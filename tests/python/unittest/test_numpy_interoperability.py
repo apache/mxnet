@@ -266,7 +266,7 @@ def _add_workload_transpose():
 
 
 def _add_workload_linalg_norm():
-    # OpArgMngr.add_workload('linalg.norm', np.random.uniform(size=(4, 1)))
+    OpArgMngr.add_workload('linalg.norm', np.random.uniform(size=(4, 1)))
     for dt in ["float64", "float32"]:
         OpArgMngr.add_workload('linalg.norm', np.array([], dtype=dt))
         OpArgMngr.add_workload('linalg.norm', np.array([np.array([]), np.array([])], dtype=dt))
@@ -307,16 +307,12 @@ def _add_workload_linalg_norm():
             OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
         OpArgMngr.add_workload('linalg.norm', np.array([[]], dtype=dt))
         A = np.array([[1, 3], [5, 7]], dtype=dt)
-        if dt == 'float32':  # float64 is flakiness for unknown reason, probably memory alignment
-            OpArgMngr.add_workload('linalg.norm', A)
-            OpArgMngr.add_workload('linalg.norm', A, 'fro')
         OpArgMngr.add_workload('linalg.norm', A, 2)
         OpArgMngr.add_workload('linalg.norm', A, -2)
         OpArgMngr.add_workload('linalg.norm', A, 'nuc')
         A = (1 / 10) * np.array([[1, 2, 3], [6, 0, 5], [3, 2, 1]], dtype=dt)
-        if dt == 'float32':
-            OpArgMngr.add_workload('linalg.norm', A)
-            OpArgMngr.add_workload('linalg.norm', A, 'fro')
+        OpArgMngr.add_workload('linalg.norm', A)
+        OpArgMngr.add_workload('linalg.norm', A, 'fro')
         OpArgMngr.add_workload('linalg.norm', A, 1)
         OpArgMngr.add_workload('linalg.norm', A, -1)
     for dt in [np.float32, np.float64]:

@@ -87,9 +87,22 @@ inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
     }
     int svd_dim = row_dim < col_dim ? row_dim : col_dim;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, out_shape); // output
-    SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ batch_dim, row_dim, row_dim })); // UT
-    SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ batch_dim, svd_dim })); // L
-    SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ batch_dim, row_dim, col_dim })); // V
+    if (param.ord == 2 || param.ord == -2) {
+      SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ batch_dim, row_dim, row_dim })); // UT
+      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ batch_dim, svd_dim })); // L
+      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ batch_dim, row_dim, col_dim })); // V
+    } else {
+      TShape sum_shape = (*in_attrs)[0];
+      TShape mat_axis = param.axis.value();
+      int sum_dim = mat_axis[!(param.ord == 1 || param.ord == -1)];
+      TShape small(3, 1);
+      sum_shape[sum_dim] = 1;
+      small[0] = sum_shape.ProdShape(0, sum_dim);
+      small[2] = sum_shape.ProdShape(sum_dim + 1, sum_shape.ndim());
+      SHAPE_ASSIGN_CHECK(*out_attrs, 1, small); // sum
+      SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ 0, 0 })); // L
+      SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ 0, 0, 0 })); // V
+    }
   }
   else {
     LOG(FATAL) << "Invalid norm or ord arguments.";

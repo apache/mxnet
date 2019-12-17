@@ -47,13 +47,6 @@ struct nrmlp {
   MSHADOW_XINLINE nrmlp(): lp(2) {}
   MSHADOW_XINLINE nrmlp(double l): lp(l) {}
 
-  static void print_tshape(mxnet::TShape shape, const char* msg) {
-    printf("%s ", msg);
-    for (int i = 0; i < shape.ndim(); ++i)
-      printf("%d ", int(shape[i]));
-    printf("\n");
-  }
-
   /* \brief power for Lp norm */
   MSHADOW_XINLINE static double lp_power(volatile double src, volatile double p) {
     if (p != 0.0) {
@@ -170,6 +163,14 @@ struct abs_grad : public mxnet_op::tunable {
     DType grad = DType(abs::Map(a)) == DType(abs::Map(b)) ?
                   DType(1.0) : DType(0.0);
     return sgn * grad;
+  }
+};
+
+/*! \brief Sign */
+struct abs_sign : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE DType Map(DType a, DType b) {
+    return DType(sign::Map(a));
   }
 };
 
@@ -410,12 +411,8 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   if (param.ord != 2 && param.ord != -2) {  // row norm or col norm
     TShape sum_shape = inputs[0].shape_;
     sum_shape[mat_axis[!(param.ord == 1 || param.ord == -1)]] = 1;
-    size_t size = int(double(sum_shape.Size()) / 16 + 0.5) * 16;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      TBlob temp = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
-                    Shape1(size), s));
-      temp = TBlob(reinterpret_cast<DType*>(temp.dptr_), sum_shape,
-                   temp.dev_mask(), temp.dev_id());
+      TBlob temp = outputs[1].reshape(sum_shape);
       std::vector<TBlob> sum_output({temp});
       ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::abs>(
         ctx, inputs, req, sum_output, sum_shape);
@@ -548,10 +545,57 @@ void NumpyMatrixNormGradCompute(const nnvm::NodeAttrs& attrs,
   TShape mat_axis = param.axis.value();
 
   if (param.ord != 2 && param.ord != -2) {  // row norm or col norm
-    LOG(FATAL) << "Under construction.";
-    TShape sum_shape = inputs[0].shape_;
-    sum_shape[mat_axis[param.ord == 1 || param.ord == -1]] = 1;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {});
+    TShape sum_shape = outputs[0].shape_;
+    TShape out_shape = outputs[0].shape_;
+    int sum_dim = mat_axis[!(param.ord == 1 || param.ord == -1)];
+    sum_shape[sum_dim] = 1;
+    TShape small(3, 1), squeezed(3, outputs[0].shape_[sum_dim]);
+    squeezed[0] = small[0] = sum_shape.ProdShape(0, sum_dim);
+    squeezed[2] = small[2] = sum_shape.ProdShape(sum_dim + 1, sum_shape.ndim());
+    map_inputs = std::vector<TBlob>({ inputs[0], inputs[6], inputs[5] });
+
+    size_t sum_size = sum_shape.Size();
+    size_t ws_offset = sum_size + (sum_size & 1);
+    size_t ws_size = ws_offset + (req[0] == kAddTo ? outputs[0].shape_.Size() : 0);
+    ws_size += ws_size & 1;
+
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      TBlob workspace = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
+                                Shape1(ws_size), s));
+      TBlob temp0 = TBlob(reinterpret_cast<DType*>(workspace.dptr_),
+                          sum_shape, workspace.dev_mask(), workspace.dev_id());
+      std::vector<TBlob> map_outputs({ temp0 });
+      ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::abs_grad, false>(
+        ctx, reduced_shape, map_inputs, req, map_outputs);
+      temp0 = temp0.reshape(small);
+      map_outputs = std::vector<TBlob>({temp0, inputs[4], inputs[6]});
+      if (req[0] == kAddTo) {
+        TBlob out_temp = TBlob(reinterpret_cast<DType*>(workspace.dptr_) + ws_offset,
+                               outputs[0].shape_, workspace.dev_mask(), workspace.dev_id());
+        std::vector<TBlob> tmp_outputs({ out_temp });
+        ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::abs_sign, false>(
+          ctx, sum_shape, map_outputs, req, tmp_outputs);
+        out_temp = out_temp.reshape(squeezed);
+        Tensor<xpu, 3, DType> tmp_out =
+          out_temp.get_with_shape<xpu, 3, DType>(Shape3(squeezed[0], squeezed[1], squeezed[2]), s);
+        Tensor<xpu, 3, DType> mask =
+          temp0.get_with_shape<xpu, 3, DType>(Shape3(small[0], small[1], small[2]), s);
+        tmp_out = tmp_out * broadcast_to(mask, squeezed);
+        TBlob final_output = outputs[0].reshape(squeezed);
+        Tensor<xpu, 3, DType> out =
+          final_output.get_with_shape<xpu, 3, DType>(Shape3(squeezed[0], squeezed[1], squeezed[2]), s);
+        out += tmp_out;
+      } else {
+        ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::abs_sign, false>(
+          ctx, sum_shape, map_outputs, req, outputs);
+        TBlob final_output = outputs[0].reshape(squeezed);
+        Tensor<xpu, 3, DType> out =
+          final_output.get_with_shape<xpu, 3, DType>(Shape3(squeezed[0], squeezed[1], squeezed[2]), s);
+        Tensor<xpu, 3, DType> mask =
+          temp0.get_with_shape<xpu, 3, DType>(Shape3(small[0], small[1], small[2]), s);
+        out = out * broadcast_to(mask, squeezed);
+      }
+    });
     return;
   }
 
