@@ -65,7 +65,7 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
 void myLog(MXTensor &in, MXTensor &out) {
   float* inp = in.data<float>();
   float* outp = out.data<float>();
-  for (int i = 0; i < in.size(); i++) {
+  for (int64_t i = 0; i < in.size(); i++) {
     outp[i] = logf(inp[i]);
   }
 }
@@ -73,7 +73,7 @@ void myLog(MXTensor &in, MXTensor &out) {
 void myExp(MXTensor &in, MXTensor &out) {
   float* inp = in.data<float>();
   float* outp =out.data<float>();
-  for (int i = 0; i < in.size(); i++) {
+  for (int64_t i = 0; i < in.size(); i++) {
     outp[i] = expf(inp[i]);
   }
 }
@@ -152,7 +152,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
     float *out_data = out.data<float>();
     float *res_data = result.data<float>();
     // loop and copy data
-    for (int i = 0; i < result.size(); i++) {
+    for (int64_t i = 0; i < result.size(); i++) {
       out_data[i] = res_data[i];
     }
   }
@@ -202,8 +202,8 @@ REGISTER_OP(_custom_subgraph_op)
 const std::vector<std::string> op_names({"exp","log"});
 
 MXReturnValue mySupportedOps(std::string json,
-			     const int num_ids,
-			     int *ids) {
+                             const int num_ids,
+                             int *ids) {
   //convert json string to json object
   JsonParser parser;
   JsonVal json_val = parser.parse_to_json(json);
