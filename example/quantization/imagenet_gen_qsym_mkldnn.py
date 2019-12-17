@@ -140,11 +140,18 @@ if __name__ == '__main__':
                         help='If enabled, the quantize op will '
                              'be calibrated offline if calibration mode is '
                              'enabled')
+    parser.add_argument('--quiet', action='store_true', default=False,
+                        help='suppress most of log')
     args = parser.parse_args()
     ctx = mx.cpu(0)
     logging.basicConfig()
     logger = logging.getLogger('logger')
-    logger.setLevel(logging.INFO)
+    if args.quiet:
+        logger.setLevel(logging.CRITICAL)
+        os.environ['MXNET_QUANTIZATION_VERBOSE'] = '0'
+        os.environ['MXNET_SUBGRAPH_VERBOSE'] = '0'
+    else:
+        logger.setLevel(logging.INFO)
 
     logger.info(args)
     logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
