@@ -19,58 +19,17 @@
 """ Key value store interface of MXNet for parameter synchronization."""
 from __future__ import absolute_import
 
-from array import array
-import ctypes
 import pickle
-from .ndarray import NDArray
-from .ndarray import _ndarray_cls
-from .base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
-from .base import check_call, string_types, mx_uint, py_str
-from .base import NDArrayHandle, KVStoreHandle
-from . import optimizer as opt
-from .profiler import set_kvstore_handle
+import ctypes
+from ..ndarray import NDArray
+from ..ndarray import _ndarray_cls
+from ..base import _LIB, c_str
+from ..base import check_call, mx_uint, py_str
+from ..base import NDArrayHandle, KVStoreHandle
+from .. import optimizer as opt
+from .base import _ctype_key_value, _ctype_dict, KVStoreBase
 
-def _ctype_key_value(keys, vals):
-    """Returns ctype arrays for the key-value args, and the whether string keys are used.
-    For internal use only.
-    """
-    if isinstance(keys, (tuple, list)):
-        assert(len(keys) == len(vals))
-        c_keys = []
-        c_vals = []
-        use_str_keys = None
-        for key, val in zip(keys, vals):
-            c_key_i, c_val_i, str_keys_i = _ctype_key_value(key, val)
-            c_keys += c_key_i
-            c_vals += c_val_i
-            use_str_keys = str_keys_i if use_str_keys is None else use_str_keys
-            assert(use_str_keys == str_keys_i), "inconsistent types of keys detected."
-        c_keys_arr = c_array(ctypes.c_char_p, c_keys) if use_str_keys \
-                     else c_array(ctypes.c_int, c_keys)
-        c_vals_arr = c_array(ctypes.c_void_p, c_vals)
-        return (c_keys_arr, c_vals_arr, use_str_keys)
-
-    assert(isinstance(keys, (int,) + string_types)), \
-           "unexpected type for keys: " + str(type(keys))
-    use_str_keys = isinstance(keys, string_types)
-    if isinstance(vals, NDArray):
-        c_keys = c_str_array([keys]) if use_str_keys \
-                 else c_array_buf(ctypes.c_int, array('i', [keys]))
-        return (c_keys, c_handle_array([vals]), use_str_keys)
-    else:
-        for value in vals:
-            assert(isinstance(value, NDArray))
-        c_keys = c_str_array([keys] * len(vals)) if use_str_keys \
-                 else c_array_buf(ctypes.c_int, array('i', [keys] * len(vals)))
-        return (c_keys, c_handle_array(vals), use_str_keys)
-
-def _ctype_dict(param_dict):
-    """Returns ctype arrays for keys and values(converted to strings) in a dictionary"""
-    assert(isinstance(param_dict, dict)), \
-        "unexpected type for param_dict: " + str(type(param_dict))
-    c_keys = c_array(ctypes.c_char_p, [c_str(k) for k in param_dict.keys()])
-    c_vals = c_array(ctypes.c_char_p, [c_str(str(v)) for v in param_dict.values()])
-    return (c_keys, c_vals)
+__all__ = ['KVStore']
 
 def _updater_wrapper(updater):
     """A wrapper for the user-defined handle."""
@@ -91,8 +50,10 @@ def _get_kvstore_server_command_type(command):
     assert (command in command_types), "Unknown command type to send to server"
     return command_types[command]
 
-class KVStore(object):
+
+class KVStore(KVStoreBase):
     """A key-value store for synchronization of values, over multiple devices."""
+
     def __init__(self, handle):
         """Initializes a new KVStore.
 
@@ -109,6 +70,62 @@ class KVStore(object):
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
+
+    def broadcast(self, key, value, out, priority=0):
+        """ Broadcast the `value` NDArray at rank 0 to all ranks,
+        and store the result in `out`.
+
+        Note that the native KVStore does not support broadcasting the same key more than once.
+
+        Parameters
+        ----------
+        key : str, or int
+            The key.
+
+        value : NDArray
+            The value corresponding to the key to broadcast
+
+        out : NDArray, list of NDArray
+            Values corresponding to the key to store the result
+
+        priority : int, optional
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
+
+        Examples
+        --------
+        >>> # broadcast a single key-value pair
+        >>> shape = (2,3)
+        >>> kv = mx.kv.create('local')
+        >>> a = mx.nd.zeros(shape)
+        >>> kv.broadcast('3', mx.nd.ones(shape)*2, out=a)
+        >>> print a.asnumpy()
+        [[ 2.  2.  2.]
+        [ 2.  2.  2.]]
+
+        """
+        self.init(key, value)
+        self.pull(key, out=out, priority=priority)
+
+    @staticmethod
+    def is_capable(capability):
+        """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
+        gradient compression, sparsity, etc.
+
+        Parameters
+        ----------
+        capability: str
+            The capability to query
+
+        Returns
+        -------
+        result : bool
+            Whether the capability is supported or not.
+        """
+        if capability.lower() == KVStoreBase.OPTIMIZER:
+            return True
+        else:
+            raise ValueError('Unknown capability: {}'.format(capability))
 
     def init(self, key, value):
         """ Initializes a single or a sequence of key-value pairs into the store.
@@ -327,27 +344,25 @@ class KVStore(object):
         key : str, int, or sequence of str or int
             Keys.
 
-        value : NDArray, RowSparseNDArray, list of NDArray or RowSparseNDArray,
-                or list of list of NDArray or RowSparseNDArray
+        value : NDArray, list of NDArray, or list of list of NDArray
             Values corresponding to the keys.
 
         out: NDArray or list of NDArray or list of list of NDArray
             Values corresponding to the keys.
 
         priority : int, optional
-            The priority of the pull operation.
-            Higher priority pull operations are likely to be executed before
-            other pull actions.
+            The priority of the operation.
+            Higher priority operations are likely to be executed before other actions.
 
         Examples
         --------
-        >>> # push a single key-value pair
+        >>> # pushpull a single key-value pair
         >>> kv.pushpull('3', mx.nd.ones(shape)*8, out=a)
         >>> print a.asnumpy()
         [[ 8.  8.  8.]
         [ 8.  8.  8.]]
 
-        >>> # aggregate the value and the push
+        >>> # aggregate the value and then pushpull
         >>> gpus = [mx.gpu(i) for i in range(4)]
         >>> b = [mx.nd.ones(shape, gpu) for gpu in gpus]
         >>> kv.pushpull('3', b, out=a)
@@ -355,11 +370,11 @@ class KVStore(object):
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
 
-        >>> # push a list of keys.
+        >>> # pushpull a list of keys.
         >>> # single device
         >>> keys = ['4', '5', '6']
         >>> b = [mx.nd.zeros(shape)]*len(keys)
-        >>> kv.push(keys, [mx.nd.ones(shape)]*len(keys), out=b)
+        >>> kv.pushpull(keys, [mx.nd.ones(shape)]*len(keys), out=b)
         >>> print b[1].asnumpy()
         [[ 1.  1.  1.]
         [ 1.  1.  1.]]
@@ -371,8 +386,8 @@ class KVStore(object):
         >>> print b[1][1].asnumpy()
         [[ 4.  4.  4.]
         [ 4.  4.  4.]]
-        """
 
+        """
         cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
         if out is not None:
             cokeys, couts, _ = _ctype_key_value(key, out)
@@ -709,47 +724,3 @@ class KVStore(object):
         """
         check_call(_LIB.MXKVStoreSendCommmandToServers(
             self.handle, mx_uint(head), c_str(body)))
-
-def create(name='local'):
-    """Creates a new KVStore.
-
-    For single machine training, there are two commonly used types:
-
-    ``local``: Copies all gradients to CPU memory and updates weights there.
-
-    ``device``: Aggregates gradients and updates weights on GPUs. With this setting,
-    the KVStore also attempts to use GPU peer-to-peer communication,
-    potentially accelerating the communication.
-
-    For distributed training, KVStore also supports a number of types:
-
-    ``dist_sync``: Behaves similarly to ``local`` but with one major difference.
-    With ``dist_sync``, batch-size now means the batch size used on each machine.
-    So if there are ``n`` machines and we use batch size ``b``,
-    then ``dist_sync`` behaves like ``local`` with batch size ``n * b``.
-
-    ``dist_device_sync``: Identical to ``dist_sync`` with the difference similar
-    to ``device`` vs ``local``.
-
-    ``dist_async``: Performs asynchronous updates.
-    The weights are updated whenever gradients are received from any machine.
-    No two updates happen on the same weight at the same time. However, the order is not
-    guaranteed.
-
-    Parameters
-    ----------
-    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async'}
-        The type of KVStore.
-    Returns
-    -------
-    kv : KVStore
-        The created KVStore.
-    """
-    if not isinstance(name, string_types):
-        raise TypeError('name must be a string')
-    handle = KVStoreHandle()
-    check_call(_LIB.MXKVStoreCreate(c_str(name),
-                                    ctypes.byref(handle)))
-    kv = KVStore(handle)
-    set_kvstore_handle(kv.handle)
-    return kv

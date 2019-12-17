@@ -182,6 +182,10 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
       request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
     }
 #endif
+  } else {
+#if MXNET_USE_MKLDNN == 1
+    request.emplace_back(ResourceRequest::kTempSpace);
+#endif
   }
   return request;
 }
@@ -243,7 +247,8 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
 
 #if MXNET_USE_MKLDNN == 1
   if ((in_types[0] == mshadow::kFloat32 || in_types[0] == mshadow::kFloat16)
-      && in_shapes[0].ndim() == 3 && ctx.dev_type == kCPU) {
+      && in_shapes[0].ndim() == 3 && ctx.dev_type == kCPU
+      && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
     const mxnet::TShape& data_shape = in_shapes[rnn_enum::kData];
     state = OpStatePtr::Create<MKLDNNRnnOp>(param, data_shape[0],
         data_shape[1], data_shape[2]);
@@ -270,7 +275,7 @@ static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
   if ((inputs[0].dtype() == mshadow::kFloat32 || inputs[0].dtype() == mshadow::kFloat16) &&
-      inputs[0].shape().ndim() == 3) {
+      inputs[0].shape().ndim() == 3 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
     MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
     op.Forward(ctx, inputs, req, outputs);
   } else {
@@ -284,7 +289,7 @@ static void RNNStatefulGradComputeExCPU(const OpStatePtr& state_ptr,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
   if ((inputs[0].dtype() == mshadow::kFloat32 || inputs[0].dtype() == mshadow::kFloat16) &&
-      inputs[0].shape().ndim() == 3) {
+      inputs[0].shape().ndim() == 3 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
     MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
     op.Backward(ctx, inputs, req, outputs);
   } else {
