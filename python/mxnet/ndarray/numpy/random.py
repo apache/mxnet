@@ -23,7 +23,8 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial"]
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial",
+            "multivariate_normal"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -344,3 +345,7 @@ def rand(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return uniform(0, 1, size=output_shape, **kwargs)
+
+
+def multivariate_normal(mean, cov, size=None):
+    return _npi.mvn_fallback(mean, cov, shape=size)

@@ -20,7 +20,8 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial"]
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial",
+            "multivariate_normal"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -321,3 +322,7 @@ def rand(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
+
+
+def multivariate_normal(mean, cov, size=None):
+    return _mx_nd_np.random.multivariate_normal(mean, cov, size)
