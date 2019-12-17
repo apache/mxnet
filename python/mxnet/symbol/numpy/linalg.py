@@ -22,7 +22,7 @@ from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv']
+__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -448,3 +448,51 @@ def tensorinv(a, ind=2):
     True
     """
     return _npi.tensorinv(a, ind)
+
+
+def tensorsolve(a, b, axes=None):
+    r"""
+    Solve the tensor equation ``a x = b`` for x.
+    It is assumed that all indices of `x` are summed over in the product,
+    together with the rightmost indices of `a`, as is done in, for example,
+    ``tensordot(a, x, axes=b.ndim)``.
+
+    Parameters
+    ----------
+    a : ndarray
+        Coefficient tensor, of shape ``b.shape + Q``. `Q`, a tuple, equals
+        the shape of that sub-tensor of `a` consisting of the appropriate
+        number of its rightmost indices, and must be such that
+        ``prod(Q) == prod(b.shape)`` (in which sense `a` is said to be
+        'square').
+    b : ndarray
+        Right-hand tensor, which can be of any shape.
+    axes : tuple of ints, optional
+        Axes in `a` to reorder to the right, before inversion.
+        If None (default), no reordering is done.
+
+    Returns
+    -------
+    x : ndarray, shape Q
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not 'square' (in the above sense).
+
+    See Also
+    --------
+    numpy.tensordot, tensorinv, numpy.einsum
+
+    Examples
+    --------
+    >>> a = np.eye(2*3*4)
+    >>> a.shape = (2*3, 4, 2, 3, 4)
+    >>> b = np.random.randn(2*3, 4)
+    >>> x = np.linalg.tensorsolve(a, b)
+    >>> x.shape
+    (2, 3, 4)
+    >>> np.allclose(np.tensordot(a, x, axes=3), b)
+    True
+    """
+    return _npi.tensorsolve(a, b, axes)
