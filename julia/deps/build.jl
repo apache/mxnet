@@ -27,35 +27,14 @@ libmxnet_detected = false
 libmxnet_curr_ver = get(ENV, "MXNET_COMMIT", "master")
 curr_win = "20190608"  # v1.5.0
 
-# TODO: remove MXNET_HOME backward compatibility in v1.7
 if haskey(ENV, "MXNET_HOME")
-  @warn "The environment variable `MXNET_HOME` has been renamed, please use `MXNET_ROOT` instead."
-end
-
-# TODO: remove MXNET_HOME backward compatibility in v2.0
-MXNET_ROOT = get(ENV, "MXNET_ROOT", get(ENV, "MXNET_HOME", ""))
-search_locations = if !isempty(MXNET_ROOT)
-  !isabspath(MXNET_ROOT) && error("MXNET_ROOT should be a absolute path")
-  @info "env var: MXNET_ROOT -> $MXNET_ROOT"
-  [joinpath(MXNET_ROOT, "lib"), MXNET_ROOT]
-else
-  []
-end
-
-MXNET_LIBRARY_PATH = get(ENV, "MXNET_LIBRARY_PATH", "")
-println(typeof(MXNET_LIBRARY_PATH))
-# In case of macOS, if user build libmxnet from source and set the MXNET_ROOT,
-# the output is still named as `libmxnet.so`.
-search_names = ["libmxnet.$(Libdl.dlext)", "libmxnet.so"]
-if !isempty(MXNET_LIBRARY_PATH)
-  !isabspath(MXNET_LIBRARY_PATH) && error("MXNET_LIBRARY_PATH should be a absolute path")
-  @info "env var: MXNET_LIBRARY_PATH -> $MXNET_LIBRARY_PATH"
-  pushfirst!(search_names, MXNET_LIBRARY_PATH)
-end
-
-if (!isempty(MXNET_ROOT)) || (!isempty(MXNET_LIBRARY_PATH))
+  MXNET_HOME = ENV["MXNET_HOME"]
+  @info("MXNET_HOME environment detected: $MXNET_HOME")
   @info("Trying to load existing libmxnet...")
-  lib = Libdl.find_library(search_names, search_locations)
+  # In case of macOS, if user build libmxnet from source and set the MXNET_HOME,
+  # the output is still named as `libmxnet.so`.
+  lib = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],
+                           [joinpath(MXNET_HOME, "lib"), MXNET_HOME])
   if !isempty(lib)
     @info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true

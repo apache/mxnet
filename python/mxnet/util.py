@@ -27,6 +27,18 @@ import threading
 from .base import _LIB, check_call
 
 
+_np_ufunc_default_kwargs = {
+    'where': True,
+    'casting': 'same_kind',
+    'order': 'K',
+    'dtype': None,
+    'subok': True,
+}
+
+_set_np_shape_logged = False
+_set_np_array_logged = False
+
+
 def makedirs(d):
     """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
     available in Python2"""
@@ -51,8 +63,7 @@ def get_gpu_memory(gpu_dev_id):
 
 
 def set_np_shape(active):
-    """
-    Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
+    """Turns on/off NumPy shape semantics, in which `()` represents the shape of scalar tensors,
     and tuples with `0` elements, for example, `(0,)`, `(1, 0, 2)`, represent the shapes
     of zero-size tensors. This is turned off by default for keeping backward compatibility.
 
@@ -79,13 +90,16 @@ def set_np_shape(active):
     >>> print(mx.is_np_shape())
     True
     """
+    global _set_np_shape_logged
     if active:
-        import logging
-        logging.info('NumPy-shape semantics has been activated in your code. '
-                     'This is required for creating and manipulating scalar and zero-size '
-                     'tensors, which were not supported in MXNet before, as in the official '
-                     'NumPy library. Please DO NOT manually deactivate this semantics while '
-                     'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+        if not _set_np_shape_logged:
+            import logging
+            logging.info('NumPy-shape semantics has been activated in your code. '
+                         'This is required for creating and manipulating scalar and zero-size '
+                         'tensors, which were not supported in MXNet before, as in the official '
+                         'NumPy library. Please DO NOT manually deactivate this semantics while '
+                         'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+            _set_np_shape_logged = True
     elif is_np_array():
         raise ValueError('Deactivating NumPy shape semantics while NumPy array semantics is still'
                          ' active is not allowed. Please consider calling `npx.reset_np()` to'
@@ -558,6 +572,105 @@ def use_np(func):
     return use_np_shape(use_np_array(func))
 
 
+def np_ufunc_legal_option(key, value):
+    """Checking if ufunc arguments are legal inputs
+
+    Parameters
+    ----------
+    key : string
+        the key of the ufunc argument.
+    value : string
+        the value of the ufunc argument.
+
+    Returns
+    -------
+    legal : boolean
+        Whether or not the argument is a legal one. True when the key is one of the ufunc
+        arguments and value is an allowed value. False when the key is not one of the ufunc
+        arugments or the value is not an allowed value even when the key is a legal one.
+    """
+    if key == 'where':
+        return True
+    elif key == 'casting':
+        return (value in set(['no', 'equiv', 'safe', 'same_kind', 'unsafe']))
+    elif key == 'order':
+        if isinstance(value, str):
+            return True
+    elif key == 'dtype':
+        import numpy as _np
+        return (value in set([_np.int8, _np.uint8, _np.int32, _np.int64,
+                              _np.float16, _np.float32, _np.float64,
+                              'int8', 'uint8', 'int32', 'int64',
+                              'float16', 'float32', 'float64']))
+    elif key == 'subok':
+        return isinstance(value, bool)
+    return False
+
+
+def wrap_np_unary_func(func):
+    """A convenience decorator for wrapping numpy-compatible unary ufuncs to provide uniform
+    error handling.
+
+    Parameters
+    ----------
+    func : a numpy-compatible unary function to be wrapped for better error handling.
+
+    Returns
+    -------
+    Function
+        A function wrapped with proper error handling.
+    """
+    @wraps_safely(func)
+    def _wrap_np_unary_func(x, out=None, **kwargs):
+        if len(kwargs) != 0:
+            for key, value in kwargs.items():
+                # if argument is not in the set of ufunc arguments
+                if key not in _np_ufunc_default_kwargs:
+                    raise TypeError("{} is an invalid keyword to function \'{}\'".format(key, func.__name__))
+                # if argument is one of the ufunc arguments, but not with the default value
+                if value != _np_ufunc_default_kwargs[key]:
+                    # if the provided value of the argument is a legal option, raise NotImplementedError
+                    if np_ufunc_legal_option(key, value):
+                        raise NotImplementedError("{}={} is not implemented yet for operator {}"
+                                                  .format(key, str(value), func.__name__))
+                    # otherwise raise TypeError with not understood error message
+                    raise TypeError("{}={} not understood for operator {}"
+                                    .format(key, value, func.__name__))
+        return func(x, out=out)
+    return _wrap_np_unary_func
+
+
+def wrap_np_binary_func(func):
+    """A convenience decorator for wrapping numpy-compatible binary ufuncs to provide uniform
+    error handling.
+
+    Parameters
+    ----------
+    func : a numpy-compatible binary function to be wrapped for better error handling.
+
+    Returns
+    -------
+    Function
+        A function wrapped with proper error handling.
+    """
+    @wraps_safely(func)
+    def _wrap_np_binary_func(x1, x2, out=None, **kwargs):
+        if len(kwargs) != 0:
+            for key, value in kwargs.items():
+                # if argument is not in the set of ufunc arguments
+                if key not in _np_ufunc_default_kwargs:
+                    raise TypeError("{} is an invalid keyword to function \'{}\'".format(key, func.__name__))
+                # if argument is one of the ufunc arguments, but not with the default value
+                if value != _np_ufunc_default_kwargs[key]:
+                    # if the provided value of the argument is a legal option, raise NotImplementedError
+                    if np_ufunc_legal_option(key, value):
+                        raise NotImplementedError("{}={} is not implemented yet".format(key, str(value)))
+                    # otherwise raise TypeError with not understood error message
+                    raise TypeError("{} {} not understood".format(key, value))
+        return func(x1, x2, out=out)
+    return _wrap_np_binary_func
+
+
 def _set_np_array(active):
     """Turns on/off NumPy array semantics for the current thread in which `mxnet.numpy.ndarray`
     is expected to be created, instead of the legacy `mx.nd.NDArray`.
@@ -571,11 +684,14 @@ def _set_np_array(active):
     -------
         A bool value indicating the previous state of NumPy array semantics.
     """
+    global _set_np_array_logged
     if active:
-        import logging
-        logging.info('NumPy array semantics has been activated in your code. This allows you'
-                     ' to use operators from MXNet NumPy and NumPy Extension modules as well'
-                     ' as MXNet NumPy `ndarray`s.')
+        if not _set_np_array_logged:
+            import logging
+            logging.info('NumPy array semantics has been activated in your code. This allows you'
+                         ' to use operators from MXNet NumPy and NumPy Extension modules as well'
+                         ' as MXNet NumPy `ndarray`s.')
+            _set_np_array_logged = True
     cur_state = is_np_array()
     _NumpyArrayScope._current.value = _NumpyArrayScope(active)
     return cur_state
@@ -583,15 +699,76 @@ def _set_np_array(active):
 
 def set_np(shape=True, array=True):
     """Setting NumPy shape and array semantics at the same time.
-    It is required to keep NumPy shape semantics active when activating NumPy array semantics.
+    It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
+    It is highly recommended to set these two flags to `True` at the same time to fully enable
+    NumPy-like behaviors. Please refer to the Examples section for a better understanding.
 
     Parameters
     ----------
     shape : bool
         A boolean value indicating whether the NumPy-shape semantics should be turned on or off.
+        When this flag is set to `True`, zero-size and zero-dim shapes are all valid shapes in
+        shape inference process, instead of treated as unknown shapes in legacy mode.
     array : bool
         A boolean value indicating whether the NumPy-array semantics should be turned on or off.
+        When this flag is set to `True`, it enables Gluon code flow to use or generate `mxnet.numpy.ndarray`s
+        instead of `mxnet.ndarray.NDArray`. For example, a `Block` would create parameters of type
+        `mxnet.numpy.ndarray`.
+
+    Examples
+    --------
+    >>> import mxnet as mx
+
+    Creating zero-dim ndarray in legacy mode would fail at shape inference.
+
+    >>> mx.nd.ones(shape=())
+    mxnet.base.MXNetError: Operator _ones inferring shapes failed.
+
+    >>> mx.nd.ones(shape=(2, 0, 3))
+    mxnet.base.MXNetError: Operator _ones inferring shapes failed.
+
+    In legacy mode, Gluon layers would create parameters and outputs of type `mx.nd.NDArray`.
+
+    >>> from mxnet.gluon import nn
+    >>> dense = nn.Dense(2)
+    >>> dense.initialize()
+    >>> dense(mx.nd.ones(shape=(3, 2)))
+    [[0.01983214 0.07832371]
+     [0.01983214 0.07832371]
+     [0.01983214 0.07832371]]
+    <NDArray 3x2 @cpu(0)>
+
+    >>> [p.data() for p in dense.collect_params().values()]
+    [
+    [[0.0068339  0.01299825]
+     [0.0301265  0.04819721]]
+    <NDArray 2x2 @cpu(0)>,
+    [0. 0.]
+    <NDArray 2 @cpu(0)>]
+
+    When the `shape` flag is `True`, both shape inferences are successful.
+
+    >>> from mxnet import np, npx
+    >>> npx.set_np()  # this is required to activate NumPy-like behaviors
+
+    >>> np.ones(shape=())
+    array(1.)
+    >>> np.ones(shape=(2, 0, 3))
+    array([], shape=(2, 0, 3))
+
+    When the `array` flag is `True`, Gluon layers would create parameters and outputs of type `mx.np.ndarray`.
+
+    >>> dense = nn.Dense(2)
+    >>> dense.initialize()
+    >>> dense(np.ones(shape=(3, 2)))
+    array([[0.01983214, 0.07832371],
+           [0.01983214, 0.07832371],
+           [0.01983214, 0.07832371]])
+
+    >>> [p.data() for p in dense.collect_params().values()]
+    [array([[0.0068339 , 0.01299825],
+           [0.0301265 , 0.04819721]]), array([0., 0.])]
     """
     if not shape and array:
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
@@ -602,3 +779,64 @@ def set_np(shape=True, array=True):
 def reset_np():
     """Deactivate NumPy shape and array semantics at the same time."""
     set_np(shape=False, array=False)
+
+
+_CUDA_SUCCESS = 0
+
+
+def get_cuda_compute_capability(ctx):
+    """Returns the cuda compute capability of the input `ctx`.
+
+    Parameters
+    ----------
+    ctx : Context
+        GPU context whose corresponding cuda compute capability is to be retrieved.
+
+    Returns
+    -------
+    cuda_compute_capability : int
+        CUDA compute capability. For example, it returns 70 for CUDA arch equal to `sm_70`.
+
+    References
+    ----------
+    https://gist.github.com/f0k/63a664160d016a491b2cbea15913d549#file-cuda_check-py
+    """
+    if ctx.device_type != 'gpu':
+        raise ValueError('Expecting a gpu context to get cuda compute capability, '
+                         'while received ctx {}'.format(str(ctx)))
+
+    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
+    for libname in libnames:
+        try:
+            cuda = ctypes.CDLL(libname)
+        except OSError:
+            continue
+        else:
+            break
+    else:
+        raise OSError("could not load any of: " + ' '.join(libnames))
+
+    # Some constants taken from cuda.h
+
+    cc_major = ctypes.c_int()
+    cc_minor = ctypes.c_int()
+    device = ctypes.c_int()
+    error_str = ctypes.c_char_p()
+
+    ret = cuda.cuInit(0)
+    if ret != _CUDA_SUCCESS:
+        cuda.cuGetErrorString(ret, ctypes.byref(error_str))
+        raise RuntimeError('cuInit failed with erro code {}: {}'
+                           .format(ret, error_str.value.decode()))
+
+    ret = cuda.cuDeviceGet(ctypes.byref(device), ctx.device_id)
+    if ret != _CUDA_SUCCESS:
+        cuda.cuGetErrorString(ret, ctypes.byref(error_str))
+        raise RuntimeError('cuDeviceGet failed with error code {}: {}'
+                           .format(ret, error_str.value.decode()))
+    ret = cuda.cuDeviceComputeCapability(ctypes.byref(cc_major), ctypes.byref(cc_minor), device)
+    if ret != _CUDA_SUCCESS:
+        cuda.cuGetErrorString(ret, ctypes.byref(error_str))
+        raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
+                           .format(ret, error_str.value.decode()))
+    return cc_major.value * 10 + cc_minor.value

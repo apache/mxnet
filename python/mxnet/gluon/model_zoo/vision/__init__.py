@@ -106,7 +106,7 @@ def get_model(name, **kwargs):
 
     Returns
     -------
-    HybridBlock
+    gluon.HybridBlock
         The model.
     """
     models = {'resnet18_v1': resnet18_v1,

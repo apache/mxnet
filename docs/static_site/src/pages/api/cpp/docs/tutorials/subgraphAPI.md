@@ -1,3 +1,12 @@
+---
+layout: page_api
+title: Subgraph API
+action: Get Started
+action_url: /get_started
+permalink: /api/cpp/docs/tutorials/subgraph_api
+is_tutorial: true
+tag: cpp
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,15 +23,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Subgraph API
-action: Get Started
-action_url: /get_started
-permalink: /api/cpp/docs/tutorials/subgraph_api
-is_tutorial: true
-tag: cpp
----
 
 ## Subgraph API
 
@@ -116,9 +116,11 @@ class SgProperty : public SubgraphProperty {
 ```
 {% endraw %}
 `SetAttr` is optional and developer can define their own attributes to control property behavior.
-There're 2 built-in attributes that used by MXNet executor.
+There're some built-in attributes that used by MXNet executor.
 
-`property_name`  : std::string, name of this property.
+`property_name`  : std::string, name of this property, used for diagnose.
+
+`disable` : bool, whther to disable this property.
 
 `inference_only` : bool, apply this property only for inference. Property will be skiped when need_grad=True. Default `false` if this attribute isn't defined.
 

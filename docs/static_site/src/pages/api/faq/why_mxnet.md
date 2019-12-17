@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Why MXNet came to be?
+category: faq
+faq_c: Extend and Contribute to MXNet
+question: Why was MXNet developed in the first place ?
+permalink: /api/faq/why_mxnet
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Why MXNet came to be?
-category: faq
-faq_c: Extend and Contribute to MXNet
-question: Why was MXNet developed in the first place ?
-permalink: /api/faq/why_mxnet
----
 
 # Why was MXNet developed in the first place ?
 
@@ -133,6 +133,7 @@ In either case, the dataset typically must be managed by the CPU.
 To compute the transformation of a neural network quickly, we need both the parameters and data points to make it into GPU memory. For any example _X_, the parameters _W_ are the same. Moreover the size of the model tends to dwarf the size of an individual example. So we might arrive at the natural insight that parameters should always live on the GPU, even if the dataset itself must live on the CPU or stream in. This prevents IO from becoming the bottleneck during training or inference.
 
 Fortunately, _MXNet_ makes this kind of assignment easy.
+
 ```python
 import mxnet.ndarray as nd
 
@@ -201,7 +202,7 @@ Symbolic computation is useful for several reasons. First, because we define a f
 
 ### Gluon for briding the gap between the two
 
-[MXNet Gluon]({{'/api/python'|relative_url}}) aims to bridge the gap between the imperative nature of MXNet and its symbolic capabilities and keep the advantages of both through [hybridization](http://d2l.ai/chapter_computational-performance/hybridize.html).
+[MXNet Gluon]({{'/api/python'|relative_url}}) aims to bridge the gap between the imperative nature of MXNet and its symbolic capabilities and keep the advantages of both through [hybridization](https://d2l.ai/chapter_computational-performance/hybridize.html).
 
 ## Conclusions
 Given its combination of high performance, clean code, access to a high-level API, and low-level control, _MXNet_ stands out as a unique choice among deep learning frameworks.

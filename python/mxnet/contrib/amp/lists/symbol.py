@@ -368,6 +368,9 @@ FP32_FUNCS = [
     'arctanh',
     '_sparse_arcsin',
     '_sparse_arctanh',
+    '_contrib_MultiBoxDetection',
+    '_contrib_MultiBoxPrior',
+    '_contrib_MultiBoxTarget',
 
     # Exponents
     'exp',
@@ -575,9 +578,6 @@ WIDEST_TYPE_CASTS = [
     'stack',
     '_Maximum',
     '_Minimum',
-    '_contrib_MultiBoxDetection',
-    '_contrib_MultiBoxPrior',
-    '_contrib_MultiBoxTarget',
     '_contrib_MultiProposal',
     '_contrib_PSROIPooling',
     '_contrib_Proposal',

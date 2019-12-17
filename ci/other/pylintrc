@@ -40,7 +40,7 @@ persistent=yes
 load-plugins=
 
 # Use multiple processes to speed up Pylint.
-jobs=8
+jobs=1
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -113,7 +113,10 @@ disable=
     too-many-instance-attributes,
     too-many-locals,
     too-many-public-methods,
-    too-many-statements
+    too-many-statements,
+    too-many-lines,
+    duplicate-code,
+    cyclic-import
 
 # disable=unicode-builtin,delslice-method,using-cmp-argument,setslice-method,dict-view-method,parameter-unpacking,range-builtin-not-iterating,print-statement,file-builtin,old-raise-syntax,basestring-builtin,execfile-builtin,indexing-exception,import-star-module-level,coerce-method,long-builtin,old-ne-operator,old-division,no-absolute-import,raw_input-builtin,old-octal-literal,oct-method,xrange-builtin,hex-method,unpacking-in-except,nonzero-method,raising-string,intern-builtin,reload-builtin,metaclass-assignment,cmp-method,filter-builtin-not-iterating,apply-builtin,map-builtin-not-iterating,next-method-called,unichr-builtin,buffer-builtin,dict-iter-method,input-builtin,coerce-builtin,getslice-method,useless-suppression,standarderror-builtin,zip-builtin-not-iterating,suppressed-message,cmp-builtin,backtick,long-suffix,reduce-builtin,round-builtin
 

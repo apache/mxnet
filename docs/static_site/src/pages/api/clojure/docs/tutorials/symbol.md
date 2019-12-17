@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Symbolic API
+is_tutorial: true
+tag: clojure
+permalink: /api/clojure/docs/tutorials/symbol
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Symbolic API
-is_tutorial: true
-tag: clojure
-permalink: /api/clojure/docs/tutorials/symbol
----
 
 # MXNet Clojure Symbolic API
 
@@ -31,10 +31,11 @@ Topics:
 * [Group Multiple Symbols](#group-multiple-symbols)
 * [Serialization](#serialization)
 * [Executing Symbols](#executing-symbols)
-* [Symbol API Reference](http://mxnet.incubator.apache.org/api/clojure/docs/org.apache.clojure-mxnet.symbol.html)
+* [Symbol API Reference]({{'/api/clojure/docs/api/org.apache.clojure-mxnet.symbol'|relative_url}})
 
 
-We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
+We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures).
+
 
 To follow along with this documentation, you can use this namespace to with the following requirements:
 
@@ -111,7 +112,7 @@ To construct neural networks with multiple loss layers, we can use `group` to gr
 ```
 
 ## Serialization
-You can use the [`save`](docs/org.apache.clojure-mxnet.symbol.html#var-save) and [`load`](docs/org.apache.clojure-mxnet.symbol.html#var-load) functions to serialize the Symbol objects. The advantage of using save and load functions is that it is language agnostic and cloud friendly. The symbol is saved in JSON format. You can also get a JSON string directly using mxnet.Symbol.toJson. Refer to API documentation for more details.
+You can use the [`save`]({{'/api/clojure/docs/api/org.apache.clojure-mxnet.symbol.html#var-save'|relative_url}}) and [`load`]({{'/api/clojure/docs/api/org.apache.clojure-mxnet.symbol.html#var-load'|relative_url}}) functions to serialize the Symbol objects. The advantage of using save and load functions is that it is language agnostic and cloud friendly. The symbol is saved in JSON format. You can also get a JSON string directly using mxnet.Symbol.toJson. Refer to API documentation for more details.
 
  The following example shows how to save a symbol to a file, load it back, and compare two symbols using a JSON string. You can also save to S3 as well
 
@@ -152,5 +153,5 @@ _To do this you must have the correct native library jar defined as a dependency
 ```
 
 ## Next Steps
-* See [NDArray API](ndarray.md) for vector/matrix/tensor operations.
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [NDArray API](ndarray) for vector/matrix/tensor operations.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

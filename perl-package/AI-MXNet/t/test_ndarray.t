@@ -19,7 +19,7 @@ use strict;
 use warnings;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(almost_equal same rand_ndarray randint zip);
-use Test::More tests => 251;
+use Test::More tests => 280;
 use PDL;
 use File::Temp qw(tempdir);
 use IO::File;
@@ -217,6 +217,51 @@ sub test_histogram
     ok(same($bins->aspdl, pdl([10, 20, 30, 60])));
 }
 
+sub test_overload
+{
+    # much of this depends on PDL being sane as well.
+    my $px = PDL->new([ 2, -5, 11, 17 ]) / 2;
+    my $nx = mx->nd->array($px, dtype => 'float64');
+    my $py = PDL->new([ -3, 7, 13, 19 ]) / 4;
+    my $ny = mx->nd->array($py, dtype => 'float64');
+
+    ok(same(($nx + $ny)->aspdl(), $px + $py), 'overloaded add');
+    ok(same(($nx - $ny)->aspdl(), $px - $py), 'overloaded sub');
+    ok(same(($nx * $ny)->aspdl(), $px * $py), 'overloaded mul');
+    ok(same(($nx / $ny)->aspdl(), $px / $py), 'overloaded div');
+    ok(same(($nx % $ny)->aspdl(), $px % $py), 'overloaded mod');
+    ok(same(($nx ** $ny)->aspdl(), $px ** $py), 'overloaded pow');
+    ok(same(($nx->copy() += $ny)->aspdl(), $px + $py), 'inplace add');
+    ok(same(($nx->copy() -= $ny)->aspdl(), $px - $py), 'inplace sub');
+    ok(same(($nx->copy() *= $ny)->aspdl(), $px * $py), 'inplace mul');
+    ok(same(($nx->copy() /= $ny)->aspdl(), $px / $py), 'inplace div');
+    ok(same(($nx->copy() %= $ny)->aspdl(), $px % $py), 'inplace mod');
+    ok(same(($nx->copy() **= $ny)->aspdl(), $px ** $py), 'inplace pow');
+    ok(same(cos($nx)->aspdl(), cos($px)), 'overloaded cos');
+    ok(same(sin($nx)->aspdl(), sin($px)), 'overloaded sin');
+    ok(same(exp($nx)->aspdl(), exp($px)), 'overloaded exp');
+    ok(same(abs($nx)->aspdl(), abs($px)), 'overloaded abs');
+    ok(same(log($nx)->aspdl(), log($px)), 'overloaded log');
+    ok(same(sqrt($nx)->aspdl(), sqrt($px)), 'overloaded sqrt');
+    ok(same(atan2($nx, 1.0)->aspdl(), atan2($px, 1.0)), 'overloaded atan2');
+}
+
+sub test_array_overload
+{
+    # array conversions are largely calls to mx->nd->split(), but have
+    # special cases around dimensions of length 0 and 1.
+    is_deeply([ @{ mx->nd->array(zeros(7, 0)) } ], []);
+    is_deeply(mx->nd->zeros([3, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([2, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([1, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([3, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([2, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([1, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([3, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+    is_deeply(mx->nd->zeros([2, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+    is_deeply(mx->nd->zeros([1, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+}
+
 test_ndarray_slice();
 test_ndarray_reshape();
 test_moveaxis();
@@ -226,3 +271,5 @@ test_linalg_gemm2();
 test_image_to_tensor();
 test_buffer_load();
 test_histogram();
+test_overload();
+test_array_overload();

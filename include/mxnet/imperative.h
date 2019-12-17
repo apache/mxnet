@@ -35,6 +35,17 @@
 #include "./ndarray.h"
 
 namespace mxnet {
+  /*! \brief there are three numpy shape flags based on priority.
+   * GlobalOn
+   *   turn on numpy shape flag globally, it includes thread local.
+   *   The flag can be seen in any thread.
+   * ThreadLocalOn
+   *   only turn on thread local numpy shape flag, it cannot be seen
+   *   in other threads.
+   * Off
+   *   turn off numpy shape flag globally.
+   * */
+  enum NumpyShape{Off, ThreadLocalOn, GlobalOn};
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
@@ -97,14 +108,32 @@ class Imperative {
       is_recording_ = is_recording;
       return old;
   }
-  /*! brief whether numpy compatibility is on. */
-  bool is_np_shape() const {
-    return is_np_shape_;
+  /*! \brief return current numpy compatibility status,
+   *  GlobalOn(2), ThreadLocalOn(1), Off(0).
+   * */
+  int is_np_shape() const {
+    if (is_np_shape_global_) {
+      return 2;
+    }
+    return is_np_shape_thread_local_ ? 1 : 0;
   }
-  /*! brief turn on or turn off numpy compatibility switch. */
-  bool set_is_np_shape(bool is_np_shape) {
-    bool old = is_np_shape_;
-    is_np_shape_ = is_np_shape;
+  /*! \brief specify numpy compatibility off, thread local on or global on. */
+  bool set_is_np_shape(int is_np_shape) {
+    NumpyShape flag = static_cast<NumpyShape>(is_np_shape);
+    bool old = this->is_np_shape();
+    switch (flag) {
+      case GlobalOn:
+        is_np_shape_global_ = true;
+        is_np_shape_thread_local_ = true;
+        break;
+      case ThreadLocalOn:
+        is_np_shape_thread_local_ = true;
+        break;
+      case Off:
+        is_np_shape_global_ = false;
+        is_np_shape_thread_local_ = false;
+        break;
+    }
     return old;
   }
   /*! \brief to record operator, return corresponding node. */
@@ -177,14 +206,15 @@ class Imperative {
   static thread_local bool is_recording_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
-  static thread_local bool is_np_shape_;
+  static thread_local bool is_np_shape_thread_local_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
-  static MX_THREAD_LOCAL bool is_np_shape_;
+  static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
 #endif
+  bool is_np_shape_global_{false};
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */

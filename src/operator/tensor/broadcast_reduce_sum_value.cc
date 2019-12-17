@@ -72,6 +72,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_sum"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_sum)
@@ -88,6 +89,7 @@ MXNET_ADD_SPARSE_OP_ALIAS(mean)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_mean"});
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_mean)
@@ -103,6 +105,7 @@ MXNET_OPERATOR_REGISTER_REDUCE(nansum)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{ "_backward_nansum" });
 
 MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_nansum)

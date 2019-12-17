@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  Efficient Data Loaders
+category: architecture
+permalink: /api/architecture/note_data_loading
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Efficient Data Loaders
-category: architecture
-permalink: /api/architecture/note_data_loading
----
 
 # Designing Efficient Data Loaders for Deep Learning
 
@@ -125,7 +125,7 @@ then compress into JPEG format.
 After that, we save a header that indicates the index and label
 for that image to be used when constructing the *Data* field for that record.
 We then pack several images together into a file.
-You may want to also review the [example using im2rec.py to create a RecordIO dataset](https://mxnet.incubator.apache.org/tutorials/basic/data.html#loading-data-using-image-iterators).
+You may want to also review the [example using im2rec.py to create a RecordIO dataset](https://mxnet.apache.org/api/faq/recordio).
 
 ### Access Arbitrary Parts Of Data
 

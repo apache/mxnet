@@ -302,7 +302,7 @@ def head_symbol(data_shape):
   weight = mx.symbol.Variable('weight', dtype='float32')
   return data, weight
 
-# single conv fuision case
+# single conv fusion case
 def single_conv(no_bias, data_shape):
   attr = {'conv': []}
   data, weight = head_symbol(data_shape)
@@ -327,6 +327,10 @@ def conv_act(no_bias, data_shape, alg):
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
   if alg == "relu6":
     relu = mx.symbol.clip(data=conv, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=conv, slope=0.25, act_type='leaky')
+  elif alg == "gelu":
+    relu = mx.symbol.LeakyReLU(data=conv, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   return relu, attr
@@ -339,6 +343,10 @@ def conv_act_sum(no_bias, data_shape, alg):
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
   if alg == "relu6":
     relu = mx.symbol.clip(data=conv, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=conv, slope=0.25, act_type='leaky')
+  elif alg == "gelu":
+    relu = mx.symbol.LeakyReLU(data=conv, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=conv, name=alg, act_type=alg)
   conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
@@ -379,6 +387,10 @@ def conv_bn_act(no_bias, data_shape, alg):
   bn1 = mx.symbol.BatchNorm(data=conv, name="bn1")
   if alg == "relu6":
     relu = mx.symbol.clip(data=bn1, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=bn1, slope=0.25, act_type='leaky')
+  elif alg == "gelu":
+    relu = mx.symbol.LeakyReLU(data=bn1, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=bn1, name=alg, act_type=alg)
   return relu, attr
@@ -395,6 +407,10 @@ def conv_bn_sum_act(no_bias, data_shape, alg):
   sum1 = bn1 + conv1
   if alg == "relu6":
     relu = mx.symbol.clip(data=sum1, name='relu6', a_min=0, a_max=6)
+  elif alg == "leakyrelu":
+    relu = mx.symbol.LeakyReLU(data=sum1, slope=0.25, act_type='leaky')
+  elif alg == "gelu":
+    relu = mx.symbol.LeakyReLU(data=sum1, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=sum1, name=alg, act_type=alg)
   return relu, attr
@@ -693,7 +709,9 @@ def test_pos_conv_act():
               "sigmoid": True,
               "tanh": True,
               "softrelu": True,
-              "relu6": True}
+              "relu6": True,
+              "leakyrelu": True,
+              "gelu": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_act(False, data_shape, alg)
@@ -731,7 +749,9 @@ def test_pos_conv_bn_act():
               "sigmoid": True,
               "tanh": True,
               "softrelu": True,
-              "relu6": True}
+              "relu6": True,
+              "leakyrelu": True,
+              "gelu": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_bn_act(False, data_shape, alg)
@@ -745,7 +765,9 @@ def test_pos_conv_bn_sum_act():
               "sigmoid": True,
               "tanh": True,
               "softrelu": True,
-              "relu6": False}
+              "relu6": False,
+              "leakyrelu": True,
+              "gelu": True}
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_bn_sum_act(False, data_shape, alg)
@@ -843,6 +865,135 @@ def test_neg_fc_relu():
   for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
     syms, attrs, excluded_attrs = neg_fc_relu(no_bias, dshape, flatten)
     check_neg_fusion(syms, attrs, excluded_attrs, dshape, name='fc')
+
+def test_float64_fallback():
+    sym = mx.sym.FullyConnected(
+        mx.sym.Variable('in'),
+        mx.sym.Variable('w'),
+        mx.sym.Variable('b'),
+        num_hidden=2
+    )
+
+    dtype = 'float64'
+    ex = sym.bind(mx.cpu(),
+                  {
+        'in': mx.nd.array([[2, 3, 4]], dtype=dtype),
+        'w': mx.nd.array([[1, 2, 3], [4, 5, 6]], dtype=dtype),
+        'b': mx.nd.array([7, 8], dtype=dtype)
+    },
+        args_grad=None,
+        grad_req='write'
+    )
+    ex.forward()
+    ex.outputs[0].wait_to_read()
+
+
+def helper_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
+  data_shape = (1, 32, 2, 2)
+  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
+  weight = mx.symbol.Variable('weight', dtype='float32')
+  bias = mx.symbol.Variable('bias', dtype='float32')
+  sym = mx.symbol.Convolution(data=data, weight=weight, bias=bias, name='conv', num_filter=64,
+                               kernel=(1, 1), stride=(1, 1))
+  data_nd = mx.random.uniform(data_min, data_max, shape=data_shape, ctx=mx.cpu())
+  weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32, 1, 1], ctx=mx.cpu())
+  bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
+  arg_params = {
+      'data': data_nd,
+      'weight': weight_nd,
+      'bias': bias_nd
+  }
+
+  ex = sym.bind(mx.cpu(), arg_params, args_grad=None)
+  ex.forward()
+  ex.outputs[0].wait_to_read()
+  sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+  batch = mx.io.DataBatch([data_nd], [])
+  calib_data = CalibIter(batch, data_shape, 1)
+  qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                   arg_params={
+                                                                       'weight': weight_nd,
+                                                                       'bias': bias_nd
+                                                                   },
+                                                                   aux_params={},
+                                                                   ctx=mx.cpu(),
+                                                                   excluded_sym_names=None,
+                                                                   excluded_op_names=None,
+                                                                   quantized_dtype='int8',
+                                                                   calib_mode='naive',
+                                                                   calib_data=calib_data,
+                                                                   label_names=None,
+                                                                   num_calib_examples=1,
+                                                                   quantize_mode='full')
+  qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+  qarg_params['data'] = data_nd
+  qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
+  qex.forward()
+  qex.outputs[0].wait_to_read()
+  assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
+                               rtol=1e-2, atol=1e-2, etol=0.01)
+
+def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
+  data_shape = (1, 32)
+  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
+  weight = mx.symbol.Variable('weight', dtype='float32')
+  bias = mx.symbol.Variable('bias', dtype='float32')
+  sym = mx.symbol.FullyConnected(data=data, weight=weight, bias=bias, name='fc', num_hidden=64)
+  data_nd = mx.random.uniform(data_min, data_max, shape=data_shape, ctx=mx.cpu())
+  weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32], ctx=mx.cpu())
+  bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
+  arg_params = {
+      'data': data_nd,
+      'weight': weight_nd,
+      'bias': bias_nd
+  }
+
+  ex = sym.bind(mx.cpu(), arg_params, args_grad=None)
+  ex.forward()
+  ex.outputs[0].wait_to_read()
+  sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+  batch = mx.io.DataBatch([data_nd], [])
+  calib_data = CalibIter(batch, data_shape, 1)
+  qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+                                                                   arg_params={
+                                                                       'weight': weight_nd,
+                                                                       'bias': bias_nd
+                                                                   },
+                                                                   aux_params={},
+                                                                   ctx=mx.cpu(),
+                                                                   excluded_sym_names=None,
+                                                                   excluded_op_names=None,
+                                                                   quantized_dtype='int8',
+                                                                   calib_mode='naive',
+                                                                   calib_data=calib_data,
+                                                                   label_names=None,
+                                                                   num_calib_examples=1,
+                                                                   quantize_mode='full')
+  qarg_params['data'] = data_nd
+  qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
+  qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
+  qex.forward()
+  qex.outputs[0].wait_to_read()
+  assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
+                               rtol=1e-2, atol=1e-2, etol=0.01)
+
+@with_seed()
+def test_quantized_conv_bias_overflow():
+    helper_quantized_conv_bias_overflow(-1, 1, 0, 0)
+    helper_quantized_conv_bias_overflow(-1, 1, -1e-6, +1e-6)
+    helper_quantized_conv_bias_overflow(0, 0, 1, 1)
+    helper_quantized_conv_bias_overflow(-1e-6, +1e-6, -1, 1)
+    helper_quantized_conv_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
+    helper_quantized_conv_bias_overflow(0, 0, 0, 0)
+
+def test_quantized_fc_bias_overflow():
+    helper_quantized_fc_bias_overflow(-1, 1, 0, 0)
+    helper_quantized_fc_bias_overflow(-1, 1, -1e-6, +1e-6)
+    helper_quantized_fc_bias_overflow(0, 0, 1, 1)
+    helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1, 1)
+    helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
+    helper_quantized_fc_bias_overflow(0, 0, 0, 0)
+
 
 if __name__ == "__main__":
   import nose

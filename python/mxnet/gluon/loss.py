@@ -189,9 +189,15 @@ class L1Loss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.abs(label - pred)
+        loss = F.np.abs(label - pred) if is_np_array() else F.abs(label - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        if is_np_array():
+            if F is ndarray:
+                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
+            else:
+                return F.npx.batch_flatten(loss).mean(axis=1)
+        else:
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 class SigmoidBinaryCrossEntropyLoss(Loss):
@@ -418,7 +424,7 @@ class KLDivLoss(Loss):
 
         prob = \softmax({pred})
 
-        L = \sum_i {label}_i * \big[\log({label}_i) - log({pred}_i)\big]
+        L = \sum_i {label}_i * \big[\log({label}_i) - \log({prob}_i)\big]
 
 
     `label` and `pred` can have arbitrary shape as long as they have the same

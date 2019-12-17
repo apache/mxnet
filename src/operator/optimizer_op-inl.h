@@ -50,7 +50,7 @@ inline void LogLazyUpdate() {
   common::LogOnce("Optimizer with lazy_update = True detected. "
                   "Be aware that lazy update with row_sparse gradient is different from "
                   "standard update, and may lead to different empirical results. See "
-                  "https://mxnet.incubator.apache.org/api/python/optimization/optimization.html "
+                  "https://mxnet.apache.org/api/python/optimization/optimization.html "
                   "for more details.");
 }
 
@@ -1066,21 +1066,18 @@ struct NAGMomKernel {
     const DType param_lr, const DType param_wd,
     const DType param_rescale_grad, const OpReqType req) {
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
-                                            param_clip_gradient)
-                    + (param_wd*weight_data[i]);
-      KERNEL_ASSIGN(out_data[i], req, weight_data[i]
-                    - param_lr*(param_momentum*mom_data[i]
-                    + mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
-                                            param_clip_gradient)));
+      mom_data[i] = param_momentum*mom_data[i];
+      KERNEL_ASSIGN(out_data[i], req, weight_data[i]-mom_data[i]+(param_momentum+1)
+              *(mom_data[i]-(param_lr*(mshadow_op::clip::Map(param_rescale_grad
+                              *grad_data[i], param_clip_gradient)+(param_wd*weight_data[i])))));
+      mom_data[i] = mom_data[i] - (param_lr*((mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
+                          param_clip_gradient))+(param_wd*weight_data[i])));
     } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + param_rescale_grad*grad_data[i]
-                    + (param_wd*weight_data[i]);
-      KERNEL_ASSIGN(out_data[i], req, weight_data[i]
-                    - param_lr*(param_momentum*mom_data[i]
-                    + param_rescale_grad*grad_data[i]));
+      mom_data[i] = param_momentum*mom_data[i];
+      KERNEL_ASSIGN(out_data[i], req, weight_data[i]-mom_data[i]+(param_momentum+1)
+              *(mom_data[i]-(param_lr*(param_rescale_grad*grad_data[i]+param_wd*weight_data[i]))));
+      mom_data[i] = mom_data[i] - param_lr*((param_rescale_grad*grad_data[i])
+              +(param_wd*weight_data[i]));
     }
   }
 };
@@ -1119,22 +1116,21 @@ struct MP_NAGMomKernel {
     const OpReqType req) {
     float w = weight32[i];
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + mshadow_op::clip::Map(param_rescale_grad
-                    *static_cast<float>(grad_data[i]), param_clip_gradient)
-                    + (param_wd*w);
-      w = w - param_lr*(param_momentum*mom_data[i]
-                        + mshadow_op::clip::Map(param_rescale_grad
-                        *static_cast<float>(grad_data[i]),
-                        param_clip_gradient));
+      mom_data[i] = param_momentum*mom_data[i];
+      w = w-mom_data[i]+(param_momentum+1)*(mom_data[i]-param_lr
+              *(mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
+                          param_clip_gradient)+(param_wd*w)));
+      mom_data[i] = mom_data[i] - param_lr
+          *((mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
+                          param_clip_gradient))+(param_wd*w));
       weight32[i] = w;
       KERNEL_ASSIGN(out_data[i], req, w);
     } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                    + param_rescale_grad*static_cast<float>(grad_data[i])
-                    + (param_wd*w);
-      w = w - param_lr*(param_momentum*mom_data[i]
-       + param_rescale_grad*static_cast<float>(grad_data[i]));
+      mom_data[i] = param_momentum*mom_data[i];
+      w = w-mom_data[i]+(param_momentum+1)*(mom_data[i]-param_lr
+              *(param_rescale_grad*static_cast<float>(grad_data[i])+(param_wd*w)));
+      mom_data[i] = mom_data[i] - param_lr
+          *((param_rescale_grad*static_cast<float>(grad_data[i]))+(param_wd*w));
       weight32[i] = w;
       KERNEL_ASSIGN(out_data[i], req, w);
     }
@@ -1565,6 +1561,352 @@ inline void AdamUpdateEx(const nnvm::NodeAttrs& attrs,
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
+}
+
+struct LambUpdatePhaseOneParam : public dmlc::Parameter<LambUpdatePhaseOneParam> {
+    float beta1;
+    float beta2;
+    float epsilon;
+    int t;
+    bool bias_correction;
+    float wd;
+    float rescale_grad;
+    float clip_gradient;
+    DMLC_DECLARE_PARAMETER(LambUpdatePhaseOneParam) {
+      DMLC_DECLARE_FIELD(beta1)
+      .set_default(0.9f)
+      .describe("The decay rate for the 1st moment estimates.");
+      DMLC_DECLARE_FIELD(beta2)
+      .set_default(0.999f)
+      .describe("The decay rate for the 2nd moment estimates.");
+      DMLC_DECLARE_FIELD(epsilon)
+      .set_default(1e-6f)
+      .describe("A small constant for numerical stability.");
+      DMLC_DECLARE_FIELD(t)
+      .describe("Index update count.");
+      DMLC_DECLARE_FIELD(bias_correction)
+      .set_default(true)
+      .describe("Whether to use bias correction.");
+      DMLC_DECLARE_FIELD(wd)
+      .describe("Weight decay augments the objective function with a "
+                "regularization term that penalizes large weights. "
+                "The penalty scales with the square of the magnitude of each weight.");
+      DMLC_DECLARE_FIELD(rescale_grad)
+      .set_default(1.0f)
+      .describe("Rescale gradient to grad = rescale_grad*grad.");
+      DMLC_DECLARE_FIELD(clip_gradient)
+      .set_default(-1.0f)
+      .describe("Clip gradient to the range of [-clip_gradient, clip_gradient] "
+                "If clip_gradient <= 0, gradient clipping is turned off. "
+                "grad = max(min(grad, clip_gradient), -clip_gradient).");
+    }
+};
+
+struct LambUpdatePhaseTwoParam : public dmlc::Parameter<LambUpdatePhaseTwoParam> {
+    float lr;
+    float lower_bound;
+    float upper_bound;
+    DMLC_DECLARE_PARAMETER(LambUpdatePhaseTwoParam) {
+      DMLC_DECLARE_FIELD(lr)
+      .describe("Learning rate");
+      DMLC_DECLARE_FIELD(lower_bound)
+      .set_default(-1.0f)
+      .describe("Lower limit of norm of weight. If lower_bound <= 0, Lower limit is not set");
+      DMLC_DECLARE_FIELD(upper_bound)
+      .set_default(-1.0f)
+      .describe("Upper limit of norm of weight. If upper_bound <= 0, Upper limit is not set");
+    }
+};
+
+struct LambUpdatePhaseOneKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+    DType* mean_data, DType* var_data, const DType* weight_data, const DType* grad_data,
+    const DType clip_gradient, const DType rescale_grad,
+    const DType beta1, const DType beta1_t, const DType beta2, const DType beta2_t,
+    const DType wd, const DType epsilon, const int t,
+    bool bias_correction, const OpReqType req) {
+    using namespace mshadow_op;
+
+    DType grad_rescaled = grad_data[i] * rescale_grad;
+    if (clip_gradient >= 0.f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+
+    mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
+    var_data[i] = beta2 * var_data[i] + (1.f - beta2) * grad_rescaled * grad_rescaled;
+
+    DType g = mean_data[i] / (square_root::Map(var_data[i]) + epsilon) + wd * weight_data[i];
+
+    if (bias_correction) {
+      DType mean_hat = mean_data[i] / (1. - beta1_t);
+      DType var_hat = var_data[i] / (1 - beta2_t);
+      g = mean_hat / (square_root::Map(var_hat) + epsilon) + wd * weight_data[i];
+    }
+    KERNEL_ASSIGN(out_data[i], req, g);
+  }
+};
+
+template<typename xpu>
+inline void LambUpdatePhaseOne(const nnvm::NodeAttrs& attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  const LambUpdatePhaseOneParam& param = nnvm::get<LambUpdatePhaseOneParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    DType beta1_t = std::pow(param.beta1, param.t);
+    DType beta2_t = std::pow(param.beta2, param.t);
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> mean = inputs[2].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> var = inputs[3].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+
+  Kernel<LambUpdatePhaseOneKernel, xpu>::Launch(s, weight.shape_.Size(),
+    out.dptr_, mean.dptr_, var.dptr_, weight.dptr_, grad.dptr_,
+    static_cast<DType>(param.clip_gradient), static_cast<DType>(param.rescale_grad),
+    static_cast<DType>(param.beta1), beta1_t, static_cast<DType>(param.beta2), beta2_t,
+    static_cast<DType>(param.wd), static_cast<DType>(param.epsilon),
+    static_cast<int>(param.t), static_cast<bool>(param.bias_correction), req[0]);
+  });
+}
+
+inline bool LambUpdatePhaseTwoShape(const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector* in_attrs,
+                            mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 4U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  mxnet::TShape expected_out(in_attrs->at(0).ndim(), -1);
+
+  mxnet::TShape& weight_shape = in_attrs->at(0);
+  mxnet::TShape& g_shape = in_attrs->at(1);
+  CHECK_EQ(weight_shape.ndim(), g_shape.ndim())
+           << "total no. of dimensions for weights and g must match";
+  for (int i=0; i < weight_shape.ndim(); ++i) {
+    CHECK_EQ(weight_shape[i], g_shape[i])
+           << "weight and g dimension size mismatch at " << i << "-th index";
+  }
+  mxnet::TShape& r1_shape = in_attrs->at(2);
+  mxnet::TShape& r2_shape = in_attrs->at(3);
+  CHECK_EQ(r1_shape[0], 1U) << "r1 shape incorrect";
+  CHECK_EQ(r2_shape[0], 1U) << "r2 shape incorrect";
+  for (int i=0; i < expected_out.ndim(); ++i) {
+    expected_out[i] = weight_shape[i];
+  }
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, expected_out);
+  return shape_is_known(expected_out);
+}
+
+struct LambUpdatePhaseTwoKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+    const DType* weight_data, const DType* g,
+    const DType* r1, const DType* r2,
+    DType lr, const DType lower_bound,
+    const DType upper_bound, const OpReqType req) {
+    using namespace mshadow_op;
+
+    DType new_r1 = r1[0];
+    if (lower_bound >= 0) {
+      new_r1 = maximum::Map(new_r1, lower_bound);
+    }
+    if (upper_bound >= 0) {
+      new_r1 = minimum::Map(new_r1, upper_bound);
+    }
+    if (new_r1 == 0.0f || r2[0] == 0.0f) {
+      lr = lr * 1.0f;
+    } else {
+      lr = lr * new_r1 / r2[0];
+    }
+
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] - lr * g[i]);
+  }
+};
+
+template<typename xpu>
+inline void LambUpdatePhaseTwo(const nnvm::NodeAttrs& attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  const LambUpdatePhaseTwoParam& param = nnvm::get<LambUpdatePhaseTwoParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> g = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> r1 = inputs[2].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> r2 = inputs[3].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+
+  Kernel<LambUpdatePhaseTwoKernel, xpu>::Launch(s, weight.shape_.Size(),
+    out.dptr_, weight.dptr_, g.dptr_, r1.dptr_, r2.dptr_,
+    static_cast<DType>(param.lr), static_cast<DType>(param.lower_bound),
+    static_cast<DType>(param.upper_bound), req[0]);
+  });
+}
+
+template<int n_in, int n_out, int total_in>
+inline bool MPLambPhaseOneType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int> *in_attrs,
+                             std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), static_cast<size_t>(total_in)) << " in operator " << attrs.name;
+  CHECK_EQ(out_attrs->size(), static_cast<size_t>(n_out)) << " in operator " << attrs.name;
+  for (int i = 0; i < n_in; ++i) {
+    TYPE_ASSIGN_CHECK(*in_attrs, i, mshadow::kFloat16);
+  }
+  for (int i = n_in; i < total_in; ++i) {
+    TYPE_ASSIGN_CHECK(*in_attrs, i, mshadow::kFloat32);
+  }
+  for (int i = 0; i < n_out; ++i) {
+    TYPE_ASSIGN_CHECK(*out_attrs, i, mshadow::kFloat32);
+  }
+  return true;
+}
+
+struct MPLambUpdatePhaseOneKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, float* out_data,
+    float* mean_data, float* var_data, const DType* weight_data,
+    const DType* grad_data, const float* weight32_data,
+    const float clip_gradient, const float rescale_grad,
+    const float beta1_t, const float beta1,
+    const float beta2_t, const float beta2,
+    const float wd, const float epsilon, const int t,
+    bool bias_correction, const OpReqType req) {
+    using namespace mshadow_op;
+
+    float grad_rescaled = grad_data[i] * rescale_grad;
+    if (clip_gradient >= 0.f) {
+      grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
+    }
+
+    mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
+    var_data[i] = beta2 * var_data[i] + (1.f - beta2) * grad_rescaled * grad_rescaled;
+
+    float g = mean_data[i] / (square_root::Map(var_data[i]) + epsilon) + wd * weight32_data[i];
+
+    if (bias_correction) {
+      float mean_hat = mean_data[i] / (1. - beta1_t);
+      float var_hat = var_data[i] / (1 - beta2_t);
+      g = mean_hat / (square_root::Map(var_hat) + epsilon) + wd * weight32_data[i];
+    }
+    KERNEL_ASSIGN(out_data[i], req, g);
+  }
+};
+
+template<typename xpu>
+inline void MPLambUpdatePhaseOne(const nnvm::NodeAttrs& attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  const LambUpdatePhaseOneParam& param = nnvm::get<LambUpdatePhaseOneParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    float beta1_t = std::pow(param.beta1, param.t);
+    float beta2_t = std::pow(param.beta2, param.t);
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, DType> grad = inputs[1].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, float> mean = inputs[2].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> var = inputs[3].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> weight32 = inputs[4].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> out = outputs[0].FlatTo2D<xpu, float>(s);
+
+  Kernel<MPLambUpdatePhaseOneKernel, xpu>::Launch(s, weight.shape_.Size(),
+    out.dptr_, mean.dptr_, var.dptr_, weight.dptr_, grad.dptr_, weight32.dptr_,
+    param.clip_gradient, param.rescale_grad, beta1_t, param.beta1, beta2_t, param.beta2,
+    param.wd, param.epsilon, param.t, param.bias_correction, req[0]);
+  });
+}
+
+inline bool MPLambUpdatePhaseTwoShape(const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector* in_attrs,
+                            mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 5U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  mxnet::TShape expected_out(in_attrs->at(0).ndim(), -1);
+
+  mxnet::TShape& weight_shape = in_attrs->at(0);
+  mxnet::TShape& g_shape = in_attrs->at(1);
+  mxnet::TShape& weight32_shape = in_attrs->at(4);
+  CHECK_EQ(weight_shape.ndim(), g_shape.ndim())
+           << "total no. of dimensions for weights and g must match";
+  CHECK_EQ(weight_shape.ndim(), weight32_shape.ndim())
+           << "total no. of dimensions for weights and g must match";
+  for (int i=0; i < weight_shape.ndim(); ++i) {
+    CHECK_EQ(weight_shape[i], g_shape[i])
+           << "weight and g dimension size mismatch at " << i << "-th index";
+    CHECK_EQ(weight_shape[i], weight32_shape[i])
+           << "weight and g dimension size mismatch at " << i << "-th index";
+  }
+  mxnet::TShape& r1_shape = in_attrs->at(2);
+  mxnet::TShape& r2_shape = in_attrs->at(3);
+  CHECK_EQ(r1_shape[0], 1U) << "r1 shape incorrect";
+  CHECK_EQ(r2_shape[0], 1U) << "r2 shape incorrect";
+  for (int i=0; i < expected_out.ndim(); ++i) {
+    expected_out[i] = weight_shape[i];
+  }
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, expected_out);
+  return shape_is_known(expected_out);
+}
+
+struct MPLambUpdatePhaseTwoKernel {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+    const DType* weight_data, const float* g,
+    const float* r1, const float* r2, const float* weight32_data,
+    float lr, const float lower_bound,
+    const float upper_bound, const OpReqType req) {
+    using namespace mshadow_op;
+
+    float new_r1 = r1[0];
+    if (lower_bound >= 0) {
+      new_r1 = maximum::Map(new_r1, lower_bound);
+    }
+    if (upper_bound >= 0) {
+      new_r1 = minimum::Map(new_r1, upper_bound);
+    }
+    if (new_r1 == 0.0f || r2[0] == 0.0f) {
+      lr = lr * 1.0f;
+    } else {
+      lr = lr * new_r1 / r2[0];
+    }
+
+    KERNEL_ASSIGN(out_data[i], req, weight32_data[i] - lr * g[i]);
+  }
+};
+
+template<typename xpu>
+inline void MPLambUpdatePhaseTwo(const nnvm::NodeAttrs& attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
+  using namespace mxnet_op;
+  const LambUpdatePhaseTwoParam& param = nnvm::get<LambUpdatePhaseTwoParam>(attrs.parsed);
+  Stream<xpu>* s = ctx.get_stream<xpu>();
+  MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, DType> weight = inputs[0].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 2, float> g = inputs[1].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> r1 = inputs[2].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> r2 = inputs[3].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, float> weight32 = inputs[4].FlatTo2D<xpu, float>(s);
+    Tensor<xpu, 2, DType> out = outputs[0].FlatTo2D<xpu, DType>(s);
+
+  Kernel<MPLambUpdatePhaseTwoKernel, xpu>::Launch(s, weight.shape_.Size(),
+    out.dptr_, weight.dptr_, g.dptr_, r1.dptr_, r2.dptr_, weight32.dptr_,
+    param.lr, param.lower_bound,
+    param.upper_bound, req[0]);
+  });
 }
 
 // This RMSProp code follows the version in
@@ -2308,6 +2650,5 @@ inline void AdagradUpdateEx(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-
 
 #endif  // MXNET_OPERATOR_OPTIMIZER_OP_INL_H_

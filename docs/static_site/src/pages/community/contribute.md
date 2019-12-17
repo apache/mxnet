@@ -1,3 +1,11 @@
+---
+layout: page
+title: Contribute
+subtitle: Contribute to the Apache MXNet project
+action: Get Started
+action_url: /get_started
+permalink: /community/contribute
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: Contribute
-subtitle: Contribute to the Apache MXNet project
-action: Get Started
-action_url: /get_started
-permalink: /community/contribute
----
 
 # Contributing to MXNet
 
@@ -169,7 +169,7 @@ Our community is constantly looking for feedback to improve Apache MXNet. If you
 - It helps to estimate the effort and to design a solution that addresses your needs. <br/>
 - It allows for constructive discussions that might arise around this issue.
 
-Detailed information is also required, if you plan to contribute the improvement or feature you proposed yourself. Please read the [contributions](http://mxnet.io/community/contribute.html) guide in this case as well.
+Detailed information is also required, if you plan to contribute the improvement or feature you proposed yourself. Please read the [contributions](https://mxnet.io/community/contribute.html) guide in this case as well.
 
 
 ## Roadmap

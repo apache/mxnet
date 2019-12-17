@@ -50,7 +50,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
     .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_eltwise).set_default(false)
-    .describe("Whether there's a post elemwise after FullyConnected operator");
+    .describe("Whether there's a post with_eltwise after FullyConnected operator");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -85,10 +85,9 @@ class MKLDNNFullyConnectedForward {
                               const NDArray &data, const NDArray &weight,
                               const NDArray *bias,
                               const mkldnn::memory::desc &out_md)
-      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {}
-
-  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
-                 const mkldnn::memory *bias, const mkldnn::memory &output);
+      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {
+          fwd_ = std::make_shared<mkldnn::inner_product_forward>(fwd_pd);
+      }
 
   const mkldnn::inner_product_forward &GetFwd() const {
     return *fwd_;
@@ -96,10 +95,6 @@ class MKLDNNFullyConnectedForward {
 
  private:
   std::shared_ptr<mkldnn::inner_product_forward> fwd_;
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> weight_;
-  std::shared_ptr<mkldnn::memory> bias_;
-  std::shared_ptr<mkldnn::memory> out_;
 };
 
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;

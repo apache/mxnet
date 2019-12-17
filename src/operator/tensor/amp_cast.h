@@ -48,10 +48,13 @@ struct AMPCastParam : public dmlc::Parameter<AMPCastParam> {
 
 struct AMPMultiCastParam : public dmlc::Parameter<AMPMultiCastParam> {
   int num_outputs;
+  bool cast_narrow;
 
   DMLC_DECLARE_PARAMETER(AMPMultiCastParam) {
     DMLC_DECLARE_FIELD(num_outputs)
     .describe("Number of input/output pairs to be casted to the widest type.");
+    DMLC_DECLARE_FIELD(cast_narrow).set_default(false)
+    .describe("Whether to cast to the narrowest type");
   }
 };
 
@@ -80,10 +83,12 @@ inline bool AMPMultiCastType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), param.num_outputs);
   CHECK_EQ(out_attrs->size(), param.num_outputs);
   bool ret = true;
-  int widest_type = kFloat16;
+  int widest_type = param.cast_narrow ? kFloat32 : kFloat16;
   for (int i = 0; i < param.num_outputs; ++i) {
-    if ((*in_attrs)[i] == kFloat32 || (*out_attrs)[i] == kFloat32) {
+    if (!param.cast_narrow && ((*in_attrs)[i] == kFloat32 || (*out_attrs)[i] == kFloat32)) {
       widest_type = kFloat32;
+    } else if (param.cast_narrow &&((*in_attrs)[i] == kFloat16 || (*out_attrs)[i] == kFloat16)) {
+      widest_type = kFloat16;
     }
   }
   for (int i = 0; i < param.num_outputs; ++i) {

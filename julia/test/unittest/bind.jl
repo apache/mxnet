@@ -84,11 +84,26 @@ function test_arithmetic()
   end
 end
 
+function test_forward()
+  # forward with data keyword argument
+  x = @var x
+  y = x .+ 42
+
+  A = 1:5
+  B = A .+ 42
+
+  e = bind(y, args = Dict(:x => NDArray(24:28)))
+  z = forward(e, x = NDArray(A))[1]
+
+  @test copy(z) == collect(B)
+end
+
 ################################################################################
 # Run tests
 ################################################################################
 @testset "Bind Test" begin
   test_arithmetic()
+  test_forward()
 end
 
 end

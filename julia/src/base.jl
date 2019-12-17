@@ -15,13 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"Exception thrown when an error occurred calling MXNet API."
-struct MXError <: Exception
-  msg :: AbstractString
-end
-
-Base.show(io::IO, e::MXError) = print(io, e.msg)
-
 ################################################################################
 # Common types used in MXNet API
 ################################################################################

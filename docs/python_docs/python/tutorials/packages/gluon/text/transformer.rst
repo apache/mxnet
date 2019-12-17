@@ -589,7 +589,7 @@ Conclusion
    the encoder-decoder structure.
 -  Low-level APIs in NLP Toolkit enables easy customization.
 
-Documentation can be found at http://gluon-nlp.mxnet.io/index.html
+Documentation can be found at https://gluon-nlp.mxnet.io/index.html
 
 Code is here https://github.com/dmlc/gluon-nlp
 

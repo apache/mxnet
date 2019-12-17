@@ -20,6 +20,8 @@
 """ctypes library of mxnet and helper functions."""
 from __future__ import absolute_import
 
+import io
+import re
 import atexit
 import ctypes
 import os
@@ -74,6 +76,28 @@ def data_dir():
     :return: data directory in the filesystem for storage, for example when downloading models
     """
     return os.getenv('MXNET_HOME', data_dir_default())
+
+class _Py2CompatibleUnicodeFileWriter(object):
+    """
+    Wraps a file handle decorating the write command to unicode the content before writing.
+    This makes writing files opened with encoding='utf-8' compatible with Python 2
+    """
+
+    def __init__(self, file_handle):
+        self._file_handle = file_handle
+        if sys.version_info[0] > 2:
+            self.unicode = str
+        else:
+            from functools import partial
+            # pylint: disable=undefined-variable
+            self.unicode = partial(unicode, encoding="utf-8")
+            # pylint: enable=undefined-variable
+
+    def write(self, value):
+        self._file_handle.write(self.unicode(value))
+
+    def __getattr__(self, name):
+        return getattr(self._file_handle, name)
 
 
 class _NullType(object):
@@ -671,11 +695,12 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
         module_path = module_name.split('.')
         module_path[-1] = 'gen_' + module_path[-1]
         file_name = os.path.join(path, '..', *module_path) + '.py'
-        module_file = open(file_name, 'w')
+        module_file = _Py2CompatibleUnicodeFileWriter(io.open(file_name, 'w', encoding="utf-8"))
         dependencies = {'symbol': ['from ._internal import SymbolBase',
                                    'from ..base import _Null'],
                         'ndarray': ['from ._internal import NDArrayBase',
                                     'from ..base import _Null']}
+        module_file.write('# coding: utf-8')
         module_file.write('# File content is auto-generated. Do not modify.' + os.linesep)
         module_file.write('# pylint: skip-file' + os.linesep)
         module_file.write(os.linesep.join(dependencies[module_name.split('.')[1]]))
@@ -741,24 +766,36 @@ ctypes.pythonapi.PyCapsule_New.restype = ctypes.py_object
 ctypes.pythonapi.PyCapsule_GetPointer.restype = ctypes.c_void_p
 
 
-from .runtime import Features
-if Features().is_enabled("TVM_OP"):
-    _LIB_TVM_OP = libinfo.find_lib_path("libtvmop")
-    check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
-
-
 _NP_OP_PREFIX = '_np_'
 _NP_OP_SUBMODULE_LIST = ['_random_', '_linalg_']
 
 _NP_EXT_OP_PREFIX = '_npx_'
-_NP_EXT_OP_SUBMODULE_LIST = ['_image_']
+_NP_EXT_OP_SUBMODULE_LIST = ['_image_', '_random_']
 
 _NP_INTERNAL_OP_PREFIX = '_npi_'
+
+_NP_OUTPUT_IS_LIST_OPERATORS = {'_npi_split', '_npi_hsplit'}
 
 
 def _is_np_op(op_name):
     return op_name.startswith(_NP_OP_PREFIX) or op_name.startswith(_NP_EXT_OP_PREFIX)\
            or op_name.startswith(_NP_INTERNAL_OP_PREFIX)
+
+
+def _output_is_list(op_name):
+    """ Whether the output of the operator is a list.
+
+    Parameters
+    ----------
+    op_name : Name of the operator
+
+    Returns
+    -------
+
+    """
+    if _is_np_op(op_name):
+        return op_name in _NP_OUTPUT_IS_LIST_OPERATORS
+    return False
 
 
 def _get_op_submodule_name(op_name, op_name_prefix, submodule_name_list):
@@ -852,3 +889,5 @@ def _init_np_op_module(root_module_name, np_module_name, mx_module_name, make_op
 
         if hasattr(_np_op_doc, name):
             function.__doc__ = getattr(_np_op_doc, name).__doc__
+        else:
+            function.__doc__ = re.sub('NDArray', 'ndarray', function.__doc__)

@@ -159,6 +159,42 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "ndim=" << NDim << "too large "; \
   }
 
+#define MXNET_NDIM_SWITCH_EX(NDim, ndim, ...)      \
+  if (NDim == 0) {                                 \
+  } else if (NDim == 1) {                          \
+    const int ndim = 1;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 2) {                          \
+    const int ndim = 2;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 3) {                          \
+    const int ndim = 3;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 4) {                          \
+    const int ndim = 4;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 5) {                          \
+    const int ndim = 5;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 6) {                          \
+    const int ndim = 6;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 7) {                          \
+    const int ndim = 7;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 8) {                          \
+    const int ndim = 8;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 9) {                          \
+    const int ndim = 9;                            \
+    {__VA_ARGS__}                                  \
+  } else if (NDim == 10) {                         \
+    const int ndim = 10;                           \
+    {__VA_ARGS__}                                  \
+  }  else {                                        \
+    LOG(FATAL) << "ndim=" << NDim << "too large "; \
+  }
+
 #define MXNET_NO_INT8_TYPE_SWITCH(type, DType, ...)        \
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
@@ -249,6 +285,16 @@ inline int get_num_threads<cpu>(const int N) {
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
 
+template <typename T>
+struct AccType {
+  using type = T;
+};
+
+template <>
+struct AccType<mshadow::half::half_t> {
+  using type = float;
+};
+
 #define MXNET_REAL_ACC_TYPE_SWITCH(type, DType, AType, ...)\
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \
@@ -302,6 +348,14 @@ inline int get_num_threads<cpu>(const int N) {
       typedef int64_t AType;                               \
       LOG(FATAL) << "This operation only support "         \
                     "floating point types, not int64";     \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      typedef bool DType;                                  \
+      typedef int64_t AType;                               \
+      LOG(FATAL) << "This operation only support "         \
+                    "floating point types, not bool";      \
     }                                                      \
     break;                                                 \
   default:                                                 \
@@ -359,6 +413,13 @@ inline int get_num_threads<cpu>(const int N) {
       {__VA_ARGS__}                                        \
     }                                                      \
     break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      typedef bool DType;                                  \
+      typedef int64_t AType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
   default:                                                 \
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
@@ -408,6 +469,69 @@ inline int get_num_threads<cpu>(const int N) {
     {                                                      \
       typedef int64_t DType;                               \
       {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      typedef bool DType;                                  \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
+#define MXNET_INT32_INT64_TYPE_SWITCH(type, DType, ...)\
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float32";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float64";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not float16";          \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not uint8";            \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not int8";             \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kBool:                                     \
+    {                                                      \
+      LOG(FATAL) << "This operation only support "         \
+                    "integer types, not bool";             \
     }                                                      \
     break;                                                 \
   default:                                                 \
@@ -481,6 +605,17 @@ inline int get_num_threads<cpu>(const int N) {
   .add_enum("int64", mshadow::kInt64)
 
 
+#define MXNET_ADD_ALL_TYPES_WITH_BOOL \
+  .add_enum("float32", mshadow::kFloat32) \
+  .add_enum("float64", mshadow::kFloat64) \
+  .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("uint8", mshadow::kUint8) \
+  .add_enum("int8", mshadow::kInt8) \
+  .add_enum("int32", mshadow::kInt32) \
+  .add_enum("int64", mshadow::kInt64) \
+  .add_enum("bool", mshadow::kBool)
+
+
 /* \brief Compute flattened index given coordinates and shape. */
 template<int ndim>
 MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape) {
@@ -547,6 +682,18 @@ MSHADOW_XINLINE Shape<ndim> calc_stride(const Shape<ndim>& shape) {
   return stride;
 }
 
+/* Increment coordinates */
+template<int ndim>
+MSHADOW_XINLINE bool inc(Shape<ndim>* coord, const Shape<ndim>& shape) {
+  ++(*coord)[ndim-1];
+  #pragma unroll
+  for (int i = ndim - 1; i > 0 && (*coord)[i] >= shape[i]; --i) {
+    (*coord)[i] -= shape[i];
+    ++(*coord)[i-1];
+  }
+  return (*coord)[0] < shape[0];
+}
+
 /* Increment coordinates and modify index */
 template<int ndim>
 MSHADOW_XINLINE void inc(Shape<ndim>* coord, const Shape<ndim>& shape,
@@ -587,11 +734,11 @@ template <typename xpu>
 MSHADOW_CINLINE void copy(mshadow::Stream<xpu> *s, const TBlob& to, const TBlob& from) {
   CHECK_EQ(from.Size(), to.Size());
   CHECK_EQ(from.dev_mask(), to.dev_mask());
-  MSHADOW_TYPE_SWITCH(to.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(to.type_flag_, DType, {
     if (to.type_flag_ == from.type_flag_) {
       mshadow::Copy(to.FlatTo1D<xpu, DType>(s), from.FlatTo1D<xpu, DType>(s), s);
     } else {
-      MSHADOW_TYPE_SWITCH(from.type_flag_, SrcDType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(from.type_flag_, SrcDType, {
         to.FlatTo1D<xpu, DType>(s) = mshadow::expr::tcast<DType>(from.FlatTo1D<xpu, SrcDType>(s));
       })
     }
@@ -676,6 +823,97 @@ struct op_with_req {
                                   const DType *input_2,
                                   const DType *input_3) {
     KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], input_3[i]));
+  }
+
+  /*! \brief input is a tensor and the output is a boolean tensor */
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
+  }
+
+  /*! \brief inputs are two tensors with a boolean output tensor */
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *lhs, const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief input is tensor and two scalar value with a boolean output tensor */
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+
+#ifndef _WIN32
+  /*! \brief inputs are two tensors with a half_t output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  mshadow::half::half_t *out,
+                                  const DType *lhs,
+                                  const mshadow::half::half_t *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief inputs are two tensors with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief inputs are two tensors with a double output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief inputs are two tensors with a half_t output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  mshadow::half::half_t *out,
+                                  const DType *lhs,
+                                  const mshadow::half::half_t value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
+  }
+
+  /*! \brief inputs are two tensors with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
+  }
+
+  /*! \brief inputs are two tensors with a double output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
+  }
+#endif
+
+  /*! \brief inputs are two tensors with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const DType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
+  /*! \brief input is a tensor and a scalar value with a float output tensor */
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *in, const DType value) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 };
 

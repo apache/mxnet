@@ -24,10 +24,10 @@ import threading
 import copy
 import warnings
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer
+from .. import symbol, ndarray, initializer, np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -37,6 +37,7 @@ from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
 from .. import numpy as _mx_np
 from .. util import is_np_array, np_shape, np_array
+
 
 
 class _BlockScope(object):
@@ -92,17 +93,85 @@ class _BlockScope(object):
         _BlockScope._current.value = self._old_scope
 
 
+def _gather_type_ctx_info(args):
+    """Analyze the elements inside the nested args object and find:
+        - If there exists ndarray
+        - If there exists symbol
+        - All contexts appearing in args
+
+    Parameters
+    ----------
+    args : list or NDArray or Symbol
+        Could be a nested architecture.
+
+    Returns
+    -------
+    has_symbol : bool
+        Whether the elements in args contains symbols
+    has_ndarray : bool
+        Whether the elements in args contains ndarrays
+    ctx_set : set of mxnet.context.Context
+        Contains all possible contexts of the inner ndarrays in args. Can be empty if there is no
+        ndarray inside args.
+    first_ctx : mxnet.context.Context or None
+        Context of the first appeared NDArray (for backward-compatibility)
+    """
+    if isinstance(args, NDArray):
+        return False, True, {args.ctx}, args.ctx
+    elif isinstance(args, Symbol):
+        return True, False, set(), None
+    elif isinstance(args, (list, tuple)):
+        has_symbol = False
+        has_ndarray = False
+        ctx_set = set()
+        first_ctx = None
+        for ele in args:
+            ele_has_sym, ele_has_nd, ele_ctx_set, ele_first_ctx =\
+                _gather_type_ctx_info(ele)
+            has_symbol = has_symbol or ele_has_sym
+            has_ndarray = has_ndarray or ele_has_nd
+            if first_ctx is None and ele_first_ctx is not None:
+                first_ctx = ele_first_ctx
+            ctx_set = ctx_set | ele_ctx_set
+            if has_symbol and has_ndarray:
+                break
+        return has_symbol, has_ndarray, ctx_set, first_ctx
+    else:
+        return False, False, set(), None
+
+
 def _flatten(args, inout_str):
+    """Parse the arguments into a flattened list + an additional format array.
+    The format array stores the structure of the original arguments to help reconstruct the inputs.
+
+    Parameters
+    ----------
+    args : NDArray, Symbol, or (nested) list of Symbol or NDArray
+        We allow None inside the args.
+    inout_str : str
+        The name of the HybridBlock
+
+    Returns
+    -------
+    flat : list of Symbol or NDArray
+        The flatten version of the input args.
+    fmts : (nested) list of ints
+        Stores the format information of the original structured args.
+    """
     if isinstance(args, NDArray):
         return [args], int(0)
     if isinstance(args, Symbol):
         length = len(args.list_outputs())
         length = length if length > 1 else 0
         return [args], int(length)
+    if args is None:
+        return [None], int(-1)
 
-    assert isinstance(args, (list, tuple)), \
-        "HybridBlock %s must be (nested) list of Symbol or NDArray, " \
-        "but got %s of type %s"%(inout_str, str(args), str(type(args)))
+    if not isinstance(args, (list, tuple)):
+        raise ValueError("When hybridized, the input of HybridBlock {}"
+                         " must be (nested) list of Symbol"
+                         " or NDArray, "
+                         "but got {} of type {}".format(inout_str, str(args), str(type(args))))
     flat = []
     fmts = []
     for i in args:
@@ -113,19 +182,47 @@ def _flatten(args, inout_str):
 
 
 def _regroup(args, fmt):
-    if isinstance(fmt, int):
-        if fmt == 0:
-            return args[0], args[1:]
-        return args[:fmt], args[fmt:]
+    """Reconstruct the structured arguments based on the flattened version.
 
-    assert isinstance(args, (list, tuple)), \
-        "HybridBlock output must be (nested) list of Symbol or NDArray, " \
-        "but got %s of type %s"%(str(args), str(type(args)))
-    ret = []
-    for i in fmt:
-        res, args = _regroup(args, i)
-        ret.append(res)
-    return ret, args
+    Parameters
+    ----------
+    args : NDArray, Symbol, or (nested) list of Symbol or NDArray
+        We allow None inside the args.
+    fmt : (nested) list of ints
+        Stores the format information of the original structured args.
+
+    Returns
+    -------
+    ret : NDArray, Symbol, or (nested) list of Symbol or NDArray
+
+    """
+    def _merger(args, fmt):
+        """Recursive call to merge the arguments"""
+        if isinstance(fmt, int):
+            if fmt < -1:
+                raise ValueError("Unsupported encoded format {}.".format(fmt))
+            if fmt == 0:
+                return args[0], args[1:]
+            if fmt == -1:
+                if args[0] is not None:
+                    raise ValueError('We do not support passing types that are not None'
+                                     ' when the initial HybridBlock has received NoneType and'
+                                     ' has been hybridized.'
+                                     ' Received arg = {}, fmt = {}.'.format(args[0], fmt))
+                return None, args[1:]
+            else:
+                return args[:fmt], args[fmt:]
+
+        if not isinstance(args, (list, tuple)):
+            raise ValueError("When hybridized, the output of HybridBlock must be (nested)"
+                             " list of Symbol or NDArray, "
+                             "but got {} of type {}".format(args, type(args)))
+        ret = []
+        for i in fmt:
+            res, args = _merger(args, i)
+            ret.append(res)
+        return ret, args
+    return _merger(args, fmt)[0]
 
 
 class Block(object):
@@ -165,7 +262,7 @@ class Block(object):
         Prefix acts like a name space. All children blocks created in parent block's
         :py:meth:`name_scope` will have parent block's prefix in their name.
         Please refer to
-        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
+        `naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
         for more info on prefix and naming.
     params : ParameterDict or None
         :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
@@ -261,7 +358,7 @@ class Block(object):
                 self.dense = nn.Dense(20)
 
         Please refer to
-        `naming tutorial <http://mxnet.incubator.apache.org/tutorials/gluon/naming.html>`_
+        `the naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
         for more info on prefix and naming.
         """
         return self._scope
@@ -316,7 +413,7 @@ class Block(object):
             ret.update(child._collect_params_with_prefix(prefix + name))
         return ret
 
-    def save_parameters(self, filename):
+    def save_parameters(self, filename, deduplicate=False):
         """Save parameters to file.
 
         Saved parameters can only be loaded with `load_parameters`. Note that this
@@ -327,14 +424,28 @@ class Block(object):
         ----------
         filename : str
             Path to file.
+        deduplicate : bool, default False
+            If True, save shared parameters only once. Otherwise, if a Block
+            contains multiple sub-blocks that share parameters, each of the
+            shared parameters will be separately saved for every sub-block.
 
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         params = self._collect_params_with_prefix()
-        arg_dict = {key : val._reduce() for key, val in params.items()}
+
+        if deduplicate:
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # Shared parameters are registered under multiple prefixes returned by
+            # _collect_params_with_prefix. We select a single one and only store
+            # it. In load_parameters it is sufficient for a shared parameter to
+            # only set it for a single prefix.
+            reverse_params = {v: k for k, v in params.items()}
+            params = {v: k for k, v in reverse_params.items()}
+
+        arg_dict = {key: val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
 
@@ -350,7 +461,7 @@ class Block(object):
         warnings.warn("save_params is deprecated. Please use save_parameters. "
                       "Note that if you want load from SymbolBlock later, please "
                       "use export instead. For details, see "
-                      "https://mxnet.incubator.apache.org/tutorials/gluon/save_lo"
+                      "https://mxnet.apache.org/tutorials/gluon/save_lo"
                       "ad_params.html")
         try:
             self.collect_params().save(filename, strip_prefix=self.prefix)
@@ -383,7 +494,7 @@ class Block(object):
         References
         ----------
         `Saving and Loading Gluon Models \
-        <https://mxnet.incubator.apache.org/tutorials/gluon/save_load_params.html>`_
+        <https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/save_load_params.html>`_
         """
         if is_np_array():
             # failure may happen when loading parameters saved as NDArrays within
@@ -413,15 +524,24 @@ class Block(object):
 
         if not any('.' in i for i in loaded.keys()):
             # legacy loading
-            del loaded
+            loaded = None  # This should be changed to `del loaded` when dropping Python 2
             self.collect_params().load(
                 filename, ctx, allow_missing, ignore_extra, self.prefix,
                 cast_dtype=cast_dtype, dtype_source=dtype_source)
             return
 
         if not allow_missing:
-            for name in params.keys():
-                assert name in loaded, \
+            # Shared parameters are stored only a single time as of MXNet 1.6.
+            # We thus retrieve all prefixes (through _collect_params_with_prefix)
+            # that a shared parameter is used with. Check that there are no
+            # missing parameters that were not yet already loaded from the
+            # shared version.
+            params_inv = defaultdict(list)
+            for k, v in params.items():
+                params_inv[v].append(k)
+
+            for name, param in params.items():
+                assert any(p in loaded for p in params_inv[param]), \
                     "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
                     "Set allow_missing=True to ignore missing parameters."%(
                         name, filename, _brief_print_list(loaded.keys()))
@@ -590,6 +710,19 @@ class Block(object):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+    def register_op_hook(self, callback, monitor_all=False):
+        """Install callback monitor.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string and a NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input and output, otherwise monitor output only.
+        """
+        for cld in self._children.values():
+            cld.register_op_hook(callback, monitor_all)
+
     def summary(self, *inputs):
         """Print the summary of the model's output and parameters.
 
@@ -744,7 +877,7 @@ class HybridBlock(Block):
     References
     ----------
         `Hybrid - Faster training and easy deployment
-        <http://mxnet.io/tutorials/gluon/hybrid.html>`_
+        <https://mxnet.io/tutorials/gluon/hybrid.html>`_
     """
     def __init__(self, prefix=None, params=None):
         super(HybridBlock, self).__init__(prefix=prefix, params=params)
@@ -754,6 +887,8 @@ class HybridBlock(Block):
         self._in_format = None
         self._active = False
         self._flags = []
+        self._callback = None
+        self._monitor_all = False
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -763,29 +898,40 @@ class HybridBlock(Block):
 
     def _get_graph(self, *args):
         if not self._cached_graph:
-            args, self._in_format = _flatten(args, "input")
-            if len(args) > 1:
-                inputs = [symbol.var('data%d' % i).as_np_ndarray()
-                          if isinstance(args[i], _mx_np.ndarray)
-                          else symbol.var('data%d' % i) for i in range(len(args))]
-            else:
-                inputs = [symbol.var('data').as_np_ndarray()
-                          if isinstance(args[0], _mx_np.ndarray)
-                          else symbol.var('data')]
-            grouped_inputs = _regroup(inputs, self._in_format)[0]
-
+            flatten_args, self._in_format = _flatten(args, "input")
+            flatten_inputs = []
+            symbol_inputs = []
+            cnt = 0
+            real_arg_num = sum([ele is not None for ele in flatten_args])
+            if real_arg_num == 0:
+                raise ValueError('All args are None and we do not support such a case.'
+                                 ' Received args={}'.format(args))
+            for arg in flatten_args:
+                if arg is not None:
+                    if real_arg_num > 1:
+                        arg_sym = symbol.var('data{}'.format(cnt))
+                    else:
+                        arg_sym = symbol.var('data')
+                    if isinstance(arg, _mx_np.ndarray):
+                        arg_sym = arg_sym.as_np_ndarray()
+                    cnt += 1
+                    flatten_inputs.append(arg_sym)
+                    symbol_inputs.append(arg_sym)
+                else:
+                    flatten_inputs.append(None)
+            grouped_inputs = _regroup(flatten_inputs, self._in_format)
             params = {i: j.var() for i, j in self._reg_params.items()}
             with self.name_scope():
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
-            self._cached_graph = inputs, symbol.Group(out, _check_same_symbol_type(out))
+            self._cached_graph = symbol_inputs, symbol.Group(out, _check_same_symbol_type(out))
 
         return self._cached_graph
 
     def _build_cache(self, *args):
         data, out = self._get_graph(*args)
-        data_names = {data.name : i for i, data in enumerate(data)}
+        data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
         input_names = out.list_inputs()
 
@@ -793,7 +939,7 @@ class HybridBlock(Block):
         expected_names = set(input_names)
         for name in expected_names:
             assert name in param_names or name in data_names, \
-                "Unknown input to HybridBlock: %s"%name
+                "Unknown input to HybridBlock: %s" %name
 
         used_data_names = [i for i in data_names if i in expected_names]
         if len(used_data_names) != len(data_names):
@@ -833,25 +979,51 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
+        assert self._cached_op, "Gluon failed to build the cache. " \
+                                "This should never happen. " \
+                                "Please submit an issue on Github" \
+                                " https://github.com/apache/incubator-mxnet."
+        if self._callback:
+            self._cached_op._register_op_hook(self._callback, self._monitor_all)
+            if len(self._flags) >= 2 and (self._flags[1] or self._flags[0]):
+                warnings.warn("register_op_hook is experimental when static_alloc=True / static_shape=True "
+                              " and may not work correctly")
 
         args, fmt = _flatten(args, "input")
-        assert fmt == self._in_format, "Invalid input format"
+        if fmt != self._in_format:
+            # Do not raise in the case that the fmt or stored_fmt ends with None and
+            # We are relying on the default values.
+            if len(self._in_format) > len(fmt):
+                valid = all([self._in_format[i] == -1
+                             for i in range(len(fmt), len(self._in_format))])
+                valid = valid and (fmt == self._in_format[:len(fmt)])
+            elif len(self._in_format) < len(fmt):
+                valid = all([fmt[i] == -1
+                             for i in range(len(self._in_format), len(fmt))])
+                valid = valid and (fmt[:len(self._in_format)] == self._in_format)
+            else:
+                valid = False
+            if not valid:
+                raise ValueError("The argument structure of HybridBlock does not match"
+                                 " the cached version. Stored format = {}, input format = {}"
+                                 .format(fmt, self._in_format))
+        args_without_none = [ele for ele in args if ele is not None]
         try:
-            cargs = [args[i] if is_arg else i.data()
+            cargs = [args_without_none[i] if is_arg else i.data()
                      for is_arg, i in self._cached_op_args]
         except DeferredInitializationError:
             self._deferred_infer_shape(*args)
             cargs = []
             for is_arg, i in self._cached_op_args:
                 if is_arg:
-                    cargs.append(args[i])
+                    cargs.append(args_without_none[i])
                 else:
                     i._finish_deferred_init()
                     cargs.append(i.data())
         out = self._cached_op(*cargs)
         if isinstance(out, NDArray):
             out = [out]
-        return _regroup(out, self._out_format)[0]
+        return _regroup(out, self._out_format)
 
     def _clear_cached_op(self):
         self._cached_graph = ()
@@ -885,9 +1057,10 @@ class HybridBlock(Block):
         """Generic infer attributes."""
         inputs, out = self._get_graph(*args)
         args, _ = _flatten(args, "input")
+        args_without_none = [ele for ele in args if ele is not None]
         with warnings.catch_warnings(record=True) as w:
             arg_attrs, _, aux_attrs = getattr(out, infer_fn)(
-                **{i.name: getattr(j, attr) for i, j in zip(inputs, args)})
+                **{i.name: getattr(j, attr) for i, j in zip(inputs, args_without_none)})
             if arg_attrs is None:
                 raise ValueError(w[0].message)
         sdict = {i: j for i, j in zip(out.list_arguments(), arg_attrs)}
@@ -906,7 +1079,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
-        `SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
+        `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -938,27 +1111,55 @@ class HybridBlock(Block):
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn('%s-%04d.params'%(path, epoch), arg_dict)
 
+    def register_op_hook(self, callback, monitor_all=False):
+        """Install op hook for block recursively.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string and a NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input and output, otherwise monitor output only.
+        """
+        self._callback = callback
+        self._monitor_all = monitor_all
+        for cld in self._children.values():
+            cld._callback = callback
+            cld._monitor_all = monitor_all
+
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
         :py:class:`NDArray` or :py:class:`Symbol`."""
-        if isinstance(x, NDArray):
-            with x.context as ctx:
-                if self._active:
-                    return self._call_cached_op(x, *args)
 
+        has_symbol, has_ndarray, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
+        if has_symbol and has_ndarray:
+            raise ValueError('In HybridBlock, we do not support mixed NDArrays and Symbols'
+                             ' types for the input. Please check the type of the args.\n')
+        if not has_symbol and not has_ndarray:
+            raise ValueError('In HybridBlock, there must be one NDArray or one Symbol in the input.'
+                             ' Please check the type of the args.\n')
+        if has_ndarray:
+            ctx = first_ctx
+            if self._active:
+                if len(ctx_set) > 1:
+                    raise ValueError('Find multiple contexts in the input, '
+                                     'After hybridized, the HybridBlock only supports one input '
+                                     'context. You can print the ele.ctx in the '
+                                     'input arguments to inspect their contexts. '
+                                     'Find all contexts = {}'.format(ctx_set))
+                with ctx:
+                    return self._call_cached_op(x, *args)
+            with ctx:
                 try:
-                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
                 except DeferredInitializationError:
                     self._deferred_infer_shape(x, *args)
-                    for _, i in self.params.items():
-                        i._finish_deferred_init()
-                    params = {i: j.data(ctx) for i, j in self._reg_params.items()}
+                    for _, v in self.params.items():
+                        v._finish_deferred_init()
+                    params = {k: v.data(ctx) for k, v in self._reg_params.items()}
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
 
-        assert isinstance(x, Symbol), \
-            "HybridBlock requires the first argument to forward be either " \
-            "Symbol or NDArray, but got %s"%type(x)
         params = {i: j.var() for i, j in self._reg_params.items()}
         with self.name_scope():
             return self.hybrid_forward(symbol, x, *args, **params)
@@ -1023,8 +1224,8 @@ class SymbolBlock(HybridBlock):
     """
     @staticmethod
     def imports(symbol_file, input_names, param_file=None, ctx=None):
-        """Import model previously saved by `HybridBlock.export` or
-        `Module.save_checkpoint` as a SymbolBlock for use in Gluon.
+        """Import model previously saved by `gluon.HybridBlock.export` or
+        `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
 
         Parameters
         ----------
@@ -1035,12 +1236,12 @@ class SymbolBlock(HybridBlock):
         param_file : str, optional
             Path to parameter file.
         ctx : Context, default None
-            The context to initialize SymbolBlock on.
+            The context to initialize `gluon.SymbolBlock` on.
 
         Returns
         -------
-        SymbolBlock
-            SymbolBlock loaded from symbol and parameter files.
+        gluon.SymbolBlock
+            `gluon.SymbolBlock` loaded from symbol and parameter files.
 
         Examples
         --------
@@ -1055,7 +1256,10 @@ class SymbolBlock(HybridBlock):
         ...     'net1-symbol.json', ['data'], 'net1-0001.params')
         >>> out2 = net2(x)
         """
-        sym = symbol.load(symbol_file)
+        if is_np_array():
+            sym = np_symbol.load(symbol_file)
+        else:
+            sym = symbol.load(symbol_file)
         if isinstance(input_names, str):
             input_names = [input_names]
         if param_file is None:
@@ -1063,7 +1267,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i, dtype=mx_real_t) for i in input_names]
         else:
             # Do not specify type, rely on saved params type instead
-            inputs = [symbol.var(i) for i in input_names]
+            inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
             ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
@@ -1089,8 +1293,6 @@ class SymbolBlock(HybridBlock):
 
         syms, self._in_format = _flatten(inputs, "input")
         out, self._out_format = _flatten(outputs, "output")
-        out = symbol.Group(out, _check_same_symbol_type(out))
-
         input_names = set()
         for i in syms:
             assert len(i.get_internals().list_outputs()) == 1, \
@@ -1099,11 +1301,16 @@ class SymbolBlock(HybridBlock):
 
         # check if any symbol is row_sparse
         row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
+
         for i in out:
             for j in i.get_internals():
                 assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
                     "SymbolBlock doesn't support Parameter '%s' because its storage " \
                     "type is 'row_sparse'." % j.name
+        if len(out) > 1:
+            out = symbol.Group(out, _check_same_symbol_type(out))
+        else:
+            out = out[0]
 
         # Infer type of parameters. Without this, every parameter will be created with
         # default type i.e., fp32
@@ -1126,7 +1333,7 @@ class SymbolBlock(HybridBlock):
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
-            with x.context:
+            with x.ctx:
                 return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \
@@ -1136,7 +1343,7 @@ class SymbolBlock(HybridBlock):
         assert in_fmt == self._in_format, "Invalid input format"
         ret = copy.copy(self._cached_graph[1])
         ret._compose(**{k.name: v for k, v in zip(self._cached_graph[0], args)})
-        return _regroup(list(ret), self._out_format)[0]
+        return _regroup(list(ret), self._out_format)
 
     def _clear_cached_op(self):
         tmp = self._cached_graph

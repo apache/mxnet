@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: KVStore API
+is_tutorial: true
+permalink: /api/clojure/docs/tutorials/kvstore
+tag: clojure
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,20 +21,13 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: KVStore API
-is_tutorial: true
-permalink: /api/clojure/docs/tutorials/kvstore
-tag: clojure
----
 # KVStore API
 
 Topics:
 
 * [Basic Push and Pull](#basic-push-and-pull)
 * [List Key-Value Pairs](#list-key-value-pairs)
-* [API Reference](http://mxnet.incubator.apache.org/api/clojure/docs/org.apache.clojure-mxnet.kvstore.html)
+* [Clojure API Reference]({{'/api/clojure/docs/api'|relative_url}})
 
 To follow along with this documentation, you can use this namespace to with the needed requires:
 

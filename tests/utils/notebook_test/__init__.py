@@ -31,7 +31,7 @@ import nbformat
 
 
 IPYTHON_VERSION = 4  # Pin to ipython version 4.
-TIME_OUT = 10*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
+TIME_OUT = 15*60  # Maximum 10 mins/test. Reaching timeout causes test failure.
 ATTEMPTS = 8
 KERNEL_ERROR_MSG = 'Kernel died before replying to kernel_info'
 
@@ -111,7 +111,7 @@ def run_notebook(notebook, notebook_dir, kernel=None, no_cache=False, temp_dir='
             nbformat.write(notebook, output_file)
             output_nb = io.open(output_file, mode='r', encoding='utf-8')
             for line in output_nb:
-                if "Warning:" in line:
+                if "Warning:" in line and "numpy operator signatures" not in line:
                     errors.append("Warning:\n" + line)
         if len(errors) > 0:
             logging.error('\n'.join(errors))

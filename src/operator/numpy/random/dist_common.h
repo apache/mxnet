@@ -27,7 +27,6 @@
 #ifndef MXNET_OPERATOR_NUMPY_RANDOM_DIST_COMMON_H_
 #define MXNET_OPERATOR_NUMPY_RANDOM_DIST_COMMON_H_
 
-#include <mshadow/base.h>
 #include <mxnet/operator_util.h>
 #include <algorithm>
 #include <string>
@@ -40,6 +39,13 @@
 
 namespace mxnet {
 namespace op {
+
+template <typename xpu>
+void _copy(mshadow::Stream<xpu> *s, float *dst, float*src);
+
+template <typename xpu>
+void _copy(mshadow::Stream<xpu> *s, double *dst, double*src);
+
 
 inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
                      const mxnet::TShape &oshape, mxnet::TShape *new_lshape,
@@ -138,7 +144,6 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
                                  std::vector<TShape> *in_attrs,
                                  std::vector<TShape> *out_attrs) {
   const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
-  CHECK_EQ(out_attrs->size(), 1U);
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
@@ -165,10 +170,83 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
     } else if (in_attrs->size() == 0) {
       // Two scalar case.
       SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
-      return true;
     }
   }
-  return out_attrs->at(0).ndim() != 0U;
+  if (out_attrs->size() == 2U) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, out_attrs->at(0));
+  }
+  return true;
+}
+
+template <typename DistParam>
+inline bool UnaryDistOpShape(const nnvm::NodeAttrs &attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
+  if (param.size.has_value()) {
+    // Size declared.
+    std::vector<dim_t> oshape_vec;
+    const mxnet::Tuple<int> &size = param.size.value();
+    for (int i = 0; i < size.ndim(); ++i) {
+      oshape_vec.emplace_back(size[i]);
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
+    for (size_t input_idx = 0; input_idx < in_attrs->size(); input_idx++) {
+      CheckBroadcastable((*in_attrs)[input_idx], (*out_attrs)[0]);
+    }
+  } else {
+    if (in_attrs->size() == 1U) {
+      // One param from ndarray.
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0))
+    } else {
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
+    }
+  }
+  return shape_is_known(out_attrs->at(0));
+}
+
+
+// Infer Shape function for sample_n Op.
+// i.e. output_shape = (shape,) + broadcast(param1.shape, param2.shape)
+template <typename DistParam>
+inline bool TwoparamsDistOpConcatShape(const nnvm::NodeAttrs &attrs,
+                                       std::vector<TShape> *in_attrs,
+                                       std::vector<TShape> *out_attrs) {
+  const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
+  // broadcast(param1.shape, param2.shape).
+  mxnet::TShape param_broadcast_shape;
+  if (in_attrs->size() == 2U) {
+      // Both params from ndarray.
+      mxnet::TShape &param1 = (*in_attrs)[0];
+      mxnet::TShape &param2 = (*in_attrs)[1];
+      mxnet::TShape out(std::max(param1.ndim(), param2.ndim()), -1);
+      InferBroadcastShape(param1, param2, &out);
+      param_broadcast_shape = out;
+    } else if (in_attrs->size() == 1U) {
+      // One param from ndarray.
+      param_broadcast_shape = in_attrs->at(0);
+    } else if (in_attrs->size() == 0) {
+      // Two scalar case.
+      param_broadcast_shape = TShape(0, -1);
+    }
+  if (param.size.has_value()) {
+    // Size declared.
+    std::vector<dim_t> oshape_vec;
+    const mxnet::Tuple<int> &size = param.size.value();
+    for (int i = 0; i < size.ndim(); ++i) {
+      oshape_vec.emplace_back(size[i]);
+    }
+    for (int i = 0; i < param_broadcast_shape.ndim(); ++i) {
+      oshape_vec.emplace_back(param_broadcast_shape[i]);
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
+  } else {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_broadcast_shape);
+  }
+  if (out_attrs->size() == 2U) {
+    SHAPE_ASSIGN_CHECK(*out_attrs, 1, out_attrs->at(0));
+  }
+  return true;
 }
 
 }  // namespace op

@@ -153,8 +153,7 @@ class EvalMetric(object):
         self.global_sum_metric = 0.0
 
     def reset_local(self):
-        """Resets the local portion of the internal evaluation results
-        to initial state."""
+        """Resets the local portion of the internal evaluation results to initial state."""
         self.num_inst = 0
         self.sum_metric = 0.0
 
@@ -372,8 +371,7 @@ class CompositeEvalMetric(EvalMetric):
             pass
 
     def reset_local(self):
-        """Resets the local portion of the internal evaluation results
-        to initial state."""
+        """Resets the local portion of the internal evaluation results to initial state."""
         try:
             for metric in self.metrics:
                 metric.reset_local()
@@ -592,9 +590,9 @@ class TopKAccuracy(EvalMetric):
 
 
 class _BinaryClassificationMetrics(object):
-    """
-    Private container class for classification metric statistics. True/false positive and
-     true/false negative counts are sufficient statistics for various classification metrics.
+    """Private container class for classification metric statistics.
+
+    True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
     This class provides the machinery to track those statistics across mini-batches of
     (label, prediction) pairs.
     """
@@ -610,9 +608,7 @@ class _BinaryClassificationMetrics(object):
         self.global_true_negatives = 0
 
     def update_binary_stats(self, label, pred):
-        """
-        Update various binary classification counts for a single (label, pred)
-        pair.
+        """Update various binary classification counts for a single (label, pred) pair.
 
         Parameters
         ----------
@@ -691,9 +687,7 @@ class _BinaryClassificationMetrics(object):
             return 0.
 
     def matthewscc(self, use_global=False):
-        """
-        Calculate the Matthew's Correlation Coefficent
-        """
+        """Calculate the Matthew's Correlation Coefficent"""
         if use_global:
             if not self.global_total_examples:
                 return 0.
@@ -1437,6 +1431,10 @@ class PearsonCorrelation(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the pearsonr scores for each batch.
+            "micro": compute a single pearsonr score across all batches.
 
     Examples
     --------
@@ -1445,13 +1443,46 @@ class PearsonCorrelation(EvalMetric):
     >>> pr = mx.metric.PearsonCorrelation()
     >>> pr.update(labels, predicts)
     >>> print pr.get()
-    ('pearson-correlation', 0.42163704544016178)
+    ('pearsonr', 0.42163704544016178)
     """
     def __init__(self, name='pearsonr',
-                 output_names=None, label_names=None):
+                 output_names=None, label_names=None, average='macro'):
+        self.average = average
         super(PearsonCorrelation, self).__init__(
             name, output_names=output_names, label_names=label_names,
             has_global_stats=True)
+        if self.average == 'micro':
+            self.reset_micro()
+
+    def reset_micro(self):
+        self._sse_p = 0
+        self._mean_p = 0
+        self._sse_l = 0
+        self._mean_l = 0
+        self._pred_nums = 0
+        self._label_nums = 0
+        self._conv = 0
+
+    def reset(self):
+        self.num_inst = 0
+        self.sum_metric = 0.0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
+        if self.average == 'micro':
+            self.reset_micro()
+
+    def update_variance(self, new_values, *aggregate):
+        #Welford's online algorithm for variance update
+        count, mean, m_2 = aggregate
+        count += len(new_values)
+        delta = new_values - mean
+        mean += numpy.sum(delta / count)
+        delta_2 = new_values - mean
+        m_2 += numpy.sum(delta * delta_2)
+        return count, mean, m_2
+
+    def update_cov(self, label, pred):
+        self._conv = self._conv + numpy.sum((label - self._mean_l) * (pred - self._mean_p))
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1464,17 +1495,34 @@ class PearsonCorrelation(EvalMetric):
             Predicted values.
         """
         labels, preds = check_label_shapes(labels, preds, True)
-
         for label, pred in zip(labels, preds):
             check_label_shapes(label, pred, False, True)
-            label = label.asnumpy()
-            pred = pred.asnumpy()
-            pearson_corr = numpy.corrcoef(pred.ravel(), label.ravel())[0, 1]
-            self.sum_metric += pearson_corr
-            self.global_sum_metric += pearson_corr
-            self.num_inst += 1
-            self.global_num_inst += 1
+            label = label.asnumpy().ravel().astype(numpy.float64)
+            pred = pred.asnumpy().ravel().astype(numpy.float64)
+            if self.average == 'macro':
+                pearson_corr = numpy.corrcoef(pred, label)[0, 1]
+                self.sum_metric += pearson_corr
+                self.global_sum_metric += pearson_corr
+                self.num_inst += 1
+                self.global_num_inst += 1
+            else:
+                self.global_num_inst += 1
+                self.num_inst += 1
+                self._label_nums, self._mean_l, self._sse_l = \
+                    self.update_variance(label, self._label_nums, self._mean_l, self._sse_l)
+                self.update_cov(label, pred)
+                self._pred_nums, self._mean_p, self._sse_p = \
+                    self.update_variance(pred, self._pred_nums, self._mean_p, self._sse_p)
 
+    def get(self):
+        if self.num_inst == 0:
+            return (self.name, float('nan'))
+        if self.average == 'macro':
+            return (self.name, self.sum_metric / self.num_inst)
+        else:
+            n = self._label_nums
+            pearsonr = self._conv / ((n-1) * numpy.sqrt(self._sse_p / (n - 1)) * numpy.sqrt(self._sse_l / (n - 1)))
+            return (self.name, pearsonr)
 
 @register
 class PCC(EvalMetric):
@@ -1604,8 +1652,7 @@ class PCC(EvalMetric):
         self.reset_local()
 
     def reset_local(self):
-        """Resets the local portion of the internal evaluation results
-        to initial state."""
+        """Resets the local portion of the internal evaluation results to initial state."""
         self.num_inst = 0.
         self.lcm = numpy.zeros((self.k, self.k))
 

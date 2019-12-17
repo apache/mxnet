@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Symbol API
+permalink: /api/scala/docs/tutorials/symbol
+is_tutorial: true
+tag: scala
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,27 +21,20 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Symbol API
-permalink: /api/scala/docs/tutorials/symbol
-is_tutorial: true
-tag: scala
----
 
 # MXNet Scala Symbolic API
 
 Topics:
 
-* [How to Compose Symbols](#overloaded-operators) introduces operator overloading of symbols.
+* [How to Compose Symbols](#how-to-compose-symbols) introduces operator overloading of symbols.
 * [Symbol Attributes](#symbol-attributes) describes how to attach attributes to symbols.
 * [Serialization](#serialization) explains how to save and load symbols.
 * [Executing Symbols](#executing-symbols) explains how to evaluate the symbols with data.
-* [Execution API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Executor) documents the execution APIs.
+* [Execution API Reference]({{'/api/scala/docs/api/#org.apache.mxnet.Executor'|relative_url}}) documents the execution APIs.
 * [Multiple Outputs](#multiple-outputs) explains how to configure multiple outputs.
-* [Symbol Creation API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Symbol) documents functions.
+* [Symbol Creation API Reference]({{'/api/scala/docs/api/#org.apache.mxnet.Symbol'|relative_url}}) documents functions.
 
-We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures.md).
+We also highly encourage you to read [Symbolic Configuration and Execution in Pictures](symbol_in_pictures).
 
 ## How to Compose Symbols
 
@@ -102,7 +102,7 @@ To attach attributes, you can use ```AttrScope```. ```AttrScope``` automatically
 There are two ways to save and load the symbols. You can use the `mxnet.Symbol.save` and `mxnet.Symbol.load` functions to serialize the ```Symbol``` objects.
 The advantage of using `save` and `load` functions is that it is language agnostic and cloud friendly.
 The symbol is saved in JSON format. You can also get a JSON string directly using `mxnet.Symbol.toJson`.
-Refer to [API documentation](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Symbol) for more details.
+Refer to [API documentation]({{'/api/scala/docs/api/#org.apache.mxnet.Symbol'|relative_url}}) for more details.
 
 The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.
 
@@ -121,7 +121,7 @@ The following example shows how to save a symbol to an S3 bucket, load it back, 
 
 After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate them.
 If you are training a neural network, this is typically
-handled by the high-level [Model class](model.md) and the [`fit()`] function.
+handled by the high-level [Model class](model) and the [`fit()`] function.
 
 For neural networks used in "feed-forward", "prediction", or "inference" mode (all terms for the same
 thing: running a trained network), the input arguments are the
@@ -150,6 +150,6 @@ After you get the ```group```, you can bind on ```group``` instead.
 The resulting executor will have two outputs, one for fc1_output and one for softmax_output.
 
 ## Next Steps
-* See [IO Data Loading API](io.md) for parsing and loading data.
-* See [NDArray API](ndarray.md) for vector/matrix/tensor operations.
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [IO Data Loading API](io) for parsing and loading data.
+* See [NDArray API](ndarray) for vector/matrix/tensor operations.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

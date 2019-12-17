@@ -15,7 +15,7 @@
     }
 }
 
-.mdl-layout__container {
+.mdl-layout {
     visibility: hidden;
 }
 
@@ -196,4 +196,11 @@ p {
 
 .install .title {
     margin-top: 1em;
+}
+
+/* autodoc */
+#autodoc_toggle {
+    float: right;
+    margin: 4px;
+    cursor: pointer;
 }

@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: LSTM Time Series
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/multi_dim_lstm
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: LSTM Time Serie
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/multi_dim_lstm
----
 
 
 LSTM Time Series Example
@@ -55,7 +55,7 @@ PM2.5 concentration levels.
 
 Load and pre-process the data
 ---------
-The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data)
+The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data).
 
  ```r
 ## Loading required packages
@@ -324,4 +324,4 @@ We also repeated the above experiments to generate the next 100 samples to 301st
 
 The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
 
-For more tutorials on MXNet-R, head on to [MXNet-R tutorials](https://mxnet.incubator.apache.org/tutorials/r/index.html)
+For more tutorials on MXNet-R, head on to [MXNet-R tutorials](/api/r/docs/tutorials)

@@ -58,7 +58,7 @@ class GraphExecutor : public Executor {
  public:
   using Executor::MonitorCallback;
 
-  GraphExecutor();
+  explicit GraphExecutor(const nnvm::Symbol& symbol);
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -267,6 +267,9 @@ class GraphExecutor : public Executor {
   std::string subgraph_property_;
   // ref of engine
   std::shared_ptr<Engine> engine_ref_;
+  // Unoptimized copy of the symbol for sharing with
+  // child executors
+  nnvm::Symbol symbol_;
 };
 
 }  // namespace exec

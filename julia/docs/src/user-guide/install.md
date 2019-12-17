@@ -40,13 +40,9 @@ libmxnet.
 
 There are several environment variables that change this behaviour.
 
-- `MXNET_ROOT`: If you already have a pre-installed version of mxnet
-  you can use `MXNET_ROOT` to point the build-process in the right direction.
-  Note that you should set this variable as a absolute path.
-- `MXNET_HOME`: This variable is replaced by `MXNET_ROOT`. It has been renamed
-  as of v1.6.
-- `MXNET_LIBRARY_PATH`: The absolute path of the libmxnet share object.
-- `CUDA_HOME`: If the automatic CUDA detection fails you can also set `CUDA_HOME`
+- `MXNET_HOME`: If you already have a pre-installed version of mxnet
+  you can use `MXNET_HOME` to point the build-process in the right direction.
+- `CUDA_HOME`: If the automatic cuda detection fails you can also set `CUDA_HOME`
   to override the process.
 - `MXNET_COMMIT`: To control which version of libmxnet will be compiled,
   you can use the`MXNET_COMMIT` variable to point to either a version tag
@@ -84,19 +80,19 @@ unresolved dependencies in an non-standard environment; Or when one want
 to work with a separate, maybe customized libmxnet.
 
 To build libmxnet, please refer to [the installation guide of
-libmxnet](https://mxnet.incubator.apache.org/install/index.html). After
-successfully installing libmxnet, set the `MXNET_ROOT` *environment
+libmxnet](https://mxnet.apache.org/install/index.html). After
+successfully installing libmxnet, set the `MXNET_HOME` *environment
 variable* to the location of libmxnet. In other words, the compiled
-`libmxnet.so` should be found in `$MXNET_ROOT/lib`.
+`libmxnet.so` should be found in `$MXNET_HOME/lib`.
 
 > **note**
 >
-> The constant `MXNET_ROOT` is pre-compiled in MXNet.jl package cache.
+> The constant `MXNET_HOME` is pre-compiled in MXNet.jl package cache.
 > If you updated the environment variable after installing MXNet.jl,
 > make sure to update the pre-compilation cache by
 > `Base.compilecache("MXNet")`.
 
-When the `MXNET_ROOT` environment variable is detected and the
+When the `MXNET_HOME` environment variable is detected and the
 corresponding `libmxnet.so` could be loaded successfully, MXNet.jl will
 skip automatic building during installation and use the specified
 libmxnet instead.
@@ -104,7 +100,7 @@ libmxnet instead.
 Basically, MXNet.jl will search `libmxnet.so` or `libmxnet.dll` in the
 following paths (and in that order):
 
--   `$MXNET_ROOT/lib`: customized libmxnet builds
+-   `$MXNET_HOME/lib`: customized libmxnet builds
 -   `Pkg.dir("MXNet", "deps", "usr", "lib")`: automatic builds
 -   Any system wide library search path
 

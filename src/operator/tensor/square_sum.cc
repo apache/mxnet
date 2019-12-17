@@ -71,6 +71,7 @@ MXNET_OPERATOR_REGISTER_REDUCE_BACKWARD(_backward_square_sum)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FInferStorageType>("FInferStorageType", SquareSumBackwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SquareSumOpBackwardEx<cpu>);
 

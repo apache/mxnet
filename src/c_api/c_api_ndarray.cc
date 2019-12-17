@@ -54,7 +54,13 @@ void SetNDInputsOutputs(const nnvm::Op* op,
   ndinputs->clear();
   ndinputs->reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
-    ndinputs->emplace_back(reinterpret_cast<NDArray*>(inputs[i]));
+    NDArray* inp = reinterpret_cast<NDArray*>(inputs[i]);
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
+                "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
+                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+    ndinputs->emplace_back(inp);
   }
 
   ndoutputs->clear();
@@ -276,7 +282,7 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
-int MXIsNumpyShape(bool* curr) {
+int MXIsNumpyShape(int* curr) {
   API_BEGIN();
   *curr = Imperative::Get()->is_np_shape();
   API_END();
@@ -284,7 +290,7 @@ int MXIsNumpyShape(bool* curr) {
 
 int MXSetIsNumpyShape(int is_np_shape, int* prev) {
   API_BEGIN();
-  *prev = Imperative::Get()->set_is_np_shape(static_cast<bool>(is_np_shape));
+  *prev = Imperative::Get()->set_is_np_shape(is_np_shape);
   API_END();
 }
 
@@ -376,5 +382,25 @@ int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out) {
   NDArray *head = reinterpret_cast<NDArray*>(handle);
   auto sym = new nnvm::Symbol(head->get_autograd_symbol());
   *out = reinterpret_cast<SymbolHandle>(sym);
+  API_END();
+}
+
+int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                             CachedOpMonitorCallback callback,
+                             bool monitor_all) {
+  API_BEGIN();
+  CachedOpMonitorCallback callback_temp = nullptr;
+  std::function<void(const char *, const char *, void*)> clbk;
+  if (callback) {
+    callback_temp = callback;
+    clbk = [callback_temp](const char *name, const char *opr_name,
+                           void *handle) {
+      callback_temp(name, opr_name, handle);
+    };
+  } else {
+      clbk = nullptr;
+  }
+  CachedOpPtr op = *static_cast<CachedOpPtr *>(handle);
+  op->RegisterOpHook(clbk, monitor_all);
   API_END();
 }

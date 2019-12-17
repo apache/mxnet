@@ -65,22 +65,49 @@ NNVM_REGISTER_OP(_np_copy)
   })
 .add_argument("a", "NDArray-or-Symbol", "The input");
 
-#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY(__name$, __input_name$, __kernel$)          \
-NNVM_REGISTER_OP(__name$)                                                               \
-.set_num_inputs(1)                                                                      \
-.set_num_outputs(1)                                                                     \
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                       \
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)                           \
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",                                       \
-  [](const NodeAttrs& attrs){                                                           \
-    return std::vector<std::pair<int, int> >{{0, 0}};                                   \
-  })                                                                                    \
-.set_attr<nnvm::FListInputNames>("FListInputNames",                                     \
-  [](const NodeAttrs& attrs) {                                                          \
-    return std::vector<std::string>{__input_name$};                                     \
-  })                                                                                    \
-.set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, __kernel$>)                  \
-.add_argument(__input_name$, "NDArray-or-Symbol", "The input array.")
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY(__name$, __input_name$, __kernel$)            \
+  NNVM_REGISTER_OP(__name$)                                                               \
+  .set_num_inputs(1)                                                                      \
+  .set_num_outputs(1)                                                                     \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                       \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)                           \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                       \
+    [](const NodeAttrs& attrs){                                                           \
+      return std::vector<std::pair<int, int> >{{0, 0}};                                   \
+    })                                                                                    \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                                     \
+    [](const NodeAttrs& attrs) {                                                          \
+      return std::vector<std::string>{__input_name$};                                     \
+    })                                                                                    \
+  .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, __kernel$>)                  \
+  .add_argument(__input_name$, "NDArray-or-Symbol", "The input array.")
+
+bool NumpyUnaryLogicOpType(const nnvm::NodeAttrs& attrs,
+                           std::vector<int>* in_attrs,
+                           std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (in_attrs->at(0) == -1) return false;
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kBool);
+  return true;
+}
+
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(__name$, __input_name$, __kernel$)      \
+  NNVM_REGISTER_OP(__name$)                                                               \
+  .set_num_inputs(1)                                                                      \
+  .set_num_outputs(1)                                                                     \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                       \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyUnaryLogicOpType)                        \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                       \
+    [](const NodeAttrs& attrs){                                                           \
+      return std::vector<std::pair<int, int> >{{0, 0}};                                   \
+    })                                                                                    \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                                     \
+    [](const NodeAttrs& attrs) {                                                          \
+      return std::vector<std::string>{__input_name$};                                     \
+    })                                                                                    \
+  .set_attr<FCompute>("FCompute<cpu>", UnaryOp::ComputeLogic<cpu, __kernel$>)             \
+  .add_argument(__input_name$, "NDArray-or-Symbol", "The input array.")
 
 // negative
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_negative, "x", mshadow_op::negation)
@@ -243,11 +270,7 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_expm1, "x", mshadow_op::expm1)
 
 
 // logical_not
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_logical_not, "x", mshadow_op::nt)
-.describe(R"code(Compute the truth value of NOT x element-wise.
-Example::
-  logical_not([-2., 0., 1.]) = [0., 1., 0.]
-)code")
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(_npi_logical_not, "x", mshadow_op::np_logical_not)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // sin
@@ -361,6 +384,69 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_arctanh, "x", mshadow_op::arctanh)
 computed element-wise.
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arctanh" });
+
+inline bool AroundOpType(const nnvm::NodeAttrs& attrs,
+                         std::vector<int>* in_attrs,
+                         std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+
+  CHECK(in_attrs->at(0) != mshadow::kFloat16) << "Do not support `float16` as input.\n";
+  return out_attrs->at(0) != -1;
+}
+
+DMLC_REGISTER_PARAMETER(AroundParam);
+
+NNVM_REGISTER_OP(_npi_around)
+.set_attr_parser(ParamParser<AroundParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"x"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", AroundOpType)
+.set_attr<FCompute>("FCompute<cpu>", AroundOpForward<cpu>)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("x", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(AroundParam::__FIELDS__())
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+DMLC_REGISTER_PARAMETER(NumpyNanToNumParam);
+
+NNVM_REGISTER_OP(_npi_nan_to_num)
+.describe("" ADD_FILELINE)
+.set_attr_parser(ParamParser<NumpyNanToNumParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyNanToNumOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_npi_backward_nan_to_num"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyNanToNumParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_backward_nan_to_num)
+.set_attr_parser(ParamParser<NumpyNanToNumParam>)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyNanToNumOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet
