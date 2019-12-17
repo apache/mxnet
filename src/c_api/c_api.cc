@@ -265,7 +265,7 @@ int MXLoadLib(const char *path) {
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
 
-      return num_in + num_out;
+      return num_in + 2*num_out;
     };
 
     // lambda function to call infer shape

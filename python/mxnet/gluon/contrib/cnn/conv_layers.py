@@ -313,7 +313,8 @@ class ModulatedDeformableConvolution(HybridBlock):
                 dilation = (dilation,) * len(kernel_size)
             self._op_name = op_name
 
-            offset_channels = 27
+            offset_channels = num_deformable_group * 3 * kernel_size[0] * kernel_size[1]
+            self.offset_split_index = num_deformable_group * 2 * kernel_size[0] * kernel_size[1]
             self._kwargs_offset = {
                 'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
                 'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
@@ -377,8 +378,8 @@ class ModulatedDeformableConvolution(HybridBlock):
         else:
             offset = F.Convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
 
-        offset_t = F.slice_axis(offset, axis=1, begin=0, end=18)
-        mask = F.slice_axis(offset, axis=1, begin=18, end=None)
+        offset_t = F.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
+        mask = F.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
         mask = F.sigmoid(mask) * 2
 
         if deformable_conv_bias is None:
