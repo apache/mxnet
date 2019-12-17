@@ -152,6 +152,7 @@ class MetricHandler(EpochBegin, BatchEnd):
         for metric in self.metrics:
             if isinstance(metric, metric_loss):
                 # metric wrapper for loss values
+                metric.reset_local()
                 metric.update(0, loss)
             else:
                 metric.update(label, pred)
