@@ -71,6 +71,13 @@
     return 1; \
   }
 
+  #define MXNET_LAPACK_CWRAPPER7(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_order, int n, int nrhs, dtype *a, \
+                          int lda, int *ipiv, dtype *b, int ldb) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
   #define MXNET_LAPACK_UNAVAILABLE(func) \
   int mxnet_lapack_##func(...) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
@@ -100,5 +107,8 @@
 
   MXNET_LAPACK_CWRAPPER6(sgesvd, float)
   MXNET_LAPACK_CWRAPPER6(dgesvd, double)
+
+  MXNET_LAPACK_CWRAPPER7(sgesv, float)
+  MXNET_LAPACK_CWRAPPER7(dgesv, double)
 
 #endif  // MSHADOW_USE_MKL == 0

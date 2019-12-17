@@ -269,8 +269,10 @@ struct TransposeParam : public dmlc::Parameter<TransposeParam> {
  * \param out output tensor
  * \param row shape of dim 0 of input
  * \param col shape of dim 1 of input
+ * \tparam DType Data type
+ * \tparam is_addto
  */
-template<typename DType>
+template<typename DType, bool is_addto>
 MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index_t col) {
   // ensure cache line hits and prevent cache miss for any configuration
   // L1 cache size to be utilized = 32kb = 2^15
@@ -282,7 +284,7 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
   // Block-size - 2^5 v 2^5 (32 v 32) with potential 4 pragma for loop unrolled
   // blocksize * blocksize * num_threads = cache_size / dtype_size
   // Instead of explicit unroll, let compiler figure out optimal unroll factor
-  index_t blocksize = 32;
+  const index_t blocksize = 32;
 
   // collapse 2 parallelizes 2 for loops
   // inner 2 for loops aren't parallelized to prevent cache miss
@@ -299,14 +301,25 @@ MSHADOW_XINLINE void Transpose2D(const DType *in, DType *out, index_t row, index
       // transpose the block
       for (index_t a = j; (a < blocksize + j) && (a < col); ++a) {
         for (index_t b = i; (b < blocksize + i) && (b < row); ++b) {
-          out[a * row + b] = in[b * col + a];
+          if (!is_addto) {
+            out[a * row + b] = in[b * col + a];
+          } else {
+            out[a * row + b] += in[b * col + a];
+          }
         }
       }
     }
   }
 }
 
-template<typename xpu>
+inline bool IsIdentityTranspose(const TShape& axes) {
+  for (dim_t i = 0; i < axes.ndim(); i++) {
+    if (axes[i] != i) return false;
+  }
+  return true;
+}
+
+template<typename xpu, bool is_addto = false>
 void TransposeImpl(RunContext ctx,
                    const TBlob& src,
                    const TBlob& ret,
@@ -323,62 +336,79 @@ void TransposeImpl(RunContext ctx,
   // Example: (0, 2, 3, 1) or (0, 3, 1, 2), but not (0, 2, 1, 3).
   if (isPseudo2DTranspose(axes)) {
     MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
-      transpose_pseudo2D<DType>(ret, src, axes, s);
+      transpose_pseudo2D<DType, is_addto>(ret, src, axes, s);
     });
     return;
   }
 #endif
+  // Special handle the identity case
+  if (IsIdentityTranspose(axes)) {
+    MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
+      Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(src.Size()), s);
+      Tensor<xpu, 1, DType> out = ret.get_with_shape<xpu, 1, DType>(mshadow::Shape1(ret.Size()), s);
+      if (!is_addto) {
+        // Use memcpy to accelerate the speed
+        Copy(out, in, s);
+      } else {
+        mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kAddTo>, xpu>::Launch(
+            s, ret.Size(), out.dptr_, in.dptr_);
+      }
+    });
+    return;
+  }
+  // Handle the general transpose case
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
     switch (axes.ndim()) {
-     case 0: {
-      Tensor<xpu, 1, DType> in = src.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
-      Tensor<xpu, 1, DType> out = ret.get_with_shape<xpu, 1, DType>(mshadow::Shape1(1), s);
-      Copy(out, in, s);
-      break;
-     }
-     case 1: {
-      Tensor<xpu, 1, DType> in = src.get<xpu, 1, DType>(s);
-      Tensor<xpu, 1, DType> out = ret.get<xpu, 1, DType>(s);
-      Copy(out, in, s);
-      break;
-     }
      case 2: {
-      mshadow::Tensor<xpu, 2, DType> in = src.FlatTo2D<xpu, DType>(s);
-      mshadow::Tensor<xpu, 2, DType> out = ret.FlatTo2D<xpu, DType>(s);
-
-      if (axes[0] == 1 && axes[1] == 0) {
-        if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
-          Transpose2D<DType>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
-        } else {
-          out = in.T();
-        }
+      Tensor<xpu, 2, DType> in = src.get<xpu, 2, DType>(s);
+      Tensor<xpu, 2, DType> out = ret.get<xpu, 2, DType>(s);
+      if (ctx.get_ctx().dev_mask() == cpu::kDevMask) {
+        Transpose2D<DType, is_addto>(in.dptr_, out.dptr_, in.shape_[0], in.shape_[1]);
       } else {
-        Copy(out, in, s);
+        LOG(FATAL) << "Not Implemented. We should never reach here because the 2D case "
+                      "in GPU has been covered by transpose_pseudo2D."
+                      " Report an issue in Github.";
       }
       break;
      }
      case 3: {
       Tensor<xpu, 3, DType> in = src.get<xpu, 3, DType>(s);
       Tensor<xpu, 3, DType> out = ret.get<xpu, 3, DType>(s);
-      out = transpose(in, axes.get<3>());
+      if (!is_addto) {
+        out = transpose(in, axes.get<3>());
+      } else {
+        out += transpose(in, axes.get<3>());
+      }
       break;
      }
      case 4: {
       Tensor<xpu, 4, DType> in = src.get<xpu, 4, DType>(s);
       Tensor<xpu, 4, DType> out = ret.get<xpu, 4, DType>(s);
-      out = transpose(in, axes.get<4>());
+      if (!is_addto) {
+        out = transpose(in, axes.get<4>());
+      } else {
+        out += transpose(in, axes.get<4>());
+      }
       break;
      }
      case 5: {
       Tensor<xpu, 5, DType> in = src.get<xpu, 5, DType>(s);
       Tensor<xpu, 5, DType> out = ret.get<xpu, 5, DType>(s);
-      out = transpose(in, axes.get<5>());
+      if (!is_addto) {
+        out = transpose(in, axes.get<5>());
+      } else {
+        out += transpose(in, axes.get<5>());
+      }
       break;
      }
      case 6: {
       Tensor<xpu, 6, DType> in = src.get<xpu, 6, DType>(s);
       Tensor<xpu, 6, DType> out = ret.get<xpu, 6, DType>(s);
-      out = transpose(in, axes.get<6>());
+      if (!is_addto) {
+        out = transpose(in, axes.get<6>());
+      } else {
+        out += transpose(in, axes.get<6>());
+      }
       break;
      }
      default:
@@ -399,15 +429,21 @@ void Transpose(const nnvm::NodeAttrs& attrs,
     return;
   }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+       << "Transpose only supports kNullOp, kWriteTo and kAddTo";
+  mxnet::TShape axes;
   if (param.axes.ndim() == 0) {
-    mxnet::TShape axes(inputs[0].ndim(), -1);
+    axes = mxnet::TShape(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
       axes[i] = axes.ndim() - 1 - i;
     }
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   } else {
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], param.axes);
+    axes = common::CanonicalizeAxes(param.axes);
+  }
+  if (req[0] == kAddTo) {
+    TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  } else {
+    TransposeImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0], axes);
   }
 }
 
@@ -2691,9 +2727,15 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
 inline mxnet::TShape GetSplitIndices(const mxnet::TShape& ishape, int axis, int sections) {
   mxnet::TShape indices(sections+1, -1);
   indices[0] = 0;
-  int64_t section_size = ishape[axis] / sections;
+  int64_t section_size_b = (int64_t) (ishape[axis] / sections);
+  int64_t section_size_a = section_size_b + 1;
+  int section_a = ishape[axis] % sections;
   for (int i = 0; i < sections; ++i) {
-    indices[i+1] = section_size * (i + 1);
+    if ( i < section_a ) {
+      indices[i+1] = section_size_a * (i + 1);
+    } else {
+      indices[i+1] = section_size_b + indices[i];
+    }
   }
   return indices;
 }

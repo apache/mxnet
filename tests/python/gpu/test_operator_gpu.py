@@ -30,7 +30,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
@@ -47,7 +47,7 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
-from test_library_loading import *
+from test_extensions import *
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
@@ -271,6 +271,36 @@ def test_fft():
 def _make_ndarrays(input_list, ctx=mx.gpu(0)):
     return [mx.nd.array(arr, dtype=arr.dtype, ctx=ctx) for arr in input_list]
 
+def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
+    values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
+    mx_vals = _make_ndarrays(values_arr, ctx=ctx)
+    sum_sq = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    sum_sq2 = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    # checks that operator is deterministic
+    assert np.array_equal(sum_sq.asnumpy(), sum_sq2.asnumpy())
+
+    ref_sum_sq = mx.nd.array([(v.astype('float32') ** 2).sum() for v in values_arr],
+                             dtype='float32', ctx=ctx)
+    assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+
+@with_seed()
+def test_multi_sum_sq():
+    min_nparam = 100
+    max_nparam = 120
+    min_dim = 50000
+    max_dim = 100000
+    max_ndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.gpu(0)]:
+        for dtype in dtypes:
+            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+            shapes = [np.random.randint(min_dim, max_dim + 1, size=max_ndim) for i in range(nparam)]
+            low_tol = ctx == mx.cpu(0) and ('float16'in [dtype])
+            tol1 = 1e-3 if low_tol else 1e-5
+            tol2 = 1e-6 if low_tol else 1e-7
+            check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2)
+
 def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
     weights_arr = [np.random.rand(*shape).astype(w_dtype) * 10. for shape in shapes]
     grads_arr = [np.random.rand(*shape).astype(g_dtype) for shape in shapes]
@@ -421,6 +451,7 @@ def test_preloaded_multi_sgd():
                 nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
                 check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
+
 
 @with_seed()
 def test_batchnorm_with_type():
@@ -2665,6 +2696,7 @@ def check_multihead_attention_selfatt(dtype):
         assert(grads_orig[k].shape == grads_opti[k].shape)
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_selfatt():
     for dtype in ['float16', 'float32']:
         check_multihead_attention_selfatt(dtype=dtype)
@@ -2828,6 +2860,7 @@ def check_multihead_attention_encdec(dtype):
         assert(grads_orig[k].shape == grads_opti[k].shape)
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_encdec():
     for dtype in ['float16', 'float32']:
         check_multihead_attention_encdec(dtype=dtype)

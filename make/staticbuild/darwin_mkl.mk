@@ -16,7 +16,7 @@
 # under the License.
 #
 #-------------------------------------------------------------------------------
-#  Template configuration for compiling mxnet for making maven package
+#  Template configuration for compiling mxnet for making python wheel
 #-------------------------------------------------------------------------------
 
 #---------------------
@@ -37,7 +37,7 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -ljpeg -lz -lgfortran -ldl -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
+ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -lz -framework CoreFoundation -framework Security  -Wl,-exported_symbols_list,$(CURDIR)/make/config/libmxnet.sym,-rpath,'$${ORIGIN}',-dead_strip
 
 # the additional compile flags you want to add
 ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
@@ -49,7 +49,7 @@ ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
 # choose the version of blas you want to use
 # can be: mkl, blas, atlas, openblas
 # in default use atlas for linux while apple for osx
-USE_BLAS=openblas
+USE_BLAS=apple
 
 # whether use opencv during compilation
 # you can disable it, however, you will not able to use
@@ -79,28 +79,12 @@ USE_CUDNN = 0
 ENABLE_CUDA_RTC = 0
 
 # use openmp for parallelization
-USE_OPENMP = 1
+USE_OPENMP = 0
 USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
 
 # whether use MKL-DNN library
 USE_MKLDNN = 1
-
-
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
 
 # whether use NNPACK library
 USE_NNPACK = 0

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,15 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-# pylint: disable=arguments-differ
+all: subgraph_lib gemm_lib
 
-# This test checks if dynamic loading of library into MXNet is successful
+gemm_lib:
+	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
 
-import mxnet as mx
-import os
+subgraph_lib:
+	g++ -shared -fPIC -std=c++11 subgraph_lib.cc -o libsubgraph_lib.so -I ../../../include/mxnet
 
-if (os.name=='posix'):
-    mx.library.load('mylib.so')
-elif (os.name=='nt'):
-    mx.library.load('mylib.dll')
+clean:
+	rm -rf libsubgraph_lib.so libgemm_lib.so

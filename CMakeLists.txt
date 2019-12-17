@@ -18,39 +18,48 @@ endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
+include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
-mxnet_option(USE_CUDA             "Build with CUDA support"   ON)
-mxnet_option(USE_OLDCMAKECUDA     "Build with old cmake cuda" OFF)
-mxnet_option(USE_NCCL             "Use NVidia NCCL with CUDA" OFF)
-mxnet_option(USE_OPENCV           "Build with OpenCV support" ON)
-mxnet_option(USE_OPENMP           "Build with Openmp support" ON)
-mxnet_option(USE_CUDNN            "Build with cudnn support"  ON) # one could set CUDNN_ROOT for search path
-mxnet_option(USE_SSE              "Build with x86 SSE instruction support" ON IF NOT ARM)
-mxnet_option(USE_F16C             "Build with x86 F16C instruction support" ON) # autodetects support if ON
-mxnet_option(USE_LAPACK           "Build with lapack support" ON)
-mxnet_option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
-mxnet_option(USE_MKLDNN           "Build with MKL-DNN support" ON IF USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
-mxnet_option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON IF NOT MSVC)
-mxnet_option(USE_GPERFTOOLS       "Build with GPerfTools support" OFF)
-mxnet_option(USE_JEMALLOC         "Build with Jemalloc support"   ON)
-mxnet_option(USE_DIST_KVSTORE     "Build with DIST_KVSTORE support" OFF)
-mxnet_option(USE_PLUGINS_WARPCTC  "Use WARPCTC Plugins" OFF)
-mxnet_option(USE_PLUGIN_CAFFE     "Use Caffe Plugin" OFF)
-mxnet_option(USE_CPP_PACKAGE      "Build C++ Package" OFF)
-mxnet_option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
-mxnet_option(USE_GPROF            "Compile with gprof (profiling) flag" OFF)
-mxnet_option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
-mxnet_option(USE_VTUNE            "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
-mxnet_option(USE_TVM_OP           "Enable use of TVM operator build system." OFF)
-mxnet_option(ENABLE_CUDA_RTC      "Build with CUDA runtime compilation support" ON)
-mxnet_option(BUILD_CPP_EXAMPLES   "Build cpp examples" ON)
-mxnet_option(INSTALL_EXAMPLES     "Install the example source files." OFF)
-mxnet_option(USE_SIGNAL_HANDLER   "Print stack traces on segfaults." ON)
-mxnet_option(USE_TENSORRT         "Enable inference optimization with TensorRT." OFF)
-mxnet_option(USE_ASAN             "Enable Clang/GCC ASAN sanitizers." OFF)
-mxnet_option(ENABLE_TESTCOVERAGE  "Enable compilation with test coverage metric output" OFF)
-mxnet_option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
-mxnet_option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
+option(USE_CUDA "Build with CUDA support"   ON)
+option(USE_OLDCMAKECUDA "Build with old cmake cuda" OFF)
+option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
+option(USE_OPENCV "Build with OpenCV support" ON)
+option(USE_OPENMP "Build with Openmp support" ON)
+cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
+cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
+option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
+option(USE_LAPACK "Build with lapack support" ON)
+option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
+if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
+  option(USE_MKLDNN "Build with MKL-DNN support" ON)
+else()
+  option(USE_MKLDNN "Build with MKL-DNN support" OFF)
+endif()
+if(NOT MSVC)
+  option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON)
+else()
+  option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" OFF)
+endif()
+option(USE_GPERFTOOLS "Build with GPerfTools support" OFF)
+option(USE_JEMALLOC "Build with Jemalloc support"   ON)
+option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
+option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
+option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
+option(USE_CPP_PACKAGE "Build C++ Package" OFF)
+option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
+option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
+option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
+option(USE_VTUNE "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
+option(USE_TVM_OP "Enable use of TVM operator build system." OFF)
+option(ENABLE_CUDA_RTC "Build with CUDA runtime compilation support" ON)
+option(BUILD_CPP_EXAMPLES "Build cpp examples" ON)
+option(INSTALL_EXAMPLES "Install the example source files." OFF)
+option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
+option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
+option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
+option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF)
+option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
+option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
@@ -102,7 +111,8 @@ endif()
 
 #Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
-
+# disable stack trace in exception by default.
+add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -240,7 +250,7 @@ if(USE_TENSORRT)
 endif()
 
 # please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971 
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 if(ENABLE_TESTCOVERAGE)
   message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
   find_program( GCOV_PATH gcov )
@@ -436,6 +446,15 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
+
+  function(load_omp)
+    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
+    set(OPENMP_STANDALONE_BUILD TRUE)
+    set(LIBOMP_ENABLE_SHARED TRUE)
+    set(CMAKE_BUILD_TYPE Release)
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+  endfunction()
+
   find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
@@ -443,11 +462,7 @@ if(USE_OPENMP)
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
      AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
-
-    # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
-    set(OPENMP_STANDALONE_BUILD TRUE)
-    set(LIBOMP_ENABLE_SHARED TRUE)
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+    load_omp()
     list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
     list(APPEND mxnet_LINKER_LIBS omp)
     if(UNIX)
@@ -502,13 +517,15 @@ add_subdirectory(${GTEST_ROOT})
 find_package(GTest REQUIRED)
 
 # cudnn detection
-if(USE_CUDNN AND USE_CUDA)
-  detect_cuDNN()
-  if(HAVE_CUDNN)
+if(USE_CUDNN)
+  find_package(CUDNN)
+  if(CUDNN_FOUND)
     add_definitions(-DUSE_CUDNN)
     include_directories(SYSTEM ${CUDNN_INCLUDE})
     list(APPEND mxnet_LINKER_LIBS ${CUDNN_LIBRARY})
-      add_definitions(-DMSHADOW_USE_CUDNN=1)
+    add_definitions(-DMSHADOW_USE_CUDNN=1)
+  else()
+    set(USE_CUDNN OFF)
   endif()
 endif()
 
@@ -699,7 +716,7 @@ else()
 
 endif()
 
-add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/lib_api/mylib.cc)
+add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
 target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)

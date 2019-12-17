@@ -120,25 +120,24 @@ class RnnPrimitive {
   template<typename rnn_fwd, typename... Args>
   static RnnPrimitive Create(Args&&... args) {
     RnnPrimitive rnn_fwd_prim;
-    rnn_fwd_prim.pd_.reset(
-      new typename rnn_fwd::desc(std::forward<Args>(args)...),
-      [](typename rnn_fwd::desc* pd) {
-        delete reinterpret_cast<typename rnn_fwd::desc*>(pd);
+    auto fwd_desc = typename rnn_fwd::desc(std::forward<Args>(args)...);
+    rnn_fwd_prim.fwd_pd_.reset(
+      new typename rnn_fwd::primitive_desc(fwd_desc, CpuEngine::Get()->get_engine()),
+      [](typename rnn_fwd::primitive_desc* pd) {
+        delete reinterpret_cast<typename rnn_fwd::primitive_desc*>(pd);
       });
-    const typename rnn_fwd::desc& fwd_desc =
-        *(reinterpret_cast<typename rnn_fwd::desc*>(rnn_fwd_prim.pd_.get()));
-    typename rnn_fwd::primitive_desc fwd_pd(fwd_desc, CpuEngine::Get()->get_engine());
-    rnn_fwd_prim.weights_layer_desc_ = fwd_pd.weights_layer_desc();
-    rnn_fwd_prim.weights_iter_desc_  = fwd_pd.weights_iter_desc();
-    rnn_fwd_prim.workspace_desc_ = fwd_pd.workspace_desc();
+    auto fwd_pd = reinterpret_cast<typename rnn_fwd::primitive_desc*>(rnn_fwd_prim.fwd_pd_.get());
+    rnn_fwd_prim.weights_layer_desc_ = fwd_pd->weights_layer_desc();
+    rnn_fwd_prim.weights_iter_desc_  = fwd_pd->weights_iter_desc();
+    rnn_fwd_prim.workspace_desc_ = fwd_pd->workspace_desc();
 
-    rnn_fwd_prim.primitive_ = std::shared_ptr<mkldnn::primitive>(new rnn_fwd(fwd_pd));
+    rnn_fwd_prim.primitive_ = std::shared_ptr<mkldnn::primitive>(new rnn_fwd(*fwd_pd));
 
     return rnn_fwd_prim;
   }
 
   RnnPrimitive() {
-    this->pd_ = nullptr;
+    this->fwd_pd_ = nullptr;
     this->primitive_ = nullptr;
     this->weights_layer_desc_ = mkldnn::memory::desc();
     this->weights_iter_desc_ = mkldnn::memory::desc();
@@ -146,7 +145,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive(const RnnPrimitive& rnn_fwd_prim) {
-    this->pd_ = rnn_fwd_prim.pd_;
+    this->fwd_pd_ = rnn_fwd_prim.fwd_pd_;
     this->primitive_ = rnn_fwd_prim.primitive_;
     this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
     this->weights_iter_desc_ = rnn_fwd_prim.weights_iter_desc_;
@@ -155,7 +154,7 @@ class RnnPrimitive {
 
   RnnPrimitive& operator=(const RnnPrimitive& rnn_fwd_prim) {
     if (this != &rnn_fwd_prim) {
-      this->pd_ = rnn_fwd_prim.pd_;
+      this->fwd_pd_ = rnn_fwd_prim.fwd_pd_;
       this->primitive_ = rnn_fwd_prim.primitive_;
       this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
       this->weights_iter_desc_ = rnn_fwd_prim.weights_iter_desc_;
@@ -165,7 +164,7 @@ class RnnPrimitive {
     return *this;
   }
 
-  const void* GetPrimDesc() const { return pd_.get(); }
+  const void* GetPrimDesc() const { return fwd_pd_.get(); }
   const mkldnn::primitive& GetPrim() const { return *primitive_; }
 
   const mkldnn::memory::desc& GetLayerDesc() const {
@@ -181,7 +180,7 @@ class RnnPrimitive {
   }
 
  private:
-  std::shared_ptr<void> pd_;
+  std::shared_ptr<void> fwd_pd_;
   std::shared_ptr<mkldnn::primitive> primitive_;
   mkldnn::memory::desc weights_layer_desc_;
   mkldnn::memory::desc weights_iter_desc_;
@@ -370,7 +369,9 @@ class MKLDNNRnnBackward {
   void SetDataGradsMem(void* diff_src, void* diff_state, void* diff_statecell,
                        void* diff_out, void* diff_state_out, void* diff_statecell_out,
                        const int dtype = mshadow::kFloat32);
-  void CommitWeightsDiff(void* diff_weights, void* diff_bias, const int dtype = mshadow::kFloat32);
+  void CommitWeightsDiff(void* diff_weights, void* diff_bias,
+                         const OpReqType req,
+                         const int dtype = mshadow::kFloat32);
 
   const mkldnn::primitive& GetBwd() const { return *bwd_.primitive_; }
   const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }

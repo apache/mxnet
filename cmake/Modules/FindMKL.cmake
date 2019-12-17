@@ -45,11 +45,11 @@ set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
 
 
   # ---[ Options
-  mxnet_option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
-  mxnet_option(MKL_USE_STATIC_LIBS "Use static libraries" OFF IF NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
-  mxnet_option(MKL_MULTI_THREADED  "Use multi-threading"   ON IF NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY)
-  mxnet_option(MKL_USE_ILP64  "Use ilp64 data model" OFF)
-  mxnet_option(MKL_USE_CLUSTER "Use cluster functions" OFF IF CMAKE_SIZEOF_VOID_P EQUAL 4)
+  option(MKL_USE_SINGLE_DYNAMIC_LIBRARY "Use single dynamic library interface" ON)
+  cmake_dependent_option(MKL_USE_STATIC_LIBS "Use static libraries" OFF "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
+  cmake_dependent_option(MKL_MULTI_THREADED  "Use multi-threading"  ON "NOT MKL_USE_SINGLE_DYNAMIC_LIBRARY" OFF)
+  option(MKL_USE_ILP64 "Use ilp64 data model" OFF)
+  cmake_dependent_option(MKL_USE_CLUSTER "Use cluster functions" OFF "CMAKE_SIZEOF_VOID_P EQUAL 4" OFF)
 
   find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKL_ROOT} ${INTEL_ROOT}/mkl
     DOC "Folder contains MKL")

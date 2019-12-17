@@ -16,7 +16,7 @@
 # under the License.
 #
 #-------------------------------------------------------------------------------
-#  Template configuration for compiling mxnet for making maven package
+#  Template configuration for compiling mxnet for making python wheel
 #-------------------------------------------------------------------------------
 
 #---------------------
@@ -66,7 +66,7 @@ USE_CUDA = 1
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
-USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-9.2
+USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-10.1
 
 # whether to use CuDNN library
 USE_CUDNN = 1
@@ -79,8 +79,9 @@ USE_NCCL = 1
 # CUDA_ARCH :=
 
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-USE_NVTX=1
 ENABLE_CUDA_RTC = 1
+
+USE_NVTX=1
 
 # use openmp for parallelization
 USE_OPENMP = 1
@@ -89,22 +90,6 @@ USE_LIBJPEG_TURBO = 1
 
 # whether use MKL-DNN library
 USE_MKLDNN = 1
-
-
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
 
 # whether use NNPACK library
 USE_NNPACK = 0
@@ -185,3 +170,4 @@ EXTRA_OPERATORS =
 # git@github.com:dato-code/SFrame.git
 # SFRAME_PATH = $(HOME)/SFrame
 # MXNET_PLUGINS += plugin/sframe/plugin.mk
+

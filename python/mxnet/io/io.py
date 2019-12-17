@@ -36,7 +36,7 @@ from ..ndarray import NDArray
 from ..ndarray.sparse import CSRNDArray
 from ..ndarray import _ndarray_cls
 from ..ndarray import array
-from ..ndarray import concat
+from ..ndarray import concat, tile
 
 from .utils import _init_data, _has_instance, _getdata_by_idx
 
@@ -709,23 +709,27 @@ class NDArrayIter(DataIter):
 
     def _concat(self, first_data, second_data):
         """Helper function to concat two NDArrays."""
+        if (not first_data) or (not second_data):
+            return first_data if first_data else second_data
         assert len(first_data) == len(
             second_data), 'data source should contain the same size'
-        if first_data and second_data:
-            return [
-                concat(
-                    first_data[x],
-                    second_data[x],
-                    dim=0
-                ) for x in range(len(first_data))
-            ]
-        elif (not first_data) and (not second_data):
+        return [
+            concat(
+                first_data[i],
+                second_data[i],
+                dim=0
+            ) for i in range(len(first_data))
+        ]
+
+    def _tile(self, data, repeats):
+        if not data:
             return []
-        else:
-            return [
-                first_data[0] if first_data else second_data[0]
-                for x in range(len(first_data))
-            ]
+        res = []
+        for datum in data:
+            reps = [1] * len(datum.shape)
+            reps[0] = repeats
+            res.append(tile(datum, reps))
+        return res
 
     def _batchify(self, data_source):
         """Load data from underlying arrays, internal use only."""
@@ -748,7 +752,13 @@ class NDArrayIter(DataIter):
             self.cursor + self.batch_size > self.num_data:
             pad = self.batch_size - self.num_data + self.cursor
             first_data = self._getdata(data_source, start=self.cursor)
-            second_data = self._getdata(data_source, end=pad)
+            if pad > self.num_data:
+                repeats = pad // self.num_data
+                second_data = self._tile(self._getdata(data_source, end=self.num_data), repeats)
+                if pad % self.num_data != 0:
+                    second_data = self._concat(second_data, self._getdata(data_source, end=pad % self.num_data))
+            else:
+                second_data = self._getdata(data_source, end=pad)
             return self._concat(first_data, second_data)
         # normal case
         else:

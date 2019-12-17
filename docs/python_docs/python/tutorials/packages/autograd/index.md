@@ -23,7 +23,7 @@
 
 Gradients are fundamental to the process of training neural networks, and tell us how to change the parameters of the network to improve its performance.
 
-![autograd-gradient](/_static/autograd/autograd_gradient.png)
+![auto-gradient](//_static/autograd_images/autograd_gradient.png)
 
 ### Long Answer:
 
@@ -39,7 +39,7 @@ Assuming we've calculated the gradient of each parameter with respect to the los
 
 We differentiate. [MXNet Gluon](/api/python/docs/tutorials/packages/gluon/index.html) uses Reverse Mode Automatic Differentiation (`autograd`) to backprogate gradients from the loss metric to the network parameters.
 
-![forward-backward](/_static/autograd/autograd_forward_backward.png)
+![forward-backward](//_static/autograd_images/autograd_forward_backward.png)
 
 ### Long Answer:
 
@@ -56,7 +56,7 @@ Stage 2. Work backwards through this record and evaluate the partial derivatives
 
 <p style="text-align:center">
     <video width="600" controls playsinline autoplay muted loop>
-        <source src="/_static/autograd/autograd_graph.mp4" type="video/mp4">
+        <source src="/_static/autograd_images/autograd_graph.mp4" type="video/mp4">
     </video>
 </p>
 
@@ -173,7 +173,7 @@ net[0].weight.grad_req = 'null'
 
 <p style="text-align:center">
     <video width="600" controls playsinline autoplay muted loop>
-        <source src="/_static/autograd/autograd_grad_req.mp4" type="video/mp4">
+        <source src="../../../../_static/autograd_images/autograd_grad_req.mp4" type="video/mp4">
     </video>
 </p>
 
@@ -217,7 +217,7 @@ def f(x):
 
 We can plot the resultant function for $x$ between 0 and 1, and we should recognise certain functions in segments of $x$. Starting with a quadratic curve from 0 to 1/2, we have a cubic curve from 1/2 to 2/3, a quartic from 2/3 to 3/4 and finally a flatline.
 
-![control-flow](/_static/autograd/autograd_control_flow.png)
+![control-flow](//_static/autograd_images/autograd_control_flow.png)
 
 Using `autograd`, let's now find the gradient of this arbritrary function. We don't have a vectorized function in this case, because of the control flow, so let's also create a function to calculate the gradient using `autograd`.
 
@@ -234,7 +234,7 @@ grads = [get_grad(f, x).asscalar() for x in xs]
 print(grads)
 ```
 
-![flow-grad](/_static/autograd/autograd_control_flow_grad.png)
+![flow-grad](//_static/autograd_images/autograd_control_flow_grad.png)
 
 We can calculate the gradients by hand in this situation (since it's a toy example), and for the four segments discussed before we'd expect $2x$, $3x^2$, $4x^3$ and 0. As a spot check, for $x=0.6$ the hand calculated gradient would be $3x^2=1.08$, which equals `1.08` as computed by `autograd`.
 
@@ -247,7 +247,7 @@ Most of the time `autograd` will be aware of the complete computational graph, a
 
 <p style="text-align:center">
     <video width="600" controls playsinline autoplay muted loop>
-        <source src="/_static/autograd/autograd_head_grad.mp4" type="video/mp4">
+        <source src="../../../../_static/autograd_images/autograd_head_grad.mp4" type="video/mp4">
     </video>
 </p>
 

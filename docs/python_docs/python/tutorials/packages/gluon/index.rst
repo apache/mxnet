@@ -71,22 +71,16 @@ Data
 .. container:: cards
 
    .. card::
-      :title: Data Loading
-      :link: data.html
+      :title: Data Augmentation
+      :link: data/data_augmentation.html
 
-      How to load data for training.
+      A guide to data augmentation.
 
    .. card::
       :title: Image Augmentation
-      :link: image-augmentation.html
-
-      Boost your training dataset with image augmentation.
-
-   .. card::
-      :title: Data Augmentation
       :link: image/image-augmentation.html
 
-      A guide to data augmentation.
+      Boost your training dataset with image augmentation.
 
    .. card::
       :title: Gluon Datasets and DataLoader
@@ -167,7 +161,7 @@ Training
 
    .. card::
       :title: Autograd API
-      :link: /api/python/docs/tutorials/packages/autograd/index.html
+      :link: ../autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
@@ -194,19 +188,15 @@ Advanced Topics
 
       Building custom operators with numpy.
 
-..
-<-- tutorial missing -->
    .. card::
       :title: Custom Loss
-      :link: custom-loss/custom-loss.html
+      :link: loss/custom-loss.md
 
       A guide to implementing custom losses.
 
-..
-
    .. card::
       :title: Gotchas using NumPy in Apache MXNet
-      :link: ../ndarray/gotchas_numpy_in_mxnet.html
+      :link: ../ndarray/gotchas_numpy_in_mxnet.md
 
       Common misconceptions when using NumPy in Apache MXNet.
 
