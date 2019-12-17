@@ -1,6 +1,7 @@
 [submodule "3rdparty/dmlc-core"]
 	path = 3rdparty/dmlc-core
-	url = https://github.com/dmlc/dmlc-core.git
+	url = https://github.com/leezu/dmlc-core.git
+	branch = patch-1
 [submodule "3rdparty/ps-lite"]
 	path = 3rdparty/ps-lite
 	url = https://github.com/dmlc/ps-lite
