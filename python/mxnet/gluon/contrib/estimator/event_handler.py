@@ -150,9 +150,9 @@ class MetricHandler(EpochBegin, BatchEnd):
         label = kwargs['label']
         loss = kwargs['loss']
         for metric in self.metrics:
+            metric.reset_local()
             if isinstance(metric, metric_loss):
                 # metric wrapper for loss values
-                metric.reset_local()
                 metric.update(0, loss)
             else:
                 metric.update(label, pred)
