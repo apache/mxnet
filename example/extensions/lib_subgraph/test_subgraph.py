@@ -54,7 +54,7 @@ out2 = exe2.forward()
 print(out2)
 
 # without propogating shapes/types
-mysym3 = sym.optimize_for("myProp")
+mysym3 = sym.optimize_for("myProp", myOpt='yello')
 exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out3 = exe3.forward()
 print(out3)

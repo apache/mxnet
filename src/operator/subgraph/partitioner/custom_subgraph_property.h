@@ -122,7 +122,14 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     const char* json = subgraph_json.c_str();
     int *ids = supportedNodeIDs.data();
 
-    CHECK(callSupportedOps_(supportedOps_, json, supportedNodeIDs.size(), ids))
+    std::vector<const char*> opt_keys, opt_vals;
+    for (auto kv : options_map) {
+      opt_keys.push_back(kv.first.c_str());
+      opt_vals.push_back(kv.second.c_str());
+    }
+    
+    CHECK(callSupportedOps_(supportedOps_, json, supportedNodeIDs.size(), ids,
+                            opt_keys.data(), opt_vals.data(), opt_keys.size()))
       << "Error calling supportedOps for '" << subgraphProp << "'";
 
     const auto& idx = g.indexed_graph();

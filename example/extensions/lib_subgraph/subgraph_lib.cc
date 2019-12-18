@@ -203,7 +203,11 @@ const std::vector<std::string> op_names({"exp","log"});
 
 MXReturnValue mySupportedOps(std::string json,
                              const int num_ids,
-                             int *ids) {
+                             int *ids,
+                             std::map<std::string, std::string> options) {
+  for (auto kv : options) {
+    std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
+  }
   //convert json string to json object
   JsonParser parser;
   JsonVal json_val = parser.parse_to_json(json);
