@@ -124,21 +124,38 @@ class BidirectionalGraph {
     for (Node& node : nodes) {
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
-        std::unordered_set<Node*> in_graph;
-        std::unordered_set<Node*> out_graph;
-        std::vector<Node*> dummy_head;
-        dummy_head.emplace_back(&node);
-        DFS(dummy_head, false, [&out_graph, &is_compatible](Node* node) {
-          //if (is_compatible(node->nnvmptr))
-            out_graph.insert(node);
-        });
-        DFS(dummy_head, true, [&in_graph, is_compatible](Node* node) {
-          //if (is_compatible(node->nnvmptr))
-            in_graph.insert(node);
-        });
-        if (!(in_graph.empty() || out_graph.empty())) {
-          separation_sets.push_back(std::make_pair(true,
-                                                   std::make_pair(in_graph, out_graph)));
+      }
+    }
+    for (Node& node : nodes) {
+      if (incomp_set.count(&node) != 0) {
+        // Check if all your inputs and outputs are incompatible too.
+        // If so, then your separation set does not matter
+        bool inside_node = true;
+        for (Node* input : node.inputs) {
+          if (incomp_set.count(input) == 0) {
+            inside_node = false;
+          }
+        }
+        if (inside_node) {
+          for (Node* output : node.outputs) {
+            if (incomp_set.count(output) == 0) {
+              inside_node = false;
+            }
+          }
+        }
+        if (!inside_node) {
+          std::unordered_set<Node*> in_graph;
+          std::unordered_set<Node*> out_graph;
+          std::vector<Node*> dummy_head;
+          dummy_head.emplace_back(&node);
+          DFS(dummy_head, false, [&out_graph](Node* node) {
+              out_graph.insert(node);
+          });
+          DFS(dummy_head, true, [&in_graph](Node* node) {
+              in_graph.insert(node);
+          });
+            separation_sets.push_back(std::make_pair(true,
+                                                     std::make_pair(in_graph, out_graph)));
         } else {
           separation_sets.push_back(std::make_pair(false, PairSet()));
         }
