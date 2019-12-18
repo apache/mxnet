@@ -383,10 +383,6 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   using namespace mxnet_op;
 
-  if (inputs[0].type_flag_ == mshadow::kFloat16) {
-    LOG(FATAL) << "Matrix +/- 2-norm does not support float 16 due to SVD.";  
-  }
-
   if (req[0] == kNullOp) return;
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -427,6 +423,10 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     return;
   }
 
+  if (inputs[0].type_flag_ == mshadow::kFloat16) {
+    LOG(FATAL) << "Matrix +/- 2-norm does not support float 16 due to SVD.";  
+  }
+
   // spectral norms
   TShape old_shape = inputs[0].shape_;
   TShape svd_in_shape = inputs[0].shape_;
@@ -455,7 +455,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    size_t space = int(double(svd_in_shape.Size()) / 16 + 0.5) * 16;
+    size_t space = svd_in_shape.Size(); // crazy memory issue
     TBlob temp = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
                         Shape1(space), s));
     TBlob workspace(reinterpret_cast<DType*>(temp.dptr_), svd_in_shape,
