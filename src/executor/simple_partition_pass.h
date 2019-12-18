@@ -34,23 +34,11 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
-#include <chrono>
 
 #include "exec_pass.h"
 
 namespace mxnet {
 namespace exec {
-
-#define TIME_START(x) \
-  auto start ## x = std::chrono::high_resolution_clock::now();
-
-#define TIME_END(x) \
-{\
-  auto end ## x = std::chrono::high_resolution_clock::now();\
-  std::chrono::duration<double> diff = end ## x - start ## x;\
-  std::cout << #x << " took " << diff.count() << std::endl;\
-}
-
 
 
 /*!
@@ -115,12 +103,10 @@ class BidirectionalGraph {
     std::vector<std::unordered_set<Node*>> subgraphs;
     std::unordered_set<Node*> incomp_set;
     std::vector<std::pair<bool, PairSet>> separation_sets;
-    std::cout << nodes.size() << std::endl;
     // Check each node for compatibility
     // and, if it is incompatible, mark nodes
     // on each side of it as not possible to be
     // in the same subset
-    TIME_START(compute_separation);
     for (Node& node : nodes) {
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
@@ -163,11 +149,9 @@ class BidirectionalGraph {
         separation_sets.push_back(std::make_pair(false, PairSet()));
       }
     }
-    TIME_END(compute_separation);
     IncompMap incomp_map;
     // For each node construct the map of nodes that cannot be in
     // the same subset
-    TIME_START(map_construct);
     index_t num_nodes = nodes.size();
     for (index_t i = 0; i < num_nodes; ++i) {
       const auto n = &(nodes[i]);
@@ -199,7 +183,6 @@ class BidirectionalGraph {
         }
       }
     }
-    TIME_END(map_construct);
     std::unordered_set<Node*> unused_set;
 
     for (auto& n : nodes) {
@@ -210,7 +193,6 @@ class BidirectionalGraph {
     std::unordered_set<Node*> visited;
     std::deque<Node*> stack(outputs.begin(), outputs.end());
     // Create subsets
-    TIME_START(create_subsets);
     while (!stack.empty()) {
       Node* vertex = stack.front();
       stack.pop_front();
@@ -224,7 +206,6 @@ class BidirectionalGraph {
         }
       }
     }
-    TIME_END(create_subsets);
     return subgraphs;
   }
 
@@ -475,20 +456,13 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
  *                      which identifies which nodes should be included in
  *                      subsets.
  */
-
 template<typename FCompatible>
 std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_compatible) {
-  TIME_START(big_construction);
   BidirectionalGraph biG = BidirectionalGraph(g);
-  TIME_END(big_construction);
-
-  TIME_START(get_subsets);
   std::vector<std::unordered_set<BidirectionalGraph::Node*>> subsets =
     biG.get_subsets(is_compatible);
-  TIME_END(get_subsets);
   std::vector<NodeRawPtrSet> nnvm_subsets;
   nnvm_subsets.reserve(subsets.size());
-  TIME_START(prepare_subsets);
   for (auto& subset : subsets) {
     if (subset.size() > 1) {
       NodeRawPtrSet node_set;
@@ -499,7 +473,6 @@ std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_c
       nnvm_subsets.push_back(node_set);
     }
   }
-  TIME_END(prepare_subsets);
   return nnvm_subsets;
 }
 
