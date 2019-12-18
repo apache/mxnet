@@ -41,7 +41,7 @@ else()
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" OFF)
 endif()
 option(USE_GPERFTOOLS "Build with GPerfTools support" OFF)
-option(USE_JEMALLOC "Build with Jemalloc support"   ON)
+cmake_dependent_option(USE_JEMALLOC "Build with Jemalloc support" ON "NOT MSVC;NOT CMAKE_CROSSCOMPILING" OFF)
 option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
 option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
 option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
@@ -416,15 +416,22 @@ if(USE_JEMALLOC)
   if(GPERFTOOLS_FOUND)
     message(ERROR " Only one of USE_JEMALLOC and USE_GPERFTOOLS can be defined at once")
   endif()
-  find_package(JeMalloc)
-  if(JEMALLOC_FOUND)
-    message(STATUS "Using JEMalloc malloc")
-    add_definitions(-DUSE_JEMALLOC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
-    include_directories(${JEMALLOC_INCLUDE_DIRS})
-    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
-  endif()
+
+  function(load_jemalloc)
+    # jemalloc Debug build generates error: "multiple rules generate
+    # 3rdparty/jemalloc/src/syms/hash.c.o.sym.jet [-w dupbuild=err]
+    set(CMAKE_BUILD_TYPE Release)
+    # Initial Exec TLS not supported is incompatible with using dlopen and
+    # default -mtls-dialect https://github.com/jemalloc/jemalloc/issues/937
+    set(JEMALLOC_DISABLE_INITIAL_EXEC_TLS ON)  # Requires CMP0077 CMake 3.13
+    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/jemalloc)
+  endfunction()
+
+  load_jemalloc()
+  list(APPEND mxnet_LINKER_LIBS jemalloc-static)
+  add_definitions(-DUSE_JEMALLOC)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ALT_MALLOC_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ALT_MALLOC_FLAGS}")
 endif()
 
 # ---[ OpenCV
@@ -492,17 +499,6 @@ if(USE_LAPACK)
   add_definitions(-DMXNET_USE_LAPACK=1)
   if (NOT MSVC)
     list(APPEND mxnet_LINKER_LIBS lapack)
-  endif()
-endif()
-
-
-# ---[ jemalloc
-if(USE_JEMALLOC)
-  find_package(JeMalloc)
-  if(JEMALLOC_FOUND)
-    add_definitions(-DUSE_JEMALLOC)
-    include_directories(${JEMALLOC_INCLUDE_DIRS})
-    set(mxnet_LINKER_LIBS ${mxnet_LINKER_LIBS} ${JEMALLOC_LIBRARIES})
   endif()
 endif()
 

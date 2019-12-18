@@ -26,3 +26,7 @@
 [submodule "3rdparty/nvidia_cub"]
 	path = 3rdparty/nvidia_cub
 	url = https://github.com/NVlabs/cub.git
+[submodule "3rdparty/jemalloc"]
+	path = 3rdparty/jemalloc
+	url = https://github.com/leezu/jemalloc.git
+	branch = add/cmake-2019
