@@ -14,7 +14,7 @@ class multivariate_normal(operator.CustomOp):
       super(multivariate_normal, self).__init__()
       self._shape = shape
 
-    def forward(self, in_train, req, in_data, out_data, aux):
+    def forward(self, is_train, req, in_data, out_data, aux):
       loc = in_data[0]
       cov = in_data[1]
       L = _mx_np.linalg.cholesky(cov)
