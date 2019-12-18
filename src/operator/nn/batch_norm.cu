@@ -385,18 +385,66 @@ static __global__ void FrozenBatchNormalizationBackwardKernel(
   const DType* input,
   const DType* gradOutput,
   DType* gradInput,
-  CUDATensors<AccType*> tensors,
+  AType* gradWeight,
+  AType* gradBias,
+  const AType* weight,
+  const AType* runningMean,
+  const AType* runningVar,
   const uint32_t flags,
   const AccReal momentum,
   const AccReal eps,
   const int splitk,
   const index_t num_channels,
-  const int channels_per_block,
+  const int loads_per_block,
   const index_t outer_dim,
   const index_t inner_dim,
   const index_t NHW) {
 
-  const index_t start_channel = (blockIdx.x / splitk) * channels_per_block;
+  constexpr int nvec = sizeof(LType) >= sizeof(DType) ? sizeof(LType) / sizeof(DType) : 1;
+  const int num_channels_per_thread = inner_dim < nvec ? nvec / inner_dim : 1;
+  const int num_NHW_per_thread = nvec / num_channels_per_thread;
+
+  const int channels_per_block = loads_per_block * num_channels_per_thread;
+  const index_t start_channel = (blockIdx.x / splitk) * channels_per_block + (threadIdx.x % loads_per_block) * num_channels_per_thread;
+
+  typedef union {
+    LType aligned;
+    DType separate[nvec];  // NOLINT(*)
+    __device__ inline scratch() {}
+    __device__ inline ~scratch() {}
+  } scratch;
+
+  scratch temp_input, temp_grad;
+
+  AType mean[nvec];
+  AType grad_sum[nvec];
+  AType dotP[nvec];
+
+#pragma unroll
+  for (int v = 0; v < nvec; ++v) {
+    mean[v] = runningMean[start_channel + v % num_channels_per_thread];
+  }
+
+  const LType* aligned_input = reinterpret_cast<LType*>(input);
+  const LType* aligned_gradOutput = reinterpret_cast<LType*>(gradOutput);
+
+  for (int i = threadIdx.x / loads_per_block; i < NHW / splitk; i += blockDim.x / loads_per_block) {
+    const index_t idx = (i / inner_dim) * (num_channels * inner_dim) +
+                        inner_dim * start_channel +
+                        (i % inner_dim);
+    const index_t aligned_idx = idx / nvec;
+    temp_input.aligned = aligned_input[aligned_idx];
+    temp_grad.aligned = aligned_gradOutput[aligned_idx];
+#pragma unroll
+    for (int v = 0; v < nvec; ++v) {
+      const AType g = static_cast<AType>(temp_grad.separate[v]);
+      const AType inp = static_cast<AType>(temp_input[v]);
+      grad_sum[v] += g;
+      dotP[v] += (inp - mean[v]) * g;
+    }
+  }
+
+
 
 
 
