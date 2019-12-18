@@ -34,11 +34,23 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
+#include <chrono>
 
 #include "exec_pass.h"
 
 namespace mxnet {
 namespace exec {
+
+#define TIME_START(x) \
+  auto start ## x = std::chrono::high_resolution_clock::now();
+
+#define TIME_END(x) \
+{\
+  auto end ## x = std::chrono::high_resolution_clock::now();\
+  std::chrono::duration<double> diff = end ## x - start ## x;\
+  std::cout << #x << " took " << diff.count() << std::endl;\
+}
+
 
 
 /*!
@@ -102,12 +114,13 @@ class BidirectionalGraph {
   std::vector<std::unordered_set<Node*>> get_subsets(FCompatible is_compatible) {
     std::vector<std::unordered_set<Node*>> subgraphs;
     std::unordered_set<Node*> incomp_set;
-    std::unordered_set<Node*> all_set(nodes.size());
-    std::vector<PairSet> separation_sets;
+    std::vector<std::pair<bool, PairSet>> separation_sets;
+    std::cout << nodes.size() << std::endl;
     // Check each node for compatibility
     // and, if it is incompatible, mark nodes
     // on each side of it as not possible to be
     // in the same subset
+    TIME_START(compute_separation);
     for (Node& node : nodes) {
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
@@ -116,47 +129,71 @@ class BidirectionalGraph {
         std::vector<Node*> dummy_head;
         dummy_head.emplace_back(&node);
         DFS(dummy_head, false, [&out_graph, &is_compatible](Node* node) {
-          if (is_compatible(node->nnvmptr))
+          //if (is_compatible(node->nnvmptr))
             out_graph.insert(node);
         });
         DFS(dummy_head, true, [&in_graph, is_compatible](Node* node) {
-          if (is_compatible(node->nnvmptr))
+          //if (is_compatible(node->nnvmptr))
             in_graph.insert(node);
         });
-        if (!(in_graph.empty() || out_graph.empty()))
-          separation_sets.push_back(std::make_pair(in_graph, out_graph));
+        if (!(in_graph.empty() || out_graph.empty())) {
+          separation_sets.push_back(std::make_pair(true,
+                                                   std::make_pair(in_graph, out_graph)));
+        } else {
+          separation_sets.push_back(std::make_pair(false, PairSet()));
+        }
+      } else {
+        separation_sets.push_back(std::make_pair(false, PairSet()));
       }
-      all_set.emplace(&node);
     }
+    TIME_END(compute_separation);
     IncompMap incomp_map;
-    std::unordered_set<Node*> comp_set;
-    comp_set.insert(all_set.begin(), all_set.end());
-    for (Node* n : incomp_set) {
-      comp_set.erase(n);
-    }
     // For each node construct the map of nodes that cannot be in
     // the same subset
-    for (Node* n : comp_set) {
-      for (PairSet p : separation_sets) {
-        if (p.first.count(n)) {
-          incomp_map[n].insert(p.second.begin(), p.second.end());
-        } else if (p.second.count(n)) {
-          incomp_map[n].insert(p.first.begin(), p.first.end());
+    TIME_START(map_construct);
+    index_t num_nodes = nodes.size();
+    for (index_t i = 0; i < num_nodes; ++i) {
+      const auto n = &(nodes[i]);
+      if (incomp_set.count(n) == 0) {
+        for (index_t j = i + 1; j < num_nodes; ++j) {
+          const auto& sep_set_pair = separation_sets[j];
+          if (sep_set_pair.first && incomp_map[n].count(&nodes[j]) == 0) {
+            const auto& p = sep_set_pair.second;
+            if (p.first.count(n)) {
+              incomp_map[n].insert(p.second.begin(), p.second.end());
+            } else if (p.second.count(n)) {
+              incomp_map[n].insert(p.first.begin(), p.first.end());
+            }
+          }
+        }
+        for (index_t j = i - 1; j >= 0; --j) {
+          const auto& sep_set_pair = separation_sets[j];
+          if (sep_set_pair.first && incomp_map[n].count(&nodes[j]) == 0) {
+            const auto& p = sep_set_pair.second;
+            if (p.first.count(n)) {
+              incomp_map[n].insert(p.second.begin(), p.second.end());
+            } else if (p.second.count(n)) {
+              incomp_map[n].insert(p.first.begin(), p.first.end());
+            }
+          }
+        }
+        for (Node* incomp_n : incomp_set) {
+          incomp_map[n].erase(incomp_n);
         }
       }
-      for (Node* incomp_n : incomp_set) {
-        incomp_map[n].erase(incomp_n);
-      }
     }
+    TIME_END(map_construct);
     std::unordered_set<Node*> unused_set;
-    unused_set.reserve(comp_set.size());
 
-    for (auto& n : comp_set) {
-      unused_set.insert(n);
+    for (auto& n : nodes) {
+      if (incomp_set.count(&n) == 0) {
+        unused_set.insert(&n);
+      }
     }
     std::unordered_set<Node*> visited;
     std::deque<Node*> stack(outputs.begin(), outputs.end());
     // Create subsets
+    TIME_START(create_subsets);
     while (!stack.empty()) {
       Node* vertex = stack.front();
       stack.pop_front();
@@ -170,6 +207,7 @@ class BidirectionalGraph {
         }
       }
     }
+    TIME_END(create_subsets);
     return subgraphs;
   }
 
@@ -420,13 +458,20 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
  *                      which identifies which nodes should be included in
  *                      subsets.
  */
+
 template<typename FCompatible>
 std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_compatible) {
+  TIME_START(big_construction);
   BidirectionalGraph biG = BidirectionalGraph(g);
+  TIME_END(big_construction);
+
+  TIME_START(get_subsets);
   std::vector<std::unordered_set<BidirectionalGraph::Node*>> subsets =
     biG.get_subsets(is_compatible);
+  TIME_END(get_subsets);
   std::vector<NodeRawPtrSet> nnvm_subsets;
   nnvm_subsets.reserve(subsets.size());
+  TIME_START(prepare_subsets);
   for (auto& subset : subsets) {
     if (subset.size() > 1) {
       NodeRawPtrSet node_set;
@@ -437,6 +482,7 @@ std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_c
       nnvm_subsets.push_back(node_set);
     }
   }
+  TIME_END(prepare_subsets);
   return nnvm_subsets;
 }
 

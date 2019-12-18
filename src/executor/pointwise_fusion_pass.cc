@@ -35,6 +35,7 @@
 #include "../operator/fusion/fused_op-inl.h"
 #include "../operator/fusion/fused_op.h"
 #include "../operator/operator_common.h"
+#include <chrono>
 
 namespace mxnet {
 namespace exec {
@@ -286,21 +287,42 @@ void AddInputsOnlyCompatible(const Graph &g,
   }
 }
 
+#define TIMEIT(x) \
+{\
+  auto time_start = std::chrono::high_resolution_clock::now();\
+  x;\
+  auto time_end = std::chrono::high_resolution_clock::now();\
+  std::chrono::duration<double> diff = time_end - time_start;\
+  std::cout << #x << " took " << diff.count() << std::endl;\
+}
+
+
 Graph FusePointwiseForward(Graph &&g) {
+  std::cout << "Fuse forward" << std::endl;
+  auto start_time = std::chrono::high_resolution_clock::now();
   Graph ret;
   g.indexed_graph();
   const auto& num_forward_outputs = g.GetAttr<size_t>("num_forward_outputs");
   Graph fg;
   fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
                     g.outputs.begin() + num_forward_outputs);
+  auto subsets_start = std::chrono::high_resolution_clock::now();
   auto subsets = GetCompatibleSubsets(fg, IsFusionCompatible);
-  AddInputsOnlyCompatible(fg, &subsets, IsInputsOnlyCompatible);
-  g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
+  auto subsets_end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> subsets_diff = subsets_end - subsets_start;
+  std::cout << "subsets took " << subsets_diff.count() << std::endl;
+  TIMEIT(AddInputsOnlyCompatible(fg, &subsets, IsInputsOnlyCompatible));
+  TIMEIT(g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode));
   ret.outputs = g.outputs;
+  auto end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> diff = end_time - start_time;
+  std::cout << "END Fuse forward: " << diff.count() << std::endl;
   return ret;
 }
 
 Graph FusePointwiseBackward(Graph &&g) {
+  std::cout << "Fuse backward" << std::endl;
+  auto start_time = std::chrono::high_resolution_clock::now();
   Graph ret;
   g.indexed_graph();
   const auto& num_forward_outputs = g.GetAttr<size_t>("num_forward_outputs");
@@ -318,6 +340,9 @@ Graph FusePointwiseBackward(Graph &&g) {
   });
   g = ReplaceSubgraphsPointwise(std::move(g), subsets, CreateSubgraphNode);
   ret.outputs = g.outputs;
+  auto end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> diff = end_time - start_time;
+  std::cout << "END Fuse backward: " << diff.count() << std::endl;
   return ret;
 }
 #endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
