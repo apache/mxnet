@@ -226,7 +226,7 @@ class _LayerOutputMinMaxCollector(object):
             self.min_max_dict[name] = (min_range, max_range)
         if self.logger:
             self.logger.debug("Collecting layer %s min_range=%f, max_range=%f"
-                             % (name, min_range, max_range))
+                              % (name, min_range, max_range))
 
 def _calibrate_quantized_sym(qsym, th_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
@@ -360,7 +360,7 @@ def _get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, 
         del hist_dict[name]  # release the memory
         if logger:
             logger.debug('layer=%s, min_val=%f, max_val=%f, th=%f, divergence=%f'
-                        % (name, min_val, max_val, th, divergence))
+                         % (name, min_val, max_val, th, divergence))
     return th_dict
 
 
