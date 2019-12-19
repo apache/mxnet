@@ -147,6 +147,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'resize',
     'where',
     'full_like',
+    'bincount'
 ]
 
 

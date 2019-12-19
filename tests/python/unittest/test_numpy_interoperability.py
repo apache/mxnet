@@ -67,6 +67,23 @@ def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', np.array([],dtype=_np.int64), (10, 3, 5))
     OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
 
+def _add_workload_bincount():
+    y = np.arange(4).astype(int)
+    y1 = np.array([1, 5, 2, 4, 1], dtype=_np.int64)
+    y2 = np.array((), dtype=_np.int8)
+    w = np.array([0.2, 0.3, 0.5, 0.1])
+    w1 = np.array([0.2, 0.3, 0.5, 0.1, 0.2])
+
+    OpArgMngr.add_workload('bincount', y)
+    OpArgMngr.add_workload('bincount', y1)
+    OpArgMngr.add_workload('bincount', y, w)
+    OpArgMngr.add_workload('bincount', y1, w1)
+    OpArgMngr.add_workload('bincount', y1, w1, 8)
+    OpArgMngr.add_workload('bincount', y, minlength=3)
+    OpArgMngr.add_workload('bincount', y, minlength=8)
+    OpArgMngr.add_workload('bincount', y2, minlength=0)
+    OpArgMngr.add_workload('bincount', y2, minlength=5)
+    
 
 def _add_workload_diag():
     def get_mat(n):
@@ -1409,6 +1426,7 @@ def _prepare_workloads():
     _add_workload_around()
     _add_workload_argsort()
     _add_workload_append()
+    _add_workload_bincount()
     _add_workload_broadcast_arrays(array_pool)
     _add_workload_broadcast_to()
     _add_workload_clip()

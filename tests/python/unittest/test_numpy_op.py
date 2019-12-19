@@ -5670,6 +5670,56 @@ def test_np_unravel_index():
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
+@with_seed()
+@use_np
+def test_np_bincount():
+    class TestBincount(HybridBlock):
+        def __init__(self, minlength=0):
+            super(TestBincount, self).__init__()
+            self._minlength = minlength
+
+        def hybrid_forward(self, F, a):
+            return F.np.bincount(a, None, self._minlength)
+    
+    class TestBincountWeights(HybridBlock):
+        def __init__(self, minlength=0):
+            super(TestBincountWeights, self).__init__()
+            self._minlength = minlength
+
+        def hybrid_forward(self, F, a, weights):
+            return F.np.bincount(a, weights, self._minlength)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64]
+    weight_types = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    shapes = [(), (5,), (10,), (15,), (20,), (30,), (50,)]
+    min_lengths = [0, 5, 20, 50]
+    has_weights = [True, False] 
+    combinations = itertools.product([True, False], shapes, dtypes, weight_types, has_weights, min_lengths)
+    for hybridize, shape, dtype, weight_type, has_weight, minlength in combinations: 
+        rtol = 1e-2 if weight_type == np.float16 else 1e-3
+        atol = 1e-4 if weight_type == np.float16 else 1e-5
+        if shape != ():
+            data = np.random.uniform(0, 10, size=shape).astype(dtype) 
+            weights = np.random.uniform(0, 10, size=shape).astype(weight_type) if has_weight else None
+        else:
+            data = np.array(()).astype(dtype)
+            weights = np.array(()).astype(weight_type) if has_weight else None
+        weights_np = weights.asnumpy() if has_weight else None
+        test_bincount = TestBincountWeights(minlength) if has_weight else TestBincount(minlength)
+        if hybridize:
+            test_bincount.hybridize()
+        mx_out = test_bincount(data, weights) if has_weight else test_bincount(data)
+        np_out = _np.bincount(data.asnumpy(), weights_np, minlength)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+        # No backward operation for operator bincount at this moment
+
+        # Test imperative once again
+        mx_out = np.bincount(data, weights, minlength)
+        np_out = _np.bincount(data.asnumpy(), weights_np, minlength)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+        
 if __name__ == '__main__':
     import nose
     nose.runmodule()
