@@ -200,8 +200,8 @@ struct MultiLAMBKernelParam {
   MPDType* weights32[N];
   DType* out_data[N];
   int step_count[N];
-  float learning_rates[N];
-  float wds[N];
+  MPDType learning_rates[N];
+  MPDType wds[N];
 
   // gpu
   int chunk_size = 65536;
@@ -247,11 +247,10 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
     multi_param->out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
     multi_param->nchunks += (multi_param->sizes[i] + multi_param->chunk_size - 1)
                             /multi_param->chunk_size;
+    multi_param->learning_rates[i] = static_cast<MPDType>(p.learning_rates[i]);
+    multi_param->wds[i] = static_cast<MPDType>(p.wds[i]);
   }
   memcpy(multi_param->step_count, p.step_count.begin(), multi_param->ntensors * sizeof(int));
-  memcpy(multi_param->learning_rates, p.learning_rates.begin(),
-         multi_param->ntensors * sizeof(p.learning_rates[0]));
-  memcpy(multi_param->wds, p.wds.begin(), multi_param->ntensors * sizeof(p.wds[0]));
 }
 
 using namespace mxnet_op;
