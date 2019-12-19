@@ -34,11 +34,9 @@ namespace op {
 
 template<bool has_mixed_precision, typename MPDType, typename DType>
 __global__ void kernel_step1(const MultiLAMBKernelParam<DType, MPDType> kernel_params,
-                             const float learning_rate,
                              const float beta1, const float beta2,
                              const MPDType beta3, const MPDType beta4,
                              const float epsilon,
-                             const float wd,
                              const float clip_gradient,
                              const bool bias_correction,
                              const float rescale_grad,
@@ -91,7 +89,7 @@ __global__ void kernel_step1(const MultiLAMBKernelParam<DType, MPDType> kernel_p
           r_mean[ii] = static_cast<MPDType>(beta1) * r_mean[ii] + beta3 * r_grad[ii];
           r_var[ii] = static_cast<MPDType>(beta2) * r_var[ii] + beta4 * r_grad[ii] * r_grad[ii];
           r_g[ii] = (r_mean[ii] / biascorrection1) / (sqrtf(r_var[ii] / biascorrection2) + epsilon)
-                    + wd * r_weight[ii];
+                    + kernel_params.wds[tensorID] * r_weight[ii];
        }
 #pragma unroll
       for (int ii = 0; ii < ILP_LAMB; ii++) {
@@ -110,7 +108,6 @@ __global__ void kernel_step2(const MultiLAMBKernelParam<DType, MPDType> kernel_p
                              const float* sumSqWeigths,
                              const float* sumSqtemp_g,
                              const float* temp_g,
-                             const float learning_rate,
                              const float lower_bound,
                              const float upper_bound,
                              int* block_to_tensor,
@@ -130,9 +127,9 @@ __global__ void kernel_step2(const MultiLAMBKernelParam<DType, MPDType> kernel_p
 
   MPDType lr_adjusted;
   if (r1 == 0.0f || r2 == 0.0f)
-      lr_adjusted = learning_rate;
+      lr_adjusted = kernel_params.learning_rates[tensorID];
   else
-      lr_adjusted = learning_rate * r1/r2;
+      lr_adjusted = kernel_params.learning_rates[tensorID] * r1/r2;
 
   MPDType r_weight[ILP_LAMB];
   MPDType r_g[ILP_LAMB];
@@ -196,10 +193,9 @@ void call_kernel1(Stream<gpu>* s,
   if (has_mixed_precision)
     kernel_step1<true><<<nblocks, BLOCK_SIZE_LAMB, 0, Stream<gpu>::GetStream(s)>>>(
                       kernel_params,
-                      param.learning_rate,
                       param.beta1, param.beta2,
                       beta3, beta4,
-                      param.epsilon, param.wd,
+                      param.epsilon,
                       param.clip_gradient,
                       param.bias_correction,
                       param.rescale_grad,
@@ -209,10 +205,9 @@ void call_kernel1(Stream<gpu>* s,
   else
     kernel_step1<false><<<nblocks, BLOCK_SIZE_LAMB, 0, Stream<gpu>::GetStream(s)>>>(
                       kernel_params,
-                      param.learning_rate,
                       param.beta1, param.beta2,
                       beta3, beta4,
-                      param.epsilon, param.wd,
+                      param.epsilon,
                       param.clip_gradient,
                       param.bias_correction,
                       param.rescale_grad,
@@ -237,7 +232,6 @@ void call_kernel2(Stream<gpu>* s,
                       kernel_params,
                       r1, r2,
                       temp_g,
-                      param.learning_rate,
                       param.lower_bound, param.upper_bound,
                       block_to_tensor,
                       block_to_chunk,
@@ -247,7 +241,6 @@ void call_kernel2(Stream<gpu>* s,
                       kernel_params,
                       r1, r2,
                       temp_g,
-                      param.learning_rate,
                       param.lower_bound, param.upper_bound,
                       block_to_tensor,
                       block_to_chunk,

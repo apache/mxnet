@@ -1260,7 +1260,7 @@ class LAMB(Optimizer):
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
         self.bias_correction = bias_correction
-        self.aggregate_num = max(1, min(50, int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "50"))))
+        self.aggregate_num = max(1, min(45, int(os.getenv('MXNET_OPTIMIZER_AGGREGATION_SIZE', "45"))))
 
     def create_state(self, index, weight):
         stype = weight.stype
@@ -1317,16 +1317,14 @@ class LAMB(Optimizer):
             if self.upper_bound:
                 kwargs['upper_bound'] = self.upper_bound
 
-            step_count = []
-            for i, (w_i, g_i) in enumerate(zip(weight, grad)):
+            step_count, lrs, wds = [], [], []
+            for i, w_i, g_i in zip(index, weight, grad):
                 assert(isinstance(w_i, NDArray))
                 assert(isinstance(g_i, NDArray))
                 self._update_count(i)
                 step_count.append(self._index_update_count[i])
-            lr = self._get_lr(index[0])
-            wd = self._get_wd(index[0])
-            kwargs['learning_rate'] = lr
-            kwargs['wd'] = wd
+                lrs.append(self._get_lr(i))
+                wds.append(self._get_wd(i))
 
             updated_tensors = 0
             while updated_tensors < len(weight):
@@ -1339,6 +1337,8 @@ class LAMB(Optimizer):
                                       mean, var,
                                       out=weight[sidx:eidx],
                                       step_count=step_count[sidx:eidx],
+                                      lrs=lrs[sidx:eidx],
+                                      wds=wds[sidx:eidx],
                                       **kwargs)
                 else:
                     mean_var = list(zip(*state[sidx:eidx]))[1]
@@ -1351,6 +1351,8 @@ class LAMB(Optimizer):
                                          list(zip(*state[sidx:eidx]))[0],
                                          out=weight[sidx:eidx],
                                          step_count=step_count[sidx:eidx],
+                                         lrs=lrs[sidx:eidx],
+                                         wds=wds[sidx:eidx],
                                          **kwargs)
                 updated_tensors += self.aggregate_num
 

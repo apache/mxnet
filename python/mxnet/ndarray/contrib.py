@@ -607,7 +607,7 @@ def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lr
                                                     **kwargs)
 
 def multi_lamb_update(weights, grads, mean, var, step_count,
-                      out=None, num_tensors=0, **kwargs):
+                      lrs, wds, out=None, num_tensors=0, **kwargs):
     """Given a list of gradients, update weights, mean and variance of multiple tensors
     following LAMB Optimizer implementation.
 
@@ -623,6 +623,10 @@ def multi_lamb_update(weights, grads, mean, var, step_count,
 
     step_count : List of scalars with the number of update step for each tensor
 
+    lrs : List of learning rates (one for each tensor)
+
+    wds : List of weight decays (one for each tensor)
+
     out: List of NDArrays where the updated weights will be stored
 
     num_tensors : Number of NDArrays/tensors in the list
@@ -635,10 +639,12 @@ def multi_lamb_update(weights, grads, mean, var, step_count,
                                                 out=out,
                                                 num_tensors=num_tensors,
                                                 step_count=step_count,
+                                                learning_rates=lrs,
+                                                wds=wds,
                                                 **kwargs)
 
 def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
-                         out=None, num_tensors=0, **kwargs):
+                         lrs, wds, out=None, num_tensors=0, **kwargs):
     """Given a list of gradients, update weights, mean and variance of multiple tensors
     following LAMB Optimizer implementation, and using Mixed-Precision.
 
@@ -656,6 +662,10 @@ def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
 
     step_count : List of scalars with the number of update step for each tensor
 
+    lrs : List of learning rates (one for each tensor)
+
+    wds : List of weight decays (one for each tensor)
+
     out: List of NDArrays where the updated weights will be stored
 
     num_tensors : Number of NDArrays/tensors in the list
@@ -668,4 +678,6 @@ def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
                                                    out=out,
                                                    num_tensors=num_tensors,
                                                    step_count=step_count,
+                                                   learning_rates=lrs,
+                                                   wds=wds,
                                                    **kwargs)

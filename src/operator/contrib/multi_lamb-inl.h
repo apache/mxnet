@@ -49,11 +49,11 @@ enum MultiLambUpdateResource {kTempSpace};
 }  // namespace multilamb
 
 struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
-  float learning_rate;
+  mxnet::Tuple<float> learning_rates;
+  mxnet::Tuple<float> wds;
   float beta1;
   float beta2;
   float epsilon;
-  float wd;
   float rescale_grad;
   float lower_bound;
   float upper_bound;
@@ -63,9 +63,8 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
   mxnet::Tuple<int> step_count;
 
   DMLC_DECLARE_PARAMETER(MultiLAMBParam) {
-    DMLC_DECLARE_FIELD(learning_rate)
-    .set_default(0.001f)
-    .describe("Learning rate");
+    DMLC_DECLARE_FIELD(learning_rates)
+    .describe("List of learning rates");
     DMLC_DECLARE_FIELD(beta1)
     .set_default(0.9f)
     .describe("Exponential decay rate for the first moment estimates.");
@@ -75,9 +74,9 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
     DMLC_DECLARE_FIELD(epsilon)
     .set_default(1e-6f)
     .describe("Small value to avoid division by 0.");
-    DMLC_DECLARE_FIELD(wd)
-    .set_default(0.0f)
-    .describe("Weight decay augments the objective function with a "
+    DMLC_DECLARE_FIELD(wds)
+    .describe("List of Weight decays."
+              "Weight decay augments the objective function with a "
               "regularization term that penalizes large weights. "
                "The penalty scales with the square of the magnitude of each weight.");
     DMLC_DECLARE_FIELD(rescale_grad)
@@ -117,8 +116,16 @@ inline bool MultiLAMB_InferShape(const nnvm::NodeAttrs& attrs,
   auto& input_shapes = *in_attrs;
   auto& output_shapes = *out_attrs;
 
+  CHECK_EQ(param.learning_rates.ndim(), param.num_tensors)
+    << "Number of learning rates is inconsistent with num_tensors "
+    << "parameter passed. Expected number of learning rates: "
+    << param.num_tensors << ", and got " << param.learning_rates.ndim();
+  CHECK_EQ(param.wds.ndim(), param.num_tensors)
+    << "Number of weight decays is inconsistent with num_tensors "
+    << "parameter passed. Expected number of weight decays: "
+    << param.num_tensors << ", and got " << param.wds.ndim();
   CHECK_EQ(param.step_count.ndim(), param.num_tensors)
-    << "Number of step counts is inconsistent with num_weights."
+    << "Number of step counts is inconsistent with num_tensors."
     << "Expected number of step counts: "
     << param.num_tensors << ", and got " << param.step_count.ndim();
 
@@ -180,7 +187,7 @@ class LAMB_single_precision {
 
 template<typename DType, typename MPDType>
 struct MultiLAMBKernelParam {
-  static const int N = 50;
+  static const int N = 45;
   size_t ntensors;
   size_t max_size;
   size_t total_size;
@@ -193,6 +200,8 @@ struct MultiLAMBKernelParam {
   MPDType* weights32[N];
   DType* out_data[N];
   int step_count[N];
+  float learning_rates[N];
+  float wds[N];
 
   // gpu
   int chunk_size = 65536;
@@ -240,6 +249,9 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
                             /multi_param->chunk_size;
   }
   memcpy(multi_param->step_count, p.step_count.begin(), multi_param->ntensors * sizeof(int));
+  memcpy(multi_param->learning_rates, p.learning_rates.begin(),
+         multi_param->ntensors * sizeof(p.learning_rates[0]));
+  memcpy(multi_param->wds, p.wds.begin(), multi_param->ntensors * sizeof(p.wds[0]));
 }
 
 using namespace mxnet_op;

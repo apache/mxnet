@@ -35,10 +35,8 @@ struct MultiLAMB_step1_kernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                                  const float learning_rate,
                                   const float beta1, const float beta2,
                                   const float epsilon,
-                                  const float wd,
                                   const float clip_gradient,
                                   const bool bias_correction,
                                   const float rescale_grad,
@@ -66,9 +64,9 @@ struct MultiLAMB_step1_kernel {
           MPDType var_hat = var / (static_cast<MPDType>(1.0f) -
                                   power::Map(static_cast<MPDType>(beta2),
                                   static_cast<MPDType>(kernel_params.step_count[index])));
-          g = mean_hat / (sqrt(var_hat) + epsilon) + wd * w;
+          g = mean_hat / (sqrt(var_hat) + epsilon) + kernel_params.wds[index] * w;
         } else {
-          g = mean / (sqrt(var) + epsilon) + wd * w;
+          g = mean / (sqrt(var) + epsilon) + kernel_params.wds[index] * w;
         }
         temp_g[kernel_params.tensor2temp_g[index]+i] = g;
       }
@@ -84,7 +82,6 @@ struct MultiLAMB_step2_kernel {
                                   const float* sumSqWeigths,
                                   const float* sumSqtemp_g,
                                   const float* temp_g,
-                                  const float learning_rate,
                                   const float lower_bound,
                                   const float upper_bound,
                                   const OpReqType req) {
@@ -106,7 +103,7 @@ struct MultiLAMB_step2_kernel {
         else
           r = r1/r2;
 
-        MPDType lr_adjusted = learning_rate * r;
+        MPDType lr_adjusted = kernel_params.learning_rates[index] * r;
         w -= lr_adjusted * temp_g[kernel_params.tensor2temp_g[index]+i];
 
         // update weights
@@ -128,10 +125,8 @@ void call_kernel1(Stream<cpu>* s,
   Kernel<MultiLAMB_step1_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
                                  Launch(s, kernel_params.max_size,
                                  kernel_params,
-                                 param.learning_rate,
                                  param.beta1, param.beta2,
                                  param.epsilon,
-                                 param.wd,
                                  param.clip_gradient,
                                  param.bias_correction,
                                  param.rescale_grad,
@@ -152,7 +147,6 @@ void call_kernel2(Stream<cpu>* s,
                                  kernel_params,
                                  r1, r2,
                                  temp_g,
-                                 param.learning_rate,
                                  param.lower_bound, param.upper_bound,
                                  req);
 }
