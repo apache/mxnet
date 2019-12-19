@@ -34,11 +34,10 @@ def post_wheel(path):
     """
     logging.info('Posting {} to PyPI'.format(path))
     pypi_credentials = get_secret()
+    os.environ['TWINE_USERNAME'] = pypi_credentials['username']
+    os.environ['TWINE_PASSWORD'] = pypi_credentials['password']
 
-    cmd = 'python3 -m twine upload --username {} --password {} {}'.format(
-        pypi_credentials['username'],
-        pypi_credentials['password'],
-        path)
+    cmd = 'python3 -m twine upload {}'.format(path)
     version = os.path.basename(path).split('-')[1]
 
     # The PyPI credentials for DEV has username set to 'skipPublish'
@@ -52,10 +51,8 @@ def post_wheel(path):
         print('Skipping publishing nightly builds to Pypi.')
         print('See https://github.com/pypa/pypi-support/issues/50 for details')
         return 0
-
     else:
-        # DO NOT PRINT CMD IN THIS BLOCK, includes password
-        p = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE)
+        p = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=os.environ.copy())
         logging.info(p.stdout)
         return p.returncode
 
