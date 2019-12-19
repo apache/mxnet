@@ -70,30 +70,19 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    step = size // num_slice
-
-    # If size < num_slice, make fewer slices
-    if not even_split and size < num_slice:
-        step = 1
-        num_slice = size
-
-    if batch_axis == 0:
-        slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
-                  for i in range(num_slice)]
-    elif even_split:
-        if is_np_array():
-            slices = _mx_np.split(data, indices_or_sections=num_slice, axis=batch_axis)
-        else:
-            slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
+    Neach_section, extras = divmod(size, num_slice)
+    section_sizes = [0] + (extras * [Neach_section + 1] +
+                           (num_slice - extras) * [Neach_section])
+    div_points = np.array(section_sizes).cumsum()
+    if is_np_array():
+        slices = _mx_np.split(data, indices_or_sections=div_points, axis=batch_axis)
     else:
-        if is_np_array():
-            indices = [step * i for i in range(1, num_slice)]
-            slices = _mx_np.split(data, indices_or_sections=indices, axis=batch_axis)
-        else:
-            slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
-                      if i < num_slice - 1 else
-                      ndarray.slice_axis(data, batch_axis, i*step, size)
-                      for i in range(num_slice)]
+        slices = []
+        sary = ndarray.swapaxes(data, batch_axis, 0)
+        for i in range(num_slice):
+            st = div_points[i]
+            end = div_points[i + 1]
+            slices.append(ndarray.swapaxes(sary[st: end], batch_axis, 0))
     return slices
 
 
