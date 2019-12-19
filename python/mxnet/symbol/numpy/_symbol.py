@@ -36,7 +36,7 @@ try:
 except ImportError:
     from builtins import slice as py_slice
 
-__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like',
+__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'bitwise_not', 'invert',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
@@ -1038,6 +1038,98 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def invert(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+    >>> x = np.invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def bitwise_not(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+    >>> x = np.invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
 
 
 @set_module('mxnet.symbol.numpy')

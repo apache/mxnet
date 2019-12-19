@@ -1780,6 +1780,66 @@ def test_np_unary_funcs():
 
 @with_seed()
 @use_np
+def test_np_bitwise_not():
+    def check_unary_func(func, ref_grad, shape, low, high):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a, *args, **kwargs):
+                return getattr(F.np, self._func)(a)
+
+        np_func = getattr(_np, func)
+        mx_func = TestUnary(func)
+        np_test_data = _np.random.uniform(low, high, shape).astype(_np.int32)
+        mx_test_data = mx.numpy.array(np_test_data)
+        for hybridize in [True, False]:
+            if hybridize:
+                mx_func.hybridize()
+            if ref_grad:
+                mx_test_data.attach_grad()
+            np_out = np_func(np_test_data)
+            with mx.autograd.record():
+                y = mx_func(mx_test_data)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+            if np_out.dtype == np.bool_:
+                assert y.dtype == np.bool_
+
+            if ref_grad:
+                y.backward()
+                assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
+
+        np_out = getattr(_np, func)(np_test_data)
+        mx_out = getattr(mx.np, func)(mx_test_data)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+        assertRaises(NotImplementedError, getattr(np, func), mx_test_data, where=False)
+        assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  subok=False)
+        assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  dtype=_np.int8)
+        assertRaises(TypeError, getattr(np, func), mx_test_data,  dtype="abcdefg")
+        assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  casting='safe')
+        assertRaises(TypeError, getattr(np, func), mx_test_data,  casting='mxnet')
+        assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='C')
+        assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='mxnet')
+
+    funcs = {
+        'bitwise_not' : (None, -5, 5),
+        'invert' : (None, -5, 5),
+    }
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        for func, func_data in funcs.items():
+            ref_grad, low, high = func_data
+            check_unary_func(func, ref_grad, shape, low, high)
+
+
+@with_seed()
+@use_np
 def test_np_binary_funcs():
     def check_binary_func(func, lshape, rshape, low, high, lgrads, rgrads=None, alltypes=None):
         class TestBinary(HybridBlock):
@@ -3760,11 +3820,7 @@ def test_np_linalg_solve():
     nrhs = (-1, 0, 1, 2, 3)
     dtypes = ['float32', 'float64']
     for hybridize, shape, dtype, nrh in itertools.product([False, True], shapes, dtypes, nrhs):
-        rtol = 1e-3
-        atol = 1e-5
-        if dtype == 'float32':
-            rtol = 1e-2
-            atol = 1e-4
+        rtol, atol =1e-2, 1e-4
         test_solve = TestSolve()
         if hybridize:
             test_solve.hybridize()

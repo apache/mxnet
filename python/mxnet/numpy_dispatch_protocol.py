@@ -219,6 +219,8 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'square',
     'cbrt',
     'reciprocal',
+    'invert',
+    'bitwise_not',
     'remainder',
     'sin',
     'cos',
