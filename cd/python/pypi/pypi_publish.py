@@ -34,8 +34,6 @@ def post_wheel(path):
     """
     logging.info('Posting {} to PyPI'.format(path))
     pypi_credentials = get_secret()
-    os.environ['TWINE_USERNAME'] = pypi_credentials['username']
-    os.environ['TWINE_PASSWORD'] = pypi_credentials['password']
 
     cmd = 'python3 -m twine upload {}'.format(path)
     version = os.path.basename(path).split('-')[1]
@@ -52,7 +50,10 @@ def post_wheel(path):
         print('See https://github.com/pypa/pypi-support/issues/50 for details')
         return 0
     else:
-        p = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=os.environ.copy())
+        env = os.environ.copy()
+        env['TWINE_USERNAME'] = pypi_credentials['username']
+        env['TWINE_PASSWORD'] = pypi_credentials['password']
+        p = subprocess.run(cmd.split(' '), stdout=subprocess.PIPE, env=env)
         logging.info(p.stdout)
         return p.returncode
 
