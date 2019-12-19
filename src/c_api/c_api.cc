@@ -146,6 +146,10 @@ int MXLoadLib(const char *path) {
   partCallSupportedOps_t callSupportedOps =
     get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
 
+
+  partCallAcceptSubgraph_t callAcceptSubgraph =
+    get_func<partCallAcceptSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLACCEPTSUBGRAPH_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -702,10 +706,9 @@ int MXLoadLib(const char *path) {
                                                   const_cast<char*>(MXLIB_PARTREGGETCOUNT_STR));
   partRegGet_t partRegGet = get_func<partRegGet_t>(lib, const_cast<char*>(MXLIB_PARTREGGET_STR));
   for (int i = 0; i < numParts; i++) {
-    int count = 0;
     const char* name;
     // get custom partitioner strategy count from the dynamic library
-    partRegGetCount(i, &count, &name);
+    int count = partRegGetCount(i, &name);
     CHECK(count > 0) << "Error loading '" << name
                      << "' custom partitioner, no strategies defined";
     std::string name_str(name);
@@ -717,11 +720,12 @@ int MXLoadLib(const char *path) {
       const char* strategy;
       // function pointers holding implementation from custom library
       supportedOps_t supportedOps_fp = nullptr;
+      acceptSubgraph_t acceptSubgraph_fp = nullptr;
       // name of subgraph op
       const char* op_name = nullptr;
 
     // get custom partitioner strategy from the dynamic library
-      partRegGet(i, j, &strategy, &supportedOps_fp, &op_name);
+      partRegGet(i, j, &strategy, &supportedOps_fp, &acceptSubgraph_fp, &op_name);
       // validate custom partitioner functions from the dynamic library
       CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
                                         << "' custom partitioner strategy '" << strategy
@@ -734,7 +738,8 @@ int MXLoadLib(const char *path) {
       // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
       mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
                             std::make_shared<mxnet::op::CustomSubgraphProperty>(
-                           strategy_str, callSupportedOps, supportedOps_fp, op_name_str));
+                           strategy_str, callSupportedOps, supportedOps_fp,
+                           callAcceptSubgraph, acceptSubgraph_fp, op_name_str));
     }
   }
   API_END();

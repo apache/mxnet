@@ -48,7 +48,9 @@ print(out)
 
 # with propogating shapes/types
 arg_array = [mx.nd.ones((3,2)), mx.nd.ones((3,2))]
-mysym2 = sym.optimize_for("myProp", arg_array)
+print(sym.tojson())
+mysym2 = sym.optimize_for("myProp")
+print(mysym2.tojson())
 exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out2 = exe2.forward()
 print(out2)

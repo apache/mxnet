@@ -585,8 +585,9 @@ class CustomOp {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(std::string, const int, int*,
+typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
                                         std::map<std::string, std::string>);
+typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*);
 
 /*!
  * \brief An abstract class for subgraph property
@@ -604,9 +605,21 @@ class CustomPartitioner {
     op_names.push_back(sg_name);
     return *this;
   }
-
+  CustomPartitioner& setAcceptSubgraph(const char* prop_name, acceptSubgraph_t fn) {
+    accept_map[std::string(prop_name)] = fn;
+    return *this;
+  }
+  acceptSubgraph_t getAcceptSubgraph(int stg_id) {
+    std::string prop(strategies[stg_id]);
+    if (accept_map.find(prop) != accept_map.end())
+      return accept_map[prop];
+    else
+      return nullptr;
+  }
+  
   /*! \brief partitioner  name */
   const char* name;
+  std::map<std::string, acceptSubgraph_t> accept_map;
   /*! \brief strategy names */
   std::vector<const char*> strategies;
   /*! \brief supported ops function */
@@ -743,15 +756,19 @@ typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**,
 typedef int (*partRegSize_t)(void);
 
 #define MXLIB_PARTREGGETCOUNT_STR "_partRegGetCount"
-typedef int (*partRegGetCount_t)(int, int*, const char**);
+typedef int (*partRegGetCount_t)(int, const char**);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
-typedef int (*partRegGet_t)(int, int, const char**,
-                            supportedOps_t*, const char**);
+typedef int (*partRegGet_t)(int, int, const char**, supportedOps_t*,
+                            acceptSubgraph_t*, const char**);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
-typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, const int, int *,
+typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, int, int *,
                                       const char* const*, const char* const*, int);
+#define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
+typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph,
+                                        const char *json, int subgraph_id,
+                                        int *accept);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -1066,12 +1083,12 @@ extern "C" {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) void __cdecl
 #else
-  void
+  int
 #endif
-  _partRegGetCount(int idx, int* count, const char** name) {
+  _partRegGetCount(int idx, const char** name) {
     CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
     *name = part.name;
-    *count = part.strategies.size();
+    return part.strategies.size();
   }
 
   /*! \brief returns partitioner registration at specified index */
@@ -1080,12 +1097,13 @@ extern "C" {
 #else
   void
 #endif
-  _partRegGet(int part_idx, int stg_idx, const char** strategy,
-              supportedOps_t* fn, const char** op_name) {
+  _partRegGet(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
+              acceptSubgraph_t* acceptSubgraph, const char** op_name) {
     CustomPartitioner part = Registry<CustomPartitioner>::get()->get(part_idx);
     *strategy = part.strategies[stg_idx];
-    *fn = part.supportedOps[stg_idx];
+    *supportedOps = part.supportedOps[stg_idx];
     *op_name = part.op_names[stg_idx];
+    *acceptSubgraph = part.getAcceptSubgraph(stg_idx);
   }
 
   /*! \brief returns status of calling parse attributes function for operator from library */
@@ -1095,7 +1113,7 @@ extern "C" {
   int
 #endif
   _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
-                        const int num_ids, int *ids, const char* const* opt_keys,
+                        int num_ids, int *ids, const char* const* opt_keys,
                         const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
     // create map of attributes from list
@@ -1104,6 +1122,21 @@ extern "C" {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }
     return supportedOps(subgraph_json, num_ids, ids, opts);
+  }
+
+    /*! \brief returns status of calling parse attributes function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
+                          int subgraph_id, int *accept) {
+    std::string subgraph_json(json);
+    bool accept_bool=false;
+    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool);
+    *accept = accept_bool;
+    return retval;
   }
 
   /*!

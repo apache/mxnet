@@ -59,19 +59,25 @@ class CustomContainOpSelector: public SubgraphSelector {
  */
 class  CustomSubgraphProperty: public SubgraphProperty {
  public:
-  CustomSubgraphProperty() :
+ CustomSubgraphProperty() :
+  subgraphProp("error"),
     callSupportedOps_(nullptr),
     supportedOps_(nullptr),
-    subgraph_op_name("error"),
-    subgraphProp("error") {}
+    callAcceptSubgraph_(nullptr),
+    acceptSubgraph_(nullptr),
+    subgraph_op_name("error") {}
   CustomSubgraphProperty(std::string subgraphProp_name,
-                        partCallSupportedOps_t callSupportedOps,
-                        supportedOps_t supportedOps,
-                        std::string op_name) :
-    callSupportedOps_(callSupportedOps),
-    supportedOps_(supportedOps),
-      subgraph_op_name(op_name),
-      subgraphProp(subgraphProp_name) {}
+                         partCallSupportedOps_t callSupportedOps,
+                         supportedOps_t supportedOps,
+                         partCallAcceptSubgraph_t callAcceptSubgraph,
+                         acceptSubgraph_t acceptSubgraph,
+                         std::string op_name) :
+    subgraphProp(subgraphProp_name),
+      callSupportedOps_(callSupportedOps),
+      supportedOps_(supportedOps),
+      callAcceptSubgraph_(callAcceptSubgraph),
+      acceptSubgraph_(acceptSubgraph),
+      subgraph_op_name(op_name) {}
 
   // create custom subgraph property
   static SubgraphPropertyPtr Create() {
@@ -143,22 +149,38 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   // override CreateSubgraphNode
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
-    nnvm::NodePtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get(subgraph_op_name);
-    n->attrs.name = "_op" + std::to_string(subgraph_id);
-    n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
-    return n;
+    int accept = 1;
+    if (acceptSubgraph_) {
+      nnvm::Graph g;
+      g.outputs = sym.outputs;
+      std::string subgraph_json = nnvm::pass::SaveJSON(g);
+      CHECK(callAcceptSubgraph_(acceptSubgraph_, subgraph_json.c_str(),
+                                subgraph_id, &accept))
+        << "Error calling acceptSubgraph for '" << subgraphProp << "'";
+      
+    }
+    if (accept) {
+      nnvm::NodePtr n = nnvm::Node::Create();
+      n->attrs.op = Op::Get(subgraph_op_name);
+      n->attrs.name = "_op" + std::to_string(subgraph_id);
+      n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+      return n;
+    } else {
+      return NULL;
+    }
   }
   // override CreateSubgraphSelector
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
     return std::make_shared<CustomContainOpSelector>(supportedNodes);
   }
 
+  std::string subgraphProp;
   partCallSupportedOps_t callSupportedOps_;
   supportedOps_t supportedOps_;
+  partCallAcceptSubgraph_t callAcceptSubgraph_;
+  acceptSubgraph_t acceptSubgraph_;
   std::unordered_set<std::string> supportedNodes;
   std::string subgraph_op_name;
-  std::string subgraphProp;
 };
 }  // namespace op
 }  // namespace mxnet
