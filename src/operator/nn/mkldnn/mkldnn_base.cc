@@ -358,7 +358,8 @@ mkldnn::memory::desc GetDesc(const mkldnn::memory::desc &desc,
   mkldnn::memory::desc data_md(dims, cpp_type, cpp_format);
   return mkldnn::memory::desc(dims, cpp_type, cpp_format);
 }
-// reorder mkldnn src to dst format dtype 
+
+// reorder mkldnn src to dst format dtype
 void ReorderTo(const mkldnn::memory *src, const mkldnn::memory *dst) {
   mkldnn::stream s(CpuEngine::Get()->get_engine());
   auto new_src = *src;
@@ -385,7 +386,7 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
     } else {
       if (in_bufs.empty())
         in_bufs.reserve(inputs.size());
-      if (inputs[i].dtype() != mshadow::kBfloat16 ) {
+      if (inputs[i].dtype() != mshadow::kBfloat16) {
         in_bufs.push_back(inputs[i].Reorder2Default());
       } else {
         in_bufs.push_back(inputs[i].Reorder2DefaultFp32());
@@ -432,7 +433,7 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
     if (outputs[i].dtype() == mshadow::kBfloat16) {
       auto src_mem = temp_bf16_src[bf16_pos].GetMKLDNNData();
       auto dst_mem = temp_bf16_dst[bf16_pos].GetMKLDNNData();
-      bf16_pos ++;
+      bf16_pos++;
       ReorderTo(src_mem, dst_mem);
     } else if (req[i] == kAddTo && outputs[i].IsMKLDNNData()) {
       mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);

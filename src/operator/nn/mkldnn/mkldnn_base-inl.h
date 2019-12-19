@@ -619,7 +619,8 @@ class MKLDNNMemory {
     return mem->get_desc();
   }
 
-  mkldnn::memory::desc GetDesc(mkldnn_format_tag_t format, mkldnn::memory::data_type data_type = mkldnn::memory::data_type::undef) const {
+  mkldnn::memory::desc GetDesc(mkldnn_format_tag_t format, 
+          mkldnn::memory::data_type data_type = mkldnn::memory::data_type::undef) const {
     mkldnn::memory::dims dims(desc.data.dims, desc.data.dims + desc.data.ndims);
     mkldnn::memory::data_type cpp_type = (data_type == mkldnn::memory::data_type::undef) ?
         static_cast<mkldnn::memory::data_type>(desc.data.data_type) : data_type;
@@ -649,6 +650,9 @@ class MKLDNNMemory {
     mkldnn::reorder(*mem, *other).execute(s, *mem, *other);
   }
 };
+
+// reorder mkldnn src to dst format dtype
+void ReorderTo(const mkldnn::memory *src, const mkldnn::memory *dst);
 
 template <typename Compute, typename AttrState>
 void FallBackCompute(Compute fn, const AttrState &attrs,

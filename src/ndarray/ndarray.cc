@@ -610,35 +610,17 @@ void NDArray::Reorder2DefaultAsync() const {
     FnProperty::kNormal, 0, "Reorder2Default");
 }
 
+// now just support bf16->fp32
 NDArray NDArray::Reorder2DefaultFp32() const {
   CHECK(storage_type() == kDefaultStorage && IsView() == false);
-
-  if (ptr_->mkl_mem_ == nullptr  && dtype() ==  mshadow::kBfloat16) {
-    // If this isn't a view, we can create a MKLDNN memory and store it in the
-    // chunk.
-    CheckAndAlloc();
-    ptr_->SetMKLMem(shape_, dtype_);
-    MKLDNNStream::Get()->RegisterMem(ptr_->mkl_mem_->GetMem());
+  if (dtype() !=  mshadow::kBfloat16) {
+    return Reorder2Default();
   }
-  mkldnn::memory::desc from_desc = ptr_->mkl_mem_->GetDesc();
-  mkldnn::memory::data_type from_type =
-        static_cast<mkldnn::memory::data_type>(from_desc.data.data_type);
+  NDArray ret(shape(), ctx(), false, mshadow::DataType<float>::kFlag);
+  auto src_mem = GetMKLDNNData();
+  auto dst_mem = ret.GetMKLDNNData();
+  ReorderTo(src_mem, dst_mem);
 
-  if (!ptr_->mkl_mem_->IsMKLDNN() && from_type == mkldnn_f32)
-    return *this;
-  // create new ndarray from  mkldnn layout
-  mxnet::TShape tshape(from_desc.data.ndims, -1);
-  for (int i = 0; i < from_desc.data.ndims; i++) tshape[i] = from_desc.data.dims[i];
-  NDArray ret(tshape, ctx(), false, mshadow::DataType<float>::kFlag);
-  mkldnn_format_tag_t format = ptr_->mkl_mem_->GetDefaultFormat();
-  mkldnn::memory::desc def_desc = ptr_->mkl_mem_->GetDesc(format, mkldnn::memory::data_type::f32);
-  CHECK(ret.ptr_->shandle.size >= def_desc.get_size());
-  mkldnn::memory def_mem(def_desc, CpuEngine::Get()->get_engine(), ret.ptr_->shandle.dptr);
-  ptr_->mkl_mem_->ReorderTo(&def_mem);
-  // reshape as needed
-  ret.shape_ = shape_;
-  ret.byte_offset_ = byte_offset_;
-  ret.reuse_ = false;
   return ret;
 }
 
