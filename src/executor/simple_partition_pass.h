@@ -114,19 +114,13 @@ class BidirectionalGraph {
     }
     for (Node& node : nodes) {
       if (incomp_set.count(&node) != 0) {
-        // Check if all your inputs and outputs are incompatible too.
-        // If so, then your separation set does not matter
+        // Check if all your inputs are incompatible too.
+        // If so, then your separation set does not matter,
+        // because it will covered by the sets of your inputs
         bool inside_node = true;
         for (Node* input : node.inputs) {
           if (incomp_set.count(input) == 0) {
             inside_node = false;
-          }
-        }
-        if (inside_node) {
-          for (Node* output : node.outputs) {
-            if (incomp_set.count(output) == 0) {
-              inside_node = false;
-            }
           }
         }
         if (!inside_node) {
