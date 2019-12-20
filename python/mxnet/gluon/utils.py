@@ -70,19 +70,18 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    Neach_section, extras = divmod(size, num_slice)
-    section_sizes = [0] + (extras * [Neach_section + 1] +
-                           (num_slice - extras) * [Neach_section])
+    n_each_section, extras = divmod(size, num_slice)
+    section_sizes = [0] + (extras * [n_each_section + 1] +
+                           (num_slice - extras) * [n_each_section])
     div_points = np.array(section_sizes).cumsum()
     if is_np_array():
         slices = _mx_np.split(data, indices_or_sections=div_points, axis=batch_axis)
     else:
         slices = []
-        sary = ndarray.swapaxes(data, batch_axis, 0)
         for i in range(num_slice):
             st = div_points[i]
             end = div_points[i + 1]
-            slices.append(ndarray.swapaxes(sary[st: end], batch_axis, 0))
+            slices.append(ndarray.slice_axis(data, axis=batch_axis, begin=st, end=end))
     return slices
 
 
