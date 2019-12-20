@@ -3057,15 +3057,15 @@ def test_npx_random_bernoulli():
         assertRaises(ValueError, _test_bernoulli_exception, prob, logit)
         if prob.size > 0:
             # larger than 1
-            assertRaises(MXNetError, _test_bernoulli_exception, prob + 2.0, None)
+            assertRaises(ValueError, _test_bernoulli_exception, prob + 2.0, None)
             # smaller than 0
-            assertRaises(MXNetError, _test_bernoulli_exception, prob - 2.0, None)
+            assertRaises(ValueError, _test_bernoulli_exception, prob - 2.0, None)
             # mixed case
             low, high = (-1.0, 2.0)
             # uniform(-1, 2)
             scaled_prob = low + (high - low) * prob
             if not ((scaled_prob.asnumpy() >= 0).all() and (scaled_prob.asnumpy() <= 1).all()):
-                assertRaises(MXNetError, _test_bernoulli_exception, scaled_prob, None)
+                assertRaises(ValueError, _test_bernoulli_exception, scaled_prob, None)
 
 
 @with_seed()
