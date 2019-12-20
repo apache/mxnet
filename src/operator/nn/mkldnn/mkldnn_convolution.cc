@@ -106,11 +106,10 @@ std::shared_ptr<mkldnn::convolution_forward::primitive_desc> GetConvFwdImpl(
     try {
       auto conv_pd =
           std::make_shared<mkldnn::convolution_forward::primitive_desc>(desc, attr, engine);
-      while ((data.dtype() != mshadow::kBfloat16) &&
-             (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
-              conv_pd->src_desc().get_size() != GetArraySize(data) ||
-              (!param.mkldnn_param.quantized &&
-               conv_pd->weights_desc().get_size() != GetArraySize(weights)))) {
+      while (conv_pd->dst_desc().get_size() != GetArraySize(output) ||
+             conv_pd->src_desc().get_size() != GetArraySize(data) ||
+             (!param.mkldnn_param.quantized &&
+              conv_pd->weights_desc().get_size() != GetArraySize(weights))) {
         // next_impl() will visit desc and engine, please make sure they are still alive here.
         CHECK(conv_pd->next_impl()) << "No convolution implementation for this request.";
       }

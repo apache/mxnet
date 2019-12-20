@@ -201,8 +201,8 @@ Graph ReducePrecision(Graph &&src) {
      * check the condition, and if true add amp_cast (to fp32) after its inputs
      * 4. for other nodes, create copy node and add it to the mirror_map
      */
-    if (!node->is_variable() && fp32_ops.count(node->op()->name) > 0 &&
-        excluded_syms.count(node->attrs.name) == 0) {
+    if ((!node->is_variable() && fp32_ops.count(node->op()->name) > 0) ||
+        (excluded_syms.count(node->attrs.name) > 0)) {
       // Add output entry to fp32_map
       for (size_t i = 0; i < node->num_outputs(); ++i) {
         const auto out_entry = NodeEntry(node, i, 0);

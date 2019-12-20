@@ -100,7 +100,34 @@ def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples,
             logger.info(m.get())
 
 
-def benchmark_score(symbol_file, ctx, batch_size, num_batches, data_layer_type, logger=None):
+def low_precison_convert(model_name, low_precision, sym, arg_params, aux_params, excluded_sym_names=[]):
+    if low_precision == 'bfloat16':
+        if model_name.find('imagenet1k-resnet-152') != -1:
+            excluded_sym_names += ['conv0']
+        elif model_name.find('imagenet1k-inception-bn') != -1:
+            excluded_sym_names += ['conv_1']
+        elif model_name.find('resnet') != -1 and model_name.find('v1') != -1:
+            excluded_sym_names += ['resnetv10_conv0_fwd']
+        elif model_name.find('resnet') != -1 and model_name.find('v2') != -1:
+            excluded_sym_names += ['resnetv20_conv0_fwd']
+        elif model_name.find('vgg') != -1:
+            excluded_sym_names += ['vgg0_conv0_fwd']
+        elif model_name.find('squeezenet1') != -1:
+            excluded_sym_names += ['squeezenet0_conv0_fwd']
+        elif model_name.find('mobilenet') != -1 and model_name.find('v2') == -1:
+            excluded_sym_names += ['mobilenet0_conv0_fwd']
+        elif model_name.find('mobilenet') != -1 and model_name.find('v2') != -1:
+            excluded_sym_names += ['mobilenetv20_conv0_fwd']
+        elif model_name.find('inceptionv3') != -1:
+            excluded_sym_names += ['inception30_conv0_fwd']
+    return amp.convert_model(sym,
+                             arg_params,
+                             aux_params,
+                             target_dtype=low_precision,
+                             excluded_sym_names=excluded_sym_names,
+                             cast_optional_params=True)
+
+def benchmark_score(symbol_file, ctx, batch_size, num_batches, data_layer_type, low_precision, logger=None):
     # get mod
     cur_path = os.path.dirname(os.path.realpath(__file__))
     symbol_file_path = os.path.join(cur_path, symbol_file)
@@ -122,17 +149,12 @@ def benchmark_score(symbol_file, ctx, batch_size, num_batches, data_layer_type, 
              data_shapes=[dshape])
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
 
-    if args.low_precision:
-        if args.ctx == 'gpu':
-            assert args.low_precision == 'float16', "Not supported low-precision options for GPU."
-        elif args.ctx == 'cpu':
-            assert args.low_precision == 'bfloat16', "Not supported low-precision options for CPU."
+    if low_precision:
         arg_params, aux_params = mod.get_params()
-        sym, arg_params, aux_params = amp.convert_model(sym,
-                                                        arg_params,
-                                                        aux_params,
-                                                        target_dtype=args.low_precision,
-                                                        cast_optional_params=True)
+        sym, arg_params, aux_params = low_precison_convert(symbol_file,
+                                                           low_precision,
+                                                           sym, arg_params,
+                                                           aux_params)
         mod = mx.mod.Module(symbol=sym, context=ctx)
         mod.bind(for_training=False,
                  inputs_need_grad=False,
@@ -233,6 +255,13 @@ if __name__ == '__main__':
     logger.info('Input data shape = %s' % str(data_shape))
 
     data_layer_type = args.data_layer_type
+
+    if args.low_precision:
+        if args.ctx == 'gpu':
+            assert args.low_precision == 'float16', "Not supported low-precision options for GPU."
+        elif args.ctx == 'cpu':
+            assert args.low_precision == 'bfloat16', "Not supported low-precision options for CPU."
+
     if args.benchmark == False:
         dataset = args.dataset
         download_dataset('http://data.mxnet.io/data/val_256_q90.rec', dataset)
@@ -259,16 +288,10 @@ if __name__ == '__main__':
         sym, arg_params, aux_params = load_model(symbol_file, param_file, logger)
 
         if args.low_precision:
-            if args.ctx == 'gpu':
-                assert args.low_precision == 'float16', "Not supported low-precision options for GPU."
-            elif args.ctx == 'cpu':
-                assert args.low_precision == 'bfloat16', "Not supported low-precision options for CPU."
-            sym, arg_params, aux_params = amp.convert_model(sym,
-                                                            arg_params,
-                                                            aux_params,
-                                                            target_dtype=args.low_precision,
-                                                            cast_optional_params=True)
-            sym.save('bf161.json', remove_amp_cast=False)
+            sym, arg_params, aux_params = low_precison_convert(symbol_file,
+                                                               args.low_precision,
+                                                               sym, arg_params,
+                                                               aux_params)
         # make sure that fp32 inference works on the same images as calibrated quantized model
         logger.info('Skipping the first %d batches' % args.num_skipped_batches)
         data = advance_data_iter(data, args.num_skipped_batches)
@@ -279,5 +302,6 @@ if __name__ == '__main__':
             max_num_examples=num_inference_images, logger=logger)
     else:
         logger.info('Running model %s for inference' % symbol_file)
-        speed = benchmark_score(symbol_file, ctx, batch_size, args.num_inference_batches, data_layer_type, logger)
+        speed = benchmark_score(symbol_file, ctx, batch_size,
+                                args.num_inference_batches, data_layer_type, args.low_precision, logger)
         logger.info('batch size %2d, image/sec: %f', batch_size, speed)
