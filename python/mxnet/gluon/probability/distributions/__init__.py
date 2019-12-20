@@ -17,10 +17,11 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Distribution Classes."""
+"""Distribution classes."""
 
 from .distribution import *
 
 from .exp_family import *
 
 from .normal import *
+

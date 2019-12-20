@@ -18,3 +18,5 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Probability module"""
+
+from .distributions import *
