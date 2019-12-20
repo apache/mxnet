@@ -291,3 +291,19 @@ def test_trainer_lr_sched():
             assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
             lr *= factor
     mx.nd.waitall()
+
+@with_seed()
+def test_gluon_trainer_param_order():
+    net = mx.gluon.nn.Sequential()
+    # layers may be added in a random order for all workers
+    layers = {'ones_': 1, 'zeros_': 0}
+    for name, init in layers.items():
+        net.add(mx.gluon.nn.Dense(10, in_units=10, weight_initializer=mx.init.Constant(init),
+                                  use_bias=False, prefix=name))
+    params = net.collect_params()
+    net.initialize()
+    trainer = gluon.Trainer(params, 'sgd')
+    for name, init in layers.items():
+        expected_idx = 0 if name == 'ones_' else 1
+        expected_name = name + 'weight'
+        assert trainer._params[expected_idx].name == expected_name
