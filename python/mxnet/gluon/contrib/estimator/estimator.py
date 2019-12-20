@@ -281,7 +281,7 @@ class Estimator(object):
 
         Parameters
         ----------
-        val_data : DataLoader
+        val_data : iterable Object
             Validation data loader with data and labels.
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
@@ -290,10 +290,11 @@ class Estimator(object):
             event handlers specified here, a default MetricHandler and a LoggingHandler
             will be added if not specified explicitly.
         """
-        if not isinstance(val_data, DataLoader):
-            raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
-                             "can transform your DataIter or any NDArray into Gluon DataLoader. "
-                             "Refer to gluon.data.DataLoader")
+        try:
+            is_iterable = iter(val_data)
+        except TypeError as te:
+            raise ValueError("Estimator only support input as Iterable. Alternatively, you "
+                             "can transform your DataIter or any NDArray into an iterable object.")
 
         for metric in self.val_metrics:
             metric.reset()
@@ -339,9 +340,9 @@ class Estimator(object):
 
         Parameters
         ----------
-        train_data : DataLoader
+        train_data : iterable Object
             Training data loader with data and labels.
-        val_data : DataLoader, default None
+        val_data : iterable Object, default None
             Validation data loader with data and labels.
         epochs : int, default None
             Number of epochs to iterate on the training data.
@@ -358,10 +359,11 @@ class Estimator(object):
         batch_axis : int, default 0
             Batch axis to split the training data into devices.
         """
-        if not isinstance(train_data, DataLoader):
-            raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
-                             "can transform your DataIter or any NDArray into Gluon DataLoader. "
-                             "Refer to gluon.data.dataloader")
+        try:
+            is_iterable = iter(train_data)
+        except TypeError as te:
+            raise ValueError("Estimator only support input as iterable Object. Alternatively, you "
+                             "can transform your DataIter or any NDArray into iterable Object. ")
 
         # must specify one and only one of epochs or batches
         if (not epochs) == (not batches):
