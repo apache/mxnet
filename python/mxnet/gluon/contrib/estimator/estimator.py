@@ -281,8 +281,9 @@ class Estimator(object):
 
         Parameters
         ----------
-        val_data : iterable Object
-            Validation data loader with data and labels.
+        val_data : iterable object
+            Validation data can be any iterable object yielding a sequence of batches,
+            e.g., a data loader object.
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
         event_handlers : EventHandler or list of EventHandler
@@ -290,11 +291,9 @@ class Estimator(object):
             event handlers specified here, a default MetricHandler and a LoggingHandler
             will be added if not specified explicitly.
         """
-        try:
-            is_iterable = iter(val_data)
-        except TypeError as te:
-            raise ValueError("Estimator only support input as Iterable. Alternatively, you "
-                             "can transform your DataIter or any NDArray into an iterable object.")
+        if not hasattr(val_data, '__iter__') and not hasattr(val_data, '__getitem__'):
+            raise ValueError("Estimator only support iterable object as input. For example, you "
+                             "can provide a customized data loader os input")
 
         for metric in self.val_metrics:
             metric.reset()
@@ -340,10 +339,12 @@ class Estimator(object):
 
         Parameters
         ----------
-        train_data : iterable Object
-            Training data loader with data and labels.
-        val_data : iterable Object, default None
-            Validation data loader with data and labels.
+        train_data : iterable object
+            Training data can be any iterable object yielding a sequence of batches,
+            e.g., a data loader object.
+        val_data : iterable object, default None
+            Validation data can be any iterable object yielding a sequence of batches,
+            e.g., a data loader object.
         epochs : int, default None
             Number of epochs to iterate on the training data.
             You can only specify one and only one type of iteration(epochs or batches).
@@ -359,11 +360,9 @@ class Estimator(object):
         batch_axis : int, default 0
             Batch axis to split the training data into devices.
         """
-        try:
-            is_iterable = iter(train_data)
-        except TypeError as te:
-            raise ValueError("Estimator only support input as iterable Object. Alternatively, you "
-                             "can transform your DataIter or any NDArray into iterable Object. ")
+        if not hasattr(train_data, '__iter__') and not hasattr(train_data, '__getitem__'):
+            raise ValueError("Estimator only support iterable object as input. For example, you "
+                             "can provide a customized data loader os input")
 
         # must specify one and only one of epochs or batches
         if (not epochs) == (not batches):
