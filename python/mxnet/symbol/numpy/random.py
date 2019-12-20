@@ -300,7 +300,7 @@ def shuffle(x):
 
     Parameters
     ----------
-    x: ndarray
+    x: _Symbol
         The array or list to be shuffled.
 
     Returns
