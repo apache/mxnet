@@ -188,8 +188,8 @@ class _LayerHistogramCollector(object):
             return
         handle = ctypes.cast(arr, NDArrayHandle)
         arr = NDArray(handle, writable=False).copyto(cpu()).asnumpy()
-        if self.logger is not None:
-            self.logger.info("Collecting layer %s histogram of shape %s" % (name, arr.shape))
+        if self.logger:
+            self.logger.debug("Collecting layer %s histogram of shape %s" % (name, arr.shape))
         min_range = np.min(arr)
         max_range = np.max(arr)
         th = max(abs(min_range), abs(max_range))
@@ -224,9 +224,9 @@ class _LayerOutputMinMaxCollector(object):
                                        max(cur_min_max[1], max_range))
         else:
             self.min_max_dict[name] = (min_range, max_range)
-        if self.logger is not None:
-            self.logger.info("Collecting layer %s min_range=%f, max_range=%f"
-                             % (name, min_range, max_range))
+        if self.logger:
+            self.logger.debug("Collecting layer %s min_range=%f, max_range=%f"
+                              % (name, min_range, max_range))
 
 def _calibrate_quantized_sym(qsym, th_dict):
     """Given a dictionary containing the thresholds for quantizing the layers,
@@ -358,18 +358,19 @@ def _get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, 
         else:
             th_dict[name] = (-th, th)
         del hist_dict[name]  # release the memory
-        if logger is not None:
-            logger.info('layer=%s, min_val=%f, max_val=%f, th=%f, divergence=%f'
-                        % (name, min_val, max_val, th, divergence))
+        if logger:
+            logger.debug('layer=%s, min_val=%f, max_val=%f, th=%f, divergence=%f'
+                         % (name, min_val, max_val, th, divergence))
     return th_dict
 
 
-def _load_sym(sym, logger=logging):
+def _load_sym(sym, logger=None):
     """Given a str as a path the symbol .json file or a symbol, returns a Symbol object."""
     if isinstance(sym, str):  # sym is a symbol file path
         cur_path = os.path.dirname(os.path.realpath(__file__))
         symbol_file_path = os.path.join(cur_path, sym)
-        logger.info('Loading symbol from file %s' % symbol_file_path)
+        if logger:
+            logger.info('Loading symbol from file %s' % symbol_file_path)
         return sym_load(symbol_file_path)
     elif isinstance(sym, Symbol):
         return sym
@@ -378,14 +379,15 @@ def _load_sym(sym, logger=logging):
                          ' while received type %s' % str(type(sym)))
 
 
-def _load_params(params, logger=logging):
+def _load_params(params, logger=None):
     """Given a str as a path to the .params file or a pair of params,
     returns two dictionaries representing arg_params and aux_params.
     """
     if isinstance(params, str):
         cur_path = os.path.dirname(os.path.realpath(__file__))
         param_file_path = os.path.join(cur_path, params)
-        logger.info('Loading params from file %s' % param_file_path)
+        if logger:
+            logger.info('Loading params from file %s' % param_file_path)
         save_dict = nd_load(param_file_path)
         arg_params = {}
         aux_params = {}
@@ -451,7 +453,7 @@ def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None,
-                   quantized_dtype='int8', quantize_mode='smart', logger=logging):
+                   quantized_dtype='int8', quantize_mode='smart', logger=None):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -530,7 +532,9 @@ def quantize_model(sym, arg_params, aux_params,
                          ' the names of the operators that will not be quantized,'
                          ' while received type %s' % str(type(excluded_op_names)))
 
-    logger.info('Quantizing symbol')
+    if logger:
+        os.environ['MXNET_QUANTIZATION_VERBOSE'] = '1'
+        logger.info('Quantizing symbol')
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
@@ -561,21 +565,24 @@ def quantize_model(sym, arg_params, aux_params,
                                                                include_layer=calib_layer,
                                                                max_num_examples=num_calib_examples,
                                                                logger=logger)
-            logger.info('Collected layer outputs from FP32 model using %d examples' % num_examples)
-            logger.info('Calculating optimal thresholds for quantization')
+            if logger:
+                logger.info('Collected layer outputs from FP32 model using %d examples' % num_examples)
+                logger.info('Calculating optimal thresholds for quantization')
             th_dict = _get_optimal_thresholds(hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict, num_examples = _collect_layer_output_min_max(
                 mod, calib_data, quantized_dtype, include_layer=calib_layer, max_num_examples=num_calib_examples,
                 logger=logger)
-            logger.info('Collected layer output min/max values from FP32 model using %d examples'
-                        % num_examples)
+            if logger:
+                logger.info('Collected layer output min/max values from FP32 model using %d examples'
+                            % num_examples)
         else:
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)
         qsym = _calibrate_quantized_sym(qsym, th_dict)
 
-    logger.info('Quantizing parameters')
+    if logger:
+        logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params, th_dict)
 
     return qsym, qarg_params, aux_params
@@ -584,7 +591,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                           data_names=('data',), label_names=('softmax_label',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_examples=None,
-                          quantized_dtype='int8', quantize_mode='smart', logger=logging):
+                          quantized_dtype='int8', quantize_mode='smart', logger=None):
     """User-level API for generating a fusion + quantized model from a FP32 model
     w/ or w/o calibration with Intel MKL-DNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -621,7 +628,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
 def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                    excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
-                   quantized_dtype='int8', quantize_mode='full', logger=logging):
+                   quantized_dtype='int8', quantize_mode='full', logger=None):
     """User-level API for generating a quantized model from a FP32 model w/o calibration
     and a collector for naive or entropy calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -676,7 +683,9 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                          ' while received type %s' % str(type(excluded_sym_names)))
     if not isinstance(ctx, Context):
         raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
-    logger.info('Quantizing graph')
+    if logger:
+        os.environ['MXNET_QUANTIZATION_VERBOSE'] = '1'
+        logger.info('Quantizing graph')
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
@@ -693,20 +702,24 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         if calib_mode == 'entropy':
             collector = _LayerHistogramCollector(
                 include_layer=calib_layer, logger=logger)
-            logger.info(
-                'Create a layer output collector for entropy calibration.')
+            if logger:
+                logger.info(
+                    'Create a layer output collector for entropy calibration.')
         elif calib_mode == 'naive':
             collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
                                                     include_layer=calib_layer, logger=logger)
-            logger.info(
-                'Create a layer output minmax collector for naive calibration')
+            if logger:
+                logger.info(
+                    'Create a layer output minmax collector for naive calibration')
         else:
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)
-        logger.info('Collector created, please use set_monitor_callback'
-                    ' to collect calibration information.')
+        if logger:
+            logger.info('Collector created, please use set_monitor_callback'
+                        ' to collect calibration information.')
 
-    logger.info('Quantizing parameters')
+    if logger:
+        logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params, th_dict)
 
     return qsym, qarg_params, aux_params, collector
@@ -751,7 +764,8 @@ def calib_graph(qsym, arg_params, aux_params, collector,
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
         if calib_mode == 'entropy':
-            logger.info('Calculating optimal thresholds for quantization')
+            if logger:
+                logger.info('Calculating optimal thresholds for quantization')
             th_dict = _get_optimal_thresholds(
                 collector.hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
@@ -763,7 +777,8 @@ def calib_graph(qsym, arg_params, aux_params, collector,
     else:
         raise ValueError('please set calibration mode to naive or entropy.')
 
-    logger.info('Quantizing parameters')
+    if logger:
+        logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params, th_dict)
 
     return qsym, qarg_params, aux_params
@@ -771,7 +786,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
                  exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                  calib_data=None, data_shapes=None, calib_mode='none',
-                 num_calib_examples=None, ctx=cpu(), logger=logging):
+                 num_calib_examples=None, ctx=cpu(), logger=None):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -825,7 +840,8 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
     -------
     """
 
-    logger.info('Export HybridBlock')
+    if logger:
+        logger.info('Export HybridBlock')
     network.hybridize()
     import mxnet as mx
     if calib_data is not None:
@@ -881,7 +897,8 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
         for layers in list(symnet.get_internals()):
             if layers.name.find(name_match) != -1:
                 exclude_layers.append(layers.name)
-    logger.info('These layers have been excluded %s' % exclude_layers)
+    if logger:
+        logger.info('These layers have been excluded %s' % exclude_layers)
 
     if ctx == mx.cpu():
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
@@ -906,8 +923,9 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
             mod.set_params(args, auxs, allow_missing=False, force_init=True)
             num_examples = _collect_layer_statistics(mod, calib_data, collector,
                                                      num_calib_examples, logger)
-            logger.info('Collected layer output values from FP32 model using %d examples'
-                        % num_examples)
+            if logger:
+                logger.info('Collected layer output values from FP32 model using %d examples'
+                            % num_examples)
             qsym, qarg_params, aux_params = calib_graph(
                 qsym=qsym, arg_params=args, aux_params=auxs, collector=collector,
                 calib_mode=calib_mode, quantized_dtype=quantized_dtype, logger=logger)
