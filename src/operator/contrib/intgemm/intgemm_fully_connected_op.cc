@@ -192,8 +192,8 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(C.type_flag_, mshadow::kFloat32);
     CHECK_EQ(inputs[3].shape_.Size(), param.num_hidden);
   }
-  CHECK_EQ(inner % ::intgemm::Int8::kBTileRow, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::kBTileRow;
-  CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::kBTileCol << " columns inthe equation C = AB.";
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::tile_info.b_cols << " columns inthe equation C = AB.";
 
   float out_float_multiplier = *inputs[2].dptr<float>();
 

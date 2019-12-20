@@ -103,8 +103,8 @@ void TakeWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(out.CheckContiguous());
   size_t B_cols = indices.shape_[0];
   size_t inner = weight.shape_[weight.shape_.ndim() - 1];
-  CHECK_EQ(inner % ::intgemm::Int8::kBTileRow, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::kBTileRow;
-  CHECK_EQ(B_cols % ::intgemm::Int8::kBTileCol, 0) << "For efficiency, intgemm requires there to be a multiple of " << ::intgemm::Int8::kBTileCol << " indices.";
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) << "For efficiency, intgemm requires there to be a multiple of " << ::intgemm::Int8::tile_info.b_cols << " indices.";
   // mxnet doesn't have a uint32_t type so we'll just pointer cast.  But check the sizes are the same.  TODO statically.
   assert(sizeof(int32_t) == sizeof(::intgemm::Index));
   const ::intgemm::Index *index = reinterpret_cast<const ::intgemm::Index*>(indices.dptr<int32_t>());
