@@ -212,7 +212,7 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     def epoch_end(self, estimator, *args, **kwargs):
         self.current_epoch += 1
         if self.epoch_period and self.current_epoch % self.epoch_period == 0:
-            self.eval_fn(val_data=self.val_data)
+            self.eval_fn(val_data=self.val_data, batch_axis=estimator.batch_axis)
 
 
 class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, BatchEnd):
