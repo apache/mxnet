@@ -93,7 +93,8 @@ struct BooleanAssignGPUKernel {
                              const size_t middle,
                              const size_t valid_num,
                              const size_t trailing,
-                             DType* tensor) {
+                             DType* tensor,
+                             const bool broadcast = false) {
     // binary search for the turning point
     size_t m = i / trailing % valid_num;
     size_t l = i / trailing / valid_num;
@@ -103,7 +104,7 @@ struct BooleanAssignGPUKernel {
     if (scalar) {
       data[dst] = tensor[0];
     } else {
-      data[dst] = tensor[i];
+      data[dst] = broadcast ? tensor[l * trailing + i % trailing] : tensor[i];
     }
   }
 };
@@ -200,14 +201,17 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
   // If there's no True in mask, return directly
   if (valid_num == 0) return;
 
+  const TShape& vshape = inputs[2].shape_;
+
   if (inputs.size() == 3U) {
-    const TShape& vshape = inputs[2].shape_;
     if (inputs[2].shape_.Size() != 1) {
-      // tensor case, check tensor size with the valid_num
-      CHECK_EQ(static_cast<size_t>(valid_num), vshape[start_axis])
-        << "boolean array indexing assignment cannot assign " << vshape
-        << " input values to the " << valid_num << " output values where the mask is true"
-        << std::endl;
+      if (vshape[start_axis] != 1) {
+        // tensor case, check tensor size equal to or broadcastable with valid_num
+        CHECK_EQ(static_cast<size_t>(valid_num), vshape[start_axis])
+          << "boolean array indexing assignment cannot assign " << vshape
+          << " input values to the " << valid_num << " output values where the mask is true"
+          << std::endl;
+      }
     }
   }
 
@@ -235,7 +239,7 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
       MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
         Kernel<BooleanAssignGPUKernel<false>, gpu>::Launch(
           s, leading * valid_num * trailing, data.dptr<DType>(), prefix_sum, mask_size + 1,
-          leading, middle, valid_num, trailing, inputs[2].dptr<DType>());
+          leading, middle, valid_num, trailing, inputs[2].dptr<DType>(), (vshape[start_axis] == 1));
       });
     }
   } else {

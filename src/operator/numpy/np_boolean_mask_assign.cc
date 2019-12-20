@@ -91,14 +91,21 @@ struct BooleanAssignCPUKernel {
                   const size_t middle,
                   const size_t valid_num,
                   const size_t trailing,
-                  DType* tensor) {
+                  DType* tensor,
+                  const bool broadcast = false) {
     // binary search for the turning point
     size_t mid = bin_search(idx, idx_size, i);
     // final answer is in mid
     for (size_t l = 0; l < leading; ++l) {
       for (size_t t = 0; t < trailing; ++t) {
-        data[(l * middle + mid) * trailing + t] =
-          (scalar) ? tensor[0] : tensor[(l * valid_num + i) * trailing + t];
+        if (scalar) {
+          data[(l * middle + mid) * trailing + t] = tensor[0];
+        } else {
+          data[(l * middle + mid) * trailing + t] =
+            (broadcast) ?
+            tensor[l * trailing + t] :
+            tensor[(l * valid_num + i) * trailing + t];
+        }
       }
     }
   }
@@ -215,14 +222,17 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   // If there's no True in mask, return directly
   if (valid_num == 0) return;
 
+  const TShape& vshape = inputs[2].shape_;
+
   if (inputs.size() == 3U) {
-    const TShape& vshape = inputs[2].shape_;
     if (inputs[2].shape_.Size() != 1) {
-      // tensor case, check tensor size with the valid_num
-      CHECK_EQ(static_cast<size_t>(valid_num), vshape[start_axis])
-        << "boolean array indexing assignment cannot assign " << vshape
-        << " input values to the " << valid_num << " output values where the mask is true"
-        << std::endl;
+      if (vshape[start_axis] != 1) {
+        // tensor case, check tensor size equal to or broadcastable with valid_num
+        CHECK_EQ(static_cast<size_t>(valid_num), vshape[start_axis])
+          << "boolean array indexing assignment cannot assign " << vshape
+          << " input values to the " << valid_num << " output values where the mask is true"
+          << std::endl;
+      }
     }
   }
 
@@ -248,7 +258,7 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
       } else {
        Kernel<BooleanAssignCPUKernel<false>, cpu>::Launch(
           s, valid_num, data.dptr<DType>(), prefix_sum.data(), prefix_sum.size(),
-          leading, middle, valid_num, trailing, inputs[2].dptr<DType>());
+          leading, middle, valid_num, trailing, inputs[2].dptr<DType>(), (vshape[start_axis] == 1));
       }
     });
   } else {

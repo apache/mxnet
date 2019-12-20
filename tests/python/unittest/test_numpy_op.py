@@ -1300,22 +1300,26 @@ def test_npi_boolean_assign():
         for config in configs:
             dshape, mshape, start_axis = config
             test_data = np.random.uniform(size=dshape)
-            np_mask = _np.random.choice(a=[False, True], size=mshape)
-            mx_mask = np.array(np_mask)
-            # to avoid using tvm op greater_scalar in gpu environment
-            valid_num = int(mx_mask.asnumpy().sum())
+            valid_num = 0
+            while test_data.size != 0 and valid_num == 0:
+                mx_mask = np.random.choice([False, True], size=mshape)
+                valid_num = int(mx_mask.sum())
+            np_mask = mx_mask.asnumpy().astype(_np.bool)
             vshape = []
+            vshape_broadcast = []
             for i in range(len(dshape)):
                 if i < start_axis:
                     vshape.append(dshape[i])
+                    vshape_broadcast.append(dshape[i])
                 elif i == start_axis:
                     vshape.append(valid_num)
+                    vshape_broadcast.append(1)
                 elif i >= start_axis + len(mshape):
                     vshape.append(dshape[i])
-            vshape = tuple(vshape)
-            for val in [42.0, _np.array(42.), _np.array([42.]), _np.random.uniform(size=vshape)]:
-                mx_val = val if isinstance(val, float) else np.array(val, dtype=np.float32)
-                test_block = TestBooleanAssignScalar(mx_val, start_axis) if isinstance(mx_val, float) else TestBooleanAssignTensor(start_axis)
+                    vshape_broadcast.append(dshape[i])
+            vshape_broadcast = tuple(vshape_broadcast)
+            for val in [42.0, np.array(42.), np.array([42.]), np.random.uniform(size=vshape), np.random.uniform(size=vshape_broadcast)]:
+                test_block = TestBooleanAssignScalar(val, start_axis) if isinstance(val, float) else TestBooleanAssignTensor(start_axis)
                 if hybridize:
                     test_block.hybridize()
                 np_data = test_data.asnumpy()
