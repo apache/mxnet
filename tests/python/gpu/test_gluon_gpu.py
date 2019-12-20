@@ -485,6 +485,13 @@ def test_large_models():
     # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
     # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
     (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(ctx.device_id)
+    # This test needs to be 'qualified' for use with each new larger memory size
+    largest_supported_total_mem_GB = 32
+    if (total_mem_bytes > largest_supported_total_mem_GB * 1024 * 1024 * 1024):
+        sys.stderr.write(
+        ' bypassing test due to too-large global memory of size {} ... '.format(total_mem_bytes))
+        return
+
     start_size = tensor_size(0.20 * total_mem_bytes)
     num_trials = 10
     sys.stderr.write(
