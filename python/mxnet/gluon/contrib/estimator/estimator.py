@@ -293,7 +293,7 @@ class Estimator(object):
         """
         if not hasattr(val_data, '__iter__') and not hasattr(val_data, '__getitem__'):
             raise ValueError("Estimator only support iterable object as input. For example, you "
-                             "can provide a customized data loader os input")
+                             "can provide a customized data loader as input")
 
         for metric in self.val_metrics:
             metric.reset()
@@ -362,7 +362,7 @@ class Estimator(object):
         """
         if not hasattr(train_data, '__iter__') and not hasattr(train_data, '__getitem__'):
             raise ValueError("Estimator only support iterable object as input. For example, you "
-                             "can provide a customized data loader os input")
+                             "can provide a customized data loader as input")
 
         # must specify one and only one of epochs or batches
         if (not epochs) == (not batches):
