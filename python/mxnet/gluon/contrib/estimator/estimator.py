@@ -24,7 +24,7 @@ import logging
 import sys
 import warnings
 
-from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler
+from .event_handler import MetricHandler, ValidationHandler, LoggingHandler, StoppingHandler, GradientUpdateHandler
 from .event_handler import TrainBegin, EpochBegin, BatchBegin, BatchEnd, EpochEnd, TrainEnd
 from .event_handler import _check_event_handlers
 from .utils import _check_metrics, _suggest_metric_for_loss, _check_handler_metric_ref
@@ -32,9 +32,9 @@ from ...data import DataLoader
 from ...loss import Loss as gluon_loss
 from ...trainer import Trainer
 from ...utils import split_and_load
-from .... import autograd
 from ....context import Context, cpu, gpu, num_gpus
 from ....metric import Loss as metric_loss
+from .batch_processor import BatchProcessor
 
 __all__ = ['Estimator']
 
@@ -51,18 +51,41 @@ class Estimator(object):
         The model used for training.
     loss : gluon.loss.Loss
         Loss (objective) function to calculate during training.
-    metrics : EvalMetric or list of EvalMetric
-        Metrics for evaluating models.
+    train_metrics : EvalMetric or list of EvalMetric
+        Training metrics for evaluating models on training dataset.
+    val_metrics : EvalMetric or list of EvalMetric
+        Validation metrics for evaluating models on validation dataset.
     initializer : Initializer
         Initializer to initialize the network.
     trainer : Trainer
         Trainer to apply optimizer on network parameters.
     context : Context or list of Context
         Device(s) to run the training on.
-    evaluation_loss: gluon.loss.loss
-        Loss (objective) function to calculate during evaluation. If set evaluation_loss
+    evaluation_loss : gluon.loss.loss
+        Loss (objective) function to calculate during validation. If set evaluation_loss
         None, it will use the same loss function as self.loss
+    eval_net : gluon.Block
+        The model used for validation. The validation model does not necessarily belong to
+        the same model class as the training model. But the two models typically share the
+        same architecture. Therefore the validation model can reuse parameters of the
+        training model.
 
+        The code example of consruction of eval_net sharing the same network parameters as
+        the training net is given below:
+
+        >>> net = _get_train_network()
+        >>> eval_net = _get_test_network(params=net.collect_params())
+        >>> net.initialize(ctx=ctx)
+        >>> est = Estimator(net, loss, eval_net=eval_net)
+
+        Proper namespace match is required for weight sharing between two networks. Most networks
+        inheriting :py:class:`Block` can share their parameters correctly. An exception is
+        Sequential networks that Block scope must be specified for correct weight sharing. For
+        the  naming in mxnet Gluon API, please refer to the site
+        (https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/naming.html)
+        for future information.
+    batch_processor: BatchProcessor
+        BatchProcessor provides customized fit_batch() and evaluate_batch() methods
     """
 
     logger = None
@@ -85,19 +108,26 @@ class Estimator(object):
 
     def __init__(self, net,
                  loss,
-                 metrics=None,
+                 train_metrics=None,
+                 val_metrics=None,
                  initializer=None,
                  trainer=None,
                  context=None,
-                 evaluation_loss=None):
+                 evaluation_loss=None,
+                 eval_net=None,
+                 batch_processor=None):
         self.net = net
         self.loss = self._check_loss(loss)
-        self._train_metrics = _check_metrics(metrics)
+        self._train_metrics = _check_metrics(train_metrics)
+        self._val_metrics = _check_metrics(val_metrics)
         self._add_default_training_metrics()
         self._add_validation_metrics()
         self.evaluation_loss = self.loss
         if evaluation_loss is not None:
             self.evaluation_loss = self._check_loss(evaluation_loss)
+        self.eval_net = self.net
+        if eval_net is not None:
+            self.eval_net = eval_net
 
         self.logger = logging.Logger(name='Estimator', level=logging.INFO)
         self.logger.addHandler(logging.StreamHandler(sys.stdout))
@@ -105,6 +135,7 @@ class Estimator(object):
         self.context = self._check_context(context)
         self._initialize(initializer)
         self.trainer = self._check_trainer(trainer)
+        self.batch_processor = self._check_batch_processor(batch_processor)
 
     def _check_loss(self, loss):
         if not isinstance(loss, gluon_loss):
@@ -144,6 +175,18 @@ class Estimator(object):
             else:
                 context = [cpu()]
         return context
+
+    def _check_batch_processor(self, batch_processor):
+        # check whether the batch processor contains fit_batch() and evaluate_batch() methods
+        if batch_processor is not None:
+            model_fit = getattr(batch_processor, 'fit_batch', None)
+            model_evaluate = getattr(batch_processor, 'evaluate_batch', None)
+            if not callable(model_fit) or not callable(model_evaluate):
+                raise ValueError('Customized Batch Processor must contain fit_batch()'
+                                 ' and evaluate_batch() methods')
+        else:
+            batch_processor = BatchProcessor()
+        return batch_processor
 
     def _initialize(self, initializer):
         # initialize the network
@@ -202,13 +245,21 @@ class Estimator(object):
             self._train_metrics.append(metric_loss(loss_name))
 
         for metric in self._train_metrics:
-            metric.name = "training " + metric.name
+            # add training prefix to the metric name
+            # it is useful for event handlers to distinguish them from validation metrics
+            metric.name = 'training ' + metric.name
 
     def _add_validation_metrics(self):
-        self._val_metrics = [copy.deepcopy(metric) for metric in self._train_metrics]
+        if not self._val_metrics:
+            self._val_metrics = [copy.deepcopy(metric) for metric in self._train_metrics]
 
         for metric in self._val_metrics:
-            metric.name = "validation " + metric.name
+            # add validation prefix to the metric name
+            # it is useful for event handlers to distinguish them from training metrics
+            if 'training' in metric.name:
+                metric.name = metric.name.replace('training', 'validation')
+            else:
+                metric.name = 'validation ' + metric.name
 
     @property
     def train_metrics(self):
@@ -218,35 +269,10 @@ class Estimator(object):
     def val_metrics(self):
         return self._val_metrics
 
-    def evaluate_batch(self,
-                       val_batch,
-                       val_metrics,
-                       batch_axis=0):
-        """Evaluate model on a batch of validation data.
-
-        Parameters
-        ----------
-        val_batch : tuple
-            Data and label of a batch from the validation data loader.
-        val_metrics : EvalMetric or list of EvalMetrics
-            Metrics to update validation result.
-        batch_axis : int, default 0
-            Batch axis to split the validation data into devices.
-        """
-        data, label = self._get_data_and_label(val_batch, self.context, batch_axis)
-        pred = [self.net(x) for x in data]
-        loss = [self.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
-        # update metrics
-        for metric in val_metrics:
-            if isinstance(metric, metric_loss):
-                metric.update(0, loss)
-            else:
-                metric.update(label, pred)
-
     def evaluate(self,
                  val_data,
-                 val_metrics,
-                 batch_axis=0):
+                 batch_axis=0,
+                 event_handlers=None):
         """Evaluate model on validation data.
 
         This function calls :py:func:`evaluate_batch` on each of the batches from the
@@ -257,59 +283,45 @@ class Estimator(object):
         ----------
         val_data : DataLoader
             Validation data loader with data and labels.
-        val_metrics : EvalMetric or list of EvalMetrics
-            Metrics to update validation result.
         batch_axis : int, default 0
             Batch axis to split the validation data into devices.
+        event_handlers : EventHandler or list of EventHandler
+            List of :py:class:`EventHandlers` to apply during validation. Besides
+            event handlers specified here, a default MetricHandler and a LoggingHandler
+            will be added if not specified explicitly.
         """
         if not isinstance(val_data, DataLoader):
             raise ValueError("Estimator only support input as Gluon DataLoader. Alternatively, you "
                              "can transform your DataIter or any NDArray into Gluon DataLoader. "
                              "Refer to gluon.data.DataLoader")
 
-        for metric in val_metrics:
+        for metric in self.val_metrics:
             metric.reset()
+        estimator_ref = self
+
+        event_handlers = self._prepare_default_validation_handlers(event_handlers)
+
+        _, epoch_begin, batch_begin, batch_end, \
+        epoch_end, _ = self._categorize_handlers(event_handlers)
+
+        estimator_ref = self
+
+        for handler in epoch_begin:
+            handler.epoch_begin(estimator_ref)
 
         for _, batch in enumerate(val_data):
-            self.evaluate_batch(batch, val_metrics, batch_axis)
+            for handler in batch_begin:
+                handler.batch_begin(estimator_ref, batch=batch)
 
-    def fit_batch(self, train_batch, batch_axis=0):
-        """Trains the model on a batch of training data.
+            _, label, pred, loss = \
+            self.batch_processor.evaluate_batch(estimator_ref, batch,
+                                                batch_axis)
 
-        Parameters
-        ----------
-        train_batch : tuple
-            Data and label of a batch from the training data loader.
-        batch_axis : int, default 0
-            Batch axis to split the training data into devices.
+            for handler in batch_end:
+                handler.batch_end(estimator_ref, batch=batch, pred=pred, label=label, loss=loss)
 
-        Returns
-        -------
-        data: List of NDArray
-            Sharded data from the batch. Data is sharded with
-            `gluon.split_and_load`.
-        label: List of NDArray
-            Sharded label from the batch. Labels are sharded with
-            `gluon.split_and_load`.
-        pred: List of NDArray
-            Prediction on each of the sharded inputs.
-        loss: List of NDArray
-            Loss on each of the sharded inputs.
-        """
-        data, label = self._get_data_and_label(train_batch, self.context, batch_axis)
-
-        batch_size = train_batch[0].shape[batch_axis]
-
-        with autograd.record():
-            pred = [self.net(x) for x in data]
-            loss = [self.loss(y_hat, y) for y_hat, y in zip(pred, label)]
-
-        for l in loss:
-            l.backward()
-
-        self.trainer.step(batch_size)
-
-        return data, label, pred, loss
+        for handler in epoch_end:
+            handler.epoch_end(estimator_ref)
 
     def fit(self, train_data,
             val_data=None,
@@ -360,6 +372,7 @@ class Estimator(object):
 
         self.max_epoch = epochs
         self.max_batch = batches
+        self.batch_axis = batch_axis
 
         # provide default handlers
         event_handlers = self._prepare_default_handlers(val_data, event_handlers)
@@ -383,8 +396,8 @@ class Estimator(object):
                 for handler in batch_begin:
                     handler.batch_begin(estimator_ref, batch=batch)
 
-                _, label, pred, loss = self.fit_batch(batch, batch_axis)
-
+                _, label, pred, loss = self.batch_processor.fit_batch(estimator_ref,
+                                                                      batch, batch_axis)
                 # batch end
 
                 batch_end_result = []
@@ -414,24 +427,21 @@ class Estimator(object):
         # no need to add to default handler check as StoppingHandler does not use metrics
         added_default_handlers.append(StoppingHandler(self.max_epoch, self.max_batch))
 
+        if not any(isinstance(handler, GradientUpdateHandler) for handler in event_handlers):
+            added_default_handlers.append(GradientUpdateHandler())
+
         if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
-            added_default_handlers.append(MetricHandler(train_metrics=self.train_metrics))
+            added_default_handlers.append(MetricHandler(metrics=self.train_metrics))
 
         if not any(isinstance(handler, ValidationHandler) for handler in event_handlers):
             # no validation handler
             if val_data:
-                val_metrics = self.val_metrics
                 # add default validation handler if validation data found
                 added_default_handlers.append(ValidationHandler(val_data=val_data,
-                                                                eval_fn=self.evaluate,
-                                                                val_metrics=val_metrics))
-            else:
-                # set validation metrics to None if no validation data and no validation handler
-                val_metrics = []
+                                                                eval_fn=self.evaluate))
 
         if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
-            added_default_handlers.append(LoggingHandler(train_metrics=self.train_metrics,
-                                                         val_metrics=val_metrics))
+            added_default_handlers.append(LoggingHandler(metrics=self.train_metrics))
 
         # if there is a mix of user defined event handlers and default event handlers
         # they should have the same set of metrics
@@ -442,6 +452,29 @@ class Estimator(object):
         if mixing_handlers:
             # check if all handlers have the same set of references to metrics
             known_metrics = set(self.train_metrics + self.val_metrics)
+            for handler in event_handlers:
+                _check_handler_metric_ref(handler, known_metrics)
+
+        event_handlers.sort(key=lambda handler: getattr(handler, 'priority', 0))
+        return event_handlers
+
+    def _prepare_default_validation_handlers(self, event_handlers):
+        event_handlers = _check_event_handlers(event_handlers)
+        added_default_handlers = []
+
+        # add default logging handler and metric handler for validation
+        if not any(isinstance(handler, MetricHandler) for handler in event_handlers):
+            added_default_handlers.append(MetricHandler(metrics=self.val_metrics))
+
+        if not any(isinstance(handler, LoggingHandler) for handler in event_handlers):
+            added_default_handlers.append(LoggingHandler(metrics=self.val_metrics))
+
+        mixing_handlers = event_handlers and added_default_handlers
+        event_handlers.extend(added_default_handlers)
+
+        # check if all handlers refer to well-defined validation metrics
+        if mixing_handlers:
+            known_metrics = set(self.val_metrics)
             for handler in event_handlers:
                 _check_handler_metric_ref(handler, known_metrics)
 

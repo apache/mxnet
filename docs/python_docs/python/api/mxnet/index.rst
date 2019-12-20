@@ -40,6 +40,7 @@ mxnet
     mxnet.kvstore
     mxnet.kvstore_server
     mxnet.libinfo
+    mxnet.runtime
     mxnet.lr_scheduler
     mxnet.log
     mxnet.metric

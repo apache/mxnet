@@ -275,12 +275,15 @@ Graph QuantizeGraph(Graph &&src) {
   std::unordered_map<Node*, NodePtr> mirror_map;
   std::unordered_map<NodePtr, NodePtr> reverse_mirror_map;
   nnvm::NodeEntryMap<NodeEntry> mirror_entry_map;
+  static int verbose = dmlc::GetEnv("MXNET_QUANTIZATION_VERBOSE", 0);
   DFSVisit(src.outputs, [&](const NodePtr& node) {
     NodePtr new_node = Node::Create();
     // If the currently visited node needs quantization, insert a quantize op node before the
     // current node and replace the current node with the quantized version in the new graph.
     if (quantized_node_map.count(node)) {
-      std::cout << node->attrs.name << " is quantized." << std::endl;
+      if (verbose) {
+        LOG(INFO) << node->attrs.name << " is quantized.";
+      }
       new_node = quantized_node_map[node];
 
       // add data into quantized op input
@@ -395,7 +398,8 @@ Graph QuantizeGraph(Graph &&src) {
       // (e.g., a quantized_conv2d node), and insert a dequantize op node in the new graph if there
       // are any. Otherwise, simply add a copy of the current node's entry to the inputs of
       // the new_node.
-      if (!node->is_variable()) std::cout << node->attrs.name << " is NOT quantized." << std::endl;
+      if (verbose && !node->is_variable())
+        LOG(INFO) << node->attrs.name << " is NOT quantized.";
       *new_node = *node;
       new_node->inputs.clear();
       for (const auto& e : node->inputs) {
@@ -516,15 +520,20 @@ static inline void SetCalibTableForEntry(
     out_data_name = out_data_name.substr(prefix.size());
   }
   const auto calib_table_iter = calib_table.find(out_data_name);
+  static int verbose = dmlc::GetEnv("MXNET_QUANTIZATION_VERBOSE", 0);
   if (calib_table_iter != calib_table.end()) {
-    std::cout << "Set calibration result to " << node->attrs.name
-              << " : min=" << calib_table_iter->second.first
-              << " max=" << calib_table_iter->second.second << std::endl;
+    if (verbose) {
+      LOG(INFO) << "Set calibration result to " << node->attrs.name
+                << " : min=" << calib_table_iter->second.first
+                << " max=" << calib_table_iter->second.second;
+    }
     node->attrs.dict["min_calib_range"] = std::to_string(calib_table_iter->second.first);
     node->attrs.dict["max_calib_range"] = std::to_string(calib_table_iter->second.second);
     if (node->op() && node->op()->attr_parser) node->op()->attr_parser(&(node->attrs));
   } else {
-    std::cout << "Can't find calibration result for " << node->attrs.name << std::endl;
+    if (verbose) {
+      LOG(INFO) << "Can't find calibration result for " << node->attrs.name;
+    }
   }
 }
 
@@ -535,7 +544,10 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
       Op::GetAttr<mxnet::FNeedCalibrateInput>("FNeedCalibrateInput");
   static const auto& need_calib_output_map =
       Op::GetAttr<mxnet::FNeedCalibrateOutput>("FNeedCalibrateOutput");
-  std::cout << "Set calibration result to quantized symbol." << std::endl;
+  static int verbose = dmlc::GetEnv("MXNET_QUANTIZATION_VERBOSE", 0);
+  if (verbose) {
+    LOG(INFO) << "Set calibration result to quantized symbol.";
+  }
   DFSVisit(g.outputs, [&](const NodePtr& node) {
     if (need_calib_input_map.count(node->op())) {
       const auto calib_idx = need_calib_input_map[node->op()](node->attrs);

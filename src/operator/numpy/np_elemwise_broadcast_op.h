@@ -252,6 +252,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(lhs.shape_, rhs.shape_, out.shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
+
   if (!ndim) {
     MixedBinaryElemwiseCompute<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
   } else {
@@ -430,12 +431,14 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, char> workspace;
 
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
-      BROADCAST_NDIM_SWITCH(new_oshape.ndim(), ndim, {
-        workspace_size_l = ReduceWorkspaceSize<ndim, OType>(
-          s, new_lshape, req[0], new_oshape, new_lshape, new_rshape);
-        workspace_size_r = ReduceWorkspaceSize<ndim, OType>(
-          s, new_rshape, req[1], new_oshape, new_lshape, new_rshape);
-      });
+      if (need_bc) {
+        BROADCAST_NDIM_SWITCH(new_oshape.ndim(), ndim, {
+          workspace_size_l = ReduceWorkspaceSize<ndim, OType>(
+            s, new_lshape, req[0], new_oshape, new_lshape, new_rshape);
+          workspace_size_r = ReduceWorkspaceSize<ndim, OType>(
+            s, new_rshape, req[1], new_oshape, new_lshape, new_rshape);
+        });
+      }
       size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
       size_t cast_tensor_size = tensor_size * sizeof(OType);
       // Allocate the temporary memories now
@@ -462,9 +465,11 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
       workspace =
         Tensor<xpu, 1, char>(temp_space.dptr_ + 2 * cast_tensor_size, Shape1(workspace_size), s);
     });
+
     // Cast the input that does not have consistent type to temp_tblob
     CastCompute<xpu>(
       attrs, ctx, {((lgrad.type_flag_ != ograd.type_flag_) ? lhs : rhs)}, {kWriteTo}, {temp_tblob});
+
     if (!need_bc) {
       if (lhs.type_flag_ != ograd.type_flag_) {
         ElemwiseBinaryOp::BackwardUseIn<xpu, LOP, ROP>(

@@ -134,6 +134,44 @@ def test_tanh():
 
 
 @with_seed()
+def test_arcsin():
+    def arcsin(x):
+        return nd.arcsin(x)
+
+    def grad_grad_op(x):
+        return x / nd.sqrt((1-x**2)**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        # Hack: Decrease std_dev to make
+        # sure all elements
+        # are in range -1 to 1
+        # i.e. Domain of arcsin
+        array *= 0.2
+        check_second_order_unary(array, arcsin, grad_grad_op)
+
+
+@with_seed()
+def test_arccos():
+    def arccos(x):
+        return nd.arccos(x)
+
+    def grad_grad_op(x):
+        return -x / nd.sqrt((1-x**2)**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        # Hack: Decrease std_dev to make
+        # sure all elements
+        # are in range -1 to 1
+        # i.e. Domain of arccos
+        array *= 0.2
+        check_second_order_unary(array, arccos, grad_grad_op)
+
+
+@with_seed()
 def test_arctan():
     def arctan(x):
         return nd.arctan(x)
@@ -271,6 +309,39 @@ def test_log10():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(array, log10, grad_grad_op)
+
+
+@with_seed()
+def test_square():
+    def grad_grad_op(x):
+        return nd.ones_like(x) * 2
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.square, grad_grad_op)
+
+
+@with_seed()
+def test_expm1():
+    def grad_grad_op(x):
+        return nd.exp(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.expm1, grad_grad_op)
+
+
+@with_seed()
+def test_log1p():
+    def grad_grad_op(x):
+        return -1/((1+x)**2)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, nd.log1p, grad_grad_op)
 
 
 @with_seed()

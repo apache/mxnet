@@ -143,6 +143,7 @@ void ROIAlignForward(
     const T* bottom_data,
     const T& spatial_scale,
     const bool position_sensitive,
+    const bool continuous_coordinate,
     const int channels,
     const int height,
     const int width,
@@ -175,14 +176,22 @@ num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     }
 
     // Do not using rounding; this implementation detail is critical
-    T roi_start_w = offset_bottom_rois[0] * spatial_scale;
-    T roi_start_h = offset_bottom_rois[1] * spatial_scale;
-    T roi_end_w = offset_bottom_rois[2] * spatial_scale;
-    T roi_end_h = offset_bottom_rois[3] * spatial_scale;
+    T roi_offset = continuous_coordinate ? static_cast<T>(0.5) : static_cast<T>(0);
+    T roi_start_w = offset_bottom_rois[0] * spatial_scale - roi_offset;
+    T roi_start_h = offset_bottom_rois[1] * spatial_scale - roi_offset;
+    T roi_end_w = offset_bottom_rois[2] * spatial_scale - roi_offset;
+    T roi_end_h = offset_bottom_rois[3] * spatial_scale - roi_offset;
 
-    // Force malformed ROIs to be 1x1
-    T roi_width = std::max(roi_end_w - roi_start_w, (T)1.);
-    T roi_height = std::max(roi_end_h - roi_start_h, (T)1.);
+    T roi_width = roi_end_w - roi_start_w;
+    T roi_height = roi_end_h - roi_start_h;
+    if (continuous_coordinate) {
+      CHECK_GT(roi_width, 0.);
+      CHECK_GT(roi_height, 0.);
+    } else {  // backward compatiblity
+      // Force malformed ROIs to be 1x1
+      roi_width = std::max(roi_width, (T)1.);
+      roi_height = std::max(roi_height, (T)1.);
+    }
     T bin_size_h = static_cast<T>(roi_height) / static_cast<T>(pooled_height);
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
@@ -322,6 +331,7 @@ void ROIAlignBackward(
     const int /*num_rois*/,
     const T& spatial_scale,
     const bool position_sensitive,
+    const bool continuous_coordinate,
     const int channels,
     const int height,
     const int width,
@@ -349,14 +359,19 @@ void ROIAlignBackward(
     }
 
     // Do not using rounding; this implementation detail is critical
-    T roi_start_w = offset_bottom_rois[0] * spatial_scale;
-    T roi_start_h = offset_bottom_rois[1] * spatial_scale;
-    T roi_end_w = offset_bottom_rois[2] * spatial_scale;
-    T roi_end_h = offset_bottom_rois[3] * spatial_scale;
+    T roi_offset = continuous_coordinate ? static_cast<T>(0.5) : static_cast<T>(0);
+    T roi_start_w = offset_bottom_rois[0] * spatial_scale - roi_offset;
+    T roi_start_h = offset_bottom_rois[1] * spatial_scale - roi_offset;
+    T roi_end_w = offset_bottom_rois[2] * spatial_scale - roi_offset;
+    T roi_end_h = offset_bottom_rois[3] * spatial_scale - roi_offset;
 
-    // Force malformed ROIs to be 1x1
-    T roi_width = std::max(roi_end_w - roi_start_w, (T)1.);
-    T roi_height = std::max(roi_end_h - roi_start_h, (T)1.);
+    T roi_width = roi_end_w - roi_start_w;
+    T roi_height = roi_end_h - roi_start_h;
+    if (!continuous_coordinate) {  // backward compatiblity
+      // Force malformed ROIs to be 1x1
+      roi_width = std::max(roi_width, (T)1.);
+      roi_height = std::max(roi_height, (T)1.);
+    }
     T bin_size_h = static_cast<T>(roi_height) / static_cast<T>(pooled_height);
     T bin_size_w = static_cast<T>(roi_width) / static_cast<T>(pooled_width);
 
@@ -460,7 +475,7 @@ void ROIAlignForwardCompute(const nnvm::NodeAttrs& attrs,
     DType *top_data = out_data[roialign::kOut].dptr<DType>();
 
     ROIAlignForward<DType>(count, bottom_data, param.spatial_scale, param.position_sensitive,
-                           channels, height, width, pooled_height, pooled_width,
+                           param.aligned, channels, height, width, pooled_height, pooled_width,
                            param.sample_ratio, bottom_rois, rois_cols, top_data);
   })
 }
@@ -509,7 +524,7 @@ void ROIAlignBackwardCompute(const nnvm::NodeAttrs& attrs,
         Fill<false>(s, outputs[0], kWriteTo, static_cast<DType>(0));
       }
       ROIAlignBackward<DType>(count, top_diff, num_rois, param.spatial_scale,
-                     param.position_sensitive, channels, height, width,
+                     param.position_sensitive, param.aligned, channels, height, width,
                      pooled_height, pooled_width, param.sample_ratio, grad_in,
                      bottom_rois, rois_cols);
     }

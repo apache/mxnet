@@ -124,16 +124,22 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
   const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support inplace";
+  if (req[0] == kNullOp) return;
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Transpose only supports kWriteTo, kNullOp and kAddTo";
+  mxnet::TShape axes;
   if (ndim_is_known(param.axes)) {
-    mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    axes = common::CanonicalizeAxes(param.axes);
   } else {
-    mxnet::TShape axes(inputs[0].ndim(), -1);
+    axes = mxnet::TShape(inputs[0].ndim(), -1);
     for (int i = 0; i < axes.ndim(); ++i) {
       axes[i] = axes.ndim() - 1 - i;
     }
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  }
+  if (req[0] == kAddTo) {
+    TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  } else {
+    TransposeImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0], axes);
   }
 }
 
@@ -1148,6 +1154,224 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 
   NumpyDiagOpImpl<xpu, true>(in_data, out_data, oshape, ishape,
                              in_data.Size(), param.k, s, req[0]);
+}
+
+struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
+  int offset;
+  int32_t axis1;
+  int32_t axis2;
+  DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
+    DMLC_DECLARE_FIELD(offset)
+      .set_default(0)
+      .describe("Diagonal in question. The default is 0. "
+                "Use k>0 for diagonals above the main diagonal, "
+                "and k<0 for diagonals below the main diagonal. "
+                "If input has shape (S0 S1) k must be between -S0 and S1");
+    DMLC_DECLARE_FIELD(axis1)
+      .set_default(0)
+      .describe("The first axis of the sub-arrays of interest. "
+                "Ignored when the input is a 1-D array.");
+    DMLC_DECLARE_FIELD(axis2)
+      .set_default(1)
+      .describe("The second axis of the sub-arrays of interest. "
+                "Ignored when the input is a 1-D array.");
+  }
+};
+
+inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
+                                            const int32_t axis1, const int32_t axis2) {
+  int32_t x1 = CheckAxis(axis1, ishape.ndim());
+  int32_t x2 = CheckAxis(axis2, ishape.ndim());
+
+  CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
+
+  auto h = ishape[x1];
+  auto w = ishape[x2];
+  if (k > 0) {
+    w -= k;
+  } else if (k < 0) {
+    h += k;
+  }
+  auto s = std::min(h, w);
+  if (s < 0) s = 0;
+  if (x1 > x2) std::swap(x1, x2);
+
+  int32_t n_dim = ishape.ndim() - 1;
+  mxnet::TShape oshape(n_dim, -1);
+
+  // remove axis1 and axis2 and append the new axis to the end
+  uint32_t idx = 0;
+  for (int i = 0; i <= n_dim; ++i) {
+    if (i != x1 && i != x2) {
+      oshape[idx++] = ishape[i];
+    }
+  }
+  oshape[n_dim - 1] = s;
+  return oshape;
+}
+
+inline bool NumpyDiagonalOpShape(const nnvm::NodeAttrs& attrs,
+                                 mxnet::ShapeVector* in_attrs,
+                                 mxnet::ShapeVector* out_attrs) {
+    CHECK_EQ(in_attrs->size(), 1U);
+    CHECK_EQ(out_attrs->size(), 1U);
+
+    const mxnet::TShape& ishape = (*in_attrs)[0];
+    CHECK_GE(ishape.ndim(), 2) << "Input array should be at least 2d";
+    if (!mxnet::ndim_is_known(ishape)) {
+      return false;
+    }
+
+    const NumpyDiagonalParam& param = nnvm::get<NumpyDiagonalParam>(attrs.parsed);
+    mxnet::TShape oshape = NumpyDiagonalShapeImpl(ishape, param.offset, param.axis1,
+                                         param.axis2);
+    if (shape_is_none(oshape)) {
+      LOG(FATAL) << "Diagonal does not exist.";
+    }
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+    return shape_is_known(out_attrs->at(0));
+}
+
+inline bool NumpyDiagonalOpType(const nnvm::NodeAttrs& attrs,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return (*out_attrs)[0] != -1;
+}
+
+template<int ndim, int req, bool back>
+struct diag_n {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
+                                  mshadow::Shape<ndim> oshape,
+                                  mshadow::Shape<ndim> ishape,
+                                  index_t stride, index_t offset,
+                                  index_t base) {
+    using namespace mxnet_op;
+    index_t idx = i / base;
+    index_t j = ravel(unravel(idx, oshape), ishape) + offset + stride * (i - idx * base);
+    if (back) {
+      KERNEL_ASSIGN(out[j], req, a[i]);
+    } else {
+      KERNEL_ASSIGN(out[i], req, a[j]);
+    }
+  }
+};
+
+template<typename xpu, bool back>
+void NumpyDiagonalOpImpl(const TBlob& in_data,
+                         const TBlob& out_data,
+                         const mxnet::TShape& ishape,
+                         const mxnet::TShape& oshape,
+                         index_t dsize,
+                         const NumpyDiagonalParam& param,
+                         mxnet_op::Stream<xpu> *s,
+                         const std::vector<OpReqType>& req) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  uint32_t x1 = CheckAxis(param.axis1, ishape.ndim());
+  uint32_t x2 = CheckAxis(param.axis2, ishape.ndim());
+  uint32_t idim = ishape.ndim(), odim = oshape.ndim();
+  uint32_t minx = x1, maxx = x2;
+  if (minx > maxx) std::swap(minx, maxx);
+
+  index_t oleading = 1,
+          obody = 1,
+          otrailing = 1;
+  for (uint32_t i = 0; i < minx; ++i) {
+    oleading *= ishape[i];
+  }
+  for (uint32_t i = minx + 1; i < maxx; ++i) {
+    obody *= ishape[i];
+  }
+  for (uint32_t i = maxx + 1; i < idim; ++i) {
+    otrailing *= ishape[i];
+  }
+
+  index_t ileading = oleading,
+      ibody = obody * ishape[minx],
+      itrailing = otrailing * ishape[maxx];
+
+  index_t stride1 = itrailing * obody,
+      stride2 = otrailing;
+  // stride1 + stride2 is the stride for iterating over the diagonal
+
+  if (x1 == maxx) std::swap(stride1, stride2);
+  index_t offset;
+  int k = param.offset;
+  if (k > 0) {
+    offset = stride2 * k;
+  } else if (k < 0) {
+    offset = stride1 * -k;
+  } else {
+    offset = 0;
+  }  // the extra index offset introduced by k
+
+  MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      if (back && req[0] != kAddTo && req[0] != kNullOp) {
+        out_data.FlatTo1D<xpu, DType>(s) = 0;
+      }
+      if (ileading == 1) {
+        Kernel<diag_n<2, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
+          in_data.dptr<DType>(), Shape2(obody, otrailing), Shape2(ibody, itrailing),
+          stride1 + stride2, offset, oshape[odim - 1]);
+      } else {
+        Kernel<diag_n<3, req_type, back>, xpu>::Launch(s, dsize, out_data.dptr<DType>(),
+          in_data.dptr<DType>(), Shape3(oleading, obody, otrailing),
+          Shape3(ileading, ibody, itrailing), stride1 + stride2, offset, oshape[odim - 1]);
+      }
+    });
+  });
+}
+
+template<typename xpu>
+void NumpyDiagonalOpForward(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
+  const NumpyDiagonalParam& param = nnvm::get<NumpyDiagonalParam>(attrs.parsed);
+
+  NumpyDiagonalOpImpl<xpu, false>(in_data, out_data, ishape, oshape,
+                                  out_data.Size(), param, s, req);
+}
+
+template<typename xpu>
+void NumpyDiagonalOpBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const mxnet::TShape& ishape = inputs[0].shape_;
+  const mxnet::TShape& oshape = outputs[0].shape_;
+  const NumpyDiagonalParam& param = nnvm::get<NumpyDiagonalParam>(attrs.parsed);
+
+  NumpyDiagonalOpImpl<xpu, true>(in_data, out_data, oshape, ishape,
+                                 in_data.Size(), param, s, req);
 }
 
 struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {
