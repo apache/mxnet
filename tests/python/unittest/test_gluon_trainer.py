@@ -26,6 +26,11 @@ from common import setup_module, with_seed, assertRaises
 from copy import deepcopy
 from nose.tools import raises, assert_raises
 
+def dict_equ(a, b):
+    assert set(a) == set(b)
+    for k in a:
+        assert (a[k].asnumpy() == b[k].asnumpy()).all()
+
 @with_seed()
 @raises(RuntimeError)
 def test_multi_trainer():
@@ -42,11 +47,26 @@ def test_multi_trainer():
     trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
+def test_trainer_with_teststore():
+    x = gluon.Parameter('x', shape=(10,))
+    x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+    kv = mx.kv.create('teststore')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5}, kvstore=kv)
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+
+    assert trainer._update_on_kvstore == False
+    assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
+    # Expect exceptions if update_on_kvstore is set to True,
+    # because TestStore does not support that
+    invalid_trainer = gluon.Trainer([x], 'sgd', kvstore=kv, update_on_kvstore=True)
+    assert_raises(ValueError, invalid_trainer._init_kvstore)
+
+@with_seed()
 def test_trainer():
-    def dict_equ(a, b):
-        assert set(a) == set(b)
-        for k in a:
-            assert (a[k].asnumpy() == b[k].asnumpy()).all()
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
@@ -120,7 +140,8 @@ def test_trainer_save_load():
 
 @with_seed()
 def test_trainer_sparse_save_load():
-    x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0, stype='row_sparse')
+    x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0,
+                        stype='row_sparse', grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
     all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
@@ -236,7 +257,7 @@ def test_trainer_sparse_kv():
             # the updated parameter should be based on the loaded checkpoint
             mx.nd.waitall()
             updated_w = x.data(mx.cpu(0)) if stype == 'default' else x.row_sparse_data(all_rows)
-            assert (updated_w == -0.2).asnumpy().all()
+            assert (updated_w == -0.2).asnumpy().all(), updated_w
         except Exception as err:
             assert isinstance(err, expected)
 
@@ -291,3 +312,19 @@ def test_trainer_lr_sched():
             assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
             lr *= factor
     mx.nd.waitall()
+
+@with_seed()
+def test_gluon_trainer_param_order():
+    net = mx.gluon.nn.Sequential()
+    # layers may be added in a random order for all workers
+    layers = {'ones_': 1, 'zeros_': 0}
+    for name, init in layers.items():
+        net.add(mx.gluon.nn.Dense(10, in_units=10, weight_initializer=mx.init.Constant(init),
+                                  use_bias=False, prefix=name))
+    params = net.collect_params()
+    net.initialize()
+    trainer = gluon.Trainer(params, 'sgd')
+    for name, init in layers.items():
+        expected_idx = 0 if name == 'ones_' else 1
+        expected_name = name + 'weight'
+        assert trainer._params[expected_idx].name == expected_name

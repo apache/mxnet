@@ -972,7 +972,7 @@ class ParameterDict(object):
                     "this may be due to your Block shares parameters from other "
                     "Blocks or you forgot to use 'with name_scope()' when creating "
                     "child blocks. For more info on naming, please see "
-                    "https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/naming.html"%(
+                    "https://mxnet.io/api/python/docs/tutorials/packages/gluon/blocks/naming.html"%(
                         strip_prefix, param.name, strip_prefix))
             arg_dict[param.name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)
@@ -1006,7 +1006,9 @@ class ParameterDict(object):
             for name in self.keys():
                 assert name.startswith(restore_prefix), \
                     "restore_prefix is '%s' but Parameters name '%s' does not start " \
-                    "with '%s'"%(restore_prefix, name, restore_prefix)
+                    "with '%s'. For more info on naming, please see " \
+                    "https://mxnet.io/api/python/docs/tutorials/packages/gluon/blocks/naming.html"%(
+                        restore_prefix, name, restore_prefix)
         ndarray_load = ndarray.load(filename)
         self.load_dict(ndarray_load, ctx, allow_missing,
                        ignore_extra, restore_prefix, filename, cast_dtype, dtype_source)
@@ -1043,14 +1045,18 @@ class ParameterDict(object):
             for name in self.keys():
                 assert name in arg_dict, \
                     "Parameter '%s' is missing in %s, which contains parameters: %s. " \
-                    "Please make sure source and target networks have the same prefix."%(
+                    "Please make sure source and target networks have the same prefix." \
+                    "For more info on naming, please see " \
+                    "https://mxnet.io/api/python/docs/tutorials/packages/gluon/blocks/naming.html"%(
                         name[lprefix:], error_str, _brief_print_list(arg_dict.keys()))
         for name in arg_dict:
             if name not in self._params:
                 assert ignore_extra, \
                     "Parameter '%s' loaded from %s is not present in ParameterDict, " \
                     "choices are: %s. Set ignore_extra to True to ignore. " \
-                    "Please make sure source and target networks have the same prefix."%(
+                    "Please make sure source and target networks have the same prefix." \
+                    "For more info on naming, please see " \
+                    "https://mxnet.io/api/python/docs/tutorials/packages/gluon/blocks/naming.html"%(
                         name[lprefix:], error_str, _brief_print_list(self._params.keys()))
                 continue
             self[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype,

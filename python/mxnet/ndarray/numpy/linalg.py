@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from . import _op as _mx_nd_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet']
+__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -352,3 +352,112 @@ def slogdet(a):
     (1., -1151.2925464970228)
     """
     return _npi.slogdet(a)
+
+
+def solve(a, b):
+    r"""
+    Solve a linear matrix equation, or system of linear scalar equations.
+
+    Computes the "exact" solution, `x`, of the well-determined, i.e., full
+    rank, linear matrix equation `ax = b`.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Coefficient matrix.
+    b : {(..., M,), (..., M, K)}, ndarray
+        Ordinate or "dependent variable" values.
+
+    Returns
+    -------
+    x : {(..., M,), (..., M, K)} ndarray
+        Solution to the system a x = b.  Returned shape is identical to `b`.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not square.
+
+    Notes
+    -----
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    The solutions are computed using LAPACK routine ``_gesv``.
+
+    `a` must be square and of full-rank, i.e., all rows (or, equivalently,
+    columns) must be linearly independent; if either is not true, use
+    `lstsq` for the least-squares best "solution" of the
+    system/equation.
+
+    Examples
+    --------
+    Solve the system of equations ``3 * x0 + x1 = 9`` and ``x0 + 2 * x1 = 8``:
+
+    >>> a = np.array([[3,1], [1,2]])
+    >>> b = np.array([9,8])
+    >>> x = np.linalg.solve(a, b)
+    >>> x
+    array([2.,  3.])
+
+    Check that the solution is correct:
+
+    >>> np.allclose(np.dot(a, x), b)
+    True
+    """
+    return _npi.solve(a, b)
+
+
+def tensorinv(a, ind=2):
+    r"""
+    Compute the 'inverse' of an N-dimensional array.
+
+    The result is an inverse for `a` relative to the tensordot operation
+    ``tensordot(a, b, ind)``, i. e., up to floating-point accuracy,
+    ``tensordot(tensorinv(a), a, ind)`` is the "identity" tensor for the
+    tensordot operation.
+
+    Parameters
+    ----------
+    a : array_like
+        Tensor to 'invert'. Its shape must be 'square', i. e.,
+        ``prod(a.shape[:ind]) == prod(a.shape[ind:])``.
+    ind : int, optional
+        Number of first indices that are involved in the inverse sum.
+        Must be a positive integer, default is 2.
+
+    Returns
+    -------
+    b : ndarray
+        `a`'s tensordot inverse, shape ``a.shape[ind:] + a.shape[:ind]``.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not 'square' (in the above sense).
+
+    See Also
+    --------
+    tensordot, tensorsolve
+
+    Examples
+    --------
+    >>> a = np.eye(4*6)
+    >>> a.shape = (4, 6, 8, 3)
+    >>> ainv = np.linalg.tensorinv(a, ind=2)
+    >>> ainv.shape
+    (8, 3, 4, 6)
+    >>> b = np.random.randn(4, 6)
+    >>> np.allclose(np.tensordot(ainv, b), np.linalg.tensorsolve(a, b))
+    True
+
+    >>> a = np.eye(4*6)
+    >>> a.shape = (24, 8, 3)
+    >>> ainv = np.linalg.tensorinv(a, ind=1)
+    >>> ainv.shape
+    (8, 3, 24)
+    >>> b = np.random.randn(24)
+    >>> np.allclose(np.tensordot(ainv, b, 1), np.linalg.tensorsolve(a, b))
+    True
+    """
+    return _npi.tensorinv(a, ind)

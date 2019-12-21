@@ -188,7 +188,31 @@ The storage type of ``arcsin`` output depends upon the input storage type:
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arcsin" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
-                                                  unary_bwd<mshadow_op::arcsin_grad>);
+                                                  unary_bwd<mshadow_op::arcsin_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dxgrad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseGradUseIn)
+      // f(x) = arcsin(x)
+      // n: f'(x) = 1/(1-x^2)^1/2
+      // f''(x) = f'(x) * x/(1-x^2)
+      // Note: x/(1-x^2) = x * f'(x)^2
+      auto dydx = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+      auto x_grad_square = op.square(x_grad);
+      auto x_grad_square_mul_x = op.mul(x_grad_square, x);
+      auto x_grad_grad = op.mul(dydx_mul_grad_x, x_grad_square_mul_x);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], x_grad_grad));
+      return ret;
+    });
 
 // arccos
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(arccos, cpu, mshadow_op::arccos)
@@ -207,7 +231,32 @@ The storage type of ``arccos`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{ "_backward_arccos" });
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
-                                                  unary_bwd<mshadow_op::arccos_grad>);
+                                                  unary_bwd<mshadow_op::arccos_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // ograds[0]: head_grad_grads (dL/dxgrad)
+      // inputs[0]: dL/dy
+      // inputs[1]: x (ElemwiseGradUseIn)
+      // f(x) = arccos(x)
+      // n: f'(x) = -1/(1-x^2)^1/2
+      // f''(x) = f'(x) * x/(1-x^2)
+      // Note: x/(1-x^2) = x * f'(x)^2
+      auto dydx = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+      auto x_grad_square = op.square(x_grad);
+      auto x_grad_square_mul_x = op.mul(x_grad_square, x);
+      auto x_grad_grad = op.mul(dydx_mul_grad_x, x_grad_square_mul_x);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], x_grad_grad));
+      return ret;
+    });
+
 
 // arctan
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(arctan, cpu, mshadow_op::arctan)

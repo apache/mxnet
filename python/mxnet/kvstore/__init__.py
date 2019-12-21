@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,10 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
-
-apt update
-# fix nvidia docker image come with wrong version of libcublas
-apt install -y --allow-downgrades libcublas-dev=10.2.1.243-1
-apt install -y --allow-downgrades  libcublas10=10.2.1.243-1
+# coding: utf-8
+"""Key-value store for distributed communication"""
+from .kvstore import *
+from .base import *
+from .kvstore_server import *
