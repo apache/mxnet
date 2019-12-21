@@ -193,7 +193,7 @@ if !libmxnet_detected
           else
             `git checkout origin/$libmxnet_curr_ver`
           end
-          `cp -f -v ../../cblas.h include/cblas.h`
+          `cp -f -v julia/deps/include/cblas.h include/cblas.h`
         end
         @build_steps begin
           ChangeDirectory(_blddir)

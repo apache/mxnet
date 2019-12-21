@@ -100,11 +100,11 @@ SET(detect_interface64_src "
 ")
 FILE(WRITE "${CMAKE_CURRENT_BINARY_DIR}/detect_interface64.c" ${detect_interface64_src})
 TRY_RUN(
-    run_detect_interface64 compile_detect_interface64
+    OpenBLAS_INTERFACE64 compile_detect_interface64
     "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/detect_interface64.c"
     LINK_LIBRARIES ${OpenBLAS_LIB}
 )
-IF(run_detect_interface64 EQUAL 0)
-    add_definitions(-DINTERFACE64=1)  # see julia/deps/cblas.h
-ENDIF(run_detect_interface64 EQUAL 0)
+IF(OpenBLAS_INTERFACE64 EQUAL 0)
+    add_definitions(-DOPENBLAS_INTERFACE64=1)  # see julia/deps/cblas.h
+ENDIF(OpenBLAS_INTERFACE64 EQUAL 0)
 FILE(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/detect_interface64.c")

@@ -52,7 +52,7 @@ typedef long BLASLONG;
 typedef unsigned long BLASULONG;
 #endif
 
-#ifdef INTERFACE64
+#ifdef OPENBLAS_INTERFACE64
 typedef BLASLONG blasint;
 #else
 typedef int blasint;
@@ -74,7 +74,7 @@ typedef int blasint;
   typedef struct { double real, imag; } openblas_complex_double;
 #endif
 
-#ifdef INTERFACE64
+#ifdef OPENBLAS_INTERFACE64
 # define cblas_sdsdot cblas_sdsdot64_
 # define cblas_dsdot cblas_dsdot64_
 # define cblas_sdot cblas_sdot64_
@@ -240,7 +240,7 @@ typedef int blasint;
 # define cblas_dgeadd cblas_dgeadd64_
 # define cblas_cgeadd cblas_cgeadd64_
 # define cblas_zgeadd cblas_zgeadd64_
-#endif
+#endif  // OPENBLAS_INTERFACE64
 
 #define CBLAS_INDEX size_t
 
