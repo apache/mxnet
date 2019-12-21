@@ -31,11 +31,50 @@ struct Context
   Context(dev_type::CONTEXT_TYPE, dev_id::Integer = 0) = new(dev_type, dev_id)
 end
 
+const _default_ctx = Ref{Context}(Context(CPU, 0))
+
 Context(dev_type::Integer, dev_id::Integer = 0) =
   Context(convert(CONTEXT_TYPE, dev_type), dev_id)
 
 Base.show(io::IO, ctx::Context) =
-  print(io, "$(ctx.device_type)$(ctx.device_id)")
+  print(io, lowercase("$(ctx.device_type)$(ctx.device_id)"))
+
+function _with_context(dev_type::Expr, dev_id::Integer, e::Expr)
+  global _default_ctx
+  quote
+    ctx = current_context()
+    ctx′ = Context($dev_type, $dev_id)
+    $_default_ctx[] = ctx′
+    try
+      return $e
+    finally
+      $_default_ctx[] = ctx
+    end
+  end
+end
+
+"""
+    @with_context device_type [device_id] expr
+
+Change the default context in the following expression.
+
+# Examples
+```jl-repl
+julia> mx.@with_context mx.GPU begin
+         mx.zeros(2, 3)
+       end
+2×3 NDArray{Float32,2} @ gpu0:
+ 0.0f0  0.0f0  0.0f0
+ 0.0f0  0.0f0  0.0f0
+```
+"""
+macro with_context(dev_type::Expr, e::Expr)
+  _with_context(dev_type, 0, e)
+end
+
+macro with_context(dev_type::Expr, dev_id::Integer, e::Expr)
+  _with_context(dev_type, dev_id, e)
+end
 
 """
     cpu(dev_id)
@@ -86,3 +125,27 @@ function gpu_memory_info(dev_id = 0)
   @mxcall :MXGetGPUMemoryInformation64 (Cint, Ref{UInt64}, Ref{UInt64}) dev_id free n
   free[], n[]
 end
+
+"""
+    current_context()
+
+Return the current context.
+
+By default,  `mx.cpu()` is used for all the computations
+and it can be overridden by using the `@with_context` macro.
+
+# Examples
+```jl-repl
+julia> mx.current_context()
+cpu0
+
+julia> mx.@with_context mx.GPU 1 begin  # Context changed in the following code block
+         mx.current_context()
+       end
+gpu1
+
+julia> mx.current_context()
+cpu0
+```
+"""
+current_context() = _default_ctx[]
