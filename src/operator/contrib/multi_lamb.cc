@@ -64,9 +64,9 @@ struct MultiLAMB_step1_kernel {
           MPDType var_hat = var / (static_cast<MPDType>(1.0f) -
                                   power::Map(static_cast<MPDType>(beta2),
                                   static_cast<MPDType>(kernel_params.step_count[index])));
-          g = mean_hat / (sqrt(var_hat) + epsilon) + kernel_params.wds[index] * w;
+          g = mean_hat / (sqrt(var_hat) + static_cast<MPDType>(epsilon)) + kernel_params.wds[index] * w;
         } else {
-          g = mean / (sqrt(var) + epsilon) + kernel_params.wds[index] * w;
+          g = mean / (sqrt(var) + static_cast<MPDType>(epsilon)) + kernel_params.wds[index] * w;
         }
         temp_g[kernel_params.tensor2temp_g[index]+i] = g;
       }

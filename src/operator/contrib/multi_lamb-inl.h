@@ -116,6 +116,9 @@ inline bool MultiLAMB_InferShape(const nnvm::NodeAttrs& attrs,
   auto& input_shapes = *in_attrs;
   auto& output_shapes = *out_attrs;
 
+  CHECK_LE(param.num_tensors, 45)
+    << "Invalid number of tensors, the maximum value is 45, and got "
+    << param.num_tensors;
   CHECK_EQ(param.learning_rates.ndim(), param.num_tensors)
     << "Number of learning rates is inconsistent with num_tensors "
     << "parameter passed. Expected number of learning rates: "

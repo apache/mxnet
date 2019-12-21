@@ -2259,7 +2259,8 @@ def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
 def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
                       rtol=1e-4, atol=1e-5, compare_states=True, ntensors=1):
     """Compare opt1 and opt2."""
-    if ntensors == 1:
+    if not isinstance(shape, list):
+        assert(ntensors==1)
         if w_stype == 'default':
             w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
             w1 = w2.copyto(default_context())
@@ -2290,14 +2291,10 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
     else:
         # test multi-tensor: Opt1 single-tensor reference, Opt2 multi-tensor
         from copy import deepcopy
-        if not isinstance(shape, list):
-            w1 = [mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype) for i in range(ntensors)]
-            g1 = [mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype) for i in range(ntensors)]
-        else:
-            w1, g1 = [], []
-            for s in shape:
-                w1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
-                g1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
+        w1, g1 = [], []
+        for s in shape:
+            w1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
+            g1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
         w1 = tuple(w1)
         w2 = deepcopy(w1)
         g1 = tuple(g1)

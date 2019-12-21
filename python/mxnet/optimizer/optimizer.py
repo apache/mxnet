@@ -1274,21 +1274,42 @@ class LAMB(Optimizer):
                   'rescale_grad': self.rescale_grad}
 
         if self.aggregate_num <= 1 or not isinstance(index, (tuple, list)):
-            assert(isinstance(weight, NDArray))
-            assert(isinstance(grad, NDArray))
-            self._update_count(index)
-            lr = self._get_lr(index)
-            wd = self._get_wd(index)
-            t = self._index_update_count[index]
+            if not isinstance(index, (tuple, list)):
+              assert(isinstance(weight, NDArray))
+              assert(isinstance(grad, NDArray))
+              self._update_count(index)
+              lr = self._get_lr(index)
+              wd = self._get_wd(index)
+              t = self._index_update_count[index]
+              weight_ptr = weight
+              grad_ptr = grad
+              if multi_precision:
+                mean, var = state[1]
+                weight32 = state[0]
+              else:
+                mean, var = state
+            else:
+              assert(len(index)==self.aggregate_num)
+              assert(isinstance(weight[0], NDArray))
+              assert(isinstance(grad[0], NDArray))
+              self._update_count(index[0])
+              lr = self._get_lr(index[0])
+              wd = self._get_wd(index[0])
+              t = self._index_update_count[index[0]]
+              weight_ptr = weight[0]
+              grad_ptr = grad[0]
+              if multi_precision:
+                mean, var = state[0][1]
+                weight32 = state[0][0]
+              else:
+                mean, var = state[0]
+
             kwargs['t'] = t
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
 
             if multi_precision:
-                mean, var = state[1]
-                weight32 = state[0]
-                g = mp_lamb_update_phase1(weight, grad, mean, var, weight32, wd=wd, **kwargs)
-
+                g = mp_lamb_update_phase1(weight_ptr, grad_ptr, mean, var, weight32, wd=wd, **kwargs)
                 kwargs = {}
                 if self.lower_bound:
                     kwargs['lower_bound'] = self.lower_bound
@@ -1296,19 +1317,18 @@ class LAMB(Optimizer):
                     kwargs['upper_bound'] = self.upper_bound
                 r_1 = weight32.norm()
                 r_2 = g.norm()
-                mp_lamb_update_phase2(weight, g, r_1, r_2, weight32, lr=lr, out=weight, **kwargs)
+                mp_lamb_update_phase2(weight_ptr, g, r_1, r_2, weight32, lr=lr, out=weight_ptr, **kwargs)
             else:
-                mean, var = state
-                g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
+                g = lamb_update_phase1(weight_ptr, grad_ptr, mean, var, wd=wd, **kwargs)
 
                 kwargs = {}
                 if self.lower_bound:
                     kwargs['lower_bound'] = self.lower_bound
                 if self.upper_bound:
                     kwargs['upper_bound'] = self.upper_bound
-                r_1 = weight.norm()
+                r_1 = weight_ptr.norm()
                 r_2 = g.norm()
-                lamb_update_phase2(weight, g, r_1, r_2, lr=lr, out=weight, **kwargs)
+                lamb_update_phase2(weight_ptr, g, r_1, r_2, lr=lr, out=weight_ptr, **kwargs)
         else:
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
