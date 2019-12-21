@@ -33,7 +33,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
 from copy import deepcopy
-import warnings∂
+import warnings
 import json
 import unittest
 import random
