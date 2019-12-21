@@ -58,8 +58,8 @@ inline void BroadcastAxisComputeCPU(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       auto dst = outputs[0].dptr<DType>();
       auto src = inputs[0].dptr<DType>();
-      index_t outer = inputs[0].shape_.ProdShape(0, param.axis[0]); 
-      index_t inner = inputs[0].shape_.ProdShape(param.axis[0], inputs[0].shape_.ndim()); 
+      index_t outer = inputs[0].shape_.ProdShape(0, param.axis[0]);
+      index_t inner = inputs[0].shape_.ProdShape(param.axis[0], inputs[0].shape_.ndim());
       BroadcastAxisKer(src, dst, outer, inner, param.size[0]);
     });
   } else {
