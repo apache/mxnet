@@ -128,7 +128,6 @@ void strided_batch_sgemm(bool transA, bool transB,
                          index_t strideA, const float *b, index_t ldb,
                          index_t strideB, float beta, float *c, index_t ldc,
                          index_t strideC, int32_t batchCount) {
-
   std::vector<const float*> pp_A(batchCount, nullptr);
   std::vector<const float*> pp_B(batchCount, nullptr);
   std::vector<float*> pp_C(batchCount, nullptr);
@@ -362,10 +361,10 @@ void BackwardInterleavedMatMulSelfAttValAttCPU(const nnvm::NodeAttrs& attrs,
   const index_t batch_stride   = 3 * head_dim;
   const float alpha            = 1.f;
   if (req[0] != kNullOp) {
-
     if (req[0] == kWriteTo) {
       memset(queries_keys_values_grads, 0, outputs[0].shape_.Size() * sizeof (float));
     }
+
     const float beta = req[0] == kAddTo ? 1.f : 0.f;
     strided_batch_sgemm(false,
                         true,
