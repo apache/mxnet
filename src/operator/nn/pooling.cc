@@ -278,9 +278,8 @@ void PoolingComputeExCPU(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     return;
   }
 
-
-  if (SupportMKLDNN(inputs[0]) &&
-      SupportMKLDNNPooling(param, inputs[0].shape())) {
+  if (SupportMKLDNN(inputs[0])
+      && SupportMKLDNNPooling(param, inputs[0].shape())) {
     if (MKLDNNRequireWorkspace(param)) {
       CHECK_GT(outputs.size(), 1U);
       workspace = &outputs[1];

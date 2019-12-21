@@ -61,22 +61,19 @@ class Estimator(object):
         Trainer to apply optimizer on network parameters.
     context : Context or list of Context
         Device(s) to run the training on.
-    evaluation_loss : gluon.loss.loss
-        Loss (objective) function to calculate during validation. If set evaluation_loss
-        None, it will use the same loss function as self.loss
-    eval_net : gluon.Block
+    val_net : gluon.Block
         The model used for validation. The validation model does not necessarily belong to
         the same model class as the training model. But the two models typically share the
         same architecture. Therefore the validation model can reuse parameters of the
         training model.
 
-        The code example of consruction of eval_net sharing the same network parameters as
+        The code example of consruction of val_net sharing the same network parameters as
         the training net is given below:
 
         >>> net = _get_train_network()
-        >>> eval_net = _get_test_network(params=net.collect_params())
+        >>> val_net = _get_test_network(params=net.collect_params())
         >>> net.initialize(ctx=ctx)
-        >>> est = Estimator(net, loss, eval_net=eval_net)
+        >>> est = Estimator(net, loss, val_net=val_net)
 
         Proper namespace match is required for weight sharing between two networks. Most networks
         inheriting :py:class:`Block` can share their parameters correctly. An exception is
@@ -84,6 +81,9 @@ class Estimator(object):
         the  naming in mxnet Gluon API, please refer to the site
         (https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/blocks/naming.html)
         for future information.
+    val_loss : gluon.loss.loss
+        Loss (objective) function to calculate during validation. If set val_loss
+        None, it will use the same loss function as self.loss
     batch_processor: BatchProcessor
         BatchProcessor provides customized fit_batch() and evaluate_batch() methods
     """
@@ -113,8 +113,8 @@ class Estimator(object):
                  initializer=None,
                  trainer=None,
                  context=None,
-                 evaluation_loss=None,
-                 eval_net=None,
+                 val_net=None,
+                 val_loss=None,
                  batch_processor=None):
         self.net = net
         self.loss = self._check_loss(loss)
@@ -122,12 +122,12 @@ class Estimator(object):
         self._val_metrics = _check_metrics(val_metrics)
         self._add_default_training_metrics()
         self._add_validation_metrics()
-        self.evaluation_loss = self.loss
-        if evaluation_loss is not None:
-            self.evaluation_loss = self._check_loss(evaluation_loss)
-        self.eval_net = self.net
-        if eval_net is not None:
-            self.eval_net = eval_net
+        self.val_loss = self.loss
+        if val_loss is not None:
+            self.val_loss = self._check_loss(val_loss)
+        self.val_net = self.net
+        if val_net is not None:
+            self.val_net = val_net
 
         self.logger = logging.Logger(name='Estimator', level=logging.INFO)
         self.logger.addHandler(logging.StreamHandler(sys.stdout))

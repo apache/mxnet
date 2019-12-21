@@ -61,8 +61,8 @@ class BatchProcessor(object):
             Batch axis to split the validation data into devices.
         """
         data, label = self._get_data_and_label(val_batch, estimator.context, batch_axis)
-        pred = [estimator.eval_net(x) for x in data]
-        loss = [estimator.evaluation_loss(y_hat, y) for y_hat, y in zip(pred, label)]
+        pred = [estimator.val_net(x) for x in data]
+        loss = [estimator.val_loss(y_hat, y) for y_hat, y in zip(pred, label)]
 
         return data, label, pred, loss
 

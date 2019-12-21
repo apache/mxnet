@@ -48,6 +48,10 @@ def post_wheel(path):
         print('Would have run: {}'.format(cmd))
         return 0
     else:
+        print('Skipping publishing nightly builds to Pypi.')
+        print('See https://github.com/pypa/pypi-support/issues/50 for details')
+        return 0
+
         # DO NOT PRINT CMD IN THIS BLOCK, includes password
         p = subprocess.run(cmd.split(' '),
                         stdout=subprocess.PIPE)

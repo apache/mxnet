@@ -67,6 +67,23 @@ def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', np.array([],dtype=_np.int64), (10, 3, 5))
     OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
 
+def _add_workload_bincount():
+    y = np.arange(4).astype(int)
+    y1 = np.array([1, 5, 2, 4, 1], dtype=_np.int64)
+    y2 = np.array((), dtype=_np.int8)
+    w = np.array([0.2, 0.3, 0.5, 0.1])
+    w1 = np.array([0.2, 0.3, 0.5, 0.1, 0.2])
+
+    OpArgMngr.add_workload('bincount', y)
+    OpArgMngr.add_workload('bincount', y1)
+    OpArgMngr.add_workload('bincount', y, w)
+    OpArgMngr.add_workload('bincount', y1, w1)
+    OpArgMngr.add_workload('bincount', y1, w1, 8)
+    OpArgMngr.add_workload('bincount', y, minlength=3)
+    OpArgMngr.add_workload('bincount', y, minlength=8)
+    OpArgMngr.add_workload('bincount', y2, minlength=0)
+    OpArgMngr.add_workload('bincount', y2, minlength=5)
+    
 
 def _add_workload_diag():
     def get_mat(n):
@@ -372,6 +389,31 @@ def _add_workload_linalg_solve():
 def _add_workload_linalg_det():
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
+
+
+def _add_workload_linalg_tensorinv():
+    shapes = [
+        (1, 20, 4, 5),
+        (2, 2, 10, 4, 5),
+        (2, 12, 5, 3, 4, 5),
+        (3, 2, 3, 4, 24)
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype, shape in itertools.product(dtypes, shapes):
+        ind = shape[0]
+        prod_front = 1
+        prod_back = 1
+        for k in shape[1:ind + 1]:
+            prod_front *= k
+        for k in shape[1 + ind:]:
+            prod_back *= k
+        a_shape = (prod_back, prod_front)
+        a = _np.random.randn(*a_shape)
+        if prod_back == prod_front:
+            if _np.allclose(_np.dot(a, _np.linalg.inv(a)), _np.eye(prod_front)):
+                a_shape = shape[1:]
+                a = a.reshape(a_shape)
+                OpArgMngr.add_workload('linalg.tensorinv', np.array(a, dtype=dtype), ind)
 
 
 def _add_workload_linalg_slogdet():
@@ -1200,6 +1242,24 @@ def _add_workload_logical_not(array_pool):
     OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
 
 
+def _add_workload_bitwise_not():
+    OpArgMngr.add_workload('bitwise_not', np.array([True, False, True, False], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_not', zeros)
+        OpArgMngr.add_workload('bitwise_not', ones)
+
+
+def _add_workload_invert():
+    OpArgMngr.add_workload('invert', np.array([True, False, True, False], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('invert', zeros)
+        OpArgMngr.add_workload('invert', ones)
+
+
 def _add_workload_vdot():
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)), np.random.normal(size=(4, 2)))
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)).astype(np.float64), np.random.normal(size=(2, 4)).astype(np.float64))
@@ -1384,6 +1444,7 @@ def _prepare_workloads():
     _add_workload_around()
     _add_workload_argsort()
     _add_workload_append()
+    _add_workload_bincount()
     _add_workload_broadcast_arrays(array_pool)
     _add_workload_broadcast_to()
     _add_workload_clip()
@@ -1428,6 +1489,7 @@ def _prepare_workloads():
     _add_workload_linalg_inv()
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
+    _add_workload_linalg_tensorinv()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()
@@ -1482,6 +1544,8 @@ def _prepare_workloads():
     _add_workload_turnc(array_pool)
     _add_workload_floor(array_pool)
     _add_workload_logical_not(array_pool)
+    _add_workload_bitwise_not()
+    _add_workload_invert()
     _add_workload_vdot()
     _add_workload_vstack(array_pool)
     _add_workload_column_stack()
