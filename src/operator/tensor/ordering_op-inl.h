@@ -157,7 +157,9 @@ inline void ParseTopKParam(const TShape& src_shape,
     CHECK(*axis >= 0 && *axis < static_cast<int>(src_shape.ndim()))
                                                   << "Invalid axis! axis should be between 0 and "
                                                   << src_shape.ndim() << ", found axis=" << *axis;
-    *batch_size = src_shape.Size() / src_shape[*axis];
+    if (src_shape[*axis] != 0) {
+      *batch_size = src_shape.Size() / src_shape[*axis];
+    }
     *element_num = src_shape[*axis];
     if (*axis != src_shape.ndim() - 1) {
       *do_transpose = true;
@@ -180,7 +182,7 @@ inline void ParseTopKParam(const TShape& src_shape,
       (*target_shape)[*axis] = *k;
     }
   }
-  CHECK(*k >= 1 && *k <= *element_num) << "k must be smaller than "
+  CHECK(*k >= 0 && *k <= *element_num) << "k must be smaller than "
                                       << *element_num << ", get k = " << *k;
 }
 
@@ -391,6 +393,8 @@ void TopKImpl(const RunContext &ctx,
               const TopKParam& param) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  // 0. If input shape is 0-shape, directly return
+  if (src.Size() == 0) return;
   // 1. Parse and initialize information
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Tensor<xpu, 1, char> workspace;

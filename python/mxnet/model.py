@@ -98,6 +98,10 @@ def _create_kvstore(kvstore, num_device, arg_params):
     elif isinstance(kvstore, kvs.KVStore):
         kv = kvstore
     elif isinstance(kvstore, str):
+        if kvstore in kvs.KVStoreBase.kv_registry:
+            # we do not assume all custom kvstore supports
+            # updates on kvstore with optimizers
+            return (kvs.create(kvstore), False)
         # create kvstore using the string type
         if num_device == 1 and 'dist' not in kvstore:
             # no need to use kv for single device and single machine
@@ -110,6 +114,10 @@ def _create_kvstore(kvstore, num_device, arg_params):
                                arg_params.values())
                 if max_size > 1024 * 1024 * 16:
                     update_on_kvstore = False
+    elif isinstance(kvstore, kvs.KVStoreBase):
+        # we do not assume all custom kvstore supports
+        # updates on kvstore with optimizers
+        return (kvstore, False)
     else:
         raise TypeError('kvstore must be KVStore, str or None')
 
@@ -122,10 +130,10 @@ def _initialize_kvstore(kvstore, param_arrays, arg_params, param_names, update_o
     """Initialize kvstore"""
     for idx, param_on_devs in enumerate(param_arrays):
         name = param_names[idx]
-        kvstore.init(name, arg_params[name])
-
-        if update_on_kvstore:
-            kvstore.pull(name, param_on_devs, priority=-idx)
+        if not update_on_kvstore or arg_params[name].stype != 'default':
+            kvstore.init(name, arg_params[name])
+        else:
+            kvstore.broadcast(name, arg_params[name], out=param_on_devs)
 
 def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_names):
     """Perform update of param_arrays from grad_arrays on NCCL kvstore."""
@@ -142,9 +150,9 @@ def _update_params_on_kvstore_nccl(param_arrays, grad_arrays, kvstore, param_nam
     while start < size:
         end = start + batch if start + batch < size else size
         # push gradient, priority is negative index
-        kvstore.push(valid_param_names[start:end], valid_grad_arrays[start:end], priority=-start)
         # pull back the weights
-        kvstore.pull(valid_param_names[start:end], valid_param_arrays[start:end], priority=-start)
+        kvstore.pushpull(valid_param_names[start:end], valid_grad_arrays[start:end],
+                         out=valid_param_arrays[start:end], priority=-start)
         start = end
 
 def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
@@ -155,9 +163,12 @@ def _update_params_on_kvstore(param_arrays, grad_arrays, kvstore, param_names):
             continue
         name = param_names[index]
         # push gradient, priority is negative index
-        kvstore.push(name, grad_list, priority=-index)
         # pull back the weights
-        kvstore.pull(name, arg_list, priority=-index)
+        if grad_list[0].stype == 'default' and arg_list[0].stype == 'default':
+            kvstore.pushpull(name, grad_list, out=arg_list, priority=-index)
+        else:
+            kvstore.push(name, grad_list, priority=-index)
+            kvstore.pull(name, out=arg_list, priority=-index)
 
 def _update_params(param_arrays, grad_arrays, updater, num_device,
                    kvstore=None, param_names=None):
@@ -171,9 +182,11 @@ def _update_params(param_arrays, grad_arrays, updater, num_device,
         if kvstore:
             name = param_names[index]
             # push gradient, priority is negative index
-            kvstore.push(name, grad_list, priority=-index)
-            # pull back the sum gradients, to the same locations.
-            kvstore.pull(name, grad_list, priority=-index)
+            if grad_list[0].stype == 'default' and arg_list[0].stype == 'default':
+                kvstore.pushpull(name, grad_list, priority=-index)
+            else:
+                kvstore.push(name, grad_list, priority=-index)
+                kvstore.pull(name, out=grad_list, priority=-index)
         for k, p in enumerate(zip(arg_list, grad_list)):
             # faked an index here, to make optimizer create diff
             # state for the same index but on diff devs, TODO(mli)

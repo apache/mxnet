@@ -223,6 +223,12 @@ The following environments can be used to profile the application without changi
 If cython modules are used, `mx.nd._internal.NDArrayBase` must be `mxnet._cy3.ndarray.NDArrayBase` for python 3 or `mxnet._cy2.ndarray.NDArrayBase` for python 2.
 If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
+## Logging
+
+* DMLC_LOG_STACK_TRACE_DEPTH
+  - Values: Int ```(default=0)```
+  - The depth of stack trace information to log when exception happens.
+
 ## Other Environment Variables
 
 * MXNET_GPU_WORKER_NSTREAMS
@@ -283,11 +289,11 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
   of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
 
-* MXNET_CPU_PARALLEL_COPY_SIZE
+* MXNET_CPU_PARALLEL_SIZE
   - Values: Int ```(default=200000)```
-  - The minimum size to call parallel copy by OpenMP in CPU2CPU mode.
-  - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
-  - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
+  - The minimum size to call parallel operations by OpenMP for CPU context.
+  - When the array size is bigger than or equal to this threshold, the operation implemented by OpenMP is executed with the Recommended OMP Thread Count.
+  - When the array size is less than this threshold, the operation is implemented naively in single thread.
 
 * MXNET_OPTIMIZER_AGGREGATION_SIZE
   - Values: Int ```(default=4)```
@@ -342,6 +348,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_ELIMINATE_COMMON_EXPR
   - Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
+
+* MXNET_USE_MKLDNN_RNN
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 
 Settings for Minimum Memory Usage
 ---------------------------------

@@ -24,6 +24,7 @@
  */
 
 #include <vector>
+#include <set>
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 
@@ -37,6 +38,7 @@ DMLC_REGISTER_PARAMETER(NumpyRot90Param);
 DMLC_REGISTER_PARAMETER(NumpyReshapeParam);
 DMLC_REGISTER_PARAMETER(NumpyXReshapeParam);
 DMLC_REGISTER_PARAMETER(NumpyDiagParam);
+DMLC_REGISTER_PARAMETER(NumpyDiagonalParam);
 DMLC_REGISTER_PARAMETER(NumpyDiagflatParam);
 
 
@@ -67,8 +69,13 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape ret(ndim, -1);
 
   if (ndim_is_known(param.axes)) {
-    CHECK_EQ(ndim, param.axes.ndim());
+    CHECK_EQ(ndim, param.axes.ndim())
+        << "The number of axes does not match the dimension of the tensor. axes = "
+        << param.axes << ", input tensor shape = " << shp;
     mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
+    std::set<dim_t> axes_set(axes.begin(), axes.end());
+    CHECK_EQ(axes_set.size(), axes.ndim()) << "Repeated axis in transpose. param.axes = "
+                                                << param.axes;
     if (ndim_is_known(shp)) {
       for (int i = 0; i < ndim; ++i) {
         ret[i] = shp[axes[i]];
@@ -117,9 +124,9 @@ NNVM_REGISTER_OP(_np_transpose)
       }
       std::ostringstream os;
       os << axes;
-      return MakeNonlossGradNode("transpose", n, ograds, {}, {{"axes", os.str()}});
+      return MakeNonlossGradNode("_np_transpose", n, ograds, {}, {{"axes", os.str()}});
     } else {
-      return MakeNonlossGradNode("transpose", n, ograds, {},
+      return MakeNonlossGradNode("_np_transpose", n, ograds, {},
                                  std::unordered_map<std::string, std::string>());
     }
   })
@@ -1325,6 +1332,28 @@ NNVM_REGISTER_OP(_backward_np_diag)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpBackward<cpu>);
+
+NNVM_REGISTER_OP(_np_diagonal)
+.set_attr_parser(ParamParser<NumpyDiagonalParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagonalOpShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyDiagonalOpType)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diagonal"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyDiagonalParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_diagonal)
+.set_attr_parser(ParamParser<NumpyDiagonalParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpBackward<cpu>);
 
 NNVM_REGISTER_OP(_np_diagflat)
 .set_attr_parser(ParamParser<NumpyDiagflatParam>)
