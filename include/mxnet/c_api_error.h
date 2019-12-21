@@ -22,6 +22,8 @@
  * \file c_api_error.h
  * \brief Error handling for C API.
  */
+#include <string>
+
 #ifndef MXNET_C_API_ERROR_H_
 #define MXNET_C_API_ERROR_H_
 
