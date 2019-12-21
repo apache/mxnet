@@ -138,7 +138,7 @@ if !libmxnet_detected
 
     run(download_cmd(package_url, "mxnet.7z"))
     # this command will create the dir "usr\\lib"
-    run(`$exe7z e mxnet.7z *\\build\\* *\\lib\\* -y -ousr\\lib`)
+    run(`$exe7z e mxnet.7z "*\\build\\*" "*\\lib\\*" -y -ousr\\lib`) # TODO check it works on windows or not
 
     run(download_cmd(base_url, "mxnet_base.7z"))
     run(`$exe7z x mxnet_base.7z -y -ousr`)
