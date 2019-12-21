@@ -33,7 +33,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
 from copy import deepcopy
-import warnings
+import warnings∂
 import json
 import unittest
 import random
@@ -967,7 +967,7 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
         assert all(r1.reshape(-1) == r2.reshape(-1))
 
 
-def check_split_data(x, num_slice, batch_axis, **kwargs):
+def test_split_data(x, num_slice, batch_axis, **kwargs):
     res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
     assert len(res) == num_slice
     if not is_np_array():
@@ -983,7 +983,7 @@ def check_split_data(x, num_slice, batch_axis, **kwargs):
 
 
 @use_np
-def check_split_data_np():
+def test_split_data_np():
     x = _mx_np.random.uniform(size=(128, 33, 64))
     check_split_data(x, 8, 0)
     check_split_data(x, 3, 1)
