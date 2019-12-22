@@ -119,18 +119,12 @@ Example::
   out_shape->clear();
   out_shape->push_back(dshape);
   if (param.axes.ndim() > 0) {
-    // TODO (lnyuan): support specifying axes
-    LOG(FATAL) << "not supported yet";
-    /*
     for (int i = 0; i < param.axes.ndim(); ++i) {
       dshape[param.axes[i]] = 1;
     }
-    out_shape->push_back(dshape); */
-  } else {
-    mxnet::TShape mshape(1, static_cast<dim_t>(ceil(static_cast<double>(dshape.Size()) / 8)));
-    out_shape->push_back(mshape);
   }
-
+  mxnet::TShape mshape(1, static_cast<dim_t>(ceil(static_cast<double>(dshape.Size()) / 8)));
+  out_shape->push_back(mshape);
   return true;
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
@@ -172,9 +166,7 @@ Example::
 #endif
     }
     request.emplace_back(ResourceRequest::kParallelRandom);
-#if MXNET_USE_MKL_DROPOUT
     request.emplace_back(ResourceRequest::kTempSpace);
-#endif
     return request;
   })
 .add_argument("data", "NDArray-or-Symbol", "Input array to which dropout will be applied.")
