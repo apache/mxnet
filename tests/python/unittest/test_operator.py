@@ -9521,7 +9521,7 @@ def check_multihead_attention_selfatt(dtype):
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
 
-@with_seed(12345)
+@with_seed()
 def test_multihead_attention_selfatt():
     dtypes = ['float32']
     if default_context().device_type == 'gpu':
@@ -9689,7 +9689,7 @@ def check_multihead_attention_encdec(dtype):
         assert(grads_orig[k].shape == grads_opti[k].shape)
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
-@with_seed(12345)
+@with_seed()
 def test_multihead_attention_encdec():
     dtypes = ['float32']
     if default_context().device_type == 'gpu':
