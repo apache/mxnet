@@ -54,41 +54,40 @@ function _with_context(dev_type::Union{Symbol,Expr}, dev_id::Integer, e::Expr)
 end
 
 """
-    @with_context device_type [device_id] expr
+    @context device_type [device_id] expr
 
 Change the default context in the following expression.
 
 # Examples
 ```jl-repl
-julia> mx.@with_context mx.GPU begin
+julia> mx.@context mx.GPU begin
          mx.zeros(2, 3)
        end
 2×3 NDArray{Float32,2} @ gpu0:
  0.0f0  0.0f0  0.0f0
  0.0f0  0.0f0  0.0f0
 
-julia> @with_context mx.GPU mx.zeros(3, 2)
+julia> @context mx.GPU mx.zeros(3, 2)
 3×2 NDArray{Float32,2} @ gpu0:
  0.0f0  0.0f0
  0.0f0  0.0f0
  0.0f0  0.0f0
 ```
 """
-macro with_context(dev_type, e::Expr)
+macro context(dev_type, e::Expr)
   _with_context(dev_type, 0, e)
 end
 
-macro with_context(dev_type, dev_id::Integer, e::Expr)
+macro context(dev_type, dev_id::Integer, e::Expr)
   _with_context(dev_type, dev_id, e)
 end
 
 for dev ∈ [:cpu, :gpu]
   ctx = QuoteNode(Symbol(uppercase(string(dev))))
-  fname = Symbol("with_", dev)
   docstring = """
-        @$fname [device_id] expr
+        @$dev [device_id] expr
 
-    A shorthand for `@with_context mx.GPU`.
+    A shorthand for `@context mx.GPU`.
 
     # Examples
     ```jl-repl
@@ -100,17 +99,17 @@ for dev ∈ [:cpu, :gpu]
     """
   @eval begin
     @doc $docstring ->
-    macro $fname(e::Expr)
+    macro $dev(e::Expr)
       ctx = $ctx
       quote
-        @with_context $ctx $(esc(e))
+        @context $ctx $(esc(e))
       end
     end
 
-    macro $fname(dev_id::Integer, e::Expr)
+    macro $dev(dev_id::Integer, e::Expr)
       ctx = $ctx
       quote
-        @with_context $ctx $dev_id $(esc(e))
+        @context $ctx $dev_id $(esc(e))
       end
     end
   end
@@ -172,15 +171,15 @@ end
 
 Return the current context.
 
-By default,  `mx.cpu()` is used for all the computations
-and it can be overridden by using the `@with_context` macro.
+By default, `mx.cpu()` is used for all the computations
+and it can be overridden by using the `@context` macro.
 
 # Examples
 ```jl-repl
 julia> mx.current_context()
 cpu0
 
-julia> mx.@with_context mx.GPU 1 begin  # Context changed in the following code block
+julia> mx.@context mx.GPU 1 begin  # Context changed in the following code block
          mx.current_context()
        end
 gpu1
