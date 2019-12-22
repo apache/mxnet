@@ -66,6 +66,12 @@ julia> mx.@with_context mx.GPU begin
 2×3 NDArray{Float32,2} @ gpu0:
  0.0f0  0.0f0  0.0f0
  0.0f0  0.0f0  0.0f0
+
+julia> @with_context mx.GPU mx.zeros(3, 2)
+3×2 NDArray{Float32,2} @ gpu0:
+ 0.0f0  0.0f0
+ 0.0f0  0.0f0
+ 0.0f0  0.0f0
 ```
 """
 macro with_context(dev_type::Expr, e::Expr)
