@@ -341,7 +341,7 @@ def conv(attrs, inputs, proto_obj):
             break
 
     data = inputs[0]
-    pad = []
+    conv_pad = []
     if asym_pad:
         # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
         # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
@@ -350,10 +350,10 @@ def conv(attrs, inputs, proto_obj):
         data = pad_op
     else:
         for i in range(0, len(padding), 2):
-            pad += [padding[i]]
+            conv_pad += [padding[i]]
 
     conv_op = symbol.Convolution(data, inputs[1], bias,
-                                 kernel=kernel, stride=stride, dilate=dilations, pad=pad,
+                                 kernel=kernel, stride=stride, dilate=dilations, pad=conv_pad,
                                  num_filter=num_filter, num_group=num_group, no_bias=no_bias)
 
     return conv_op, new_attrs, inputs
@@ -385,7 +385,7 @@ def deconv(attrs, inputs, proto_obj):
             break
 
     data = inputs[0]
-    pad = []
+    conv_pad = []
     if asym_pad:
         # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
         # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
@@ -394,10 +394,10 @@ def deconv(attrs, inputs, proto_obj):
         data = pad_op
     else:
         for i in range(0, len(padding), 2):
-            pad += [padding[i]]
+            conv_pad += [padding[i]]
 
     deconv_op = symbol.Deconvolution(data, inputs[1], bias,
-                                     kernel=kernel, stride=stride, dilate=dilations, pad=pad,
+                                     kernel=kernel, stride=stride, dilate=dilations, pad=conv_pad,
                                      num_filter=num_filter, num_group=num_group, no_bias=no_bias)
 
     return deconv_op, new_attrs, inputs
