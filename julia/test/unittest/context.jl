@@ -37,7 +37,7 @@ function test_with_context()
     @with_context mx.GPU 24 begin
       ctx = mx.current_context()
       @test ctx.device_type == mx.GPU
-      @test ctx.device_id   == 42
+      @test ctx.device_id   == 24
     end
 
     ctx = mx.current_context()
