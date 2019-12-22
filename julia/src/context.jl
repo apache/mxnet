@@ -39,11 +39,11 @@ Context(dev_type::Integer, dev_id::Integer = 0) =
 Base.show(io::IO, ctx::Context) =
   print(io, lowercase("$(ctx.device_type)$(ctx.device_id)"))
 
-function _with_context(dev_type::Union{Symbol,Expr}, dev_id::Integer, e::Expr)
+function _with_context(dev_type::Union{Symbol,Expr}, dev_id, e::Expr)
   global _default_ctx
   quote
     ctx = current_context()
-    ctx′ = Context($dev_type, $dev_id)
+    ctx′ = Context($(esc(dev_type)), $(esc(dev_id)))
     $_default_ctx[] = ctx′
     try
       return $(esc(e))
@@ -78,7 +78,7 @@ macro context(dev_type, e::Expr)
   _with_context(dev_type, 0, e)
 end
 
-macro context(dev_type, dev_id::Integer, e::Expr)
+macro context(dev_type, dev_id, e::Expr)
   _with_context(dev_type, dev_id, e)
 end
 
@@ -106,10 +106,10 @@ for dev ∈ [:cpu, :gpu]
       end
     end
 
-    macro $dev(dev_id::Integer, e::Expr)
+    macro $dev(dev_id, e::Expr)
       ctx = $ctx
       quote
-        @context $ctx $dev_id $(esc(e))
+        @context $ctx $(esc(dev_id)) $(esc(e))
       end
     end
   end

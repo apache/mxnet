@@ -74,6 +74,13 @@ function test_context_macro()
     @test ctx.device_type == mx.GPU
     @test ctx.device_id   == 0
   end
+  let n = 321
+    @gpu n begin
+      ctx = mx.current_context()
+      @test ctx.device_type == mx.GPU
+      @test ctx.device_id   == 321
+    end
+  end
 
   @info "Context::@cpu"
   @cpu 123 begin
@@ -85,6 +92,13 @@ function test_context_macro()
     ctx = mx.current_context()
     @test ctx.device_type == mx.CPU
     @test ctx.device_id   == 0
+  end
+  let n = 321
+    @cpu n begin
+      ctx = mx.current_context()
+      @test ctx.device_type == mx.CPU
+      @test ctx.device_id   == 321
+    end
   end
 end
 
