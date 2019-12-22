@@ -39,14 +39,14 @@ Context(dev_type::Integer, dev_id::Integer = 0) =
 Base.show(io::IO, ctx::Context) =
   print(io, lowercase("$(ctx.device_type)$(ctx.device_id)"))
 
-function _with_context(dev_type::Expr, dev_id::Integer, e::Expr)
+function _with_context(dev_type::Union{Symbol,Expr}, dev_id::Integer, e::Expr)
   global _default_ctx
   quote
     ctx = current_context()
     ctx′ = Context($dev_type, $dev_id)
     $_default_ctx[] = ctx′
     try
-      return $e
+      return $(esc(e))
     finally
       $_default_ctx[] = ctx
     end
@@ -74,12 +74,47 @@ julia> @with_context mx.GPU mx.zeros(3, 2)
  0.0f0  0.0f0
 ```
 """
-macro with_context(dev_type::Expr, e::Expr)
+macro with_context(dev_type, e::Expr)
   _with_context(dev_type, 0, e)
 end
 
-macro with_context(dev_type::Expr, dev_id::Integer, e::Expr)
+macro with_context(dev_type, dev_id::Integer, e::Expr)
   _with_context(dev_type, dev_id, e)
+end
+
+for dev ∈ [:cpu, :gpu]
+  ctx = QuoteNode(Symbol(uppercase(string(dev))))
+  fname = Symbol("with_", dev)
+  docstring = """
+        @$fname [device_id] expr
+
+    A shorthand for `@with_context mx.GPU`.
+
+    # Examples
+    ```jl-repl
+    julia> mx.@with_gpu mx.zeros(2, 3)
+    2×3 NDArray{Float32,2} @ gpu0:
+     0.0f0  0.0f0  0.0f0
+     0.0f0  0.0f0  0.0f0
+    ```
+    """
+  @eval begin
+    @doc $docstring ->
+    macro $fname(e::Expr)
+      ctx = $ctx
+      quote
+        @with_context $ctx $(esc(e))
+      end
+    end
+
+    macro $fname(dev_id::Integer, e::Expr)
+      ctx = $ctx
+      quote
+        @with_context $ctx $dev_id $(esc(e))
+      end
+    end
+  end
+
 end
 
 """
