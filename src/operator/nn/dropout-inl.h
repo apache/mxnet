@@ -79,9 +79,10 @@ struct DropoutParam : public dmlc::Parameter<DropoutParam> {
     .set_default(dropout::kTraining)
     .describe("Whether to only turn on dropout during training or to also turn on for inference.");
     DMLC_DECLARE_FIELD(axes).set_default(mxnet::TShape(0, 0))
-    .describe("Axes for variational dropout kernel.");
+    .describe("Axes for variational dropout kernel. Same dropout will be applied to elements "
+              "along the specified axis.");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>(false))
-    .describe("Whether to turn off cudnn in dropout operator. "
+    .describe("Whether to turn off cuDNN in dropout operator. "
               "This option is ignored if axes is specified.");
   }
 };  // struct DropoutParam
@@ -233,12 +234,55 @@ class DropoutOp {
                                     RandGenerator<xpu, DType> gen,
                                     const index_t N,
                                     const index_t step,
-                                    DType *mask_out,
+                                    DType *dropout_out,
+                                    uint8_t *mask_out,
                                     const real_t pkeep) {
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
-        mask_out[i] = mshadow_op::threshold::Map<real_t>(rand_num, pkeep) * (1.0f / pkeep);
-      });
+        // mask_out is set per bit position
+        // therefore bitwise shift need to be performed here
+        auto maskIdx = i / 8;
+        auto maskOffset = i % 8;
+        bool maskVal = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        if (maskVal) {
+          // set bit
+          mask_out[maskIdx] |= 1U << maskOffset;
+        } else {
+          // clear bit
+          mask_out[maskIdx] &= ~(1U << maskOffset);
+        }
+        dropout_out[i] = maskVal * (1.0 / pkeep);
+      })
+    }
+  };
+
+  template<int ndim>
+  struct BernoulliBackwardKernel {
+    MSHADOW_XINLINE static void Map(index_t base,
+                                    index_t length,
+                                    OpReqType req,
+                                    const Shape<ndim> &lstride,
+                                    const Shape<ndim> &rstride,
+                                    const Shape<ndim> &oshape,
+                                    DType *igrad,
+                                    DType *ograd,
+                                    const uint8_t *mask,
+                                    const real_t pkeep) {
+      Shape <ndim> coord = unravel(base, oshape);
+      auto lidx = static_cast<index_t>(dot(coord, lstride));
+      auto ridx = static_cast<index_t>(dot(coord, rstride));
+      auto maskIdx = ridx / 8;
+      uint8_t maskOffset = ridx % 8;
+      bool maskVal = (mask[maskIdx] >> maskOffset) & 1U;
+      KERNEL_ASSIGN(igrad[base], req, maskVal * ograd[lidx] * (1 / pkeep))
+      // starts from 1 to avoid extra inc at end of loop
+      for (index_t i = 1; i < length; ++i) {
+        inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
+        maskIdx = ridx / 8;
+        maskOffset = ridx % 8;
+        maskVal = (mask[maskIdx] >> maskOffset) & 1U;
+        KERNEL_ASSIGN(igrad[base + i], req, maskVal * ograd[lidx] * (1 / pkeep))
+      }
     }
   };
 
@@ -402,24 +446,30 @@ class DropoutOp {
                                         this->pkeep_);
           return;
         } else {
-          // TODO (lnyuan) : support axes param
-          LOG(FATAL) << "param axes is not yet supported in this PR";
+          // allocating temp buffer to store masked output
+          TShape temp_shape = out.shape_;
+          for (int i = 0; i < this->axes_.ndim(); ++i) {
+            temp_shape[this->axes_[i]] = 1;
+          }
+          Tensor<xpu, 1, DType> temp =
+              ctx.requested[1].get_space_typed<xpu, 1, DType>(Shape1(temp_shape.Size()), s);
           RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
           CHECK_NOTNULL(pgen);
           // initialize the mask
-          LaunchRNG<BernoulliKernel, xpu>(s, pgen, mask.Size(),
-                                          mask.dptr<DType>(),
+          LaunchRNG<BernoulliKernel, xpu>(s, pgen, temp_shape.Size(),
+                                          temp.dptr_,
+                                          mask.dptr<uint8_t>(),
                                           this->pkeep_);
           // broadcast mul
-          mxnet::TShape new_lshape, new_rshape, new_oshape;
+          TShape new_lshape, new_rshape, new_oshape;
           int ndim = BinaryBroadcastShapeCompact(in.shape_,
-                                                 mask.shape_, out.shape_,
+                                                 temp_shape, out.shape_,
                                                  &new_lshape, &new_rshape, &new_oshape);
           if (!ndim) {
             MXNET_ASSIGN_REQ_SWITCH(req[dropout::kOut], Req, {
               mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
                 s, out.Size(), out.dptr<DType>(), in.dptr<DType>(),
-                mask.dptr<DType>());
+                temp.dptr_);
             });
           } else {
             BROADCAST_NDIM_SWITCH(ndim, NDim, {
@@ -428,10 +478,9 @@ class DropoutOp {
               mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
               mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::mul>, xpu>::
               template LaunchEx(s, new_oshape.Size(), req[dropout::kOut],
-              lstride, rstride, oshape,
-              in.dptr<DType>(),
-              mask.dptr<DType>(), out.dptr<DType>());
-            });
+                                lstride, rstride, oshape, in.dptr<DType>(),
+                                temp.dptr_, out.dptr<DType>());
+            })
           }
         }
       } else {
@@ -477,28 +526,34 @@ class DropoutOp {
 
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
           mxnet_op::Kernel<DropoutBackwardKernel, xpu>::Launch(
-            s, gdata.Size(), Req, gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<uint8_t>(), pkeep_);
+              s, gdata.Size(), Req, gdata.dptr<DType>(), grad.dptr<DType>(),
+              mask.dptr<uint8_t>(), pkeep_);
         })
         return;
       } else {
+        TShape temp_shape = grad.shape_;
+        for (int i = 0; i < this->axes_.ndim(); ++i) {
+          temp_shape[this->axes_[i]] = 1;
+        }
         // broardcast mul
-        mxnet::TShape new_lshape, new_rshape, new_oshape;
+        TShape new_lshape, new_rshape, new_oshape;
         int ndim = BinaryBroadcastShapeCompact(grad.shape_,
-                                               mask.shape_, gdata.shape_,
+                                               temp_shape, gdata.shape_,
                                                &new_lshape, &new_rshape, &new_oshape);
         if (!ndim) {
           MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
-            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
-              s, gdata.Size(), gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<DType>());
+            mxnet_op::Kernel<DropoutBackwardKernel, xpu>::Launch(
+              s, gdata.Size(), Req, gdata.dptr<DType>(), grad.dptr<DType>(),
+              mask.dptr<uint8_t >(), pkeep_);
           });
         } else {
           BROADCAST_NDIM_SWITCH(ndim, NDim, {
             mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
             mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
             mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-            mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, mshadow_op::mul>, xpu>::
+            mxnet_op::Kernel<BernoulliBackwardKernel<NDim>, xpu>::
             template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-            grad.dptr<DType>(), mask.dptr<DType>(), gdata.dptr<DType>());
+            gdata.dptr<DType>(), grad.dptr<DType>(), mask.dptr<uint8_t>(), pkeep_);
           });
         }
       }
