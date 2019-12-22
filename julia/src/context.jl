@@ -113,8 +113,7 @@ for dev ∈ [:cpu, :gpu]
       end
     end
   end
-
-end
+end  # for dev ∈ [:cpu, :gpu]
 
 """
     cpu(dev_id)
