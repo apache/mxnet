@@ -32,16 +32,23 @@ class Bernoulli(ExponentialFamily):
 
     @property
     def prob(self):
-        """Get the probability
+        """Get the probability of sampling `1`.
         
         Returns
         -------
-        [type]
-            [description]
+        Tensor
+            Parameter tensor.
         """        
         return self._prob if self._prob is not None else logit2prob(self._logit, self.F)
 
     def logit(self):
+        """Get the log-odds of sampling `1`.
+        
+        Returns
+        -------
+        Tensor
+            Parameter tensor.
+        """        
         return self._logit if self._logit is not None else prob2logit(self._prob, self.F)
 
     @property
