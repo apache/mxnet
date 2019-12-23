@@ -53,7 +53,8 @@ inline static void LaunchRNG(mshadow::Stream<xpu> *s,
                     RandGenerator<xpu>::kMinNumRandomPerThread;
   const index_t nthread = std::min(nloop,
                                    static_cast<index_t>(RandGenerator<xpu>::kNumRandomStates));
-  const index_t step = (N + nthread - 1) / nthread;
+  const index_t step = ((N + nthread - 1) / nthread + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
+      RandGenerator<xpu>::kMinNumRandomPerThread * RandGenerator<xpu>::kMinNumRandomPerThread;
   Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args...);
 }
 
