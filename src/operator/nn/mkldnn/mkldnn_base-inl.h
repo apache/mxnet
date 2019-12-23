@@ -619,10 +619,10 @@ class MKLDNNMemory {
     return mem->get_desc();
   }
 
-  mkldnn::memory::desc GetDesc(mkldnn_format_tag_t format) const {
+  mkldnn::memory::desc GetDesc(mkldnn_format_tag_t format, mkldnn::memory::data_type data_type = mkldnn::memory::data_type::undef) const {
     mkldnn::memory::dims dims(desc.data.dims, desc.data.dims + desc.data.ndims);
-    mkldnn::memory::data_type cpp_type =
-        static_cast<mkldnn::memory::data_type>(desc.data.data_type);
+    mkldnn::memory::data_type cpp_type = (data_type == mkldnn::memory::data_type::undef) ?
+        static_cast<mkldnn::memory::data_type>(desc.data.data_type) : data_type;
     mkldnn::memory::desc data_md(dims, cpp_type,
         static_cast<mkldnn::memory::format_tag>(format));
     return data_md;
