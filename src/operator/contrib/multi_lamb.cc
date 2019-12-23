@@ -31,7 +31,7 @@ namespace mxnet {
 namespace op {
 
 template<typename MPDType, bool has_mixed_precision>
-struct MultiLAMB_step1_kernel {
+struct MultiLAMBKernelStep1 {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
@@ -75,12 +75,12 @@ struct MultiLAMB_step1_kernel {
 };
 
 template<typename MPDType, bool has_mixed_precision>
-struct MultiLAMB_step2_kernel {
+struct MultiLAMBKernelStep2 {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
-                                  const float* sumSqWeigths,
-                                  const float* sumSqtemp_g,
+                                  const float* sum_sq_weigths,
+                                  const float* sum_sq_temp_g,
                                   const float* temp_g,
                                   const float lower_bound,
                                   const float upper_bound,
@@ -88,9 +88,9 @@ struct MultiLAMB_step2_kernel {
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
       if ((size_t)i < kernel_params.sizes[index]) {
         MPDType w = has_mixed_precision ? kernel_params.weights32[index][i]:
-                                            MPDType(kernel_params.weights[index][i]);
-        float r1 = sqrt(sumSqWeigths[index]);
-        float r2 = sqrt(sumSqtemp_g[index]);
+                                          MPDType(kernel_params.weights[index][i]);
+        float r1 = sqrt(sum_sq_weigths[index]);
+        float r2 = sqrt(sum_sq_temp_g[index]);
         if (lower_bound >= 0)
           r1 = std::max(r1, lower_bound);
         if (upper_bound >= 0)
@@ -116,25 +116,25 @@ struct MultiLAMB_step2_kernel {
 };
 
 template<typename MPDType, typename DType>
-void call_kernel1(Stream<cpu>* s,
+void CallKernel1(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
                   float* temp_g,
                   int* block_to_tensor,
                   int* block_to_chunk) {
-  Kernel<MultiLAMB_step1_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
-                                 Launch(s, kernel_params.max_size,
-                                 kernel_params,
-                                 param.beta1, param.beta2,
-                                 param.epsilon,
-                                 param.clip_gradient,
-                                 param.bias_correction,
-                                 param.rescale_grad,
-                                 temp_g);
+  Kernel<MultiLAMBKernelStep1<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
+                               Launch(s, kernel_params.max_size,
+                               kernel_params,
+                               param.beta1, param.beta2,
+                               param.epsilon,
+                               param.clip_gradient,
+                               param.bias_correction,
+                               param.rescale_grad,
+                               temp_g);
 }
 
 template<typename MPDType, typename DType>
-void call_kernel2(Stream<cpu>* s,
+void CallKernel2(Stream<cpu>* s,
                   const MultiLAMBKernelParam<DType, MPDType>& kernel_params,
                   const MultiLAMBParam &param,
                   float* r1, float* r2,
@@ -142,13 +142,13 @@ void call_kernel2(Stream<cpu>* s,
                   int* block_to_tensor,
                   int* block_to_chunk,
                   const OpReqType req) {
-  Kernel<MultiLAMB_step2_kernel<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
-                                 Launch(s, kernel_params.max_size,
-                                 kernel_params,
-                                 r1, r2,
-                                 temp_g,
-                                 param.lower_bound, param.upper_bound,
-                                 req);
+  Kernel<MultiLAMBKernelStep2<MPDType, !std::is_same<DType, MPDType>::value>, cpu>::
+                               Launch(s, kernel_params.max_size,
+                               kernel_params,
+                               r1, r2,
+                               temp_g,
+                               param.lower_bound, param.upper_bound,
+                               req);
 }
 
 DMLC_REGISTER_PARAMETER(MultiLAMBParam);
@@ -164,7 +164,7 @@ std::vector<std::string> LAMBParamToVector(uint32_t num_args, const char *pName[
   return ret;
 }
 
-inline uint32_t num_tensors(const nnvm::NodeAttrs& attrs) {
+inline uint32_t NumTensors(const nnvm::NodeAttrs& attrs) {
   return static_cast<uint32_t>(dmlc::get<MultiLAMBParam>(attrs.parsed).num_tensors);
 }
 
@@ -172,24 +172,24 @@ NNVM_REGISTER_OP(_multi_lamb_update)
 .describe(R"code(Compute the LAMB coefficients of multiple weights and grads"
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    return num_tensors(attrs) * 4;
+    return NumTensors(attrs) * 4;
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    return num_tensors(attrs);
+    return NumTensors(attrs);
   })
 .set_attr_parser(ParamParser<MultiLAMBParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMB_InferShape<MultiLAMBParam, 4>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMBInferShape<MultiLAMBParam, 4>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, -1>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const char *paramName[] = {"weight_", "grad_", "mean_", "var_"};
-    return LAMBParamToVector(num_tensors(attrs), paramName, sizeof(paramName)/sizeof(paramName[0]));
+    const char *param_name[] = {"weight_", "grad_", "mean_", "var_"};
+    return LAMBParamToVector(NumTensors(attrs), param_name, sizeof(param_name)/sizeof(param_name[0]));
   })
 // mutable: mean, var
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
-    const auto iMax = num_tensors(attrs);
+    const auto iMax = NumTensors(attrs);
     for (size_t i = 0; i < iMax; ++i) {
       ret.push_back(i * 4 + 2);
       ret.push_back(i * 4 + 3);
@@ -200,7 +200,7 @@ NNVM_REGISTER_OP(_multi_lamb_update)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", multiLAMBUpdate<cpu, false>)
+.set_attr<FCompute>("FCompute<cpu>", MultiLAMBUpdate<cpu, false>)
 .add_argument("data", "NDArray-or-Symbol[]", "data")
 .add_arguments(MultiLAMBParam::__FIELDS__());
 
@@ -209,24 +209,24 @@ NNVM_REGISTER_OP(_multi_mp_lamb_update)
 .describe(R"code(Compute the LAMB coefficients of multiple weights and grads with Mix Precision"
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    return num_tensors(attrs) * 5;
+    return NumTensors(attrs) * 5;
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    return num_tensors(attrs);
+    return NumTensors(attrs);
   })
 .set_attr_parser(ParamParser<MultiLAMBParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMB_InferShape<MultiLAMBParam, 5>)
-.set_attr<nnvm::FInferType>("FInferType", MP_MultiLAMB_InferType<MultiLAMBParam, 5>)
+.set_attr<mxnet::FInferShape>("FInferShape", MultiLAMBInferShape<MultiLAMBParam, 5>)
+.set_attr<nnvm::FInferType>("FInferType", MPMultiLAMBInferType<MultiLAMBParam, 5>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const char *paramName[] = {"weight_", "grad_", "mean_", "var_", "weight32_"};
-    return LAMBParamToVector(num_tensors(attrs), paramName, sizeof(paramName)/sizeof(paramName[0]));
+    const char *param_name[] = {"weight_", "grad_", "mean_", "var_", "weight32_"};
+    return LAMBParamToVector(NumTensors(attrs), param_name, sizeof(param_name)/sizeof(param_name[0]));
   })
 // mutable: mean, var, weights32
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
-    const auto iMax = num_tensors(attrs);
+    const auto iMax = NumTensors(attrs);
     for (size_t i = 0; i < iMax; ++i) {
       ret.push_back(i * 5 + 2);
       ret.push_back(i * 5 + 3);
@@ -238,7 +238,7 @@ NNVM_REGISTER_OP(_multi_mp_lamb_update)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", multiLAMBUpdate<cpu, true>)
+.set_attr<FCompute>("FCompute<cpu>", MultiLAMBUpdate<cpu, true>)
 .add_argument("data", "NDArray-or-Symbol[]", "data")
 .add_arguments(MultiLAMBParam::__FIELDS__());
 

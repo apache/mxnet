@@ -105,9 +105,9 @@ struct MultiLAMBParam : public dmlc::Parameter<MultiLAMBParam> {
 };
 
 template<typename ParamType, int input_stride>
-inline bool MultiLAMB_InferShape(const nnvm::NodeAttrs& attrs,
-                                 mxnet::ShapeVector *in_attrs,
-                                 mxnet::ShapeVector *out_attrs) {
+inline bool MultiLAMBInferShape(const nnvm::NodeAttrs& attrs,
+                                mxnet::ShapeVector *in_attrs,
+                                mxnet::ShapeVector *out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), input_stride * param.num_tensors);
   CHECK_EQ(out_attrs->size(), param.num_tensors);
@@ -145,9 +145,9 @@ inline bool MultiLAMB_InferShape(const nnvm::NodeAttrs& attrs,
 }
 
 template <typename ParamType, int input_stride>
-inline bool MP_MultiLAMB_InferType(const nnvm::NodeAttrs& attrs,
-                                    std::vector<int> *in_attrs,
-                                    std::vector<int> *out_attrs) {
+inline bool MPMultiLAMBInferType(const nnvm::NodeAttrs& attrs,
+                                 std::vector<int> *in_attrs,
+                                 std::vector<int> *out_attrs) {
   const ParamType& param = dmlc::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), input_stride * param.num_tensors);
   CHECK_EQ(out_attrs->size(), param.num_tensors);
@@ -177,13 +177,13 @@ inline bool MP_MultiLAMB_InferType(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename T>
-class LAMB_type_identity {
+class LAMBTypeIdentity {
  public:
   using type = T;
 };
 
 template<typename T>
-class LAMB_single_precision {
+class LAMBSinglePrecision {
  public:
   using type = float;
 };
@@ -249,7 +249,7 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
       multi_param->weights32[i] = inputs[idx + input_stride - 1].FlatTo2D<xpu, MPDType>(s).dptr_;
     multi_param->out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
     multi_param->nchunks += (multi_param->sizes[i] + multi_param->chunk_size - 1)
-                            /multi_param->chunk_size;
+                            / multi_param->chunk_size;
     multi_param->learning_rates[i] = static_cast<MPDType>(p.learning_rates[i]);
     multi_param->wds[i] = static_cast<MPDType>(p.wds[i]);
   }
@@ -258,17 +258,17 @@ void FillMultiLAMBKernelParam(const nnvm::NodeAttrs& attrs,
 
 using namespace mxnet_op;
 template<typename MPDType, typename DType>
-void call_kernel1(Stream<cpu>* s);
+void CallKernel1(Stream<cpu>* s);
 template<typename MPDType, typename DType>
-void call_kernel1(Stream<gpu>* s);
+void CallKernel1(Stream<gpu>* s);
 
 template<typename MPDType, typename DType>
-void call_kernel2(Stream<cpu>* s);
+void CallKernel2(Stream<cpu>* s);
 template<typename MPDType, typename DType>
-void call_kernel2(Stream<gpu>* s);
+void CallKernel2(Stream<gpu>* s);
 
 template<typename xpu, template<typename> class MPTypeChooser, int input_stride>
-inline void multiLAMB(const nnvm::NodeAttrs& attrs,
+inline void MultiLAMB(const nnvm::NodeAttrs& attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
@@ -329,28 +329,28 @@ inline void multiLAMB(const nnvm::NodeAttrs& attrs,
       Shape1(kernel_params.nchunks), s);
 
     MultiSumSqRun<xpu>(weights, kernel_params.ntensors, r1.dptr_, ctx);
-    call_kernel1<MPDType, DType>(s, kernel_params, param, temp_g.dptr_,
-                                 block_to_tensor.dptr_,
-                                 block_to_chunk.dptr_);
+    CallKernel1<MPDType, DType>(s, kernel_params, param, temp_g.dptr_,
+                                block_to_tensor.dptr_,
+                                block_to_chunk.dptr_);
     MultiSumSqRun<xpu>(temp_g_tblobs, kernel_params.ntensors, r2.dptr_, ctx);
-    call_kernel2<MPDType, DType>(s, kernel_params, param, r1.dptr_, r2.dptr_,
-                                 temp_g.dptr_,
-                                 block_to_tensor.dptr_, block_to_chunk.dptr_,
-                                 req[0]);
+    CallKernel2<MPDType, DType>(s, kernel_params, param, r1.dptr_, r2.dptr_,
+                                temp_g.dptr_,
+                                block_to_tensor.dptr_, block_to_chunk.dptr_,
+                                req[0]);
   });
 }
 
 template<typename xpu, bool MP>
-inline void multiLAMBUpdate(const nnvm::NodeAttrs& attrs,
+inline void MultiLAMBUpdate(const nnvm::NodeAttrs& attrs,
                             const OpContext &ctx,
                             const std::vector<TBlob> &inputs,
                             const std::vector<OpReqType> &req,
                             const std::vector<TBlob> &outputs) {
   if (!MP) {
-    multiLAMB<xpu, LAMB_type_identity, 4>
+    MultiLAMB<xpu, LAMBTypeIdentity, 4>
       (attrs, ctx, inputs, req, outputs);
   } else {
-    multiLAMB<xpu, LAMB_single_precision, 5>
+    MultiLAMB<xpu, LAMBSinglePrecision, 5>
       (attrs, ctx, inputs, req, outputs);
   }
 }
