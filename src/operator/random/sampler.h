@@ -49,13 +49,13 @@ inline static void LaunchRNG(mshadow::Stream<xpu> *s,
   if (N <= 0) {
     return;
   }
-  const index_t nloop = (N + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
-                    RandGenerator<xpu>::kMinNumRandomPerThread;
-  const index_t nthread = std::min(nloop,
-                                   static_cast<index_t>(RandGenerator<xpu>::kNumRandomStates));
-  const index_t step = ((N + nthread - 1) / nthread + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
+  int num_threads = (N + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
+      RandGenerator<xpu>::kMinNumRandomPerThread;
+  num_threads = std::min(num_threads, RandGenerator<xpu>::kNumRandomStates);
+  const index_t num_steps_per_thread =
+      ((N + num_threads - 1) / num_threads + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
       RandGenerator<xpu>::kMinNumRandomPerThread * RandGenerator<xpu>::kMinNumRandomPerThread;
-  Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args...);
+  Kernel<OP, xpu>::Launch(s, num_threads, *gen, N, num_steps_per_thread, args...);
 }
 
 #define RNG_KERNEL_LOOP(xpu, GType, thread_id, gen, N, step, ...)        \
