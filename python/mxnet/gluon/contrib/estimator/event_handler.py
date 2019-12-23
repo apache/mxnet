@@ -734,6 +734,6 @@ class GradientUpdateHandler(BatchEnd):
             loss = [loss]
         if isinstance(loss, list):
             for l in loss:
-                batch_size += l.shape[estimator.batch_axis]
+                batch_size += l.shape[0]
 
         estimator.trainer.step(batch_size)
