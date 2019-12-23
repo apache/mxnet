@@ -197,7 +197,7 @@ class DropoutOp {
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
         auto mask_idx = i / 8;
-        auto mask_offset = i % 8;
+        uint8_t mask_offset = i % 8;
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
         if (mask_val) {
           // set bit
@@ -239,7 +239,7 @@ class DropoutOp {
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
         auto mask_idx = i / 8;
-        auto mask_offset = i % 8;
+        uint8_t mask_offset = i % 8;
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
         if (mask_val) {
           // set bit
@@ -477,7 +477,7 @@ class DropoutOp {
               template LaunchEx(s, new_oshape.Size(), req[dropout::kOut],
                                 lstride, rstride, oshape, in.dptr<DType>(),
                                 temp.dptr_, out.dptr<DType>());
-            })
+            });
           }
         }
       } else {
@@ -519,7 +519,7 @@ class DropoutOp {
         }
 #endif  // MXNET_USE_CUDNN_DROPOUT && defined(__CUDACC__)
         // standard case for dropout
-        CHECK_LE(grad.Size(), mask.Size() * 8);
+        CHECK_EQ((grad.Size() + 7) / 8, mask.Size());
 
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
           mxnet_op::Kernel<DropoutBackwardKernel, xpu>::Launch(
