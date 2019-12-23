@@ -1,6 +1,6 @@
 from mxnet import np, npx
 from .exp_family import ExponentialFamily
-from .distribution import getF
+from .util import getF
 import math
 
 
@@ -13,6 +13,9 @@ class Normal(ExponentialFamily):
         mean of the distribution.
     scale : Tensor or scalar, default 1
         standard deviation of the distribution
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
 
     """
 
