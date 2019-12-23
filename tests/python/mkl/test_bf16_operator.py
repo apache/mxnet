@@ -25,7 +25,7 @@ import collections
 import ctypes
 import mxnet.contrib.amp as amp
 from nose.tools import assert_raises
-from mxnet.test_utils import set_default_context, download_model, same_symbol_structure, assert_almost_equal
+from mxnet.test_utils import set_default_context, download_model, same_symbol_structure, assert_almost_equal_with_err
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
@@ -35,7 +35,14 @@ from common import with_seed
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
-def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=False):
+def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=False, etol=0):
+    """
+    sym_fp32: fp32 symbol
+    sym_bf16: bf16 symbol
+    data_shape: input data shape for fp32/bf16 symbol
+    bf16_use_fp32_params: currently only bn use this param as True, since bf16 bn only accept bf16 data with fp32 mean/var/scale/shift
+    etol: The error rate threshold, allow a small amount of value not consistent between bf16 and fp32
+    """
     Batch = collections.namedtuple('Batch',['data'])
     data_range = (0.0, 10.0)
     data_fp32 = mx.nd.random.uniform(low=data_range[0], high=data_range[1], shape=data_shape)
@@ -74,7 +81,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params
     exe_bf16.forward(Batch([data_bf16]), is_train=False)
     output_bf16 = exe_bf16.get_outputs()[0]
     output_bf16_2_fp32 = mx.nd.amp_cast(output_bf16, dtype="float32")
-    assert_almost_equal(output_bf16_2_fp32, output_fp32, rtol=1e-1, atol=5e-1)
+    assert_almost_equal_with_err(output_bf16_2_fp32, output_fp32, rtol=1e-1, atol=5e-1, etol=etol)
 
 @with_seed()
 def test_bf16_bn():
@@ -84,8 +91,8 @@ def test_bf16_bn():
     bn_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)
     bn_bf16=mx.sym.BatchNorm(data_sym_bf16, **bn_params)
-    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True)
-    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True)
+    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True, etol=2e-3)
+    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=2e-3)
 
 @with_seed()
 def test_bf16_conv():
