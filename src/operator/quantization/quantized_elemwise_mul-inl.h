@@ -33,6 +33,7 @@ namespace op {
 struct QuantizeElemwiseMulParam : public dmlc::Parameter<QuantizeElemwiseMulParam> {
   dmlc::optional<float> min_calib_range;
   dmlc::optional<float> max_calib_range;
+  bool enable_float_output;
   DMLC_DECLARE_PARAMETER(QuantizeElemwiseMulParam) {
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
@@ -44,12 +45,14 @@ struct QuantizeElemwiseMulParam : public dmlc::Parameter<QuantizeElemwiseMulPara
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to requantize the "
               "int8 output data.");
+    DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
+    .describe("Whether to enable float32 output");
   }
 };
 
 namespace quantized_elemwise_mul {
 enum QuantizedElemwiseMulOpInputs {kLhs, kRhs, kLhsMin, kLhsMax, kRhsMin, kRhsMax};
-enum QuantizedElemwiseMulOpOutputs {kOut};
+enum QuantizedElemwiseMulOpOutputs {kOut, kOutMin, kOutMax};
 enum QuantizedElemwiseMulOpResource {kTempSpace};
 }  // namespace quantized embedding
 
