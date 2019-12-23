@@ -111,10 +111,9 @@ Example::
 })
 .set_attr<mxnet::FInferShape>("FInferShape", [](const nnvm::NodeAttrs& attrs,
       mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape){
-  using namespace mshadow;
   CHECK_EQ(in_shape->size(), 1U);
   const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
-  mxnet::TShape dshape(in_shape->at(0));
+  TShape dshape(in_shape->at(0));
   if (!mxnet::ndim_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
@@ -123,13 +122,13 @@ Example::
       dshape[param.axes[i]] = 1;
     }
   }
-  mxnet::TShape mshape(1, static_cast<dim_t>(ceil(static_cast<double>(dshape.Size()) / 8)));
+  // Use 1-bit in mask by rounding up dshape.Size() / 8
+  TShape mshape(1, static_cast<dim_t>((dshape.Size() + 7) / 8));
   out_shape->push_back(mshape);
   return true;
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
       std::vector<int> *in_type, std::vector<int> *out_type) {
-  using namespace mshadow;
   CHECK_EQ(in_type->size(), 1U);
   int dtype = in_type->at(0);
 

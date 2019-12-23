@@ -179,7 +179,7 @@ class DropoutOp {
      * \param N Total number of items in the output
      * \param step Step between items, related to parallelism
      * \param dropout_out Output dropout values
-     * \param mask_out  Output mask (is multiplied to create dropout output, may be 0)
+     * \param mask_out  Output mask with one bit for one element
      * \param input_data Input data to perform the dropout on
      * \param pkeep Dropout rate (keep when the generated random number is less than this value)
      */
@@ -191,25 +191,22 @@ class DropoutOp {
                                     uint8_t *mask_out,
                                     const DType *input_data,
                                     const real_t pkeep) {
+      CHECK_EQ(step & 7, 0);
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
-        auto maskIdx = i / 8;
-        auto maskOffset = i % 8;
-        bool maskVal = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
-        if (maskVal) {
+        auto mask_idx = i / 8;
+        auto mask_offset = i % 8;
+        bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        if (mask_val) {
           // set bit
-          mask_out[maskIdx] |= 1U << maskOffset;
+          mask_out[mask_idx] |= 1U << mask_offset;
         } else {
           // clear bit
-          mask_out[maskIdx] &= ~(1U << maskOffset);
+          mask_out[mask_idx] &= ~(1U << mask_offset);
         }
-
-        // TODO (lnyuan): seems we can set dropout to zero if maskVal is False
-        // however doing this would break one unit test when pkeep is 0, expecting nan
-        // not sure why
-        dropout_out[i] = maskVal * input_data[i] * (1.0f / pkeep);
+        dropout_out[i] = mask_val * input_data[i] * (1.0f / pkeep);
       })
     }
   };
@@ -221,10 +218,10 @@ class DropoutOp {
                                     DType *ograd,
                                     const uint8_t *mask,
                                     const real_t pkeep) {
-      auto maskIdx = i / 8;
-      uint8_t maskOffset = i % 8;
-      bool maskVal = (mask[maskIdx] >> maskOffset) & 1U;
-      KERNEL_ASSIGN(igrad[i], req, maskVal * ograd[i] * (1 / pkeep));
+      auto mask_idx = i / 8;
+      uint8_t mask_offset = i % 8;
+      bool mask_val = (mask[mask_idx] >> mask_offset) & 1U;
+      KERNEL_ASSIGN(igrad[i], req, mask_val * ograd[i] * (1 / pkeep));
     }
   };
 
@@ -241,17 +238,17 @@ class DropoutOp {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
-        auto maskIdx = i / 8;
-        auto maskOffset = i % 8;
-        bool maskVal = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
-        if (maskVal) {
+        auto mask_idx = i / 8;
+        auto mask_offset = i % 8;
+        bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        if (mask_val) {
           // set bit
-          mask_out[maskIdx] |= 1U << maskOffset;
+          mask_out[mask_idx] |= 1U << mask_offset;
         } else {
           // clear bit
-          mask_out[maskIdx] &= ~(1U << maskOffset);
+          mask_out[mask_idx] &= ~(1U << mask_offset);
         }
-        dropout_out[i] = maskVal * (1.0 / pkeep);
+        dropout_out[i] = mask_val * (1.0 / pkeep);
       })
     }
   };
@@ -271,17 +268,17 @@ class DropoutOp {
       Shape <ndim> coord = unravel(base, oshape);
       auto lidx = static_cast<index_t>(dot(coord, lstride));
       auto ridx = static_cast<index_t>(dot(coord, rstride));
-      auto maskIdx = ridx / 8;
-      uint8_t maskOffset = ridx % 8;
-      bool maskVal = (mask[maskIdx] >> maskOffset) & 1U;
-      KERNEL_ASSIGN(igrad[base], req, maskVal * ograd[lidx] * (1 / pkeep))
+      auto mask_idx = ridx / 8;
+      uint8_t mask_offset = ridx % 8;
+      bool mask_val = (mask[mask_idx] >> mask_offset) & 1U;
+      KERNEL_ASSIGN(igrad[base], req, mask_val * ograd[lidx] * (1 / pkeep))
       // starts from 1 to avoid extra inc at end of loop
       for (index_t i = 1; i < length; ++i) {
         inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
-        maskIdx = ridx / 8;
-        maskOffset = ridx % 8;
-        maskVal = (mask[maskIdx] >> maskOffset) & 1U;
-        KERNEL_ASSIGN(igrad[base + i], req, maskVal * ograd[lidx] * (1 / pkeep))
+        mask_idx = ridx / 8;
+        mask_offset = ridx % 8;
+        mask_val = (mask[mask_idx] >> mask_offset) & 1U;
+        KERNEL_ASSIGN(igrad[base + i], req, mask_val * ograd[lidx] * (1 / pkeep))
       }
     }
   };
