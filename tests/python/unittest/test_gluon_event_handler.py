@@ -32,7 +32,7 @@ try:
 except ImportError:
     from io import StringIO
 
-class AxisTestArrayDataset(Dataset):
+class TestAxisArrayDataset(Dataset):
     def __init__(self, * args):
         self._length = len(args[1])
         self._data = []
@@ -64,7 +64,7 @@ def _get_test_data(in_size=32):
 def _get_batch_axis_test_data(in_size=32):
     data = nd.ones((100, in_size))
     label = nd.zeros((1, in_size))
-    data_arr = AxisTestArrayDataset(data, label)
+    data_arr = TestAxisArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
 def test_checkpoint_handler():
