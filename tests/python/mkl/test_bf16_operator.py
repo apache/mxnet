@@ -84,7 +84,7 @@ def test_bf16_bn():
     bn_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)
     bn_bf16=mx.sym.BatchNorm(data_sym_bf16, **bn_params)
-    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28, 5), bf16_use_fp32_params=True)
+    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True)
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True)
 
 @with_seed()
