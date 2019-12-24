@@ -169,7 +169,7 @@ if !libmxnet_detected
   _srcdir = joinpath(BinDeps.depsdir(mxnet), "src")
   _mxdir  = joinpath(_srcdir, "mxnet")
 
-  # We have do eagerly delete the build stuffs.
+  # We have to eagerly delete the build directory.
   # Otherwise we won't rebuild on an update.
   rm(_blddir, recursive=true, force=true)
 
