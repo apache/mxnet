@@ -28,6 +28,7 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <utility>
+#include <dmlc/strtonum.h>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "elemwise_unary_op.h"
@@ -400,7 +401,7 @@ class BinaryScalarOp : public UnaryOp {
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
   .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
+      attrs->parsed = dmlc::stod(attrs->dict["scalar"]);            \
     })                                                              \
   .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \

@@ -22,6 +22,7 @@
  * \file elemwise_binary_scalar_op_extended.cc
  * \brief CPU Implementation of extended binary scalar functions.
  */
+#include <dmlc/strtonum.h>
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_scalar_op.h"
@@ -36,7 +37,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_maximum_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_maximum_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ge>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_minimum_scalar)
@@ -47,7 +48,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_minimum_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_minimum_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::le>);
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_power_scalar)
@@ -57,7 +58,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_power_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_power_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::power_grad>);
 
@@ -69,7 +70,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rpower_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rpower_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::rpower_grad>);
 
@@ -82,7 +83,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_hypot_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_hypot_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::hypot_grad_left>);
 
@@ -110,7 +111,7 @@ Example::
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
     if (attrs->dict.find("scalar") != attrs->dict.end()) {
-      attrs->parsed = std::stod(attrs->dict["scalar"]);
+      attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
     } else {
       attrs->parsed = 1.0;
     }
@@ -129,7 +130,7 @@ Example::
 MXNET_OPERATOR_REGISTER_BINARY(_backward_smooth_l1)
   .set_attr_parser([](NodeAttrs *attrs) {
       if (attrs->dict.find("scalar") != attrs->dict.end()) {
-        attrs->parsed = std::stod(attrs->dict["scalar"]);
+        attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
       } else {
         attrs->parsed = 1.0;
       }

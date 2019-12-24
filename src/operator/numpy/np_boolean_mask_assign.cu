@@ -23,6 +23,7 @@
  */
 
 #include <cub/cub.cuh>
+#include <dmlc/strtonum.h>
 #include "../../common/utils.h"
 #include "../contrib/boolean_mask-inl.h"
 
@@ -252,7 +253,7 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
     }
   } else {
     CHECK(attrs.dict.find("value") != attrs.dict.end()) << "value is not provided";
-    double value = std::stod(attrs.dict.at("value"));
+    double value = dmlc::stod(attrs.dict.at("value"));
     MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
       Kernel<BooleanAssignGPUKernel<true>, gpu>::Launch(
         s, leading * valid_num * trailing, data.dptr<DType>(), prefix_sum, mask_size + 1,

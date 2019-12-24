@@ -23,6 +23,7 @@
  * \brief
  * \author Istvan Fehervari
 */
+#include <dmlc/strtonum.h>
 #include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 
@@ -77,7 +78,7 @@ multiplies the gradient from the subsequent level by a scalar factor lambda and 
 the preceding layer.
 )code" ADD_FILELINE)
 .set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
