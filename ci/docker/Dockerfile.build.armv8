@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for ARM64/ARMv8
 
-FROM dockcross/linux-arm64
+FROM mxnetcipinned/dockcross-linux-arm64:11262018
 
 ENV ARCH aarch64
 ENV HOSTCC gcc
