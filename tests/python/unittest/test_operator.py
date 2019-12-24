@@ -9974,7 +9974,7 @@ def test_broadcast_ops_on_misaligned_input_oneside():
                 mx.nd.waitall()
                 assert_almost_equal(f, expected)
 
-def test_elemwise_locale_invariance():
+def test_scalarop_locale_invariance():
     arr = mx.nd.zeros((1,))
     prev = locale.getlocale(locale.LC_NUMERIC)
     try:
