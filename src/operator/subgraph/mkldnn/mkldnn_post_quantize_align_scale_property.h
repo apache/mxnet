@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <dmlc/strtonum.h>
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
 
@@ -146,8 +147,8 @@ class SgMKLDNNPostQuantizeAlignScaleProperty : public SubgraphProperty {
     float min_calib = 0.0f;
     float max_calib = 0.0f;
     for (size_t i = 0; i < subgraph_nodes.size(); ++i) {
-      auto this_min_calib = std::stof(subgraph_nodes[i]->attrs.dict["min_calib_range"]);
-      auto this_max_calib = std::stof(subgraph_nodes[i]->attrs.dict["max_calib_range"]);
+      auto this_min_calib = dmlc::stof(subgraph_nodes[i]->attrs.dict["min_calib_range"]);
+      auto this_max_calib = dmlc::stof(subgraph_nodes[i]->attrs.dict["max_calib_range"]);
       if (min_calib > this_min_calib) min_calib = this_min_calib;
       if (max_calib < this_max_calib) max_calib = this_max_calib;
     }

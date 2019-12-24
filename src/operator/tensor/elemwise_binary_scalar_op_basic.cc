@@ -22,6 +22,7 @@
  * \file elemwise_binary_scalar_op_basic.cc
  * \brief CPU Implementation of basic binary scalar functions.
  */
+#include <dmlc/strtonum.h>
 #include "../../common/utils.h"
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_scalar_op.h"
@@ -31,7 +32,7 @@
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
   .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
+      attrs->parsed = dmlc::stod(attrs->dict["scalar"]);             \
     })                                                              \
   .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
@@ -189,7 +190,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rdiv_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rdiv_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::rdiv_grad>);
 
@@ -200,7 +201,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_mod_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_mod_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::mod_grad>);
 
@@ -211,7 +212,7 @@ MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_rmod_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rmod_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<
   cpu, mshadow_op::rmod_grad>);
 

@@ -23,6 +23,7 @@
  * \brief CPU Implementation of basic functions for elementwise numpy binary broadcast operator.
  */
 
+#include <dmlc/strtonum.h>
 #include "./np_elemwise_broadcast_op.h"
 
 namespace mxnet {
@@ -33,7 +34,7 @@ namespace op {
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
   .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
+      attrs->parsed = dmlc::stod(attrs->dict["scalar"]);             \
     })                                                              \
   .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
   .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)  \

@@ -22,6 +22,7 @@
  * \brief CPU implementation of Boolean Mask Assign
  */
 
+#include <dmlc/strtonum.h>
 #include "../../common/utils.h"
 #include "../contrib/boolean_mask-inl.h"
 
@@ -272,7 +273,7 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
       Kernel<BooleanAssignCPUKernel<true>, cpu>::Launch(
         s, valid_num, data.dptr<DType>(), prefix_sum.data(), prefix_sum.size(),
-        leading, middle, trailing, static_cast<DType>(std::stod(attrs.dict.at("value"))));
+        leading, middle, trailing, static_cast<DType>(dmlc::stod(attrs.dict.at("value"))));
     });
   }
 }

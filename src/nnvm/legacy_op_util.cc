@@ -23,6 +23,7 @@
  * \brief Utility to adapt OpProperty to the new NNVM registery
  */
 #include <dmlc/base.h>
+#include <dmlc/strtonum.h>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
@@ -511,7 +512,7 @@ void RegisterLegacyNDFunc() {
           const std::string& name = reg->arguments[i+reg->num_use_vars].name;
           auto s = dict.find(name);
           CHECK(s != dict.end()) << "Missing scalar param " << name;
-          scalars.push_back(std::stof(s->second));
+          scalars.push_back(dmlc::stof(s->second));
           dict.erase(s);
         }
 

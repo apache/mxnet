@@ -34,6 +34,7 @@
 #include <map>
 #include <algorithm>
 #include <vector>
+#include <dmlc/strtonum.h>
 
 namespace mxnet {
 
@@ -69,7 +70,7 @@ void TorchRunOp(std::vector<NDArray> arr_in,
         lua_pushinteger(L, std::stoi(val));
         break;
       case 'f':
-        lua_pushnumber(L, std::stof(val));
+        lua_pushnumber(L, dmlc::stof(val));
         break;
       case 's':
         lua_pushstring(L, val.c_str());
