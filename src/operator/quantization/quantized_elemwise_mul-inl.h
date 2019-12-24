@@ -18,9 +18,9 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file quantized_elemwise_mul.cc
- * \brief CPU Implementation of basic elementwise binary broadcast operators
+ * \brief CPU Implementation of basic elementwise binary mul operators
  */
 #ifndef MXNET_OPERATOR_QUANTIZATION_QUANTIZED_ELEMWISE_MUL_INL_H_
 #define MXNET_OPERATOR_QUANTIZATION_QUANTIZED_ELEMWISE_MUL_INL_H_

@@ -18,9 +18,9 @@
  */
 
 /*!
- *  Copyright (c) 2016 by Contributors
+ *  Copyright (c) 2019 by Contributors
  * \file quantized_elemwise_mul.cc
- * \brief CPU Implementation of basic elementwise binary broadcast operators
+ * \brief CPU Implementation of basic elementwise binary mul operators
  */
 #include <mxnet/op_attr_types.h>
 #include "../tensor/elemwise_binary_op-inl.h"
@@ -56,15 +56,15 @@ inline bool QuantizedElemwiseMulOpShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kLhsMax, mxnet::TShape(1, 1));
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kRhsMin, mxnet::TShape(1, 1));
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kRhsMax, mxnet::TShape(1, 1));
-  out_attrs->clear();
 
+  out_attrs->clear();
   mxnet::TShape oshape(lshape);
-  out_attrs->push_back(oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOut, oshape);
   if (!params.enable_float_output) {
-    out_attrs->push_back(mxnet::TShape(1, 1));
-    out_attrs->push_back(mxnet::TShape(1, 1));
+    SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOutMin, mxnet::TShape(1, 1));
+    SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOutMax, mxnet::TShape(1, 1));
   }
-  return shape_is_known(oshape);
+  return true;
 }
 
 inline bool QuantizedElemwiseMulOpType(const nnvm::NodeAttrs& attrs,
@@ -78,21 +78,21 @@ inline bool QuantizedElemwiseMulOpType(const nnvm::NodeAttrs& attrs,
       LOG(ERROR) << "currently, quantized elemwise mul only support int8 inputs.";
     }
   }
-  TYPE_ASSIGN_CHECK(*in_type, 2, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*in_type, 3, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*in_type, 4, mshadow::kFloat32);
-  TYPE_ASSIGN_CHECK(*in_type, 5, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*in_type, quantized_elemwise_mul::kLhsMin, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*in_type, quantized_elemwise_mul::kLhsMax, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*in_type, quantized_elemwise_mul::kRhsMin, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*in_type, quantized_elemwise_mul::kRhsMax, mshadow::kFloat32);
 
   int dtype = mshadow::kInt32;
   if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
     dtype = mshadow::kInt8;
   }
   if (!params.enable_float_output) {
-    TYPE_ASSIGN_CHECK(*out_type, 0, dtype);
-    TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
-    TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
+    TYPE_ASSIGN_CHECK(*out_type, quantized_elemwise_mul::kOut, dtype);
+    TYPE_ASSIGN_CHECK(*out_type, quantized_elemwise_mul::kOutMin, mshadow::kFloat32);
+    TYPE_ASSIGN_CHECK(*out_type, quantized_elemwise_mul::kOutMax, mshadow::kFloat32);
   } else {
-    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kFloat32);
+    TYPE_ASSIGN_CHECK(*out_type, quantized_elemwise_mul::kOut, mshadow::kFloat32);
   }
   return true;
 }
@@ -138,15 +138,14 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
   float cached_output_max_ = 0.f;
   float out_data_scale = 1.f;
   float out_scale = 1.f;
-  // output default set as int32
-  float output_data_range = kInt32Range;
-  // dataA && dataB are uint8
-  if (outputs[quantized_elemwise_mul::kOut].type_flag_ == mshadow::kInt8) {
-    output_data_range = kInt8Range;
-  } else {
-    output_data_range = kInt32Range;
-  }
   if (!params.enable_float_output) {
+    float output_data_range = kInt32Range;
+    // dataA && dataB are int8
+    if (outputs[quantized_elemwise_mul::kOut].type_flag_ == mshadow::kInt8) {
+      output_data_range = kInt8Range;
+    } else {
+      output_data_range = kInt32Range;
+    }
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
       cached_output_min_ = params.min_calib_range.value();
       cached_output_max_ = params.max_calib_range.value();
@@ -247,9 +246,6 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_mul)
 .add_arguments(QuantizeElemwiseMulParam::__FIELDS__());
 
 NNVM_REGISTER_OP(elemwise_mul)
-.set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {
-    return QuantizeType::kMust;
-})
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   nnvm::NodePtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_contrib_quantized_elemwise_mul");
