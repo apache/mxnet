@@ -34,6 +34,7 @@ from common import run_in_spawned_process
 from nose.tools import assert_raises, ok_
 import unittest
 import os
+import locale
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
     dshape = (N, T, I)
@@ -9972,6 +9973,33 @@ def test_broadcast_ops_on_misaligned_input_oneside():
                 expected = c.asnumpy() + d.asnumpy()
                 mx.nd.waitall()
                 assert_almost_equal(f, expected)
+
+def test_elemwise_locale_invariance():
+    arr = mx.nd.zeros((1,))
+    prev = locale.getlocale(locale.LC_NUMERIC)
+    try:
+        locales_to_try = [
+            "en_DK.UTF-8", # Non-standard locale that uses , as the decimal separator, installed
+                           # on English Ubuntu by default.
+            "ru_RU.UTF-8", # Uses , as the decimal separator. May not be installed on the system.
+            "German"       # A Windows locale. Uses , as the decimal separator.
+        ]
+
+        locale_set = False
+        for loc in locales_to_try:
+            try:
+                locale.setlocale(locale.LC_NUMERIC, loc)
+                locale_set = True
+                break
+            except locale.Error as e:
+                print("Couldn't enable locale", loc, ": ", str(e))
+                
+        assert locale_set, "Couldn't find any suitable locales for test_elemwise_locale_invariance!"
+        scalar = 0.3
+        assert "," in locale.str(scalar)
+        assert_almost_equal(arr.asnumpy() + scalar, (arr + scalar).asnumpy(), rtol=1e-5, atol=1e-5)
+    finally:
+        locale.setlocale(locale.LC_NUMERIC, prev)
 
 if __name__ == '__main__':
     import nose
