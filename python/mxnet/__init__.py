@@ -27,7 +27,10 @@ from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
 from .util import is_np_array, np_array, use_np_array, use_np
 from . import base
-from . import library
+
+# version info
+__version__ = base.__version__
+
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
@@ -60,8 +63,6 @@ from . import visualization as viz
 from . import callback
 # from . import misc
 from . import lr_scheduler
-# use mx.kv as short for kvstore
-from . import kvstore as kv
 # Runtime compile module
 from . import rtc
 # Attribute scope to add attributes to symbolic graphs
@@ -85,20 +86,20 @@ from . import image as img
 from . import test_utils
 
 from . import rnn
-
 from . import gluon
 
-from . import tvmop
-
-__version__ = base.__version__
-
-# Dist kvstore module which launches a separate process when role is set to "server".
-# This should be done after other modules are initialized.
+# With the native kvstore module (such as 'dist_sync_device'), the module launches a separate
+# process when role is set to "server". This should be done after other modules are initialized.
 # Otherwise this may result in errors when unpickling custom LR scheduler/optimizers.
 # For example, the LRScheduler in gluoncv depends on a specific version of MXNet, and
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
-from . import kvstore_server
+# use mx.kv as short for kvstore
+from . import kvstore as kv
+
+# Dynamic library module should be done after ndarray and symbol are initialized
+from . import library
+from . import tvmop
 
 from . import numpy_op_signature
 from . import numpy_dispatch_protocol

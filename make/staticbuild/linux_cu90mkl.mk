@@ -81,29 +81,15 @@ USE_NCCL = 1
 # whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
 ENABLE_CUDA_RTC = 1
 
+USE_NVTX=1
+
 # use openmp for parallelization
 USE_OPENMP = 1
 USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
 
 # whether use MKL-DNN library
-USE_MKLDNN = 0
-
-
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
+USE_MKLDNN = 1
 
 # whether use NNPACK library
 USE_NNPACK = 0

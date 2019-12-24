@@ -19,19 +19,19 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file mylib.cc
+ * \file init_lib.cc
  * \brief Sample library file
  */
 
 #include <iostream>
 #include "lib_api.h"
 
-int initialize(int version) {
+MXReturnValue initialize(int version) {
   if (version >= 10400) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
-    return 1;
+    return MX_SUCCESS;
   } else {
     std::cout << "MXNet version " << version << " not supported" << std::endl;
-    return 0;
+    return MX_FAIL;
   }
 }

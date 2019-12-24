@@ -594,13 +594,12 @@ CUfunction FusedOp::CompileCode(const std::string &code,
 
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
-                          "--std=c++11",
-                          "-default-device"};
+                          "--std=c++11"};
     const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
     nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    3,        // num options
+                                                    2,        // num options
                                                     opts);    // options
     CHECK_EQ(compileResult, NVRTC_SUCCESS)
         << "NVRTC Compilation failed. Please set environment variable MXNET_USE_FUSION to 0.\n"

@@ -1002,11 +1002,12 @@ sanity_check() {
 cd_unittest_ubuntu() {
     set -ex
     export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=1  # Ignored if not present
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
     local python_cmd=${2:?"This function requires a python command as the first argument"}
@@ -1050,6 +1051,7 @@ unittest_ubuntu_python2_cpu_cython() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     check_cython 2
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
@@ -1063,6 +1065,7 @@ unittest_ubuntu_python2_cpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
@@ -1075,6 +1078,7 @@ unittest_ubuntu_python3_cpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization.xml --verbose tests/python/quantization
 }
@@ -1086,6 +1090,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
@@ -1097,6 +1102,7 @@ unittest_ubuntu_python2_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1108,6 +1114,7 @@ unittest_ubuntu_python3_gpu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1120,6 +1127,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     check_cython 3
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
@@ -1131,6 +1139,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_OFF_TEST_ONLY=true
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1142,6 +1151,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     python tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
@@ -1156,6 +1166,7 @@ unittest_ubuntu_python2_quantization_gpu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-2.7 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -1169,6 +1180,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -1313,12 +1325,14 @@ unittest_centos7_gpu() {
     set -ex
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
 	python tests/python-pytest/onnx/backend_test.py
 	pytest tests/python-pytest/onnx/mxnet_export_test.py
 	pytest tests/python-pytest/onnx/test_models.py
@@ -1330,18 +1344,21 @@ integrationtest_ubuntu_gpu_python() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     python example/image-classification/test_score.py
 }
 
 integrationtest_ubuntu_gpu_caffe() {
     set -ex
     export PYTHONPATH=/work/deps/caffe/python:./python
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     python tools/caffe_converter/test_converter.py
 }
 
 integrationtest_ubuntu_cpu_asan() {
     set -ex
     export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
 
     cd /work/mxnet/build/cpp-package/example/
     /work/mxnet/cpp-package/example/get_data.sh
@@ -1350,6 +1367,7 @@ integrationtest_ubuntu_cpu_asan() {
 
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     cpp-package/tests/ci_test.sh
 }
 
@@ -1360,6 +1378,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_USE_OPERATOR_TUNING=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
     ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
@@ -1375,6 +1394,7 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
 
 integrationtest_ubuntu_cpu_scala() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     scala_prepare
     cd scala-package
     mvn -B verify -DskipTests=false
@@ -1382,6 +1402,7 @@ integrationtest_ubuntu_cpu_scala() {
 
 integrationtest_ubuntu_gpu_scala() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     scala_prepare
     cd scala-package
     export SCALA_TEST_ON_GPU=1
@@ -1394,8 +1415,10 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
+    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
     ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
@@ -1404,6 +1427,7 @@ test_ubuntu_cpu_python2() {
     set -ex
     pushd .
     export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
 
     VENV=mxnet_py2_venv
     virtualenv -p `which python2` $VENV
@@ -1421,6 +1445,7 @@ test_ubuntu_cpu_python3() {
     set -ex
     pushd .
     export MXNET_LIBRARY_PATH=/work/build/libmxnet.so
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     VENV=mxnet_py3_venv
     virtualenv -p `which python3` $VENV
     source $VENV/bin/activate
@@ -1478,6 +1503,7 @@ nightly_test_installation() {
 # Runs Imagenet inference
 nightly_test_imagenet_inference() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     echo $PWD
     cp /work/mxnet/build/cpp-package/example/imagenet_inference /work/mxnet/cpp-package/example/inference/
     cd /work/mxnet/cpp-package/example/inference/
@@ -1487,6 +1513,7 @@ nightly_test_imagenet_inference() {
 #Runs a simple MNIST training example
 nightly_test_image_classification() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     ./tests/nightly/test_image_classification.sh
 }
 
@@ -1494,6 +1521,7 @@ nightly_test_image_classification() {
 nightly_test_KVStore_singleNode() {
     set -ex
     export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     python tests/nightly/test_kvstore.py
 }
 
@@ -1501,12 +1529,14 @@ nightly_test_KVStore_singleNode() {
 nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 tests/nightly/test_large_array.py
 }
 
 #Tests Amalgamation Build with 5 different sets of flags
 nightly_test_amalgamation() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
     make -C amalgamation/ ${1} ${2}
@@ -1516,6 +1546,7 @@ nightly_test_amalgamation() {
 nightly_test_javascript() {
     set -ex
     export LLVM=/work/deps/emscripten-fastcomp/build/bin
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     # This part is needed to run emcc correctly
     cd /work/deps/emscripten
     ./emcc
@@ -1527,6 +1558,7 @@ nightly_test_javascript() {
 nightly_model_backwards_compat_test() {
     set -ex
     export PYTHONPATH=/work/mxnet/python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     ./tests/nightly/model_backwards_compatibility_check/model_backward_compat_checker.sh
 }
 
@@ -1534,6 +1566,7 @@ nightly_model_backwards_compat_test() {
 nightly_model_backwards_compat_train() {
     set -ex
     export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
 }
 
@@ -1543,6 +1576,7 @@ nightly_straight_dope_python2_single_gpu_tests() {
     cd /work/mxnet/tests/nightly/straight_dope
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TEST_KERNEL=python2
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-2.7 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_straight_dope_python2_single_gpu.xml \
       test_notebooks_single_gpu.py --nologcapture
 }
@@ -1552,6 +1586,7 @@ nightly_straight_dope_python3_single_gpu_tests() {
     cd /work/mxnet/tests/nightly/straight_dope
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TEST_KERNEL=python3
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_straight_dope_python3_single_gpu.xml \
       test_notebooks_single_gpu.py --nologcapture
 }
@@ -1562,6 +1597,7 @@ nightly_straight_dope_python2_multi_gpu_tests() {
     cd /work/mxnet/tests/nightly/straight_dope
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TEST_KERNEL=python2
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-2.7 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_straight_dope_python2_multi_gpu.xml \
       test_notebooks_multi_gpu.py --nologcapture
 }
@@ -1571,6 +1607,7 @@ nightly_straight_dope_python3_multi_gpu_tests() {
     cd /work/mxnet/tests/nightly/straight_dope
     export PYTHONPATH=/work/mxnet/python/
     export MXNET_TEST_KERNEL=python3
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_straight_dope_python3_multi_gpu.xml \
       test_notebooks_multi_gpu.py --nologcapture
 }
@@ -1580,6 +1617,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     cd /work/mxnet/docs
     export BUILD_VER=tutorial
     export MXNET_DOCS_BUILD_MXNET=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
@@ -1594,6 +1632,7 @@ nightly_tutorial_test_ubuntu_python2_gpu() {
     cd /work/mxnet/docs
     export BUILD_VER=tutorial
     export MXNET_DOCS_BUILD_MXNET=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     make html
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
@@ -1621,6 +1660,7 @@ nightly_scala_demo_test_cpu() {
 
 nightly_estimator() {
     set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd /work/mxnet/tests/nightly/estimator
     export PYTHONPATH=/work/mxnet/python/
     nosetests test_estimator_cnn.py
@@ -1977,7 +2017,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
-    source tools/staticbuild/build.sh ${mxnet_variant} pip
+    source tools/staticbuild/build.sh ${mxnet_variant}
     popd
 }
 

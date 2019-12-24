@@ -39,22 +39,31 @@ namespace mxnet {
 namespace op {
 namespace cuda {
 
-
-template <typename DType, typename CType>
+/*!
+ * \brief The `transpose_pseudo2D` based on chosen vectorized types. It transposes an array of
+ *    shape (k, m, n) to (k, n, m)
+ * \param out Pointer to output memory.
+ * \param inp Pointer to input memory.
+ * \param m First of tensor dimensions.
+ * \param n Second of tensor dimensions.
+ * \param nIterY The number of iterations in the y-dim of the thread to cover all rows. (1-->m)
+ * \param nIterZ The number of iterations in the z-dim of the thread to cover all rows. (1-->k)
+ * \tparam DType Data type
+ * \tparam CType The type to load the data.
+ * \tparam is_addto Whether to perform out += transpose(data) or out = transpose(data)
+ */
+template <typename DType, typename CType, bool is_addto>
 __global__ void transpose_pseudo2D(DType* out, DType* inp,
                                    const index_t m, const index_t n,
                                    const index_t nIterY, const index_t nIterZ) {
-  const index_t TSR = sizeof(CType)/sizeof(DType);  // TypeSizeRatio
+  // Calculate the TypeSizeRatio
+  const index_t TSR = sizeof(CType) / sizeof(DType) > 0 ? sizeof(CType) / sizeof(DType) : 1;
   const index_t chunked_n = n/TSR;
   const index_t chunked_m = m/TSR;
 
-  union transp_t {
-    CType valChunk;
-    DType values[TSR];
-  };
-
-  __shared__ DType d_shm[1024*TSR*TSR];
-  CType* c_shm = reinterpret_cast<CType*>(d_shm);
+  extern __shared__ char buf[];
+  DType* d_shm = reinterpret_cast<DType*>(buf);
+  CType* c_shm = reinterpret_cast<CType*>(buf);
 
   CType* cInp = reinterpret_cast<CType*>(inp);
   CType* cOut = reinterpret_cast<CType*>(out);
@@ -78,23 +87,34 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
         }
         __syncthreads();
 
-        // read from shared to registers
-        transp_t tmp[TSR];
+        // read from shared to local registers
+        CType tmp[TSR];
         #pragma unroll
         for (index_t i = 0; i < TSR; i++) {
+          DType* tmp_dptr = reinterpret_cast<DType*>(&tmp[i]);
           #pragma unroll
           for (int j = 0; j < TSR; j++) {
             index_t shmIdx = (TSR*threadIdx.y + j)*blockDim.x*TSR + TSR*threadIdx.x + i;
-            tmp[i].values[j] = d_shm[shmIdx];
+            tmp_dptr[j] = d_shm[shmIdx];
           }
         }
         __syncthreads();
 
         // write back to global output
-        offset = blockIdx_z*m*chunked_n + blockIdx.x*blockDim.x*TSR*chunked_m + blockIdx_y*blockDim.y;
+        offset = blockIdx_z*m*chunked_n + blockIdx.x*blockDim.x*TSR*chunked_m
+                                        + blockIdx_y*blockDim.y;
         #pragma unroll
         for (index_t i = 0; i < TSR; i++) {
-            cOut[offset + (TSR*threadIdx.x + i)*chunked_m + threadIdx.y] = tmp[i].valChunk;
+          if (is_addto) {
+            DType* tmp_dptr = reinterpret_cast<DType*>(&tmp[i]);
+            #pragma unroll
+            for (int j = 0; j < TSR; j++) {
+              out[TSR * (offset + (TSR*threadIdx.x + i)*chunked_m + threadIdx.y) + j]
+                += tmp_dptr[j];
+            }
+          } else {
+            cOut[offset + (TSR*threadIdx.x + i)*chunked_m + threadIdx.y] = tmp[i];
+          }
         }
       }
     }
@@ -107,7 +127,6 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
 /*!
  * \brief Calls proper version of kernel `transpose_pseudo2D`
  *        basing on chosen type sizes.
- * \param dTypeSize Size of data type.
  * \param cTypeSize Size of type that should be use to copy.
  * \param grid Grid dimensions for the kernel.
  * \param block Block dimensions for the kernel.
@@ -116,92 +135,39 @@ __global__ void transpose_pseudo2D(DType* out, DType* inp,
  * \param inp Pointer to input memory.
  * \param m First of tensor dimensions.
  * \param n Second of tensor dimensions.
+ * \tparam DType Data type
+ * \tparam is_addto Whether to trigger add the transpose result to the output tensor.
  */
-inline void call_transpose_pseudo2D(index_t dTypeSize, index_t cTypeSize,
-                                   dim3 grid, dim3 block, cudaStream_t stream,
-                                   void* out, void* inp, const index_t m, const index_t n,
-                                   const index_t nIterY, const index_t nIterZ) {
-  switch (dTypeSize) {
-   case (1): {
-    uint8_t* d_outPtr = reinterpret_cast<uint8_t*>(out);
-    uint8_t* d_inpPtr = reinterpret_cast<uint8_t*>(inp);
-    switch (cTypeSize) {
-     case (1):
-      cuda::transpose_pseudo2D<uint8_t, uint8_t><<<grid, block, 0, stream>>>
+template <typename DType, bool is_addto>
+inline void call_transpose_pseudo2D(index_t cTypeSize,
+                                    dim3 grid, dim3 block, cudaStream_t stream,
+                                    DType* d_outPtr, DType* d_inpPtr,
+                                    const index_t m, const index_t n,
+                                    const index_t nIterY, const index_t nIterZ) {
+  const int nshared = 1024 * cTypeSize / sizeof(DType) * cTypeSize;
+  switch (cTypeSize) {
+    case (1):
+      cuda::transpose_pseudo2D<DType, uint8_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (2):
-      cuda::transpose_pseudo2D<uint8_t, uint16_t><<<grid, block, 0, stream>>>
+    case (2):
+      cuda::transpose_pseudo2D<DType, uint16_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (4):
-      cuda::transpose_pseudo2D<uint8_t, uint32_t><<<grid, block, 0, stream>>>
+    case (4):
+      cuda::transpose_pseudo2D<DType, uint32_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (8):
-      // case guarded against in function getBestCopyTypeSize
-      LOG(FATAL) << "cuda::transpose_pseudo2D<uint8_t, uint64_t> would take too much shared memory";
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   case (2): {
-    uint16_t* d_outPtr = reinterpret_cast<uint16_t*>(out);
-    uint16_t* d_inpPtr = reinterpret_cast<uint16_t*>(inp);
-    switch (cTypeSize) {
-     case (2):
-      cuda::transpose_pseudo2D<uint16_t, uint16_t><<<grid, block, 0, stream>>>
+    case (8):
+      cuda::transpose_pseudo2D<DType, uint64_t, is_addto><<<grid, block, nshared, stream>>>
                               (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
       break;
-     case (4):
-      cuda::transpose_pseudo2D<uint16_t, uint32_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     case (8):
-      cuda::transpose_pseudo2D<uint16_t, uint64_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   case (4): {
-    uint32_t* d_outPtr = reinterpret_cast<uint32_t*>(out);
-    uint32_t* d_inpPtr = reinterpret_cast<uint32_t*>(inp);
-    switch (cTypeSize) {
-     case (4):
-      cuda::transpose_pseudo2D<uint32_t, uint32_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     case (8):
-      cuda::transpose_pseudo2D<uint32_t, uint64_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   case (8): {
-    uint64_t* d_outPtr = reinterpret_cast<uint64_t*>(out);
-    uint64_t* d_inpPtr = reinterpret_cast<uint64_t*>(inp);
-    switch (cTypeSize) {
-     case (8):
-      cuda::transpose_pseudo2D<uint64_t, uint64_t><<<grid, block, 0, stream>>>
-                              (d_outPtr, d_inpPtr, m, n, nIterY, nIterZ);
-      break;
-     default:
-      LOG(FATAL) << "Unsupported type combination";
-    }
-    break;
-   }
-   default:
-    LOG(FATAL) << "Unsupported type combination";
+    default:
+      LOG(FATAL) << "Unsupported type combination. " << "Copy type size = " << cTypeSize;
   }
   auto cuErr = cudaPeekAtLastError();
-  CHECK_EQ(cuErr, cudaSuccess) << "Transpose kernel failure: " << cudaGetErrorString(cuErr) << ". "
+  CHECK_EQ(cuErr, cudaSuccess) << "TransposePseudo2D kernel failure: "
+                               << cudaGetErrorString(cuErr) << ". "
                                << "block: (" << block.x << "," << block.y << "," << block.z << ")"
                                << " grid: (" << grid.x << "," << grid.y << "," << grid.z << ")";
 }
@@ -224,7 +190,6 @@ inline bool isPseudo2DTranspose(const TShape& params) {
   }
   return n_swpDims == 2;
 }
-
 
 struct pseudo2DSizes {
   index_t leadDimS;
@@ -306,15 +271,14 @@ inline std::pair<dim3, dim3> calculateKernelParams(pseudo2DSizes sizes, const in
  * \param outBlob Tensor blob to store result.
  * \param inpBlob Tensor blob with input data.
  * \param params Parameters (axes) of the transpose.
+ * \param is_addto Whether to add the transpose result to the outBlob
  * \param s Pointer to GPU stream.
  */
-template <typename DType, typename gpu>
+template <typename DType, bool is_addto>
 void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
                         const TShape& params, mshadow::Stream<gpu>* s) {
   const TShape& shape = inpBlob.shape_;
   CHECK_EQ(shape.ndim(), params.ndim());
-  auto ndim = params.ndim();
-
   auto sizes = getPackedTransposeDimensions(shape, params);
 
   index_t cTypeSize = getBestCopyTypeSize(sizeof(DType), sizes.M, sizes.N);
@@ -337,8 +301,10 @@ void transpose_pseudo2D(const TBlob& outBlob, const TBlob& inpBlob,
   }
 
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  call_transpose_pseudo2D(sizeof(DType), cTypeSize, grid, block, stream,
-                          outBlob.dptr_, inpBlob.dptr_, sizes.M, sizes.N, nIterY, nIterZ);
+  call_transpose_pseudo2D<DType, is_addto>
+      (cTypeSize, grid, block, stream,
+       outBlob.dptr<DType>(), inpBlob.dptr<DType>(),
+       sizes.M, sizes.N, nIterY, nIterZ);
 }
 
 }  // namespace op
