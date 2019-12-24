@@ -40,7 +40,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
            'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'vstack', 'bincount', 'row_stack']
+           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount', 'row_stack']
 
 
 @set_module('mxnet.ndarray.numpy')
