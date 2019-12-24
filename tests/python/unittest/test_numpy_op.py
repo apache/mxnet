@@ -2695,23 +2695,24 @@ def test_np_insert():
         for ed in [-5, -3, -1, 0, 1, 3, 5, None]:
             for stp in [-1, 1, 2, None]:
                 config.append(tuple([A, slice(st, ed, stp), F, 1]))
+    dtypes = ['int32', 'float16', 'float32', 'float64', None]
     
     for arr_shape, obj, val_shape, axis in config:
-        for objtype in ['int32', 'int64']:
+        for atype, btype in itertools.product(dtypes, dtypes):
             if type(obj) == list:
-                obj_mxnp = np.array(obj, dtype=objtype)
-                obj_onp = _np.array(obj, dtype=objtype)
+                obj_mxnp = np.array(obj, dtype='int64')
+                obj_onp = _np.array(obj)
             elif type(obj) == slice:
                 obj_mxnp = obj
                 obj_onp = obj
-            else:
-                obj_mxnp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
-                obj_onp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+            else:  # integer
+                obj_mxnp = obj
+                obj_onp = obj
             test_insert = TestInsert(obj=obj_mxnp, axis=axis)
 
-            a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray()
+            a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray().astype(atype)
             a.attach_grad()
-            b = mx.nd.random.uniform(-1.0, 1.0, shape=val_shape).as_np_ndarray()
+            b = mx.nd.random.uniform(-1.0, 1.0, shape=val_shape).as_np_ndarray().astype(btype)
             b.attach_grad()
             expected_ret = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
 

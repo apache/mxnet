@@ -3060,16 +3060,15 @@ def insert(arr, obj, values, axis=None):
     ----------
     arr : _Symbol
         Input array.
-    obj : int, slice or _Symbol of ints
+    obj : int, slice or ndarray of int64
         Object that defines the index or indices before which `values` is
         inserted.
         Support for multiple insertions when `obj` is a single scalar or a
         sequence with one element (only support int32 and int64 element).
     values : _Symbol
         Values to insert into `arr`.
-        The type of `values` should equal to the type of `arr`.
-        `values` should be shaped so that ``arr[...,obj,...] = values``
-        is legal.
+        If the type of values is different from that of arr, values is converted
+        to the type of arr.
     axis : int, optional
         Axis along which to insert `values`.  If `axis` is None then `arr`
         is flattened first.
@@ -3083,10 +3082,21 @@ def insert(arr, obj, values, axis=None):
 
     Notes
     -----
-    Note that for higher dimensional inserts `obj=0` behaves very different
+    - Note that for higher dimensional inserts `obj=0` behaves very different
     from `obj=[0]` just like `arr[:,0,:] = values` is different from
     `arr[:,[0],:] = values`.
+    - If obj is a ndarray, it's dtype only supports int64 
     """
+    if isinstance(values, numeric_types):
+        if isinstance(obj, slice):
+            start = obj.start
+            stop = obj.stop
+            step = 1 if obj.step is None else obj.step
+            return _npi.insert(arr, val=values, start=start, stop=stop, step=step, axis=axis)
+        elif isinstance(obj, integer_types):
+            return _npi.insert(arr, val=values, int_ind=obj, axis=axis)
+        elif isinstance(obj, NDArray):
+            return _npi.insert(arr, obj, val=values, axis=axis)
     if not isinstance(arr, ndarray): # pylint: disable= undefined-variable
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))
     if not isinstance(values, ndarray): # pylint: disable= undefined-variable

@@ -1254,13 +1254,12 @@ def _add_workload_inner():
 
 def _add_workload_insert():
     a = np.arange(10)
-    for dt in [np.int32, np.int64]:
-        OpArgMngr.add_workload('insert', a, 0, np.array([0]))
-        OpArgMngr.add_workload('insert', a, np.array([], dtype=dt), np.array([]))
-        OpArgMngr.add_workload('insert', a, np.array([0, 1], dtype=dt), np.array([1, 2]))
-        OpArgMngr.add_workload('insert', a, slice(1, 2), np.array([1, 2]))
-        OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
-        OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=dt), np.array([3, 4, 5]))
+    OpArgMngr.add_workload('insert', a, 0, np.array([0]))
+    OpArgMngr.add_workload('insert', a, np.array([], dtype=np.int64), np.array([]))
+    OpArgMngr.add_workload('insert', a, np.array([0, 1], dtype=np.int64), np.array([1, 2]))
+    OpArgMngr.add_workload('insert', a, slice(1, 2), np.array([1, 2]))
+    OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
+    OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=np.int64), np.array([3, 4, 5]))
     OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
 
 

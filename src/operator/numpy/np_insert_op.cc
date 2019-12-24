@@ -35,32 +35,41 @@ bool NumpyInsertType(const nnvm::NodeAttrs& attrs,
                      std::vector<int> *in_type,
                      std::vector<int> *out_type) {
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  int insize = (param.step.has_value() || param.int_ind.has_value()) ? 2 : 3;
+  int input_count = param.val.has_value() ? 1 : 2;
+  int insize = (param.step.has_value() || param.int_ind.has_value()) ?
+               input_count : input_count + 1;
+  bool obj_is_tensor = !param.step.has_value() && !param.int_ind.has_value();
   CHECK_EQ(in_type->size(), insize);
   CHECK_EQ(out_type->size(), 1U);
-  if (insize == 3) {
-    CHECK_NE((*in_type)[2], -1) << "Index type must be set for insert operator\n";
-    CHECK(((*in_type)[2] == mshadow::DataType<int64_t>::kFlag) ||
-          ((*in_type)[2] == mshadow::DataType<int32_t>::kFlag))
-      << "Index type only support int32 or int64.\n";
+  if (obj_is_tensor) {
+    int obj_pos = input_count;
+    CHECK_NE((*in_type)[obj_pos], -1) << "Index type must be set for insert operator\n";
+    CHECK_EQ((*in_type)[obj_pos], mshadow::DataType<int64_t>::kFlag)
+      << "Index type only support int64.\n";
   }
-  TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);
-  TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[1]);
+  TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);  // output type equals to input arr's
   TYPE_ASSIGN_CHECK(*in_type, 0, (*out_type)[0]);
   return (*in_type)[0] != -1;
 }
 
 bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
-                            mxnet::ShapeVector *in_shape,
-                            mxnet::ShapeVector *out_shape) {
+                      mxnet::ShapeVector *in_shape,
+                      mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  CHECK_EQ(in_shape->size(),
-    (param.step.has_value() || param.int_ind.has_value()) ? 2U : 3U);
-  mxnet::TShape &arrshape = (*in_shape)[insert_::kArr];
-  mxnet::TShape &valshape = (*in_shape)[insert_::kValues];
-  mxnet::TShape &objShape = (*in_shape)[insert_::kObj];
-  if (in_shape->size() == 3U) {
+  int input_count = param.val.has_value() ? 1 : 2;
+  int insize = (param.step.has_value() || param.int_ind.has_value()) ?
+               input_count : input_count + 1;
+  bool obj_is_tensor = !param.step.has_value() && !param.int_ind.has_value();
+  const int arr_pos = 0;
+  const int val_pos = param.val.has_value() ? 0 : 1;
+  const int obj_pos = val_pos + 1;
+  CHECK_EQ(in_shape->size(), insize);
+  mxnet::TShape scale_shape(0, 1);
+  mxnet::TShape &arrshape = (*in_shape)[arr_pos];
+  mxnet::TShape &valshape = param.val.has_value() ? scale_shape : (*in_shape)[val_pos];
+  mxnet::TShape &objShape = obj_is_tensor ? (*in_shape)[obj_pos] : scale_shape;
+  if (obj_is_tensor) {
     CHECK_LE(objShape.ndim(), 1)
       << "index array argument obj to insert must be one dimensional or scale.\n";
   }
@@ -73,11 +82,15 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
     arrshape = Shape1(arrshape.Size());
     ndim = 1;
   } else if (ndim == 0) {
-    CHECK_EQ(valshape.ndim(), 0)
-      << "'arr' is a 0-d array, 'values' can not assign to it. "
-      << "alueError: assignment to 0-d array.";
-    out_shape->push_back(valshape);
-    return shape_is_known(valshape);
+    if (param.val.has_value()) {
+      out_shape->push_back(scale_shape);
+    } else {
+      CHECK_EQ(valshape.ndim(), 0)
+        << "'arr' is a 0-d array, 'values' can not assign to it. "
+        << "alueError: assignment to 0-d array.";
+      out_shape->push_back(valshape);
+    }
+    return shape_is_known(out_shape[0]);
   } else {
     CHECK(axis >= -1 * arrshape.ndim() && axis < arrshape.ndim())
       << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
@@ -86,7 +99,7 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
 
   int seq_cnt = -1;
   int N = arrshape[axis];
-  if (in_shape->size() == 3U) {
+  if (obj_is_tensor) {
     seq_cnt = objShape.Size();
   } else if (param.step.has_value()) {
     int step = param.step.value();
@@ -132,9 +145,9 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
   valshape.assign(val_newshape.begin(), val_newshape.end());
 
   if (param.int_ind.has_value() ||
-      (in_shape->size() == 3U && objShape.ndim() == 0)) {
+      (obj_is_tensor && objShape.ndim() == 0)) {
     // because of moveaxis(values, 0, axis)
-    numnew =  valshape[0];
+    numnew = valshape[0];
   } else if (seq_cnt == 1) {
     numnew = valshape[axis];
   } else {
@@ -151,15 +164,22 @@ NNVM_REGISTER_OP(_npi_insert)
 .set_attr_parser(ParamParser<NumpyInsertParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
     const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
-    return (params.step.has_value() || params.int_ind.has_value()) ? 2U : 3U;
+    int input_count = params.val.has_value() ? 1 : 2;
+    return (params.step.has_value() || params.int_ind.has_value()) ? input_count : input_count + 1;
 })
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
-    return (params.step.has_value() || params.int_ind.has_value()) ?
-            std::vector<std::string>{"arr", "values"} :
-            std::vector<std::string>{"arr", "values", "obj"};
+    if (params.val.has_value()) {
+      return (params.step.has_value() || params.int_ind.has_value()) ?
+             std::vector<std::string>{"arr"} :
+             std::vector<std::string>{"arr", "obj"};
+    } else {
+      return (params.step.has_value() || params.int_ind.has_value()) ?
+             std::vector<std::string>{"arr", "values"} :
+             std::vector<std::string>{"arr", "values", "obj"};
+    }
 })
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyInsertShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyInsertType)

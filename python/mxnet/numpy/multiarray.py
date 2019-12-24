@@ -8151,16 +8151,15 @@ def insert(arr, obj, values, axis=None):
     ----------
     arr : ndarray
         Input array.
-    obj : int, slice or ndarray of ints
+    obj : int, slice or ndarray of int64
         Object that defines the index or indices before which `values` is
         inserted.
         Support for multiple insertions when `obj` is a single scalar or a
         sequence with one element (only support int32 and int64 element).
     values : ndarray
         Values to insert into `arr`.
-        The type of `values` should equal to the type of `arr`.
-        `values` should be shaped so that ``arr[...,obj,...] = values``
-        is legal.
+        If the type of values is different from that of arr, values is converted
+        to the type of arr.
     axis : int, optional
         Axis along which to insert `values`.  If `axis` is None then `arr`
         is flattened first.
@@ -8174,9 +8173,10 @@ def insert(arr, obj, values, axis=None):
 
     Notes
     -----
-    Note that for higher dimensional inserts `obj=0` behaves very different
+    - Note that for higher dimensional inserts `obj=0` behaves very different
     from `obj=[0]` just like `arr[:,0,:] = values` is different from
     `arr[:,[0],:] = values`.
+    - If obj is a ndarray, it's dtype only supports int64 
 
     Examples
     --------
@@ -8194,7 +8194,7 @@ def insert(arr, obj, values, axis=None):
 
     Difference between sequence and scalars:
 
-    >>> np.insert(a, np.array([1], dtype=np.int32), np.array([[1],[2],[3]]), axis=1)
+    >>> np.insert(a, np.array([1], dtype=np.int64), np.array([[1],[2],[3]]), axis=1)
     array([[1., 1., 1.],
            [2., 2., 2.],
            [3., 3., 3.]])
@@ -8212,11 +8212,12 @@ def insert(arr, obj, values, axis=None):
     >>> np.insert(b, slice(2, 4), np.array([5, 6]))
     array([1., 1., 5., 2., 6., 2., 3., 3.])
 
-    >>> np.insert(b, np.array([2, 2], dtype=np.int32), np.array([7.13, False]))
-    array([1.  , 1.  , 7.13, 0.  , 2.  , 2.  , 3.  , 3.  ])
+    # type casting
+    >>> np.insert(b.astype(np.int32), np.array([2, 2],dtype='int64'), np.array([7.13, False]))
+    array([1, 1, 7, 0, 2, 2, 3, 3], dtype=int32)
 
     >>> x = np.arange(8).reshape(2, 4)
-    >>> idx = np.array([1, 3], dtype=np.int32)
+    >>> idx = np.array([1, 3], dtype=np.int64)
     >>> np.insert(x, idx, np.array([999]), axis=1)
     array([[  0., 999.,   1.,   2., 999.,   3.],
            [  4., 999.,   5.,   6., 999.,   7.]])
