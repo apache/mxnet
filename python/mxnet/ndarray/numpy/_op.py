@@ -34,7 +34,7 @@ __all__ = ['shape', 'zeros', 'ones', 'full', 'add', 'subtract', 'multiply', 'div
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'tensordot', 'histogram', 'eye',
            'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'row_stack','column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
+           'stack', 'vstack', 'row_stack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
            'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
            'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
            'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
@@ -3131,6 +3131,7 @@ def vstack(arrays, out=None):
     arrays = get_list(arrays)
     return _npi.vstack(*arrays)
 
+
 @set_module('mxnet.ndarray.numpy')
 def row_stack(arrays, out=None):
     r"""Stack arrays in sequence vertically (row wise).
@@ -3180,6 +3181,7 @@ def row_stack(arrays, out=None):
 
     arrays = get_list(arrays)
     return _npi.vstack(*arrays)
+
 
 @set_module('mxnet.ndarray.numpy')
 def column_stack(tup):
