@@ -140,17 +140,23 @@ if __name__ == '__main__':
                         help='If enabled, the quantize op will '
                              'be calibrated offline if calibration mode is '
                              'enabled')
+    parser.add_argument('--quiet', action='store_true', default=False,
+                        help='suppress most of log')
     args = parser.parse_args()
     ctx = mx.cpu(0)
-    logging.basicConfig()
-    logger = logging.getLogger('logger')
-    logger.setLevel(logging.INFO)
+    logger = None
+    if not args.quiet:
+        logging.basicConfig()
+        logger = logging.getLogger('logger')
+        logger.setLevel(logging.INFO)
 
-    logger.info(args)
-    logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
+    if logger:
+        logger.info(args)
+        logger.info('shuffle_dataset=%s' % args.shuffle_dataset)
 
     calib_mode = args.calib_mode
-    logger.info('calibration mode set to %s' % calib_mode)
+    if logger:
+        logger.info('calibration mode set to %s' % calib_mode)
 
     # download calibration dataset
     if calib_mode != 'none':
@@ -158,13 +164,16 @@ if __name__ == '__main__':
 
     # download model
     if not args.no_pretrained:
-        logger.info('Get pre-trained model from MXNet or Gluoncv modelzoo.')
-        logger.info('If you want to use custom model, please set --no-pretrained.')
+        if logger:
+            logger.info('Get pre-trained model from MXNet or Gluoncv modelzoo.')
+            logger.info('If you want to use custom model, please set --no-pretrained.')
         if args.model in ['imagenet1k-resnet-152', 'imagenet1k-inception-bn']:
-            logger.info('model %s is downloaded from MXNet modelzoo' % args.model)
+            if logger:
+                logger.info('model %s is downloaded from MXNet modelzoo' % args.model)
             prefix, epoch = download_model(model_name=args.model, logger=logger)
         else:
-            logger.info('model %s is converted from GluonCV' % args.model)
+            if logger:
+                logger.info('model %s is converted from GluonCV' % args.model)
             prefix = convert_from_gluon(model_name=args.model, image_shape=args.image_shape, classes=1000, logger=logger)
             rgb_mean = '123.68,116.779,103.939'
             rgb_std = '58.393, 57.12, 57.375'
@@ -178,14 +187,16 @@ if __name__ == '__main__':
 
     # get batch size
     batch_size = args.batch_size
-    logger.info('batch size = %d for calibration' % batch_size)
+    if logger:
+        logger.info('batch size = %d for calibration' % batch_size)
 
     # get number of batches for calibration
     num_calib_batches = args.num_calib_batches
-    if calib_mode == 'none':
-        logger.info('skip calibration step as calib_mode is none')
-    else:
-        logger.info('number of batches = %d for calibration' % num_calib_batches)
+    if logger:
+        if calib_mode == 'none':
+            logger.info('skip calibration step as calib_mode is none')
+        else:
+            logger.info('number of batches = %d for calibration' % num_calib_batches)
 
     # get number of threads for decoding the dataset
     data_nthreads = args.data_nthreads
@@ -195,7 +206,8 @@ if __name__ == '__main__':
 
     exclude_first_conv = args.exclude_first_conv
     if args.quantized_dtype == "uint8":
-        logger.info('quantized dtype is set to uint8, will exclude first conv.')
+        if logger:
+            logger.info('quantized dtype is set to uint8, will exclude first conv.')
         exclude_first_conv = True
     excluded_sym_names = []
     if not args.no_pretrained:
@@ -242,42 +254,48 @@ if __name__ == '__main__':
         else:
             raise ValueError('Currently, model %s is not supported in this script' % args.model)
     else:
-        logger.info('Please set proper RGB configs for model %s' % args.model)
+        if logger:
+            logger.info('Please set proper RGB configs for model %s' % args.model)
         # add rgb mean/std of your model.
         rgb_mean = '0,0,0'
         rgb_std = '0,0,0'
         # add layer names you donnot want to quantize.
-        logger.info('Please set proper excluded_sym_names for model %s' % args.model)
+        if logger:
+            logger.info('Please set proper excluded_sym_names for model %s' % args.model)
         excluded_sym_names += ['layers']
         if exclude_first_conv:
             excluded_sym_names += ['layers']
 
-    logger.info('These layers have been excluded %s' % excluded_sym_names)
+    if logger:
+        logger.info('These layers have been excluded %s' % excluded_sym_names)
 
     label_name = args.label_name
-    logger.info('label_name = %s' % label_name)
+    if logger:
+        logger.info('label_name = %s' % label_name)
 
     data_shape = tuple([int(i) for i in image_shape.split(',')])
-    logger.info('Input data shape = %s' % str(data_shape))
-
-    logger.info('rgb_mean = %s' % rgb_mean)
+    if logger:
+        logger.info('Input data shape = %s' % str(data_shape))
+        logger.info('rgb_mean = %s' % rgb_mean)
+        logger.info('rgb_std = %s' % rgb_std)
     rgb_mean = [float(i) for i in rgb_mean.split(',')]
     mean_args = {'mean_r': rgb_mean[0], 'mean_g': rgb_mean[1], 'mean_b': rgb_mean[2]}
-    logger.info('rgb_std = %s' % rgb_std)
     rgb_std = [float(i) for i in rgb_std.split(',')]
     std_args = {'std_r': rgb_std[0], 'std_g': rgb_std[1], 'std_b': rgb_std[2]}
     combine_mean_std = {}
     combine_mean_std.update(mean_args)
     combine_mean_std.update(std_args)
     if calib_mode == 'none':
-        logger.info('Quantizing FP32 model %s' % args.model)
+        if logger:
+            logger.info('Quantizing FP32 model %s' % args.model)
         qsym, qarg_params, aux_params = quantize_model_mkldnn(sym=sym, arg_params=arg_params, aux_params=aux_params,
                                                               ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                               calib_mode=calib_mode, quantized_dtype=args.quantized_dtype,
                                                               logger=logger)
         sym_name = '%s-symbol.json' % (prefix + '-quantized')
     else:
-        logger.info('Creating ImageRecordIter for reading calibration dataset')
+        if logger:
+            logger.info('Creating ImageRecordIter for reading calibration dataset')
         data = mx.io.ImageRecordIter(path_imgrec=args.calib_dataset,
                                      label_width=1,
                                      preprocess_threads=data_nthreads,

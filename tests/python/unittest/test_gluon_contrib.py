@@ -411,6 +411,10 @@ def test_ModulatedDeformableConvolution():
     net = nn.HybridSequential()
     net.add(
         DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(1, 1), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(5, 5), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(3, 5), strides=1, padding=0),
+        DeformableConvolution(10, kernel_size=(5, 1), strides=1, padding=0, num_deformable_group=2),
         DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
                                offset_use_bias=False, use_bias=False),
         DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',

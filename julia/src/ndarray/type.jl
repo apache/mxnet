@@ -116,7 +116,7 @@ end
 
 # UndefInitializer constructors
 NDArray{T,N}(::UndefInitializer, dims::NTuple{N,Integer};
-             writable = true, ctx::Context = cpu()) where {T,N} =
+             writable = true, ctx::Context = current_context()) where {T,N} =
   NDArray{T,N}(_ndarray_alloc(T, dims, ctx, false), writable)
 NDArray{T,N}(::UndefInitializer, dims::Vararg{Integer,N}; kw...) where {T,N} =
   NDArray{T,N}(undef, dims; kw...)

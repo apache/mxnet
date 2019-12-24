@@ -134,6 +134,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.cholesky',
     'linalg.inv',
     'linalg.solve',
+    'linalg.tensorinv',
     'shape',
     'trace',
     'tril',
@@ -146,6 +147,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'resize',
     'where',
     'full_like',
+    'bincount'
 ]
 
 
@@ -217,6 +219,8 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'square',
     'cbrt',
     'reciprocal',
+    'invert',
+    'bitwise_not',
     'remainder',
     'sin',
     'cos',
