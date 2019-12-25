@@ -1229,6 +1229,13 @@ def _add_workload_outer():
     OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
 
 
+def _add_workload_kron():
+    OpArgMngr.add_workload('kron', np.ones((5)), np.ones((2)))
+    OpArgMngr.add_workload('kron', np.arange(16).reshape((4,4)), np.ones((4,4)))
+    OpArgMngr.add_workload('kron', np.ones((2,4)), np.zeros((2,4)))
+    OpArgMngr.add_workload('kron', np.ones(()), np.ones(()))
+
+
 def _add_workload_meshgrid():
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
@@ -2812,6 +2819,7 @@ def _prepare_workloads():
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
+    _add_workload_kron()
     _add_workload_meshgrid()
     _add_workload_einsum()
     _add_workload_abs()

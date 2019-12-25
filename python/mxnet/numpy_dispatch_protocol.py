@@ -168,6 +168,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'tril',
     'meshgrid',
     'outer',
+    'kron',
     'einsum',
     'polyval',
     'shares_memory',
