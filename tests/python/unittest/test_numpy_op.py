@@ -501,38 +501,44 @@ def test_np_matmul():
     ]
 
     dtypes = ['float32', 'float64']
+    req_type = ['write', 'add', 'null']
     eps = 1E-4
-    for dtype in dtypes:
-        for hybridize in [True, False]:
-            for shape_a, shape_b in shapes:
-                for grad_req_a in ['write', 'add']:
-                    for grad_req_b in ['write', 'add']:
-                        test_matmul = TestMatmul()
-                        if hybridize:
-                            test_matmul.hybridize()
-                        np_a = _np.random.uniform(-1.0, 1.0, shape_a).astype(dtype)
-                        np_a[abs(np_a) < eps] = 2 * eps
-                        np_b = _np.random.uniform(-1.0, 1.0, shape_b).astype(dtype)
-                        np_b[abs(np_b) < eps] = 2 * eps
-                        a = mx.np.array(np_a, dtype=dtype)
-                        a.attach_grad(grad_req=grad_req_a)
-                        b = mx.np.array(np_b, dtype=dtype)
-                        b.attach_grad(grad_req=grad_req_b)
+    for dtype, hybridize, (shape_a, shape_b), grad_req_a, grad_req_b in \
+        itertools.product(dtypes, [True, False], shapes, req_type, req_type):
+        if grad_req_a == 'null' and grad_req_b == 'null':
+            continue
+        test_matmul = TestMatmul()
+        if hybridize:
+            test_matmul.hybridize()
+        np_a = _np.random.uniform(-1.0, 1.0, shape_a).astype(dtype)
+        np_a[abs(np_a) < eps] = 2 * eps
+        np_b = _np.random.uniform(-1.0, 1.0, shape_b).astype(dtype)
+        np_b[abs(np_b) < eps] = 2 * eps
+        a = mx.np.array(np_a, dtype=dtype)
+        a.attach_grad(grad_req=grad_req_a)
+        b = mx.np.array(np_b, dtype=dtype)
+        b.attach_grad(grad_req=grad_req_b)
 
-                        np_out = _np.matmul(np_a, np_b)
-                        with mx.autograd.record():
-                            mx_out = test_matmul(a, b)
-                        assert mx_out.shape == np_out.shape
-                        assert_almost_equal(np_out, mx_out.asnumpy(), rtol=eps, atol=eps)
-                        mx_out.backward()
-                        np_backward = matmul_backward(np_a, np_b)
-                        assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = eps, atol=eps)
-                        assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = eps, atol=eps)
-                        
-                        # Test imperative once again
-                        mx_out = np.matmul(a, b)
-                        np_out = _np.matmul(np_a, np_b)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=eps, atol=eps)
+        np_out = _np.matmul(np_a, np_b)
+        with mx.autograd.record():
+            mx_out = test_matmul(a, b)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(np_out, mx_out.asnumpy(), rtol=eps, atol=eps)
+        mx_out.backward()
+        np_backward = matmul_backward(np_a, np_b)
+        if grad_req_a == 'null':
+            assert a.grad is None
+        else:
+            assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = eps, atol=eps)
+        if grad_req_b == 'null':
+            assert b.grad is None
+        else:
+            assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = eps, atol=eps)
+        
+        # Test imperative once again
+        mx_out = np.matmul(a, b)
+        np_out = _np.matmul(np_a, np_b)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=eps, atol=eps)
 
     bad_shapes = [
                 ((1,), (2,)),            # mismatched vector vector
@@ -547,13 +553,9 @@ def test_np_matmul():
                 ]
 
     for shape_a, shape_b in bad_shapes:
-        a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
-        b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
-        try:
-            mx_res = np.matmul(a.as_np_ndarray(), b.as_np_ndarray())
-        except mx.base.MXNetError:
-            continue
-        assert False
+        a = np.random.uniform(size=shape_a)
+        b = np.random.uniform(size=shape_b)
+        assert_raises(MXNetError, lambda: np.matmul(a, b))
 
 
 @with_seed()

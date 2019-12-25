@@ -137,21 +137,7 @@ inline bool NumpyMatmulShape(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_npi_matmul)
-.describe(R"doc(Matrix product of two arrays.
-The behavior depends on the arguments in the following way.
-- If both arguments are 2-D they are multiplied like conventional matrices.
-- If either argument is N-D, N > 2, it is treated as a stack of matrices residing
- in the last two indexes and broadcast accordingly.
-- If the first argument is 1-D, it is promoted to a matrix by prepending a 1 to its
- dimensions. After matrix multiplication the prepended 1 is removed.
-- If the second argument is 1-D, it is promoted to a matrix by appending a 1 to its
- dimensions. After matrix multiplication the appended 1 is removed.
-
-'matmul' differs from 'dot' in two important ways:
-- Multiplication by scalars is not allowed, use * instead.
-- Stacks of matrices are broadcast together as if the matrices were elements,
- respecting the signature (n,k),(k,m)->(n,m).
-)doc" ADD_FILELINE)
+.describe(R"doc()doc" ADD_FILELINE)
 .set_num_inputs(2U)
 .set_num_outputs(1U)
 .set_attr<nnvm::FListInputNames>("FListInputNames",

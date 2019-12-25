@@ -224,9 +224,6 @@ class ndarray(NDArray):
             kwargs['out'] = out[0]
 
         if method == '__call__':
-            #if ufunc.signature is not None:
-                # we don't support generalised-ufuncs (gufuncs)
-                #return NotImplemented
             name = ufunc.__name__
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
@@ -3033,6 +3030,7 @@ def matmul(a, b, out=None, **kwargs):
     mxnet.base.MXNetError: ... : Multiplication by scalars is not allowed.
     """
     return _mx_nd_np.matmul(a, b, out=out)
+
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func

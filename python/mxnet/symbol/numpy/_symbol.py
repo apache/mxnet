@@ -1563,15 +1563,15 @@ def matmul(a, b, out=None, **kwargs):
 
     Parameters
     ----------
-    a, b : Symbol.
-    out : Symbol, optional
+    a, b : _Symbol.
+    out : _Symbol, optional
         A location into which the result is stored.
         If provided, it must have a shape that matches the signature (n,k),(k,m)->(n,m).
         If not provided or None, a freshly-allocated array is returned.
 
     Returns
     -------
-    y : Symbol
+    y : _Symbol
         The matrix product of the inputs.
         This is a scalar only when both x1, x2 are 1-d vectors.
 
