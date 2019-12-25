@@ -54,13 +54,30 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                   inputs, req, outputs);
 }
 
+static void SoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
+  // It seems MKLDNN softmax doesn't support training.
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  if (SupportMKLDNNSoftmax(param, inputs[1], outputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNNRun(MKLDNNSoftmaxBackward, attrs, ctx, inputs, req, outputs);
+    auto fn = SoftmaxGradCompute<cpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>;
+    MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(SoftmaxGradCompute<cpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>, attrs, ctx,
+                  inputs, req, outputs);
+}
+
 inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
                                       DispatchMode* dispatch_mode,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), (param.use_length.value()) ? 2U : 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   if (param.use_length.value()) {
@@ -147,8 +164,12 @@ NNVM_REGISTER_OP(_backward_softmax)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxGradComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
-
 }  // namespace op
 }  // namespace mxnet
