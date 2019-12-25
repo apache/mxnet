@@ -67,7 +67,13 @@ bool QuantizedBatchNormType(const nnvm::NodeAttrs& attrs, std::vector<int>* in_t
   CHECK_EQ(in_type->size(), 7U);
   CHECK_EQ(out_type->size(), 3U);
 
+#if MXNET_USE_MKLDNN == 1
+  CHECK(in_type->at(0) == mshadow::kInt8 || in_type->at(0) == mshadow::kUint8)
+      << "QuantizedBatchNorm with MKLDNN backend only supports int8/uint8 input, while "
+      << in_type->at(0) << " is given.";
+#else
   TYPE_ASSIGN_CHECK(*in_type, 0, mshadow::kInt8);
+#endif
   for (size_t i = 1; i < 7; ++i) {
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kFloat32);
   }
@@ -106,6 +112,9 @@ the float32 data into int8.
 .set_attr<nnvm::FInferType>("FInferType", QuantizedBatchNormType)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return false; })
+.set_attr<FNeedCalibrateInput>("FNeedCalibrateOutput", [](const NodeAttrs& attrs){
+  return std::vector<int>{0};
+})
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma.")
 .add_argument("beta", "NDArray-or-Symbol", "beta.")

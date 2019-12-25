@@ -54,7 +54,13 @@ void SetNDInputsOutputs(const nnvm::Op* op,
   ndinputs->clear();
   ndinputs->reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
-    ndinputs->emplace_back(reinterpret_cast<NDArray*>(inputs[i]));
+    NDArray* inp = reinterpret_cast<NDArray*>(inputs[i]);
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
+                "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
+                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+    ndinputs->emplace_back(inp);
   }
 
   ndoutputs->clear();
@@ -276,7 +282,7 @@ int MXAutogradSetIsRecording(int is_recording, int* prev) {
   API_END();
 }
 
-int MXIsNumpyShape(bool* curr) {
+int MXIsNumpyShape(int* curr) {
   API_BEGIN();
   *curr = Imperative::Get()->is_np_shape();
   API_END();
@@ -284,21 +290,21 @@ int MXIsNumpyShape(bool* curr) {
 
 int MXSetIsNumpyShape(int is_np_shape, int* prev) {
   API_BEGIN();
-  *prev = Imperative::Get()->set_is_np_shape(static_cast<bool>(is_np_shape));
+  *prev = Imperative::Get()->set_is_np_shape(is_np_shape);
   API_END();
 }
 
-int MXAutogradMarkVariables(mx_uint num_var,
+int MXAutogradMarkVariables(uint32_t num_var,
                             NDArrayHandle *var_handles,
-                            mx_uint *reqs_array,
+                            uint32_t *reqs_array,
                             NDArrayHandle *grad_handles) {
   API_BEGIN();
   std::vector<NDArray*> variables, gradients;
-  std::vector<mx_uint> grad_reqs;
+  std::vector<uint32_t> grad_reqs;
   variables.reserve(num_var);
   gradients.reserve(num_var);
   grad_reqs.reserve(num_var);
-  for (mx_uint i = 0; i < num_var; ++i) {
+  for (uint32_t i = 0; i < num_var; ++i) {
     variables.emplace_back(static_cast<NDArray*>(var_handles[i]));
     gradients.emplace_back(static_cast<NDArray*>(grad_handles[i]));
     grad_reqs.emplace_back(reqs_array[i]);
@@ -307,12 +313,12 @@ int MXAutogradMarkVariables(mx_uint num_var,
   API_END();
 }
 
-int MXAutogradComputeGradient(mx_uint num_output,
+int MXAutogradComputeGradient(uint32_t num_output,
                               NDArrayHandle *output_handles) {
   return MXAutogradBackward(num_output, output_handles, nullptr, 0);
 }
 
-int MXAutogradBackward(mx_uint num_output,
+int MXAutogradBackward(uint32_t num_output,
                        NDArrayHandle *output_handles,
                        NDArrayHandle *ograd_handles,
                        int retain_graph) {
@@ -321,10 +327,10 @@ int MXAutogradBackward(mx_uint num_output,
                               nullptr, nullptr);
 }
 
-int MXAutogradBackwardEx(mx_uint num_output,
+int MXAutogradBackwardEx(uint32_t num_output,
                          NDArrayHandle *output_handles,
                          NDArrayHandle *ograd_handles,
-                         mx_uint num_variables,
+                         uint32_t num_variables,
                          NDArrayHandle *var_handles,
                          int retain_graph,
                          int create_graph,
@@ -336,12 +342,12 @@ int MXAutogradBackwardEx(mx_uint num_output,
 
   std::vector<NDArray*> outputs, ograds, variables;
   outputs.reserve(num_output);
-  for (mx_uint i = 0; i < num_output; ++i) {
+  for (uint32_t i = 0; i < num_output; ++i) {
     outputs.emplace_back(reinterpret_cast<NDArray*>(output_handles[i]));
   }
 
   ograds.reserve(num_output);
-  for (mx_uint i = 0; i < num_output; ++i) {
+  for (uint32_t i = 0; i < num_output; ++i) {
     if (ograd_handles != nullptr) {
       ograds.emplace_back(reinterpret_cast<NDArray*>(ograd_handles[i]));
     } else {
@@ -350,7 +356,7 @@ int MXAutogradBackwardEx(mx_uint num_output,
   }
 
   variables.reserve(num_variables);
-  for (mx_uint i = 0; i < num_variables; ++i) {
+  for (uint32_t i = 0; i < num_variables; ++i) {
     variables.emplace_back(reinterpret_cast<NDArray*>(var_handles[i]));
   }
 
@@ -376,5 +382,25 @@ int MXAutogradGetSymbol(NDArrayHandle handle, SymbolHandle *out) {
   NDArray *head = reinterpret_cast<NDArray*>(handle);
   auto sym = new nnvm::Symbol(head->get_autograd_symbol());
   *out = reinterpret_cast<SymbolHandle>(sym);
+  API_END();
+}
+
+int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                             CachedOpMonitorCallback callback,
+                             bool monitor_all) {
+  API_BEGIN();
+  CachedOpMonitorCallback callback_temp = nullptr;
+  std::function<void(const char *, const char *, void*)> clbk;
+  if (callback) {
+    callback_temp = callback;
+    clbk = [callback_temp](const char *name, const char *opr_name,
+                           void *handle) {
+      callback_temp(name, opr_name, handle);
+    };
+  } else {
+      clbk = nullptr;
+  }
+  CachedOpPtr op = *static_cast<CachedOpPtr *>(handle);
+  op->RegisterOpHook(clbk, monitor_all);
   API_END();
 }

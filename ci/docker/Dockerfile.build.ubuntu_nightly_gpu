@@ -29,6 +29,7 @@ COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
 COPY install/ubuntu_python.sh /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 
 COPY install/ubuntu_scala.sh /work/
@@ -45,9 +46,6 @@ RUN /work/ubuntu_perl.sh
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 
-COPY install/ubuntu_mklml.sh /work/
-RUN /work/ubuntu_mklml.sh
-
 COPY install/ubuntu_tvm.sh /work/
 RUN /work/ubuntu_tvm.sh
 
@@ -61,7 +59,7 @@ COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh
 
 COPY install/ubuntu_docs.sh /work/
-COPY install/docs_requirements /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_docs.sh
 
 COPY install/ubuntu_tutorials.sh /work/

@@ -781,6 +781,14 @@ def lpnormalization(attrs, inputs, proto_obj):
     return 'norm', new_attrs, inputs
 
 
+def topk(attrs, inputs, proto_obj):
+    """Returns the top k elements in an input array along the given axis."""
+    new_attrs = translation_utils._add_extra_attributes(attrs,
+                                                        {'ret_typ': 'both',
+                                                         'dtype': 'int64'})
+    return 'topk', new_attrs, inputs
+
+
 def upsampling(attrs, inputs, proto_obj):
     """Rearranges blocks of spatial data into depth."""
     new_attrs = translation_utils._fix_attribute_names(attrs, {'scales': 'scale',

@@ -18,10 +18,12 @@
 Prerequisites
 -------------
 This package supports Linux and Windows platforms. You may also want to check:
+- [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 support.
+- [mxnet-cu101mkl](https://pypi.python.org/pypi/mxnet-cu101mkl/) with CUDA-10.1 support and MKLDNN support.
+- [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100mkl/) with CUDA-10.0 support.
+- [mxnet-cu100mkl](https://pypi.python.org/pypi/mxnet-cu100mkl/) with CUDA-10.0 support and MKLDNN support.
 - [mxnet-cu92](https://pypi.python.org/pypi/mxnet-cu92/) with CUDA-9.2 support.
 - [mxnet-cu92mkl](https://pypi.python.org/pypi/mxnet-cu92mkl/) with CUDA-9.2 support and MKLDNN support.
-- [mxnet-cu91](https://pypi.python.org/pypi/mxnet-cu91/) with CUDA-9.1 support.
-- [mxnet-cu91mkl](https://pypi.python.org/pypi/mxnet-cu91mkl/) with CUDA-9.1 support and MKLDNN support.
 - [mxnet-cu90](https://pypi.python.org/pypi/mxnet-cu90/) with CUDA-9.0 support.
 - [mxnet-cu90mkl](https://pypi.python.org/pypi/mxnet-cu90mkl/) with CUDA-9.0 support and MKLDNN support.
 - [mxnet-cu80](https://pypi.python.org/pypi/mxnet-cu80/) with CUDA-8.0 support.
@@ -32,7 +34,7 @@ This package supports Linux and Windows platforms. You may also want to check:
 
 To download CUDA, check [CUDA download](https://developer.nvidia.com/cuda-downloads). For more instructions, check [CUDA Toolkit online documentation](http://docs.nvidia.com/cuda/index.html).
 
-To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions of CUDA, check [Installing MXNet](https://mxnet.incubator.apache.org/versions/master/install/index.html) for instructions on building from source.
+To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions of CUDA, check [Installing MXNet](https://mxnet.apache.org/versions/master/install/index.html) for instructions on building from source.
 
 Installation
 ------------

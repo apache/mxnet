@@ -1,0 +1,474 @@
+<script>
+    /** Defaults **/
+    /** See options.js for the full ugly script **/
+    var versionSelect = defaultVersion = 'v1.5.1';
+    var platformSelect = 'linux';
+    var languageSelect = 'python';
+    var processorSelect = 'cpu';
+    var environSelect = 'pip';
+</script>
+<script src="{{'/assets/js/options.js'|relative_url}}"></script>
+
+<div class="install-selector">
+    <h2>Installing MXNet</h2>
+    <p>Indicate your preferred configuration. Then, follow the customized commands to install MXNet.</p>
+    <br>
+    <br>
+    <div class="install-widget">
+        <div class="row">
+            <div class="col-3 install-left">
+                <span>MXNet Version</span>
+            </div>
+            <div class="col-9 install-right">
+                <div class="dropdown">
+                    <button class="current-version dropbtn btn" type="button" data-toggle="dropdown">v1.5.1</button>
+                    <ul class="opt-group dropdown-content">
+                        <li class="opt versions"><a href="#">master</a></li>
+                        <li class="opt active versions"><a href="#">v1.5.1</a></li>
+                        <li class="opt versions"><a href="#">v1.4.1</a></li>
+                        <li class="opt versions"><a href="#">v1.3.1</a></li>
+                        <li class="opt versions"><a href="#">v1.2.1</a></li>
+                        <li class="opt versions"><a href="#">v1.1.0</a></li>
+                        <li class="opt versions"><a href="#">v1.0.0</a></li>
+                        <li class="opt versions"><a href="#">v0.12.1</a></li>
+                        <li class="opt versions"><a href="#">v0.11.0</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- START - OS Menu -->
+        <div class="row">
+            <div class="col-3 install-left">
+                <span>OS / Platform</span>
+            </div>
+            <div class="col-9 install-right">
+                <div class="btn-group opt-group" role="group">
+                    <button type="button" class="btn btn-default opt active platforms">Linux</button>
+                    <button type="button" class="btn btn-default opt platforms">MacOS</button>
+                    <button type="button" class="btn btn-default opt platforms">Windows</button>
+                    <button type="button" class="btn btn-default opt platforms">Cloud</button>
+                    <button type="button" class="btn btn-default opt platforms">Devices</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- START - Language Menu -->
+        <div class="linux macos windows">
+            <div class="row">
+                <div class="col-3 install-left">
+                    <span>Language</span>
+                </div>
+                <div class="col-9 install-right">
+                    <div class="btn-group opt-group" role="group">
+                        <button type="button" class="btn btn-default opt active languages">Python</button>
+                        <button type="button" class="btn btn-default opt languages">Scala</button>
+                        <button type="button" class="btn btn-default opt languages">Java</button>
+                        <button type="button" class="btn btn-default opt languages">Clojure</button>
+                        <button type="button" class="btn btn-default opt languages">R</button>
+                        <button type="button" class="btn btn-default opt languages">Julia</button>
+                        <button type="button" class="btn btn-default opt languages">Perl</button>
+                        <button type="button" class="btn btn-default opt languages">Cpp</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- No CPU GPU for other Devices -->
+        <div class="linux macos windows cloud">
+            <div class="row">
+                <div class="col-3 install-left">
+                    <span>GPU / CPU</span>
+                </div>
+                <div class="col-9 install-right">
+                    <div class="btn-group opt-group" role="group">
+                        <button type="button" class="btn btn-default processors opt active">GPU</button>
+                        <button type="button" class="btn btn-default processors opt">CPU</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- other devices -->
+        <div class="devices">
+            <div class="row">
+                <div class="col-3 install-left">
+                    <span>Device</span>
+                </div>
+                <div class="col-9 install-right">
+                    <div class="btn-group opt-group" role="group">
+                        <button type="button" class="btn btn-default iots opt active">Raspberry Pi</button>
+                        <button type="button" class="btn btn-default iots opt">NVIDIA Jetson</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Python Distribution -->
+        <div class="linux macos windows">
+            <div class="python">
+                <div class="cpu gpu">
+                    <div class="row">
+                        <div class="col-3 install-left">
+                            <span>Distribution</span>
+                        </div>
+                        <div class="col-9 install-right">
+                            <div class="btn-group opt-group" role="group">
+                                <button type="button" class="btn btn-default environs opt active">Pip</button>
+                                <button type="button" class="btn btn-default environs opt">Docker</button>
+                                <button type="button" class="btn btn-default environs opt">Build from Source</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Julia Options -->
+        <div class="linux macos windows">
+            <div class="julia">
+                <div class="cpu gpu">
+                    <div class="row">
+                        <div class="col-3 install-left">
+                            <span>Distribution</span>
+                        </div>
+                        <div class="col-9 install-right">
+                            <div class="btn-group opt-group" role="group">
+                                <button type="button" class="btn btn-default environs opt active">Pkg</button>
+                                <button type="button" class="btn btn-default environs opt">Build from Source</button>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<!-- END - Main Menu -->
+    <br>
+    <br>
+    <br>
+    <div class="install-content">
+        <div class="linux">
+            <div class="python">
+                 <!-- START - Linux Python CPU Installation Instructions -->
+                <div class="cpu">
+                    <div class="pip">
+                        {% markdown %}{% include /get_started/linux/python/cpu/pip.md %}{% endmarkdown %}
+                    </div> <!-- End of pip -->
+
+                    <div class="docker">
+                        {% markdown %}{% include /get_started/linux/python/cpu/docker.md %}{% endmarkdown %}
+                    </div> <!-- END of docker -->
+
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/linux/python/cpu/build-from-source.md %}{% endmarkdown %}
+                    </div><!-- END of build from source -->
+
+                </div><!-- END of CPU -->
+                <!-- END - Linux Python CPU Installation Instructions -->
+
+                <!-- START - Linux Python GPU Installation Instructions -->
+                <div class="gpu">
+                    <div class="pip">
+                        {% markdown %}{% include /get_started/linux/python/gpu/pip.md %}{% endmarkdown %}
+                    </div> <!-- END of pip -->
+
+                    <div class="docker">
+                        {% markdown %}{% include /get_started/linux/python/gpu/docker.md %}{% endmarkdown %}
+                    </div> <!-- END of docker -->
+
+                    <div class="build-from-source">
+                         {% markdown %}{% include /get_started/linux/python/gpu/build-from-source.md %}{% endmarkdown %}
+                    </div> <!-- END of build from source -->
+                </div> <!-- END of GPU -->
+            </div> <!-- END of Python -->
+            <!-- END - Linux Python Installation Instructions -->
+
+
+            <div class="r">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/linux/r/cpu.md %}{% endmarkdown %}
+                </div> <!-- END of CPU -->
+
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/linux/r/gpu.md %}{% endmarkdown %}
+                </div> <!-- END of GPU -->
+            </div> <!-- END of R -->
+
+
+            <div class="scala">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/linux/scala/cpu.md %}{% endmarkdown %}
+                </div> <!-- End of cpu -->
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/linux/scala/gpu.md %}{% endmarkdown %}
+                </div> <!-- End of gpu -->
+            </div> <!-- End of scala -->
+
+
+            <div class="clojure">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/linux/clojure/cpu.md %}{% endmarkdown %}
+                </div> <!-- End of cpu -->
+
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/linux/clojure/gpu.md %}{% endmarkdown %}
+                </div> <!-- End of gpu -->
+            </div> <!-- End of clojure -->
+
+
+            <div class="java">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/linux/java/cpu.md %}{% endmarkdown %}
+                </div> <!-- End of cpu -->
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/linux/java/gpu.md %}{% endmarkdown %}
+                </div> <!-- End of gpu -->
+            </div> <!-- End of java -->
+
+            <div class="julia">
+                <div class="cpu gpu">
+                    <div class="pkg">
+                        {% markdown %}{% include /get_started/linux/julia/pkg.md %}{% endmarkdown %}
+                    </div>
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/linux/julia/build-from-source.md %}{% endmarkdown %}
+                    </div>
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of julia -->
+
+            <div class="perl">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/linux/perl/perl.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of perl -->
+
+
+            <div class="cpp">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/linux/cpp/cpp.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- END - C++-->
+
+            <br>
+            For more installation options, refer to the <a href="/get_started/ubuntu_setup.html">Ubuntu installation guide</a> and
+            <a href="/get_started/centos_setup.html">CentOS installation guide</a>.
+        </div> <!-- END - Linux -->
+
+
+        <!-- START - MacOS Python CPU Installation Instructions -->
+
+        <div class="macos">
+            <div class="python">
+                <div class="cpu">
+                    <div class="pip">
+                        {% markdown %}{% include /get_started/macos/python/cpu/pip.md %}{% endmarkdown %}
+                    </div> <!-- END of pip -->
+                    <div class="docker">
+                        {% markdown %}{% include /get_started/macos/python/cpu/docker.md %}{% endmarkdown %}
+                    </div> <!-- END of docker -->
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/macos/python/cpu/build-from-source.md %}{% endmarkdown %}
+                    </div> <!-- END of build from source -->
+                </div> <!-- END of CPU -->
+
+
+                <!-- START - Mac OS Python GPU Installation Instructions -->
+                <div class="gpu">
+                    <div class="pip docker">
+                        {% markdown %}{% include /get_started/macos/python/gpu/pip_docker.md %}{% endmarkdown %}
+                    </div>
+
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/macos/python/gpu/build-from-source.md %}{% endmarkdown %}
+                    </div> <!-- END of build from source -->
+                </div> <!-- END of GPU -->
+            </div> <!-- END of Python -->
+
+
+            <!-- START - MacOS R CPU Installation Instructions -->
+            <div class="r">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/macos/r/cpu.md %}{% endmarkdown %}
+                </div> <!-- END of CPU -->
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/macos/r/gpu.md %}{% endmarkdown %}
+                </div> <!-- END of GPU -->
+            </div> <!-- END of R -->
+
+            <div class="scala">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/macos/scala/cpu.md %}{% endmarkdown %}
+                </div> <!-- End of cpu  -->
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/macos/scala/gpu.md %}{% endmarkdown %}
+                </div>
+            </div> <!-- End of scala -->
+
+            <div class="clojure">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/macos/clojure/cpu.md %}{% endmarkdown %}
+                </div> <!-- End of cpu  -->
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/macos/clojure/gpu.md %}{% endmarkdown %}
+                </div> <!-- End of gpu -->
+            </div> <!-- End of clojure -->
+
+
+            <div class="java">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/macos/java/cpu.md %}{% endmarkdown %}
+                </div> <!-- End of cpu  -->
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/macos/java/gpu.md %}{% endmarkdown %}
+                </div>
+            </div> <!-- End of java -->
+
+
+            <div class="julia">
+                <div class="cpu gpu">
+                    <div class="pkg">
+                        {% markdown %}{% include /get_started/macos/julia/pkg.md %}{% endmarkdown %}
+                    </div>
+
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/macos/julia/build-from-source.md %}{% endmarkdown %}
+                    </div>
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of julia -->
+
+            <div class="perl">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/macos/perl/perl.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of julia -->
+
+            <div class="cpp">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/macos/cpp/cpp.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div>
+            <br>
+            For more installation options, refer to the <a href="/get_started/osx_setup.html">MXNet macOS installation guide</a>.
+        </div> <!-- END - Mac OS -->
+
+
+        <div class="windows">
+            <div class="python">
+                <div class="cpu">
+                    <div class="pip">
+                        {% markdown %}{% include /get_started/windows/python/cpu/pip.md %}{% endmarkdown %}
+                    </div> <!-- End of pip -->
+
+                    <div class="docker">
+                        {% markdown %}{% include /get_started/windows/python/cpu/docker.md %}{% endmarkdown %}
+                    </div> <!-- End of docker -->
+
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/windows/python/cpu/build-from-source.md %}{% endmarkdown %}
+                    </div> <!-- End of Build from source -->
+                </div> <!-- End of CPU -->
+
+
+                <div class="gpu">
+                    <div class="pip">
+                        {% markdown %}{% include /get_started/windows/python/gpu/pip.md %}{% endmarkdown %}
+                    </div> <!-- End of pip -->
+
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/windows/python/gpu/build-from-source.md %}{% endmarkdown %}
+                    </div> <!-- End of build from source -->
+                </div> <!-- End of GPU -->
+            </div> <!-- End of Python -->
+
+
+            <!-- START - Windows R CPU Installation Instructions -->
+
+            <div class="r">
+                <div class="cpu">
+                    {% markdown %}{% include /get_started/windows/r/cpu.md %}{% endmarkdown %}
+                </div> <!-- END - Windows R CPU -->
+
+                <div class="gpu">
+                    {% markdown %}{% include /get_started/windows/r/gpu.md %}{% endmarkdown %}
+                </div> <!-- END of GPU -->
+            </div> <!-- END - Windows R -->
+
+            <div class="scala">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/windows/scala/scala.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of scala -->
+
+            <div class="clojure">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/windows/clojure/clojure.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of clojure -->
+
+            <div class="java">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/windows/java/java.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of java -->
+
+            <div class="julia">
+                <div class="cpu gpu">
+                    <div class="pkg">
+                        {% markdown %}{% include /get_started/windows/julia/pkg.md %}{% endmarkdown %}
+                    </div>
+                    <div class="build-from-source">
+                        {% markdown %}{% include /get_started/windows/julia/build-from-source.md %}{% endmarkdown %}
+                    </div>
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of julia -->
+
+            <div class="perl">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/windows/perl/perl.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of perl -->
+
+            <div class="cpp">
+                <div class="cpu gpu">
+                    {% markdown %}{% include /get_started/windows/cpp/cpp.md %}{% endmarkdown %}
+                </div> <!-- End of cpu gpu -->
+            </div> <!-- End of C++ -->
+
+            For more installation options, refer to the <a href="/get_started/windows_setup.html">MXNet Windows installation guide</a>.
+        </div> <!-- End of Windows -->
+
+
+        <!-- START - Cloud Python Installation Instructions -->
+
+        <div class="cloud">
+            <div class="gpu">
+                {% markdown %}{% include /get_started/cloud/gpu.md %}{% endmarkdown %}
+            </div> <!-- END gpu -->
+
+            <div class="cpu">
+                {% markdown %}{% include /get_started/cloud/cpu.md %}{% endmarkdown %}
+
+            </div> <!-- end cpu -->
+        </div> <!-- END - Cloud Python Installation Instructions -->
+
+
+        <!-- DEVICES -->
+        <div class="devices">
+            <div class="raspberry-pi">
+                {% markdown %}{% include /get_started/devices/raspberry_pi.md %}{% endmarkdown %}
+            </div> <!-- End of raspberry pi -->
+
+
+            <div class="nvidia-jetson">
+                {% markdown %}{% include /get_started/devices/nvidia-jetson.md %}{% endmarkdown %}
+            </div> <!-- End of jetson -->
+        </div> <!-- End of devices -->
+    </div>
+</div>
+

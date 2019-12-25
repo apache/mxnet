@@ -32,11 +32,41 @@ NNVM_REGISTER_OP(_np_sum)
 NNVM_REGISTER_OP(_backward_np_sum)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu>);
 
+NNVM_REGISTER_OP(_np_max)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeCompute<gpu, mshadow::red::maximum>);
+
+NNVM_REGISTER_OP(_backward_np_max)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeBackward<gpu, mshadow_op::eq>);
+
+NNVM_REGISTER_OP(_np_min)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeCompute<gpu, mshadow::red::minimum>);
+
+NNVM_REGISTER_OP(_backward_np_min)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeBackward<gpu, mshadow_op::eq>);
+
 NNVM_REGISTER_OP(_np_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::product, true>);
 
 NNVM_REGISTER_OP(_backward_np_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
+
+NNVM_REGISTER_OP(_npi_average)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_average)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageBackward<gpu>);
+
+NNVM_REGISTER_OP(_npi_mean)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true, true>);
+
+NNVM_REGISTER_OP(_backward_np_mean)
+.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseNone<gpu, true>);
+
+NNVM_REGISTER_OP(_npi_std)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, true>);
+
+NNVM_REGISTER_OP(_npi_var)
+.set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, false>);
 
 NNVM_REGISTER_OP(_np_broadcast_to)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToForward<gpu>);

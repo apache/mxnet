@@ -97,6 +97,10 @@ def _prepare_op_benchmark_result(op, op_bench_result, profiler):
     max_mem_usage = "---"
     inputs = "---"
     avg_time = "---"
+    p50_time = "---"
+    p90_time = "---"
+    p99_time = "---"
+
     for key, value in op_bench_result.items():
         if "avg_time_forward" in key:
             avg_forward_time = value
@@ -108,12 +112,19 @@ def _prepare_op_benchmark_result(op, op_bench_result, profiler):
             inputs = value
         elif "avg_time" in key:
             avg_time = value
+        elif "p50_time" in key:
+            p50_time = value
+        elif "p90_time" in key:
+            p90_time = value
+        elif "p99_time" in key:
+            p99_time = value
+
     result = ""
     if profiler == "native":
         result = "| {} | {} | {} | {} | {} |".format(operator_name,
                  avg_forward_time, avg_backward_time, max_mem_usage, inputs)
     elif profiler == "python":
-        result = "| {} | {} | {} |".format(operator_name, avg_time, inputs)
+        result = "| {} | {} | {} | {} | {} | {} |".format(operator_name, avg_time, p50_time, p90_time, p99_time, inputs)
     return result
 
 
@@ -132,8 +143,8 @@ def _prepare_markdown(results, runtime_features=None, profiler='native'):
             " | Inputs |")
     elif profiler == 'python':
         results_markdown.append(
-            "| Operator | Avg Time (ms) | Inputs |")
-    results_markdown.append("| :---: | :---: | :---: |")
+            "| Operator | Avg Time (ms) | P50 Time (ms) | P90 Time (ms) | P99 Time (ms) | Inputs |")
+    results_markdown.append("| :---: | :---: | :---: | :---: | :---: | :---: |")
 
     for op, op_bench_results in sorted(results.items(), key=itemgetter(0)):
         for op_bench_result in op_bench_results:

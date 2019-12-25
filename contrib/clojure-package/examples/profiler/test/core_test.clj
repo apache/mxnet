@@ -27,5 +27,4 @@
 (deftest run-profiler
 	(profiler/run)
 	(let [new-file (clojure.java.io/as-file profiler/profiler-name)]
-		(is (.exists new-file))
-		(is (> 10000 (- (System/currentTimeMillis) (.lastModified new-file))))))
+		(is (.exists new-file))))

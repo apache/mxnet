@@ -1,0 +1,52 @@
+{% extends "basic/layout.html" %}
+
+{%- block doctype -%}
+<!DOCTYPE html>
+{%- endblock %}
+{% block htmltitle %}
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    {{ super() }}
+{% endblock %}
+
+
+{% set css_files = css_files + [
+    '_static/material-design-lite-1.3.0/material.' + theme_primary_color|e + '-' + theme_accent_color|e + '.min.css',
+    '_static/sphinx_materialdesign_theme.css',
+    '_static/fontawesome/all.css',
+    '_static/fonts.css',
+] %}
+
+    {%- block header %}
+	<script type="text/javascript" src="{{ pathto('_static/sphinx_materialdesign_theme.js', 1) }} "></script>
+    {% endblock %}
+{%- block relbar1 %}{% endblock %}
+{%- block relbar2 %}{% include "relations.html" %}{% endblock %}
+{%- block sidebar2 %}{% endblock %}
+
+{%- block body_tag %}
+<body>
+    {%- block header_top %}{% include "header_top.html" %}{% endblock %}
+    <div class="mdl-layout mdl-js-layout {% if theme_fixed_header|tobool %}mdl-layout--fixed-header{% endif %} {% if theme_fixed_drawer|tobool %}mdl-layout--fixed-drawer{% endif %}">
+        {%- block md_header %}{% include "header.html" %}{% endblock %}
+        {%- block sidebar1 %}{% include "drawer.html" %}{% endblock %}
+        <main class="mdl-layout__content" tabIndex="0">
+{% endblock %}
+
+{%- block document %}
+        <div class="page-content" role="main">
+        {% block body %} {% endblock %}
+        </div>
+        <div class="side-doc-outline">
+            <div class="side-doc-outline--content">
+                {%- block right_sidebar %} {% include "localtoc.html" %}{% endblock %}
+            </div>
+        </div>                    
+{% endblock %}
+        {%- block footer %}
+            {% if theme_show_footer|tobool %}{% include "footer.html" %}{% endif %}
+        {% endblock %}
+        </main>
+    </div>
+</body>

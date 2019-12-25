@@ -70,7 +70,7 @@ https://drive.google.com/drive/folders/0By0bAi7hOBAFUHVXd1JCN3MwTEU
                     - predict.py ...
     ```
 
-4. Apache MXNet is installed on the machine. For instructions, go to the link: https://mxnet.incubator.apache.org/install/
+4. Apache MXNet is installed on the machine. For instructions, go to the link: https://mxnet.apache.org/install/
 
 
 

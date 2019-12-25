@@ -1,0 +1,25 @@
+---
+layout: default
+---
+<script>
+
+</script>
+<article class="post">
+
+    <header class="post-header wrapper">
+        <h1 class="post-title">{{ page.title | escape }}</h1>
+        <h3>{{page.subtitle}}</h3>
+
+        {%- if page.action -%}
+        <a style="float:left; margin-top:20px" href="{{page.action_url | relative_url}}" class="btn btn-action">{{page.action}}
+            <span class="span-accented">›</span></a>
+        {%- endif -%}
+    </header>
+
+    <div class="post-content">
+        <div class="wrapper">
+            {{ content }}
+        </div>
+    </div>
+
+</article>

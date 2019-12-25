@@ -22,56 +22,45 @@
  * \file np_true_divide.cc
  * \brief CPU Implementation of true_divide operator.
  */
-#include "../tensor/elemwise_binary_broadcast_op.h"
-#include "../tensor/elemwise_binary_scalar_op.h"
+
+#include "./np_true_divide-inl.h"
 
 namespace mxnet {
 namespace op {
+
+int TrueDivideOutType(int ltype, int rtype) {
+  if (common::is_float(ltype) && common::is_float(rtype)) {
+    // If both inputs are float, return the one with the higher precision
+    return common::get_more_precise_type(ltype, rtype);
+  } else if (common::is_float(ltype) || common::is_float(rtype)) {
+    // If only one of the inputs is float, return that float type
+    return (common::is_float(ltype)) ? ltype : rtype;
+  }
+  // If neither of the inputs is float, return the default float32 type
+  return mshadow::kFloat32;
+}
 
 template <int num_inputs>
 bool TrueDivideType(const nnvm::NodeAttrs& attrs,
                     std::vector<int>* in_attrs,
                     std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), static_cast<size_t>(num_inputs));
+  CHECK_GT(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
+
   for (const int dtype : *in_attrs) {
     if (dtype == -1) return false;
   }
-  if (num_inputs == 2) {
-    const int lhs_dtype = in_attrs->at(0);
-    const int rhs_dtype = in_attrs->at(1);
-    CHECK_EQ(lhs_dtype, rhs_dtype)
-        << "_true_divide currently only supports same dtype for dividend and divisor";
-  }
-  auto is_float = [](const int dtype) {
-    return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
-  };
 
-  for (const int dtype : *in_attrs) {
-    CHECK(is_float(dtype)) << "_true_divide currently only supports float dtype";
-  }
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  const int lhs_dtype = in_attrs->at(0);
+  const int rhs_dtype = (num_inputs == 2) ?
+                        in_attrs->at(1) :
+                        (common::is_float(lhs_dtype) ? lhs_dtype : mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, TrueDivideOutType(lhs_dtype, rhs_dtype));
   return true;
 }
 
 NNVM_REGISTER_OP(_npi_true_divide)
-.describe(R"code(
-Returns a true division of the inputs, element-wise.
-
-It currently only supports dtype float16, float32, and float64.
-
-Example::
-
-   x = [[ 6.,  6.,  6.],
-        [ 6.,  6.,  6.]]
-
-   y = [[ 2.],
-        [ 3.]]
-
-   _true_divide(x, y) = [[ 3.,  3.,  3.],
-                         [ 2.,  2.,  2.]]
-
-)code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -84,7 +73,13 @@ Example::
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, op::mshadow_op::div>)
+#ifdef _WIN32
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+#endif
+.set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"})
 .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
 .add_argument("rhs", "NDArray-or-Symbol", "Divisor array");
@@ -101,7 +96,13 @@ NNVM_REGISTER_OP(_npi_true_divide_scalar)
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, op::mshadow_op::div>)
+#ifdef _WIN32
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+#endif
+.set_attr<FCompute>("FCompute<cpu>", TrueDivideScalarCompute<cpu, op::mshadow_op::true_divide>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_div_scalar"})
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "float", "scalar input");
@@ -118,8 +119,14 @@ NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rdiv>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_rdiv_scalar"})
+#ifdef _WIN32
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+#endif
+.set_attr<FCompute>("FCompute<cpu>", TrueDivideScalarCompute<cpu, mshadow_op::rtrue_divide>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rdiv_scalar"})
 .add_argument("data", "NDArray-or-Symbol", "source input")
 .add_argument("scalar", "float", "scalar input");
 

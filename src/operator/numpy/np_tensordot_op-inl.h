@@ -140,7 +140,7 @@ inline mxnet::TShape GetReorderedShape(const mxnet::TShape& shape, const mxnet::
 }
 
 /**
- * gets matrix dot. Reshapes tensor a as ad1-by-ad2 matrix, tensor b as bd1-by-bd2 matrix, then 
+ * gets matrix dot. Reshapes tensor a as ad1-by-ad2 matrix, tensor b as bd1-by-bd2 matrix, then
  * calculates matrix dot a * b and stores in tensor out.
  */
 template<typename xpu>
@@ -205,7 +205,8 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
                    const TBlob& a,
                    const TBlob& b,
                    const TBlob& out,
-                   const std::vector<OpReqType>& req) {
+                   const std::vector<OpReqType>& req,
+                   const Tensor<xpu, 1, char>& workspace) {
   if (req[0] == kNullOp) {
     return;
   }
@@ -264,10 +265,8 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
       mxnet::TShape a_temp_shape = GetReorderedShape(a_shape, a_axes);
       mxnet::TShape b_temp_shape = GetReorderedShape(b_shape, b_axes);
 
-      Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
-        (Shape1(a.Size() + b.Size()), s);
       DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-      DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
+      DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a.Size() * sizeof(DType));
       TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
       TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
 
@@ -279,6 +278,46 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
       MatrixDot<xpu>(ctx, a_res, b_res, out, req[0], ad1, ad2, bd1, bd2);
     }
   });
+}
+
+/**
+ * Calculates workspace size of tensordot.
+ */
+template<typename xpu>
+size_t TensordotWorkspaceSize(const Tuple<int>& a_axes_summed,
+                              const Tuple<int>& b_axes_summed,
+                              const TBlob& a,
+                              const TBlob& b,
+                              const TBlob& out,
+                              const std::vector<OpReqType>& req) {
+  if (req[0] == kNullOp) {
+    return 0U;
+  }
+
+  if (out.shape_.Size() == 0U) {
+    return 0U;  // zero-size output, no need to launch kernel
+  }
+
+  const mxnet::TShape& a_shape = a.shape_;
+  const mxnet::TShape& b_shape = b.shape_;
+
+  MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, DType, {
+    if (a_shape.Size() == 0U || b_shape.Size() == 0U) {
+      // 0-size input
+      return 0U;
+    } else if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
+      // Both 0-D scalars, equivalent to multiply
+      return 0U;
+    } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+      // Either of them is a scalar, just scale by one of them
+      return 0U;
+    } else {
+      // Two tensors of at least 1 dimensions.
+      return (a.Size() + b.Size()) * sizeof(DType);
+    }
+  });
+  LOG(FATAL) << "InternalError: cannot reach here";
+  return 0U;
 }
 
 /**
@@ -306,7 +345,10 @@ void TensordotOpForward(const nnvm::NodeAttrs& attrs,
   ShiftAxes(&a_axes_summed, a_shape.ndim());
   ShiftAxes(&b_axes_summed, b_shape.ndim());
 
-  TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req);
+  size_t workspace_size = TensordotWorkspaceSize<xpu>(a_axes_summed, b_axes_summed, a, b, out, req);
+  Tensor<xpu, 1, char> workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
+    Shape1(workspace_size), ctx.get_stream<xpu>());
+  TensordotImpl<xpu>(a_axes_summed, b_axes_summed, ctx, a, b, out, req, workspace);
 }
 
 /**
@@ -332,7 +374,8 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
                            const TBlob& b,
                            const TBlob& grad_a,
                            const TBlob& grad_b,
-                           const std::vector<OpReqType>& req) {
+                           const std::vector<OpReqType>& req,
+                           const Tensor<xpu, 1, char>& workspace) {
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   const mxnet::TShape& a_shape = a.shape_;
@@ -366,12 +409,15 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       const OpReqType& scalar_req = (a_shape.ndim() == 0) ? req[0] : req[1];
       ASSIGN_DISPATCH(tensor_grad_, tensor_req,
                       broadcast_scalar(scalar_, tensor_grad_.shape_) * out_grad_);
-      Tensor<xpu, 1, DType> workspace =
-        ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
-      ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * out_grad_);
+      Tensor<xpu, 1, DType> dtypespace =
+        Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace.dptr_),
+                              workspace.shape_,
+                              workspace.stride_,
+                              workspace.stream_);
+      ASSIGN_DISPATCH(dtypespace, kWriteTo, tensor_ * out_grad_);
 
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
-        ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+        ctx, {TBlob(dtypespace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
     } else {
       // Two tensors of at least 1 dimensions.
       Tuple<int> a_axes_remained;
@@ -405,12 +451,13 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       mxnet::TShape b_temp_shape(GetReorderedShape(b_shape, b_axes));
       mxnet::TShape b_T_temp_shape(GetReorderedShape(b_shape, b_T_axes));
 
-      Tensor<xpu, 1, DType> workspace = ctx.requested[0].get_space_typed<xpu, 1, DType>
-        (Shape1((a.Size() + b.Size()) * 2), s);
       DType* a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
-      DType* a_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + a.Size());
-      DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size());
-      DType* b_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size() + b.Size());
+      DType* a_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ + a.Size() * sizeof(DType));
+      DType* b_ptr = reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size() * sizeof(DType));
+      DType* b_ptr2 = reinterpret_cast<DType*>(workspace.dptr_ +
+                                               (2 * a.Size() +
+                                               b.Size()) *
+                                               sizeof(DType));
 
       TBlob a_res = TBlob(a_ptr, a_temp_shape, xpu::kDevMask);
       TBlob b_res = TBlob(b_ptr, b_temp_shape, xpu::kDevMask);
@@ -429,6 +476,39 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b_res, grad_b, GetReverseShape(b_axes));
     }
   });
+}
+
+/**
+ * Calculates workspace size of tensordot backward.
+ */
+template<typename xpu>
+size_t TensordotBackwardWorkspaceSize(const Tuple<int>& a_axes_summed,
+                                      const Tuple<int>& b_axes_summed,
+                                      const TBlob& out_grad,
+                                      const TBlob& a,
+                                      const TBlob& b,
+                                      const TBlob& grad_a,
+                                      const TBlob& grad_b,
+                                      const std::vector<OpReqType>& req) {
+  const mxnet::TShape& a_shape = a.shape_;
+  const mxnet::TShape& b_shape = b.shape_;
+
+  if ((a_shape.Size() == 0U) || (b_shape.Size() == 0U)) {
+    return 0U;  // zero-size output, no need to launch kernel
+  }
+  MSHADOW_REAL_TYPE_SWITCH(out_grad.type_flag_, DType, {
+    if (a_shape.ndim() == 0 && b_shape.ndim() == 0) {
+      // Both 0-D scalars, equivalent to multiply
+      return 0U;
+    } else if (a_shape.ndim() == 0 || b_shape.ndim() == 0) {
+      // Either of them is a scalar, just scale by one of them
+      return out_grad.shape_.Size() * sizeof(DType);
+    } else {
+      return (a.Size() + b.Size()) * 2 * sizeof(DType);
+    }
+  });
+  LOG(FATAL) << "InternalError: cannot reach here";
+  return 0U;
 }
 
 /**
@@ -458,8 +538,14 @@ void TensordotOpBackward(const nnvm::NodeAttrs& attrs,
   ShiftAxes(&a_axes_summed, a_shape.ndim());
   ShiftAxes(&b_axes_summed, b_shape.ndim());
 
+  size_t workspace_size = TensordotBackwardWorkspaceSize<xpu>(a_axes_summed, b_axes_summed,
+                                                              out_grad, a, b, grad_a,
+                                                              grad_b, req);
+  Tensor<xpu, 1, char> workspace =
+    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size),
+                                                   ctx.get_stream<xpu>());
   TensordotBackwardImpl<xpu>(a_axes_summed, b_axes_summed, ctx, out_grad, a, b, grad_a,
-                             grad_b, req);
+                             grad_b, req, workspace);
 }
 
 struct TensordotIntAxesParam : public dmlc::Parameter<TensordotIntAxesParam> {

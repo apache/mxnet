@@ -98,18 +98,6 @@ set(USE_RANDOM OFF)
 # Whether use NNPack
 set(USE_NNPACK OFF)
 
-# Whether use CuDNN
-if(USE_CUDNN AND USE_CUDA)
-    detect_cuDNN()
-    if(HAVE_CUDNN)
-        set(USE_CUDNN ON)
-    else()
-        set(USE_CUDNN OFF)
-    endif()
-else()
-    set(USE_CUDNN OFF)
-endif()
-
 # Whether use cuBLAS
 set(USE_CUBLAS OFF)
 
@@ -133,3 +121,6 @@ set(USE_VTA_TSIM OFF)
 
 # Whether use Relay debug mode
 set(USE_RELAY_DEBUG OFF)
+
+# Use OPENMP thread pool to be compatible with MXNet
+set(USE_OPENMP ON)

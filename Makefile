@@ -84,8 +84,6 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
-	MKLROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
-	export USE_MKLML = 1
 endif
 
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
@@ -94,6 +92,10 @@ include $(DMLC_CORE)/make/dmlc.mk
 # all tge possible warning tread
 WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+# use old thread local implementation in DMLC-CORE
+CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
+# disable stack trace in exception by default.
+CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -109,6 +111,8 @@ endif
 CFLAGS += -I$(TPARTYDIR)/mshadow/ -I$(TPARTYDIR)/dmlc-core/include -fPIC -I$(NNVM_PATH)/include -I$(DLPACK_PATH)/include -I$(TPARTYDIR)/tvm/include -Iinclude $(MSHADOW_CFLAGS)
 LDFLAGS = -pthread -ldl $(MSHADOW_LDFLAGS) $(DMLC_LDFLAGS)
 
+# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
+# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
 ifeq ($(ENABLE_TESTCOVERAGE), 1)
         CFLAGS += --coverage
         LDFLAGS += --coverage
@@ -147,14 +151,9 @@ endif
 
 ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMXNET_USE_MKLDNN=1
-	CFLAGS += -DUSE_MKL=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
-	ifneq ($(MKLDNNROOT), $(MKLROOT))
-		CFLAGS += -I$(MKLROOT)/include
-		LDFLAGS += -L$(MKLROOT)/lib
-	endif
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	LIB_DEP += $(MKLDNNROOT)/lib/libdnnl.a
 endif
 
 # setup opencv
@@ -218,14 +217,18 @@ ifeq ($(USE_LAPACK), 1)
 ifeq ($(USE_BLAS),$(filter $(USE_BLAS),blas openblas atlas mkl))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.a))
 ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.so))
+ifeq (,$(wildcard $(USE_LAPACK_PATH)/liblapack.dylib))
 ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/liblapack.dylib))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
 endif
 endif
 endif
@@ -451,7 +454,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint docs clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib
@@ -460,6 +463,20 @@ SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
+
+ifeq ($(USE_TVM_OP), 1)
+LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
+CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
+LDFLAGS += -L$(ROOTDIR)/lib -ltvm_runtime -Wl,-rpath,'$${ORIGIN}'
+
+TVM_USE_CUDA := OFF
+ifeq ($(USE_CUDA), 1)
+	TVM_USE_CUDA := ON
+	ifneq ($(USE_CUDA_PATH), NONE)
+		TVM_USE_CUDA := $(USE_CUDA_PATH)
+	endif
+endif
+endif
 
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
@@ -580,13 +597,6 @@ lib/libmxnet.so: $(ALLX_DEP)
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -shared -o $@ $(filter-out %libnnvm.a, $(filter %.o %.a, $^)) $(LDFLAGS) \
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
-ifeq ($(USE_MKLDNN), 1)
-ifeq ($(UNAME_S), Darwin)
-	install_name_tool -change '@rpath/libmklml.dylib' '@loader_path/libmklml.dylib' $@
-	install_name_tool -change '@rpath/libiomp5.dylib' '@loader_path/libiomp5.dylib' $@
-	install_name_tool -change '@rpath/libmkldnn.0.dylib' '@loader_path/libmkldnn.0.dylib' $@
-endif
-endif
 
 $(PS_PATH)/build/libps.a: PSLITE
 
@@ -598,34 +608,29 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
 
-ifeq ($(USE_TVM_OP), 1)
-LIB_DEP += lib/libtvm_runtime.so lib/libtvmop.so
-CFLAGS += -I$(TVM_PATH)/include -DMXNET_USE_TVM_OP=1
-LDFLAGS += -L$(TVM_PATH)/build -ltvm_runtime
-
-TVM_USE_CUDA := OFF
-ifeq ($(USE_CUDA), 1)
-	TVM_USE_CUDA := ON
-	ifneq ($(USE_CUDA_PATH), NONE)
-		TVM_USE_CUDA := $(USE_CUDA_PATH)
-	endif
-endif
 lib/libtvm_runtime.so:
 	echo "Compile TVM"
+	@mkdir -p $(@D)
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
 	cd $(TVM_PATH)/build; \
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
-		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF -DUSE_OPENMP=ON ..; \
 	$(MAKE) VERBOSE=1; \
+	mkdir -p $(ROOTDIR)/lib; \
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
+	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
+TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so --config $(ROOTDIR)/lib/tvmop.conf
+ifneq ($(CUDA_ARCH),)
+	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
+endif
 lib/libtvmop.so: lib/libtvm_runtime.so $(wildcard contrib/tvmop/*/*.py contrib/tvmop/*.py)
 	echo "Compile TVM operators"
-	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib:$PYTHONPATH \
-		LD_LIBRARY_PATH=lib \
-	    python3 $(ROOTDIR)/contrib/tvmop/compile.py -o $(ROOTDIR)/lib/libtvmop.so
-endif
+	@mkdir -p $(@D)
+	PYTHONPATH=$(TVM_PATH)/python:$(TVM_PATH)/topi/python:$(ROOTDIR)/contrib \
+		LD_LIBRARY_PATH=$(ROOTDIR)/lib \
+	    python3 $(ROOTDIR)/contrib/tvmop/compile.py $(TVM_OP_COMPILE_OPTIONS)
 
 NNVM_INC = $(wildcard $(NNVM_PATH)/include/*/*.h)
 NNVM_SRC = $(wildcard $(NNVM_PATH)/src/*/*/*.cc $(NNVM_PATH)/src/*/*.cc $(NNVM_PATH)/src/*.cc)
@@ -657,21 +662,11 @@ cpplint:
 	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
-	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet tools/caffe_converter/*.py
+	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
+# sample lib for MXNet extension dynamically loading custom operator
 sample_lib:
-	$(CXX) -shared -fPIC example/lib_api/mylib.cc -o libsample_lib.so -I include/mxnet
-
-doc: docs
-
-docs:
-	make -C docs html
-
-clean_docs:
-	make -C docs clean
-
-doxygen:
-	doxygen docs/Doxyfile
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
 
 # Cython build
 cython:
@@ -695,10 +690,8 @@ rpkg:
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
 
-	if [ -e "lib/libmkldnn.so.0" ]; then \
-		cp -rf lib/libmkldnn.so.0 R-package/inst/libs; \
-		cp -rf lib/libiomp5.so R-package/inst/libs; \
-		cp -rf lib/libmklml_intel.so R-package/inst/libs; \
+	if [ -e "lib/libtvm_runtime.so" ]; then \
+		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
 	fi
 
 	mkdir -p R-package/inst/include
@@ -762,23 +755,26 @@ ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
 
 ifneq ($(EXTRA_OPERATORS),)
 clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) libsample_lib.so
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
 clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
-	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~ 
+	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) libsample_lib.so
 endif
 
 clean_all: clean

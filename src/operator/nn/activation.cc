@@ -102,7 +102,7 @@ static void ActivationComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   if (SupportMKLDNNAct(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNActivationForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNActivationForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(ActivationCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -118,10 +118,7 @@ void ActivationGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), activation::GradNumInputs(param.act_type));
   if (SupportMKLDNNAct(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    // XXX: for y = relu(x), y is passed as "in_data" to Backward()
-    const bool relu = param.act_type == activation::kReLU;
-    MKLDNNActivationBackward(attrs, ctx, inputs.at(0), relu ? inputs.at(1) : inputs.at(2), req[0],
-                             outputs[0]);
+    MKLDNNRun(MKLDNNActivationBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ActivationGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }

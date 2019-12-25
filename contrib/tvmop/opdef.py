@@ -17,6 +17,8 @@
 
 # coding: utf-8
 import tvm
+import inspect
+from tvm import autotvm
 from itertools import product
 
 __OP_DEF__ = []
@@ -68,18 +70,49 @@ class OpDef:
         self.name = name
         self.target = target
         self.auto_broadcast = auto_broadcast
+        self.dispatchable = 'fallback' in inspect.signature(self.func).parameters
 
     def __call__(self, *args, **kwargs):
         return self.func(*args, **kwargs)
 
     def invoke_all(self):
         for each_kwargs in self.arg_combination:
-            if (self.attrs_valid(**each_kwargs)):
-                sch, args = self.func(**each_kwargs)
+            if self.attrs_valid(**each_kwargs):
                 name = self.name \
-                    + ''.join(["{}_{}".format(key, each_kwargs[key]) for key in self.attrs]) \
-                    + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args])
-                yield sch, args, name
+                    + ''.join(["{}_{}".format(key, each_kwargs[key]) for key in self.attrs])
+                if self.dispatchable is False:
+                    sch, args = self.func(**each_kwargs)
+                    yield sch, args, name
+                else:
+                    # register dispatch schedules
+                    config_space = autotvm.ConfigSpace()
+                    with autotvm.task.ApplyConfig(config_space):
+                            sch, args = self.func(fallback=False, **each_kwargs)
+                    for i in range(len(config_space)):
+                        config_entity = config_space.get(i)
+                        with autotvm.task.ApplyConfig(config_entity):
+                            sch, args = self.func(fallback=False, **each_kwargs)
+                        subname = name + "index_" + str(i)
+                        yield sch, args, subname
+                    # register fallback schedule
+                    config_space = autotvm.ConfigSpace()
+                    with autotvm.task.ApplyConfig(config_space):
+                            sch, args = self.func(fallback=True, **each_kwargs)
+                    subname = name + "fallback"
+                    yield sch, args, subname
+
+    def get_op_name(self, name, args):
+        return name + ''.join(["%s_%d" % (arg.dtype, len(arg.shape)) for arg in args if hasattr(arg, 'shape')])
+
+    def get_config_spaces(self):
+        for each_kwargs in self.arg_combination:
+            if self.attrs_valid(**each_kwargs) and self.dispatchable is True:
+                name = self.name \
+                    + ''.join(["{}_{}".format(key, each_kwargs[key]) for key in self.attrs])
+                config_space = autotvm.ConfigSpace()
+                with autotvm.task.ApplyConfig(config_space):
+                    self.func(fallback=False, **each_kwargs)
+                yield config_space, name
 
     def get_binds(self, args):
         if self.auto_broadcast:
@@ -107,6 +140,7 @@ def defop(name, target=None, auto_broadcast=False, **kwargs):
     """
     assert name is not None and len(name) > 0
     target = "cpu" if target is None else target
+
     def _defop(func):
         opdef = OpDef(func, name, target, auto_broadcast, **kwargs)
         __OP_DEF__.append(opdef)

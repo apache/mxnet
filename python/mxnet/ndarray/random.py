@@ -220,8 +220,8 @@ def randn(*shape, **kwargs):
     dtype = kwargs.pop('dtype', _Null)
     ctx = kwargs.pop('ctx', None)
     out = kwargs.pop('out', None)
-    assert isinstance(loc, (int, float))
-    assert isinstance(scale, (int, float))
+    assert isinstance(loc, (int, float, NDArray))
+    assert isinstance(scale, (int, float, NDArray))
     return _random_helper(_internal._random_normal, _internal._sample_normal,
                           [loc, scale], shape, dtype, ctx, out, kwargs)
 

@@ -54,14 +54,9 @@
       <directory>${MXNET_DIR}/lib</directory>
       <includes>
         <include>libmxnet.so</include>
+        <include>libtvm_runtime.so</include>
         <include>libgfortran.so.3</include>
         <include>libquadmath.so.0</include>
-        <include>libiomp5.so</include>
-        <include>libiomp5.dylib</include>
-        <include>libmklml_intel.so</include>
-        <include>libmklml.dylib</include>
-        <include>libmkldnn.so.0</include>
-        <include>libmkldnn.0.dylib</include>
       </includes>
       <outputDirectory>lib/native</outputDirectory>
     </fileSet>

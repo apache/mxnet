@@ -25,6 +25,7 @@ use AI::MXNet::TestUtils qw(almost_equal dies_ok);
 use Scalar::Util qw(refaddr);
 use AI::MXNet::Base;
 $ENV{MXNET_STORAGE_FALLBACK_LOG_VERBOSE} = 0;
+$ENV{MXNET_SUBGRAPH_VERBOSE} = 0;
 
 sub test_multi_trainer
 {
@@ -252,4 +253,3 @@ sub test_trainer_reset_kv
 }
 
 test_trainer_reset_kv();
-

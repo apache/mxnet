@@ -43,6 +43,10 @@ import Base.Iterators: filter
 #  exports
 ###############################################################################
 
+# exceptions.jl
+export AbstractMXError,
+       MXError
+
 # symbolic-node.jl
 export SymbolicNode,
        Variable,
@@ -74,7 +78,13 @@ export Executor,
 # context.jl
 export Context,
        cpu,
-       gpu
+       gpu,
+       num_gpus,
+       gpu_memory_info,
+       current_context,
+       @context,
+       @cpu,
+       @gpu
 
 # model.jl
 export AbstractModel,
@@ -135,6 +145,7 @@ export to_graphviz
 #  includes
 ###############################################################################
 
+include("exceptions.jl")
 include("base.jl")
 
 include("runtime.jl")

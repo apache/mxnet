@@ -17,7 +17,7 @@
 
 (ns tutorial.module
   "A REPL tutorial of the MXNet Clojure API for Module, based on
-  https://mxnet.incubator.apache.org/api/clojure/module.html"
+  https://mxnet.apache.org/api/clojure/module.html"
   (:require [clojure.java.io :as io]
             [clojure.java.shell :refer [sh]]
             [org.apache.clojure-mxnet.eval-metric :as eval-metric]

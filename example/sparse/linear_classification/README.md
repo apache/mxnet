@@ -19,8 +19,8 @@ Linear Classification Using Sparse Matrix Multiplication
 ===========
 This examples trains a linear model using the sparse feature in MXNet. This is for demonstration purpose only.
 
-The example utilizes the sparse data loader ([mx.io.LibSVMIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter)),
-the sparse dot operator and [sparse gradient updaters](https://mxnet.incubator.apache.org/versions/master/api/python/ndarray/sparse.html#updater)
+The example utilizes the sparse data loader ([mx.io.LibSVMIter](https://mxnet.apache.org/versions/master/api/python/io/io.html#mxnet.io.LibSVMIter)),
+the sparse dot operator and [sparse gradient updaters](https://mxnet.apache.org/versions/master/api/python/ndarray/sparse.html#updater)
 to train a linear model on the
 [Avazu](https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#avazu) click-through-prediction dataset.
 

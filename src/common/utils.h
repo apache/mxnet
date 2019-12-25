@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
+#include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -364,6 +365,30 @@ inline bool ContainsStorageType(const std::vector<int>& ndstypes,
   return false;
 }
 
+inline std::string dtype_string(const int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat32:
+      return "float";
+    case mshadow::kFloat64:
+      return "double";
+    case mshadow::kFloat16:
+      return "half";
+    case mshadow::kUint8:
+      return "unsigned char";
+    case mshadow::kInt8:
+      return "char";
+    case mshadow::kInt32:
+      return "int";
+    case mshadow::kInt64:
+      return "long long";
+    case mshadow::kBool:
+      return "bool";
+    default:
+      LOG(FATAL) << "Unknown type enum " << dtype;
+  }
+  return "unknown";
+}
+
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const DispatchMode x) {
   switch (x) {
@@ -410,6 +435,15 @@ inline std::string dev_type_string(const int dev_type) {
   return "unknown";
 }
 
+inline std::string attr_value_string(const nnvm::NodeAttrs& attrs,
+                                     const std::string& attr_name,
+                                     std::string default_val = "") {
+  if (attrs.dict.find(attr_name) == attrs.dict.end()) {
+    return default_val;
+  }
+  return attrs.dict.at(attr_name);
+}
+
 /*! \brief get string representation of the operator stypes */
 inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -438,10 +472,10 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
 
 /*! \brief get string representation of the operator */
 inline std::string operator_string(const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
   std::string result = "";
   std::vector<int> in_stypes;
   std::vector<int> out_stypes;
@@ -735,7 +769,7 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape
  */
 template<typename DType>
 inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
-  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_COPY_SIZE", 200000);
+  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
   if (size >= copy_block_size) {
     #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (index_t i = 0; i < size; ++i) {
@@ -743,6 +777,24 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
     }
   } else {
     std::memcpy(dst, src, sizeof(DType) * size);
+  }
+}
+
+/*!
+ * \breif parallelize add by OpenMP
+ */
+template<typename DType>
+inline void ParallelAdd(DType* dst, const DType* src, index_t size) {
+  static index_t add_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
+  if (size >= add_block_size) {
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] += src[i];
+    }
+  } else {
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] += src[i];
+    }
   }
 }
 
@@ -802,6 +854,79 @@ inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
   for (size_t i = 0; i < shapes->size(); ++i) {
     ConvertToLegacyShape(&(shapes->at(i)));
   }
+}
+void ExecuteMonInputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+void ExecuteMonOutputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+/*!
+ * \brief This is function can return the output names of a NodeEntry.
+ */
+static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
+  nnvm::Symbol sym;
+  sym.outputs.push_back(e);
+  return sym.ListOutputNames()[0];
+}
+
+inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
+  // convert negative axes to positive values
+  const int ndim = src.ndim();
+  mxnet::TShape axes = src;
+  for (int i = 0; i < ndim; ++i) {
+    if (axes[i] < 0) {
+      axes[i] += ndim;
+    }
+    CHECK(axes[i] >= 0 && axes[i] < ndim) << "axes[" << i << "]="
+                                          << axes[i] << " exceeds the range ["
+                                          << 0 << ", " << ndim << ")";
+  }
+  return axes;
+}
+
+inline bool is_float(const int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+}
+
+inline int get_more_precise_type(const int type1, const int type2) {
+  if (type1 == type2) return type1;
+  if (is_float(type1) && is_float(type2)) {
+    if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
+      return mshadow::kFloat64;
+    }
+    if (type1 == mshadow::kFloat32 || type2 == mshadow::kFloat32) {
+      return mshadow::kFloat32;
+    }
+    return mshadow::kFloat16;
+  } else if (is_float(type1) || is_float(type2)) {
+    return is_float(type1) ? type1 : type2;
+  }
+  if (type1 == mshadow::kInt64 || type2 == mshadow::kInt64) {
+    return mshadow::kInt64;
+  }
+  if (type1 == mshadow::kInt32 || type2 == mshadow::kInt32) {
+    return mshadow::kInt32;
+  }
+  CHECK(!((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+          (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)))
+    << "1 is UInt8 and 1 is Int8 should not get here";
+  if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
+    return mshadow::kUint8;
+  }
+  return mshadow::kInt8;
+}
+
+inline int np_binary_out_infer_type(const int type1, const int type2) {
+  if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+      (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
+    return mshadow::kInt32;
+  }
+  return get_more_precise_type(type1, type2);
 }
 
 }  // namespace common

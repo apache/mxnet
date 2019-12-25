@@ -45,7 +45,7 @@ class MKLDNNSliceFwd {
                  const NDArray &in,
                  const NDArray &out);
   void SetNewMem(const mkldnn::memory &input, const mkldnn::memory &output);
-  const mkldnn::reorder &GetPd() const;
+  void Register();
 
  private:
   std::shared_ptr<mkldnn::memory> data_;
@@ -57,7 +57,7 @@ typedef ParamOpSign<SliceParam> MKLDNNSliceSignature;
 MKLDNNSliceFwd &GetSliceForward(const SliceParam &param, const bool is_train,
                  const NDArray &in_data, const NDArray &out_data);
 
-void MKLDNNSlice(const SliceParam &param, const OpContext& ctx,
+void MKLDNNSlice(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
                  const NDArray &in, OpReqType req, const NDArray &out);
 
 }  // namespace op

@@ -1,0 +1,42 @@
+/*
+Variables
+*/
+$font_size: 16px;
+
+$background_color: #fafafa;
+$code_background: rgba(0,0,0,.05);
+
+$code_font_family: "Menlo", "DejaVu Sans Mono", "Liberation Mono", "Consolas", "Ubuntu Mono", "Courier New", "andale mono", "lucida console", monospace !default;
+$body_font_family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !default;
+$base-font-size:   17px !default;
+
+$xl-breakpoint: 1795px;
+$lg-breakpoint: 1200px;
+$md-breakpoint: 992px;
+$sm-breakpoint: 768px;
+$xs-breakpoint: 576px;
+
+$color-primary: $palette-blue-500;
+$color-primary-dark: $palette-blue-700 !default;
+$color-accent: $palette-deep-orange-A200 !default;
+$color-primary-contrast: $color-white !default;
+$color-accent-contrast: $color-white !default;
+
+
+$base-line-height: 1.5 !default;
+$spacing-unit:     30px !default;
+
+$color-mxnet: rgb(4,140,204);
+$color-mxnet-dark: rgb(4,60,110);
+$grey-color:       #828282 !default;
+$grey-color-light: lighten($grey-color, 45%) !default;
+$grey-color-dark:  darken($grey-color, 25%) !default;
+
+$table-text-align: left !default;
+
+// Width of the content area
+$content-width:    1150px !default;
+
+$on-palm:          600px !default;
+$on-palm:          900px !default;
+$on-laptop:        1024px !default;

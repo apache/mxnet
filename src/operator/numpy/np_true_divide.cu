@@ -22,20 +22,20 @@
  * \file np_true_divide.cu
  * \brief GPU Implementation of true_divide operator.
  */
-#include "../tensor/elemwise_binary_broadcast_op.h"
-#include "../tensor/elemwise_binary_scalar_op.h"
+
+#include "./np_true_divide-inl.h"
 
 namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_true_divide)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastCompute<gpu, mshadow_op::div>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideBroadcastCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::div>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::true_divide>);
 
 NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rdiv>);
+.set_attr<FCompute>("FCompute<gpu>", TrueDivideScalarCompute<gpu, mshadow_op::rtrue_divide>);
 
 }  // namespace op
 }  // namespace mxnet

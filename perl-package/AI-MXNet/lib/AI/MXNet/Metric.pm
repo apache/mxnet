@@ -29,7 +29,7 @@ use JSON::PP;
 =head1 DESCRIPTION
 
     This module hosts all the evaluation metrics available to evaluate the performance of a learned model.
-    L<Python Docs|http://mxnet.incubator.apache.org/api/python/metric/metric.html>
+    L<Python Docs|https://mxnet.apache.org/api/python/metric/metric.html>
 =cut
 
 # Check to see if the two arrays are the same size.

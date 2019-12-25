@@ -9,7 +9,7 @@ This folder contains examples of quantizing a FP32 model with Intel® MKL-DNN or
 
 <h2 id="1">Model Quantization with Intel® MKL-DNN</h2>
 
-Intel® MKL-DNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html). A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with Intel® MKL-DNN. This script integrates with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html), so that more pre-trained models can be downloaded from Gluon-CV and then converted for quantization. To apply quantization flow to your project directly, please refer [Quantize custom models with MKL-DNN backend](https://mxnet.incubator.apache.org/tutorials/mkldnn/mkldnn_quantization.html).
+Intel® MKL-DNN supports quantization with subgraph features on Intel® CPU Platform and can bring performance improvements on the [Intel® Xeon® Scalable Platform](https://www.intel.com/content/www/us/en/processors/xeon/scalable/xeon-scalable-platform.html). A new quantization script `imagenet_gen_qsym_mkldnn.py` has been designed to launch quantization for image-classification models with Intel® MKL-DNN. This script integrates with [Gluon-CV modelzoo](https://gluon-cv.mxnet.io/model_zoo/classification.html), so that more pre-trained models can be downloaded from Gluon-CV and then converted for quantization. To apply quantization flow to your project directly, please refer [Quantize custom models with MKL-DNN backend](https://mxnet.apache.org/tutorials/mkldnn/mkldnn_quantization.html).
 
 ```
 usage: imagenet_gen_qsym_mkldnn.py [-h] [--model MODEL] [--epoch EPOCH]
@@ -80,27 +80,49 @@ optional arguments:
                         if calibration mode is enabled
 ```
 
+A new benchmark script `launch_inference_mkldnn.sh` has been designed to launch performance benchmark for float32 or int8 image-classification models with Intel® MKL-DNN.
+```
+usage: bash ./launch_inference_mkldnn.sh [[[-s symbol_file ] [-b batch_size] [-iter iteraton] [-ins instance] [-c cores/instance]] | [-h]]
+
+optional arguments:
+  -h, --help                show this help message and exit
+  -s, --symbol_file         symbol file for benchmark
+  -b, --batch_size          inference batch size
+                            default: 64
+  -iter, --iteration        inference iteration
+                            default: 500
+  -ins, --instance          launch multi-instance inference
+                            default: one instance per socket
+  -c, --core                number of cores per instance
+                            default: divide full physical cores
+
+example: resnet int8 performance benchmark on c5.24xlarge(duo sockets, 24 physical cores per socket).
+
+    bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
+
+will launch two instances for throughput benchmark and each instance will use 24 physical cores.
+```
+
 Use the following command to install [Gluon-CV](https://gluon-cv.mxnet.io/):
 
 ```
 pip install gluoncv
 ```
 
-Below are some quantization demos. These models have been tested on Linux systems.
+The following models have been tested on Linux systems. Accuracy is collected on Intel XEON Cascade Lake CPU. For CPU with Skylake Lake or eariler architecture, the accuracy may not be the same.
 
 | Model | Source | Dataset | FP32 Accuracy (top-1/top-5)| INT8 Accuracy (top-1/top-5)|
 |:---|:---|---|:---:|:---:|
-| [ResNet18-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.15%/89.38%|69.92%/89.26%|
-| [ResNet50-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 76.34%/93.13%  |  75.91%/92.95% |
-| [ResNet50-V1b](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 76.82%/93.38% |  76.39%/93.24% |
-| [ResNet101-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 77.33%/93.59%  | 77.05%/93.43%  |
-|[Squeezenet 1.0](#4)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|56.98%/79.20%|52.98%/77.21%|
-|[MobileNet 1.0](#5)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.23%/90.64%|72.03%/90.42%|
-|[MobileNetV2 1.0](#6)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|70.27%/89.62%|69.70%/89.26%|
-|[Inception V3](#7)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|77.76%/93.83% |77.87%/93.78% |
-|[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.65%/93.07%|76.36%/92.89%|
-|[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.28%/90.63%|72.20%/90.56%|
-| [SSD-VGG16](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.8366 mAP  | 0.8364 mAP  |
+| [ResNet18-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  |70.15%/89.38%|69.92%/89.30%|
+| [ResNet50-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 76.34%/93.13%  |  76.06%/92.99% |
+| [ResNet101-V1](#3)  | [Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)  | [Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)  | 77.33%/93.59%  | 77.07%/93.47%  |
+|[Squeezenet 1.0](#4)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|56.98%/79.20%|56.79%/79.47%|
+|[MobileNet 1.0](#5)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.23%/90.64%|72.06%/90.53%|
+|[MobileNetV2 1.0](#6)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|70.27%/89.62%|69.82%/89.35%|
+|[Inception V3](#7)|[Gluon-CV](https://gluon-cv.mxnet.io/model_zoo/classification.html)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|77.76%/93.83% |78.05%/93.91% |
+|[ResNet152-V2](#8)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/resnet/152-layers/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|76.65%/93.07%|76.25%/92.89%|
+|[Inception-BN](#9)|[MXNet ModelZoo](http://data.mxnet.io/models/imagenet/inception-bn/)|[Validation Dataset](http://data.mxnet.io/data/val_256_q90.rec)|72.28%/90.63%|72.02%/90.53%|
+| [SSD-VGG16](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | VOC2007/2012  | 0.8366 mAP  | 0.8357 mAP  |
 | [SSD-VGG16](#10) | [example/ssd](https://github.com/apache/incubator-mxnet/tree/master/example/ssd)  | COCO2014  | 0.2552 mAP  | 0.253 mAP  |
 
 <h3 id='3'>ResNetV1</h3>
@@ -121,8 +143,8 @@ python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --par
 python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --param-file=./model/resnet50_v1-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/resnet50_v1-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
-python imagenet_inference.py --symbol-file=./model/resnet50_v1-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/resnet50_v1-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='4'>SqueezeNet 1.0</h3>
@@ -143,8 +165,8 @@ python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --p
 python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --param-file=./model/squeezenet1.0-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/squeezenet1.0-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
-python imagenet_inference.py --symbol-file=./model/squeezenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/squeezenet1.0-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/squeezenet1.0-quantized-5batches-naive-symbol.json 
 ```
 
 <h3 id='5'>MobileNet 1.0</h3>
@@ -165,8 +187,8 @@ python imagenet_inference.py --symbol-file=./model/mobilenet1.0-symbol.json --pa
 python imagenet_inference.py --symbol-file=./model/mobilenet1.0-quantized-5batches-naive-symbol.json --param-file=./model/mobilenet1.0-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/mobilenet1.0-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
-python imagenet_inference.py --symbol-file=./model/mobilenet1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/mobilenet1.0-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/mobilenet1.0-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='6'>MobileNetV2 1.0</h3>
@@ -187,8 +209,8 @@ python imagenet_inference.py --symbol-file=./model/mobilenetv2_1.0-symbol.json -
 python imagenet_inference.py --symbol-file=./model/mobilenetv2_1.0-quantized-5batches-naive-symbol.json --param-file=./model/mobilenetv2_1.0-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/mobilenetv2_1.0-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
-python imagenet_inference.py --symbol-file=./model/mobilenetv2_1.0-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/mobilenetv2_1.0-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/mobilenetv2_1.0-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='7'>Inception-V3</h3>
@@ -209,8 +231,8 @@ python imagenet_inference.py --symbol-file=./model/inceptionv3-symbol.json --par
 python imagenet_inference.py --symbol-file=./model/inceptionv3-quantized-5batches-naive-symbol.json --param-file=./model/inceptionv3-quantized-0000.params --image-shape=3,299,299 --rgb-mean=123.68,116.779,103.939 --rgb-std=58.393,57.12,57.375 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/inceptionv3-symbol.json --image-shape=3,299,299 --batch-size=64 --num-inference-batches=500 --ctx=cpu  --benchmark=True
-python imagenet_inference.py --symbol-file=./model/inceptionv3-quantized-5batches-naive-symbol.json --image-shape=3,299,299 --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/inceptionv3-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/inceptionv3-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='8'>ResNet152-V2</h3>
@@ -232,8 +254,8 @@ python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.
 python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-quantized-5batches-naive-symbol.json --param-file=./model/imagenet1k-resnet-152-quantized-0000.params --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
-python imagenet_inference.py --symbol-file=./model/imagenet1k-resnet-152-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/imagenet1k-resnet-152-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/imagenet1k-resnet-152-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='9'>Inception-BN</h3>
@@ -255,8 +277,8 @@ python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbo
 python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json --param-file=./model/imagenet1k-inception-bn-quantized-0000.params --rgb-mean=123.68,116.779,103.939 --num-skipped-batches=50 --batch-size=64 --num-inference-batches=500 --dataset=./data/val_256_q90.rec --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
-python imagenet_inference.py --symbol-file=./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json --batch-size=64 --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/imagenet1k-inception-bn-symbol.json
+bash ./launch_inference_mkldnn.sh -s ./model/imagenet1k-inception-bn-quantized-5batches-naive-symbol.json
 ```
 
 <h3 id='10'>SSD-VGG16</h3>
@@ -308,7 +330,7 @@ python imagenet_gen_qsym_mkldnn.py --model=custom --num-calib-batches=5 --calib-
 python imagenet_inference.py --symbol-file=./model/*.json --param-file=./model/*.params --rgb-mean=* --rgb-std=* --num-skipped-batches=* --batch-size=* --num-inference-batches=*--dataset=./data/* --ctx=cpu
 
 # Launch dummy data Inference
-python imagenet_inference.py --symbol-file=./model/*.json --batch-size=* --num-inference-batches=500 --ctx=cpu --benchmark=True
+bash ./launch_inference_mkldnn.sh -s ./model/*.json
 ```
 
 <h2 id="2">Model Quantization with CUDNN</h2>
