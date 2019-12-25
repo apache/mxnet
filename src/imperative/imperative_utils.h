@@ -477,18 +477,8 @@ inline void PushFComputeEx(const FComputeEx& fn,
         // copying A to B may not happen, and will corrupt A's memory.
         InvalidateOutputs(outputs, req);
       }
-      // add for mkldnn OP + no mkldnn OP
-      const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
-      if (!is_mkldnn.get(attrs.op, false)) {
-        std::vector<NDArray> inputs_fallback;
-        CreateDefaultInputs(inputs, &inputs_fallback);
-        fn(attrs, opctx, inputs_fallback, req, outputs);
-      } else {
-        fn(attrs, opctx, inputs, req, outputs);
-      }
-#else
-      fn(attrs, opctx, inputs, req, outputs);
 #endif
+      fn(attrs, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
@@ -541,18 +531,8 @@ inline void PushOperator(const OpStatePtr& state,
         // copying A to B may not happen, and will corrupt A's memory.
         InvalidateOutputs(outputs, req);
       }
-      // add for mkldnn OP + no mkldnn OP
-      const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
-      if (!is_mkldnn.get(attrs.op, false)) {
-        std::vector<NDArray> inputs_fallback;
-        CreateDefaultInputs(inputs, &inputs_fallback);
-        fcompute_ex(state, opctx, inputs_fallback, req, outputs);
-      } else {
-        fcompute_ex(state, opctx, inputs, req, outputs);
-      }
-#else
-      fcompute_ex(state, opctx, inputs, req, outputs);
 #endif
+      fcompute_ex(state, opctx, inputs, req, outputs);
       if (ctx.dev_mask() == gpu::kDevMask && exec_type == ExecType::kSync
           && rctx.get_stream<gpu>() && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
