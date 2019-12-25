@@ -143,6 +143,7 @@ else(MSVC)
     check_cxx_compiler_flag("-msse2"     SUPPORT_MSSE2)
   else()
     set(SUPPORT_MSSE2 FALSE)
+    add_definitions(-DMSHADOW_USE_SSE=0)
   endif()
   # For cross complication, turn off flag if target device does not support it
   if(USE_F16C)
