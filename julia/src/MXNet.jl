@@ -84,7 +84,8 @@ export Context,
        current_context,
        @context,
        @cpu,
-       @gpu
+       @gpu,
+       empty_cache
 
 # model.jl
 export AbstractModel,
