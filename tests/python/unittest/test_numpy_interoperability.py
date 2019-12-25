@@ -576,7 +576,7 @@ def _add_workload_reshape():
     # OpArgMngr.add_workload('reshape', b, (2, 2), order='F')  # Items are not equal with order='F'
 
     a = np.array(_np.ones((0, 2)))
-    OpArgMngr.add_workload('reshape', a, -1, 2)
+    OpArgMngr.add_workload('reshape', a, (-1, 2))
 
 
 def _add_workload_rint(array_pool):
