@@ -32,7 +32,7 @@
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
 #include "../../tensor/init_op.h"
-#include "../../tensor/broadcast_reduce_op.h"
+#include "./broadcast_reduce_op_customized.h"
 #include "./np_gesvd-inl.h"
 #include "../np_matrix_op-inl.h"
 
@@ -157,7 +157,7 @@ struct nrmlp_grad : public mxnet_op::tunable {
 /*! \brief Gradient for abs-min/max */
 struct abs_grad : public mxnet_op::tunable {
   template<typename DType>
-  MSHADOW_XINLINE DType Map(DType a, DType b) {
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType sgn = DType(sign::Map(a));
     DType grad = DType(abs::Map(a)) == DType(abs::Map(b)) ?
                   DType(1.0) : DType(0.0);
@@ -168,7 +168,7 @@ struct abs_grad : public mxnet_op::tunable {
 /*! \brief Sign */
 struct abs_sign : public mxnet_op::tunable {
   template<typename DType>
-  MSHADOW_XINLINE DType Map(DType a, DType b) {
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
     return DType(sign::Map(a));
   }
 };
@@ -251,10 +251,10 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
       reducer_instance = &host_reducer;
 #endif
       if (safe_acc) {
-        ReduceAxesComputeImpl<xpu, mshadow_op::nrmlp, true, false, mshadow_op::abs>(
+        ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, true, false, mshadow_op::abs>(
           ctx, inputs, req, outputs, small, reducer_instance);
       } else {
-        ReduceAxesComputeImpl<xpu, mshadow_op::nrmlp, false, false, mshadow_op::abs>(
+        ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, false, false, mshadow_op::abs>(
           ctx, inputs, req, outputs, small, reducer_instance);
       }
 #ifdef __CUDACC__
@@ -352,12 +352,12 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
           TBlob workspace = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
                               Shape1(outputs[0].shape_.Size()), s));
           std::vector<TBlob> temp({workspace.reshape(outputs[0].shape_)});
-          ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::nrmlp_grad, false>(
+          ReduceAxesBackwardUseInOutImplWithMapper<xpu, mshadow_op::nrmlp_grad, false>(
             ctx, small, inputs, req, temp, mapper_instance);
           Tensor<xpu, 1, DType> out = outputs[0].FlatTo1D<xpu, DType>(s);
           out += workspace.FlatTo1D<xpu, DType>(s);
         } else {
-          ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::nrmlp_grad, false>(
+          ReduceAxesBackwardUseInOutImplWithMapper<xpu, mshadow_op::nrmlp_grad, false>(
             ctx, small, inputs, req, outputs, mapper_instance);
         }
       });
@@ -394,7 +394,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (param.flag == 1) {  // Frobenius norm
-    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+    ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
       ctx, inputs, req, outputs, reduced_shape);
     return;
   }

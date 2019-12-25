@@ -603,14 +603,13 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, typename Reducer, bool safe_acc, bool normalize = false,
+template<typename xpu, typename reducer, bool safe_acc, bool normalize = false,
          typename OP = op::mshadow_op::identity>
 void ReduceAxesComputeImpl(const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs,
-                           const mxnet::TShape& small,
-                           Reducer* reducer = nullptr) {
+                           const mxnet::TShape& small) {
   using namespace mshadow;
   using namespace mshadow::expr;
 
@@ -626,8 +625,8 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
             s, out_data.shape_, req[0], in_data.shape_);
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-        broadcast::Reduce<Reducer, NDim, DType, OP, safe_acc>(
-            s, out_data, req[0], workspace, in_data, reducer);
+        broadcast::Reduce<reducer, NDim, DType, OP, safe_acc>(
+            s, out_data, req[0], workspace, in_data);
         if (normalize) {
           auto out = out_data.FlatTo2D<xpu, OType>(s);
           out /= scalar<OType>(src_shape.Size()/dst_shape.Size());
@@ -637,7 +636,7 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
   });
 }
 
-template<typename xpu, typename Reducer, bool normalize = false,
+template<typename xpu, typename reducer, bool normalize = false,
          typename OP = op::mshadow_op::identity>
 void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const OpContext& ctx,
@@ -652,8 +651,7 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
 
-  ReduceAxesComputeImpl<xpu, Reducer, false, normalize, OP>(ctx, inputs, req, outputs,
-                                                            small);
+  ReduceAxesComputeImpl<xpu, reducer, false, normalize, OP>(ctx, inputs, req, outputs, small);
 }
 
 template <typename red_op, int req, int axis>
@@ -895,7 +893,7 @@ void ReduceAxesOpForwardEx(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   }
 }
 
-template<int req, typename Mapper>
+template<int req, typename OP>
 struct reduce_axes_backward_broadcast {
   template<typename DType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
@@ -905,13 +903,11 @@ struct reduce_axes_backward_broadcast {
                                   OType *ograd,
                                   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
                                   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
-                                  const uint32_t ndim,
-                                  Mapper* OP = nullptr) {
+                                  const uint32_t ndim) {
     size_t in_stride = 1;
     size_t out_stride = 1;
     index_t idx = i;
     index_t out_idx = i;
-    bool need_clean = !OP;
     for (int iter = ndim - 1; iter >= 0; --iter) {
       size_t dim_idx = idx % in_shape[iter];
       out_idx -= dim_idx * in_stride;
@@ -922,21 +918,16 @@ struct reduce_axes_backward_broadcast {
       in_stride *= in_shape[iter];
       out_stride *= out_shape[iter];
     }
-    OP = OP ? OP : new Mapper();
-    KERNEL_ASSIGN(igrad[i], req, DType(ograd[out_idx]) * OP->Map(data[i], DType(out[out_idx])));
-    if (need_clean) {
-      delete OP;
-    }
+    KERNEL_ASSIGN(igrad[i], req, DType(ograd[out_idx]) * OP::Map(data[i], DType(out[out_idx])));
   }
 };
 
-template<typename xpu, typename Mapper, bool normalize = false>
+template<typename xpu, typename OP, bool normalize = false>
 void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
                                     const mxnet::TShape &small,
                                     const std::vector<TBlob>& inputs,
                                     const std::vector<OpReqType>& req,
-                                    const std::vector<TBlob>& outputs,
-                                    Mapper* OP = nullptr) {
+                                    const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
@@ -968,9 +959,9 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
         Tensor<xpu, 2, DType> out =
           inputs[2].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
         MXNET_REQ_TYPE_SWITCH(req[0], Req, {
-          Kernel<reduce_axes_backward_broadcast<Req, Mapper>, xpu>::Launch(
+          Kernel<reduce_axes_backward_broadcast<Req, OP>, xpu>::Launch(
             s, outputs[0].shape_.Size(), data.dptr_, out.dptr_, igrad.dptr_, ograd.dptr_,
-            in_shape, out_shape, src_shape.ndim(), OP);
+            in_shape, out_shape, src_shape.ndim());
         });
         if (normalize) igrad /= scalar<OType>(src_shape.Size()/dst_shape.Size());
       } else {
@@ -984,9 +975,9 @@ void ReduceAxesBackwardUseInOutImpl(const OpContext& ctx,
         Tensor<xpu, ndim, DType> out =
           inputs[2].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
         MXNET_REQ_TYPE_SWITCH(req[0], Req, {
-          Kernel<reduce_axes_backward_broadcast<Req, Mapper>, xpu>::Launch(
+          Kernel<reduce_axes_backward_broadcast<Req, OP>, xpu>::Launch(
             s, outputs[0].shape_.Size(), data.dptr_, out.dptr_, igrad.dptr_, ograd.dptr_,
-            in_shape, out_shape, src_shape.ndim(), OP);
+            in_shape, out_shape, src_shape.ndim());
         });
         if (normalize) igrad /= scalar<OType>(src_shape.Size()/dst_shape.Size());
       }
