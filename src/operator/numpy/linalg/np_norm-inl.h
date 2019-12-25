@@ -251,10 +251,10 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
       reducer_instance = &host_reducer;
 #endif
       if (safe_acc) {
-        ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, true, false, mshadow_op::abs>(
+        ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, true, mshadow_op::abs>(
           ctx, inputs, req, outputs, small, reducer_instance);
       } else {
-        ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, false, false, mshadow_op::abs>(
+        ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, false, mshadow_op::abs>(
           ctx, inputs, req, outputs, small, reducer_instance);
       }
 #ifdef __CUDACC__
@@ -394,7 +394,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (param.flag == 1) {  // Frobenius norm
-    ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+    ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
       ctx, inputs, req, outputs, reduced_shape);
     return;
   }

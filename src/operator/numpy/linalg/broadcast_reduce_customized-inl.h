@@ -37,9 +37,7 @@ MSHADOW_XINLINE void seq_reduce_assign_wr(const index_t idx, const size_t M, con
                                           const DType* __restrict big, OType *small,
                                           const Shape<ndim>& bshape, const Shape<ndim>& sshape,
                                           const Shape<ndim>& rshape, const Shape<ndim>& rstride,
-                                          Reducer* reducer = nullptr) {
-  bool need_clean = !reducer;
-  reducer = reducer ? reducer : new Reducer();
+                                          Reducer* reducer) {
   Shape<ndim> coord = unravel(idx, sshape);
   index_t j = ravel(coord, bshape);
   AType val, residual;
@@ -50,9 +48,6 @@ MSHADOW_XINLINE void seq_reduce_assign_wr(const index_t idx, const size_t M, con
   }
   reducer->Finalize(val, residual);
   assign(&small[idx], addto, OType(val));
-  if (need_clean) {
-    delete reducer;
-  }
 }
 
 #ifdef __CUDACC__
@@ -66,7 +61,7 @@ void seq_reduce_compute_wr(const size_t N, const size_t M, const bool addto,
                            const DType *big, OType *small, const Shape<ndim> bshape,
                            const Shape<ndim> sshape, const Shape<ndim> rshape,
                            const Shape<ndim> rstride,
-                           Reducer* reducer = nullptr) {
+                           Reducer* reducer) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
     seq_reduce_assign_wr<Reducer, ndim, AType, DType, OType, OP>(idx, M, addto, big, small,
@@ -77,7 +72,7 @@ void seq_reduce_compute_wr(const size_t N, const size_t M, const bool addto,
 template <typename Reducer, int ndim, typename DType, typename OP, bool safe_acc = false>
 void ReduceWithReducer(Stream<cpu>* s, const TBlob& small, const OpReqType req,
                        const Tensor<cpu, 1, char>& workspace, const TBlob& big,
-                       Reducer* reducer = nullptr) {
+                       Reducer* reducer) {
   if (req == kNullOp) return;
   Shape<ndim> rshape, rstride;
   diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
@@ -109,14 +104,12 @@ MSHADOW_XINLINE void seq_reduce_assign_wr(const index_t idx, const size_t M, con
                                           const Shape<ndim>& lhs_shape, const Shape<ndim>& rhs_shape,
                                           const Shape<ndim>& rstride, const Shape<ndim>& lhs_stride,
                                           const Shape<ndim>& rhs_stride,
-                                          Reducer* reducer = nullptr) {
+                                          Reducer* reducer) {
   Shape<ndim> coord = unravel(idx, small_shape);
   const index_t idx_big0 = ravel(coord, big_shape);
   const index_t idx_lhs0 = ravel(coord, lhs_shape0);
   const index_t idx_rhs0 = ravel(coord, rhs_shape0);
   DType val, residual;
-  bool need_clean = !reducer;
-  reducer = reducer ? reducer : new Reducer();
   reducer->SetInitValue(val, residual);
   for (size_t k = 0; k < M; ++k) {
     Shape<ndim> coord_big = unravel(k, rshape);
@@ -132,9 +125,6 @@ MSHADOW_XINLINE void seq_reduce_assign_wr(const index_t idx, const size_t M, con
   }
   reducer->Finalize(val, residual);
   assign(&small[idx], addto, val);
-  if (need_clean) {
-    delete reducer;
-  }
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
@@ -145,7 +135,7 @@ void seq_reduce_compute_wr(const size_t N, const size_t M, const bool addto,
                            const Shape<ndim> lhs_shape, const Shape<ndim> lhs_stride,
                            const Shape<ndim> rhs_shape, const Shape<ndim> rhs_stride,
                            const Shape<ndim>& lhs_shape0, const Shape<ndim>& rhs_shape0,
-                           Reducer* reducer = nullptr) {
+                           Reducer* reducer) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
     seq_reduce_assign_wr<Reducer, ndim, DType, OP1, OP2>(idx, M, addto, big, lhs, rhs, small,
@@ -157,7 +147,7 @@ void seq_reduce_compute_wr(const size_t N, const size_t M, const bool addto,
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void ReduceWithReducer(Stream<cpu> *s, const TBlob& small, const OpReqType req,
                        const Tensor<cpu, 1, char>& workspace, const TBlob& big, const TBlob& lhs,
-                       const TBlob& rhs, Reducer* reducer = nullptr) {
+                       const TBlob& rhs, Reducer* reducer) {
   if (req == kNullOp) return;
   Shape<ndim> rshape, rstride;
   diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);

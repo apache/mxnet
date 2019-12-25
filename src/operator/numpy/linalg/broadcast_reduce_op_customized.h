@@ -31,7 +31,7 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename Reducer, bool safe_acc, bool normalize = false,
+template<typename xpu, typename Reducer, bool safe_acc,
          typename OP = op::mshadow_op::identity>
 void ReduceAxesComputeImplWithReducer(const OpContext& ctx,
                                       const std::vector<TBlob>& inputs,
@@ -56,10 +56,7 @@ void ReduceAxesComputeImplWithReducer(const OpContext& ctx,
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
         broadcast::ReduceWithReducer<Reducer, NDim, DType, OP, safe_acc>(
             s, out_data, req[0], workspace, in_data, reducer);
-        if (normalize) {
-          auto out = out_data.FlatTo2D<xpu, OType>(s);
-          out /= scalar<OType>(src_shape.Size()/dst_shape.Size());
-        }
+        // no normalization
       });
     });
   });
@@ -69,14 +66,14 @@ template<int req, typename Mapper>
 struct reduce_axes_backward_broadcast_wm {
   template<typename DType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
-                                              DType *data,
-                                              OType *out,
-                                              DType *igrad,
-                                              OType *ograd,
-                                              mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
-                                              mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
-                                              const uint32_t ndim,
-                                              Mapper* OP = nullptr) {
+                                  DType *data,
+                                  OType *out,
+                                  DType *igrad,
+                                  OType *ograd,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
+                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
+                                  const uint32_t ndim,
+                                  Mapper* OP = nullptr) {
     size_t in_stride = 1;
     size_t out_stride = 1;
     index_t idx = i;
@@ -102,11 +99,11 @@ struct reduce_axes_backward_broadcast_wm {
 
 template<typename xpu, typename Mapper, bool normalize = false>
 void ReduceAxesBackwardUseInOutImplWithMapper(const OpContext& ctx,
-                                                const mxnet::TShape &small,
-                                                const std::vector<TBlob>& inputs,
-                                                const std::vector<OpReqType>& req,
-                                                const std::vector<TBlob>& outputs,
-                                                Mapper* OP = nullptr) {
+                                              const mxnet::TShape &small,
+                                              const std::vector<TBlob>& inputs,
+                                              const std::vector<OpReqType>& req,
+                                              const std::vector<TBlob>& outputs,
+                                              Mapper* OP = nullptr) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace mxnet_op;
