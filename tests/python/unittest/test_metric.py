@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 import scipy
+from scipy.stats import pearsonr
 import json
 import math
 from common import with_seed
@@ -267,7 +268,7 @@ def test_pearsonr():
     pred1 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
     label1 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
     pearsonr_expected_np = np.corrcoef(pred1.asnumpy().ravel(), label1.asnumpy().ravel())[0, 1]
-    pearsonr_expected_scipy, _ = scipy.stats.pearsonr(pred1.asnumpy().ravel(), label1.asnumpy().ravel())
+    pearsonr_expected_scipy, _ = pearsonr(pred1.asnumpy().ravel(), label1.asnumpy().ravel())
     macro_pr = mx.metric.create('pearsonr', average='macro')
     micro_pr = mx.metric.create('pearsonr', average='micro')
 
@@ -289,7 +290,7 @@ def test_pearsonr():
     label12 = mx.nd.array([[1, 0], [0, 1], [0, 1], [1, 0], [0, 1], [0, 1]])
 
     pearsonr_expected_np = np.corrcoef(pred12.asnumpy().ravel(), label12.asnumpy().ravel())[0, 1]
-    pearsonr_expected_scipy, _ = scipy.stats.pearsonr(pred12.asnumpy().ravel(), label12.asnumpy().ravel())
+    pearsonr_expected_scipy, _ = pearsonr(pred12.asnumpy().ravel(), label12.asnumpy().ravel())
 
     macro_pr.reset()
     micro_pr.update([label2], [pred2])
