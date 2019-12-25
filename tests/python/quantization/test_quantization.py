@@ -391,12 +391,10 @@ def test_quantized_elemwise_mul():
         elemwise_mul_int8_exe.arg_dict[qarg_names[4]][:] = data_low
         elemwise_mul_int8_exe.arg_dict[qarg_names[5]][:] = data_high
         qoutput, min_range, max_range = elemwise_mul_int8_exe.forward()
-        min_val = min_range.asnumpy().tolist()[0]
-        max_val = max_range.asnumpy().tolist()[0]
 
         fp32_rslt = output.asnumpy()
-        int8_rslt = qoutput.asnumpy()*max_val/0x7fffffff
-        assert_almost_equal(int8_rslt, int8_rslt, atol = 1e-4)
+        int8_rslt = qoutput.astype(output.dtype)
+        assert_almost_equal(fp32_rslt, int8_rslt, atol = 1e-4)
 
     for qtype in ['int8', 'uint8']:
         check_quantized_elemwise_mul((4, 6), qtype)
