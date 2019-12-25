@@ -1152,7 +1152,7 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
                                      DispatchMode::kFCompute);
   }
   if (param.ord == 2) {
-    const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
+    const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape(0, -1);
     if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
         axis.ndim() == 0 && param.ord == 2) {
       // l2 norm: rsp/csr, axis = () -> dns
