@@ -744,11 +744,11 @@ def _add_workload_repeat(array_pool):
 
 def _add_workload_reshape():
     arr = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]])
-    OpArgMngr.add_workload('reshape', arr, (2, 6))
-    OpArgMngr.add_workload('reshape', arr, (3, 4))
+    OpArgMngr.add_workload('reshape', arr, (2, 6), order='C')
+    OpArgMngr.add_workload('reshape', arr, (3, 4), order='C')
     # OpArgMngr.add_workload('reshape', arr, (3, 4), order='F') # Items are not equal with order='F'
     OpArgMngr.add_workload('reshape', arr, (3, 4), order='C')
-    OpArgMngr.add_workload('reshape', np.array(_np.ones(100)), (100, 1, 1))
+    OpArgMngr.add_workload('reshape', np.array(_np.ones(100)), (100, 1, 1), order='C')
 
     # test_reshape_order
     a = np.array(_np.arange(6))
@@ -758,7 +758,7 @@ def _add_workload_reshape():
     # OpArgMngr.add_workload('reshape', b, (2, 2), order='F')  # Items are not equal with order='F'
 
     a = np.array(_np.ones((0, 2)))
-    OpArgMngr.add_workload('reshape', a, -1, 2)
+    OpArgMngr.add_workload('reshape', a, -1, 2, order='C')
 
 
 def _add_workload_rint(array_pool):
