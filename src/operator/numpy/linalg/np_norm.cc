@@ -177,7 +177,7 @@ TShape inverseTranspose(const TShape &axes) {
   }
   return ret;
 }
-
+/*
 NNVM_REGISTER_OP(_npi_norm)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -204,6 +204,6 @@ NNVM_REGISTER_OP(_backward_npi_norm)
      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<FCompute>("FCompute<cpu>", NumpyNormCompute<cpu, true>);
-
+*/
 }  // namespace op
 }  // namespace mxnet

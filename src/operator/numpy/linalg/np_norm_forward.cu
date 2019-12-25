@@ -27,10 +27,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_norm)
-.set_attr<FCompute>("FCompute<gpu>", NumpyNormCompute<gpu>);
-
-NNVM_REGISTER_OP(_backward_npi_norm)
-.set_attr<FCompute>("FCompute<gpu>", NumpyNormCompute<gpu, true>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyNormComputeForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
