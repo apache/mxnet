@@ -178,7 +178,9 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
     if (params.max_calib_range.has_value() && params.min_calib_range.has_value()) {
       typedef int8_t out_type;
       auto *out_data = outputs[quantized_elemwise_mul::kOut].dptr<out_type>();
-  #pragma omp simd
+#if !defined(_MSC_VER)
+#pragma omp simd
+#endif
       for (size_t i = 0; i < out_size; ++i) {
         const int8_t a = input_l[i];
         const int8_t b = input_r[i];
@@ -187,7 +189,9 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
     } else {
       typedef int32_t out_type;
       auto *out_data = outputs[quantized_elemwise_mul::kOut].dptr<out_type>();
-  #pragma omp simd
+#if !defined(_MSC_VER)
+#pragma omp simd
+#endif
       for (size_t i = 0; i < out_size; ++i) {
         const int8_t a = input_l[i];
         const int8_t b = input_r[i];
@@ -197,7 +201,9 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
   } else {
     typedef float_t out_type;
     auto *out_data = outputs[quantized_elemwise_mul::kOut].dptr<out_type>();
+#if !defined(_MSC_VER)
 #pragma omp simd
+#endif
     for (size_t i = 0; i < out_size; ++i) {
       const int8_t a = input_l[i];
       const int8_t b = input_r[i];
