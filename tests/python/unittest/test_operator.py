@@ -9994,10 +9994,20 @@ def test_scalarop_locale_invariance():
             except locale.Error as e:
                 print("Couldn't enable locale", loc, ": ", str(e))
                 
-        assert locale_set, "Couldn't find any suitable locales for test_elemwise_locale_invariance!"
-        scalar = 0.3
-        assert "," in locale.str(scalar)
-        assert_almost_equal(arr.asnumpy() + scalar, (arr + scalar).asnumpy(), rtol=1e-5, atol=1e-5)
+        if locale_set:
+            scalar = 0.3
+            assert "," in locale.str(scalar)
+            assert_almost_equal(
+                arr.asnumpy() + scalar,
+                (arr + scalar).asnumpy(),
+                rtol=1e-5,
+                atol=1e-5
+            )
+        else:
+            # Shouldn't happen on Windows: "German" should always be available.
+            raise unittest.SkipTest("Couldn't find a locale suitable for "
+                                    "test_scalarop_locale_invariance. Please install en_DK.UTF-8 "
+                                    "or ru_RU.UTF-8 to run this test.")
     finally:
         locale.setlocale(locale.LC_NUMERIC, prev)
 
