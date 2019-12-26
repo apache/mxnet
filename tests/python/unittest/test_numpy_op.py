@@ -3091,6 +3091,28 @@ def test_np_random():
 
 @with_seed()
 @use_np
+def test_np_randn():
+    # Test shapes.
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    for dtype in dtypes:
+        for shape in shapes:
+            data_mx = np.random.randn(*shape, dtype=dtype)
+            assert data_mx.shape == shape
+
+
+@with_seed()
+@use_np
 def test_random_seed():
     for seed in [234, 594, 7240, 20394]:
         ret = []
