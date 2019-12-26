@@ -701,6 +701,20 @@ def _add_workload_max(array_pool):
     OpArgMngr.add_workload('max', array_pool['4x1'])
 
 
+def _add_workload_amax(array_pool):
+    a = np.array([3, 4, 5, 10, -3, -5, 6.0])
+    b = np.array([[3, 6.0, 9.0],
+                  [4, 10.0, 5.0],
+                  [8, 3.0, 2.0]])
+    c = np.array(1)
+    OpArgMngr.add_workload('amax', array_pool['4x1'])
+    OpArgMngr.add_workload('amax', a)
+    OpArgMngr.add_workload('amax', b, axis=0)
+    OpArgMngr.add_workload('amax', b, axis=1)
+    OpArgMngr.add_workload('amax', c)
+    OpArgMngr.add_workload('amax', c, axis=None)
+
+
 def _add_workload_min(array_pool):
     OpArgMngr.add_workload('min', array_pool['4x1'])
 
@@ -1461,6 +1475,7 @@ def _prepare_workloads():
     _add_workload_fix()
     _add_workload_flip()
     _add_workload_max(array_pool)
+    _add_workload_amax(array_pool)
     _add_workload_min(array_pool)
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
