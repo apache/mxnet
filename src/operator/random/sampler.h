@@ -52,7 +52,7 @@ inline static void LaunchRNG(mshadow::Stream<xpu> *s,
   int num_threads = (N + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
       RandGenerator<xpu>::kMinNumRandomPerThread;
   num_threads = std::min(num_threads, RandGenerator<xpu>::kNumRandomStates);
-  index_t num_steps_per_thread = std::max((N + num_threads - 1) / num_threads,
+  index_t num_steps_per_thread = std::max<index_t>((N + num_threads - 1) / num_threads,
       RandGenerator<xpu>::kMinNumRandomPerThread);
   Kernel<OP, xpu>::Launch(s, num_threads, *gen, N, num_steps_per_thread, args...);
 }
@@ -77,7 +77,7 @@ inline static void LaunchRNGBatch(mshadow::Stream<xpu> *s,
   int num_threads = (N + RandGenerator<xpu>::kMinNumRandomPerThread - 1) /
       RandGenerator<xpu>::kMinNumRandomPerThread;
   num_threads = std::min(num_threads, RandGenerator<xpu>::kNumRandomStates);
-  index_t num_steps_per_thread = std::max((N + num_threads - 1) / num_threads,
+  index_t num_steps_per_thread = std::max<index_t>((N + num_threads - 1) / num_threads,
       RandGenerator<xpu>::kMinNumRandomPerThread);
   num_steps_per_thread = (num_steps_per_thread + batch_size - 1) / batch_size * batch_size;
   Kernel<OP, xpu>::Launch(s, num_threads, *gen, N, num_steps_per_thread, args...);
