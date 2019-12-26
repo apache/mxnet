@@ -220,7 +220,7 @@ class DropoutOp {
                                     const real_t pkeep) {
       auto mask_idx = i / 8;
       uint8_t mask_offset = i % 8;
-      bool mask_val = (mask[mask_idx] >> mask_offset) & 1U;
+      bool mask_val = mask[mask_idx] & (1U << mask_offset);
       KERNEL_ASSIGN(igrad[i], req, mask_val * ograd[i] * (1 / pkeep));
     }
   };
@@ -270,14 +270,14 @@ class DropoutOp {
       auto ridx = static_cast<index_t>(dot(coord, rstride));
       auto mask_idx = ridx / 8;
       uint8_t mask_offset = ridx % 8;
-      bool mask_val = (mask[mask_idx] >> mask_offset) & 1U;
+      bool mask_val = mask[mask_idx] & (1U << mask_offset);
       KERNEL_ASSIGN(igrad[base], req, mask_val * ograd[lidx] * (1 / pkeep))
       // starts from 1 to avoid extra inc at end of loop
       for (index_t i = 1; i < length; ++i) {
         inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
         mask_idx = ridx / 8;
         mask_offset = ridx % 8;
-        mask_val = (mask[mask_idx] >> mask_offset) & 1U;
+        mask_val = mask[mask_idx] & (1U << mask_offset);
         KERNEL_ASSIGN(igrad[base + i], req, mask_val * ograd[lidx] * (1 / pkeep))
       }
     }
@@ -436,11 +436,12 @@ class DropoutOp {
           RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
           CHECK_NOTNULL(pgen);
           CHECK(req[dropout::kOut] != kAddTo);
-          LaunchRNG<DropoutKernel, xpu>(s, pgen, out.Size(),
-                                        out.dptr<DType>(),
-                                        mask.dptr<uint8_t>(),
-                                        in.dptr<DType>(),
-                                        this->pkeep_);
+          // Use batch size 8 to avoid race condition on mask
+          LaunchRNGBatch<DropoutKernel, xpu>(s, pgen, out.Size(), 8 /* batch_size */,
+                                             out.dptr<DType>(),
+                                             mask.dptr<uint8_t>(),
+                                             in.dptr<DType>(),
+                                             this->pkeep_);
           return;
         } else {
           // allocating temp buffer to store masked output
@@ -453,10 +454,11 @@ class DropoutOp {
           RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
           CHECK_NOTNULL(pgen);
           // initialize the mask
-          LaunchRNG<BernoulliKernel, xpu>(s, pgen, temp_shape.Size(),
-                                          temp.dptr_,
-                                          mask.dptr<uint8_t>(),
-                                          this->pkeep_);
+          // Use batch size 8 to avoid race condition on mask
+          LaunchRNGBatch<BernoulliKernel, xpu>(s, pgen, temp_shape.Size(), 8 /* batch_size */,
+                                               temp.dptr_,
+                                               mask.dptr<uint8_t>(),
+                                               this->pkeep_);
           // broadcast mul
           TShape new_lshape, new_rshape, new_oshape;
           int ndim = BinaryBroadcastShapeCompact(in.shape_,
