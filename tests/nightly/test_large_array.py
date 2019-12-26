@@ -1690,12 +1690,14 @@ def test_binary_broadcast():
 
 
 def test_sparse_dot():
-    shape = (LARGE_X, 2)
-    density = 0.5
-    matrix = rand_ndarray(shape, 'csr', density)
-    sp_mat2 = nd.sparse.csr_matrix((matrix.data, matrix.indices, matrix.indptr), shape)
-    mat1 = nd.ones((2, LARGE_X))
-    out = nd.dot(mat1, sp_mat2)
+    shape = (2, LARGE_X)
+   # density = 0.5
+    #matrix = rand_ndarray(shape, 'csr', density)
+    #sp_mat1 = nd.sparse.csr_matrix((matrix.data, matrix.indices, matrix.indptr), shape)
+    sp_mat1 = nd.sparse.csr_matrix(([2],[6],[0,1]),shape=shape)
+    mat2 = nd.ones((LARGE_X, 2))
+    out = nd.dot(sp_mat1, mat2)
+    assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
 
 
