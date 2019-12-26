@@ -69,7 +69,7 @@ Shared APIs
 
    .. card::
       :title: Data APIs
-      :link: data/index.html
+      :link: gluon/data/index.html
 
       How to use MXNet's data APIs.
 

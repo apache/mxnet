@@ -1032,17 +1032,19 @@ OpStatePtr CachedOp::Forward(
   CHECK_EQ(inputs.size(), num_inputs());
 
   Context default_ctx = inputs[0]->ctx();
-  auto state_ptr = GetCachedOpState(default_ctx);
-  auto& state = state_ptr.get_state<CachedOpState>();
+  {
+    auto state_ptr = GetCachedOpState(default_ctx);
+    auto& state = state_ptr.get_state<CachedOpState>();
 
-  const auto& idx = state.info.fwd_graph.indexed_graph();
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    CHECK_EQ(inputs[i]->ctx(), default_ctx)
-        << "CachedOp requires all inputs to live on the same context. But "
-        << idx[idx.input_nodes()[0]].source->attrs.name
-        << " is on " << default_ctx << " while "
-        << idx[idx.input_nodes()[i]].source->attrs.name
-        << " is on " << inputs[i]->ctx();
+    const auto& idx = state.info.fwd_graph.indexed_graph();
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      CHECK_EQ(inputs[i]->ctx(), default_ctx)
+          << "CachedOp requires all inputs to live on the same context. But "
+          << idx[idx.input_nodes()[0]].source->attrs.name
+          << " is on " << default_ctx << " while "
+          << idx[idx.input_nodes()[i]].source->attrs.name
+          << " is on " << inputs[i]->ctx();
+    }
   }
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);

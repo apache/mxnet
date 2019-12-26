@@ -1418,6 +1418,7 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
+    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
     ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
@@ -2062,6 +2063,15 @@ cd_pypi_publish() {
     set -ex
     pip3 install --user twine
     ./cd/python/pypi/pypi_publish.py `readlink -f wheel_build/dist/*.whl`
+}
+
+cd_s3_publish() {
+    set -ex
+    pip3 install --user awscli
+    filepath=$(readlink -f wheel_build/dist/*.whl)
+    filename=$(basename $file_path)
+    variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)
+    aws s3 cp --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers,full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822 s3://apache-mxnet/dist/${variant}/${filename}
 }
 
 build_static_scala_mkl() {

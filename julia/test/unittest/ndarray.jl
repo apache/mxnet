@@ -1294,7 +1294,7 @@ function test_show()
     @test occursin("1×4", str)
     @test occursin("NDArray", str)
     @test occursin("Int64", str)
-    @test occursin("CPU", str)
+    @test occursin("cpu", str)
     @test match(r"1\s+2\s+3\s+4", str) != nothing
   end
 

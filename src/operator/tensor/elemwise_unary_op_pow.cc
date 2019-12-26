@@ -25,6 +25,7 @@
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nnvm/node_op_util.h"
 
 namespace mxnet {
 namespace op {
@@ -120,7 +121,34 @@ The storage type of ``square`` output depends upon the input storage type:
 #endif
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
-                                               unary_bwd<mshadow_op::square_grad>);
+                                               unary_bwd<mshadow_op::square_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // ograds[0]: head_grad_grads (dL/dxgrad)
+    // inputs[0]: dL/dy
+    // inputs[1]: x (ElemwiseGradUseIn)
+    // f(x) = y = x^2
+    // f'(x) = 2*x
+    // f''(x) = 2
+    auto dldy = n->inputs[0];
+    auto x = n->inputs[1];
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto op = mxnet::util::NodeOpGen{n};
+
+    auto dydx = op.div(dydx_mul_dldy, dldy);
+
+    std::unordered_map<std::string, std::string> args = {{"scalar", "2.0"}};
+    auto ones_like = MakeNode("ones_like", n->attrs.name + "_backward_ones_like",
+                         {n->inputs[1]}, nullptr, &n);
+    auto d2ydx2 = op.mul(2.0, nnvm::NodeEntry{ones_like});
+    auto d2ydx2_mul_dldy = op.mul(d2ydx2, dldy);
+
+    std::vector<nnvm::NodeEntry> ret;
+
+    ret.emplace_back(op.mul(ograds[0], dydx));
+    ret.emplace_back(op.mul(ograds[0], d2ydx2_mul_dldy));
+    return ret;
+  });
 
 // sqrt
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sqrt, cpu, mshadow_op::square_root)
