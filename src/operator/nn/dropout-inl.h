@@ -191,7 +191,6 @@ class DropoutOp {
                                     uint8_t *mask_out,
                                     const DType *input_data,
                                     const real_t pkeep) {
-      CHECK_EQ(step & 7, 0);
       RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
         // mask_out is set per bit position
