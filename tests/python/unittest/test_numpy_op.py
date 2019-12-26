@@ -3493,15 +3493,17 @@ def test_np_linalg_norm():
                     mx_ret.backward()
 
                     grad_axis = axis
-                    if axis is None and len(shape) >= 2:
+                    if axis is None and len(shape) >= 2 and ord is not None:
                         grad_axis = (len(shape) - 2, len(shape) - 1)
+                    elif axis is None and ord is None:
+                        grad_axis = tuple([i for i in range(len(shape))])
                     elif axis is None:
                         grad_axis = len(shape) - 1
 
+                    print('np_ret shape', np_ret.shape, grad_axis)
                     if not keepdims and isinstance(grad_axis, tuple):
-                        if grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
+                        if len(grad_axis) == 2 and grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
                             grad_axis = (grad_axis[1], grad_axis[0])
-                            print('np_ret shape', np_ret.shape, grad_axis)
                         for i in grad_axis:
                             np_ret = _np.expand_dims(np_ret, axis=i)
                     elif not keepdims:
