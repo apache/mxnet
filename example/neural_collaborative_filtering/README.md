@@ -71,7 +71,7 @@ python train.py # --gpu=0
 ## Model Optimizer
 
 ```
-# optimize nc model
+# optimize model
 python model_optimizer.py
 ```
 
