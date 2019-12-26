@@ -62,25 +62,20 @@ train_dataset = NCFTrainData((args.path + args.dataset + '/train-ratings.csv'), 
 net = get_model(model_type, factor_size_mlp, factor_size_gmf, 
                 model_layers, num_hidden, train_dataset.nb_users, train_dataset.nb_items, opt=True)
 
-raw_params = mx.nd.load("%s-%04d.params" % (model_prefix, args.epoch))
-fc_0_weight_split = mx.nd.split(raw_params['arg:fc_0_weight'], axis=1, num_outputs=2)
+raw_params, _ = mx.model.load_params(model_prefix, args.epoch)
+fc_0_weight_split = mx.nd.split(raw_params['fc_0_weight'], axis=1, num_outputs=2)
 fc_0_left = fc_0_weight_split[0]
 fc_0_right = fc_0_weight_split[1]
 
-user_weight_fusion = mx.nd.FullyConnected(data = raw_params['arg:mlp_user_weight'], weight=fc_0_left, bias=raw_params['arg:fc_0_bias'], no_bias=False, num_hidden=model_layers[0])
-item_weight_fusion = mx.nd.FullyConnected(data = raw_params['arg:mlp_item_weight'], weight=fc_0_right, no_bias=True, num_hidden=model_layers[0])
+user_weight_fusion = mx.nd.FullyConnected(data = raw_params['mlp_user_weight'], weight=fc_0_left, bias=raw_params['fc_0_bias'], no_bias=False, num_hidden=model_layers[0])
+item_weight_fusion = mx.nd.FullyConnected(data = raw_params['mlp_item_weight'], weight=fc_0_right, no_bias=True, num_hidden=model_layers[0])
 
-opt_params = {}
-opt_params['gmf_user_weight'] = raw_params['arg:gmf_user_weight']
-opt_params['gmf_item_weight'] = raw_params['arg:gmf_item_weight']
+opt_params = raw_params
+del opt_params['mlp_user_weight']
+del opt_params['mlp_item_weight']
+del opt_params['fc_0_bias']
 opt_params['fused_mlp_user_weight'] = user_weight_fusion
 opt_params['fused_mlp_item_weight'] = item_weight_fusion
-opt_params['fc_1_weight'] = raw_params['arg:fc_1_weight']
-opt_params['fc_1_bias'] = raw_params['arg:fc_1_bias']
-opt_params['fc_2_weight'] = raw_params['arg:fc_2_weight']
-opt_params['fc_2_bias'] = raw_params['arg:fc_2_bias']
-opt_params['fc_final_weight'] = raw_params['arg:fc_final_weight']
-opt_params['fc_final_bias'] = raw_params['arg:fc_final_bias']
 
 mx.model.save_checkpoint(model_prefix + '-opt', args.epoch, net, opt_params, {})
 

@@ -29,15 +29,6 @@ Author: Dr. Xiangnan He (http://www.comp.nus.edu.sg/~xiangnan/)
 
 Code Reference: https://github.com/hexiangnan/neural_collaborative_filtering
 
-## Environment Settings
-We use MXnet with MKL-DNN as the backend. 
-- MXNet version:  MXNet Master(TBD)
-
-## Install
-```
-pip install -r requirements.txt
-```
-
 ## Dataset
 
 We provide the processed datasets on [Google Drive](https://drive.google.com/drive/folders/1qACR_Zhc2O2W0RrazzcepM2vJeh0MMdO?usp=sharing): MovieLens 20 Million (ml-20m), you can download directly or 
