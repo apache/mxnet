@@ -19,11 +19,11 @@
 
 /*!
  *  Copyright (c) 2015-2017 by Contributors
- * \file broadcast_reduce-inl.h
+ * \file broadcast_reduce_customized-inl.h
  * \brief CPU-specific Function definition of broadcast and reduce operators
  */
-#ifndef MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_INL_CUSTOMIZED_H_
-#define MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_INL_CUSTOMIZED_H_
+#ifndef MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_CUSTOMIZED_INL_H_
+#define MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_CUSTOMIZED_INL_H_
 
 #include "../../tensor/broadcast_reduce-inl.h"
 
@@ -98,10 +98,12 @@ template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 MSHADOW_XINLINE void seq_reduce_assign_wr(const index_t idx, const size_t M, const bool addto,
                                           const DType* __restrict big, const DType* __restrict lhs,
                                           const DType* __restrict rhs, DType *small,
-                                          const Shape<ndim>& big_shape, const Shape<ndim>& lhs_shape0,
+                                          const Shape<ndim>& big_shape,
+                                          const Shape<ndim>& lhs_shape0,
                                           const Shape<ndim>& rhs_shape0,
                                           const Shape<ndim>& small_shape, const Shape<ndim>& rshape,
-                                          const Shape<ndim>& lhs_shape, const Shape<ndim>& rhs_shape,
+                                          const Shape<ndim>& lhs_shape,
+                                          const Shape<ndim>& rhs_shape,
                                           const Shape<ndim>& rstride, const Shape<ndim>& lhs_stride,
                                           const Shape<ndim>& rhs_stride,
                                           Reducer* reducer) {
@@ -176,4 +178,4 @@ void ReduceWithReducer(Stream<cpu> *s, const TBlob& small, const OpReqType req,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_INL_CUSTOMIZED_H_
+#endif  // MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_CUSTOMIZED_INL_H_

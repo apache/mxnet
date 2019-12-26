@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file broadcast_reduce_op.h
+ * \file broadcast_reduce_op_customized.h
  * \brief Function definition of broadcast and reduce operators
  */
 #ifndef MXNET_OPERATOR_NUMPY_LINALG_BROADCAST_REDUCE_OP_CUSTOMIZED_H_

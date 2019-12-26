@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_norm-inl.cc
+ * \file np_norm-.cc
  * \brief CPU registration of np.linalg.norm
  */
 
@@ -177,33 +177,6 @@ TShape inverseTranspose(const TShape &axes) {
   }
   return ret;
 }
-/*
-NNVM_REGISTER_OP(_npi_norm)
-.describe(R"code()code" ADD_FILELINE)
-.set_num_inputs(1)
-.set_num_outputs(4)
-.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
-  [](const NodeAttrs& attrs) { return 1; })
-.set_attr_parser(ParamParser<NumpyNormParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyNormShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 4>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_norm"})
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<FCompute>("FCompute<cpu>", NumpyNormCompute<cpu>)
-.add_argument("data", "NDArray-or-Symbol", "The input");
 
-NNVM_REGISTER_OP(_backward_npi_norm)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<NumpyNormParam>)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<FCompute>("FCompute<cpu>", NumpyNormCompute<cpu, true>);
-*/
 }  // namespace op
 }  // namespace mxnet

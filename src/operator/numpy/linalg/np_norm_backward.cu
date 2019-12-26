@@ -18,7 +18,7 @@
 */
 /*!
 * Copyright (c) 2019 by Contributors
-* \file np_norm.cu
+* \file np_norm_backward.cu
 * \brief GPU implementation of Operators for advanced linear algebra.
 */
 #include "./np_norm-inl.h"
