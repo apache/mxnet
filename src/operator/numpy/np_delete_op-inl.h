@@ -263,6 +263,9 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     numtodel = inputs[delete_::kObj].shape().Size();
   }
 
+  char* out_pos_ptr = NULL;
+  char* indices_ptr = NULL;
+  char* is_delete_ptr = NULL;
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
                       inputs[delete_::kObj].dtype() :
                       mshadow::DataType<int64_t>::kFlag), IType, {
@@ -271,43 +274,55 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
                            sizeof(bool) * arr.shape()[axis];
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-    int64_t* out_pos_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
-    IType* indices_ptr = reinterpret_cast<IType*>
-                         (temp_mem.dptr_ + sizeof(int64_t) * arr.shape()[axis]);
-    bool* is_delete_ptr = reinterpret_cast<bool*>
-                          (temp_mem.dptr_ + sizeof(int64_t) * arr.shape()[axis] +
-                          sizeof(IType) * numtodel);
+    out_pos_ptr = temp_mem.dptr_;
+    indices_ptr = out_pos_ptr + sizeof(int64_t) * arr.shape()[axis];
+    is_delete_ptr = indices_ptr + sizeof(IType) * numtodel;
     if (param.step.has_value()) {  // obj is slice, transfer slice to tensor
-      Kernel<SliceToIndices, xpu>::Launch(s, numtodel, indices_ptr, start, step);
+      Kernel<SliceToIndices, xpu>::Launch(
+        s, numtodel, reinterpret_cast<IType*>(indices_ptr), start, step);
     } else if (param.int_ind.has_value()) {  // obj is scaler, copy it to tensor
-      Fill(s, TBlob(indices_ptr, Shape1(numtodel), xpu::kDevMask), kWriteTo, index);
+      Fill(s, TBlob(reinterpret_cast<IType*>(indices_ptr),
+           Shape1(numtodel), xpu::kDevMask), kWriteTo, index);
     } else {  // obj is tensor, copy it to a unified tensor
       mxnet_op::copy(s,
-        TBlob(indices_ptr, inputs[delete_::kObj].shape(), inputs[delete_::kObj].data().dev_mask()),
+        TBlob(reinterpret_cast<IType*>(indices_ptr), inputs[delete_::kObj].shape(),
+              inputs[delete_::kObj].data().dev_mask()),
         inputs[delete_::kObj].data());
     }
-    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, arr.shape()[axis], is_delete_ptr);
+    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
+      s, arr.shape()[axis], reinterpret_cast<bool*>(is_delete_ptr));
     // mark which position need to be deleted from input arr
-    Kernel<IsDeleteCal, xpu>::Launch(s, numtodel, N, is_delete_ptr, indices_ptr);
+    Kernel<IsDeleteCal, xpu>::Launch(
+      s, numtodel, N, reinterpret_cast<bool*>(is_delete_ptr),
+      reinterpret_cast<IType*>(indices_ptr));
     // calculate output data's original position in input arr
-    Kernel<OutPosCal, xpu>::Launch(s, arr.shape()[axis], out_pos_ptr, is_delete_ptr);
-    if (inputs.size() == 2U) {  // obj is tensor
-      // get total number of nonredundant indices
-      #ifdef __CUDACC__
-        thrust::device_ptr<bool>is_delete_dev(is_delete_ptr);
-        thrust::device_vector<bool>vec_is_delete(is_delete_dev, is_delete_dev + arr.shape()[axis]);
-      #else
-        std::vector<bool>vec_is_delete(is_delete_ptr, is_delete_ptr + arr.shape()[axis]);
-      #endif
-      numtodel = 0;
-      for (int i = 0; i < arr.shape()[axis]; ++i) {
-        if (vec_is_delete[i]) {
-          numtodel++;
-        }
+    Kernel<OutPosCal, xpu>::Launch(
+      s, arr.shape()[axis], reinterpret_cast<int64_t*>(out_pos_ptr),
+      reinterpret_cast<bool*>(is_delete_ptr));
+  });
+
+  if (inputs.size() == 2U) {  // obj is tensor
+    // get total number of nonredundant indices
+    #ifdef __CUDACC__
+      thrust::device_ptr<bool>is_delete_dev(reinterpret_cast<bool*>(is_delete_ptr));
+      thrust::device_vector<bool>vec_is_delete(is_delete_dev, is_delete_dev + arr.shape()[axis]);
+    #else
+      std::vector<bool>vec_is_delete(reinterpret_cast<bool*>(is_delete_ptr),
+                                     reinterpret_cast<bool*>(is_delete_ptr) + arr.shape()[axis]);
+    #endif
+    numtodel = 0;
+    for (int i = 0; i < arr.shape()[axis]; ++i) {
+      if (vec_is_delete[i]) {
+        numtodel++;
       }
-      outshape[axis] -= numtodel;
-      const_cast<NDArray &>(outputs[delete_::kOut]).Init(outshape);
     }
+    outshape[axis] -= numtodel;
+    const_cast<NDArray &>(outputs[delete_::kOut]).Init(outshape);
+  }
+
+  MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
+                      inputs[delete_::kObj].dtype() :
+                      mshadow::DataType<int64_t>::kFlag), IType, {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
       MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
@@ -316,7 +331,8 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
             s, arr.shape().Size(),
             outputs[delete_::kOut].data().dptr<DType>(),
             arr.data().dptr<DType>(),
-            is_delete_ptr, out_pos_ptr,
+            reinterpret_cast<bool*>(is_delete_ptr),
+            reinterpret_cast<int64_t*>(out_pos_ptr),
             arr.shape().get<ndim>(),
             out_strides, axis);
         });
