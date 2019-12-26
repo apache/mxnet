@@ -430,7 +430,8 @@ class _DataIterWrapper(DataIter):
         self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:])]
         # data0, data1, ..., label
         if num_data >= 3:
-            self.provide_data = [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[0:])]
+            self.provide_data = [DataDesc(name='data{}'.format(i), shape=x.shape)
+                                 for i, x in enumerate(data_example[0:])]
         self.batch_size = data_example[0].shape[0]
         self.reset()
 
@@ -719,7 +720,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
             if logger:
                 logger.info(
                     'Create a layer output minmax collector for naive calibration')
-        elif calib_mode == 'customize' and LayerOutputCollector != None:
+        elif calib_mode == 'customize' and LayerOutputCollector is not None:
             collector = LayerOutputCollector
             if logger:
                 logger.info(
