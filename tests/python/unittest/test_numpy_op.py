@@ -4437,6 +4437,38 @@ def test_np_around():
 
 @with_seed()
 @use_np
+def test_np_round():
+    class TestRound(HybridBlock):
+        def __init__(self, decimals):
+            super(TestRound, self).__init__()
+            self.decimals = decimals
+
+        def hybrid_forward(self, F, x):
+            return F.np.round(x, self.decimals)
+
+    shapes = [(), (1, 2, 3), (1, 0)]
+    types = ['int32', 'int64', 'float32', 'float64']
+    for hybridize in [True, False]:
+        for oneType in types:
+            rtol, atol = 1e-3, 1e-5
+            for shape in shapes:
+                for d in range(-5, 6):
+                    test_round = TestRound(d)
+                    if hybridize:
+                        test_round.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                    np_out = _np.round(x.asnumpy(), d)
+                    mx_out = test_round(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+                    mx_out = np.round(x, d)
+                    np_out = _np.round(x.asnumpy(), d)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_nonzero():
     class TestNonzero(HybridBlock):
         def __init__(self):
