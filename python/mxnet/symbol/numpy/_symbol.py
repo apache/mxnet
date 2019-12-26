@@ -45,10 +45,10 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'bitwise_not
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
            'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
-           'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
+           'blackman', 'flip', 'around', 'round', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
+           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
+           'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide',
+           'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -491,7 +491,7 @@ class _Symbol(Symbol):
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -665,13 +665,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute norm')
 
-    def round(self, *args, **kwargs):
+    def round(self, decimals=0, out=None, **kwargs): # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`round`.
 
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        raise NotImplementedError
+        return round(self, decimals=decimals, out=out, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -4515,6 +4515,24 @@ def around(x, decimals=0, out=None, **kwargs):
 
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
         - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def round(x, decimals=0, out=None, **kwargs):
+    r"""
+    round_(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
     """
     if isinstance(x, numeric_types):
         return _np.around(x, decimals, **kwargs)

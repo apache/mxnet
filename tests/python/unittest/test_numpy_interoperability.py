@@ -594,6 +594,10 @@ def _add_workload_around():
     OpArgMngr.add_workload('around', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
 
 
+def _add_workload_round():
+    OpArgMngr.add_workload('round', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
+
+
 def _add_workload_argsort():
     for dtype in [np.int32, np.float32]:
         a = np.arange(101, dtype=dtype)
@@ -1442,6 +1446,7 @@ def _prepare_workloads():
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
+    _add_workload_round()
     _add_workload_argsort()
     _add_workload_append()
     _add_workload_bincount()
