@@ -48,7 +48,8 @@ inline bool QuantizedElemwiseMulOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape &lshape = (*in_attrs)[quantized_elemwise_mul::kLhs];
   const mxnet::TShape &rshape = (*in_attrs)[quantized_elemwise_mul::kRhs];
   if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
-  CHECK_EQ(lshape.ndim(), rshape.ndim()) << "Currently, quantized elemwise multiply doesn't support broadcast.";
+  CHECK_EQ(lshape.ndim(), rshape.ndim())
+    << "Currently, quantized elemwise multiply doesn't support broadcast.";
   for (int i = 0; i < lshape.ndim(); ++i) {
     CHECK_EQ(lshape[i], rshape[i]);
   }

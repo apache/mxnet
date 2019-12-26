@@ -54,7 +54,7 @@ namespace quantized_elemwise_mul {
 enum QuantizedElemwiseMulOpInputs {kLhs, kRhs, kLhsMin, kLhsMax, kRhsMin, kRhsMax};
 enum QuantizedElemwiseMulOpOutputs {kOut, kOutMin, kOutMax};
 enum QuantizedElemwiseMulOpResource {kTempSpace};
-}  // namespace quantized embedding
+}  // namespace quantized_elemwise_mul
 
 
 
