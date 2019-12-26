@@ -3499,8 +3499,11 @@ def test_np_linalg_norm():
                         grad_axis = len(shape) - 1
 
                     if not keepdims and isinstance(grad_axis, tuple):
-                        for i in range(len(grad_axis)): 
-                            np_ret = _np.expand_dims(np_ret, axis=grad_axis[i])
+                        print('np_ret shape', np_ret.shape, grad_axis)
+                        for i in grad_axis:
+                            print('linalg_norm expand', np_ret.shape, grad_axis, i)
+                            np_ret = _np.expand_dims(np_ret, axis=i)
+                        print('expanded ', np_ret.shape)
                     elif not keepdims:
                         np_ret = _np.expand_dims(np_ret, axis=grad_axis)
 
