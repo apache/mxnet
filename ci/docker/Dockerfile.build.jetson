@@ -22,7 +22,7 @@
 
 FROM nvidia/cuda:9.0-cudnn7-devel as cudabuilder
 
-FROM mxnetcipinned/dockcross-linux-arm64:11262018
+FROM dockcross/linux-arm64
 
 ENV ARCH aarch64
 ENV HOSTCC gcc
