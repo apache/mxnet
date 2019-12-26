@@ -25,11 +25,7 @@ This script is a wrapper around `build_lib.sh. It simplifies the things by autom
 ```
 tools/staticbuild/build.sh cu92
 ```
-This would build the mxnet package based on CUDA9.2.
-```
-tools/staticbuild/build.sh mkl
-```
-This would build the mxnet package based on MKLDNN and and pypi configuration settings.
+This would build the mxnet package based on CUDA9.2. Currently, we support variants cpu, native, cu90, cu92, cu100, and cu101. All of these variants expect native have MKL-DNN backend enabled. 
 
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 
@@ -38,7 +34,7 @@ This script clones the most up-to-date master and builds the MXNet backend with 
 
 - `DEPS_PATH` Path to your static dependencies
 - `PLATFORM` linux, darwin
-- `VARIANT` cpu, cu*, cu*mkl, mkl
+- `VARIANT` cpu, cu*
 
 It is not recommended to run this file alone since there are a bunch of variables need to be set.
 

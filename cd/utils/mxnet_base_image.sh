@@ -39,7 +39,7 @@ case ${mxnet_variant} in
     cpu)
     echo "ubuntu:16.04"
     ;;
-    mkl)
+    native)
     echo "ubuntu:16.04"
     ;;
     *)

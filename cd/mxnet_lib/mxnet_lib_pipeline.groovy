@@ -82,7 +82,7 @@ def get_pipeline(mxnet_variant, build_fn) {
 // Returns a string of comma separated resources to be stashed b/w stages
 // E.g. the libmxnet library and any other dependencies
 def get_stash(mxnet_variant) {
-  def deps = mxnet_variant.endsWith('mkl') ? mx_mkldnn_deps : mx_deps
+  def deps = mxnet_variant.endsWith('native') ? mx_native_deps : mx_deps
   return "${libmxnet}, ${licenses}, ${deps}"
 }
 
@@ -158,7 +158,7 @@ def test_gpu_quantization_py3(mxnet_variant) {
 def push(mxnet_variant) {
   node(NODE_LINUX_CPU) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      def deps = (mxnet_variant.endsWith('mkl')? mx_mkldnn_deps : mx_deps).replaceAll(',', '')
+      def deps = (mxnet_variant.endsWith('native')? mx_native_deps : mx_deps).replaceAll(',', '')
       ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       cd_utils.push_artifact(libmxnet, mxnet_variant, libtype, licenses, deps)
     }
