@@ -4291,6 +4291,375 @@ def test_np_linalg_tensorsolve():
                 check_tensorsolve(mx_out, a.asnumpy(), b.asnumpy(), axes)
 
 
+def test_np_linalg_eigvals():
+    class TestEigvals(HybridBlock):
+        def __init__(self):
+            super(TestEigvals, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eigvals(a)
+
+    def check_eigvals(x, a_np):
+        try:
+            x_expected = _np.linalg.eigvals(a_np)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            if 0 not in x.shape:
+                n = int(_np.prod(x.shape[:-1])) if len(shape) > 1 else 1
+                x = x.reshape(n, -1)
+                x_expected = x_expected.reshape(n, -1)
+                for i in range(n):
+                    x1 = _np.sort(x[i].asnumpy())
+                    x2 = _np.sort(x_expected[i])
+                    assert_almost_equal(x1, x2, rtol=rtol, atol=atol)
+
+    def newMatrixWithRealEigvals_2D(n):
+        shape = (n, n)
+        q = _np.ones(shape)
+        while 1:
+            D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            q = _np.matmul(U, D)
+            if (_np.linalg.cond(q, 2) < 3):
+                break
+        D = _np.diag(_np.random.uniform(-10.0, 10.0, n))
+        q_inv = _np.linalg.inv(q)
+        return _np.matmul(_np.matmul(q_inv, D), q)
+
+    def newMatrixWithRealEigvals_nD(shape):
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        return _np.array([newMatrixWithRealEigvals_2D(shape[-1]) for i in range(n)]).reshape(shape)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize in [True, False]:
+        for shape, dtype in itertools.product(shapes, dtypes):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eigvals = TestEigvals()
+            if hybridize:
+                test_eigvals.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                a_np = newMatrixWithRealEigvals_nD(shape)
+            a = np.array(a_np, dtype=dtype)
+            # check eigvals validity
+            mx_out = test_eigvals(a)
+            check_eigvals(mx_out, a_np)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eigvalsh():
+    class TestEigvalsh(HybridBlock):
+        def __init__(self, UPLO):
+            super(TestEigvalsh, self).__init__()
+            self._UPLO = UPLO
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eigvalsh(a, UPLO=self._UPLO)
+
+    def check_eigvalsh(w, a_np, UPLO):
+        try:
+            w_expected = _np.linalg.eigvalsh(a_np, UPLO)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert w.shape == w_expected.shape
+            assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
+
+    def newOrthonormalMatrix_2D(n):
+        x = _np.random.randn(n, n)
+        x_trans = x.T
+        sym_mat = _np.matmul(x_trans, x)
+        q, r = _np.linalg.qr(sym_mat)
+        return q
+
+    def newSymMatrixWithRealEigvals_2D(n):
+        q = newOrthonormalMatrix_2D(n)
+        D = _np.diag(_np.random.uniform(-10.0, 10.0, n))
+        return _np.matmul(_np.matmul(q.T, D), q)
+
+    def newSymMatrixWithRealEigvals_nD(shape):
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        return _np.array([newSymMatrixWithRealEigvals_2D(shape[-1]) for i in range(n)]).reshape(shape)
+
+    def newMatrixFromSymMatrix_nD(sym_a, UPLO):
+        shape = sym_a.shape
+        if 0 in shape:
+            return sym_a
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        a = sym_a.reshape(n, shape[-2], shape[-1])
+        for idx in range(n):
+            for i in range(shape[-2]):
+                for j in range(shape[-1]):
+                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                        a[idx][i][j] = _np.random.uniform(-10., 10.)
+        return a.reshape(shape)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64']
+    UPLOs = ['L', 'U']
+    for hybridize in [True, False]:
+        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eigvalsh = TestEigvalsh(UPLO)
+            if hybridize:
+                test_eigvalsh.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                a_np = newSymMatrixWithRealEigvals_nD(shape)
+                a_np = newMatrixFromSymMatrix_nD(a_np, UPLO)
+            a = np.array(a_np, dtype=dtype)
+            # check eigvalsh validity
+            mx_out = test_eigvalsh(a)
+            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eig():
+    class TestEig(HybridBlock):
+        def __init__(self):
+            super(TestEig, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eig(a)
+
+    def check_eig(w, v, a_np):
+        try:
+            w_expected, v_expected = _np.linalg.eig(a_np)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert w.shape == w_expected.shape
+            assert v.shape == v_expected.shape
+            if 0 not in a_np.shape:
+                n = int(_np.prod(w.shape[:-1])) if len(shape) > 1 else 1
+                N = a_np.shape[-1]
+                w = w.reshape(n, N)
+                w_expected = w_expected.reshape(n, N)
+                v = v.reshape(n, N, N)
+                v_expected = v_expected.reshape(n, N, N)
+                a_np = a_np.reshape(n, N, N)
+                for i in range(n):
+                    # check eigenvector
+                    ai = a_np[i]
+                    vi = v[i].T.asnumpy()
+                    wi = w[i].asnumpy()
+                    for j in range(N):
+                        assert_almost_equal(wi[j] * vi[j], _np.matmul(ai, vi[j]), rtol=rtol, atol=atol)
+
+                    # check eigenvalues
+                    w1 = _np.sort(w[i].asnumpy())
+                    w2 = _np.sort(w_expected[i])
+                    assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
+
+    def newMatrixWithRealEigvals_2D(n):
+        shape = (n, n)
+        q = _np.ones(shape)
+        while 1:
+            D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            q = _np.matmul(U, D)
+            if (_np.linalg.cond(q, 2) < 3):
+                break
+        D = _np.diag(_np.random.uniform(-10.0, 10.0, n))
+        q_inv = _np.linalg.inv(q)
+        return _np.matmul(_np.matmul(q_inv, D), q)
+
+    def newMatrixWithRealEigvals_nD(shape):
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        return _np.array([newMatrixWithRealEigvals_2D(shape[-1]) for i in range(n)]).reshape(shape)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize in [True, False]:
+        for shape, dtype in itertools.product(shapes, dtypes):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eig = TestEig()
+            if hybridize:
+                test_eig.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                a_np = newMatrixWithRealEigvals_nD(shape)
+            a = np.array(a_np, dtype=dtype)
+            # check eig validity
+            mx_w, mx_v = test_eig(a)
+            check_eig(mx_w, mx_v, a.asnumpy())
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eigh():
+    class TestEigh(HybridBlock):
+        def __init__(self, UPLO):
+            super(TestEigh, self).__init__()
+            self._UPLO = UPLO
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eigh(a, UPLO=self._UPLO)
+
+    def check_eigh(w, v, a_np, UPLO):
+        try:
+            w_expected, v_expected = _np.linalg.eigh(a_np, UPLO)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert w.shape == w_expected.shape
+            assert v.shape == v_expected.shape
+            # check eigenvalues.
+            assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
+            # check eigenvectors.
+            w_shape, v_shape, a_sym_np = getSymMatrix_nD(a_np, UPLO)
+            w_np = w.asnumpy()
+            v_np = v.asnumpy()
+            if 0 not in a_np.shape:
+                w_np = w_np.reshape(w_shape)
+                v_np = v_np.reshape(v_shape)
+                a_sym_np = a_sym_np.reshape(v_shape)
+                for i in range(w_shape[0]):
+                    for j in range(w_shape[1]):
+                        assert_almost_equal(_np.dot(a_sym_np[i], v_np[i][:, j]), w_np[i][j] * v_np[i][:, j], rtol=rtol, atol=atol)
+
+    def getSymMatrix_nD(a_np, UPLO):
+        a_res_np = a_np
+        shape = a_np.shape
+        if 0 not in a_np.shape:
+            n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+            nrow, ncol = shape[-2], shape[-1]
+            a_np = a_np.reshape(n, nrow, ncol)
+            a_res_np = a_np
+            for idx in range(n):
+                for i in range(nrow):
+                    for j in range(ncol):
+                        if ((UPLO == 'L' and i < j) or (UPLO == 'U' and i > j)):
+                            a_res_np[idx][i][j] = a_np[idx][j][i]
+            return (n, nrow), (n, nrow, ncol), a_res_np.reshape(shape)
+        else :
+            return (0, 0), (0, 0, 0), a_res_np.reshape(shape)
+
+    def newOrthonormalMatrix_2D(n):
+        x = _np.random.randn(n, n)
+        x_trans = x.T
+        sym_mat = _np.matmul(x_trans, x)
+        q, r = _np.linalg.qr(sym_mat)
+        return q
+
+    def newSymMatrixWithRealEigvals_2D(n):
+        q = newOrthonormalMatrix_2D(n)
+        D = _np.diag(_np.random.uniform(-10.0, 10.0, n))
+        return _np.matmul(_np.matmul(q.T, D), q)
+
+    def newSymMatrixWithRealEigvals_nD(shape):
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        return _np.array([newSymMatrixWithRealEigvals_2D(shape[-1]) for i in range(n)]).reshape(shape)
+
+    def newMatrixFromSymMatrix_nD(sym_a, UPLO):
+        shape = sym_a.shape
+        if 0 in shape:
+            return sym_a
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        a = sym_a.reshape(n, shape[-2], shape[-1])
+        for idx in range(n):
+            for i in range(shape[-2]):
+                for j in range(shape[-1]):
+                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                        a[idx][i][j] = _np.random.uniform(-10., 10.)
+        return a.reshape(shape)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64']
+    UPLOs = ['L', 'U']
+    for hybridize in [True, False]:
+        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eigh = TestEigh(UPLO)
+            if hybridize:
+                test_eigh.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                a_np = newSymMatrixWithRealEigvals_nD(shape)
+                a_np = newMatrixFromSymMatrix_nD(a_np, UPLO)
+            a = np.array(a_np, dtype=dtype)
+            # check eigh validity
+            w, v = test_eigh(a)
+            check_eigh(w, v, a.asnumpy(), UPLO)
+
+
 @with_seed()
 @use_np
 def test_np_linalg_det():
