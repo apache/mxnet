@@ -1558,13 +1558,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute norm')
 
-    def round(self, decimals=0, out=None, **kwargs):
+    def round(self, decimals=0, out=None, **kwargs): # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`round`.
 
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        return round(self, decimals = decimals, out = None )
+        return round(self, decimals=decimals, out=out, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -6461,7 +6461,7 @@ def round(x, decimals=0, out=None, **kwargs):
     r"""
     round_(a, decimals=0, out=None)
     Round an array to the given number of decimals.
-    
+
     See Also
     --------
     around : equivalent function; see for details.

@@ -4741,7 +4741,7 @@ def round(x, decimals=0, out=None, **kwargs):
     r"""
     round_(a, decimals=0, out=None)
     Round an array to the given number of decimals.
-    
+
     See Also
     --------
     around : equivalent function; see for details.
