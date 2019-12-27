@@ -229,23 +229,33 @@ MXReturnValue mySupportedOps(std::string json,
       if(attrs.map.find(JsonVal("dtype")) != attrs.map.end())
         dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
     }
+
     //check if op dtype is float
-    std::cout << "dtype: " << dtype << "   " << ids[i] <<std::endl;
-    //if(dtype == kFloat32) {
+    if(dtype == kFloat32) {
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
-        std::cout << op.str << " : " << shape << " " << dtype << std::endl;
         // found op in whitelist, set value to 1 to include op in subgraph
         ids[i]=1;
       }
-      //}
+    }
   }
   return MX_SUCCESS;
 }
 
-MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept) {
+MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
+                               std::map<std::string, std::string> options) {
   std::cout << "myAcceptSubgraph" << std::endl;
-  *accept = true;
+  for (auto kv : options) {
+    std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
+  }
+  if(options.find("reject") != options.end() &&
+     options["reject"].compare("True") == 0) {
+    *accept = false;
+    std::cout << "rejecting subgraph" << std::endl;
+  } else {
+    *accept = true;
+    std::cout << "accepting subgraph" << std::endl;
+  }
   return MX_SUCCESS;
 }
 

@@ -564,6 +564,18 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 }
 
 /*!
+ * \brief This function reattaches the original input nodes that were cut
+ * by CutGraphInputs.
+ */
+void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
+                         std::vector<nnvm::NodeEntry> *orig_entries) {
+  for (size_t i = 0; i < input_entries.size(); ++i) {
+    nnvm::NodeEntry *e = input_entries[i];
+    *e = orig_entries->at(i);
+  }
+}
+
+/*!
  * \brief Replace a set of nodes belonging to the same subgraph with a subgrpah node
  * and keep the subgraph in the subgraph node.
  */
@@ -620,6 +632,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
         sn->outputs[n.get()].push_back(i);
       }
     }
+  } else {
+    ReattachGraphInputs(input_entries, &orig_input_entries);
   }
 #if DEBUG_SUBGRAPH
   if (n)

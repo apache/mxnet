@@ -587,7 +587,8 @@ class CustomOp {
 /*! \brief Custom Subgraph Create function template */
 typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
                                         std::map<std::string, std::string>);
-typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*);
+typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
+                                          std::map<std::string, std::string>);
 
 /*!
  * \brief An abstract class for subgraph property
@@ -768,7 +769,8 @@ typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, int, int *,
 #define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
 typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph,
                                         const char *json, int subgraph_id,
-                                        int *accept);
+                                        int *accept, const char* const*,
+                                        const char* const*, int);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -1131,10 +1133,16 @@ extern "C" {
   int
 #endif
   _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
-                          int subgraph_id, int *accept) {
+                          int subgraph_id, int *accept, const char* const* opt_keys,
+                          const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
     bool accept_bool=false;
-    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool);
+    // create map of attributes from list
+    std::map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++) {
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+    }
+    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts);
     *accept = accept_bool;
     return retval;
   }

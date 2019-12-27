@@ -47,10 +47,15 @@ out = exe.forward()
 print(out)
 
 # with propogating shapes/types
-arg_array = [mx.nd.ones((3,2)), mx.nd.ones((3,2))]
-print(sym.tojson())
-mysym2 = sym.optimize_for("myProp")
-print(mysym2.tojson())
+arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
+mysym2 = sym.optimize_for("myProp",arg_array)
+exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+out2 = exe2.forward()
+print(out2)
+
+# with propogating shapes/types, rejecting subgraph
+arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
+mysym2 = sym.optimize_for("myProp", arg_array, reject=True)
 exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out2 = exe2.forward()
 print(out2)
