@@ -959,6 +959,27 @@ def _add_workload_unique():
     # OpArgMngr.add_workload('unique', np.arange(10, dtype=np.uint8).reshape(-1, 2).astype(bool), axis=1)
 
 
+def _add_workload_delete():
+    a = np.arange(5)
+    nd_a = np.arange(5).repeat(2).reshape(1, 5, 2)
+    lims = [-6, -2, 0, 1, 2, 4, 5]
+    steps = [-3, -1, 1, 3]
+    for start in lims:
+        for stop in lims:
+            for step in steps:
+                s = slice(start, stop, step)
+                OpArgMngr.add_workload('delete', a, s)
+                OpArgMngr.add_workload('delete', nd_a, s, axis=1)
+    OpArgMngr.add_workload('delete', a, np.array([]), axis=0)
+    OpArgMngr.add_workload('delete', a, 0)
+    OpArgMngr.add_workload('delete', a, np.array([]))
+    OpArgMngr.add_workload('delete', a, np.array([0, 1]))
+    OpArgMngr.add_workload('delete', a, slice(1, 2))
+    OpArgMngr.add_workload('delete', a, slice(1, -2))
+    k = np.arange(10).reshape(2, 5)
+    OpArgMngr.add_workload('delete', k, slice(60, None), axis=1)
+
+
 def _add_workload_var(array_pool):
     OpArgMngr.add_workload('var', array_pool['4x1'])
     OpArgMngr.add_workload('var', np.array([np.float16(1.)]))
@@ -1590,6 +1611,7 @@ def _prepare_workloads():
     _add_workload_tile()
     _add_workload_transpose()
     _add_workload_unique()
+    _add_workload_delete()
     _add_workload_var(array_pool)
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
