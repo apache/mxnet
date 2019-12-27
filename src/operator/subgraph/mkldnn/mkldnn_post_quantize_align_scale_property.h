@@ -21,9 +21,9 @@
 #define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_POST_QUANTIZE_ALIGN_SCALE_PROPERTY_H_
 #if MXNET_USE_MKLDNN == 1
 
+#include <dmlc/strtonum.h>
 #include <string>
 #include <vector>
-#include <dmlc/strtonum.h>
 #include "../common.h"
 #include "mkldnn_subgraph_base-inl.h"
 

@@ -27,12 +27,12 @@
 #ifndef MXNET_CPP_OPTIMIZER_H_
 #define MXNET_CPP_OPTIMIZER_H_
 
+#include <dmlc/strtonum.h>
 #include <map>
 #include <vector>
 #include <string>
 #include <memory>
 #include <functional>
-#include <dmlc/strtonum.h>
 #include "mxnet-cpp/base.h"
 #include "dmlc/logging.h"
 #include "mxnet-cpp/ndarray.h"

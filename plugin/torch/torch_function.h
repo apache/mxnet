@@ -28,13 +28,13 @@
 #include "./torch_base.h"
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
+#include <dmlc/strtonum.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <map>
 #include <algorithm>
 #include <vector>
-#include <dmlc/strtonum.h>
 
 namespace mxnet {
 

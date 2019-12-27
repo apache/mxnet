@@ -26,6 +26,7 @@
 #ifndef MXNET_CPP_OPTIMIZER_HPP_
 #define MXNET_CPP_OPTIMIZER_HPP_
 
+#include <dmlc/strtonum.h>
 #include <algorithm>
 #include <utility>
 #include <numeric>
@@ -33,7 +34,6 @@
 #include <cmath>
 #include <string>
 #include <vector>
-#include <dmlc/strtonum.h>
 #include "mxnet-cpp/optimizer.h"
 #include "mxnet-cpp/op.h"
 #include "mxnet-cpp/op_map.h"

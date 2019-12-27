@@ -26,9 +26,9 @@
 #define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_
 
 #include <mxnet/operator_util.h>
+#include <dmlc/strtonum.h>
 #include <vector>
 #include <utility>
-#include <dmlc/strtonum.h>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "elemwise_unary_op.h"
