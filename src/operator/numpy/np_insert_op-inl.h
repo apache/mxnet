@@ -311,12 +311,6 @@ struct ObjToIndices {
   }
 };
 
-struct AssignId {
-  MSHADOW_XINLINE static void Map(int i, int* order) {
-    order[i] = i;
-  }
-};
-
 struct IndicesModify {
   MSHADOW_XINLINE static void Map(int i, int64_t* indices, const int* order) {
     indices[order[i]] += i;
@@ -602,7 +596,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
             Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
                                               inputs[obj_pos].dptr<int64_t>());
           }
-          Kernel<AssignId, xpu>::Launch(s, indices_len, order_ptr);
+          Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
           mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
           Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
 
