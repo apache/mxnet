@@ -16,7 +16,12 @@ class Distribution:
     has_grad = False
 
     def __init__(self, F=None):
+        self._kl_dict = {}
         self.F = F
+
+    @staticmethod
+    def _register_kl():
+        pass
 
     def log_prob(self, x):
         r"""
