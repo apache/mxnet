@@ -442,6 +442,66 @@ def _add_workload_linalg_tensorinv():
                 OpArgMngr.add_workload('linalg.tensorinv', np.array(a, dtype=dtype), ind)
 
 
+def _add_workload_linalg_tensorsolve():
+    shapes = [
+        # a_shape.ndim <= 6
+        # (a_shape, b_shape, axes)
+        ((1, 1), (1,), None),
+        ((1, 1), (1, 1, 1, 1, 1), None),
+        ((4, 4), (4,), None),
+        ((2, 3, 3, 4, 2), (3, 4), (0, 2, 4)),
+        ((1, 3, 3, 4, 4), (1, 3, 4), (1, 3)),
+        ((1, 4, 1, 12, 3), (1, 2, 1, 2, 1, 3, 1), (1, 2, 4)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, b_shape, axes in shapes:
+            a_ndim = len(a_shape)
+            b_ndim = len(b_shape)
+            a_trans_shape = list(a_shape)
+            a_axes = list(range(0, a_ndim))
+            if axes is not None:
+                for k in axes:
+                    a_axes.remove(k)
+                    a_axes.insert(a_ndim, k)
+                for k in range(a_ndim):
+                    a_trans_shape[k] = a_shape[a_axes[k]]
+            x_shape = a_trans_shape[-(a_ndim - b_ndim):]
+            prod = 1
+            for k in x_shape:
+                prod *= k
+            if prod * prod != _np.prod(a_shape):
+                raise ValueError("a is not square")
+            if prod != _np.prod(b_shape):
+                raise ValueError("a's shape and b's shape dismatch")
+            mat_shape = (prod, prod)
+            a_trans_shape = tuple(a_trans_shape)
+            x_shape = tuple(x_shape)
+
+            a_np = _np.eye(prod)
+            shape = mat_shape
+            while 1:
+                # generate well-conditioned matrices with small eigenvalues
+                D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+                I = _np.eye(shape[-1]).reshape(shape)
+                v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+                v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+                v_T = _np.swapaxes(v, -1, -2)
+                U = I - 2 * _np.matmul(v, v_T)
+                a = _np.matmul(U, D)
+                if (_np.linalg.cond(a, 2) < 4):
+                    a_np = a.reshape(a_trans_shape)
+                    break
+            x_np = _np.random.randn(*x_shape)
+            b_np = _np.tensordot(a_np, x_np, axes=len(x_shape))
+            a_origin_axes = list(range(a_np.ndim))
+            if axes is not None:
+                for k in range(a_np.ndim):
+                    a_origin_axes[a_axes[k]] = k
+            a_np = a_np.transpose(a_origin_axes)
+            OpArgMngr.add_workload('linalg.tensorsolve', np.array(a_np, dtype=dtype), np.array(b_np, dtype=dtype), axes)
+
+
 def _add_workload_linalg_slogdet():
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1523,6 +1583,7 @@ def _prepare_workloads():
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
     _add_workload_linalg_tensorinv()
+    _add_workload_linalg_tensorsolve()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()

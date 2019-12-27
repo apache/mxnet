@@ -4064,6 +4064,160 @@ def test_np_linalg_tensorinv():
 
 @with_seed()
 @use_np
+def test_np_linalg_tensorsolve():
+    class TestTensorsolve(HybridBlock):
+        def __init__(self, axes):
+            super(TestTensorsolve, self).__init__()
+            self._axes = axes
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.linalg.tensorsolve(a, b, axes=self._axes)
+
+    def get_tensorsolve_backward(a_np, b_np, mx_out_np, a_axes, a_origin_axes, a_trans_shape):
+        if (a_np.ndim == 0 or b_np.ndim == 0) or (a_np.ndim == b_np.ndim):
+            a_shape = a_np.shape
+            b_shape = b_np.shape
+            a_np = a_np.reshape((1, 1))
+            b_np = b_np.reshape((1,))
+            mx_out_np = mx_out_np.reshape((1,))
+            dx = _np.ones_like(mx_out_np)
+            inv_a_temp_np = _np.linalg.inv(a_np)
+            grad_b = inv_a_temp_np[0][0] * dx[0]
+            grad_a = -grad_b * mx_out_np[0]
+            return grad_a.reshape(a_shape), grad_b.reshape(b_shape)
+        else:
+            dx = _np.ones_like(mx_out_np)
+            a_np = a_np.transpose(a_axes)
+            ind = a_np.ndim - mx_out_np.ndim
+            tensorinv_a_np = _np.linalg.tensorinv(a_np, ind=ind)
+            a_trans_axes = list(range(a_np.ndim))[a_np.ndim - ind:] + list(range(a_np.ndim))[:a_np.ndim - ind]
+            trans_tensorinv_a_np = tensorinv_a_np.transpose(a_trans_axes)
+            grad_b = _np.tensordot(trans_tensorinv_a_np, dx, axes=dx.ndim)
+            grad_a = _np.tensordot(grad_b, mx_out_np, axes=0)
+            grad_a = grad_a.transpose(a_origin_axes)
+            return -grad_a, grad_b.reshape(b_np.shape)
+
+    def check_tensorsolve(x, a_np, b_np, axes):
+        try:
+            x_expected = _np.linalg.tensorsolve(a_np, b_np, axes=axes)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print("b", b_np)
+            print("b shape:", b_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+
+    def shapeInfer(a_shape, b_shape, axes=None):
+        # b_shape - Right-hand tensor shape, which can be of any shape.
+        a_ndim = len(a_shape)
+        b_ndim = len(b_shape)
+        a_trans_shape = list(a_shape)
+        a_axes = list(range(0, a_ndim))
+        if axes is not None:
+            for k in axes:
+                a_axes.remove(k)
+                a_axes.insert(a_ndim, k)
+            for k in range(a_ndim):
+                a_trans_shape[k] = a_shape[a_axes[k]]
+        x_shape = a_trans_shape[-(a_ndim - b_ndim):]
+        prod = 1
+        for k in x_shape:
+            prod *= k
+        if prod * prod != _np.prod(a_shape):
+            raise ValueError("a is not square")
+        if prod != _np.prod(b_shape):
+            raise ValueError("a's shape and b's shape dismatch")
+        return a_axes, (prod, prod), tuple(a_trans_shape), tuple(x_shape)
+
+    def newInvertibleMatrix_2D(shape, max_cond=4):
+        while 1:
+            # generate well-conditioned matrices with small eigenvalues
+            D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            a = _np.matmul(U, D)
+            if (_np.linalg.cond(a, 2) < max_cond):
+                return a
+
+    shapes = [
+        # a_shape.ndim <= 6,
+        # (a_shape, b_shape, axes)
+        ((), (), None),                     # a.ndim == 0, b.ndim == 0, with axes must be None
+        ((), (1, 1, 1), None),              # a.ndim == 0, b.ndim != 0, with axes must be None
+        ((1, 1, 1), (), None),              # a.ndim != 0, b.ndim == 0, with axes == None
+        ((1, 1, 1), (), (0, 1, 2)),         # a.ndim != 0, b.ndim == 0, with axes != None
+        ((1, 1, 1), (1, 1, 1), None),       # a.ndim != 0, b.ndim != 0, a.ndim == b.ndim with axes == None
+        ((1, 1, 1), (1, 1, 1), (2, 0, 1)),  # a.ndim != 0, b.ndim != 0, a.ndim == b.ndim with axes != None
+        ((1, 1), (1,), None),               # a.ndim != 0, b.ndim != 0, a.ndim > b.ndim
+        ((1, 1), (1, 1, 1, 1, 1), None),    # a.ndim != 0, b.ndim != 0, a.ndim < b.ndim - a.ndim
+        ((4, 4), (4,), None),
+        ((6, 2, 3), (6,), None),
+        ((2, 3, 6), (6,), (0, 1)),
+        ((3, 4, 2, 3, 2), (3, 4), None),
+        ((2, 1, 4, 2, 4), (2, 4), (0, 1, 2)),
+        ((2, 3, 3, 4, 2), (3, 4), (0, 2, 4)),
+        ((1, 3, 3, 4, 4), (1, 3, 4), (1, 3)),
+        ((1, 12, 4, 1, 3), (1, 2, 1, 2, 1, 3, 1), None),
+        ((1, 4, 1, 12, 3), (1, 2, 1, 2, 1, 3, 1), (1, 2, 4)),
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize in [True, False]:
+        for dtype in dtypes:
+            for a_shape, b_shape, axes in shapes:
+                rtol = 1e-2 if dtype == 'float32' else 1e-3
+                atol = 1e-4 if dtype == 'float32' else 1e-5
+                test_tensorsolve = TestTensorsolve(axes)
+                if hybridize:
+                    test_tensorsolve.hybridize()
+
+                a_axes, mat_shape, a_trans_shape, x_shape = shapeInfer(a_shape, b_shape, axes)
+                # generate coefficient tensor a and right side tensor b
+                if (len(a_shape) == 0 or len(b_shape) == 0) or (len(a_shape) == len(b_shape)):
+                    a_np = _np.asarray(1).astype(dtype).reshape(a_shape)
+                    b_np = _np.asarray(2).astype(dtype).reshape(b_shape)
+                else:
+                    a_np = newInvertibleMatrix_2D(mat_shape, max_cond=3).reshape(a_trans_shape)
+                    x_np = _np.random.randn(*x_shape)
+                    b_np = _np.tensordot(a_np, x_np, axes=len(x_shape))
+
+                # resume original shape of tensor a
+                a_origin_axes = list(range(a_np.ndim))
+                if axes is not None:
+                    for k in range(a_np.ndim):
+                        a_origin_axes[a_axes[k]] = k
+                a_np = a_np.transpose(a_origin_axes)
+                a = np.array(a_np, dtype=dtype).reshape(a_shape)
+                b = np.array(b_np, dtype=dtype).reshape(b_shape)
+                a.attach_grad()
+                b.attach_grad()
+
+                with mx.autograd.record():
+                    mx_out = test_tensorsolve(a, b)
+                # check tensorsolve validity
+                assert mx_out.shape == x_shape
+                check_tensorsolve(mx_out, a.asnumpy(), b.asnumpy(), axes)
+
+                # check backward
+                if len(a_shape) != 0 and len(b_shape) != 0:
+                    mx.autograd.backward(mx_out)
+                    grad_a_expected, grad_b_expected = get_tensorsolve_backward(
+                        a.asnumpy(), b.asnumpy(), mx_out.asnumpy(), a_axes, a_origin_axes, a_trans_shape)
+                    assert_almost_equal(a.grad.asnumpy(), grad_a_expected, rtol=rtol, atol=atol)
+                    assert_almost_equal(b.grad.asnumpy(), grad_b_expected, rtol=rtol, atol=atol)
+
+                # check imperative once again
+                mx_out = test_tensorsolve(a, b)
+                check_tensorsolve(mx_out, a.asnumpy(), b.asnumpy(), axes)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
         def __init__(self):
