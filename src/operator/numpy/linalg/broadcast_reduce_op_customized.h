@@ -27,6 +27,7 @@
 
 #include "../../tensor/broadcast_reduce_op.h"
 #include "./broadcast_reduce_customized-inl.h"
+#include <vector>
 
 namespace mxnet {
 namespace op {
