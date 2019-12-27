@@ -24,9 +24,10 @@
  * \author Ciyong Chen
 */
 
-#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H
-#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H
+#ifndef MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
+#define MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_
 #if MXNET_USE_MKLDNN == 1
+#include <vector>
 
 namespace mxnet {
 namespace op {
@@ -59,7 +60,6 @@ static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *
     #pragma omp parallel for num_threads(nthreads)
     for (int c = 0; c < static_cast<int>(channel); ++c) {
       float scale = GetQuantizeScale(mshadow::kInt8, weight_c_min[c], weight_c_max[c]);
-      //printf("scale[%d]: %.3f, bias_ptr[%d]: %.3f\n", c, scale, c, bias_ptr[c]);
       if (bias_ptr && bias_ptr[c]) {
         // avoid overflow on bias
         // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
@@ -91,7 +91,7 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
                                      const mkldnn::memory::desc *bias_md,
                                      const int num_group, float data_scale,
                                      const std::vector<float> &weight_scales,
-                                     const bool submit=true) {
+                                     const bool submit = true) {
   MKLDNNStream *stream = MKLDNNStream::Get();
   const auto new_weight = NDArray(weight_md);
   const auto conv_weights_memory = new_weight.GetMKLDNNData();
@@ -135,4 +135,4 @@ static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bi
 }  // namespace mxnet
 
 #endif  // if MXNET_USE_MKLDNN == 1
-#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H
+#endif  // MXNET_OPERATOR_SUBGRAPH_MKLDNN_MKLDNN_COMMON_H_

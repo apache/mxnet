@@ -172,6 +172,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
   }
 
   if (!initialized_) {
+    const auto nthreads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     cached_min_data_ = min_data;
     cached_max_data_ = max_data;
     cached_min_weight_ = min_weight;
@@ -190,7 +191,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
     // create cached out_md
     const mxnet::TShape ishape = data.shape();
     const mxnet::TShape oshape = output.shape();
-    mkldnn::memory::dims out_dims (2);
+    mkldnn::memory::dims out_dims(2);
     if (oshape.ndim() == 2) {
       out_dims[0] = static_cast<int>(oshape[0]);
       out_dims[1] = static_cast<int>(oshape[1]);
@@ -229,14 +230,16 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       // True          False                      Error
       // False         True/False                 False
       if (channel_wise && !support_channelwise_scale) {
-        LOG(FATAL) << "Currently, channel-wise quantization requires fuse requantize or dequantize.";
+        LOG(FATAL)
+          << "Currently, channel-wise quantization requires fuse requantize or dequantize.";
       }
       support_channelwise_scale = support_channelwise_scale && channel_wise;
 
       if (support_channelwise_scale) {
         MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-          weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
-                                                  data_scale_, support_channelwise_scale);
+          weight_scales_ =
+            GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
+                                   data_scale_, support_channelwise_scale);
         });
       } else {
         weight_scales_.resize(1);
@@ -245,17 +248,18 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
         if (has_bias) {
           float bias_scale = GetQuantizeScale(mshadow::kInt8, cached_min_bias_, cached_max_bias_);
           float bias_int32_rescale = data_scale_ * weight_scales_[0] / bias_scale;
-          // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
-          // to INT_MAX / 2.
+          // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value
+          // of bias to INT_MAX / 2.
           float bias_max_rescale =
               MaxValue<int32_t>() / 2 / MaxAbs(cached_min_bias_, cached_max_bias_) / bias_scale;
           if (bias_int32_rescale > bias_max_rescale) {
             // avoid overflow on bias
             bias_int32_rescale = bias_max_rescale;
-            float weight_rescale = bias_int32_rescale * bias_scale / data_scale_ / weight_scales_[0];
+            float weight_rescale =
+              bias_int32_rescale * bias_scale / data_scale_ / weight_scales_[0];
             int8_t *weight_ptr = weight.data().dptr<int8_t>();
             size_t weight_size = weight.shape().Size();
-            #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+            #pragma omp parallel for num_threads(nthreads)
             for (index_t i = 0; i < static_cast<index_t>(weight_size); ++i) {
               weight_ptr[i] = std::round(weight_ptr[i] * weight_rescale);
             }
@@ -267,7 +271,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
           int8_t *bias_ptr = bias.data().dptr<int8_t>();
           int32_t *quantized_bias_ptr = cached_bias_.data().dptr<int32_t>();
           size_t bias_size = bias.shape().Size();
-          #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+          #pragma omp parallel for num_threads(nthreads)
           for (index_t i = 0; i < static_cast<index_t>(bias_size); ++i) {
             quantized_bias_ptr[i] = std::round(bias_ptr[i] * bias_int32_rescale);
           }
@@ -286,7 +290,7 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
 
         if (support_channelwise_scale) {
           full_param_.output_scales.resize(num_channel);
-          #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+          #pragma omp parallel for num_threads(nthreads)
           for (index_t i = 0; i < static_cast<index_t>(num_channel); ++i) {
             full_param_.output_scales[i] = tmp_scale_ / weight_scales_[i];
           }

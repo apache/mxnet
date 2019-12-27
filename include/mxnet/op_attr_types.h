@@ -31,6 +31,7 @@
 
 #include <vector>
 #include <functional>
+#include <string>
 
 #include "./base.h"
 #include "./ndarray.h"
