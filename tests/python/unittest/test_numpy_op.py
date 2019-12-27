@@ -624,7 +624,7 @@ def test_np_max_min():
         assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
     in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
+    shape = rand_shape_nd(in_data_dim, dim=3)
     for func in ['max', 'min']:
         for hybridize in [False, True]:
             for keepdims in [True, False]:
@@ -809,7 +809,7 @@ def test_np_mean():
 
     is_windows = sys.platform.startswith('win')
     in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
+    shape = rand_shape_nd(in_data_dim, dim=3)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'bool': 'int64', 'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
     ft_types = ['float16', 'float32', 'float64']
