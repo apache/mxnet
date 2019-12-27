@@ -125,7 +125,8 @@ inline QuantizeType NeedQuantize(NodePtr node,
                                  const std::unordered_set<std::string>& excluded_nodes,
                                  const std::unordered_set<std::string>& excluded_ops,
                                  const int& dev_type,
-                                 std::unordered_map<NodePtr, NodePtr>* quantized_node_map) {
+                                 std::unordered_map<NodePtr, NodePtr>* quantized_node_map,
+                                 const std::string quantize_granularity) {
   std::unordered_map<NodePtr, NodePtr> quantized_node;
   static auto& quantizable_map = Op::GetAttr<mxnet::FQuantizable>("FQuantizable");
   static auto& quantized_op_map = Op::GetAttr<mxnet::FQuantizedOp>("FQuantizedOp");
@@ -165,6 +166,10 @@ inline QuantizeType NeedQuantize(NodePtr node,
       auto quantized_node = quantized_op_map[op](node->attrs);
       if (!quantized_node->op()) need = false;
       if (need) {
+        if ((quantize_granularity == "channel-wise") &&
+            (node->op() == Op::Get("_sg_mkldnn_fully_connected"))) {
+          quantized_node->attrs.dict["channel_wise_quantize"] = "True";
+        }
         quantized_node_map->insert(std::make_pair(node, quantized_node));
       }
       if (quantizable_map.count(op)) {
@@ -189,6 +194,7 @@ static void MarkQuantizedNodes(const Graph& src,
   const auto excluded_ops = src.GetAttr<std::unordered_set<std::string>>("excluded_ops");
   const auto quantize_mode = src.GetAttr<std::string>("quantize_mode");
   const auto dev_type = src.GetAttr<int>("target_ctx");
+  const auto quantize_granularity = src.GetAttr<std::string>("quantize_granularity");
 
   std::unordered_map<NodePtr, std::vector<NodePtr>> node_output_map;
   std::unordered_set<NodePtr> must_quantize_nodes;
@@ -196,7 +202,8 @@ static void MarkQuantizedNodes(const Graph& src,
   // Build node_output_map, must_quantize_nodes and support_quantize_nodes;
   DFSVisit(src.outputs, [&](const NodePtr& node) {
     auto quantize_type =
-        NeedQuantize(node, excluded_nodes, excluded_ops, dev_type, quantized_node_map);
+        NeedQuantize(node, excluded_nodes, excluded_ops, dev_type,
+                     quantized_node_map, quantize_granularity);
     if (quantize_type == QuantizeType::kMust) {
       must_quantize_nodes.insert(node);
     } else if (quantize_type == QuantizeType::kSupport) {
@@ -265,6 +272,7 @@ Graph QuantizeGraph(Graph &&src) {
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
   const auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
+  const auto quantize_granularity = src.GetAttr<std::string>("quantize_granularity");
 
   std::unordered_map<NodePtr, NodePtr> quantized_node_map;
   MarkQuantizedNodes(src, &quantized_node_map);
@@ -298,7 +306,7 @@ Graph QuantizeGraph(Graph &&src) {
         // e's source node and the newly created quantize op so that the quantize op can be
         // reused next time when the same entry is visited again.
         if (avoid_quantize_input_map.count(node->op()) &&
-            avoid_quantize_input_map[node->op()](node->attrs, i)) {
+            avoid_quantize_input_map[node->op()](node->attrs, i, quantize_granularity)) {
           new_node->inputs.emplace_back(mirror_entry);
         } else if (!quantized_node_map.count(e.node)) {
           if (mirror_entry_map.count(e)) {
@@ -349,7 +357,7 @@ Graph QuantizeGraph(Graph &&src) {
         uint32_t min_index = 1;
         uint32_t max_index = 2;
         if (avoid_quantize_input_map.count(node->op()) &&
-            avoid_quantize_input_map[node->op()](node->attrs, i)) {
+            avoid_quantize_input_map[node->op()](node->attrs, i, quantize_granularity)) {
           // skip non-quantized input
           continue;
         }

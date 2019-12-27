@@ -85,7 +85,8 @@ def _quantize_params(qsym, params, th_dict):
     return quantized_params
 
 def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
-                     offline_params=None, quantized_dtype='int8', quantize_mode='smart'):
+                     offline_params=None, quantized_dtype='int8', quantize_mode='smart',
+                     quantize_granularity='tensor-wise'):
     """Given a symbol object representing a neural network of data type FP32,
     quantize it into a INT8 network.
 
@@ -109,6 +110,9 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
         The quantized destination type for input data.
     quantize_mode: str
         The mode that quantization pass to apply.
+    quantize_granularity: str
+        The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
+        quantization.
 
     """
     num_excluded_symbols = 0
@@ -147,6 +151,7 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
                                      c_str(quantized_dtype),
                                      ctypes.c_bool(True),
                                      c_str(quantize_mode),
+                                     c_str(quantize_granularity),
                                      ctypes.byref(size),
                                      ctypes.byref(calib_str)))
     calib_layer = []
@@ -459,7 +464,8 @@ def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None,
-                   quantized_dtype='int8', quantize_mode='smart', logger=None):
+                   quantized_dtype='int8', quantize_mode='smart',
+                   quantize_granularity='channel-wise', logger=None):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -515,6 +521,9 @@ def quantize_model(sym, arg_params, aux_params,
         The mode that quantization pass to apply. Support 'full' and 'smart'.
         'full' means quantize all operator if possible.
         'smart' means quantization pass will smartly choice which operator should be quantized.
+    quantize_granularity: str
+        The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
+        quantization.
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -546,9 +555,10 @@ def quantize_model(sym, arg_params, aux_params,
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
     qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
-                                         offline_params=list(
-                                             arg_params.keys()),
-                                         quantized_dtype=quantized_dtype, quantize_mode=quantize_mode)
+                                         offline_params=list(arg_params.keys()),
+                                         quantized_dtype=quantized_dtype,
+                                         quantize_mode=quantize_mode,
+                                         quantize_granularity=quantize_granularity)
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
