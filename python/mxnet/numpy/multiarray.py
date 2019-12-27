@@ -47,7 +47,7 @@ from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
 
 __all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
@@ -55,9 +55,9 @@ __all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'zeros_like', 'ones', 
            'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
-           'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
-           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
+           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'round', 'arctan2',
+           'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity',
+           'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
            'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
            'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
@@ -1377,7 +1377,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -1558,13 +1558,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute norm')
 
-    def round(self, *args, **kwargs):
+    def round(self, decimals=0, out=None, **kwargs): # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`round`.
 
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        raise NotImplementedError
+        return round(self, decimals=decimals, out=out, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -5849,6 +5849,55 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
 
 @set_module('mxnet.numpy')
+def delete(arr, obj, axis=None):
+    """
+    Return a new array with sub-arrays along an axis deleted. For a one
+    dimensional array, this returns those entries not returned by
+    `arr[obj]`.
+
+    Parameters
+    ----------
+    arr : ndarray
+      Input array.
+    obj : slice, int or ndarray of ints
+      Indicate indices of sub-arrays to remove along the specified axis.
+    axis : int, optional
+      The axis along which to delete the subarray defined by `obj`.
+      If `axis` is None, `obj` is applied to the flattened array.
+
+    Returns
+    -------
+    out : ndarray
+        A copy of `arr` with the elements specified by `obj` removed. Note
+        that `delete` does not occur in-place. If `axis` is None, `out` is
+        a flattened array.
+
+    Examples
+    --------
+    >>> arr = np.array([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
+    >>> arr
+    array([[ 1.,  2.,  3.,  4.],
+           [ 5.,  6.,  7.,  8.],
+           [ 9., 10., 11., 12.]])
+
+    >>> np.delete(arr, 1, 0)
+    array([[ 1.,  2.,  3.,  4.],
+           [ 9., 10., 11., 12.]])
+
+    >>> np.delete(arr, slice(None, None, 2), 1)
+    array([[ 2.,  4.],
+           [ 6.,  8.],
+           [10., 12.]])
+
+    >>> np.delete(arr, np.array([1,3,5]), None)
+    array([ 1.,  3.,  5.,  7.,  8.,  9., 10., 11., 12.])
+    >>> np.delete(arr, np.array([1,1,5]), None)
+    array([ 1.,  3.,  4.,  5.,  7.,  8.,  9., 10., 11., 12.])
+    """
+    return _mx_nd_np.delete(arr, obj, axis=axis)
+
+
+@set_module('mxnet.numpy')
 def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
@@ -6452,6 +6501,19 @@ def around(x, decimals=0, out=None, **kwargs):
     array([ 1,  2,  3, 11])
     >>> np.around([1, 2, 3, 11], decimals=-1)
     array([ 0,  0,  0, 10])
+    """
+    return _mx_nd_np.around(x, decimals, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def round(x, decimals=0, out=None, **kwargs):
+    r"""
+    round_(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
     """
     return _mx_nd_np.around(x, decimals, out=out, **kwargs)
 

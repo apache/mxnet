@@ -495,6 +495,84 @@ def test_np_sum():
 
 @with_seed()
 @use_np
+def test_np_any():
+    class TestAny(HybridBlock):
+        def __init__(self, axis=None, keepdims=False) :
+            super(TestAny, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+             
+        def hybrid_forward(self, F, a):
+            return F.np.any(a, axis=self._axis, keepdims=self._keepdims)
+    
+    keepdims = [True, False]
+    axes = [True, False]
+    shapes = [(), (5, ), (10, ),
+              (2, 5), (5, 5), (10, 10),
+              (4, 4, 4), (4, 6, 9), (6, 6, 6),
+              (7, 8, 9, 10), (7, 9, 11, 13)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    
+    combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
+    for hybridize, shape, dtype, axis, keepdim in combinations:
+        ndim = len(shape)
+        samples = random.randint(0, ndim)
+        axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
+        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        test_any = TestAny(axis=axis, keepdims=keepdim)
+        if hybridize:
+            test_any.hybridize()
+        y = test_any(x)
+        expected_ret = _np.any(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(y.asnumpy(), expected_ret)
+
+        # test imperative
+        mx_outs = np.any(x, axis=axis, keepdims=keepdim)
+        np_outs = _np.any(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(mx_outs.asnumpy(), np_outs)
+
+
+@with_seed()
+@use_np
+def test_np_all():
+    class TestAll(HybridBlock):
+        def __init__(self, axis=None, keepdims=False) :
+            super(TestAll, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+             
+        def hybrid_forward(self, F, a):
+            return F.np.all(a, axis=self._axis, keepdims=self._keepdims)
+    
+    keepdims = [True, False]
+    axes = [True, False]
+    shapes = [(), (5, ), (10, ),
+              (2, 5), (5, 5), (10, 10),
+              (4, 4, 4), (4, 6, 9), (6, 6, 6),
+              (7, 8, 9, 10), (7, 9, 11, 13)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
+    
+    combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
+    for hybridize, shape, dtype, axis, keepdim in combinations:
+        ndim = len(shape)
+        samples = random.randint(0, ndim)
+        axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
+        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        test_all = TestAll(axis=axis, keepdims=keepdim)
+        if hybridize:
+            test_all.hybridize()
+        y = test_all(x)
+        expected_ret = _np.all(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(y.asnumpy(), expected_ret)
+
+        # test imperative
+        mx_outs = np.all(x, axis=axis, keepdims=keepdim)
+        np_outs = _np.all(x.asnumpy(), axis=axis, keepdims=keepdim)
+        assert_almost_equal(mx_outs.asnumpy(), np_outs)
+
+
+@with_seed()
+@use_np
 def test_np_max_min():
     class TestMax(HybridBlock):
         def __init__(self, axis=None, keepdims=False):
@@ -2756,6 +2834,81 @@ def test_np_swapaxes():
 
 @with_seed()
 @use_np
+def test_np_delete():
+    class TestDelete(HybridBlock):
+        def __init__(self, obj, axis=None):
+            super(TestDelete, self).__init__()
+            self._obj = obj
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.np.delete(a, self._obj, axis=self._axis)
+    
+    def GetSize(shp):
+        if len(shp) == 0:
+            return 0
+        else:
+            res = 1
+            shp_list = list(shp)
+            for x in shp:
+                res *= x
+            return res
+
+    def GetDimSize(shp, axis):
+        if axis is None:
+            return GetSize(shp)
+        shp_list = list(shp)
+        return shp_list[axis]
+
+    shape = [(), (0, ), (1, ), (2, 3), (2, 1, 4, 5)]
+    config = []
+    for shp in shape:
+        for ax in range(-1 * len(shp), len(shp), 2):
+            #test slice
+            for st in [-5, -2, 0, 2, 5, None]:
+                for ed in [-5, -2, 0, 2, 5, None]:
+                    for stp in [-5, -2, 2, 5, None]:
+                        config.append(tuple([shp, slice(st, ed, stp), None]))
+                        config.append(tuple([shp, slice(st, ed, stp), ax]))
+            #test iteger
+            for idx in range(-1 * GetDimSize(shp, ax), GetDimSize(shp, ax)):
+                config.append(tuple([shp, idx, ax]))
+            #test ndarray indices
+            idx =  _np.random.randint(-1 * shp[ax], shp[ax] + 1, size = (4)).tolist()
+            config.append(tuple([shp, idx, ax]))
+
+    for arr_shape, obj, axis in config:
+        for objtype in ['int32', 'int64']:
+            if type(obj) == list:
+                obj_mxnp = np.array(obj, dtype=objtype)
+                obj_onp = _np.array(obj, dtype=objtype)
+            elif type(obj) == slice:
+                obj_mxnp = obj
+                obj_onp = obj
+            else:
+                obj_mxnp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+                obj_onp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+            test_delete = TestDelete(obj=obj_mxnp, axis=axis)
+
+            a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray()
+            a.attach_grad()
+            expected_ret = _np.delete(a.asnumpy(), obj_onp, axis=axis)
+
+            with mx.autograd.record():
+                y = test_delete(a)
+
+            assert y.shape == expected_ret.shape
+            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
+
+            #test imperative
+            mx_out = np.delete(a, obj_mxnp, axis=axis)
+            np_out = _np.delete(a.asnumpy(), obj_onp, axis=axis)
+
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_np_argmin_argmax():
     workloads = [
         ((), 0, False),
@@ -3087,6 +3240,28 @@ def test_np_random():
                 if not isinstance(shape, tuple):
                     expected_shape = () if shape is None else (shape,)
                 assert out.shape == expected_shape
+
+
+@with_seed()
+@use_np
+def test_np_randn():
+    # Test shapes.
+    shapes = [
+        (3, 3),
+        (3, 4),
+        (0, 0),
+        (3, 3, 3),
+        (0, 0, 0),
+        (2, 2, 4, 3),
+        (2, 2, 4, 3),
+        (2, 0, 3, 0),
+        (2, 0, 2, 3)
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    for dtype in dtypes:
+        for shape in shapes:
+            data_mx = np.random.randn(*shape, dtype=dtype)
+            assert data_mx.shape == shape
 
 
 @with_seed()
@@ -3964,6 +4139,160 @@ def test_np_linalg_tensorinv():
 
 @with_seed()
 @use_np
+def test_np_linalg_tensorsolve():
+    class TestTensorsolve(HybridBlock):
+        def __init__(self, axes):
+            super(TestTensorsolve, self).__init__()
+            self._axes = axes
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.linalg.tensorsolve(a, b, axes=self._axes)
+
+    def get_tensorsolve_backward(a_np, b_np, mx_out_np, a_axes, a_origin_axes, a_trans_shape):
+        if (a_np.ndim == 0 or b_np.ndim == 0) or (a_np.ndim == b_np.ndim):
+            a_shape = a_np.shape
+            b_shape = b_np.shape
+            a_np = a_np.reshape((1, 1))
+            b_np = b_np.reshape((1,))
+            mx_out_np = mx_out_np.reshape((1,))
+            dx = _np.ones_like(mx_out_np)
+            inv_a_temp_np = _np.linalg.inv(a_np)
+            grad_b = inv_a_temp_np[0][0] * dx[0]
+            grad_a = -grad_b * mx_out_np[0]
+            return grad_a.reshape(a_shape), grad_b.reshape(b_shape)
+        else:
+            dx = _np.ones_like(mx_out_np)
+            a_np = a_np.transpose(a_axes)
+            ind = a_np.ndim - mx_out_np.ndim
+            tensorinv_a_np = _np.linalg.tensorinv(a_np, ind=ind)
+            a_trans_axes = list(range(a_np.ndim))[a_np.ndim - ind:] + list(range(a_np.ndim))[:a_np.ndim - ind]
+            trans_tensorinv_a_np = tensorinv_a_np.transpose(a_trans_axes)
+            grad_b = _np.tensordot(trans_tensorinv_a_np, dx, axes=dx.ndim)
+            grad_a = _np.tensordot(grad_b, mx_out_np, axes=0)
+            grad_a = grad_a.transpose(a_origin_axes)
+            return -grad_a, grad_b.reshape(b_np.shape)
+
+    def check_tensorsolve(x, a_np, b_np, axes):
+        try:
+            x_expected = _np.linalg.tensorsolve(a_np, b_np, axes=axes)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print("b", b_np)
+            print("b shape:", b_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+
+    def shapeInfer(a_shape, b_shape, axes=None):
+        # b_shape - Right-hand tensor shape, which can be of any shape.
+        a_ndim = len(a_shape)
+        b_ndim = len(b_shape)
+        a_trans_shape = list(a_shape)
+        a_axes = list(range(0, a_ndim))
+        if axes is not None:
+            for k in axes:
+                a_axes.remove(k)
+                a_axes.insert(a_ndim, k)
+            for k in range(a_ndim):
+                a_trans_shape[k] = a_shape[a_axes[k]]
+        x_shape = a_trans_shape[-(a_ndim - b_ndim):]
+        prod = 1
+        for k in x_shape:
+            prod *= k
+        if prod * prod != _np.prod(a_shape):
+            raise ValueError("a is not square")
+        if prod != _np.prod(b_shape):
+            raise ValueError("a's shape and b's shape dismatch")
+        return a_axes, (prod, prod), tuple(a_trans_shape), tuple(x_shape)
+
+    def newInvertibleMatrix_2D(shape, max_cond=4):
+        while 1:
+            # generate well-conditioned matrices with small eigenvalues
+            D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+            I = _np.eye(shape[-1]).reshape(shape)
+            v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+            v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+            v_T = _np.swapaxes(v, -1, -2)
+            U = I - 2 * _np.matmul(v, v_T)
+            a = _np.matmul(U, D)
+            if (_np.linalg.cond(a, 2) < max_cond):
+                return a
+
+    shapes = [
+        # a_shape.ndim <= 6,
+        # (a_shape, b_shape, axes)
+        ((), (), None),                     # a.ndim == 0, b.ndim == 0, with axes must be None
+        ((), (1, 1, 1), None),              # a.ndim == 0, b.ndim != 0, with axes must be None
+        ((1, 1, 1), (), None),              # a.ndim != 0, b.ndim == 0, with axes == None
+        ((1, 1, 1), (), (0, 1, 2)),         # a.ndim != 0, b.ndim == 0, with axes != None
+        ((1, 1, 1), (1, 1, 1), None),       # a.ndim != 0, b.ndim != 0, a.ndim == b.ndim with axes == None
+        ((1, 1, 1), (1, 1, 1), (2, 0, 1)),  # a.ndim != 0, b.ndim != 0, a.ndim == b.ndim with axes != None
+        ((1, 1), (1,), None),               # a.ndim != 0, b.ndim != 0, a.ndim > b.ndim
+        ((1, 1), (1, 1, 1, 1, 1), None),    # a.ndim != 0, b.ndim != 0, a.ndim < b.ndim - a.ndim
+        ((4, 4), (4,), None),
+        ((6, 2, 3), (6,), None),
+        ((2, 3, 6), (6,), (0, 1)),
+        ((3, 4, 2, 3, 2), (3, 4), None),
+        ((2, 1, 4, 2, 4), (2, 4), (0, 1, 2)),
+        ((2, 3, 3, 4, 2), (3, 4), (0, 2, 4)),
+        ((1, 3, 3, 4, 4), (1, 3, 4), (1, 3)),
+        ((1, 12, 4, 1, 3), (1, 2, 1, 2, 1, 3, 1), None),
+        ((1, 4, 1, 12, 3), (1, 2, 1, 2, 1, 3, 1), (1, 2, 4)),
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize in [True, False]:
+        for dtype in dtypes:
+            for a_shape, b_shape, axes in shapes:
+                rtol = 1e-2 if dtype == 'float32' else 1e-3
+                atol = 1e-4 if dtype == 'float32' else 1e-5
+                test_tensorsolve = TestTensorsolve(axes)
+                if hybridize:
+                    test_tensorsolve.hybridize()
+
+                a_axes, mat_shape, a_trans_shape, x_shape = shapeInfer(a_shape, b_shape, axes)
+                # generate coefficient tensor a and right side tensor b
+                if (len(a_shape) == 0 or len(b_shape) == 0) or (len(a_shape) == len(b_shape)):
+                    a_np = _np.asarray(1).astype(dtype).reshape(a_shape)
+                    b_np = _np.asarray(2).astype(dtype).reshape(b_shape)
+                else:
+                    a_np = newInvertibleMatrix_2D(mat_shape, max_cond=3).reshape(a_trans_shape)
+                    x_np = _np.random.randn(*x_shape)
+                    b_np = _np.tensordot(a_np, x_np, axes=len(x_shape))
+
+                # resume original shape of tensor a
+                a_origin_axes = list(range(a_np.ndim))
+                if axes is not None:
+                    for k in range(a_np.ndim):
+                        a_origin_axes[a_axes[k]] = k
+                a_np = a_np.transpose(a_origin_axes)
+                a = np.array(a_np, dtype=dtype).reshape(a_shape)
+                b = np.array(b_np, dtype=dtype).reshape(b_shape)
+                a.attach_grad()
+                b.attach_grad()
+
+                with mx.autograd.record():
+                    mx_out = test_tensorsolve(a, b)
+                # check tensorsolve validity
+                assert mx_out.shape == x_shape
+                check_tensorsolve(mx_out, a.asnumpy(), b.asnumpy(), axes)
+
+                # check backward
+                if len(a_shape) != 0 and len(b_shape) != 0:
+                    mx.autograd.backward(mx_out)
+                    grad_a_expected, grad_b_expected = get_tensorsolve_backward(
+                        a.asnumpy(), b.asnumpy(), mx_out.asnumpy(), a_axes, a_origin_axes, a_trans_shape)
+                    assert_almost_equal(a.grad.asnumpy(), grad_a_expected, rtol=rtol, atol=atol)
+                    assert_almost_equal(b.grad.asnumpy(), grad_b_expected, rtol=rtol, atol=atol)
+
+                # check imperative once again
+                mx_out = test_tensorsolve(a, b)
+                check_tensorsolve(mx_out, a.asnumpy(), b.asnumpy(), axes)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
         def __init__(self):
@@ -4410,6 +4739,38 @@ def test_np_around():
 
                     mx_out = np.around(x, d)
                     np_out = _np.around(x.asnumpy(), d)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_round():
+    class TestRound(HybridBlock):
+        def __init__(self, decimals):
+            super(TestRound, self).__init__()
+            self.decimals = decimals
+
+        def hybrid_forward(self, F, x):
+            return F.np.round(x, self.decimals)
+
+    shapes = [(), (1, 2, 3), (1, 0)]
+    types = ['int32', 'int64', 'float32', 'float64']
+    for hybridize in [True, False]:
+        for oneType in types:
+            rtol, atol = 1e-3, 1e-5
+            for shape in shapes:
+                for d in range(-5, 6):
+                    test_round = TestRound(d)
+                    if hybridize:
+                        test_round.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                    np_out = _np.round(x.asnumpy(), d)
+                    mx_out = test_round(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+                    mx_out = np.round(x, d)
+                    np_out = _np.round(x.asnumpy(), d)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 

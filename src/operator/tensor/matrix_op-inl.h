@@ -1244,7 +1244,7 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
       const int b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
     }
-    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(out.type_flag_, DType, {
       mxnet_op::Kernel<slice_assign_scalar<ndim>, xpu>::Launch(s, vshape.FlatTo2D()[0],
           out.dptr<DType>(), static_cast<DType>(param.scalar), req[0],
           out.shape_.get<ndim>(), vshape.get<ndim>(), begin, step);

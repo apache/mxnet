@@ -59,6 +59,32 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_all():
+    # check bad element in all positions
+    for i in range(256-7):
+        e = np.array([True] * 256, dtype=bool)[7::]
+        e[i] = False
+        OpArgMngr.add_workload('all', e)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        e = np.array([True] * 100043, dtype=bool)
+        e[i] = False
+        OpArgMngr.add_workload('all', e)
+
+
+def _add_workload_any():
+    # check bad element in all positions
+    for i in range(256-7):
+        d = np.array([False] * 256, dtype=bool)[7::]
+        d[i] = True
+        OpArgMngr.add_workload('any', d)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        d = np.array([False] * 100043, dtype=bool)
+        d[i] = True
+        OpArgMngr.add_workload('any', d)
+
+
 def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', indices=np.array([2],dtype=_np.int64), shape=(2, 2))
     OpArgMngr.add_workload('unravel_index', np.array([(2*3 + 1)*6 + 4], dtype=_np.int64), (4, 3, 6))
@@ -416,6 +442,66 @@ def _add_workload_linalg_tensorinv():
                 OpArgMngr.add_workload('linalg.tensorinv', np.array(a, dtype=dtype), ind)
 
 
+def _add_workload_linalg_tensorsolve():
+    shapes = [
+        # a_shape.ndim <= 6
+        # (a_shape, b_shape, axes)
+        ((1, 1), (1,), None),
+        ((1, 1), (1, 1, 1, 1, 1), None),
+        ((4, 4), (4,), None),
+        ((2, 3, 3, 4, 2), (3, 4), (0, 2, 4)),
+        ((1, 3, 3, 4, 4), (1, 3, 4), (1, 3)),
+        ((1, 4, 1, 12, 3), (1, 2, 1, 2, 1, 3, 1), (1, 2, 4)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, b_shape, axes in shapes:
+            a_ndim = len(a_shape)
+            b_ndim = len(b_shape)
+            a_trans_shape = list(a_shape)
+            a_axes = list(range(0, a_ndim))
+            if axes is not None:
+                for k in axes:
+                    a_axes.remove(k)
+                    a_axes.insert(a_ndim, k)
+                for k in range(a_ndim):
+                    a_trans_shape[k] = a_shape[a_axes[k]]
+            x_shape = a_trans_shape[-(a_ndim - b_ndim):]
+            prod = 1
+            for k in x_shape:
+                prod *= k
+            if prod * prod != _np.prod(a_shape):
+                raise ValueError("a is not square")
+            if prod != _np.prod(b_shape):
+                raise ValueError("a's shape and b's shape dismatch")
+            mat_shape = (prod, prod)
+            a_trans_shape = tuple(a_trans_shape)
+            x_shape = tuple(x_shape)
+
+            a_np = _np.eye(prod)
+            shape = mat_shape
+            while 1:
+                # generate well-conditioned matrices with small eigenvalues
+                D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+                I = _np.eye(shape[-1]).reshape(shape)
+                v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+                v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+                v_T = _np.swapaxes(v, -1, -2)
+                U = I - 2 * _np.matmul(v, v_T)
+                a = _np.matmul(U, D)
+                if (_np.linalg.cond(a, 2) < 4):
+                    a_np = a.reshape(a_trans_shape)
+                    break
+            x_np = _np.random.randn(*x_shape)
+            b_np = _np.tensordot(a_np, x_np, axes=len(x_shape))
+            a_origin_axes = list(range(a_np.ndim))
+            if axes is not None:
+                for k in range(a_np.ndim):
+                    a_origin_axes[a_axes[k]] = k
+            a_np = a_np.transpose(a_origin_axes)
+            OpArgMngr.add_workload('linalg.tensorsolve', np.array(a_np, dtype=dtype), np.array(b_np, dtype=dtype), axes)
+
+
 def _add_workload_linalg_slogdet():
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -594,6 +680,10 @@ def _add_workload_around():
     OpArgMngr.add_workload('around', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
 
 
+def _add_workload_round():
+    OpArgMngr.add_workload('round', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
+
+
 def _add_workload_argsort():
     for dtype in [np.int32, np.float32]:
         a = np.arange(101, dtype=dtype)
@@ -701,6 +791,20 @@ def _add_workload_max(array_pool):
     OpArgMngr.add_workload('max', array_pool['4x1'])
 
 
+def _add_workload_amax(array_pool):
+    a = np.array([3, 4, 5, 10, -3, -5, 6.0])
+    b = np.array([[3, 6.0, 9.0],
+                  [4, 10.0, 5.0],
+                  [8, 3.0, 2.0]])
+    c = np.array(1)
+    OpArgMngr.add_workload('amax', array_pool['4x1'])
+    OpArgMngr.add_workload('amax', a)
+    OpArgMngr.add_workload('amax', b, axis=0)
+    OpArgMngr.add_workload('amax', b, axis=1)
+    OpArgMngr.add_workload('amax', c)
+    OpArgMngr.add_workload('amax', c, axis=None)
+
+
 def _add_workload_min(array_pool):
     OpArgMngr.add_workload('min', array_pool['4x1'])
 
@@ -758,7 +862,7 @@ def _add_workload_reshape():
     # OpArgMngr.add_workload('reshape', b, (2, 2), order='F')  # Items are not equal with order='F'
 
     a = np.array(_np.ones((0, 2)))
-    OpArgMngr.add_workload('reshape', a, -1, 2)
+    OpArgMngr.add_workload('reshape', a, (-1, 2))
 
 
 def _add_workload_rint(array_pool):
@@ -853,6 +957,27 @@ def _add_workload_unique():
     OpArgMngr.add_workload('unique', np.array([[0, 1, 0], [0, 1, 0]]), axis=0)
     OpArgMngr.add_workload('unique', np.array([[0, 1, 0], [0, 1, 0]]), axis=1)
     # OpArgMngr.add_workload('unique', np.arange(10, dtype=np.uint8).reshape(-1, 2).astype(bool), axis=1)
+
+
+def _add_workload_delete():
+    a = np.arange(5)
+    nd_a = np.arange(5).repeat(2).reshape(1, 5, 2)
+    lims = [-6, -2, 0, 1, 2, 4, 5]
+    steps = [-3, -1, 1, 3]
+    for start in lims:
+        for stop in lims:
+            for step in steps:
+                s = slice(start, stop, step)
+                OpArgMngr.add_workload('delete', a, s)
+                OpArgMngr.add_workload('delete', nd_a, s, axis=1)
+    OpArgMngr.add_workload('delete', a, np.array([]), axis=0)
+    OpArgMngr.add_workload('delete', a, 0)
+    OpArgMngr.add_workload('delete', a, np.array([]))
+    OpArgMngr.add_workload('delete', a, np.array([0, 1]))
+    OpArgMngr.add_workload('delete', a, slice(1, 2))
+    OpArgMngr.add_workload('delete', a, slice(1, -2))
+    k = np.arange(10).reshape(2, 5)
+    OpArgMngr.add_workload('delete', k, slice(60, None), axis=1)
 
 
 def _add_workload_var(array_pool):
@@ -1439,9 +1564,12 @@ def _prepare_workloads():
         '1x1x0': np.array([[[]]])
     }
 
+    _add_workload_all()
+    _add_workload_any()
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
+    _add_workload_round()
     _add_workload_argsort()
     _add_workload_append()
     _add_workload_bincount()
@@ -1461,6 +1589,7 @@ def _prepare_workloads():
     _add_workload_fix()
     _add_workload_flip()
     _add_workload_max(array_pool)
+    _add_workload_amax(array_pool)
     _add_workload_min(array_pool)
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
@@ -1482,6 +1611,7 @@ def _prepare_workloads():
     _add_workload_tile()
     _add_workload_transpose()
     _add_workload_unique()
+    _add_workload_delete()
     _add_workload_var(array_pool)
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
@@ -1490,6 +1620,7 @@ def _prepare_workloads():
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
     _add_workload_linalg_tensorinv()
+    _add_workload_linalg_tensorsolve()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()
