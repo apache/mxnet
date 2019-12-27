@@ -54,11 +54,13 @@ inline bool MatmulNeedBroadcast(const mxnet::TShape& ashape,
 
 /*!
  * \brief Get mshadow::Shape from mxnet::TShape.
-          i.e. input shape (2, 3), shape.ndim() = 2, but the ndim we want output shape
-          has is 'N' = 4, so return shape would be (1, 1, 2, 3). We put the outshape into
-          mshadow::Shape<ndim>, 'ndim' may not equal to 'N'.
- * \tparam ndim - ndim of output's argument.
- * \param N - true ndim of output.
+ * \note fill ndim = 1 into extra ndims if outshape.ndim > input.ndim
+ * \example i        0 1 2 3 4   (shape.ndim() = 5)
+            shape    2 3 - - -   (N = 2)
+            k_shape  1 1 2 3     (ndim = 4)
+ * \tparam ndim - ndim of outshape.
+ * \param shape - inshape.
+ * \param N - the count of valid inshape ndims.
  */
 template<int ndim>
 mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape, size_t N) {
@@ -75,8 +77,8 @@ mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape, size_t N) {
 
 /*!
  * \brief Broadcast in_shape to broadcast_shape in [dimstart, dimend].
-         Make sure that before use this function:
-         If in_shape[i] != broadcast_shape[i], in_shape[i] == 1.
+          Make sure that before use this function:
+          If in_shape[i] != broadcast_shape[i], in_shape[i] == 1.
  * \param N - ndim of both in_shape and broadcast_shape.
  * \param dimstart start dimension
  * \param dimend end dimension
@@ -98,13 +100,12 @@ mshadow::Shape<ndim> GetBroadcastKernelShape(mshadow::Shape<ndim> in_shape,
 struct SumByShape {
   /*!
    * \brief squash input into output by addition
-   * \example in_size = 10, out_size = 2, so,
+   * \example input.flatten.shape = (10, ),
+              output.flatten.shape = (2, ),
+              in_size = 10, out_size = 2, then,
               output[0] = sum(input[0, 2, 4, 6, 8])
               output[1] = sum(input[1, 3, 5, 7, 9])
-   * \param out - output: insert 'value' to 'arr' according to 'index'.
-   * \param a - input: the first argument.
-   * \param b - input: the second argument.
-   * \param ndim - ndim of a, b and output. Because of broadcast, regard their ndim as equal.  
+   * \note in_size >= out_size
    */
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, DType* output, DType* input,

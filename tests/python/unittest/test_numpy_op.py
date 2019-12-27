@@ -431,9 +431,6 @@ def test_np_matmul():
             return F.np.matmul(a, b)
 
     def matmul_backward(a, b):
-        if (a.ndim < 1) or (b.ndim < 1):
-            raise ValueError('An input is zero-dim')
-
         def ShapeInfer(mat_a, mat_b):
             if mat_a.ndim == 1:
                 mat_a = mat_a.reshape((1, mat_a.size))
