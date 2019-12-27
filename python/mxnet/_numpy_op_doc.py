@@ -731,7 +731,7 @@ def _np_squeeze(a, axis=None, out=None):
     pass
 
 
-def _np_max(a, axis=None, out=None, keepdims=False):
+def _np_max(a, axis=None, keepdims=False, out=None):
     """
     Return the maximum of an array or maximum along an axis.
     
@@ -795,7 +795,14 @@ def _np_max(a, axis=None, out=None, keepdims=False):
     pass
 
 
-def _np_min(a, axis=None, out=None, keepdims=False):
+def _np_amax(a, axis=None, keepdims=False, out=None):
+    """
+    Refer to _np_max
+    """
+    pass
+
+
+def _np_min(a, axis=None, keepdims=False, out=None):
     """
     Return the minimum of an array or minimum along an axis.
     

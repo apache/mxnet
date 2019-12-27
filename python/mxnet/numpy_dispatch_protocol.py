@@ -106,6 +106,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'flip',
     'inner',
     'max',
+    'amax',
     'mean',
     'min',
     'nonzero',
