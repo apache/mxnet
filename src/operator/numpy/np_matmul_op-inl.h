@@ -270,7 +270,7 @@ void NumpyMatmulForward(const nnvm::NodeAttrs& attrs,
     size_t bc_size_a = batch_size * a_shape[a_shape.ndim() - 2] * a_shape[a_shape.ndim() - 1];
     size_t bc_size_b = batch_size * b_shape[b_shape.ndim() - 2] * b_shape[b_shape.ndim() - 1];
     size_t temp_mem_size = (bc_size_a + bc_size_b) * sizeof(DType) +
-                            3 * batch_size * sizeof(DType*);
+                           3 * batch_size * sizeof(DType*);
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
     MatmulImpl<xpu, DType>(ctx, inputs[0], inputs[1], req[0], outputs[0], temp_mem,
@@ -395,7 +395,7 @@ void NumpyMatmulBackward(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
     Tensor<xpu, 1, char> workspace_grada(temp_mem.dptr_, Shape1(temp_mem_size_grada), s);
-    Tensor<xpu, 1, char> workspace_gradb(workspace_grada.dptr_ + temp_mem_size_grada ,
+    Tensor<xpu, 1, char> workspace_gradb(workspace_grada.dptr_ + temp_mem_size_grada,
                                          Shape1(temp_mem_size_gradb), s);
     Tensor<xpu, 1, DType> temp_grada(
       reinterpret_cast<DType*>(workspace_gradb.dptr_ + temp_mem_size_gradb),
