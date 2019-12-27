@@ -836,7 +836,10 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
   } else {
     small = NumpyReduceAxesShapeImpl(data.shape_, param.axis, true);
   }
-
+  
+  if (small.Size() == 0) {
+    return;
+  }
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(data.shape_, small, &src_shape, &dst_shape);
 

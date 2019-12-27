@@ -435,7 +435,7 @@ def test_np_sum():
         return 'int' in dtype
 
     in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     is_windows = sys.platform.startswith('win')
@@ -624,7 +624,7 @@ def test_np_max_min():
         assert out.ndim == dim, 'dimension mismatch, output.ndim={}, dim={}'.format(output.ndim, dim)
 
     in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
     for func in ['max', 'min']:
         for hybridize in [False, True]:
             for keepdims in [True, False]:
@@ -809,7 +809,7 @@ def test_np_mean():
 
     is_windows = sys.platform.startswith('win')
     in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'bool': 'int64', 'int8': 'int32', 'int32': 'int64', 'int64': 'int64'}
     ft_types = ['float16', 'float32', 'float64']
@@ -911,7 +911,7 @@ def test_np_moment():
         return tuple(shape_)
 
     in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
     shape = legalize_shape(shape)
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'float64', 'int32': 'float64', 'int64': 'float64'}
@@ -1459,7 +1459,7 @@ def test_np_prod():
             return F.np.prod(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     in_data_dim = random.choice([3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3)
+    shape = rand_shape_nd(in_data_dim, dim=3, allow_zero_size=True)
     for hybridize in [False, True]:
         for keepdims in [True, False]:
             for axis in ([i for i in range(in_data_dim)] + [(), None]):
