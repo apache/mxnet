@@ -62,7 +62,7 @@ struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
               "'values' is inserted");
     DMLC_DECLARE_FIELD(axis)
     .set_default(dmlc::optional<int>())
-    .describe("Axis along which to insert `values`.");
+    .describe("Axis along which to insert 'values'.");
   }
 };
 
@@ -186,26 +186,6 @@ struct InsertSingleIndexForward {
     }
   }
 };
-
-template<int ndim>
-inline mshadow::Shape<ndim> GetStride(const mxnet::TShape& shape) {
-  mshadow::Shape<ndim>stride;
-  size_t tmp = 1;
-  for (int i = shape.ndim() - 1; i >= 0; --i) {
-    stride[i] = tmp;
-    tmp *= shape[i];
-  }
-  return stride;
-}
-
-template<int ndim>
-inline mshadow::Shape<ndim> GetKernelShape(const mxnet::TShape& shape) {
-  mshadow::Shape<ndim>k_shape;
-  for (int i = 0 ; i < shape.ndim() ; ++i) {
-    k_shape[i] = shape[i];
-  }
-  return k_shape;
-}
 
 /*!
  * \brief insert when obj is 'tensor' or 'slice' with more than one element.
@@ -354,7 +334,7 @@ struct SetOriginArrIdx {
  * /return step - slice.indices(range).step
  * /return tot - total number of slice.indices(range)
  */
-inline void SliceIndices(const dmlc::optional<int>& pstart,
+void SliceIndices(const dmlc::optional<int>& pstart,
                          const dmlc::optional<int>& pstop,
                          const dmlc::optional<int>& pstep,
                          const int range,
@@ -555,7 +535,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
             axis, true, req[out_pos]);
         });
       });
-    } else if (indices_len == 1) {`
+    } else if (indices_len == 1) {
       if (param.step.has_value()) {
         MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
           MSHADOW_TYPE_SWITCH(vtype, VType, {
