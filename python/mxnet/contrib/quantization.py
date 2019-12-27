@@ -613,7 +613,9 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
         A tuple of quantized symbol, quantized arg_params, and aux_params.
     -------
     """
-    if ctx != cpu():
+    if not isinstance(ctx, Context):
+        raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
+    if ctx.device_type != 'cpu':
         raise ValueError(
             'quantize_model_mkldnn only support Intel cpu platform with MKL-DNN Backend')
 
