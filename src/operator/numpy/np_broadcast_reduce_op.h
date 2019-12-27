@@ -836,7 +836,7 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
   } else {
     small = NumpyReduceAxesShapeImpl(data.shape_, param.axis, true);
   }
-  
+
   if (small.Size() == 0) {
     return;
   }
