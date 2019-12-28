@@ -118,8 +118,11 @@ def test_subgraph():
     d = mx.sym.exp(c)
     sym = mx.sym.log(d)
 
+    args = {'a':mx.nd.ones((3,2),ctx=mx.cpu()), 'b':mx.nd.ones((3,2),ctx=mx.cpu())}
+    arg_array = [mx.nd.ones((3,2),dtype='float32',ctx=mx.cpu()),
+                 mx.nd.ones((3,2),dtype='float32'),ctx=mx.cpu()]
+
     # baseline - regular execution in MXNet
-    args = {'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))}
     exe = sym.bind(ctx=mx.cpu(), args=args)
     out = exe.forward()
 
@@ -133,7 +136,6 @@ def test_subgraph():
 
     # with propogating shapes/types, rejecting subgraph
     # this tests creating the subgraph and having the subgraph prop reject it
-    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
     mysym2 = sym.optimize_for("myProp", arg_array, reject=True)
     exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
