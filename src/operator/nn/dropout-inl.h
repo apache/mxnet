@@ -196,7 +196,7 @@ class DropoutOp {
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
         auto mask_idx = i / 8;
-        uint8_t mask_offset = i % 8;
+        uint8_t mask_offset = i & 7; // mod 8
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
         if (mask_val) {
           // set bit
@@ -218,7 +218,7 @@ class DropoutOp {
                                     const uint8_t *mask,
                                     const real_t pkeep) {
       auto mask_idx = i / 8;
-      uint8_t mask_offset = i % 8;
+      uint8_t mask_offset = i & 7; // mod 8
       bool mask_val = mask[mask_idx] & (1U << mask_offset);
       KERNEL_ASSIGN(igrad[i], req, mask_val * ograd[i] * (1 / pkeep));
     }
@@ -238,7 +238,7 @@ class DropoutOp {
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
         auto mask_idx = i / 8;
-        uint8_t mask_offset = i % 8;
+        uint8_t mask_offset = i & 7; // mod 8
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
         if (mask_val) {
           // set bit
@@ -275,7 +275,7 @@ class DropoutOp {
       for (index_t i = 1; i < length; ++i) {
         inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
         mask_idx = ridx / 8;
-        mask_offset = ridx % 8;
+        mask_offset = ridx & 7; // mod 8
         mask_val = mask[mask_idx] & (1U << mask_offset);
         KERNEL_ASSIGN(igrad[base + i], req, mask_val * ograd[lidx] * (1 / pkeep))
       }
