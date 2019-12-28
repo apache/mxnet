@@ -457,7 +457,7 @@ endif
 .PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
-all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib
+all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib subgraph_lib
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
@@ -667,6 +667,8 @@ pylint:
 # sample lib for MXNet extension dynamically loading custom operator
 sample_lib:
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
+subgraph_lib:
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o libsubgraph_lib.so -I include/mxnet
 
 # Cython build
 cython:
@@ -762,7 +764,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) libsample_lib.so
+	$(RM) libsample_lib.so libsubgraph_lib.so
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -774,7 +776,7 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) libsample_lib.so
+	$(RM) libsample_lib.so libsubgraph_lib.so
 endif
 
 clean_all: clean
