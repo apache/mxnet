@@ -148,6 +148,19 @@ function num_gpus()
 end
 
 """
+    empty_cache(ctx::Context = current_context())
+
+Empties the memory cache for the current contexts device.
+MXNet utilizes a memory pool to avoid excessive allocations.
+Calling empty_cache will empty the memory pool of the contexts
+device. This will only free the memory of the unreferenced data.
+"""
+function empty_cache(ctx::Context = current_context())
+  @mxcall :MXStorageEmptyCache (Cint, Cint) ctx.device_type ctx.device_id
+  ctx
+end
+
+"""
     gpu_memory_info(dev_id = 0)::Tuple{UInt64,UInt64}
 
 Query CUDA for the free and total bytes of GPU global memory.
