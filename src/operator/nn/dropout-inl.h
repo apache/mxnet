@@ -179,7 +179,7 @@ class DropoutOp {
      * \param N Total number of items in the output
      * \param step Step between items, related to parallelism
      * \param dropout_out Output dropout values
-     * \param mask_out  Output mask with one bit for one element
+     * \param mask_out  Output mask with one bit for each element
      * \param input_data Input data to perform the dropout on
      * \param pkeep Dropout rate (keep when the generated random number is less than this value)
      */
