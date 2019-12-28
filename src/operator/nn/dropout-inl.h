@@ -268,7 +268,7 @@ class DropoutOp {
       auto lidx = static_cast<index_t>(dot(coord, lstride));
       auto ridx = static_cast<index_t>(dot(coord, rstride));
       auto mask_idx = ridx / 8;
-      uint8_t mask_offset = ridx % 8;
+      uint8_t mask_offset = ridx & 7; // mod 8
       bool mask_val = mask[mask_idx] & (1U << mask_offset);
       KERNEL_ASSIGN(igrad[base], req, mask_val * ograd[lidx] * (1 / pkeep))
       // starts from 1 to avoid extra inc at end of loop
