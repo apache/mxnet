@@ -617,7 +617,7 @@ class CustomPartitioner {
     else
       return nullptr;
   }
-  
+
   /*! \brief partitioner  name */
   const char* name;
   std::map<std::string, acceptSubgraph_t> accept_map;
@@ -1136,7 +1136,7 @@ extern "C" {
                           int subgraph_id, int *accept, const char* const* opt_keys,
                           const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
-    bool accept_bool=false;
+    bool accept_bool = false;
     // create map of attributes from list
     std::map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++) {

@@ -59,8 +59,8 @@ class CustomContainOpSelector: public SubgraphSelector {
  */
 class  CustomSubgraphProperty: public SubgraphProperty {
  public:
- CustomSubgraphProperty() :
-  subgraphProp("error"),
+  CustomSubgraphProperty() :
+    subgraphProp("error"),
     callSupportedOps_(nullptr),
     supportedOps_(nullptr),
     callAcceptSubgraph_(nullptr),
@@ -128,16 +128,16 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     const char* json = subgraph_json.c_str();
     int *ids = supportedNodeIDs.data();
 
-    //clear options from previous call
+    // clear options from previous call
     opt_keys_.clear();
     opt_vals_.clear();
     options_map_.clear();
     for (auto kv : options_map) {
-      options_map_.push_back(kv);      
+      options_map_.push_back(kv);
       opt_keys_.push_back(options_map_.back().first.c_str());
       opt_vals_.push_back(options_map_.back().second.c_str());
     }
-    
+
     CHECK(callSupportedOps_(supportedOps_, json, supportedNodeIDs.size(), ids,
                             opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
       << "Error calling supportedOps for '" << subgraphProp << "'";
@@ -162,7 +162,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                                 subgraph_id, &accept, opt_keys_.data(),
                                 opt_vals_.data(), opt_keys_.size()))
         << "Error calling acceptSubgraph for '" << subgraphProp << "'";
-      
     }
     if (accept) {
       nnvm::NodePtr n = nnvm::Node::Create();
@@ -188,7 +187,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
-
 };
 }  // namespace op
 }  // namespace mxnet
