@@ -86,7 +86,15 @@ std::string NormalizeError(std::string err_msg) {
     if (!(is >> line)) return false;
     // get filename
     while (is.peek() == ' ') is.get();
-    if (!getline(is, file_name, ':')) return false;
+    if (!getline(is, file_name, ':')) {
+      return false;
+    } else {
+      if (is.peek() == '\\') {
+        // windows path
+        if (!getline(is, line, ':')) return false;
+        file_name = file_name + ':' + line;
+      }
+    }
     // get line number
     if (!(is >> line_number)) return false;
     // get rest of the message.
