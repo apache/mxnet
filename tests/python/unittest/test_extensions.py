@@ -120,7 +120,7 @@ def test_subgraph():
 
     args = {'a':mx.nd.ones((3,2),ctx=mx.cpu()), 'b':mx.nd.ones((3,2),ctx=mx.cpu())}
     arg_array = [mx.nd.ones((3,2),dtype='float32',ctx=mx.cpu()),
-                 mx.nd.ones((3,2),dtype='float32'),ctx=mx.cpu()]
+                 mx.nd.ones((3,2),dtype='float32',ctx=mx.cpu())]
 
     # baseline - regular execution in MXNet
     exe = sym.bind(ctx=mx.cpu(), args=args)
