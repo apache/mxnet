@@ -23,6 +23,7 @@
  * \brief subgraph operator implementation library file
  */
 
+#include <math.h>
 #include <iostream>
 #include <algorithm>
 #include "lib_api.h"
