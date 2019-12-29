@@ -707,10 +707,10 @@ class Registry {
 typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
-typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
-                          parseAttrs_t*, inferType_t*,
-                          inferShape_t*, mutateInputs_t*,
-                          createOpState_t*);
+typedef void (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
+                           parseAttrs_t*, inferType_t*,
+                           inferShape_t*, mutateInputs_t*,
+                           createOpState_t*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -760,7 +760,7 @@ typedef int (*partRegSize_t)(void);
 typedef int (*partRegGetCount_t)(int, const char**);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
-typedef int (*partRegGet_t)(int, int, const char**, supportedOps_t*,
+typedef void (*partRegGet_t)(int, int, const char**, supportedOps_t*,
                             acceptSubgraph_t*, const char**);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
@@ -1083,7 +1083,7 @@ extern "C" {
   /* returns number of strategies registered for partitioner 
    * at specified index */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) void __cdecl
+  __declspec(dllexport) int __cdecl
 #else
   int
 #endif
