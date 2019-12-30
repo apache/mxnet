@@ -4631,8 +4631,6 @@ def fliplr(m):
         A view of `m` with the columns reversed.  Since a view
         is returned, this operation is :math:`\mathcal O(1)`.
     """
-    if len(_np.shape(m.asnumpy())) < 2:
-        raise ValueError("Input must be >= 2-d.")
     if isinstance(m, numeric_types):
         return _np.flip(m, 1)
     elif isinstance(m, _Symbol):

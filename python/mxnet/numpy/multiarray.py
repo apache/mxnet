@@ -6612,8 +6612,6 @@ def fliplr(m):
     >>> np.all(np.fliplr(A) == A[:,::-1,...])
     array(True)
     """
-    if len(_np.shape(m.asnumpy())) < 2:
-        raise ValueError("Input must be >= 2-d.")
     return _mx_nd_np.flip(m, 1)
 
 

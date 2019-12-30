@@ -498,7 +498,7 @@ void NumpyFlipForward(const nnvm::NodeAttrs& attrs,
   std::vector<index_t>  trailing_(axistemp.ndim());
   index_t flip_index = 0;
   for (int axis : axistemp) {
-    CHECK_LT(axis, ishape.ndim());
+    CHECK_LT(axis, ishape.ndim()) << "Input must be >= 2-d";
     stride_[flip_index] = ishape[axis];
     trailing_[flip_index] = 1;
     for (int i2 = axis + 1; i2 < ishape.ndim(); ++i2) {

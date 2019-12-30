@@ -4920,8 +4920,6 @@ def fliplr(m):
     array(True)
     """
     from ...numpy import ndarray
-    if len(_np.shape(m.asnumpy())) < 2:
-        raise ValueError("Input must be >= 2-d.")
     if isinstance(m, numeric_types):
         return _np.flip(m, 1)
     elif isinstance(m, ndarray):
