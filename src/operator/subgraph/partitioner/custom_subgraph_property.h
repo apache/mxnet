@@ -17,6 +17,14 @@
  * under the License.
  */
 
+/*
+ * This file contains an implementation of a subgraph property
+ * that interfaces between MXNet and custom subgraph properties
+ * created by users in external libraries. It does not implement
+ * any custom subgraphing logic itself, rather it calls APIs
+ * in the user's custom library to enable control of partitioning
+ */
+
 #ifndef MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 #define MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 
