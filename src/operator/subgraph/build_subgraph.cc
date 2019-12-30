@@ -565,7 +565,8 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 
 /*!
  * \brief This function reattaches the original input nodes that were cut
- * by CutGraphInputs.
+ * by CutGraphInputs. This function is used when subgraphs are rejected, it
+ * reattaches the subgraph back to the main graph where it was cut earlier.
  */
 void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
                          std::vector<nnvm::NodeEntry> *orig_entries) {
