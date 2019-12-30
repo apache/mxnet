@@ -1478,7 +1478,7 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute flipud')
 
-    def flip(self, *args, **kwargs):
+    def fliplr(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`fliplr`.
 
         The arguments are the same as for :py:func:`fliplr`, with
