@@ -41,12 +41,16 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-#execute in MXNet 
+#execute in MXNet
+print('-------------------------------')
+print('Testing regular MXNet execution')
 exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out = exe.forward()
 print(out)
 
 # with propogating shapes/types
+print('-------------------------------')
+print('Testing partitioning with shapes/types')
 arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
 mysym2 = sym.optimize_for("myProp",arg_array)
 exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
@@ -54,6 +58,8 @@ out2 = exe2.forward()
 print(out2)
 
 # with propogating shapes/types, rejecting subgraph
+print('-------------------------------')
+print('Testing partitioning with shapes/types - rejecting subgraph')
 arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
 mysym2 = sym.optimize_for("myProp", arg_array, reject=True)
 exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
@@ -61,6 +67,8 @@ out2 = exe2.forward()
 print(out2)
 
 # without propogating shapes/types
+print('-------------------------------')
+print('Testing partitioning without shapes/types')
 mysym3 = sym.optimize_for("myProp", myOpt='yello')
 exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out3 = exe3.forward()
