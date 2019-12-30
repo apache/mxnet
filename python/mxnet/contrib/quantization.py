@@ -112,7 +112,7 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
         The mode that quantization pass to apply.
     quantize_granularity: str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
-        quantization.
+        quantization. The default value is 'tensor-wise'.
 
     """
     num_excluded_symbols = 0
@@ -465,7 +465,7 @@ def quantize_model(sym, arg_params, aux_params,
                    ctx=cpu(), excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
                    calib_data=None, num_calib_examples=None,
                    quantized_dtype='int8', quantize_mode='smart',
-                   quantize_granularity='channel-wise', logger=None):
+                   quantize_granularity='tensor-wise', logger=None):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -523,7 +523,7 @@ def quantize_model(sym, arg_params, aux_params,
         'smart' means quantization pass will smartly choice which operator should be quantized.
     quantize_granularity: str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
-        quantization.
+        quantization. The default value is 'tensor-wise'.
     logger : Object
         A logging object for printing information during the process of quantization.
 
@@ -553,6 +553,9 @@ def quantize_model(sym, arg_params, aux_params,
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
+    if quantize_granularity not in ('tensor-wise', 'channel-wise'):
+        raise ValueError('unkonwn quantize_granularity %s received,',
+                         ' expected `tensor-wise` or `channel-wise`.' % quantize_granularity)
     qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
                                          offline_params=list(arg_params.keys()),
@@ -607,7 +610,8 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                           data_names=('data',), label_names=('softmax_label',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
                           calib_mode='entropy', calib_data=None, num_calib_examples=None,
-                          quantized_dtype='int8', quantize_mode='smart', logger=None):
+                          quantized_dtype='int8', quantize_mode='smart',
+                          quantize_granularity='tensor-wise', logger=None):
     """User-level API for generating a fusion + quantized model from a FP32 model
     w/ or w/o calibration with Intel MKL-DNN.
     The backend quantized operators are only enabled for Linux systems. Please do not run
@@ -638,7 +642,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                                                    calib_mode=calib_mode, calib_data=calib_data,
                                                    num_calib_examples=num_calib_examples,
                                                    quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
-                                                   logger=logger)
+                                                   quantize_granularity=quantize_granularity, logger=logger)
 
     qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 
@@ -646,7 +650,8 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
 def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
                    excluded_sym_names=None, excluded_op_names=None,
-                   calib_mode='entropy', quantized_dtype='int8', quantize_mode='full',
+                   calib_mode='entropy', quantized_dtype='int8',
+                   quantize_mode='full', quantize_granularity='tensor-wise',
                    LayerOutputCollector=None, logger=None):
     """User-level API for generating a quantized model from a FP32 model w/o calibration
     and a collector for naive or entropy calibration.
@@ -686,6 +691,9 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         The mode that quantization pass to apply. Support 'full' and 'smart'.
         'full' means quantize all operator if possible.
         'smart' means quantization pass will smartly choice which operator should be quantized.
+    quantize_granularity: str
+        The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
+        quantization. The default value is 'tensor-wise'.
     LayerOutputCollector : class
         For customize calibration method usage.
     logger : Object
@@ -710,12 +718,16 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
     if quantized_dtype not in ('int8', 'uint8', 'auto'):
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
+    if quantize_granularity not in ('tensor-wise', 'channel-wise'):
+        raise ValueError('unkonwn quantize_granularity %s received,',
+                         ' expected `tensor-wise` or `channel-wise`.' % quantize_granularity)
     qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
                                          offline_params=list(
                                              arg_params.keys()),
                                          quantized_dtype=quantized_dtype,
-                                         quantize_mode=quantize_mode)
+                                         quantize_mode=quantize_mode,
+                                         quantize_granularity=quantize_granularity)
 
     th_dict = {}
     collector = None
@@ -811,7 +823,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 
     return qsym, qarg_params, aux_params
 
-def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full',
+def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
                     exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                     calib_data=None, data_shapes=None, calib_mode='none',
                     num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
@@ -831,6 +843,9 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full',
         The mode that quantization pass to apply. Support 'full' and 'smart'.
         'full' means quantize all operator if possible.
         'smart' means quantization pass will smartly choice which operator should be quantized.
+    quantize_granularity: str
+        The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
+        quantization. The default value is 'tensor-wise'.
     exclude_layers : list of strings
         A list of strings representing the names of the symbols that users want to excluding
     exclude_layers_match : list of strings
@@ -937,7 +952,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full',
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
         calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
-        LayerOutputCollector=LayerOutputCollector, logger=logger)
+        quantize_granularity=quantize_granularity, LayerOutputCollector=LayerOutputCollector,
+        logger=logger)
 
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
@@ -988,7 +1004,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full',
         net.collect_params().reset_ctx(ctx)
     return net
 
-def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
+def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
                  exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                  calib_data=None, data_shapes=None, calib_mode='none',
                  num_calib_examples=None, ctx=cpu(), logger=None):
@@ -997,7 +1013,9 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
     """
     warnings.warn('WARNING: This will be deprecated after MXNet 2.0, please use quantize_net_v2.')
     return quantize_net_v2(network=network, quantized_dtype=quantized_dtype,
-                           quantize_mode=quantize_mode, exclude_layers=exclude_layers,
+                           quantize_mode=quantize_mode,
+                           quantize_granularity=quantize_granularity,
+                           exclude_layers=exclude_layers,
                            exclude_layers_match=exclude_layers_match,
                            exclude_operators=exclude_operators,
                            calib_data=calib_data, data_shapes=data_shapes,
