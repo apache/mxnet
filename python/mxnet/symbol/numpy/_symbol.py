@@ -36,7 +36,7 @@ try:
 except ImportError:
     from builtins import slice as py_slice
 
-__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'bitwise_not', 'invert', 'delete',
+__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'empty_like', 'bitwise_not', 'invert', 'delete',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
@@ -1717,6 +1717,67 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     if ctx is None:
         ctx = current_context()
     return _npi.eye(N, M, k, ctx, dtype)
+
+
+@set_module('mxnet.symbol.numpy')
+def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+    """
+    Return a new array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    prototype : _Symbol
+        The shape and data-type of `prototype` define these same attributes
+        of the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    subok : bool, optional.
+        If True, then the newly created array will use the sub-class
+        type of 'a', otherwise it will be a base-class array. Defaults
+        to False.
+        (Only support False at this moment)
+    shape : int or sequence of ints, optional.
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, will try to keep order, otherwise,
+        order='C' is implied.
+        (This parameter is not supported at this moment)
+
+    Returns
+    -------
+    out : _Symbol
+        Array of uninitialized (arbitrary) data with the same
+        shape and type as `prototype`.
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    empty : Return a new uninitialized array.
+
+    Notes
+    -----
+    This function does *not* initialize the returned array; to do that use
+    `zeros_like` or `ones_like` instead.  It may be marginally faster than
+    the functions that do set the array values.
+    """
+    dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
+                  _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
+                  _np.float64:'float64', _np.bool_:'bool'}
+    if order != 'C':
+        raise NotImplementedError("Only support C order at this moment")
+    if subok:
+        raise NotImplementedError("Creating array by using sub-class is not supported at this moment")
+    if shape is not None:
+        raise NotImplementedError("Parameter 'shape' is not supported at this moment")
+    try:
+        dtype = dtype if isinstance(dtype, str) else dtype_list[dtype]
+    except:
+        raise NotImplementedError("Do not support this dtype at this moment")
+    return _npi.empty_like_fallback(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 @set_module('mxnet.symbol.numpy')

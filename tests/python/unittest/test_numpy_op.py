@@ -6136,7 +6136,65 @@ def test_np_bincount():
         np_out = _np.bincount(data.asnumpy(), weights_np, minlength)
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
-        
+
+@with_seed()
+@use_np
+def test_np_empty_like():
+    class TestEmptyLike(HybridBlock):
+        def __init__(self, dtype, order, subok):
+            super(TestEmptyLike, self).__init__()
+            self._dtype = dtype
+            self._order = order 
+            self._subok = subok
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.np.empty_like(x, self._dtype, self._order, self._subok)
+
+    if StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
+        return
+
+    dtypes = [None, 'float16', 'float32', np.int8, np.uint8, np.int32, np.int64,
+              np.float16, np.float32, np.float64, np.bool_]
+    shapes = [
+        (),
+        (1,),
+        (5,),
+        (4, 3),
+        (3, 5),
+        (4, 4),
+        (4, 5),
+        (5, 5),
+        (5, 6),
+        (6, 6),
+        (0, 1),
+        (6, 5, 6),
+        (2, 3, 3, 4),
+        (4, 2, 1, 2),
+        (0, 5, 3, 3),
+        (5, 0, 3, 3),
+        (3, 3, 0, 0),
+    ]
+    orders = ["C"]
+    subok_list = [False]
+    flags = [False]
+    _np_version = _np.version.version
+    for dtype, shape, hybridize, order, subok in itertools.product(dtypes, shapes, flags, orders, subok_list):
+        prototype = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
+        test = TestEmptyLike(dtype, order, subok)
+        if StrictVersion(_np_version) >= StrictVersion('1.6.0'):
+            expected_ret = _np.empty_like(prototype, dtype=dtype, order=order, subok=subok)
+        else:
+            expected_ret = _np.empty_like(prototype)
+        if hybridize:
+            test.hybridize()
+        ret = test(prototype)
+        assert ret.asnumpy().shape == expected_ret.shape
+
+        # check imperative again
+        ret = np.empty_like(prototype, dtype, order, subok)
+        assert ret.asnumpy().shape == expected_ret.shape
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

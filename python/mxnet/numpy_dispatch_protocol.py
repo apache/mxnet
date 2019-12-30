@@ -153,7 +153,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'resize',
     'where',
     'full_like',
-    'bincount'
+    'bincount',
+    'empty_like',
+    'nan_to_num',
 ]
 
 
