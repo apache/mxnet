@@ -4712,6 +4712,60 @@ def test_np_flip():
 
 @with_seed()
 @use_np
+def test_np_flipud_fliplr():
+    class TestFlipud(HybridBlock):
+        def __init__(self):
+            super(TestFlipud, self).__init__()
+
+        def hybrid_forward(self, F, x):
+            return F.np.flipud(x)
+    
+    class TestFliplr(HybridBlock):
+        def __init__(self):
+            super(TestFliplr, self).__init__()
+
+        def hybrid_forward(self, F, x):
+            return F.np.fliplr(x)
+
+    shapes = [(1, 2, 3), (1, 0)]
+    types = ['int32', 'int64', 'float16', 'float32', 'float64']
+    for func in ['flipud', 'fliplr']:
+        for hybridize in [True, False]:
+            for oneType in types:
+                rtol, atol=1e-3, 1e-5
+                for shape in shapes:
+                    if func == 'flipud':
+                        test_flip = TestFlipud()
+                    else:
+                        test_flip = TestFliplr()
+                    if hybridize:
+                        test_flip.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                    x.attach_grad()
+                    if func == 'flipud':
+                        np_out = _np.flipud(x.asnumpy())
+                    else:
+                        np_out = _np.fliplr(x.asnumpy())
+                    with mx.autograd.record():
+                        mx_out = test_flip(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                    mx_out.backward()
+                    np_backward = _np.ones(np_out.shape)
+                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    if func == 'flipud':
+                        mx_out = np.flipud(x)
+                        np_out = _np.flipud(x.asnumpy())
+                    else:
+                        mx_out = np.fliplr(x)
+                        np_out = _np.fliplr(x.asnumpy())
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_around():
     class TestAround(HybridBlock):
         def __init__(self, decimals):

@@ -56,11 +56,11 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'round', 'arctan2',
-           'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity',
-           'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
+           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around',
+           'round', 'arctan2', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater',
+           'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
+           'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -1469,6 +1469,22 @@ class ndarray(NDArray):
         this array as data.
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute flip')
+
+    def flipud(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`flipud`.
+
+        The arguments are the same as for :py:func:`flipud`, with
+        this array as data.
+        """
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute flipud')
+
+    def flip(self, *args, **kwargs):
+        """Convenience fluent method for :py:func:`fliplr`.
+
+        The arguments are the same as for :py:func:`fliplr`, with
+        this array as data.
+        """
+        raise AttributeError('mxnet.numpy.ndarray object has no attribute fliplr')
 
     def depth_to_space(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`depth_to_space`.
@@ -6511,6 +6527,108 @@ def flip(m, axis=None, out=None):
             [3, 2]]])
     """
     return _mx_nd_np.flip(m, axis, out=out)
+
+
+@set_module('mxnet.numpy')
+def flipud(m):
+    r"""
+    flipud(*args, **kwargs)
+
+    Flip array in the up/down direction.
+
+    Flip the entries in each column in the up/down direction.
+    Rows are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array.
+
+    Returns
+    -------
+    out : array_like
+        A view of `m` with the rows reversed.  Since a view is
+        returned, this operation is :math:`\mathcal O(1)`.
+
+    See Also
+    --------
+    fliplr : Flip array in the left/right direction.
+    rot90 : Rotate array counterclockwise.
+
+    Notes
+    -----
+    Equivalent to ``m[::-1,...]``.
+    Does not require the array to be two-dimensional.
+
+    Examples
+    --------
+    >>> A = np.diag(np.array([1.0, 2, 3]))
+    >>> A
+    array([[1.,  0.,  0.],
+        [0.,  2.,  0.],
+        [0.,  0.,  3.]])
+    >>> np.flipud(A)
+    array([[0.,  0.,  3.],
+        [0.,  2.,  0.],
+        [1.,  0.,  0.]])
+
+    >>> A = np.random.randn(2,3,5)
+    >>> np.all(np.flipud(A) == A[::-1,...])
+    array(True)
+
+    >>> np.flipud(np.array([1,2]))
+    array([2., 1.])
+    """
+    return _mx_nd_np.flip(m, 0)
+
+
+@set_module('mxnet.numpy')
+def fliplr(m):
+    r"""
+    fliplr(*args, **kwargs)
+
+    Flip array in the left/right direction.
+
+    Flip the entries in each row in the left/right direction.
+    Columns are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array, must be at least 2-D.
+
+    Returns
+    -------
+    f : ndarray
+        A view of `m` with the columns reversed.  Since a view
+        is returned, this operation is :math:`\mathcal O(1)`.
+
+    See Also
+    --------
+    flipud : Flip array in the up/down direction.
+    rot90 : Rotate array counterclockwise.
+
+    Notes
+    -----
+    Equivalent to m[:,::-1]. Requires the array to be at least 2-D.
+
+    Examples
+    --------
+    >>> A = np.diag([1.,2.,3.])
+    >>> A
+    array([[1.,  0.,  0.],
+        [0.,  2.,  0.],
+        [0.,  0.,  3.]])
+    >>> np.fliplr(A)
+    array([[0.,  0.,  1.],
+        [0.,  2.,  0.],
+        [3.,  0.,  0.]])
+
+    >>> A = np.random.randn(2,3,5)
+    >>> np.all(np.fliplr(A) == A[:,::-1,...])
+    array(True)
+    """
+    return _mx_nd_np.flip(m, 1)
 
 
 @set_module('mxnet.numpy')
