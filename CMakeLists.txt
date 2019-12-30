@@ -605,7 +605,6 @@ if(USE_CUDA)
       list(APPEND arch_code_list ${arch_code})
     endif()
   endforeach()
-  MESSAGE( "${arch_code_list}")
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
@@ -792,7 +791,7 @@ endif()
 
 if(MSVC)
   if(USE_SPLIT_ARCH_DLL)
-    foreach(arch ${cuda_arch})
+    foreach(arch ${arch_code_list})
       target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
       target_link_libraries(mxnet_${arch} PUBLIC dmlc)
     endforeach()
