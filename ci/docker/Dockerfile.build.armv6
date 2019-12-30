@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for ARMv6
 
-FROM mxnetcipinned/dockcross-linux-armv6:11262018
+FROM dockcross/linux-armv6
 
 ENV ARCH armv6l
 ENV HOSTCC gcc

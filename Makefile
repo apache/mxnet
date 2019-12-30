@@ -94,6 +94,8 @@ WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
+# disable stack trace in exception by default.
+CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -151,7 +153,7 @@ ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LIB_DEP += $(MKLDNNROOT)/lib/libmkldnn.a
+	LIB_DEP += $(MKLDNNROOT)/lib/libdnnl.a
 endif
 
 # setup opencv
@@ -612,7 +614,7 @@ lib/libtvm_runtime.so:
 	[ -e $(LLVM_PATH)/bin/llvm-config ] || sh $(ROOTDIR)/contrib/tvmop/prepare_tvm.sh; \
 	cd $(TVM_PATH)/build; \
 	cmake -DUSE_LLVM="$(LLVM_PATH)/bin/llvm-config" \
-		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF ..; \
+		  -DUSE_SORT=OFF -DUSE_CUDA=$(TVM_USE_CUDA) -DUSE_CUDNN=OFF -DUSE_OPENMP=ON ..; \
 	$(MAKE) VERBOSE=1; \
 	mkdir -p $(ROOTDIR)/lib; \
 	cp $(TVM_PATH)/build/libtvm_runtime.so $(ROOTDIR)/lib/libtvm_runtime.so; \
@@ -662,6 +664,10 @@ cpplint:
 pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
+# sample lib for MXNet extension dynamically loading custom operator
+sample_lib:
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
+
 # Cython build
 cython:
 	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
@@ -704,10 +710,6 @@ rpkg:
 rpkgtest:
 	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
 	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
-
-
-sample_lib:
-	$(CXX) -shared -fPIC example/lib_api/mylib.cc -o libsample_lib.so -I include/mxnet
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package && mvn clean)
@@ -760,6 +762,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) libsample_lib.so
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -769,7 +772,9 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
+	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
+	$(RM) libsample_lib.so
 endif
 
 clean_all: clean

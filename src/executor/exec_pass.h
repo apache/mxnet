@@ -222,6 +222,11 @@ Graph FusePointwiseForward(Graph&& g);
 Graph FusePointwiseBackward(Graph&& g);
 
 /*!
+ * \brief Issue a one-time warning that fusion is not possible for this platform or build.
+ */
+void WarnFusionNotSupported();
+
+/*!
  * \brief Infer shapes in the graph given the information.
  * \param graph The input graph.
  * \param shape_inputs The shapes of input symbols to the graph.

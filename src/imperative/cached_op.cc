@@ -167,10 +167,8 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
 
 void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Graph * grad_graph,
                    const Context& context, size_t num_forward_outputs, const bool inlining) {
-#if MXNET_USE_CUDA && !defined(_WIN32)
-  if (context.dev_mask() == kGPU &&
-      !inlining &&
-      dmlc::GetEnv("MXNET_USE_FUSION", true)) {
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+  if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", true)) {
     nnvm::Graph unoptimized_graph;
     common::CopyGraph(&unoptimized_graph, *full_graph, false);
 
@@ -202,7 +200,12 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
         << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
      }
   }
-#endif  // MXNET_USE_CUDA
+#else
+  // Only warn user if MXNET_USE_FUSION env var is explicitly set
+  if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", false)) {
+    exec::WarnFusionNotSupported();
+  }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
 
   *fwd_graph = nnvm::Graph();
   fwd_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin(),
@@ -470,7 +473,7 @@ bool CachedOp::SetForwardGraph(
     storage[idx.entry_id(idx.outputs()[i])] = exec::kExternalStorageID;
   }
 
-  auto mem_plan = PlanMemory(
+  auto mem_plan = MXPlanMemory(
       &g, std::move(storage), g.GetAttr<std::vector<uint32_t> >(AddPrefix(prefix, REF_COUNT)),
       AddPrefix(prefix, STORAGE_PLAN));
   g.attrs[AddPrefix(prefix, MEM_PLAN)] =
@@ -598,7 +601,7 @@ bool CachedOp::SetBackwardGraph(
   for (const auto i : idx.input_nodes()) storage[idx.entry_id(i, 0)] = exec::kExternalStorageID;
   for (const auto i : idx.outputs()) storage[idx.entry_id(i)] = exec::kExternalStorageID;
 
-  auto mem_plan = PlanMemory(
+  auto mem_plan = MXPlanMemory(
       &g, std::move(storage),
       g.GetAttr<std::vector<uint32_t> >(AddPrefix(BACKWARD, REF_COUNT)),
       AddPrefix(BACKWARD, STORAGE_PLAN),
@@ -1029,17 +1032,19 @@ OpStatePtr CachedOp::Forward(
   CHECK_EQ(inputs.size(), num_inputs());
 
   Context default_ctx = inputs[0]->ctx();
-  auto state_ptr = GetCachedOpState(default_ctx);
-  auto& state = state_ptr.get_state<CachedOpState>();
+  {
+    auto state_ptr = GetCachedOpState(default_ctx);
+    auto& state = state_ptr.get_state<CachedOpState>();
 
-  const auto& idx = state.info.fwd_graph.indexed_graph();
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    CHECK_EQ(inputs[i]->ctx(), default_ctx)
-        << "CachedOp requires all inputs to live on the same context. But "
-        << idx[idx.input_nodes()[0]].source->attrs.name
-        << " is on " << default_ctx << " while "
-        << idx[idx.input_nodes()[i]].source->attrs.name
-        << " is on " << inputs[i]->ctx();
+    const auto& idx = state.info.fwd_graph.indexed_graph();
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      CHECK_EQ(inputs[i]->ctx(), default_ctx)
+          << "CachedOp requires all inputs to live on the same context. But "
+          << idx[idx.input_nodes()[0]].source->attrs.name
+          << " is on " << default_ctx << " while "
+          << idx[idx.input_nodes()[i]].source->attrs.name
+          << " is on " << inputs[i]->ctx();
+    }
   }
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);

@@ -83,9 +83,13 @@ def with_array_ufunc_protocol(func):
 
 
 _NUMPY_ARRAY_FUNCTION_LIST = [
+    'all',
+    'any',
     'argmin',
     'argmax',
     'around',
+    'round',
+    'argsort',
     'append',
     'broadcast_arrays',
     'broadcast_to',
@@ -93,12 +97,16 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'concatenate',
     'copy',
     'cumsum',
+    'diag',
+    'diagonal',
+    'diagflat',
     'dot',
     'expand_dims',
     'fix',
     'flip',
     'inner',
     'max',
+    'amax',
     'mean',
     'min',
     'nonzero',
@@ -109,6 +117,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'reshape',
     'roll',
     'split',
+    'array_split',
     'squeeze',
     'stack',
     'std',
@@ -119,6 +128,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'tile',
     'transpose',
     'unique',
+    'unravel_index',
+    'delete',
     'var',
     'vdot',
     'vstack',
@@ -127,6 +138,10 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.norm',
     'linalg.cholesky',
     'linalg.inv',
+    'linalg.solve',
+    'linalg.tensorinv',
+    'linalg.tensorsolve',
+    'shape',
     'trace',
     'tril',
     'meshgrid',
@@ -136,6 +151,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'may_share_memory',
     'diff',
     'resize',
+    'where',
+    'full_like',
+    'bincount'
 ]
 
 
@@ -207,6 +225,8 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'square',
     'cbrt',
     'reciprocal',
+    'invert',
+    'bitwise_not',
     'remainder',
     'sin',
     'cos',
@@ -225,13 +245,15 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'ceil',
     'trunc',
     'floor',
+    'bitwise_xor',
+    'bitwise_or',
     'logical_not',
     'equal',
     'not_equal',
     'less',
     'less_equal',
     'greater',
-    'greater_equal'
+    'greater_equal',
 ]
 
 

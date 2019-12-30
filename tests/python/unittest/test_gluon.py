@@ -868,11 +868,13 @@ def test_sync_batchnorm():
 
     cfgs = [(1, False)]
     num_gpus = mx.context.num_gpus()
+    batch_size = 24
     for i in range(1, num_gpus + 1):
-        cfgs.append((i, True))
+        if batch_size % i == 0:
+            cfgs.append((i, True))
     for ndev, cuda in cfgs:
         # check with unsync version
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 5, 6, 4, 4)]:
+        for shape in [(batch_size, 2), (batch_size, 3, 4), (batch_size, 4, 4, 4), (batch_size, 5, 6, 4, 4)]:
             print(str((ndev, cuda, shape)))
             for i in range(10):
                 _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
@@ -1387,6 +1389,11 @@ def test_activations():
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
 
+    multichannel_init = mx.initializer.Constant(mx.nd.array([0.1, 0.25, 0.5]))
+    prelu_multichannel = mx.gluon.nn.PReLU(alpha_initializer=multichannel_init, in_channels=3)
+    prelu_multichannel.initialize()
+    assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
+
     gelu = mx.gluon.nn.GELU()
     def gelu_test(x):
         CUBE_CONSTANT = 0.044715
@@ -1672,7 +1679,7 @@ def check_hybrid_static_memory(**kwargs):
 
     assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
-        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-5)
+        assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-4)
 
 @with_seed()
 def test_hybrid_static_memory():

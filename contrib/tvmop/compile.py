@@ -101,6 +101,11 @@ def get_cuda_arch(arch):
     if len(arch) == 0:
         return None
 
+    # the arch string is of format '-gencode;arch=compute_XX,code=sm_XX'
+    # this format is computed by CMake CUDA_SELECT_NVCC_ARCH_FLAGS
+    if arch.startswith('-gencode;'):
+        return arch.split(';')
+
     # the arch string contains '-arch=sm_xx'
     flags = arch.split()
     for flag in flags:
