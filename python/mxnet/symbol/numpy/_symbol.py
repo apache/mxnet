@@ -585,22 +585,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute flip')
 
-    def flipud(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flipud`.
-
-        The arguments are the same as for :py:func:`flipud`, with
-        this array as data.
-        """
-        raise AttributeError('_Symbol object has no attribute flipud')
-
-    def fliplr(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`fliplr`.
-
-        The arguments are the same as for :py:func:`fliplr`, with
-        this array as data.
-        """
-        raise AttributeError('_Symbol object has no attribute fliplr')
-
     def depth_to_space(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`depth_to_space`.
 
@@ -4621,7 +4605,7 @@ def flipud(m):
     if isinstance(m, numeric_types):
         return _np.flip(m, 0)
     elif isinstance(m, _Symbol):
-        return _npi.flip(m,0)
+        return _npi.flip(m, 0)
     else:
         raise TypeError('type {} not supported'.format(str(type(m))))
 
@@ -4647,10 +4631,12 @@ def fliplr(m):
         A view of `m` with the columns reversed.  Since a view
         is returned, this operation is :math:`\mathcal O(1)`.
     """
+    if len(_np.shape(m.asnumpy())) < 2:
+        raise ValueError("Input must be >= 2-d.")
     if isinstance(m, numeric_types):
         return _np.flip(m, 1)
     elif isinstance(m, _Symbol):
-        return _npi.flip(m,1)
+        return _npi.flip(m, 1)
     else:
         raise TypeError('type {} not supported'.format(str(type(m))))
 

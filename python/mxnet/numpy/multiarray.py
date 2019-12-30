@@ -1470,22 +1470,6 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute flip')
 
-    def flipud(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`flipud`.
-
-        The arguments are the same as for :py:func:`flipud`, with
-        this array as data.
-        """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute flipud')
-
-    def fliplr(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`fliplr`.
-
-        The arguments are the same as for :py:func:`fliplr`, with
-        this array as data.
-        """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute fliplr')
-
     def depth_to_space(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`depth_to_space`.
 
@@ -6628,6 +6612,8 @@ def fliplr(m):
     >>> np.all(np.fliplr(A) == A[:,::-1,...])
     array(True)
     """
+    if len(_np.shape(m.asnumpy())) < 2:
+        raise ValueError("Input must be >= 2-d.")
     return _mx_nd_np.flip(m, 1)
 
 
