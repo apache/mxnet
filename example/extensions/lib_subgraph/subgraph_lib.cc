@@ -138,6 +138,9 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
       data.push_back(tmp);
     } else {
       std::cout << "Error! Unsupported op '" << op << "' found in myExecutor";
+      // free allocated temporary storage
+      for (void* ptr : to_free)
+        free(ptr);
       return MX_FAIL;
     }
   }
