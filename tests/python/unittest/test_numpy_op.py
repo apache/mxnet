@@ -476,7 +476,7 @@ def test_np_sum():
             y = test_sum(x)
         assert y.shape == expected_ret.shape
         assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
+                            atol=1e-3 if dtype == 'float16' else 1e-3, use_broadcast=False)
 
         y.backward()
         assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
@@ -491,7 +491,7 @@ def test_np_sum():
         # test imperative
         mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
         np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, initial=initial).astype(dtype)
-        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
 
 @with_seed()
@@ -573,7 +573,7 @@ def test_np_max_min():
                             y = test_gluon(x)
                         assert y.shape == expected_ret.shape
                         assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if itype == 'float16' else 1e-3,
-                                            atol=1e-5 if itype == 'float16' else 1e-5)
+                                            atol=1e-3 if itype == 'float16' else 1e-3)
                         y.backward()
                         # only check the gradient with hardcoded input
                         if is_int(itype):
@@ -657,12 +657,12 @@ def test_np_mean():
                         x_sym = mx.sym.Variable("x").as_np_ndarray()
                         mx_sym = mx.sym.np.mean(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
                         check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                               numeric_eps=1e-3, rtol=1e-3, atol=1e-4, dtype=_np.float32)
+                                               numeric_eps=1e-3, rtol=1e-3, atol=1e-3, dtype=_np.float32)
 
                     # test imperative
                     mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
                     np_out = _np.mean(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-3)
 
                 for itype, dtype in itertools.product(it_types, [None] + ft_types + it_types):
                     if dtype == 'bool':
@@ -686,13 +686,13 @@ def test_np_mean():
                             y = test_mean(x)
                             assert y.shape == expected_ret.shape
                             assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                                                atol=1e-5 if dtype == 'float16' else 1e-5)
+                                                atol=1e-3 if dtype == 'float16' else 1e-3)
                         continue
 
                     y = test_mean(x)
                     assert y.shape == expected_ret.shape
                     assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                                        atol=1e-5 if dtype == 'float16' else 1e-5)
+                                        atol=1e-3 if dtype == 'float16' else 1e-3)
 
                     # test imperative
                     mx_out = np.mean(x, axis=axis, dtype=dtype, keepdims=keepdims)
@@ -789,10 +789,10 @@ def test_np_linspace():
                         mx_ret = np.linspace(config, endpoint=endpoint, retstep=retstep, dtype=dtype)
                         np_ret = _np.linspace(config, endpoint=endpoint, retstep=retstep, dtype=dtype)
                     if retstep:
-                        assert_almost_equal(mx_ret[0].asnumpy(), np_ret[0], atol=1e-3, rtol=1e-5)
+                        assert_almost_equal(mx_ret[0].asnumpy(), np_ret[0], atol=1e-3, rtol=1e-3)
                         same(mx_ret[1], np_ret[1])
                     else:
-                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-3)
     # check for exception input
     for config in exception_configs:
         assertRaises(MXNetError, np.linspace, *config)
@@ -831,7 +831,7 @@ def test_np_linspace():
                     if hybridize:
                         net.hybridize()
                     mx_out = net(x)
-                    assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-3)
 
 
 @with_seed()
@@ -872,14 +872,14 @@ def test_np_logspace():
                         if hybridize:
                             net.hybridize()
                         mx_out = net(x)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-5)
+                        assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-3, rtol=1e-3)
                         if dtype is not None:
                             assert mx_out.dtype == np_out.dtype
 
                         # Test imperative once again
                         mx_ret = np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
                         np_ret = _np.logspace(*config, endpoint=endpoint, base=base, dtype=dtype)
-                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-5)
+                        assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-3, rtol=1e-3)
                         if dtype is not None:
                             assert mx_out.dtype == np_out.dtype
 
@@ -1092,7 +1092,7 @@ def test_npi_boolean_assign():
                 mx_data = test_data.copy()
                 np_data[np_mask] = val
                 mx_data = test_block(mx_data, mx_mask) if isinstance(val, float) else test_block(mx_data, mx_mask, val)
-                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
 
 @with_seed()
