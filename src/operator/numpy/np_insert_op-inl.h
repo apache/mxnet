@@ -27,12 +27,13 @@
 
 #include <vector>
 #include <memory>
+#include <algorithm>
 #include "../../common/utils.h"
 #include "../tensor/sort_op.h"
 #include "../tensor/init_op.h"
 #include "../operator_common.h"
 #include "../mxnet_op.h"
-
+#include "./np_delete_op-inl.h"
 namespace mxnet {
 namespace op {
 
@@ -271,16 +272,6 @@ struct InsertSeqIndicesForward {
   }
 };
 
-struct SliceToIndices {
-  MSHADOW_XINLINE static void Map(int i, int64_t* indices, int N,
-                                  int start, int step) {
-    indices[i] = start + i * step;
-    if (indices[i] < 0) {
-      indices[i] += static_cast<int64_t>(N);
-    }
-  }
-};
-
 struct ObjToIndices {
   MSHADOW_XINLINE static void Map(int i, int64_t* indices,
                                   int N, const int64_t* obj) {
@@ -323,47 +314,6 @@ struct SetOriginArrIdx {
     }
   }
 };
-
-/*!
- * /brief equals to numpy's slice.indices(range)
- * /param pstart - slice.start
- * /param pstep - slice.step
- * /param pstop - slice.stop
- * /return start - slice.indices(range).start
- * /return stop - slice.indices(range).stop
- * /return step - slice.indices(range).step
- * /return tot - total number of slice.indices(range)
- */
-void SliceIndices(const dmlc::optional<int>& pstart,
-                         const dmlc::optional<int>& pstop,
-                         const dmlc::optional<int>& pstep,
-                         const int range,
-                         int* start, int* stop, int* step,
-                         size_t* tot) {
-  *step = pstep.has_value() ? pstep.value() : 1;
-  CHECK_NE(*step, 0) << "'step' can not equal to 0.";
-  if (pstop.has_value()) {
-    *stop = pstop.value();
-    *stop += (*stop < 0) ? range : 0;
-    *stop = (*stop < 0) ? ((*step < 0) ? -1 : 0) : *stop;
-    *stop = (*stop >= range) ? ((*step < 0) ? range - 1 : range) : *stop;
-  } else {
-    *stop = (*step > 0) ? range : -1;
-  }
-  if (pstart.has_value()) {
-    *start = pstart.value();
-    *start += (*start < 0) ? range : 0;
-    *start = (*start < 0) ? ((*step < 0) ? -1 : 0) : *start;
-    *start = (*start >= range) ? ((*step < 0) ? range - 1 : range) : *start;
-  } else {
-    *start = (*step > 0) ? 0 : range - 1;
-  }
-  if (*step > 0 && *stop >= *start) {
-    *tot = static_cast<size_t>((*stop - *start + *step - 1) / *step);
-  } else if (*step < 0 && *stop <= *start) {
-    *tot = static_cast<size_t>((*stop - *start + *step + 1) / *step);
-  }
-}
 
 template<typename xpu>
 void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
@@ -434,8 +384,8 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
   for (int i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
-       i >= 0 || j >= 0;
-       --i, --j) {
+        i >= 0 || j >= 0;
+        --i, --j) {
     if (i >= 0 && j >= 0) {
       val_newshape[j] = values.shape_[i];
     } else if (i >= 0) {
@@ -490,29 +440,29 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   }
 
   const mxnet::TShape& outshape = outputs[out_pos].shape_;
-  MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-    mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
-    mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
-    mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
-    mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
-    mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
-    mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
-    int vtype = param.val.has_value() ?
-                mshadow::DataType<double>::kFlag :
-                inputs[val_pos].type_flag_;
-    if ((param.int_ind.has_value() ||
-        (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0) ||
-        (indices_len == 1)) &&
-        param.val.has_value()) {
-      MSHADOW_TYPE_SWITCH(vtype, VType, {
-        // If insert use single index and 'value' is inputed as numerical parameter
-        values = TBlob(ctx.requested[0].get_space_typed<xpu, 1, VType>(Shape1(1), s));
-        Fill(s, values, kWriteTo, param.val.value());
-      });
-    }
+  int vtype = param.val.has_value() ?
+              mshadow::DataType<double>::kFlag :
+              inputs[val_pos].type_flag_;
+  if ((param.int_ind.has_value() ||
+      (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0) ||
+      (indices_len == 1)) &&
+      param.val.has_value()) {
+    MSHADOW_TYPE_SWITCH(vtype, VType, {
+      // If insert use single index and 'value' is inputed as numerical parameter
+      values = TBlob(ctx.requested[0].get_space_typed<xpu, 1, VType>(Shape1(1), s));
+      Fill(s, values, kWriteTo, param.val.value());
+    });
+  }
 
-    if (param.int_ind.has_value()) {
-      // 'obj' is integer, need to moveaxis
+  if (param.int_ind.has_value()) {
+    // 'obj' is integer, need to moveaxis
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
+      mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
+      mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
+      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
+      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
+      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
       MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
         MSHADOW_TYPE_SWITCH(vtype, VType, {
           Kernel<InsertSingleIndexForward<ndim>, xpu>::Launch(
@@ -523,8 +473,16 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
             axis, true, req[out_pos]);
         });
       });
-    } else if (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0) {
-      // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
+    });
+  } else if (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0) {
+    // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
+      mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
+      mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
+      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
+      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
+      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
       MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
         MSHADOW_TYPE_SWITCH(vtype, VType, {
           Kernel<InsertSingleIndexForward<ndim>, xpu>::Launch(
@@ -535,7 +493,15 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
             axis, true, req[out_pos]);
         });
       });
-    } else if (indices_len == 1) {
+    });
+  } else if (indices_len == 1) {
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
+      mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
+      mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
+      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
+      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
+      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
       if (param.step.has_value()) {
         MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
           MSHADOW_TYPE_SWITCH(vtype, VType, {
@@ -559,49 +525,55 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
           });
         });
       }
+    });
+  } else {
+    // broadcast check
+    for (int i = outshape.ndim() - 1; i >= 0; --i) {
+      int sz = outshape[i];
+      if (i == axis) {
+        sz = numnew;
+      }
+      CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
+    }
+    size_t temp_storage_bytes, temp_mem_size;
+    temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, int, xpu>(indices_len, false, true);
+    temp_mem_size = indices_len * sizeof(int64_t) * 2 +
+                    indices_len * sizeof(int) +
+                    outshape[axis] * sizeof(int) * 2 +
+                    temp_storage_bytes;
+    Tensor<xpu, 1, char> temp_mem =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+    int64_t* indices_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
+    int64_t* sorted_indices_ptr = reinterpret_cast<int64_t*>(indices_ptr + indices_len);
+    int* order_ptr = reinterpret_cast<int*>(sorted_indices_ptr + indices_len);
+    int* is_insert = reinterpret_cast<int*>(order_ptr + indices_len);
+    int* origin_idx = reinterpret_cast<int*>(is_insert + outshape[axis]);
+    Tensor<xpu, 1, char> temp_storage(reinterpret_cast<char*>(origin_idx + outshape[axis]),
+                                      Shape1(temp_storage_bytes), s);
+    Tensor<xpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
+    Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
+    Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
+    int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
+    if (param.step.has_value()) {
+      Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, start, step);
     } else {
-      // broadcast check
-      for (int i = outshape.ndim() - 1; i >= 0; --i) {
-        int sz = outshape[i];
-        if (i == axis) {
-          sz = numnew;
-        }
-        CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
-      }
-      size_t temp_storage_bytes, temp_mem_size;
-      temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, int, xpu>(indices_len, false, true);
-      temp_mem_size = indices_len * sizeof(int64_t) * 2 +
-                      indices_len * sizeof(int) +
-                      outshape[axis] * sizeof(int) * 2 +
-                      temp_storage_bytes;
-      Tensor<xpu, 1, char> temp_mem =
-        ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-      int64_t* indices_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
-      int64_t* sorted_indices_ptr = reinterpret_cast<int64_t*>(indices_ptr + indices_len);
-      int* order_ptr = reinterpret_cast<int*>(sorted_indices_ptr + indices_len);
-      int* is_insert = reinterpret_cast<int*>(order_ptr + indices_len);
-      int* origin_idx = reinterpret_cast<int*>(is_insert + outshape[axis]);
-      Tensor<xpu, 1, char> temp_storage(reinterpret_cast<char*>(origin_idx + outshape[axis]),
-                                        Shape1(temp_storage_bytes), s);
-      Tensor<xpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
-      Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
-      Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
-      int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
-      if (param.step.has_value()) {
-        Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, N, start, step);
-      } else {
-        Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
-                                          inputs[obj_pos].dptr<int64_t>());
-      }
-      Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
-      mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
-      Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
+      Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
+                                        inputs[obj_pos].dptr<int64_t>());
+    }
+    Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
+    mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
+    Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
 
-      mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, outshape[axis], is_insert);
-      Kernel<SetIsInsert, xpu>::Launch(s, indices_len, indices_ptr, is_insert);
+    mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, outshape[axis], is_insert);
+    Kernel<SetIsInsert, xpu>::Launch(s, indices_len, indices_ptr, is_insert);
 
-      Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
-      Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
+    Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
+    Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
+      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
+      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
+      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
       if (param.val.has_value()) {
         MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
           Kernel<InsertSeqIndicesForward<ndim>, xpu>::Launch(
@@ -612,6 +584,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
             arr_strides, out_strides, axis, req[out_pos]);
         });
       } else {
+        mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
         MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
           MSHADOW_TYPE_SWITCH(vtype, VType, {
             Kernel<InsertSeqIndicesForward<ndim>, xpu>::Launch(
@@ -623,8 +596,8 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
           });
         });
       }
-    }
-  });
+    });
+  }
 }
 
 }  // namespace op

@@ -2660,36 +2660,47 @@ def test_np_insert():
     for idx in range(-1 * GetSize(A), GetSize(A) + 1):
         config.append(tuple([A, idx, B, None]))
         config.append(tuple([A, idx, E, None]))
+        config.append(tuple([A, idx, 1, None]))
     for idx in range(-1 * A[0], A[0] + 1):
         config.append(tuple([A, idx, C, 0]))
         config.append(tuple([A, idx, E, 0]))
         config.append(tuple([A, idx, F, 0]))
+        config.append(tuple([A, idx, 1, 0]))
     for idx in range(-1 * A[1], A[1] + 1):
         config.append(tuple([A, idx, D, 1]))
         config.append(tuple([A, idx, E, 1]))
         config.append(tuple([A, idx, F, 1]))
+        config.append(tuple([A, idx, 1, 1]))
     # test tuple of indices with size = 1
     for idx in range(-1 * GetSize(A), GetSize(A) + 1):
         config.append(tuple([A, [idx], B, None]))
         config.append(tuple([A, [idx], E, None]))
+        config.append(tuple([A, [idx], 1, None]))
     for idx in range(-1 * A[0], A[0] + 1):
         config.append(tuple([A, [idx], C, 0]))
         config.append(tuple([A, [idx], E, 0]))
         config.append(tuple([A, [idx], F, 0]))
+        config.append(tuple([A, [idx], 1, 0]))
     for idx in range(-1 * A[1], A[1] + 1):
         config.append(tuple([A, [idx], G, 1]))
         config.append(tuple([A, [idx], E, 1]))
         config.append(tuple([A, [idx], F, 1]))
+        config.append(tuple([A, [idx], 1, 1]))
     # test tuple of indices with size > 1
     for ax in range(-1 * GetNdim(A), GetNdim(A)):
         idx = _np.random.randint(-1 * A[ax], A[ax] + 1, size = (3)).tolist()
         config.append(tuple([A, idx, F, ax]))
+        config.append(tuple([A, idx, 1, ax]))
         config.append(tuple([A, slice(0, 3), F, ax]))
+        config.append(tuple([A, slice(0, 3), 1, ax]))
     # test multidimensional array and unequal dimensions case
     config.append(tuple([H, 0, D, 3]))
+    config.append(tuple([H, 0, 1, 3]))
     config.append(tuple([H, [1], E, 2]))
+    config.append(tuple([H, [1], 1, 2]))
     idx = _np.random.randint(-1 * H[3], H[3] + 1, size = (3)).tolist()
     config.append(tuple([H, idx, E, 3]))
+    config.append(tuple([H, idx, 1, 3]))
     # test slice
     for st in [-5, -3, -1, 0, 1, 3, 5, None]:
         for ed in [-5, -3, -1, 0, 1, 3, 5, None]:
