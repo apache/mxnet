@@ -706,7 +706,7 @@ def insert(arr, obj, values, axis=None):
     - Note that for higher dimensional inserts `obj=0` behaves very different
     from `obj=[0]` just like `arr[:,0,:] = values` is different from
     `arr[:,[0],:] = values`.
-    - If obj is a ndarray, it's dtype only supports int64 
+    - If obj is a ndarray, it's dtype only supports int64
 
     Examples
     --------
@@ -762,7 +762,7 @@ def insert(arr, obj, values, axis=None):
             return _npi.insert(arr, val=values, int_ind=obj, axis=axis)
         elif isinstance(obj, NDArray):
             return _npi.insert(arr, obj, val=values, axis=axis)
-    
+
     if not isinstance(arr, NDArray):
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))
     if not isinstance(values, NDArray):

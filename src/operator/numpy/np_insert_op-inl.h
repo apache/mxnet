@@ -85,7 +85,7 @@ struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
          The second one use a sequence of indecies which only has one index.
  */
 template<int ndim>
-struct InsertSingleIndexForward {
+struct InsertSingleIndexKernel {
   template<typename DType, typename VType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
@@ -203,7 +203,7 @@ struct InsertSingleIndexForward {
          The second one insert only a single data, param 'in_val' is a scaler.
  */
 template<int ndim>
-struct InsertSeqIndicesForward {
+struct InsertSeqIndicesKernel {
   template<typename DType, typename VType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
@@ -234,32 +234,6 @@ struct InsertSeqIndicesForward {
       }
       dest_idx = mxnet_op::dot(val_idx, val_stride);
       KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(in_val[dest_idx]));
-    } else {
-      // the data of output[i] is from 'arr'
-      int idx_arr = origin_idx[out_idx[axis]];
-      // arr_idx: i -> position in arr's shape
-      mshadow::Shape<ndim> arr_idx(out_idx);
-      arr_idx[axis] = idx_arr;
-      dest_idx = mxnet_op::dot(arr_idx, arr_stride);
-      KERNEL_ASSIGN(out_data[i], req, in_arr[dest_idx]);
-    }
-  }
-
-  template<typename DType, typename VType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
-                                  const VType in_val, const DType* in_arr,
-                                  const mshadow::Shape<ndim> outshape,
-                                  const int* is_insert,
-                                  const int* origin_idx,
-                                  const mshadow::Shape<ndim> arr_stride,
-                                  const mshadow::Shape<ndim> out_stride,
-                                  const int axis, const int req) {
-    // i is the global flattened index in the output
-    // out_idx: i -> position in output's shape
-    mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);
-    int64_t dest_idx;
-    if (is_insert[out_idx[axis]]) {
-      KERNEL_ASSIGN(out_data[i], req, static_cast<DType>(in_val));
     } else {
       // the data of output[i] is from 'arr'
       int idx_arr = origin_idx[out_idx[axis]];
@@ -314,6 +288,82 @@ struct SetOriginArrIdx {
     }
   }
 };
+
+template<typename xpu, int ndim>
+void InsertScalerObj(mshadow::Stream<xpu> *s, const TBlob& output,
+                     const TBlob& arr, const TBlob& values,
+                     const mshadow::Shape<ndim>& arr_strides,
+                     const mshadow::Shape<ndim>& val_strides,
+                     const mshadow::Shape<ndim>& old_val_strides,
+                     const mshadow::Shape<ndim>& out_strides,
+                     const mshadow::Shape<ndim>& k_outshape,
+                     const mshadow::Shape<ndim>& k_valshape,
+                     const int dtype, const int vtype, const int req,
+                     const int axis, const int index, const int numnew,
+                     const size_t len, const bool moveaxis) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+    MSHADOW_TYPE_SWITCH(vtype, VType, {
+      Kernel<InsertSingleIndexKernel<ndim>, xpu>::Launch(
+        s, len, output.dptr<DType>(),
+        values.dptr<VType>(), arr.dptr<DType>(),
+        k_outshape, k_valshape, index, numnew,
+        val_strides, old_val_strides, arr_strides, out_strides,
+        axis, moveaxis, req);
+    });
+  });
+}
+
+template<typename xpu, int ndim>
+void InsertSizeOneTensorObj(mshadow::Stream<xpu> *s, const TBlob& output,
+                            const TBlob& arr, const TBlob& values,
+                            const mshadow::Shape<ndim>& arr_strides,
+                            const mshadow::Shape<ndim>& val_strides,
+                            const mshadow::Shape<ndim>& old_val_strides,
+                            const mshadow::Shape<ndim>& out_strides,
+                            const mshadow::Shape<ndim>& k_outshape,
+                            const mshadow::Shape<ndim>& k_valshape,
+                            const int dtype, const int vtype, const int req,
+                            const int axis, const TBlob& index, const int numnew,
+                            const int N, const size_t len, const bool moveaxis) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+    MSHADOW_TYPE_SWITCH(vtype, VType, {
+      Kernel<InsertSingleIndexKernel<ndim>, xpu>::Launch(
+        s, len, output.dptr<DType>(),
+        values.dptr<VType>(), arr.dptr<DType>(),
+        k_outshape, k_valshape, N, index.dptr<int64_t>(), numnew,
+        val_strides, old_val_strides, arr_strides, out_strides,
+        axis, moveaxis, req);
+    });
+  });
+}
+
+template<typename xpu, int ndim>
+void InsertSequenceObj(mshadow::Stream<xpu> *s, const TBlob& output,
+                       const TBlob& arr, const TBlob& values,
+                       const mshadow::Shape<ndim>& arr_strides,
+                       const mshadow::Shape<ndim>& val_strides,
+                       const mshadow::Shape<ndim>& out_strides,
+                       const mshadow::Shape<ndim>& k_outshape,
+                       const mshadow::Shape<ndim>& k_valshape,
+                       const int* is_insert, const int* origin_idx,
+                       const int dtype, const int vtype, const int req,
+                       const int axis, const size_t len) {
+  using namespace mshadow;
+  using namespace mxnet_op;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+    MSHADOW_TYPE_SWITCH(vtype, VType, {
+      Kernel<InsertSeqIndicesKernel<ndim>, xpu>::Launch(
+        s, len, output.dptr<DType>(),
+        values.dptr<VType>(), arr.dptr<DType>(),
+        k_outshape, k_valshape, is_insert, origin_idx,
+        val_strides, arr_strides, out_strides, axis, req);
+    });
+  });
+}
 
 template<typename xpu>
 void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
@@ -440,6 +490,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   }
 
   const mxnet::TShape& outshape = outputs[out_pos].shape_;
+  int dtype = outputs[out_pos].type_flag_;
   int vtype = param.val.has_value() ?
               mshadow::DataType<double>::kFlag :
               inputs[val_pos].type_flag_;
@@ -457,73 +508,48 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   if (param.int_ind.has_value()) {
     // 'obj' is integer, need to moveaxis
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
-      mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
-      mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
-      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
-      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
-      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
-      MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
-        MSHADOW_TYPE_SWITCH(vtype, VType, {
-          Kernel<InsertSingleIndexForward<ndim>, xpu>::Launch(
-            s, outshape.Size(), outputs[out_pos].dptr<DType>(),
-            values.dptr<VType>(), arr.dptr<DType>(),
-            k_outshape, k_valshape, index, numnew,
-            val_strides, old_val_strides, arr_strides, out_strides,
-            axis, true, req[out_pos]);
-        });
-      });
+      InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                 mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                 mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                 mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                 mxnet_op::calc_stride(outshape.get<ndim>()),
+                                 outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                 dtype, vtype, req[out_pos], axis, index, numnew,
+                                 outshape.Size(), true);
     });
   } else if (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0) {
     // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
-      mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
-      mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
-      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
-      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
-      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
-      MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
-        MSHADOW_TYPE_SWITCH(vtype, VType, {
-          Kernel<InsertSingleIndexForward<ndim>, xpu>::Launch(
-            s, outshape.Size(), outputs[out_pos].dptr<DType>(),
-            values.dptr<VType>(), arr.dptr<DType>(),
-            k_outshape, k_valshape, N, inputs[obj_pos].dptr<int64_t>(), numnew,
-            val_strides, old_val_strides, arr_strides, out_strides,
-            axis, true, req[out_pos]);
-        });
-      });
+      InsertSizeOneTensorObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                        mxnet_op::calc_stride(outshape.get<ndim>()),
+                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                        numnew, N, outshape.Size(), true);
+      
     });
   } else if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
-      mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
-      mshadow::Shape<ndim> old_val_strides = mxnet_op::calc_stride(old_valshape.get<ndim>());
-      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
-      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
-      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
       if (param.step.has_value()) {
-        MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
-          MSHADOW_TYPE_SWITCH(vtype, VType, {
-            Kernel<InsertSingleIndexForward<ndim>, xpu>::Launch(
-              s, outshape.Size(), outputs[out_pos].dptr<DType>(),
-              values.dptr<VType>(), arr.dptr<DType>(),
-              k_outshape, k_valshape, start, numnew,
-              val_strides, old_val_strides, arr_strides, out_strides,
-              axis, false, req[out_pos]);
-          });
-        });
+        InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                   mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                   mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                   mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                   mxnet_op::calc_stride(outshape.get<ndim>()),
+                                   outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                   dtype, vtype, req[out_pos], axis, start, numnew,
+                                   outshape.Size(), false);
       } else {
-        MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
-          MSHADOW_TYPE_SWITCH(vtype, VType, {
-            Kernel<InsertSingleIndexForward<ndim>, xpu>::Launch(
-              s, outshape.Size(), outputs[out_pos].dptr<DType>(),
-              values.dptr<VType>(), arr.dptr<DType>(),
-              k_outshape, k_valshape, N, inputs[obj_pos].dptr<int64_t>(), numnew,
-              val_strides, old_val_strides, arr_strides, out_strides,
-              axis, false, req[out_pos]);
-          });
-        });
+        InsertSizeOneTensorObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                          mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                          mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                          mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                          mxnet_op::calc_stride(outshape.get<ndim>()),
+                                          outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                          dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                          numnew, N, outshape.Size(), false);
       }
     });
   } else {
@@ -570,32 +596,14 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
     Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
     Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      mshadow::Shape<ndim> arr_strides = mxnet_op::calc_stride(arr.shape_.get<ndim>());
-      mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
-      mshadow::Shape<ndim> k_outshape = outshape.get<ndim>();
-      mshadow::Shape<ndim> k_valshape = values.shape_.get<ndim>();
-      if (param.val.has_value()) {
-        MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
-          Kernel<InsertSeqIndicesForward<ndim>, xpu>::Launch(
-            s, outshape.Size(),
-            outputs[out_pos].dptr<DType>(),
-            param.val.value(), arr.dptr<DType>(),
-            k_outshape, is_insert, origin_idx,
-            arr_strides, out_strides, axis, req[out_pos]);
-        });
-      } else {
-        mshadow::Shape<ndim> val_strides = mxnet_op::calc_stride(values.shape_.get<ndim>());
-        MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
-          MSHADOW_TYPE_SWITCH(vtype, VType, {
-            Kernel<InsertSeqIndicesForward<ndim>, xpu>::Launch(
-              s, outshape.Size(),
-              outputs[out_pos].dptr<DType>(),
-              values.dptr<VType>(), arr.dptr<DType>(),
-              k_outshape, k_valshape, is_insert, origin_idx,
-              val_strides, arr_strides, out_strides, axis, req[out_pos]);
-          });
-        });
-      }
+      InsertSequenceObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                   mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                   mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                   mxnet_op::calc_stride(outshape.get<ndim>()),
+                                   outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                   is_insert, origin_idx, dtype, vtype, req[out_pos],
+                                   axis, outshape.Size());
+      
     });
   }
 }

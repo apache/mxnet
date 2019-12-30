@@ -3085,7 +3085,7 @@ def insert(arr, obj, values, axis=None):
     - Note that for higher dimensional inserts `obj=0` behaves very different
     from `obj=[0]` just like `arr[:,0,:] = values` is different from
     `arr[:,[0],:] = values`.
-    - If obj is a ndarray, it's dtype only supports int64 
+    - If obj is a ndarray, it's dtype only supports int64
     """
     if isinstance(values, numeric_types):
         if isinstance(obj, slice):
@@ -3095,11 +3095,11 @@ def insert(arr, obj, values, axis=None):
             return _npi.insert(arr, val=values, start=start, stop=stop, step=step, axis=axis)
         elif isinstance(obj, integer_types):
             return _npi.insert(arr, val=values, int_ind=obj, axis=axis)
-        elif isinstance(obj, NDArray):
+        elif isinstance(obj, Symbol):
             return _npi.insert(arr, obj, val=values, axis=axis)
-    if not isinstance(arr, ndarray): # pylint: disable= undefined-variable
+    if not isinstance(arr, Symbol): # pylint: disable= undefined-variable
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))
-    if not isinstance(values, ndarray): # pylint: disable= undefined-variable
+    if not isinstance(values, Symbol): # pylint: disable= undefined-variable
         raise TypeError("'values' can not support type {}".format(str(type(values))))
     if isinstance(obj, slice):
         start = obj.start

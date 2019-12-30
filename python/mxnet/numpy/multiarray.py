@@ -8176,7 +8176,7 @@ def insert(arr, obj, values, axis=None):
     - Note that for higher dimensional inserts `obj=0` behaves very different
     from `obj=[0]` just like `arr[:,0,:] = values` is different from
     `arr[:,[0],:] = values`.
-    - If obj is a ndarray, it's dtype only supports int64 
+    - If obj is a ndarray, it's dtype only supports int64
 
     Examples
     --------
