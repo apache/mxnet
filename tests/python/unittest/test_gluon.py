@@ -955,19 +955,8 @@ def test_deferred_init():
     layer(x)
 
 
+
 def check_split_data(x, num_slice, batch_axis, **kwargs):
-    res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
-    assert len(res) == num_slice
-    mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
-                                      x.asnumpy())
-
-    np_res = np.array_split(x.asnumpy(), num_slice, axis=batch_axis)
-    res_asnp = [s.asnumpy() for s in res]
-    for r1, r2 in zip(np_res, res_asnp):
-        assert all(r1.reshape(-1) == r2.reshape(-1))
-
-
-def test_split_data(x, num_slice, batch_axis, **kwargs):
     res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
     assert len(res) == num_slice
     if not is_np_array():
@@ -982,6 +971,7 @@ def test_split_data(x, num_slice, batch_axis, **kwargs):
         assert all(r1.reshape(-1) == r2.reshape(-1))
 
 
+@with_seed()
 @use_np
 def test_split_data_np():
     x = _mx_np.random.uniform(size=(128, 33, 64))
@@ -995,6 +985,18 @@ def test_split_data_np():
         return
     assert False, "Should have failed"
 
+@with_seed()
+def test_split_data():
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
+    check_split_data(x, 8, 0)
+    check_split_data(x, 3, 1)
+    check_split_data(x, 4, 1, even_split=False)
+    check_split_data(x, 15, 1, even_split=False)
+    try:
+        check_split_data(x, 4, 1)
+    except ValueError:
+        return
+    assert False, "Should have failed"
 
 @with_seed()
 def test_flatten():
