@@ -169,12 +169,12 @@ int MXLoadLib(const char *path) {
     opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
              &mutate_fp, &create_opstate_fp, &isSubgraphOp);
 
+    CHECK(parse_fp != nullptr) << "Error loading '" << name
+                               << "' custom op, ParseAttrs function was not set.";
     if(!isSubgraphOp) {
       // validate custom operator functions from the dynamic library
       CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
-      CHECK(parse_fp != nullptr) << "Error loading '" << name
-                            << "' custom op, ParseAttrs function was not set.";
       CHECK(type_fp  != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
       CHECK(shape_fp != nullptr) << "Error loading '" << name
