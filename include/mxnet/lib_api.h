@@ -572,8 +572,8 @@ class CustomOp {
     create_opstate = func;
     return *this;
   }
-  CustomOp& isSubgraphOp(bool state) {
-    isSGop = state;
+  CustomOp& setIsSubgraphOp() {
+    isSGop = true;
     return *this;
   }
 

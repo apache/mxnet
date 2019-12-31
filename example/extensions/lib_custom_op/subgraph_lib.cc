@@ -84,7 +84,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
 
 REGISTER_OP(_custom_subgraph_op)
 .setParseAttrs(parseAttrs)
-.isSubgraphOp(true)
+.setIsSubgraphOp()
 .setCreateOpState(createOpState);
 
 MXReturnValue initialize(int version) {
