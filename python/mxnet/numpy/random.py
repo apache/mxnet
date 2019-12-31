@@ -20,12 +20,8 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-<<<<<<< HEAD
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial",
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
             "multivariate_normal"]
-=======
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn"]
->>>>>>> upstream/master
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):

@@ -86,3 +86,6 @@ class Bernoulli(ExponentialFamily):
     @property
     def _log_normalizer(self, x):
         return self.F.np.log(1 + self.F.np.exp(x))
+
+    def _kl_Bernoulli_Bernoulli(self, x):
+        pass

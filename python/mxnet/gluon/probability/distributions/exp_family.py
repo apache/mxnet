@@ -48,3 +48,4 @@ class ExponentialFamily(Distribution):
         """
         # TODO
         raise NotImplementedError
+
