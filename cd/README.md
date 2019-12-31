@@ -37,8 +37,10 @@ Currently, 10 variants are supported:
 * *cu92mkl*: CUDA 9.2 w/ MKL-DNN
 * *cu100*: CUDA 10
 * *cu100mkl*: CUDA 10 w/ MKL-DNN
-* *cu101*: CUDA 10
+* *cu101*: CUDA 10.1
 * *cu101mkl*: CUDA 10.1 w/ MKL-DNN
+* *cu102*: CUDA 10.2
+* *cu102mkl*: CUDA 10.2 w/ MKL-DNN
 
 *For more on variants, see [here](https://github.com/apache/incubator-mxnet/issues/8671)*
 
