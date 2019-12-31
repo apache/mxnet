@@ -790,7 +790,7 @@ if(USE_PLUGINS_WARPCTC)
 endif()
 
 if(MSVC)
-  if(USE_SPLIT_ARCH_DLL)
+  if(USE_SPLIT_ARCH_DLL AND USE_CUDA)
     foreach(arch ${arch_code_list})
       target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
       target_link_libraries(mxnet_${arch} PUBLIC dmlc)
