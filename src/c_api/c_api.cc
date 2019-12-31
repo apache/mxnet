@@ -164,14 +164,14 @@ int MXLoadLib(const char *path) {
     mutateInputs_t mutate_fp = nullptr;
     createOpState_t create_opstate_fp = nullptr;
     bool isSubgraphOp = false;
-    
+
     // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
              &mutate_fp, &create_opstate_fp, &isSubgraphOp);
 
     CHECK(parse_fp != nullptr) << "Error loading '" << name
                                << "' custom op, ParseAttrs function was not set.";
-    if(!isSubgraphOp) {
+    if (!isSubgraphOp) {
       // validate custom operator functions from the dynamic library
       CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
@@ -182,9 +182,9 @@ int MXLoadLib(const char *path) {
     } else {
       // validate custom operator functions from the dynamic library
       CHECK(create_opstate_fp != nullptr) << "Error loading '" << name
-                            << "' custom subgraph op, CreateOpState function was not set.";      
+                            << "' custom subgraph op, CreateOpState function was not set.";
     }
-    
+
     LOG(INFO) << "\tOp[" << i << "] " << name;
     std::string name_str(name);
 
@@ -654,7 +654,7 @@ int MXLoadLib(const char *path) {
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
       plevel++;
     }
-    if(!isSubgraphOp) {
+    if (!isSubgraphOp) {
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
@@ -675,7 +675,7 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                           DefaultSubgraphOpMutableInputs, plevel);
     }
-    
+
     // optionally add stateful forward
     if (create_opstate_fp != nullptr) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
