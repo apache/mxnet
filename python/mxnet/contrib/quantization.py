@@ -1004,7 +1004,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         net.collect_params().reset_ctx(ctx)
     return net
 
-def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
+def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
                  exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                  calib_data=None, data_shapes=None, calib_mode='none',
                  num_calib_examples=None, ctx=cpu(), logger=None):
@@ -1014,7 +1014,7 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full', quantize
     warnings.warn('WARNING: This will be deprecated after MXNet 2.0, please use quantize_net_v2.')
     return quantize_net_v2(network=network, quantized_dtype=quantized_dtype,
                            quantize_mode=quantize_mode,
-                           quantize_granularity=quantize_granularity,
+                           quantize_granularity='tensor-wise',
                            exclude_layers=exclude_layers,
                            exclude_layers_match=exclude_layers_match,
                            exclude_operators=exclude_operators,

@@ -231,7 +231,11 @@ void SgMKLDNNFCOp::Forward(const OpContext &ctx,
       // False         True/False                 False
       if (channel_wise && !support_channelwise_scale) {
         LOG(FATAL)
-          << "Currently, channel-wise quantization requires fuse requantize or dequantize.";
+          << "Currently, channel-wise quantization requires fuse requantize or dequantize."
+          << " Please make sure the `min_calib_range` and `max_calib_range` are set when only"
+          << " fuse requantize (outputs of FullyConnected are collected during calibration phase),"
+          << " or the env var of `MXNET_DISABLE_MKLDNN_QFC_FLOAT_OUTPUT` and "
+          << " `MXNET_DISABLE_MKLDNN_QFC_FUSE_ALL` are not set to true (default is false)";
       }
       support_channelwise_scale = support_channelwise_scale && channel_wise;
 
