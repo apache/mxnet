@@ -4850,12 +4850,12 @@ def flipud(m):
     >>> A = np.diag(np.array([1.0, 2, 3]))
     >>> A
     array([[1.,  0.,  0.],
-        [0.,  2.,  0.],
-        [0.,  0.,  3.]])
+           [0.,  2.,  0.],
+           [0.,  0.,  3.]])
     >>> np.flipud(A)
     array([[0.,  0.,  3.],
-        [0.,  2.,  0.],
-        [1.,  0.,  0.]])
+           [0.,  2.,  0.],
+           [1.,  0.,  0.]])
 
     >>> A = np.random.randn(2,3,5)
     >>> np.all(np.flipud(A) == A[::-1,...])
@@ -4864,13 +4864,7 @@ def flipud(m):
     >>> np.flipud(np.array([1,2]))
     array([2., 1.])
     """
-    from ...numpy import ndarray
-    if isinstance(m, numeric_types):
-        return _np.flip(m, 0)
-    elif isinstance(m, ndarray):
-        return _npi.flip(m, 0)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(m))))
+    return flip(m, 0)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4908,24 +4902,18 @@ def fliplr(m):
     >>> A = np.diag(np.array([1.,2.,3.]))
     >>> A
     array([[1.,  0.,  0.],
-        [0.,  2.,  0.],
-        [0.,  0.,  3.]])
+           [0.,  2.,  0.],
+           [0.,  0.,  3.]])
     >>> np.fliplr(A)
     array([[0.,  0.,  1.],
-        [0.,  2.,  0.],
-        [3.,  0.,  0.]])
+           [0.,  2.,  0.],
+           [3.,  0.,  0.]])
 
     >>> A = np.random.randn(2,3,5)
     >>> np.all(np.fliplr(A) == A[:,::-1,...])
     array(True)
     """
-    from ...numpy import ndarray
-    if isinstance(m, numeric_types):
-        return _np.flip(m, 1)
-    elif isinstance(m, ndarray):
-        return _npi.flip(m, 1)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(m))))
+    return flip(m, 1)
 
 
 @set_module('mxnet.ndarray.numpy')

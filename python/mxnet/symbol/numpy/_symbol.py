@@ -4602,12 +4602,7 @@ def flipud(m):
         A view of `m` with the rows reversed.  Since a view is
         returned, this operation is :math:`\mathcal O(1)`.
     """
-    if isinstance(m, numeric_types):
-        return _np.flip(m, 0)
-    elif isinstance(m, _Symbol):
-        return _npi.flip(m, 0)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(m))))
+    return flip(m, 0)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -4631,12 +4626,7 @@ def fliplr(m):
         A view of `m` with the columns reversed.  Since a view
         is returned, this operation is :math:`\mathcal O(1)`.
     """
-    if isinstance(m, numeric_types):
-        return _np.flip(m, 1)
-    elif isinstance(m, _Symbol):
-        return _npi.flip(m, 1)
-    else:
-        raise TypeError('type {} not supported'.format(str(type(m))))
+    return flip(m, 1)
 
 
 @set_module('mxnet.symbol.numpy')
