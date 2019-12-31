@@ -19,10 +19,6 @@ class Distribution:
         self._kl_dict = {}
         self.F = F
 
-    @staticmethod
-    def _register_kl():
-        pass
-
     def log_prob(self, x):
         r"""
         Return the log likehood given input x.
@@ -60,3 +56,40 @@ class Distribution:
         Return the variance of the distribution.
         """
         return NotImplementedError
+
+    @classmethod
+    def _dispatch_kl(cls, type_q):
+        r"""KL divergence methods should be registered
+        with distribution name,
+        i.e. the implementation of KL(P(\theta)||Q(\theta))
+        should be named after _kl_{P}_{Q}
+
+        Parameters
+        ----------
+        type_q : Typename of a distribution
+            
+        
+        Returns
+        -------
+        Get a class method with function name.
+        """
+        func_name = "_kl_" + cls.__name__ + "_" + str(type_q)
+        return getattr(cls, func_name)
+
+    def kl_divergence(self, q):
+        r"""Return the kl divergence with q,
+        this method will automatically dispatch
+        to the corresponding function based on q's type.
+        
+        Parameters
+        ----------
+        q : Distribution
+            Target distribution.
+        
+        Returns
+        -------
+        Tensor
+            KL(self||q)
+        """
+        kl_func = self._dispatch_kl(q.__class__.__name__)
+        return kl_func(self, q)
