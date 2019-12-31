@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <iostream>
 #include <utility>
@@ -586,9 +587,9 @@ class CustomOp {
 
 /*! \brief Custom Subgraph Create function template */
 typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
-                                        std::map<std::string, std::string>);
+                                        std::unordered_map<std::string, std::string>&);
 typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
-                                          std::map<std::string, std::string>);
+                                          std::unordered_map<std::string, std::string>&);
 
 /*!
  * \brief An abstract class for subgraph property
@@ -1119,7 +1120,7 @@ extern "C" {
                         const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
     // create map of attributes from list
-    std::map<std::string, std::string> opts;
+    std::unordered_map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++) {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }
@@ -1138,7 +1139,7 @@ extern "C" {
     std::string subgraph_json(json);
     bool accept_bool = false;
     // create map of attributes from list
-    std::map<std::string, std::string> opts;
+    std::unordered_map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++) {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }

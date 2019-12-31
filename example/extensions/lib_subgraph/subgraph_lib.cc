@@ -208,7 +208,7 @@ const std::vector<std::string> op_names({"exp","log"});
 MXReturnValue mySupportedOps(std::string json,
                              const int num_ids,
                              int *ids,
-                             std::map<std::string, std::string> options) {
+                             std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
@@ -247,8 +247,7 @@ MXReturnValue mySupportedOps(std::string json,
 }
 
 MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
-                               std::map<std::string, std::string> options) {
-  std::cout << "myAcceptSubgraph" << std::endl;
+                               std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }

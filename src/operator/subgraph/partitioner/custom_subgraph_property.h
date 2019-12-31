@@ -94,7 +94,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
 
   void PrePartition(const nnvm::Graph& g,
     const std::vector<std::pair<std::string, std::string>>& options_map) {
-    std::cout << "PrePartition" << std::endl;
     // clear supportedNodes to remove state from previous calls
     supportedNodes.clear();
 
