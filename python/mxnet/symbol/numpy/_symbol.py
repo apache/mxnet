@@ -49,8 +49,8 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round', 'hypot', 'bitwise_xor',
            'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot',
            'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit',
-           'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num',
-           'where', 'bincount']
+           'rot90', 'einsum', 'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
+           'resize', 'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5547,6 +5547,112 @@ def einsum(*operands, **kwargs):
     subscripts = operands[0]
     operands = operands[1:]
     return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
+
+
+@set_module('mxnet.symbol.numpy')
+def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
+    """
+    Compute the q-th percentile of the data along the specified axis.
+    Returns the q-th percentile(s) of the array elements.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array
+    q : _Symbol
+        Percentile or sequence of percentiles to compute.
+    axis : {int, tuple of int, None}, optional
+        Axis or axes along which the percentiles are computed. The default is to
+        compute the percentile(s) along a flattened version of the array.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have the same
+        shape and buffer length as the expected output, but the type (of the output)
+        will be cast if necessary.
+    overwrite_input : bool, optional (Not supported yet)
+        If True, then allow the input array a to be modified by intermediate calculations,
+        to save memory. In this case, the contents of the input a after this function
+        completes is undefined.
+    interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        This optional parameter specifies the interpolation method to use when the
+        desired percentile lies between two data points i < j:
+        'linear': i + (j - i) * fraction, where fraction is the fractional part of the
+        index surrounded by i and j.
+        'lower': i.
+        'higher': j.
+        'nearest': i or j, whichever is nearest.
+        'midpoint': (i + j) / 2.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result as
+        dimensions with size one. With this option, the result will broadcast
+        correctly against the original array a.
+
+    Returns
+    -------
+    percentile : _Symbol
+        Output array.
+    """
+    if overwrite_input is not None:
+        raise NotImplementedError('overwrite_input is not supported yet')
+    return _npi.percentile(a, q, axis=axis, interpolation=interpolation,
+                           keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
+    """
+    Compute the q-th quantile of the data along the specified axis.
+    New in version 1.15.0.
+    Parameters
+    ----------
+    a : _Symbol
+        Input array or object that can be converted to an array.
+    q : _Symbol
+        Quantile or sequence of quantiles to compute, which must be between 0 and 1 inclusive.
+    axis : {int, tuple of int, None}, optional
+        Axis or axes along which the quantiles are computed.
+        The default is to compute the quantile(s) along a flattened version of the array.
+    out : ndarray, optional
+        Alternative output array in which to place the result.
+        It must have the same shape and buffer length as the expected output,
+        but the type (of the output) will be cast if necessary.
+    interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        This optional parameter specifies the interpolation method to use
+        when the desired quantile lies between two data points i < j:
+            linear: i + (j - i) * fraction, where fraction is the fractional part of the index surrounded by i and j.
+            lower: i.
+            higher: j.
+            nearest: i or j, whichever is nearest.
+            midpoint: (i + j) / 2.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result as dimensions with size one.
+        With this option, the result will broadcast correctly against the original array a.
+    Returns
+    -------
+    quantile : _Symbol
+        If q is a single quantile and axis=None, then the result is a scalar.
+        If multiple quantiles are given, first axis of the result corresponds to the quantiles.
+        The other axes are the axes that remain after the reduction of a.
+        If out is specified, that array is returned instead.
+    See also
+    --------
+    mean
+    Notes
+    -----
+    Given a vector V of length N, the q-th quantile of V is the value q of the way from the minimum
+    to the maximum in a sorted copy of V. The values and distances of the two nearest neighbors
+    as well as the interpolation parameter will determine the quantile if the normalized ranking
+    does not match the location of q exactly. This function is the same as the median if q=0.5,
+    the same as the minimum if q=0.0 and the same as the maximum if q=1.0.
+    This function differs from the original `numpy.quantile
+    <https://numpy.org/devdocs/reference/generated/numpy.quantile.html>`_ in
+    the following aspects:
+    - q must be _Symbol type even if it is a scalar
+    - do not support overwrite_input
+    """
+    if overwrite_input is not None:
+        raise NotImplementedError('overwrite_input is not supported yet')
+    return _npi.percentile(a, q * 100, axis=axis, interpolation=interpolation,
+                           keepdims=keepdims, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
