@@ -554,7 +554,7 @@ def quantize_model(sym, arg_params, aux_params,
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
     if quantize_granularity not in ('tensor-wise', 'channel-wise'):
-        raise ValueError('unkonwn quantize_granularity %s received,',
+        raise ValueError('unkonwn quantize_granularity %s received,'
                          ' expected `tensor-wise` or `channel-wise`.' % quantize_granularity)
     qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
@@ -719,7 +719,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         raise ValueError('unknown quantized_dtype %s received,'
                          ' expected `int8`, `uint8` or `auto`' % quantized_dtype)
     if quantize_granularity not in ('tensor-wise', 'channel-wise'):
-        raise ValueError('unkonwn quantize_granularity %s received,',
+        raise ValueError('unkonwn quantize_granularity %s received,'
                          ' expected `tensor-wise` or `channel-wise`.' % quantize_granularity)
     qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
