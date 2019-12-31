@@ -54,10 +54,6 @@ RUN /work/ubuntu_cudnn.sh
 COPY install/ubuntu_nvidia.sh /work/
 RUN /work/ubuntu_nvidia.sh
 
-# hotfix nvidia-docker image come with wrong version of libcublas
-COPY install/ubuntu_cublas.sh /work/
-RUN /work/ubuntu_cublas.sh
-
 # Keep this at the end since this command is not cachable
 ARG USER_ID=0
 ARG GROUP_ID=0

@@ -34,6 +34,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyEyeParam);
 DMLC_REGISTER_PARAMETER(IndicesOpParam);
 DMLC_REGISTER_PARAMETER(LogspaceParam);
+DMLC_REGISTER_PARAMETER(FullLikeOpParam);
 
 inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
                               mxnet::ShapeVector* in_shapes,
@@ -97,11 +98,12 @@ NNVM_REGISTER_OP(_npi_identity)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_np_zeros_like)
+NNVM_REGISTER_OP(_npi_full_like)
 .set_num_inputs(1)
 .set_num_outputs(1)
+.set_attr_parser(ParamParser<FullLikeOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", FullLikeOpType<FullLikeOpParam>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
   [](const NodeAttrs& attrs) {
     return std::vector<uint32_t>(1, 0);
@@ -110,28 +112,11 @@ NNVM_REGISTER_OP(_np_zeros_like)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
   })
-.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
+.set_attr<FCompute>("FCompute<cpu>", FullLikeOpCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("a", "NDArray-or-Symbol",
-              "The shape and data-type of a define these same attributes of the returned array.");
-
-NNVM_REGISTER_OP(_np_ones_like)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
-  [](const NodeAttrs& attrs) {
-    return std::vector<uint32_t>(1, 0);
-  })
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
-.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("a", "NDArray-or-Symbol",
-              "The shape and data-type of a define these same attributes of the returned array.");
+              "The shape and data-type of a define these same attributes of the returned array.")
+.add_arguments(FullLikeOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_arange)
 .set_num_inputs(0)

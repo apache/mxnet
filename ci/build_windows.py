@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -28,7 +28,9 @@ import os
 import platform
 import shutil
 import sys
+import tempfile
 import time
+import zipfile
 from distutils.dir_util import copy_tree
 from enum import Enum
 from subprocess import check_call
@@ -112,9 +114,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DCUDA_ARCH_NAME=Manual '
-        '-DCUDA_ARCH_BIN=52 '
-        '-DCUDA_ARCH_PTX=52 '
+        '-DMXNET_CUDA_ARCH="5.2" '
         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
         '-DUSE_MKL_IF_AVAILABLE=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
@@ -128,9 +128,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DCUDA_ARCH_NAME=Manual '
-        '-DCUDA_ARCH_BIN=52 '
-        '-DCUDA_ARCH_PTX=52 '
+        '-DMXNET_CUDA_ARCH="5.2" '
         '-DUSE_MKLDNN=ON '
         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
         '-DCMAKE_BUILD_TYPE=Release')
@@ -147,22 +145,33 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
-    with remember_cwd():
-        os.chdir(path)
-        cmd = "\"{}\" && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
-                                                                        CMAKE_FLAGS[args.flavour],
-                                                                        mxnet_root)
-        logging.info("Generating project with CMake:\n{}".format(cmd))
-        check_call(cmd, shell=True)
+    url = 'https://github.com/Kitware/CMake/releases/download/v3.16.1/cmake-3.16.1-win64-x64.zip'
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cmake_file_path = download_file(url, tmpdir)
+        with zipfile.ZipFile(cmake_file_path, 'r') as zip_ref:
+            # Create $tmpdir\cmake-3.16.1-win64-x64\bin\cmake.exe
+            zip_ref.extractall(tmpdir)
 
-        cmd = "\"{}\" && jom".format(args.vcvars)
-        logging.info("Building with jom:\n{}".format(cmd))
+        with remember_cwd():
+            os.chdir(path)
+            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
+                args.vcvars,
+                os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
+                CMAKE_FLAGS[args.flavour], mxnet_root)
+            logging.info("Generating project with CMake:\n{}".format(cmd))
+            check_call(cmd, shell=True)
 
-        t0 = int(time.time())
-        check_call(cmd, shell=True)
+            cmd = "\"{}\" && jom".format(args.vcvars)
+            logging.info("Building with jom:\n{}".format(cmd))
 
-        logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
-        logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+            t0 = int(time.time())
+            check_call(cmd, shell=True)
+
+            logging.info(
+                "Build flavour: {} complete in directory: \"{}\"".format(
+                    args.flavour, os.path.abspath(path)))
+            logging.info("Build took {}".format(
+                datetime.timedelta(seconds=int(time.time() - t0))))
     windows_package(args)
 
 
@@ -262,4 +271,3 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-

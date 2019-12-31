@@ -36,15 +36,6 @@ import unittest
 import os
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
-    if default_context().device_type == 'cpu':
-    # NOTE(zixuanweeei): Currently, we don't add `add` requests support on fused mkl-dnn rnn operator.
-    # We tracked this issue by https://github.com/apache/incubator-mxnet/issues/16578
-        if isinstance(grad_req, dict) and 'add' in grad_req.values():
-            print("Skip the test when requiring `add` operation against gradients on CPU context.")
-            return
-        if isinstance(grad_req, str) and grad_req == 'add':
-            print("Skip the test when requiring `add` operation against gradients on CPU context.")
-            return
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
 
@@ -182,9 +173,9 @@ def test_gru_sym():
         stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
         stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
 
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -208,9 +199,9 @@ def test_gru_bidirectional():
                     mx.rnn.GRUCell(H, prefix='r1_'),
                     output_prefix='bi_gru_1_'))
 
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add', atol=2e-4)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null', atol=2e-4)
+        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
+        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -9381,6 +9372,153 @@ def test_large_tensor_disabled_err_msg():
             low = 0
             hight = 1
             assertRaises(MXNetError, mx.nd.random_uniform, alpha, beta, shape)
+
+
+@with_seed()
+def test_im2col_col2im():
+    def compute_output_size(spatial, kernel, stride=1, dilate=1, pad=0):
+        pad_size = spatial + 2 * pad
+        dilated_kernel = dilate * (kernel - 1) + 1
+        return (pad_size - dilated_kernel) // stride + 1
+
+    def build_kwargs(kernel, stride=1, dilate=1, pad=0):
+        return {'kernel': (kernel, kernel),
+                'stride': (stride, stride),
+                'dilate': (dilate, dilate),
+                'pad': (pad, pad)}
+
+    # use im2col to compute convolution
+    def test_conv_compute(input_shape, num_filter, kernel, stride=1, dilate=1, pad=0):
+        batch_size = input_shape[0]
+        channel = input_shape[1]
+        kwargs = build_kwargs(kernel, stride, dilate, pad)
+        data = mx.nd.uniform(shape=input_shape)
+        col = mx.nd.im2col(data, **kwargs)
+        w = mx.nd.uniform(shape=(num_filter, channel, kernel, kernel))
+        c1 = mx.nd.dot(col.transpose((0, 2, 1)), w.reshape(num_filter, -1).T).transpose((0, 2, 1))
+        hos = compute_output_size(input_shape[2], kernel, stride, dilate, pad)
+        wos = compute_output_size(input_shape[3], kernel, stride, dilate, pad)
+        c1 = c1.reshape((batch_size, num_filter, hos, wos))
+
+        c2 = mx.nd.Convolution(data, num_filter=num_filter, weight=w, no_bias=True, **kwargs)
+        assert_almost_equal(c1.asnumpy(), c2.asnumpy(), rtol=1e-5, atol=1e-5)
+
+    test_conv_compute(
+        input_shape = (5, 3, 30, 20),
+        num_filter  = 10,
+        kernel      = 3
+    )
+
+    test_conv_compute(
+        input_shape = (5, 3, 30, 20),
+        num_filter  = 10,
+        kernel      = 3,
+        stride      = 2
+    )
+
+    test_conv_compute(
+        input_shape = (5, 3, 30, 20),
+        num_filter  = 10,
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2
+    )
+
+    test_conv_compute(
+        input_shape = (5, 3, 30, 20),
+        num_filter  = 10,
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2,
+        pad         = 1
+    )
+
+    # use composite of im2col and col2im to reconstruct image
+    def test_reconstruct(input_shape, kernel, stride=1, dilate=1, pad=0):
+        batch_size = input_shape[0]
+        channel = input_shape[1]
+        kwargs = build_kwargs(kernel, stride, dilate, pad)
+        data = mx.nd.uniform(shape=input_shape)
+        col = mx.nd.im2col(data, **kwargs)
+        im1 = mx.nd.col2im(col, input_shape[2:], **kwargs)
+
+        im2 = mx.nd.col2im(mx.nd.ones_like(col), input_shape[2:], **kwargs) * data
+        assert_almost_equal(im1.asnumpy(), im2.asnumpy(), rtol=1e-5, atol=1e-5)
+
+    test_reconstruct(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3
+    )
+
+    test_reconstruct(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2
+    )
+
+    test_reconstruct(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2
+    )
+
+    test_reconstruct(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2,
+        pad         = 1
+    )
+
+    # test gradient
+    # the grad of im2col is col2im, and vice versa
+    def test_grad(input_shape, kernel, stride=1, dilate=1, pad=0):
+        # im2col
+        data = mx.sym.Variable('data')
+        kwargs = build_kwargs(kernel, stride, dilate, pad)
+        sym = mx.sym.im2col(data, **kwargs)
+
+        im = mx.nd.uniform(shape=input_shape)
+        col = mx.nd.im2col(im, **kwargs)
+        col_shape = col.shape
+        expected = mx.nd.col2im(col, input_shape[2:], **kwargs)
+        check_symbolic_backward(sym, [im.asnumpy()], [col.asnumpy()], [expected.asnumpy()])
+
+        # col2im
+        data = mx.sym.Variable('data')
+        sym = mx.sym.col2im(data, input_shape[2:], **kwargs)
+
+        col = mx.nd.uniform(shape=col_shape)
+        im = mx.nd.col2im(col, input_shape[2:], **kwargs)
+        expected = mx.nd.im2col(im, **kwargs)
+        check_symbolic_backward(sym, [col.asnumpy()], [im.asnumpy()], [expected.asnumpy()])
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3
+    )
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2
+    )
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2
+    )
+
+    test_grad(
+        input_shape = (5, 3, 30, 20),
+        kernel      = 3,
+        stride      = 2,
+        dilate      = 2,
+        pad         = 1
+    )
 
 
 if __name__ == '__main__':

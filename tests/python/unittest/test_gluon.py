@@ -1389,6 +1389,11 @@ def test_activations():
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
 
+    multichannel_init = mx.initializer.Constant(mx.nd.array([0.1, 0.25, 0.5]))
+    prelu_multichannel = mx.gluon.nn.PReLU(alpha_initializer=multichannel_init, in_channels=3)
+    prelu_multichannel.initialize()
+    assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
+
     gelu = mx.gluon.nn.GELU()
     def gelu_test(x):
         CUBE_CONSTANT = 0.044715

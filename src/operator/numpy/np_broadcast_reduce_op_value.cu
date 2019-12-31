@@ -50,6 +50,12 @@ NNVM_REGISTER_OP(_np_prod)
 NNVM_REGISTER_OP(_backward_np_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
+NNVM_REGISTER_OP(_npi_average)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_average)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWeightedAverageBackward<gpu>);
+
 NNVM_REGISTER_OP(_npi_mean)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::sum, true, true>);
 

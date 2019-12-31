@@ -359,6 +359,18 @@ MXNET_UNARY_MATH_OP(negation, -a);
 
 MXNET_UNARY_MATH_OP(reciprocal, 1.0f / math::id(a));
 
+struct bitwise_not : public mxnet_op::tunable {
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return ~static_cast<int64_t>(a);
+  }
+
+  MSHADOW_XINLINE static bool Map(bool a) {
+    return !a;
+  }
+};
+
 MXNET_UNARY_MATH_OP(reciprocal_grad, -1.0f / math::sqr(a));
 
 MXNET_UNARY_MATH_OP(sigmoid, 1.0f / (1.0f + math::exp(-a)));
@@ -1086,6 +1098,14 @@ struct minimum : public mxnet_op::tunable {
     } else {
       return DType(a < b ? a : b);
     }
+  }
+};
+
+/*! \brief boolean any/all kernel that determines whether elem is NonZero */
+struct NonZero {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return (a != DType(0));
   }
 };
 
