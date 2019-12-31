@@ -46,7 +46,8 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
 
-__all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
+__all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
+           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
@@ -2200,6 +2201,65 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     """
     return _mx_nd_np.full(shape, fill_value, order=order, ctx=ctx, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
+
+
+@set_module('mxnet.numpy')
+def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+    """
+    Return a new array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    prototype : ndarray
+        The shape and data-type of `prototype` define these same attributes
+        of the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    subok : {False}, optional
+        If True, then the newly created array will use the sub-class
+        type of 'a', otherwise it will be a base-class array. Defaults
+        to False.
+        (Only support False at this moment)
+    shape : int or sequence of ints, optional.
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, will try to keep order, otherwise,
+        order='C' is implied.
+        (Not supported at this moment)
+
+    Returns
+    -------
+    out : ndarray
+        Array of uninitialized (arbitrary) data with the same
+        shape and type as `prototype`.
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    empty : Return a new uninitialized array.
+
+    Notes
+    -----
+    This function does *not* initialize the returned array; to do that use
+    `zeros_like` or `ones_like` instead.  It may be marginally faster than
+    the functions that do set the array values.
+
+    Examples
+    --------
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.empty_like(a)
+    array([[-5764607523034234880, -2305834244544065442,           4563075075], # uninitialized
+           [          4567052944, -5764607523034234880,      844424930131968]])
+    >>> a = np.array([[1., 2., 3.],[4.,5.,6.]])
+    >>> np.empty_like(a)
+    array([[4.9e-324, 9.9e-324, 1.5e-323], # uninitialized
+           [2.0e-323, 2.5e-323, 3.0e-323]])
+    """
+    return _mx_nd_np.empty_like(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 @set_module('mxnet.numpy')
