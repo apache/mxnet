@@ -501,10 +501,10 @@ def test_np_any():
             super(TestAny, self).__init__()
             self._axis = axis
             self._keepdims = keepdims
-             
+
         def hybrid_forward(self, F, a):
             return F.np.any(a, axis=self._axis, keepdims=self._keepdims)
-    
+
     keepdims = [True, False]
     axes = [True, False]
     shapes = [(), (5, ), (10, ),
@@ -512,7 +512,7 @@ def test_np_any():
               (4, 4, 4), (4, 6, 9), (6, 6, 6),
               (7, 8, 9, 10), (7, 9, 11, 13)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
-    
+
     combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
     for hybridize, shape, dtype, axis, keepdim in combinations:
         ndim = len(shape)
@@ -540,10 +540,10 @@ def test_np_all():
             super(TestAll, self).__init__()
             self._axis = axis
             self._keepdims = keepdims
-             
+
         def hybrid_forward(self, F, a):
             return F.np.all(a, axis=self._axis, keepdims=self._keepdims)
-    
+
     keepdims = [True, False]
     axes = [True, False]
     shapes = [(), (5, ), (10, ),
@@ -551,7 +551,7 @@ def test_np_all():
               (4, 4, 4), (4, 6, 9), (6, 6, 6),
               (7, 8, 9, 10), (7, 9, 11, 13)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
-    
+
     combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
     for hybridize, shape, dtype, axis, keepdim in combinations:
         ndim = len(shape)
@@ -687,10 +687,10 @@ def test_np_average():
             # necessary initializations
             self._axis = axis
             self._returned = returned
-             
+
         def hybrid_forward(self, F, a, weights):
             return F.np.average(a, weights=weights, axis=self._axis, returned=self._returned)
-    
+
     def avg_backward(a, w, avg, axes, init_a_grad=None, init_w_grad=None):
         # avg = sum(a * w) / sum(w)
         if axes is not None and not isinstance(axes, tuple) and axes < 0:
@@ -705,13 +705,13 @@ def test_np_average():
             new_shape = [a.shape[i] if i == axes else 1 for i in range(a.ndim)]
             w = w.reshape(new_shape)
             w = _np.broadcast_to(w, a.shape)
-       
+
         # partial a = w / sum(w)
         # partial w = (a*sum(w) - sum(a*w)) / (sum(w) * sum(w))
         scl = _np.sum(w, axis=axes, keepdims=True)
         a_grad = _np.divide(w, scl)
         w_grad = _np.divide(a*scl-_np.sum(a*w, axis=axes, keepdims=True), scl*scl)
-        
+
         if onedim:
             axis = list(range(a.ndim))
             axis.remove(axes)
@@ -780,7 +780,7 @@ def test_np_average():
             assert a.grad is None
         else:
             assert_almost_equal(a.grad.asnumpy(), a_grad, rtol=rtol, atol=atol)
-        
+
         # Test imperative once again
         np_out = _np.average(a.asnumpy(), weights=np_w, axis=axes, returned=returned)
         mx_out = np.average(a, weights=w, axis=axes, returned=returned)
@@ -1625,7 +1625,7 @@ def test_np_transpose():
                             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
     # Test for error raising
     dat = np.random.normal(0, 1, (3, 4, 5), dtype=np.float32)
-    assert_raises(MXNetError, lambda: dat.transpose((0, 0, 1)))
+    assert_raises(ValueError, lambda: dat.transpose((0, 0, 1)))
     assert_raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
 
 
@@ -2843,7 +2843,7 @@ def test_np_delete():
 
         def hybrid_forward(self, F, a):
             return F.np.delete(a, self._obj, axis=self._axis)
-    
+
     def GetSize(shp):
         if len(shp) == 0:
             return 0
@@ -2886,8 +2886,8 @@ def test_np_delete():
                 obj_mxnp = obj
                 obj_onp = obj
             else:
-                obj_mxnp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
-                obj_onp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj)) 
+                obj_mxnp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj))
+                obj_onp = (_np.int32(obj) if objtype == 'int32' else _np.int64(obj))
             test_delete = TestDelete(obj=obj_mxnp, axis=axis)
 
             a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray()
@@ -3057,15 +3057,15 @@ def test_npx_random_bernoulli():
         assertRaises(ValueError, _test_bernoulli_exception, prob, logit)
         if prob.size > 0:
             # larger than 1
-            assertRaises(MXNetError, _test_bernoulli_exception, prob + 2.0, None)
+            assertRaises(ValueError, _test_bernoulli_exception, prob + 2.0, None)
             # smaller than 0
-            assertRaises(MXNetError, _test_bernoulli_exception, prob - 2.0, None)
+            assertRaises(ValueError, _test_bernoulli_exception, prob - 2.0, None)
             # mixed case
             low, high = (-1.0, 2.0)
             # uniform(-1, 2)
             scaled_prob = low + (high - low) * prob
             if not ((scaled_prob.asnumpy() >= 0).all() and (scaled_prob.asnumpy() <= 1).all()):
-                assertRaises(MXNetError, _test_bernoulli_exception, scaled_prob, None)
+                assertRaises(ValueError, _test_bernoulli_exception, scaled_prob, None)
 
 
 @with_seed()
@@ -3188,7 +3188,7 @@ def test_npx_sample_n():
     event_shapes = [(), (2,), (2,2)]
     dtypes = ['float16', 'float32', 'float64']
     op_names = ['uniform_n', 'normal_n']
-    
+
     for bshape, eshape, dtype, op in itertools.product(batch_shapes, event_shapes, dtypes, op_names):
         for hybridize in [True, False]:
             net = TestSampleN(bshape, op)
@@ -4042,7 +4042,7 @@ def test_np_linalg_tensorinv():
         def __init__(self, ind=2):
             super(TestTensorinv, self).__init__()
             self._ind = ind
-        
+
         def hybrid_forward(self, F, a):
             return F.np.linalg.tensorinv(a, ind=self._ind)
 
@@ -4483,7 +4483,7 @@ def test_np_full_like():
         param_dtype= _np.random.choice(dtypes)
         a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
         test = TestFullLike(fill_value, param_dtype, npx.current_context())
-        expected_ret = _np.full_like(a.asnumpy(), fill_value=fill_value, dtype=param_dtype)     
+        expected_ret = _np.full_like(a.asnumpy(), fill_value=fill_value, dtype=param_dtype)
         if hybridize:
             test.hybridize()
         ret = test(a)
@@ -4708,6 +4708,60 @@ def test_np_flip():
                 mx_out = np.flip(x, axis)
                 np_out = _np.flip(x.asnumpy(), axis)
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_flipud_fliplr():
+    class TestFlipud(HybridBlock):
+        def __init__(self):
+            super(TestFlipud, self).__init__()
+
+        def hybrid_forward(self, F, x):
+            return F.np.flipud(x)
+    
+    class TestFliplr(HybridBlock):
+        def __init__(self):
+            super(TestFliplr, self).__init__()
+
+        def hybrid_forward(self, F, x):
+            return F.np.fliplr(x)
+
+    shapes = [(1, 2, 3), (1, 0)]
+    types = ['int32', 'int64', 'float16', 'float32', 'float64']
+    for func in ['flipud', 'fliplr']:
+        for hybridize in [True, False]:
+            for oneType in types:
+                rtol, atol=1e-3, 1e-5
+                for shape in shapes:
+                    if func == 'flipud':
+                        test_flip = TestFlipud()
+                    else:
+                        test_flip = TestFliplr()
+                    if hybridize:
+                        test_flip.hybridize()
+                    x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+                    x.attach_grad()
+                    if func == 'flipud':
+                        np_out = _np.flipud(x.asnumpy())
+                    else:
+                        np_out = _np.fliplr(x.asnumpy())
+                    with mx.autograd.record():
+                        mx_out = test_flip(x)
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+                    mx_out.backward()
+                    np_backward = _np.ones(np_out.shape)
+                    assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+                    # Test imperative once again
+                    if func == 'flipud':
+                        mx_out = np.flipud(x)
+                        np_out = _np.flipud(x.asnumpy())
+                    else:
+                        mx_out = np.fliplr(x)
+                        np_out = _np.fliplr(x.asnumpy())
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -5302,7 +5356,7 @@ def test_np_diagflat():
             # Test imperative once again
             mx_out = np.diagflat(x, k)
             np_out = _np.diagflat(x.asnumpy(), k)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol) 
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -5823,7 +5877,7 @@ def test_np_diagonal():
             array_temp = array_temp.reshape(shape_out[:-1] + (shape[axis1], shape[axis2]))
             axis_idx = [i for i in range(ndim-2)]
             axis_idx[axis1:axis1] = [ndim - 2]
-            axis_idx[axis2:axis2] = [ndim - 1] 
+            axis_idx[axis2:axis2] = [ndim - 1]
             np_backward = _np.transpose(array_temp, tuple(axis_idx))
         assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
@@ -6043,10 +6097,10 @@ def test_np_unravel_index():
             super(TestUnravel_index, self).__init__()
             self._shape = shape
             self._order = order
-             
+
         def hybrid_forward(self, F, a):
             return F.np.unravel_index(a, self._shape, self._order)
-     
+
     in_shapes = [
         2, 5,
         (), (1,), (4,),
@@ -6058,7 +6112,7 @@ def test_np_unravel_index():
         (3, 4), (4, 5),
         (2,3,4)
     ]
-    dtypes = [np.uint8, np.int8, np.int32, np.int64] 
+    dtypes = [np.uint8, np.int8, np.int32, np.int64]
     for hybridize, ishape, dtype, rshape in itertools.product([False, True], in_shapes, dtypes, unravel_shapes):
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
@@ -6077,7 +6131,7 @@ def test_np_unravel_index():
             assert elem_mx.asnumpy().shape == elem_np.shape
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
         # no backward function for unravel_index operator
- 
+
         # Test imperative once again
         mx_out = np.unravel_index(x, rshape)
         np_out = _np.unravel_index(x.asnumpy(), rshape)
@@ -6097,7 +6151,7 @@ def test_np_bincount():
 
         def hybrid_forward(self, F, a):
             return F.np.bincount(a, None, self._minlength)
-    
+
     class TestBincountWeights(HybridBlock):
         def __init__(self, minlength=0):
             super(TestBincountWeights, self).__init__()
@@ -6110,13 +6164,13 @@ def test_np_bincount():
     weight_types = [np.int32, np.int64, np.float16, np.float32, np.float64]
     shapes = [(), (5,), (10,), (15,), (20,), (30,), (50,)]
     min_lengths = [0, 5, 20, 50]
-    has_weights = [True, False] 
+    has_weights = [True, False]
     combinations = itertools.product([True, False], shapes, dtypes, weight_types, has_weights, min_lengths)
-    for hybridize, shape, dtype, weight_type, has_weight, minlength in combinations: 
+    for hybridize, shape, dtype, weight_type, has_weight, minlength in combinations:
         rtol = 1e-2 if weight_type == np.float16 else 1e-3
         atol = 1e-4 if weight_type == np.float16 else 1e-5
         if shape != ():
-            data = np.random.uniform(0, 10, size=shape).astype(dtype) 
+            data = np.random.uniform(0, 10, size=shape).astype(dtype)
             weights = np.random.uniform(0, 10, size=shape).astype(weight_type) if has_weight else None
         else:
             data = np.array(()).astype(dtype)
@@ -6144,7 +6198,7 @@ def test_np_empty_like():
         def __init__(self, dtype, order, subok):
             super(TestEmptyLike, self).__init__()
             self._dtype = dtype
-            self._order = order 
+            self._order = order
             self._subok = subok
 
         def hybrid_forward(self, F, x, *args, **kwargs):

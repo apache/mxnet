@@ -787,6 +787,18 @@ def _add_workload_flip():
     OpArgMngr.add_workload('flip', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]), (1, 2))
 
 
+def _add_workload_flipud():
+    OpArgMngr.add_workload('flipud', np.random.normal(size=(4, 4)))
+    OpArgMngr.add_workload('flipud', np.array([[0, 1, 2], [3, 4, 5]]))
+    OpArgMngr.add_workload('flipud', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]))
+
+
+def _add_workload_fliplr():
+    OpArgMngr.add_workload('fliplr', np.random.normal(size=(4, 4)))
+    OpArgMngr.add_workload('fliplr', np.array([[0, 1, 2], [3, 4, 5]]))
+    OpArgMngr.add_workload('fliplr', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]))
+
+
 def _add_workload_max(array_pool):
     OpArgMngr.add_workload('max', array_pool['4x1'])
 
@@ -1606,6 +1618,8 @@ def _prepare_workloads():
     _add_workload_expand_dims()
     _add_workload_fix()
     _add_workload_flip()
+    _add_workload_flipud()
+    _add_workload_fliplr()
     _add_workload_max(array_pool)
     _add_workload_amax(array_pool)
     _add_workload_min(array_pool)

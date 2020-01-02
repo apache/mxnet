@@ -47,6 +47,21 @@ def test_multi_trainer():
     trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
+def test_trainer_with_sparse_grad_on_single_context():
+    x = gluon.Parameter('x', shape=(10,), grad_stype='row_sparse')
+    x.initialize(ctx=[mx.cpu(0)], init='zeros')
+    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
+    with mx.autograd.record():
+        for w in x.list_data():
+            y = w + 1
+            y.backward()
+    trainer.step(1)
+
+    assert trainer._update_on_kvstore is None
+    assert trainer._kvstore is None  # No kvstore created for single-device training
+    assert (x.data(mx.cpu(0)).asnumpy() == -1).all()
+
+@with_seed()
 def test_trainer_with_teststore():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
