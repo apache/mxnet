@@ -717,7 +717,7 @@ typedef int (*opRegSize_t)(void);
 typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*, mutateInputs_t*,
-                          createOpState_t*, bool*);
+                          createOpState_t*, int*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -756,7 +756,7 @@ typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const 
                                      void**);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
-typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, int,
+typedef int (*opCallFStatefulComp_t)(int, void*, const int64_t**, int*, void**, int*, int,
                                      const int64_t**, int*, void**, int*, int,
                                      xpu_malloc_t, void*);
 
@@ -815,7 +815,7 @@ extern "C" {
   _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate,
-            createOpState_t* create_op, bool *isSGop) {
+            createOpState_t* create_op, int *isSGop) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.forward;
@@ -1043,7 +1043,7 @@ extern "C" {
 #else
   int
 #endif
-  _opCallFStatefulCompute(bool is_forward, void* state_op,
+  _opCallFStatefulCompute(int is_forward, void* state_op,
                           const int64_t** inshapes, int* indims,
                           void** indata, int* intypes, int num_in,
                           const int64_t** outshapes, int* outdims,
