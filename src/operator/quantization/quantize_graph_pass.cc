@@ -273,6 +273,12 @@ Graph QuantizeGraph(Graph &&src) {
   const auto offline_params = src.GetAttr<std::unordered_set<std::string>>("offline_params");
   const auto quantized_dtype = src.GetAttr<std::string>("quantized_dtype");
   const auto quantize_granularity = src.GetAttr<std::string>("quantize_granularity");
+  const auto dev_type = src.GetAttr<int>("target_ctx");
+
+  if (dev_type == Context::kGPU && quantize_granularity == "channel-wise") {
+    LOG(FATAL) << "`channel-wise` quantization option is not supported yet by GPU,"
+               << " please set quantize_granularity to `tensor-wise` when quantizing model.";
+  }
 
   std::unordered_map<NodePtr, NodePtr> quantized_node_map;
   MarkQuantizedNodes(src, &quantized_node_map);
