@@ -41,7 +41,7 @@ import numpy as np
 from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
 from ..base import c_array_buf, mx_real_t, integer_types
-from ..base import mx_uint, NDArrayHandle, check_call
+from ..base import NDArrayHandle, check_call
 from ..context import Context, current_context
 from . import _internal
 from . import op
@@ -87,34 +87,34 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     aux_shapes = [(0,) for aux_t in aux_types] if aux_shapes is None else aux_shapes
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
     aux_shapes = py_sum(aux_shapes, ())
-    num_aux = mx_uint(len(aux_types))
+    num_aux = ctypes.c_int(len(aux_types))
     if _int64_enabled():
         check_call(_LIB.MXNDArrayCreateSparseEx64(
             ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
             c_array_buf(ctypes.c_int64, native_array('q', shape)),
-            mx_uint(len(shape)),
+            ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
             ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
             num_aux,
             c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
-            c_array_buf(mx_uint, native_array('I', aux_shape_lens)),
+            c_array_buf(ctypes.c_int, native_array('i', aux_shape_lens)),
             c_array_buf(ctypes.c_int64, native_array('q', aux_shapes)),
             ctypes.byref(hdl)))
     else:
         check_call(_LIB.MXNDArrayCreateSparseEx(
             ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
-            c_array_buf(mx_uint, native_array('I', shape)),
-            mx_uint(len(shape)),
+            c_array_buf(ctypes.c_int, native_array('i', shape)),
+            ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
             ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
             num_aux,
             c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
-            c_array_buf(mx_uint, native_array('I', aux_shape_lens)),
-            c_array_buf(mx_uint, native_array('I', aux_shapes)),
+            c_array_buf(ctypes.c_int, native_array('i', aux_shape_lens)),
+            c_array_buf(ctypes.c_int, native_array('i', aux_shapes)),
             ctypes.byref(hdl)))
     return hdl
 

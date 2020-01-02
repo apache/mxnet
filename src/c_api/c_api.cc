@@ -943,17 +943,17 @@ int MXNDArrayCreateEx(const uint32_t *shape,
   API_END();
 }
 
-template<typename DType, typename IType>
+template<typename DType>
 void CreateSparseNDArray(int storage_type,
                          const DType *shape,
-                         IType ndim,
+                         int ndim,
                          int dev_type,
                          int dev_id,
                          int delay_alloc,
                          int dtype,
                          uint32_t num_aux,
                          int *aux_type,
-                         IType *aux_ndims,
+                         int *aux_ndims,
                          const DType *aux_shape,
                          NDArrayHandle *out) {
   std::vector<int> aux_types;
@@ -976,18 +976,18 @@ void CreateSparseNDArray(int storage_type,
 
 int MXNDArrayCreateSparseEx(int storage_type,
                             const uint32_t *shape,
-                            uint32_t ndim,
+                            int ndim,
                             int dev_type,
                             int dev_id,
                             int delay_alloc,
                             int dtype,
                             uint32_t num_aux,
                             int *aux_type,
-                            uint32_t *aux_ndims,
+                            int *aux_ndims,
                             const uint32_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  CreateSparseNDArray<uint32_t, uint32_t>(storage_type, shape, ndim, dev_type, dev_id,
+  CreateSparseNDArray<uint32_t>(storage_type, shape, ndim, dev_type, dev_id,
                                 delay_alloc, dtype, num_aux, aux_type,
                                 aux_ndims, aux_shape, out);
   API_END();
@@ -1007,7 +1007,7 @@ int MXNDArrayCreateSparseEx64(int storage_type,
                             const int64_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  CreateSparseNDArray<int64_t, int>(storage_type, shape, ndim, dev_type, dev_id,
+  CreateSparseNDArray<int64_t>(storage_type, shape, ndim, dev_type, dev_id,
                                delay_alloc, dtype, num_aux, aux_type,
                                aux_ndims, aux_shape, out);
   API_END();
