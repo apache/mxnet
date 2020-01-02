@@ -643,14 +643,14 @@ MXNET_DLL int MXNDArrayCreateSparseEx(int storage_type,
 
 MXNET_DLL int MXNDArrayCreateSparseEx64(int storage_type,
                                         const int64_t *shape,
-                                        uint32_t ndim,
+                                        int ndim,
                                         int dev_type,
                                         int dev_id,
                                         int delay_alloc,
                                         int dtype,
                                         uint32_t num_aux,
                                         int *aux_type,
-                                        uint32_t *aux_ndims,
+                                        int *aux_ndims,
                                         const int64_t *aux_shape,
                                         NDArrayHandle *out);
 
