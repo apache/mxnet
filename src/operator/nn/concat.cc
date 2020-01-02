@@ -395,7 +395,7 @@ CONCAT_FORWARD_ATTRS
 
 NNVM_REGISTER_OP(_backward_Concat)
 .set_num_inputs([](const NodeAttrs& attrs) {
-#if MXNET_USE_MKLDNN
+#if MXNET_USE_MKLDNN == 1
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
   return 1 + params.num_args;
 #else
