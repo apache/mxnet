@@ -49,6 +49,7 @@ except NameError:
 integer_types = (int, long, _np.int32, _np.int64)
 numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
+error_types = {}
 
 if sys.version_info[0] > 2:
     # this function is needed for python3
@@ -109,11 +110,121 @@ class _NullType(object):
 _Null = _NullType()
 
 
-class MXNetError(Exception):
-    """Error that will be thrown by all mxnet functions."""
-    pass
+class MXNetError(RuntimeError):
+    """Default error thrown by MXNet functions.
+
+    MXNetError will be raised if you do not give any error type specification,
+    """
+
+def register_error(func_name=None, cls=None):
+    """Register an error class so it can be recognized by the ffi error handler.
+
+    Parameters
+    ----------
+    func_name : str or function or class
+        The name of the error function.
+
+    cls : function
+        The function to create the class
+
+    Returns
+    -------
+    fregister : function
+        Register function if f is not specified.
+
+    Examples
+    --------
+    .. code-block:: python
+
+      @mxnet.error.register_error
+      class MyError(RuntimeError):
+          pass
+
+      err_inst = mxnet.error.create_ffi_error("MyError: xyz")
+      assert isinstance(err_inst, MyError)
+    """
+    if callable(func_name):
+        cls = func_name
+        func_name = cls.__name__
+
+    def register(mycls):
+        """internal register function"""
+        err_name = func_name if isinstance(func_name, str) else mycls.__name__
+        error_types[err_name] = mycls
+        return mycls
+    if cls is None:
+        return register
+    return register(cls)
 
 
+def _valid_error_name(name):
+    """Check whether name is a valid error name."""
+    return all(x.isalnum() or x in "_." for x in name)
+
+
+def _find_error_type(line):
+    """Find the error name given the first line of the error message.
+
+    Parameters
+    ----------
+    line : str
+        The first line of error message.
+
+    Returns
+    -------
+    name : str The error name
+    """
+    end_pos = line.find(":")
+    if end_pos == -1:
+        return None
+    err_name = line[:end_pos]
+    if _valid_error_name(err_name):
+        return err_name
+    return None
+
+
+def c2pyerror(err_msg):
+    """Translate C API error message to python style.
+
+    Parameters
+    ----------
+    err_msg : str
+        The error message.
+
+    Returns
+    -------
+    new_msg : str
+        Translated message.
+
+    err_type : str
+        Detected error type.
+    """
+    arr = err_msg.split("\n")
+    if arr[-1] == "":
+        arr.pop()
+    err_type = _find_error_type(arr[0])
+    trace_mode = False
+    stack_trace = []
+    message = []
+    for line in arr:
+        if trace_mode:
+            if line.startswith("  "):
+                stack_trace.append(line)
+            else:
+                trace_mode = False
+        if not trace_mode:
+            if line.startswith("Stack trace"):
+                trace_mode = True
+            else:
+                message.append(line)
+    out_msg = ""
+    if stack_trace:
+        out_msg += "Traceback (most recent call last):\n"
+        out_msg += "\n".join(reversed(stack_trace)) + "\n"
+    out_msg += "\n".join(message)
+    return out_msg, err_type
+
+@register_error
 class NotImplementedForSymbol(MXNetError):
     """Error: Not implemented for symbol"""
     def __init__(self, function, alias, *args):
@@ -130,6 +241,36 @@ class NotImplementedForSymbol(MXNetError):
             msg += ' with arguments ({})'.format(', '.join(self.args))
         msg += ' is not implemented for Symbol and only available in NDArray.'
         return msg
+
+
+def get_last_ffi_error():
+    """Create error object given result of MXGetLastError.
+
+    Returns
+    -------
+    err : object
+        The error object based on the err_msg
+    """
+    c_err_msg = py_str(_LIB.MXGetLastError())
+    py_err_msg, err_type = c2pyerror(c_err_msg)
+    if err_type is not None and err_type.startswith("mxnet.error."):
+        err_type = err_type[10:]
+    return error_types.get(err_type, MXNetError)(py_err_msg)
+
+
+def check_call(ret):
+    """Check the return value of C API call.
+
+    This function will raise an exception when an error occurs.
+    Wrap every API call with this function.
+
+    Parameters
+    ----------
+    ret : int
+        return value from API calls.
+    """
+    if ret != 0:
+        raise get_last_ffi_error()
 
 
 class NotSupportedForSparseNDArray(MXNetError):
@@ -263,21 +404,6 @@ DLPackHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
-def check_call(ret):
-    """Check the return value of C API call.
-
-    This function will raise an exception when an error occurs.
-    Wrap every API call with this function.
-
-    Parameters
-    ----------
-    ret : int
-        return value from API calls.
-    """
-    if ret != 0:
-        raise MXNetError(py_str(_LIB.MXGetLastError()))
-
-
 if sys.version_info[0] < 3:
     def c_str(string):
         """Create ctypes char * from a Python string.

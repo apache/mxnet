@@ -74,8 +74,9 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
         << param.axes << ", input tensor shape = " << shp;
     mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
     std::set<dim_t> axes_set(axes.begin(), axes.end());
-    CHECK_EQ(axes_set.size(), axes.ndim()) << "Repeated axis in transpose. param.axes = "
-                                                << param.axes;
+    CHECK_EQ(axes_set.size(), axes.ndim()) << "ValueError: Repeated axis in transpose."
+                                           << " param.axes = "
+                                           << param.axes;
     if (ndim_is_known(shp)) {
       for (int i = 0; i < ndim; ++i) {
         ret[i] = shp[axes[i]];

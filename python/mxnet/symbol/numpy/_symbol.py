@@ -36,7 +36,7 @@ try:
 except ImportError:
     from builtins import slice as py_slice
 
-__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'bitwise_not', 'invert',
+__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'empty_like', 'bitwise_not', 'invert', 'delete',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
@@ -45,10 +45,10 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'bitwise_not
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
            'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
-           'blackman', 'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
+           'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round', 'hypot', 'bitwise_xor', 'bitwise_or',
+           'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'true_divide', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -491,7 +491,7 @@ class _Symbol(Symbol):
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -665,13 +665,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute norm')
 
-    def round(self, *args, **kwargs):
+    def round(self, decimals=0, out=None, **kwargs): # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`round`.
 
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        raise NotImplementedError
+        return round(self, decimals=decimals, out=out, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -1717,6 +1717,67 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     if ctx is None:
         ctx = current_context()
     return _npi.eye(N, M, k, ctx, dtype)
+
+
+@set_module('mxnet.symbol.numpy')
+def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+    """
+    Return a new array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    prototype : _Symbol
+        The shape and data-type of `prototype` define these same attributes
+        of the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    subok : bool, optional.
+        If True, then the newly created array will use the sub-class
+        type of 'a', otherwise it will be a base-class array. Defaults
+        to False.
+        (Only support False at this moment)
+    shape : int or sequence of ints, optional.
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, will try to keep order, otherwise,
+        order='C' is implied.
+        (This parameter is not supported at this moment)
+
+    Returns
+    -------
+    out : _Symbol
+        Array of uninitialized (arbitrary) data with the same
+        shape and type as `prototype`.
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    empty : Return a new uninitialized array.
+
+    Notes
+    -----
+    This function does *not* initialize the returned array; to do that use
+    `zeros_like` or `ones_like` instead.  It may be marginally faster than
+    the functions that do set the array values.
+    """
+    dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
+                  _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
+                  _np.float64:'float64', _np.bool_:'bool'}
+    if order != 'C':
+        raise NotImplementedError("Only support C order at this moment")
+    if subok:
+        raise NotImplementedError("Creating array by using sub-class is not supported at this moment")
+    if shape is not None:
+        raise NotImplementedError("Parameter 'shape' is not supported at this moment")
+    try:
+        dtype = dtype if isinstance(dtype, str) else dtype_list[dtype]
+    except:
+        raise NotImplementedError("Do not support this dtype at this moment")
+    return _npi.empty_like_fallback(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -3161,6 +3222,45 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
 
 
+@set_module('mxnet.symbol.numpy')
+def delete(arr, obj, axis=None):
+    """
+    Return a new array with sub-arrays along an axis deleted. For a one
+    dimensional array, this returns those entries not returned by
+    `arr[obj]`.
+
+    Parameters
+    ----------
+    arr : _Symbol
+      Input array.
+    obj : slice, scaler or _Symbol of ints
+      Indicate indices of sub-arrays to remove along the specified axis.
+    axis : scaler, optional
+      The axis along which to delete the subarray defined by `obj`.
+      If `axis` is None, `obj` is applied to the flattened array.
+
+    Returns
+    -------
+    out : _Symbol
+        A copy of `arr` with the elements specified by `obj` removed. Note
+        that `delete` does not occur in-place. If `axis` is None, `out` is
+        a flattened array.
+    """
+    if not isinstance(arr, Symbol):
+        raise TypeError("'arr' can not support type {}".format(str(type(arr))))
+    if isinstance(obj, slice):
+        start = obj.start
+        stop = obj.stop
+        step = 1 if obj.step is None else obj.step
+        return _npi.delete(arr, start=start, stop=stop, step=step, axis=axis)
+    elif isinstance(obj, integer_types):
+        return _npi.delete(arr, int_ind=obj, axis=axis)
+    elif isinstance(obj, Symbol):
+        return _npi.delete(arr, obj, axis=axis)
+    else:
+        raise TypeError("'obj' can not support type {}".format(str(type(obj))))
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
@@ -4482,6 +4582,54 @@ def flip(m, axis=None, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def flipud(m):
+    r"""
+    flipud(*args, **kwargs)
+
+    Flip array in the up/down direction.
+
+    Flip the entries in each column in the up/down direction.
+    Rows are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array.
+
+    Returns
+    -------
+    out : array_like
+        A view of `m` with the rows reversed.  Since a view is
+        returned, this operation is :math:`\mathcal O(1)`.
+    """
+    return flip(m, 0)
+
+
+@set_module('mxnet.symbol.numpy')
+def fliplr(m):
+    r"""
+    fliplr(*args, **kwargs)
+
+    Flip array in the left/right direction.
+
+    Flip the entries in each row in the left/right direction.
+    Columns are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array, must be at least 2-D.
+
+    Returns
+    -------
+    f : ndarray
+        A view of `m` with the columns reversed.  Since a view
+        is returned, this operation is :math:`\mathcal O(1)`.
+    """
+    return flip(m, 1)
+
+
+@set_module('mxnet.symbol.numpy')
 def around(x, decimals=0, out=None, **kwargs):
     r"""
     around(x, decimals=0, out=None)
@@ -4515,6 +4663,24 @@ def around(x, decimals=0, out=None, **kwargs):
 
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
         - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def round(x, decimals=0, out=None, **kwargs):
+    r"""
+    round_(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
     """
     if isinstance(x, numeric_types):
         return _np.around(x, decimals, **kwargs)
