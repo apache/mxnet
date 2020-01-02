@@ -51,6 +51,7 @@
 #include "./c_api_common.h"
 #include "../operator/custom/custom-inl.h"
 #include "../operator/operator_common.h"
+#include "../operator/subgraph/common.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
 #include "../common/utils.h"
@@ -162,20 +163,27 @@ int MXLoadLib(const char *path) {
     fcomp_t fgrad_fp = nullptr;
     mutateInputs_t mutate_fp = nullptr;
     createOpState_t create_opstate_fp = nullptr;
+    bool isSubgraphOp = false;
 
     // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
-                &mutate_fp, &create_opstate_fp);
+             &mutate_fp, &create_opstate_fp, &isSubgraphOp);
 
-    // validate custom operator functions from the dynamic library
-    CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
-                            << "' custom op, Forward or CreateOpState function was not set.";
     CHECK(parse_fp != nullptr) << "Error loading '" << name
-                            << "' custom op, ParseAttrs function was not set.";
-    CHECK(type_fp  != nullptr) << "Error loading '" << name
+                               << "' custom op, ParseAttrs function was not set.";
+    if (!isSubgraphOp) {
+      // validate custom operator functions from the dynamic library
+      CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
+                            << "' custom op, Forward or CreateOpState function was not set.";
+      CHECK(type_fp  != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
-    CHECK(shape_fp != nullptr) << "Error loading '" << name
+      CHECK(shape_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferShape function was not set.";
+    } else {
+      // validate custom operator functions from the dynamic library
+      CHECK(create_opstate_fp != nullptr) << "Error loading '" << name
+                            << "' custom subgraph op, CreateOpState function was not set.";
+    }
 
     LOG(INFO) << "\tOp[" << i << "] " << name;
     std::string name_str(name);
@@ -653,10 +661,28 @@ int MXLoadLib(const char *path) {
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
       plevel++;
     }
-    regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
-    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
-    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
-    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+    if (!isSubgraphOp) {
+      regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
+      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
+      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+      regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+      // optionally add fmutate inputs if user specified a function
+      if (mutate_fp != nullptr)
+        regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
+    } else {
+      using namespace mxnet::op;
+      regOp.set_attr<nnvm::FInferType>("FInferType",
+                                       DefaultSubgraphOpType, plevel);
+      regOp.set_attr<mxnet::FInferShape>("FInferShape",
+                                         DefaultSubgraphOpShape, plevel);
+      regOp.set_attr<FInferStorageType>("FInferStorageType",
+                                        DefaultSubgraphOpStorageType, plevel);
+      regOp.set_attr<FResourceRequest>("FResourceRequest",
+                                       DefaultSubgraphOpResourceRequest, plevel);
+      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+                                          DefaultSubgraphOpMutableInputs, plevel);
+    }
+
     // optionally add stateful forward
     if (create_opstate_fp != nullptr) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
@@ -665,9 +691,6 @@ int MXLoadLib(const char *path) {
     } else {
       regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
     }
-    // optionally add fmutate inputs if user specified a function
-    if (mutate_fp != nullptr)
-      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
     // optionally add fgradient if user specified a function
     if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {
       regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);

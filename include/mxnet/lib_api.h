@@ -558,7 +558,8 @@ class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
     forward(NULL), backward(NULL), parse_attrs(NULL), infer_type(NULL),
-    infer_shape(NULL), mutate_inputs(NULL), create_opstate(NULL) {}
+    infer_shape(NULL), mutate_inputs(NULL), create_opstate(NULL),
+    isSGop(false) {}
   ~CustomOp() {}
   CustomOp& setForward(fcomp_t fcomp) {
     forward = fcomp;
@@ -588,6 +589,10 @@ class CustomOp {
     create_opstate = func;
     return *this;
   }
+  CustomOp& setIsSubgraphOp() {
+    isSGop = true;
+    return *this;
+  }
 
   /*! \brief operator name */
   const char* name;
@@ -599,6 +604,7 @@ class CustomOp {
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
   createOpState_t create_opstate;
+  bool isSGop;
 };
 
 /*!
@@ -675,7 +681,7 @@ typedef int (*opRegSize_t)(void);
 typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*, mutateInputs_t*,
-                          createOpState_t*);
+                          createOpState_t*, bool*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -748,7 +754,7 @@ extern "C" {
   _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate,
-            createOpState_t* create_op) {
+            createOpState_t* create_op, bool *isSGop) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.forward;
@@ -758,6 +764,7 @@ extern "C" {
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
     *create_op = op.create_opstate;
+    *isSGop = op.isSGop;
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
