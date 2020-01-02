@@ -198,6 +198,7 @@ enum MXDType {
   kInt32 = 4,
   kInt8  = 5,
   kInt64 = 6,
+  kUNSET = 100,
 };
 
 enum MXReturnValue {
@@ -209,13 +210,16 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL) {}
+MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
-           size_t ID, bool param)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), version(ID),
-    isParam(param) {}
+           size_t ID)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), version(ID) {}
 
+  void update(void *data_ptr, MXDType dtype, size_t ID) {
+    data_ptr = data_ptr; dtype = dtype; version = ID;
+  }
+  
   /*! \brief populate DLTensor fields */
   void setDLTensor() {
     dltensor.data = data_ptr;
@@ -291,10 +295,6 @@ struct MXTensor {
 
   // version number updated if the tensor has changed since the last use by custom op
   size_t version;
-
-  // true if this tensor is a fixed paramter of the model, false if it is an output
-  // of some other operator
-  bool isParam;
 
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
@@ -687,15 +687,9 @@ typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* co
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                           const int64_t**, int*, void**, int*, int,
-                           const int64_t**, int*, void**, int*, int,
-                           xpu_malloc_t, void*);
-
-#define MXLIB_OPCALLBKWD_STR "_opCallBackward"
-typedef int (*opCallBkwd_t)(fcomp_t, const char* const*, const char* const*, int,
-                            const int64_t**, int*, void**, int*, int,
-                            const int64_t**, int*, void**, int*, int,
-                            xpu_malloc_t, void*);
+                             const int64_t**, int*, void**, int*, size_t*, int,
+                             const int64_t**, int*, void**, int*, size_t*, int,
+                             xpu_malloc_t, void*);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
@@ -706,9 +700,9 @@ typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const 
                                      void**);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
-typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, int,
-                                     const int64_t**, int*, void**, int*, int,
-                                     xpu_malloc_t, void*);
+typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, size_t*,
+                                     int, const int64_t**, int*, void**, int*, size_t*,
+                                     int, xpu_malloc_t, void*);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -878,9 +872,9 @@ extern "C" {
   _opCallFCompute(fcomp_t fcomp, const char* const* keys,
                   const char* const* vals, int num,
                   const int64_t** inshapes, int* indims,
-                  void** indata, int* intypes, int num_in,
+                  void** indata, int* intypes, size_t* inIDs, int num_in,
                   const int64_t** outshapes, int* outdims,
-                  void** outdata, int* outtypes, int num_out,
+                  void** outdata, int* outtypes, size_t* outIDs, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
@@ -891,8 +885,7 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].data_ptr = indata[i];
-      inputs[i].dtype = (MXDType)intypes[i];
+      inputs[i].update(indata[i], (MXDType)intypes[i], inIDs[i]);
       for (int j = 0; j < indims[i]; j++) {
         inputs[i].shape.push_back(inshapes[i][j]);
       }
@@ -902,8 +895,7 @@ extern "C" {
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].data_ptr = outdata[i];
-      outputs[i].dtype = (MXDType) outtypes[i];
+      outputs[i].update(outdata[i], (MXDType)outtypes[i], outIDs[i]);
       for (int j = 0; j < outdims[i]; j++) {
         outputs[i].shape.push_back(outshapes[i][j]);
       }
@@ -975,15 +967,14 @@ extern "C" {
 #endif
   _opCallFStatefulCompute(bool is_forward, void* state_op,
                           const int64_t** inshapes, int* indims,
-                          void** indata, int* intypes, int num_in,
+                          void** indata, int* intypes, size_t* inIDs, int num_in,
                           const int64_t** outshapes, int* outdims,
-                          void** outdata, int* outtypes, int num_out,
+                          void** outdata, int* outtypes, size_t* outIDs, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].data_ptr = indata[i];
-      inputs[i].dtype = (MXDType)intypes[i];
+      inputs[i].update(indata[i], (MXDType)intypes[i], inIDs[i]);
       for (int j = 0; j < indims[i]; j++) {
         inputs[i].shape.push_back(inshapes[i][j]);
       }
@@ -993,8 +984,7 @@ extern "C" {
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].data_ptr = outdata[i];
-      outputs[i].dtype = (MXDType) outtypes[i];
+      outputs[i].update(outdata[i], (MXDType)outtypes[i], outIDs[i]);
       for (int j = 0; j < outdims[i]; j++) {
         outputs[i].shape.push_back(outshapes[i][j]);
       }
