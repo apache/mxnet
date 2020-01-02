@@ -195,7 +195,7 @@ class DropoutOp {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
-        auto mask_idx = i / 8;
+        auto mask_idx = i >> 3; // div 8;
         uint8_t mask_offset = i & 7; // mod 8
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
         if (mask_val) {
@@ -217,7 +217,7 @@ class DropoutOp {
                                     DType *ograd,
                                     const uint8_t *mask,
                                     const real_t pkeep) {
-      auto mask_idx = i / 8;
+      auto mask_idx = i >> 3; // div 8;
       uint8_t mask_offset = i & 7; // mod 8
       bool mask_val = mask[mask_idx] & (1U << mask_offset);
       KERNEL_ASSIGN(igrad[i], req, mask_val * ograd[i] * (1 / pkeep));
@@ -237,7 +237,7 @@ class DropoutOp {
         const real_t rand_num = static_cast<real_t>(genImpl.uniform());
         // mask_out is set per bit position
         // therefore bitwise shift need to be performed here
-        auto mask_idx = i / 8;
+        auto mask_idx = i >> 3; // div 8;
         uint8_t mask_offset = i & 7; // mod 8
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
         if (mask_val) {
@@ -267,14 +267,14 @@ class DropoutOp {
       Shape <ndim> coord = unravel(base, oshape);
       auto lidx = static_cast<index_t>(dot(coord, lstride));
       auto ridx = static_cast<index_t>(dot(coord, rstride));
-      auto mask_idx = ridx / 8;
+      auto mask_idx = ridx >> 3; // div 8;
       uint8_t mask_offset = ridx & 7; // mod 8
       bool mask_val = mask[mask_idx] & (1U << mask_offset);
       KERNEL_ASSIGN(igrad[base], req, mask_val * ograd[lidx] * (1 / pkeep))
       // starts from 1 to avoid extra inc at end of loop
       for (index_t i = 1; i < length; ++i) {
         inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
-        mask_idx = ridx / 8;
+        mask_idx = ridx >> 3; // div 8
         mask_offset = ridx & 7; // mod 8
         mask_val = mask[mask_idx] & (1U << mask_offset);
         KERNEL_ASSIGN(igrad[base + i], req, mask_val * ograd[lidx] * (1 / pkeep))
@@ -520,6 +520,7 @@ class DropoutOp {
         }
 #endif  // MXNET_USE_CUDNN_DROPOUT && defined(__CUDACC__)
         // standard case for dropout
+        LOG(INFO) << "grad size: " << grad.Size() << " mask.Size(): " << mask.Size();
         CHECK_EQ((grad.Size() + 7) / 8, mask.Size());
 
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
