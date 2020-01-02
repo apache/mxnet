@@ -137,6 +137,25 @@ Check the chart below for other options or refer to [PyPI for other MXNet pip pa
 
 ## Build from Source
 
+
+
+### *NEW* Automated environment setup.
+
+For automated setting up of developer environment in windows, use script bundle from the ![windows.zip](https://windows-post-install.s3-us-west-2.amazonaws.com/windows.zip)
+file. Extract into a folder and execute the following command in a powershell console:
+
+```
+.\setup.ps1
+```
+
+This will install VS Community 2017, Python, and other dependencies needed to build in windows.
+After that, follow the steps below starting from "build the MXNet source code" section.
+
+
+
+### Manual installation.
+
+
 **IMPORTANT: It is recommended that you review the [build from source guide](build_from_source) first.** It describes many of the build options that come with MXNet in more detail. You may decide to install additional dependencies and modify your build flags after reviewing this material.
 
 We provide two primary options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
