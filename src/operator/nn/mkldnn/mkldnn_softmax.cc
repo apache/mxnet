@@ -143,29 +143,76 @@ void MKLDNNSoftmaxForward(const nnvm::NodeAttrs& attrs,
   stream->Submit();
 }
 
+class MKLDNNSoftmaxBwd {
+ public:
+  mkldnn::softmax_backward::primitive_desc pd;
+
+  MKLDNNSoftmaxBwd(const mkldnn::memory &diff_mem,
+                   const mkldnn::memory &data_mem,
+                   const int axis,
+                   const mkldnn::softmax_forward::primitive_desc &hint_fwd_pd) :
+                                 pd(GetSoftmaxBwdPd(diff_mem, data_mem, axis, hint_fwd_pd)) {
+    bwd_ = std::make_shared<mkldnn::softmax_backward>(pd);
+  }
+
+  const mkldnn::softmax_backward &GetBwd() const {
+    return *bwd_;
+  }
+
+ private:
+  std::shared_ptr<mkldnn::softmax_backward> bwd_;
+};
+
+typedef ParamOpSign<SoftmaxParam> MKLDNNSoftmaxSignature;
+
+static MKLDNNSoftmaxBwd &GetSoftmaxBwd(const SoftmaxParam &param,
+                                       const int real_axis,
+                                       const std::vector<NDArray> &data,
+                                       const std::vector<NDArray> &output) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxBwd, OpHash> bwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSoftmaxSignature, MKLDNNSoftmaxBwd, OpHash> bwds;
+#endif
+
+  MKLDNNSoftmaxSignature key(param);
+  key.AddSign(real_axis);
+  key.AddSign(data);
+  key.AddSign(output);
+
+  auto it = bwds.find(key);
+  if (it == bwds.end()) {
+    auto diff_mem = data[0].GetMKLDNNData();
+    auto data_mem = data[1].GetMKLDNNData();
+    auto fwd_pd = GetSoftmaxFwdPd(true, real_axis, *data_mem);
+    MKLDNNSoftmaxBwd bwd(*diff_mem, *data_mem, real_axis, fwd_pd);
+    it = AddToCache(&bwds, key, bwd);
+  }
+  return it->second;
+}
+
 void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
-                          const OpContext &ctx,
-                          const std::vector<NDArray> &in_data,
-                          const std::vector<OpReqType>& req,
-                          const std::vector<NDArray> &out_data) {
+                           const OpContext &ctx,
+                           const std::vector<NDArray> &in_data,
+                           const std::vector<OpReqType>& req,
+                           const std::vector<NDArray> &out_data) {
   if (req[0] == kNullOp) return;
   CHECK_EQ(in_data.size(), 2U);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, in_data[1].shape().ndim());
   auto diff_mem = in_data[0].GetMKLDNNData();
   auto data_mem = in_data[1].GetMKLDNNData();
-  auto fwd_pd = GetSoftmaxFwdPd(ctx.is_train, axis, *data_mem);
-  auto bwd_pd = GetSoftmaxBwdPd(*diff_mem, *data_mem, axis, fwd_pd);
+  auto bwd = GetSoftmaxBwd(param, axis, in_data, out_data);
 
-  auto out_mem = CreateMKLDNNMem(out_data[0], bwd_pd.diff_src_desc(), req[0]);
+  auto out_mem = CreateMKLDNNMem(out_data[0], bwd.pd.diff_src_desc(), req[0]);
   MKLDNNStream *stream = MKLDNNStream::Get();
   mkldnn_args_map_t args = {
     { MKLDNN_ARG_DST, *data_mem },
     { MKLDNN_ARG_DIFF_DST, *diff_mem },
-    { MKLDNN_ARG_DIFF_SRC, *out_mem.second },
+    { MKLDNN_ARG_DIFF_SRC, *out_mem.second }
   };
 
-  stream->RegisterPrimArgs(bwd_pd, args);
+  stream->RegisterPrimArgs(bwd.GetBwd(), args);
   CommitOutput(out_data[0], out_mem);
   stream->Submit();
 }

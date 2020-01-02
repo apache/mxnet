@@ -41,7 +41,6 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  // It seems MKLDNN softmax doesn't support training.
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportMKLDNNSoftmax(param, inputs[0], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
@@ -59,7 +58,6 @@ static void SoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  // It seems MKLDNN softmax doesn't support training.
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportMKLDNNSoftmax(param, inputs[1], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
@@ -73,6 +71,25 @@ static void SoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int> *in_attrs,
+                                      std::vector<int> *out_attrs) {
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), (param.use_length.value()) ? 2U : 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  if (param.use_length.value()) {
+    auto& out_stype = out_attrs->at(0);
+    return storage_type_assign(&out_stype, kDefaultStorage,
+                               dispatch_mode, DispatchMode::kFCompute);
+  }
+
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
+                           out_attrs);
+}
+
+inline static bool SoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
                                       const int dev_mask,
                                       DispatchMode* dispatch_mode,
                                       std::vector<int> *in_attrs,
@@ -167,7 +184,7 @@ NNVM_REGISTER_OP(_backward_softmax)
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxGradComputeExCPU)
-.set_attr<FInferStorageType>("FInferStorageType", SoftmaxStorageType)
+.set_attr<FInferStorageType>("FInferStorageType", SoftmaxGradStorageType)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
