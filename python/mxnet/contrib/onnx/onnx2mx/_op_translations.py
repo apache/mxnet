@@ -787,3 +787,24 @@ def topk(attrs, inputs, proto_obj):
                                                         {'ret_typ': 'both',
                                                          'dtype': 'int64'})
     return 'topk', new_attrs, inputs
+
+
+def upsampling(attrs, inputs, proto_obj):
+    """Rearranges blocks of spatial data into depth."""
+    new_attrs = translation_utils._fix_attribute_names(attrs, {'scales': 'scale',
+                                                               'mode': 'sample_type'})
+    sample_type = new_attrs.get('sample_type', 'nearest')
+    if sample_type != 'nearest':
+        raise NotImplementedError("Operator {} in ONNX supports 'linear' mode "
+                                  "for linear, bilinear, trilinear etc. There is no "
+                                  "way to distinguish these so far. Therefore, supporting "
+                                  "import of only nearest neighbor upsampling for now. "
+                                  "https://github.com/onnx/onnx/issues/1774. "
+                                  "Use contrib.BilinearResize2D for bilinear mode."
+                                  .format('UpSample'))
+
+    scale = tuple(new_attrs.get('scale'))[2:]
+    scale = tuple([int(s) for s in scale])
+    mx_op = symbol.UpSampling(inputs[0], scale=scale, sample_type=sample_type)
+
+    return mx_op, new_attrs, inputs
