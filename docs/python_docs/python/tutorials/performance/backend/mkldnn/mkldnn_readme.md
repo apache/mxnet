@@ -214,12 +214,16 @@ export MKLDNN_VERBOSE=1
 ```
 For example, by running above code snippet, the following debugging logs providing more insights on MKL-DNN primitives `convolution` and `reorder`. That includes: Memory layout, infer shape and the time cost of primitive execution.
 ```
-mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nchw out:f32_nChw16c,num:1,32x32x256x256,6.47681
-mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_oihw out:f32_OIhw16i16o,num:1,32x32x3x3,0.0429688
-mkldnn_verbose,exec,convolution,jit:avx512_common,forward_inference,fsrc:nChw16c fwei:OIhw16i16o fbia:undef fdst:nChw16c,alg:convolution_direct,mb32_g1ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,9.98193
-mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_oihw out:f32_OIhw16i16o,num:1,32x32x3x3,0.0510254
-mkldnn_verbose,exec,reorder,jit:uni,undef,in:f32_nChw16c out:f32_nchw,num:1,32x32x256x256,20.4819
+dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
+dnnl_verbose,info,Detected ISA is Intel AVX-512 with Intel DL Boost
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:aBcd16b:f0,,,32x32x256x256,7.43701
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:ABcd16b16a:f0,,,32x32x3x3,0.202148
+dnnl_verbose,exec,cpu,convolution,jit:avx512_common,forward_inference,src_f32::blocked:aBcd16b:f0 wei_f32::blocked:ABcd16b16a:f0 bia_undef::undef::f0 dst_f32::blocked:aBcd16b:f0,,alg:convolution_direct,mb32_ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,20.7539
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:abcd:f0 dst_f32::blocked:ABcd16b16a:f0,,,32x32x3x3,1.86694
+dnnl_verbose,exec,cpu,reorder,jit:uni,undef,src_f32::blocked:aBcd16b:f0 dst_f32::blocked:abcd:f0,,,32x32x256x256,35.9771
 ```
+
+You can find step-by-step guidance to do profiling for MKLDNN primitives in [Profiling MKLDNN Operators](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html#Profiling-MKLDNN-Operators).
 
 <h2 id="5">Enable MKL BLAS</h2>
 

@@ -30,7 +30,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
@@ -2696,6 +2696,7 @@ def check_multihead_attention_selfatt(dtype):
         assert(grads_orig[k].shape == grads_opti[k].shape)
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_selfatt():
     for dtype in ['float16', 'float32']:
         check_multihead_attention_selfatt(dtype=dtype)
@@ -2859,6 +2860,7 @@ def check_multihead_attention_encdec(dtype):
         assert(grads_orig[k].shape == grads_opti[k].shape)
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_encdec():
     for dtype in ['float16', 'float32']:
         check_multihead_attention_encdec(dtype=dtype)

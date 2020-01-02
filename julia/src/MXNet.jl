@@ -80,7 +80,12 @@ export Context,
        cpu,
        gpu,
        num_gpus,
-       gpu_memory_info
+       gpu_memory_info,
+       current_context,
+       @context,
+       @cpu,
+       @gpu,
+       empty_cache
 
 # model.jl
 export AbstractModel,

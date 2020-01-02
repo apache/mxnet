@@ -169,6 +169,20 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+// bitwise_not
+NNVM_REGISTER_OP(_npi_bitwise_not)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"x"};
+})
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::ComputeInt<cpu, mshadow_op::bitwise_not>)
+.add_argument("x", "NDArray-or-Symbol", "The input array.")
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 // trunc
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_trunc, "x", mshadow_op::trunc)
 .describe(R"code(Return the truncated value of the input, element-wise.

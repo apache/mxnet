@@ -46,20 +46,21 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
 
-__all__ = ['ndarray', 'empty', 'array', 'shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power',
-           'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10',
+__all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
+           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
+           'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean',
            'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'around', 'arctan2', 'hypot',
-           'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take',
-           'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal',
-           'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around',
+           'round', 'arctan2', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater',
+           'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
+           'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -1377,7 +1378,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -1558,13 +1559,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute norm')
 
-    def round(self, *args, **kwargs):
+    def round(self, decimals=0, out=None, **kwargs): # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`round`.
 
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        raise NotImplementedError
+        return round(self, decimals=decimals, out=out, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -2200,6 +2201,65 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     """
     return _mx_nd_np.full(shape, fill_value, order=order, ctx=ctx, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
+
+
+@set_module('mxnet.numpy')
+def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+    """
+    Return a new array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    prototype : ndarray
+        The shape and data-type of `prototype` define these same attributes
+        of the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    subok : {False}, optional
+        If True, then the newly created array will use the sub-class
+        type of 'a', otherwise it will be a base-class array. Defaults
+        to False.
+        (Only support False at this moment)
+    shape : int or sequence of ints, optional.
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, will try to keep order, otherwise,
+        order='C' is implied.
+        (Not supported at this moment)
+
+    Returns
+    -------
+    out : ndarray
+        Array of uninitialized (arbitrary) data with the same
+        shape and type as `prototype`.
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    empty : Return a new uninitialized array.
+
+    Notes
+    -----
+    This function does *not* initialize the returned array; to do that use
+    `zeros_like` or `ones_like` instead.  It may be marginally faster than
+    the functions that do set the array values.
+
+    Examples
+    --------
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.empty_like(a)
+    array([[-5764607523034234880, -2305834244544065442,           4563075075], # uninitialized
+           [          4567052944, -5764607523034234880,      844424930131968]])
+    >>> a = np.array([[1., 2., 3.],[4.,5.,6.]])
+    >>> np.empty_like(a)
+    array([[4.9e-324, 9.9e-324, 1.5e-323], # uninitialized
+           [2.0e-323, 2.5e-323, 3.0e-323]])
+    """
+    return _mx_nd_np.empty_like(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 @set_module('mxnet.numpy')
@@ -3981,6 +4041,110 @@ def floor(x, out=None, **kwargs):
     """
     return _mx_nd_np.floor(x, out=out, **kwargs)
 
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def invert(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+
+    >>> x = np.invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _mx_nd_np.bitwise_not(x, out=out, **kwargs)
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def bitwise_not(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+
+    >>> x = np.invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _mx_nd_np.bitwise_not(x, out=out, **kwargs)
+
 
 @set_module('mxnet.numpy')
 @wrap_np_unary_func
@@ -5745,6 +5909,55 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
 
 @set_module('mxnet.numpy')
+def delete(arr, obj, axis=None):
+    """
+    Return a new array with sub-arrays along an axis deleted. For a one
+    dimensional array, this returns those entries not returned by
+    `arr[obj]`.
+
+    Parameters
+    ----------
+    arr : ndarray
+      Input array.
+    obj : slice, int or ndarray of ints
+      Indicate indices of sub-arrays to remove along the specified axis.
+    axis : int, optional
+      The axis along which to delete the subarray defined by `obj`.
+      If `axis` is None, `obj` is applied to the flattened array.
+
+    Returns
+    -------
+    out : ndarray
+        A copy of `arr` with the elements specified by `obj` removed. Note
+        that `delete` does not occur in-place. If `axis` is None, `out` is
+        a flattened array.
+
+    Examples
+    --------
+    >>> arr = np.array([[1,2,3,4], [5,6,7,8], [9,10,11,12]])
+    >>> arr
+    array([[ 1.,  2.,  3.,  4.],
+           [ 5.,  6.,  7.,  8.],
+           [ 9., 10., 11., 12.]])
+
+    >>> np.delete(arr, 1, 0)
+    array([[ 1.,  2.,  3.,  4.],
+           [ 9., 10., 11., 12.]])
+
+    >>> np.delete(arr, slice(None, None, 2), 1)
+    array([[ 2.,  4.],
+           [ 6.,  8.],
+           [10., 12.]])
+
+    >>> np.delete(arr, np.array([1,3,5]), None)
+    array([ 1.,  3.,  5.,  7.,  8.,  9., 10., 11., 12.])
+    >>> np.delete(arr, np.array([1,1,5]), None)
+    array([ 1.,  3.,  4.,  5.,  7.,  8.,  9., 10., 11., 12.])
+    """
+    return _mx_nd_np.delete(arr, obj, axis=axis)
+
+
+@set_module('mxnet.numpy')
 def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
     Compute the variance along the specified axis.
@@ -6301,6 +6514,108 @@ def flip(m, axis=None, out=None):
 
 
 @set_module('mxnet.numpy')
+def flipud(m):
+    r"""
+    flipud(*args, **kwargs)
+
+    Flip array in the up/down direction.
+
+    Flip the entries in each column in the up/down direction.
+    Rows are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array.
+
+    Returns
+    -------
+    out : array_like
+        A view of `m` with the rows reversed.  Since a view is
+        returned, this operation is :math:`\mathcal O(1)`.
+
+    See Also
+    --------
+    fliplr : Flip array in the left/right direction.
+    rot90 : Rotate array counterclockwise.
+
+    Notes
+    -----
+    Equivalent to ``m[::-1,...]``.
+    Does not require the array to be two-dimensional.
+
+    Examples
+    --------
+    >>> A = np.diag(np.array([1.0, 2, 3]))
+    >>> A
+    array([[1.,  0.,  0.],
+           [0.,  2.,  0.],
+           [0.,  0.,  3.]])
+    >>> np.flipud(A)
+    array([[0.,  0.,  3.],
+           [0.,  2.,  0.],
+           [1.,  0.,  0.]])
+
+    >>> A = np.random.randn(2,3,5)
+    >>> np.all(np.flipud(A) == A[::-1,...])
+    array(True)
+
+    >>> np.flipud(np.array([1,2]))
+    array([2., 1.])
+    """
+    return flip(m, 0)
+
+
+@set_module('mxnet.numpy')
+def fliplr(m):
+    r"""
+    fliplr(*args, **kwargs)
+
+    Flip array in the left/right direction.
+
+    Flip the entries in each row in the left/right direction.
+    Columns are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array, must be at least 2-D.
+
+    Returns
+    -------
+    f : ndarray
+        A view of `m` with the columns reversed.  Since a view
+        is returned, this operation is :math:`\mathcal O(1)`.
+
+    See Also
+    --------
+    flipud : Flip array in the up/down direction.
+    rot90 : Rotate array counterclockwise.
+
+    Notes
+    -----
+    Equivalent to m[:,::-1]. Requires the array to be at least 2-D.
+
+    Examples
+    --------
+    >>> A = np.diag([1.,2.,3.])
+    >>> A
+    array([[1.,  0.,  0.],
+        [0.,  2.,  0.],
+        [0.,  0.,  3.]])
+    >>> np.fliplr(A)
+    array([[0.,  0.,  1.],
+        [0.,  2.,  0.],
+        [3.,  0.,  0.]])
+
+    >>> A = np.random.randn(2,3,5)
+    >>> np.all(np.fliplr(A) == A[:,::-1,...])
+    array(True)
+    """
+    return flip(m, 1)
+
+
+@set_module('mxnet.numpy')
 def around(x, decimals=0, out=None, **kwargs):
     r"""
     around(x, decimals=0, out=None)
@@ -6348,6 +6663,19 @@ def around(x, decimals=0, out=None, **kwargs):
     array([ 1,  2,  3, 11])
     >>> np.around([1, 2, 3, 11], decimals=-1)
     array([ 0,  0,  0, 10])
+    """
+    return _mx_nd_np.around(x, decimals, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def round(x, decimals=0, out=None, **kwargs):
+    r"""
+    round_(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
     """
     return _mx_nd_np.around(x, decimals, out=out, **kwargs)
 
@@ -7892,3 +8220,54 @@ def where(condition, x=None, y=None):
            [ 0.,  3., -1.]])
     """
     return _mx_nd_np.where(condition, x, y)
+
+
+@set_module('mxnet.numpy')
+def bincount(x, weights=None, minlength=0):
+    """
+    Count number of occurrences of each value in array of non-negative ints.
+
+    Parameters
+    ----------
+    x : ndarray
+        input array, 1 dimension, nonnegative ints.
+    weights: ndarray
+        input weigths same shape as x. (Optional)
+    minlength: int
+        A minimum number of bins for the output. (Optional)
+
+    Returns
+    --------
+    out : ndarray
+        the result of binning the input array. The length of out is equal to amax(x)+1.
+
+    Raises
+    --------
+    Value Error
+        If the input is not 1-dimensional, or contains elements with negative values,
+        or if minlength is negative
+    TypeError
+        If the type of the input is float or complex.
+
+    Examples
+    --------
+    >>> np.bincount(np.arange(5))
+    array([1, 1, 1, 1, 1])
+    >>> np.bincount(np.array([0, 1, 1, 3, 2, 1, 7]))
+    array([1, 3, 1, 1, 0, 0, 0, 1])
+
+    >>> x = np.array([0, 1, 1, 3, 2, 1, 7, 23])
+    >>> np.bincount(x).size == np.amax(x)+1
+    True
+
+    >>> np.bincount(np.arange(5, dtype=float))
+    Traceback (most recent call last):
+    File "<stdin>", line 1, in <module>
+    TypeError: array cannot be safely cast to required type
+
+    >>> w = np.array([0.3, 0.5, 0.2, 0.7, 1., -0.6]) # weights
+    >>> x = np.array([0, 1, 1, 2, 2, 2])
+    >>> np.bincount(x,  weights=w)
+    array([ 0.3,  0.7,  1.1])
+    """
+    return _mx_nd_np.bincount(x, weights=weights, minlength=minlength)

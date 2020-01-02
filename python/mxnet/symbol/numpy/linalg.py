@@ -22,7 +22,7 @@ from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve']
+__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve']
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -393,3 +393,106 @@ def solve(a, b):
     True
     """
     return _npi.solve(a, b)
+
+
+def tensorinv(a, ind=2):
+    r"""
+    Compute the 'inverse' of an N-dimensional array.
+
+    The result is an inverse for `a` relative to the tensordot operation
+    ``tensordot(a, b, ind)``, i. e., up to floating-point accuracy,
+    ``tensordot(tensorinv(a), a, ind)`` is the "identity" tensor for the
+    tensordot operation.
+
+    Parameters
+    ----------
+    a : array_like
+        Tensor to 'invert'. Its shape must be 'square', i. e.,
+        ``prod(a.shape[:ind]) == prod(a.shape[ind:])``.
+    ind : int, optional
+        Number of first indices that are involved in the inverse sum.
+        Must be a positive integer, default is 2.
+
+    Returns
+    -------
+    b : ndarray
+        `a`'s tensordot inverse, shape ``a.shape[ind:] + a.shape[:ind]``.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not 'square' (in the above sense).
+
+    See Also
+    --------
+    tensordot, tensorsolve
+
+    Examples
+    --------
+    >>> a = np.eye(4*6)
+    >>> a.shape = (4, 6, 8, 3)
+    >>> ainv = np.linalg.tensorinv(a, ind=2)
+    >>> ainv.shape
+    (8, 3, 4, 6)
+    >>> b = np.random.randn(4, 6)
+    >>> np.allclose(np.tensordot(ainv, b), np.linalg.tensorsolve(a, b))
+    True
+
+    >>> a = np.eye(4*6)
+    >>> a.shape = (24, 8, 3)
+    >>> ainv = np.linalg.tensorinv(a, ind=1)
+    >>> ainv.shape
+    (8, 3, 24)
+    >>> b = np.random.randn(24)
+    >>> np.allclose(np.tensordot(ainv, b, 1), np.linalg.tensorsolve(a, b))
+    True
+    """
+    return _npi.tensorinv(a, ind)
+
+
+def tensorsolve(a, b, axes=None):
+    r"""
+    Solve the tensor equation ``a x = b`` for x.
+    It is assumed that all indices of `x` are summed over in the product,
+    together with the rightmost indices of `a`, as is done in, for example,
+    ``tensordot(a, x, axes=b.ndim)``.
+
+    Parameters
+    ----------
+    a : ndarray
+        Coefficient tensor, of shape ``b.shape + Q``. `Q`, a tuple, equals
+        the shape of that sub-tensor of `a` consisting of the appropriate
+        number of its rightmost indices, and must be such that
+        ``prod(Q) == prod(b.shape)`` (in which sense `a` is said to be
+        'square').
+    b : ndarray
+        Right-hand tensor, which can be of any shape.
+    axes : tuple of ints, optional
+        Axes in `a` to reorder to the right, before inversion.
+        If None (default), no reordering is done.
+
+    Returns
+    -------
+    x : ndarray, shape Q
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not 'square' (in the above sense).
+
+    See Also
+    --------
+    numpy.tensordot, tensorinv, numpy.einsum
+
+    Examples
+    --------
+    >>> a = np.eye(2*3*4)
+    >>> a.shape = (2*3, 4, 2, 3, 4)
+    >>> b = np.random.randn(2*3, 4)
+    >>> x = np.linalg.tensorsolve(a, b)
+    >>> x.shape
+    (2, 3, 4)
+    >>> np.allclose(np.tensordot(a, x, axes=3), b)
+    True
+    """
+    return _npi.tensorsolve(a, b, axes)
