@@ -283,6 +283,14 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
     return size;
   }
 
+  /*! \brief helper function to compare two MXTensors */
+  inline bool isSame(MXTensor &oth) {
+    return data_ptr == oth.data_ptr &&
+      dtype == oth.dtype &&
+      version == oth.version &&
+      shape == oth.shape;
+  }
+  
   // data is flatten 1D repr of tensor, elements are in continuous memory
   // user can access each element using the shape of tensor
   void *data_ptr;
