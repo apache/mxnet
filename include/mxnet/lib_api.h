@@ -37,7 +37,7 @@
 #include <utility>
 #include <stdexcept>
 
-#define MX_LIBRARY_VERSION 1
+#define MX_LIBRARY_VERSION 2
 
 /*
  * Import from DLPack https://github.com/dmlc/dlpack/blob/master/include/dlpack/dlpack.h
@@ -211,8 +211,10 @@ enum MXReturnValue {
 struct MXTensor {
   MXTensor() : data_ptr(NULL) {}
 
-  MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype) {}
+  MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
+           size_t ID, bool param)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), version(ID),
+    isParam(param) {}
 
   /*! \brief populate DLTensor fields */
   void setDLTensor() {
@@ -286,6 +288,13 @@ struct MXTensor {
 
   // type can only be MXDType enum types
   MXDType dtype;
+
+  // version number updated if the tensor has changed since the last use by custom op
+  size_t version;
+
+  // true if this tensor is a fixed paramter of the model, false if it is an output
+  // of some other operator
+  bool isParam;
 
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
