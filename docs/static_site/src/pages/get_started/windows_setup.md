@@ -141,16 +141,16 @@ Check the chart below for other options or refer to [PyPI for other MXNet pip pa
 
 ### *NEW* Automated environment setup.
 
-For automated setting up of developer environment in windows, use script bundle from the ![windows.zip](https://windows-post-install.s3-us-west-2.amazonaws.com/windows.zip)
-file. Extract into a folder and execute the following command in a powershell console:
+For automated setting up of developer environment in windows, use script bundle from the
+![ci/windows_dev_env](https://github.com/apache/incubator-mxnet/tree/master/ci/windows_dev_env/)
+folder. Copy to a local directory and execute:
 
 ```
 .\setup.ps1
 ```
 
-This will install VS Community 2017, Python, and other dependencies needed to build in windows.
-After that, follow the steps below starting from "build the MXNet source code" section.
-
+This will install the recommended VS Community, Python, git, and other dependencies needed to build in windows.
+After that, follow the steps below starting from "build the MXNet source code" section below.
 
 
 ### Manual installation.

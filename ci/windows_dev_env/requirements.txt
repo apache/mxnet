@@ -1,0 +1,4 @@
+psutil
+boto3
+python-jenkins
+progressbar2
