@@ -15,6 +15,8 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+**CUDA 7.5 package for MXNet is no longer maintained for new releases.**
+
 Prerequisites
 -------------
 This package supports Linux only, up to 1.2.1. You may also want to check:

@@ -221,7 +221,7 @@ class Trainer(object):
                                      "when sparse gradients are present.")
                 update_on_kvstore = config['update_on_kvstore']
             # raise err if a custom kvstore is used for sparse training
-            if not isinstance(kvstore, KVStore):
+            if kvstore is not None and not isinstance(kvstore, KVStore):
                 raise ValueError("Cannot use {} for multi-device training with sparse gradients"
                                  .format(type(kvstore)))
 
