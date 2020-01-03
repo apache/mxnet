@@ -621,7 +621,7 @@ class Parameter(object):
     def var(self):
         """Returns a symbol representing this parameter."""
         if self._var is None:
-            self._var = symbol.var(self.name,
+            self._var = symbol.var(self.name, shape=self.shape,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
             if is_np_array():
