@@ -213,7 +213,7 @@ struct MXTensor {
 MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
-           size_t ID)
+           size_t vID)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID) {}
 
   void setTensor(void *dptr, MXDType type, const int64_t* dims,
@@ -290,7 +290,7 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
   }
 
   /*! \brief helper function to compare two MXTensors */
-  inline bool isSame(const MXTensor &oth) {
+  inline bool operator==(const MXTensor &oth) {
     return data_ptr == oth.data_ptr &&
       dtype == oth.dtype &&
       verID == oth.verID &&
