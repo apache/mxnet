@@ -612,9 +612,11 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
                            const mxnet::TShape& small) {
   using namespace mshadow;
   using namespace mshadow::expr;
+
   if (small.Size() == 0) {
     return;
   }
+
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();

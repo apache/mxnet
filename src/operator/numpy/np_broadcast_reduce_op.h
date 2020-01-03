@@ -262,7 +262,7 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+      Kernel<reducer, xpu>::Launch(s, outputs[0].shape_.Size(), req[0], outputs[0].dptr<DType>());
     });
     return;
   }
