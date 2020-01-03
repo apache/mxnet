@@ -417,6 +417,9 @@ class DropoutOp {
       const TBlob &in = in_data[dropout::kData];
       const TBlob &out = out_data[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
+      CHECK_EQ(mask.type_flag_, kUint8);
+      CHECK_EQ((out.Size() + 7) / 8, mask.Size());
+
       if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
         if (this->axes_.ndim() == 0) {
@@ -505,6 +508,8 @@ class DropoutOp {
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
+      CHECK_EQ(mask.type_flag_, kUint8);
+      CHECK_EQ((grad.Size() + 7) / 8, mask.Size());
 
       if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT
@@ -520,9 +525,6 @@ class DropoutOp {
         }
 #endif  // MXNET_USE_CUDNN_DROPOUT && defined(__CUDACC__)
         // standard case for dropout
-        LOG(INFO) << "grad size: " << grad.Size() << " mask.Size(): " << mask.Size();
-        CHECK_EQ((grad.Size() + 7) / 8, mask.Size());
-
         MXNET_ASSIGN_REQ_SWITCH(req[dropout::kData], Req, {
           mxnet_op::Kernel<DropoutBackwardKernel, xpu>::Launch(
               s, gdata.Size(), Req, gdata.dptr<DType>(), grad.dptr<DType>(),

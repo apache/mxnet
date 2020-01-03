@@ -319,7 +319,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       ograd_entries.reserve(num_outputs);
       for (uint32_t i = 0; i < num_outputs; ++i) {
         const uint32_t index = num_inputs + i;
-        ograd_entries.emplace_back(nullptr, index, 1);
+        ograd_entries.emplace_back(nullptr, i, 1);
         (*index2array)[index] = &outputs()[i];
       }
       const std::vector<nnvm::NodeEntry> igrad_entries = fgradient[node->op()](node, ograd_entries);
@@ -435,7 +435,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
             CHECK_EQ(bwd_node_ptr->inputs.size(), num_inputs);
             input_types.resize(bwd_node_ptr->inputs.size(), -1);
             for (int i = 0; i < num_inputs; ++i) {
-              const int map_key = bwd_node_ptr->inputs[i].index;
+              // map_key starts from the igrad entries. Need to add offset here
+              const int map_key = bwd_node_ptr->inputs[i].index + inferred_num_outputs;
               CHECK(index2array.find(map_key) != index2array.end());
               const int dtype = index2array[map_key]->dtype();
               input_types[i] = dtype;
@@ -480,7 +481,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
               input_shapes.clear();
               CHECK_EQ(bwd_node_ptr->inputs.size(), num_inputs);
               for (int i = 0; i < num_inputs; ++i) {
-                const int map_key = bwd_node_ptr->inputs[i].index;
+                // map_key starts from the igrad entries. Need to add offset here
+                const int map_key = bwd_node_ptr->inputs[i].index + inferred_num_outputs;
                 CHECK(index2array.find(map_key) != index2array.end());
                 const mxnet::TShape &shp = index2array[map_key]->shape();
                 input_shapes.push_back(shp);
