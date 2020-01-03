@@ -48,20 +48,6 @@ MXReturnValue parseAttrs(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-MXReturnValue inferType(std::map<std::string, std::string> attrs,
-                        std::vector<int> &intypes,
-                        std::vector<int> &outtypes) {
-  outtypes[0] = intypes[0];
-  return MX_SUCCESS;
-}
-
-MXReturnValue inferShape(std::map<std::string, std::string> attrs,
-                         std::vector<std::vector<unsigned int>> &inshapes,
-                         std::vector<std::vector<unsigned int>> &outshapes) {
-  outshapes[0] = inshapes[0];
-  return MX_SUCCESS;
-}
-
 /* function to execute log operator on floats */
 void myLog(MXTensor &in, MXTensor &out) {
   float* inp = in.data<float>();
@@ -199,8 +185,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
 
 REGISTER_OP(_custom_subgraph_op)
 .setParseAttrs(parseAttrs)
-.setInferType(inferType)
-.setInferShape(inferShape)
+.setIsSubgraphOp()
 .setCreateOpState(createOpState);
 
 const std::vector<std::string> op_names({"exp","log"});
