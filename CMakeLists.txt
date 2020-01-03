@@ -698,7 +698,6 @@ elseif(MSVC)
   target_compile_options(subgraph_lib PUBLIC /LD)
   set_target_properties(sample_lib PROPERTIES PREFIX "lib")
   set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
-endif()
 
   if(USE_CUDA)
     if(MSVC)

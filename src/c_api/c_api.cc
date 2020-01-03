@@ -174,11 +174,11 @@ int MXLoadLib(const char *path) {
     createOpState_t create_opstate_fp = nullptr;
     bool isSubgraphOp = false;
     int _isSubgraphOp = 0;
-    
+
     // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
              &mutate_fp, &create_opstate_fp, &_isSubgraphOp);
-    //set bool, dont pass bool across ABI boundary
+    // set bool, dont pass bool across ABI boundary
     isSubgraphOp = _isSubgraphOp;
 
     CHECK(parse_fp != nullptr) << "Error loading '" << name

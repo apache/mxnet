@@ -182,7 +182,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         }
       }
 
-      
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
       CHECK(callAcceptSubgraph_(acceptSubgraph_, subgraph_json.c_str(),
                                 subgraph_id, &accept, opt_keys_.data(),
