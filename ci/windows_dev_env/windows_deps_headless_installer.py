@@ -37,6 +37,7 @@ from urllib.error import HTTPError
 import logging
 from subprocess import check_output
 import re
+import sys
 
 log = logging.getLogger(__name__)
 
