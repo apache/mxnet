@@ -29,6 +29,7 @@
 #define MXNET_OPERATOR_SUBGRAPH_PARTITIONER_CUSTOM_SUBGRAPH_PROPERTY_H_
 
 #include <nnvm/pass_functions.h>
+#include <nnvm/symbolic.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -164,6 +165,24 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     if (acceptSubgraph_) {
       nnvm::Graph g;
       g.outputs = sym.outputs;
+      const auto& idx = g.indexed_graph();
+
+      // set isArg/isAux for each null op/param in the graph
+      const std::vector<std::string> aux_names = sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      std::unordered_set<std::string> aux_set(aux_names.begin(), aux_names.end());
+      for (unsigned i = 0; i < idx.num_nodes(); i++) {
+        nnvm::Node* node = const_cast<nnvm::Node*>(idx[i].source);
+        // check if this node is input to subgraph
+        if (node->is_variable()) {
+          // check if this node is an aux param
+          if (aux_set.count(node->attrs.name))
+            node->attrs.dict["isAux"] = "True";
+          else
+            node->attrs.dict["isAux"] = "False";
+        }
+      }
+
+      
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
       CHECK(callAcceptSubgraph_(acceptSubgraph_, subgraph_json.c_str(),
                                 subgraph_id, &accept, opt_keys_.data(),
