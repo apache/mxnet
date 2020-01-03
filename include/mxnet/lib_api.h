@@ -216,8 +216,14 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
            size_t ID)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID) {}
 
-  void setTensor(void *dptr, MXDType type, size_t vID) {
+  void setTensor(void *dptr, MXDType type, const int64_t* dims,
+                 int ndims, size_t vID) {
     data_ptr = dptr; dtype = type; verID = vID;
+    shape.clear();
+    for (int j = 0; j < ndims; j++) {
+      shape.push_back(dims[j]);
+    }
+    setDLTensor();
   }
 
   /*! \brief populate DLTensor fields */
@@ -900,21 +906,14 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].update(indata[i], (MXDType)intypes[i], inIDs[i]);
-      for (int j = 0; j < indims[i]; j++) {
-        inputs[i].shape.push_back(inshapes[i][j]);
-      }
-      inputs[i].setDLTensor();
+      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i], inIDs[i]);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].update(outdata[i], (MXDType)outtypes[i], outIDs[i]);
-      for (int j = 0; j < outdims[i]; j++) {
-        outputs[i].shape.push_back(outshapes[i][j]);
-      }
-      outputs[i].setDLTensor();
+      outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                           outIDs[i]);
     }
 
     OpResource res(cpu_malloc, cpu_alloc);
@@ -989,21 +988,14 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].update(indata[i], (MXDType)intypes[i], inIDs[i]);
-      for (int j = 0; j < indims[i]; j++) {
-        inputs[i].shape.push_back(inshapes[i][j]);
-      }
-      inputs[i].setDLTensor();
+      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i], inIDs[i]);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].update(outdata[i], (MXDType)outtypes[i], outIDs[i]);
-      for (int j = 0; j < outdims[i]; j++) {
-        outputs[i].shape.push_back(outshapes[i][j]);
-      }
-      outputs[i].setDLTensor();
+      outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                           outIDs[i]);
     }
     OpResource res(cpu_malloc, cpu_alloc);
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
