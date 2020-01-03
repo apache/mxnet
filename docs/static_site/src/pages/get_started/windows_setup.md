@@ -138,9 +138,6 @@ Check the chart below for other options or refer to [PyPI for other MXNet pip pa
 ## Build from Source
 
 
-
-### *NEW* Automated environment setup.
-
 For automated setting up of developer environment in windows, use script bundle from the
 ![ci/windows_dev_env](https://github.com/apache/incubator-mxnet/tree/master/ci/windows_dev_env/)
 folder. Copy to a local directory and execute:
@@ -152,97 +149,12 @@ folder. Copy to a local directory and execute:
 This will install the recommended VS Community, Python, git, and other dependencies needed to build in windows.
 After that, follow the steps below starting from "build the MXNet source code" section below.
 
-
-### Manual installation.
-
-
-**IMPORTANT: It is recommended that you review the [build from source guide](build_from_source) first.** It describes many of the build options that come with MXNet in more detail. You may decide to install additional dependencies and modify your build flags after reviewing this material.
-
-We provide two primary options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
-
-**NOTE:** Visual Studio 2017's compiler is `vc15`. This is not to be confused with Visual Studio 2015's compiler, `vc14`.
-
-You also have the option to install MXNet with MKL or MKL-DNN. In this case it is recommended that you refer to the [MKLDNN_README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html).
-
-**Option 1: Build with Microsoft Visual Studio 2017 (VS2017)**
-
-To build and install MXNet yourself using [VS2017](https://www.visualstudio.com/downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/incubator-mxnet/issues/new) to update this guide if a newer version is validated.
-
-1. Install or update VS2017.
-    - If [VS2017](https://www.visualstudio.com/downloads/) is not already installed, download and install it. You can download and install the free community edition.
-    - When prompted about installing Git, go ahead and install it.
-    - If VS2017 is already installed you will want to update it. Proceed to the next step to modify your installation. You will be given the opportunity to update VS2017 as well
-1. Follow the [instructions for opening the Visual Studio Installer](https://docs.microsoft.com/en-us/visualstudio/install/modify-visual-studio) to modify `Individual components`.
-1. Once in the Visual Studio Installer application, update as needed, then look for and check `VC++ 2017 version 15.4 v14.11 toolset`, and click `Modify`.
-1. Change the version of the Visual studio 2017 to v14.11 using the following command (by default the VS2017 is installed in the following path):
 ```
-"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat" -vcvars_ver=14.11
-```
-1. Download and install [CMake](https://cmake.org/download) if it is not already installed. [CMake v3.12.2](https://cmake.org/files/v3.12/cmake-3.12.2-win64-x64.msi) has been tested with MXNet.
-1. Download and run the  [OpenCV](https://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.4.1/opencv-3.4.1-vc14_vc15.exe/download) package. There are more recent versions of OpenCV, so please create an issue/PR to update this info if you validate one of these later versions.
-1. This will unzip several files. You can place them in another directory if you wish. We will use `C:\utils`(```mkdir C:\utils```) as our default path.
-1. Set the environment variable `OpenCV_DIR` to point to the OpenCV build directory that you just unzipped. Start ```cmd``` and type `set OpenCV_DIR=C:\utils\opencv\build`.
-1. If you don’t have the Intel Math Kernel Library (MKL) installed, you can install it and follow the [MKLDNN_README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html) from here, or you can use OpenBLAS. These instructions will assume you're using OpenBLAS.
-1. Download the [OpenBlas](https://sourceforge.net/projects/openblas/files/v0.2.19/OpenBLAS-v0.2.19-Win64-int32.zip/download) package. Later versions of OpenBLAS are available, but you would need to build from source. v0.2.19 is the most recent version that ships with binaries. Contributions of more recent binaries would be appreciated.
-1. Unzip the file, rename it to ```OpenBLAS``` and put it under `C:\utils`. You can place the unzipped files and folders in another directory if you wish.
-1. Set the environment variable `OpenBLAS_HOME` to point to the OpenBLAS directory that contains the `include` and `lib` directories and type `set OpenBLAS_HOME=C:\utils\OpenBLAS` on the command prompt(```cmd```).
-1. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal). If you already had CUDA, then installed VS2017, you should reinstall CUDA now so that you get the CUDA toolkit components for VS2017 integration. Note that the latest CUDA version supported by MXNet is [9.2](https://developer.nvidia.com/cuda-92-download-archive). You might also want to find other CUDA verion on the [Legacy Releases](https://developer.nvidia.com/cuda-toolkit-archive).
-1. Download and install cuDNN. To get access to the download link, register as an NVIDIA community user. Then follow the [link](http://docs.nvidia.com/deeplearning/sdk/cudnn-install/index.html#install-windows) to install the cuDNN and put those libraries into ```C:\cuda```.
-1. Download and install [git](https://git-for-windows.github.io/) if you haven't already.
-
-After you have installed all of the required dependencies, build the MXNet source code:
-
-1. Start ```cmd``` in windows.
-2. Download the MXNet source code from GitHub by using following command:
-```
-cd C:\
-git clone https://github.com/apache/incubator-mxnet.git --recursive
-```
-3. Verify that the `DCUDNN_INCLUDE` and `DCUDNN_LIBRARY` environment variables are pointing to the `include` folder and `cudnn.lib` file of your CUDA installed location, and `C:\incubator-mxnet` is the location of the source code you just cloned in the previous step.
-4. Create a build dir using the following command and go to the directory, for example:
-```
-mkdir C:\incubator-mxnet\build
-cd C:\incubator-mxnet\build
-```
-5. Compile the MXNet source code with `cmake` by using following command:
-```
-cmake -G "Visual Studio 15 2017 Win64" -T cuda=9.2,host=x64 -DUSE_CUDA=1 -DUSE_CUDNN=1 -DUSE_NVRTC=1 -DUSE_OPENCV=1 -DUSE_OPENMP=1 -DUSE_BLAS=open -DUSE_LAPACK=1 -DUSE_DIST_KVSTORE=0 -DCUDA_ARCH_LIST=Common -DCUDA_TOOLSET=9.2 -DCUDNN_INCLUDE=C:\cuda\include -DCUDNN_LIBRARY=C:\cuda\lib\x64\cudnn.lib "C:\incubator-mxnet"
-```
-* Make sure you set the environment variables correctly (OpenBLAS_HOME, OpenCV_DIR) and change the version of the Visual studio 2017 to v14.11 before enter above command.
-6. After the CMake successfully completed, compile the MXNet source code by using following command:
-```
-msbuild mxnet.sln /p:Configuration=Release;Platform=x64 /maxcpucount
+C:\Python37\python.exe .\ci\build_windows.py
 ```
 
-
-**Option 2: Build with Visual Studio 2015**
-
-To build and install MXNet yourself using [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/), you need the following dependencies. You may try a newer version of a particular dependency, but please open a pull request or [issue](https://github.com/apache/incubator-mxnet/issues/new) to update this guide if a newer version is validated.
-
-1. If [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/) is not already installed, download and install it. You can download and install the free community edition. At least Update 3 of Microsoft Visual Studio 2015 is required to build MXNet from source. Upgrade via it's ```Tools -> Extensions and Updates... | Product Updates``` menu.
-2. Download and install [CMake](https://cmake.org/) if it is not already installed.
-3. Download and install [OpenCV](http://sourceforge.net/projects/opencvlibrary/files/opencv-win/3.0.0/opencv-3.0.0.exe/download).
-4. Unzip the OpenCV package.
-5. Set the environment variable ```OpenCV_DIR``` to point to the ```OpenCV build directory``` (```C:\opencv\build\x64\vc14``` for example). Also, you need to add the OpenCV bin directory (```C:\opencv\build\x64\vc14\bin``` for example) to the ``PATH`` variable.
-6. If you don't have the Intel Math Kernel Library (MKL) installed, download and install [OpenBlas](http://sourceforge.net/projects/openblas/files/v0.2.14/).
-7. Set the environment variable ```OpenBLAS_HOME``` to point to the ```OpenBLAS``` directory that contains the ```include``` and ```lib``` directories. Typically, you can find the directory in ```C:\Program files (x86)\OpenBLAS\```.
-8. Download and install [CUDA](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64) and [cuDNN](https://developer.nvidia.com/cudnn). To get access to the download link, register as an NVIDIA community user.
-9. Set the environment variable ```CUDACXX``` to point to the ```CUDA Compiler```(```C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v9.1\bin\nvcc.exe``` for example).
-10. Set the environment variable ```CUDNN_ROOT``` to point to the ```cuDNN``` directory that contains the ```include```,  ```lib``` and ```bin``` directories (```C:\Downloads\cudnn-9.1-windows7-x64-v7\cuda``` for example).
-
-After you have installed all of the required dependencies, build the MXNet source code:
-
-1. Download the MXNet source code from [GitHub](https://github.com/apache/incubator-mxnet) (make sure you also download third parties submodules e.g. ```git clone --recurse-submodules```).
-2. Use [CMake](https://cmake.org/) to create a Visual Studio solution in ```./build```.
-3. In Visual Studio, open the solution file,```.sln```, and compile it.
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
 
-&nbsp;
-Next, we install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
-- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
-**Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
-- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.anaconda.com/download/)
-**Note** Do not install Anaconda for Python 3.5. MXNet has a few compatibility issues with Python 3.5.
 
 We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
 - [Python](#install-the-mxnet-package-for-python)
@@ -250,32 +162,21 @@ We have installed MXNet core library. Next, we will install MXNet interface pack
 - [Julia](#install-the-mxnet-package-for-julia)
 - **Scala** is not yet available for Windows
 
+### Optional step:
+
+install ```graphviz``` library that we use for visualizing network graphs you build on MXNet. We will also install [Jupyter Notebook](http://jupyter.readthedocs.io/)  used for running MXNet tutorials and examples.
+- Install ```graphviz``` by downloading MSI installer from [Graphviz Download Page](https://graphviz.gitlab.io/_pages/Download/Download_windows.html).
+**Note** Make sure to add graphviz executable path to PATH environment variable. Refer [here for more details](http://stackoverflow.com/questions/35064304/runtimeerror-make-sure-the-graphviz-executables-are-on-your-systems-path-aft)
+- Install ```Jupyter``` by installing [Anaconda for Python 2.7](https://www.anaconda.com/download/)
+**Note** Do not install Anaconda for Python 3.5. MXNet has a few compatibility issues with Python 3.5.
+
+
 ## Install the MXNet Package for Python
 
-These steps are required after building from source. If you already installed MXNet by using pip, you do not need to do these steps to use MXNet with Python.
-
-1. Install ```Python``` using windows installer available [here](https://www.python.org/downloads/release/python-2712/).
-2. Install ```Numpy``` using windows installer available [here](https://scipy.org/index.html).
-3. Start ```cmd``` and create a folder named ```common```(```mkdir C:\common```)
-4. Download the [mingw64_dll.zip](https://sourceforge.net/projects/openblas/files/v0.2.12/mingw64_dll.zip/download), unzip and copy three libraries (.dll files) that openblas.dll depends on to ```C:\common```.
-5. Copy the required .dll file to ```C:\common``` and make sure following libraries (.dll files) in the folder.
-```
-libgcc_s_seh-1.dll (in mingw64_dll)
-libgfortran-3.dll (in mingw64_dll)
-libquadmath-0.dll (in mingw64_dll)
-libopenblas.dll (in OpenBlas folder you download)
-opencv_world341.dll (in OpenCV folder you download)
-```
-6. Add ```C:\common``` to Environment Variables.
- * Type ```control sysdm.cpl``` on ```cmp```
- * Select the **Advanced tab** and click **Environment Variables**
- * Double click the **Path** and click **New**
- * Add ```C:\common``` and click OK
-7. Use setup.py to install the package.
+Use setup.py to install the package.
 ```bash
     # Assuming you are in root mxnet source code folder
-    cd python
-    python setup.py install
+    pip install --upgrade --force-reinstall -e python
 ```
 
 Done! We have installed MXNet with Python interface.
