@@ -249,9 +249,9 @@ if(USE_TENSORRT)
   find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx_proto library.")
-  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
-          PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
+  #find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
+  #        PATHS ${ONNX_TRT_PATH}
+  #        DOC "Path to onnx_proto library.")
   find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
           DOC "Path to onnx_proto library.")

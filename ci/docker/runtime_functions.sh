@@ -735,13 +735,12 @@ build_ubuntu_gpu_tensorrt() {
         -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         ..
     make -j$(nproc)
+    #make install
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
 
     mkdir -p /work/mxnet/lib/
     cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
     cd /work/build
     cmake -DUSE_CUDA=1                            \
