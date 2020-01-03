@@ -37,7 +37,8 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
     const NDArray &data, const NDArray &weight, const NDArray *bias,
     const mkldnn::memory::desc &out_md) {
   auto data_md = GetMemDesc(data);
-  auto weight_md = GetFCWeightDesc(weight);
+  auto weight_md = full_param.mkldnn_param.quantized ?
+    GetFCWeightDesc(weight, mshadow::kInt8) : GetFCWeightDesc(weight);
   auto engine = CpuEngine::Get()->get_engine();
   auto propagation =
     is_train ? mkldnn::prop_kind::forward_training : mkldnn::prop_kind::forward_scoring;
@@ -52,22 +53,9 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
   }
   attr.set_post_ops(ops);
 
-  if (full_param.mkldnn_param.quantized) {
-    if ((full_param.mkldnn_param.min_calib_range.has_value() &&
-         full_param.mkldnn_param.max_calib_range.has_value()) ||
-        full_param.mkldnn_param.enable_float_output) {
-      int mask = 0;
-      std::vector<float> scales = {0.0};
-      if (full_param.requantize_scales.size()) {
-        scales[0] = full_param.requantize_scales[0];
-      } else if (full_param.output_scales.size()) {
-        scales[0] = full_param.output_scales[0];
-      } else {
-        LOG(FATAL) << "Must specified either output_scales or requantize_scales!";
-      }
-
-      attr.set_output_scales(mask, scales);
-    }
+  if (full_param.mkldnn_param.quantized && full_param.output_scales.size()) {
+    int mask = (full_param.output_scales.size() == 1) ? 0 : (1 << 1);
+    attr.set_output_scales(mask, full_param.output_scales);
   }
 
   auto GetFCFwdPd = [&full_param, &attr,
@@ -88,7 +76,8 @@ mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
   if (bias) {
     if ((*bias).shape().ndim() != 1)
       LOG(FATAL) << "Unexpected shape for bias " << (*bias).shape();
-    auto bias_md = GetMemDesc(*bias);
+    auto bias_md =
+       full_param.mkldnn_param.quantized ? GetMemDesc(*bias, mshadow::kInt32) : GetMemDesc(*bias);
     mkldnn::inner_product_forward::desc desc(propagation,
         data_md, weight_md, bias_md, out_md);
     return GetFCFwdPd(desc);
