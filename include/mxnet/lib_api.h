@@ -216,10 +216,10 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
            size_t ID)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), version(ID) {}
 
-  void update(void *data_ptr, MXDType dtype, size_t ID) {
-    data_ptr = data_ptr; dtype = dtype; version = ID;
+  void update(void *dptr, MXDType type, size_t ver) {
+    data_ptr = dptr; dtype = type; version = ver;
   }
-  
+
   /*! \brief populate DLTensor fields */
   void setDLTensor() {
     dltensor.data = data_ptr;
@@ -284,13 +284,13 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
   }
 
   /*! \brief helper function to compare two MXTensors */
-  inline bool isSame(MXTensor &oth) {
+  inline bool isSame(const MXTensor &oth) {
     return data_ptr == oth.data_ptr &&
       dtype == oth.dtype &&
       version == oth.version &&
       shape == oth.shape;
   }
-  
+
   // data is flatten 1D repr of tensor, elements are in continuous memory
   // user can access each element using the shape of tensor
   void *data_ptr;

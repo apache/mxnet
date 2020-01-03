@@ -396,7 +396,7 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_versions, out_versions;
-      
+
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
         in_data.push_back(inputs[i].data().dptr_);
@@ -575,7 +575,7 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_versions, out_versions;
-      
+
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
         in_data.push_back(inputs[i].data().dptr_);
