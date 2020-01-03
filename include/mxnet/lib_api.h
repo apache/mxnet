@@ -210,14 +210,14 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
+MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t ID)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), version(ID) {}
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID) {}
 
-  void update(void *dptr, MXDType type, size_t ver) {
-    data_ptr = dptr; dtype = type; version = ver;
+  void setTensor(void *dptr, MXDType type, size_t vID) {
+    data_ptr = dptr; dtype = type; verID = vID;
   }
 
   /*! \brief populate DLTensor fields */
@@ -287,7 +287,7 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
   inline bool isSame(const MXTensor &oth) {
     return data_ptr == oth.data_ptr &&
       dtype == oth.dtype &&
-      version == oth.version &&
+      verID == oth.verID &&
       shape == oth.shape;
   }
 
@@ -302,7 +302,7 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), version(0) {}
   MXDType dtype;
 
   // version number updated if the tensor has changed since the last use by custom op
-  size_t version;
+  size_t verID;
 
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
