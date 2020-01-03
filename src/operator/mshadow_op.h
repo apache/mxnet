@@ -31,6 +31,7 @@
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
+#include "./mxnet_op.h"
 #include "./operator_tune.h"
 #include "./contrib/erfinv-inl.h"
 
@@ -1061,6 +1062,14 @@ struct product {
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &none) { // NOLINT(*)
     SetInitValue(initv);
   }
+
+  /*!
+   *\brief identity function of the reducer
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req, DType(1));
+  }
 };
 
 MXNET_UNARY_MATH_OP_NC(relu, IsNan(a) || (a > DType(0)) ? a : DType(0));
@@ -1343,6 +1352,14 @@ struct sum {
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
     SetInitValue(initv);
     residual = 0;
+  }
+
+  /*!
+   *\brief identity function of the reducer
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, int req, DType* out) {
+    KERNEL_ASSIGN(out[i], req, DType(0));
   }
 };
 
