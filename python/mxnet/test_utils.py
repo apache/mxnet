@@ -542,21 +542,21 @@ def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True
     # pylint: enable=unexpected-keyword-arg
 
 def locationError(a, b, index, names, maxError=False):
-        """Create element mismatch comment
+    """Create element mismatch comment
 
-        Parameters
-        ----------
-        a, b : compared np.ndarray's
-        index : tuple of coordinate arrays
-            Location of violation
-        names : tuple of names
-            The names of compared arrays.
-        maxError: boolean, optional
-            Flag indicating that maximum error is reporting.
-        """
-        maximum = "maximum " if maxError else ""
-        return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
-               % (maximum, str(index), names[0], a[index], names[1], b[index])
+    Parameters
+    ----------
+    a, b : compared np.ndarray's
+    index : tuple of coordinate arrays
+        Location of violation
+    names : tuple of names
+        The names of compared arrays.
+    maxError: boolean, optional
+        Flag indicating that maximum error is reporting.
+    """
+    maximum = "maximum " if maxError else ""
+    return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
+            % (maximum, str(index), names[0], a[index], names[1], b[index])
 
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False,
                         use_broadcast=True, mismatches=(10, 10)):
@@ -641,7 +641,8 @@ def assert_allclose(a, b, rtol=1e-07, atol=0, equal_nan=True):
     assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False, mismatches=(10, 10)):
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
+                                 names=('a', 'b'), equal_nan=False, mismatches=(10, 10)):
     """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
 
     Parameters

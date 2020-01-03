@@ -127,7 +127,8 @@ class NaiveEngine final : public Engine {
           if (profiler->AggregateEnabled()) {
             attrs.reset(new profiler::ProfileOperator::Attributes());
           }
-          opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name.c_str(), attrs.release()));
+          opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name.c_str(),
+                                                               attrs.release()));
           opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
         }
         opr->fn(ctx, on_complete);

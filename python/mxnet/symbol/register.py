@@ -165,8 +165,8 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
         else:
             kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-            dtype_name, dtype_name, dtype_name,
-            dtype_name, dtype_name, dtype_name))
+                dtype_name, dtype_name, dtype_name,
+                dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
     if not hasattr(AttrScope._current, "value"):

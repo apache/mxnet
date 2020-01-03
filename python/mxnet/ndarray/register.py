@@ -197,7 +197,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
         else:
             kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
-            dtype_name, dtype_name, dtype_name))
+                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)

@@ -227,11 +227,11 @@ class Executor(object):
         for obj in out_grads:
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
-        ndarray = c_handle_array(out_grads)
+        handle_array = c_handle_array(out_grads)
         check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),
-            ndarray,
+            handle_array,
             ctypes.c_int(is_train)))
 
     def set_monitor_callback(self, callback, monitor_all=False):

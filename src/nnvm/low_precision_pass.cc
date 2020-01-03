@@ -173,8 +173,7 @@ Graph ReducePrecision(Graph &&src) {
   std::string target_dtype_str = "float32";
   if (target_dtype == mshadow::kFloat16) {
     target_dtype_str = "float16";
-  } else if (target_dtype == mshadow::kBfloat16)
-  {
+  } else if (target_dtype == mshadow::kBfloat16) {
     target_dtype_str = "bfloat16";
   }
 
@@ -285,7 +284,8 @@ Graph ReducePrecision(Graph &&src) {
       bool have_unknown_dtype = false;
       for (size_t i = 0; i < node->inputs.size(); ++i) {
         // Try to infer output dtype based on input dtype
-        if (!mirror_target_dtype_map.count(node->inputs[i]) && !mirror_fp32_map.count(node->inputs[i])) {
+        if (!mirror_target_dtype_map.count(node->inputs[i])
+            && !mirror_fp32_map.count(node->inputs[i])) {
           have_unknown_dtype = true;
           break;
         } else if (mirror_fp32_map.count(node->inputs[i])) {

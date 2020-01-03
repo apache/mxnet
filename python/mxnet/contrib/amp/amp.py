@@ -132,7 +132,7 @@ def _wrap_symbol_functions(module, target_dtype, target_precision_ops=None,
                 inputs = new_inputs
             else:
                 inputs = list(map(lambda x: _cast_symbol_NDArray(x, target_dtype)
-                                if x.name not in aux else x, inputs))
+                                  if x.name not in aux else x, inputs))
             atomic_sym = sym._gen_atomic_symbol()
             wrapped_sym = atomic_sym(*inputs)
             wrapped_sym._set_attr(name=sym.name)
@@ -425,7 +425,7 @@ def convert_symbol(sym, target_dtype="float16", target_dtype_ops=None,
     """
     assert isinstance(sym, Symbol), "First argument to convert_symbol should be Symbol"
 
-    assert target_dtype in ['float16','bfloat16'], \
+    assert target_dtype in ['float16', 'bfloat16'], \
                "Only target_dtype float16 and bfloat16 are supported currently"
 
     if target_dtype == 'bfloat16':
@@ -592,7 +592,7 @@ def convert_model(sym, arg_params, aux_params, target_dtype="float16", target_dt
             raise ValueError('excluded_sym_names must be a list of strings representing'
                              ' the names of the symbols that should not be casted,'
                              ' while received type %s' % str(type(excluded_sym_names)))
-    assert target_dtype in ['float16','bfloat16'], \
+    assert target_dtype in ['float16', 'bfloat16'], \
                "Only target_dtype float16 and bfloat16 are supported currently"
 
     assert isinstance(sym, Symbol), "First argument to convert_model should be Symbol"
@@ -791,7 +791,8 @@ def list_lp16_ops(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP16_FUNCS
-    elif target_dtype == bfloat16:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.BF16_FUNCS
 
 def list_fp32_ops(target_dtype):
@@ -799,7 +800,8 @@ def list_fp32_ops(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP32_FUNCS
-    elif target_dtype in [bfloat16]:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.FP32_FUNCS
 
 def list_lp16_fp32_ops(target_dtype):
@@ -807,7 +809,8 @@ def list_lp16_fp32_ops(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.FP16_FP32_FUNCS
-    elif target_dtype in [bfloat16]:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.BF16_FP32_FUNCS
 
 def list_conditional_fp32_ops(target_dtype):
@@ -815,7 +818,8 @@ def list_conditional_fp32_ops(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.CONDITIONAL_FP32_FUNCS
-    elif target_dtype in [bfloat16]:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.CONDITIONAL_FP32_FUNCS
 
 def list_widest_type_cast(target_dtype):
@@ -823,7 +827,8 @@ def list_widest_type_cast(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.WIDEST_TYPE_CASTS
-    elif target_dtype in [bfloat16]:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.WIDEST_TYPE_CASTS
 
 def list_loss_output_functions(target_dtype):
@@ -831,7 +836,8 @@ def list_loss_output_functions(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return lists.symbol_fp16.LOSS_OUTPUT_FUNCTIONS
-    elif target_dtype in [bfloat16]:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.LOSS_OUTPUT_FUNCTIONS
 
 def list_lp16_use_fp32_params(target_dtype):
@@ -840,5 +846,6 @@ def list_lp16_use_fp32_params(target_dtype):
     """
     if target_dtype in ['float16', np.float16]:
         return None
-    elif target_dtype in [bfloat16]:
+    else:
+        assert (target_dtype == bfloat16), "not supported type"
         return lists.symbol_bf16.BF16_USE_FP32_PARAMS
