@@ -25,6 +25,7 @@ import copy
 import warnings
 import re
 from collections import OrderedDict, defaultdict
+import numpy as np
 
 from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, np_symbol
@@ -1298,6 +1299,7 @@ class SymbolBlock(HybridBlock):
             assert len(i.get_internals().list_outputs()) == 1, \
                 "Input symbols must be variable, but %s is an output of operators"%str(i)
             input_names.add(i.name)
+        self._input_names = input_names
 
         # check if any symbol is row_sparse
         row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
@@ -1353,7 +1355,29 @@ class SymbolBlock(HybridBlock):
     def cast(self, dtype):
         self._clear_cached_op()
         super(SymbolBlock, self).cast(dtype)
-
+        if np.dtype(dtype).name == 'float16':
+            # correct BatchNorm types back to float32 due to its special requirement
+            out = self._cached_graph[1]
+            params_list = out.get_internals().list_inputs()
+            for node in params_list:
+                if node.endswith('running_var'):
+                    prefix = node[:-11]
+                    sibs = [prefix + t for t in ('running_mean', 'gamma', 'beta')]
+                    is_bn = all(p in params_list for p in sibs)
+                    if is_bn:
+                        self.params.get(node).cast('float32')
+                        for sib in sibs:
+                            self.params.get(sib).cast('float32')
+                if node.endswith('moving_var'):
+                    # another convention used
+                    prefix = node[:-10]
+                    sibs = [prefix + t for t in ('moving_mean', 'gamma', 'beta')]
+                    is_bn = all(p in params_list for p in sibs)
+                    if is_bn:
+                        self.params.get(node).cast('float32')
+                        for sib in sibs:
+                            self.params.get(sib).cast('float32')
+                
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
