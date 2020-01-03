@@ -1299,7 +1299,6 @@ class SymbolBlock(HybridBlock):
             assert len(i.get_internals().list_outputs()) == 1, \
                 "Input symbols must be variable, but %s is an output of operators"%str(i)
             input_names.add(i.name)
-        self._input_names = input_names
 
         # check if any symbol is row_sparse
         row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
