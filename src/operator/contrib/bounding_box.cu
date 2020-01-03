@@ -539,7 +539,7 @@ TempWorkspace<DType> GetWorkspace(const index_t num_batch,
     .get_space_typed<gpu, 1, uint8_t>(mshadow::Shape1(workspace_size), s);
 
   // Populate workspace pointers
-  workspace.scores = scratch_memory.dptr_;
+  workspace.scores = reinterpret_cast<DType*>(scratch_memory.dptr_);
   workspace.scratch = reinterpret_cast<uint8_t*>(workspace.scores) +
                                                  workspace.scores_temp_space;
   workspace.buffer = reinterpret_cast<DType*>(workspace.scratch +
