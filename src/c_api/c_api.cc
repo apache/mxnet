@@ -181,10 +181,10 @@ int MXLoadLib(const char *path) {
     // set bool, dont pass bool across ABI boundary
     isSubgraphOp = _isSubgraphOp;
 
-    CHECK(parse_fp != nullptr) << "Error loading '" << name
-                               << "' custom op, ParseAttrs function was not set.";
     if (!isSubgraphOp) {
       // validate custom operator functions from the dynamic library
+      CHECK(parse_fp != nullptr) << "Error loading '" << name
+                                 << "' custom op, ParseAttrs function was not set.";
       CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
       CHECK(type_fp  != nullptr) << "Error loading '" << name
@@ -655,9 +655,6 @@ int MXLoadLib(const char *path) {
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-    regOp.set_attr_parser(attr_parser);
-    regOp.set_num_inputs(num_inputs);
-    regOp.set_num_outputs(num_outputs);
     int plevel = 10;
     if (regOpPtr != nullptr) {
       // overwrite registration of existing op with custom op
@@ -667,6 +664,9 @@ int MXLoadLib(const char *path) {
       plevel++;
     }
     if (!isSubgraphOp) {
+      regOp.set_attr_parser(attr_parser);
+      regOp.set_num_inputs(num_inputs);
+      regOp.set_num_outputs(num_outputs);
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
@@ -676,6 +676,8 @@ int MXLoadLib(const char *path) {
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
     } else {
       using namespace mxnet::op;
+      regOp.set_num_inputs(DefaultSubgraphOpNumInputs);
+      regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
       regOp.set_attr<nnvm::FInferType>("FInferType",
                                        DefaultSubgraphOpType, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape",
@@ -765,7 +767,7 @@ int MXLoadLib(const char *path) {
       mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
                             std::make_shared<mxnet::op::CustomSubgraphProperty>(
                            strategy_str, callSupportedOps, supportedOps_fp,
-                           callAcceptSubgraph, acceptSubgraph_fp, op_name_str));
+                           callAcceptSubgraph, acceptSubgraph_fp, callFree, op_name_str));
     }
   }
   API_END();

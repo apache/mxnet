@@ -28,26 +28,6 @@
 #include <algorithm>
 #include "lib_api.h"
 
-MXReturnValue parseAttrs(std::map<std::string, std::string> attrs,
-                         int* num_in, int* num_out) {
-  *num_in = 1;
-  *num_out = 1;
-  if (attrs.count(SUBGRAPH_SYM_JSON)) {
-    // example of subgraph json parsing
-    JsonParser jp;
-    JsonVal val = jp.parse_to_json(attrs[SUBGRAPH_SYM_JSON]);
-    int input = 0;
-    for (auto &item : val.map[JsonVal("nodes")].list) {
-      if (item.map[JsonVal("op")].str == "null")
-        input++;
-    }
-    int output = val.map[JsonVal("heads")].list.size();
-    *num_in = input;
-    *num_out = output;
-  }
-  return MX_SUCCESS;
-}
-
 /* function to execute log operator on floats */
 void myLog(MXTensor &in, MXTensor &out) {
   float* inp = in.data<float>();
@@ -157,7 +137,12 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(std::string sym) : subgraph_sym(sym) {}
+  explicit MyStatefulOp(std::string sym, std::map<std::string, std::string> attrs)
+    : subgraph_sym(sym), attrs_(attrs) {
+    for (auto kv : attrs) {
+      std::cout << "subgraphOp attributes: " << kv.first << " ==> " << kv.second << std::endl;
+    }
+  }
 
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
@@ -167,6 +152,7 @@ class MyStatefulOp : public CustomStatefulOp {
 
  private:
   std::string subgraph_sym;
+  std::map<std::string, std::string> attrs_;
 };
 
 MXReturnValue createOpState(std::map<std::string, std::string> attrs,
@@ -178,13 +164,13 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
     // user can now parse json and run other custom ops inside subgraph
     serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
   }
-  *op_inst = new MyStatefulOp(serialized_subgraph);
+  attrs.erase(SUBGRAPH_SYM_JSON);
+  *op_inst = new MyStatefulOp(serialized_subgraph, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 
 REGISTER_OP(_custom_subgraph_op)
-.setParseAttrs(parseAttrs)
 .setIsSubgraphOp()
 .setCreateOpState(createOpState);
 
@@ -232,7 +218,8 @@ MXReturnValue mySupportedOps(std::string json,
 }
 
 MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
-                               std::unordered_map<std::string, std::string>& options) {
+                               std::unordered_map<std::string, std::string>& options,
+                               std::unordered_map<std::string, std::string>& attrs) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
@@ -243,6 +230,7 @@ MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
   } else {
     *accept = true;
     std::cout << "accepting subgraph" << std::endl;
+    attrs["myKey"] = "myVal";
   }
   return MX_SUCCESS;
 }

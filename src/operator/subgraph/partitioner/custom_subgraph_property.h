@@ -80,12 +80,14 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                          supportedOps_t supportedOps,
                          partCallAcceptSubgraph_t callAcceptSubgraph,
                          acceptSubgraph_t acceptSubgraph,
+                         opCallFree_t callFree,
                          std::string op_name) :
     subgraphProp(subgraphProp_name),
       callSupportedOps_(callSupportedOps),
       supportedOps_(supportedOps),
       callAcceptSubgraph_(callAcceptSubgraph),
       acceptSubgraph_(acceptSubgraph),
+      callFree_(callFree),
       subgraph_op_name(op_name) {}
 
   // create custom subgraph property
@@ -162,6 +164,9 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     int accept = 1;
+    int num_attr = 0;
+    char** attr_keys = nullptr;
+    char** attr_vals = nullptr;
     if (acceptSubgraph_) {
       nnvm::Graph g;
       g.outputs = sym.outputs;
@@ -181,11 +186,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
             node->attrs.dict["isAux"] = "False";
         }
       }
-
+      
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
       CHECK(callAcceptSubgraph_(acceptSubgraph_, subgraph_json.c_str(),
                                 subgraph_id, &accept, opt_keys_.data(),
-                                opt_vals_.data(), opt_keys_.size()))
+                                opt_vals_.data(), opt_keys_.size(),
+                                &attr_keys, &attr_vals, &num_attr))
         << "Error calling acceptSubgraph for '" << subgraphProp << "'";
     }
     if (accept) {
@@ -193,6 +199,15 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       n->attrs.op = Op::Get(subgraph_op_name);
       n->attrs.name = "_op" + std::to_string(subgraph_id);
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+      // set user specified attributes
+      for (int i=0; i < num_attr; i++) {
+        n->attrs.dict[attr_keys[i]] = attr_vals[i];
+        callFree_(attr_vals[i]);
+        callFree_(attr_keys[i]);
+      }
+      // free memory used by custom op to allocate attributes
+      callFree_(attr_vals);
+      callFree_(attr_keys);
       return n;
     } else {
       return NULL;
@@ -208,6 +223,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   supportedOps_t supportedOps_;
   partCallAcceptSubgraph_t callAcceptSubgraph_;
   acceptSubgraph_t acceptSubgraph_;
+  opCallFree_t callFree_;
   std::unordered_set<std::string> supportedNodes;
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;

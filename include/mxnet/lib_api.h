@@ -30,6 +30,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vector>
 #include <map>
 #include <unordered_map>
@@ -595,6 +596,7 @@ class CustomOp {
 typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
                                         std::unordered_map<std::string, std::string>&);
 typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
+                                          std::unordered_map<std::string, std::string>&,
                                           std::unordered_map<std::string, std::string>&);
 
 /*!
@@ -777,7 +779,8 @@ typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, int, int *,
 typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph,
                                         const char *json, int subgraph_id,
                                         int *accept, const char* const*,
-                                        const char* const*, int);
+                                        const char* const*, int,
+                                        char***, char***, int*);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -1142,7 +1145,8 @@ extern "C" {
 #endif
   _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
                           int subgraph_id, int *accept, const char* const* opt_keys,
-                          const char* const* opt_vals, int num_opts) {
+                          const char* const* opt_vals, int num_opts,
+                          char*** attr_keys, char*** attr_vals, int *num_attrs) {
     std::string subgraph_json(json);
     bool accept_bool = false;
     // create map of attributes from list
@@ -1150,8 +1154,30 @@ extern "C" {
     for (int i = 0; i < num_opts; i++) {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }
-    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts);
+
+    //attributes to set on subgraph node
+    std::unordered_map<std::string, std::string> attrs;
+    
+    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
     *accept = accept_bool;
+
+    if (attrs.size() > 0) {
+      *num_attrs = attrs.size();
+      // allocate space for attributes
+      *attr_keys = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+      *attr_vals = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+
+      // copy attributes
+      int i=0;
+      for (auto kv : attrs) {
+        (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
+        (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));
+        strcpy((*attr_keys)[i], kv.first.c_str());
+        strcpy((*attr_vals)[i], kv.second.c_str());
+        i++;
+      }
+    }
+
     return retval;
   }
 
