@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable= arguments-differ, too-many-lines
+# pylint: disable= arguments-differ, too-many-lines, reimported
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
@@ -1376,7 +1376,7 @@ class SymbolBlock(HybridBlock):
                         self.params.get(node).cast('float32')
                         for sib in sibs:
                             self.params.get(sib).cast('float32')
-                
+
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
 
