@@ -1155,9 +1155,9 @@ extern "C" {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }
 
-    //attributes to set on subgraph node
+    // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
-    
+
     MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
     *accept = accept_bool;
 
@@ -1168,12 +1168,12 @@ extern "C" {
       *attr_vals = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
 
       // copy attributes
-      int i=0;
+      int i = 0;
       for (auto kv : attrs) {
         (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
         (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));
-        strcpy((*attr_keys)[i], kv.first.c_str());
-        strcpy((*attr_vals)[i], kv.second.c_str());
+        snprintf((*attr_keys)[i], kv.first.size()+1, kv.first.c_str());
+        snprintf((*attr_vals)[i], kv.seconds.size()+1, kv.second.c_str());
         i++;
       }
     }
