@@ -31,7 +31,7 @@ class Distribution:
         """
         raise NotImplementedError
 
-    def sample(self, size):
+    def sample(self, size=None):
         r"""
         Generate samples of `size` from the distribution.
         """
@@ -41,6 +41,10 @@ class Distribution:
         r"""
         Generate samples of (batch_size + parameter_size) from the distribution.
         """
+        raise NotImplementedError
+
+    def broadcast_to(self, new_batch_size):
+        
         raise NotImplementedError
 
     @property
@@ -56,40 +60,3 @@ class Distribution:
         Return the variance of the distribution.
         """
         return NotImplementedError
-
-    @classmethod
-    def _dispatch_kl(cls, type_q):
-        r"""KL divergence methods should be registered
-        with distribution name,
-        i.e. the implementation of KL(P(\theta)||Q(\theta))
-        should be named after _kl_{P}_{Q}
-
-        Parameters
-        ----------
-        type_q : Typename of a distribution
-            
-        
-        Returns
-        -------
-        Get a class method with function name.
-        """
-        func_name = "_kl_" + cls.__name__ + "_" + str(type_q)
-        return getattr(cls, func_name)
-
-    def kl_divergence(self, q):
-        r"""Return the kl divergence with q,
-        this method will automatically dispatch
-        to the corresponding function based on q's type.
-        
-        Parameters
-        ----------
-        q : Distribution
-            Target distribution.
-        
-        Returns
-        -------
-        Tensor
-            KL(self||q)
-        """
-        kl_func = self._dispatch_kl(q.__class__.__name__)
-        return kl_func(self, q)

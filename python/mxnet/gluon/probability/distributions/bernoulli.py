@@ -1,6 +1,6 @@
 from mxnet import np, npx
 from .exp_family import ExponentialFamily
-from .util import prob2logit, logit2prob, getF
+from .utils import prob2logit, logit2prob, getF
 import math
 
 
@@ -22,7 +22,7 @@ class Bernoulli(ExponentialFamily):
         _F = F if F is not None else getF([prob, logit])
         super(Bernoulli, self).__init__(F=_F)
 
-        if (prob == None) == (logit == None):
+        if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
                 "Received prob={}, logit={}".format(prob, logit))

@@ -1,6 +1,6 @@
 from mxnet import np, npx
 from .exp_family import ExponentialFamily
-from .util import getF
+from .utils import getF
 import math
 
 
@@ -137,15 +137,3 @@ class Normal(ExponentialFamily):
         F = self.F
         return -0.25 * F.np.pow(2) / y + 0.5 * F.np.log(-F.np.pi / y)
 
-    def _kl_Normal_Normal(self, q):
-        R"""Calculate the kl divergence with another Normal distribution.
-        
-        Parameters
-        ----------
-        q : Normal
-            
-        """
-        F = self.F
-        var_ratio = (self.scale / q.scale) ** 2
-        t1 = ((self.loc - q.loc) / q.scale) ** 2
-        return 0.5 * (var_ratio +  t1 - 1 - F.np.log(var_ratio))

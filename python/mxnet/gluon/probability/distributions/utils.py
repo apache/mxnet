@@ -1,7 +1,8 @@
 import mxnet as mx
 from mxnet import np, npx
-from .exp_family import ExponentialFamily
 import math
+
+__all__ = ['getF', 'prob2logit', 'logit2prob']
 
 def getF(*params):
     r"""
