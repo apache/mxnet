@@ -39,6 +39,10 @@ from subprocess import check_output
 import re
 import sys
 
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
 log = logging.getLogger(__name__)
 
 
@@ -49,6 +53,8 @@ DEPS = {
         'nvdriver': 'https://windows-post-install.s3-us-west-2.amazonaws.com/nvidia_display_drivers_398.75_server2016.zip',
         'cmake': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cmake-3.15.5-win64-x64.msi'
 }
+
+DEFAULT_SUBPROCESS_TIMEOUT=3600
 
 
 def retry(target_exception, tries=4, delay_s=1, backoff=2):
@@ -134,10 +140,10 @@ def download(url, dest=None, progress=True) -> str:
 
 # Takes arguments and runs command on host.  Shell is disabled by default.
 # TODO: Move timeout to args
-def run_command(args, shell=False):
+def run_command(*args, shell=False, timeout=DEFAULT_SUBPROCESS_TIMEOUT, **kwargs):
     try:
         logging.info("Issuing command: {}".format(args))
-        res = subprocess.check_output(args, shell=shell, timeout=1800).decode("utf-8").replace("\r\n", "")
+        res = subprocess.check_output(*args, shell=shell, timeout=timeout).decode("utf-8").replace("\r\n", "\n")
         logging.info("Output: {}".format(res))
     except subprocess.CalledProcessError as e:
         raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
@@ -196,13 +202,19 @@ def install_vs():
         ' --norestart'
     )
     # Workaround for --wait sometimes ignoring the subprocesses doing component installs
+    def vs_still_installing():
+        return {'vs_installer.exe', 'vs_installershell.exe', 'vs_setup_bootstrapper.exe'} & set(map(lambda process: process.name(), psutil.process_iter()))
     timer = 0
-    while {'vs_installer.exe', 'vs_installershell.exe', 'vs_setup_bootstrapper.exe'} & set(map(lambda process: process.name(), psutil.process_iter())):
+    while vs_still_installing() and timer < DEFAULT_SUBPROCESS_TIMEOUT:
+        logging.warning("VS installers still running for %d s", timer)
         if timer % 60 == 0:
             logging.info("Waiting for Visual Studio to install for the last {} seconds".format(str(timer)))
+        sleep(1)
         timer += 1
-    logging.info("Visual studio install complete.")
-
+    if vs_still_installing():
+        logging.warning("VS install still running after timeout (%d)", DEFAULT_SUBPROCESS_TIMEOUT)
+    else:
+        logging.info("Visual studio install complete.")
 
 
 def install_cmake():
@@ -299,16 +311,6 @@ def install_cuda():
     + ' nvml_dev_9.2' \
     + ' occupancy_calculator_9.2'
     )
-    # Download patches and assume less than 100 patches exist
-    for patch_number in range(1, 100):
-        if patch_number == 100:
-            raise Exception('Probable patch loop: CUDA patch downloader is downloading at least 100 patches!')
-        cuda_9_2_patch_file_path = download("https://developer.nvidia.com/compute/cuda/9.2/Prod2/patches/{0}/cuda_9.2.148.{0}_windows".format(patch_number))
-        if cuda_9_2_patch_file_path == 404:
-            break
-        run_command("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(cuda_9_2_patch_file_path, cuda_9_2_patch_file_path.split('\\')[-1]), shell=True)
-        cuda_9_2_patch_file_path = cuda_9_2_patch_file_path + '.exe'
-        run_command("{} -s".format(cuda_9_2_patch_file_path))
 
 
 def add_paths():
@@ -322,9 +324,11 @@ def add_paths():
 
 
 def has_gpu():
+    # FIXME: this is too simplistic and not reliable as of now.
     hwinfo = check_output(['powershell','gwmi', 'win32_pnpEntity'])
-    m = re.search('3D Video', hwinfo.decode())
-    if m:
+    m_g3 = re.search('3D Video', hwinfo.decode()) # G3
+    m_p3 = re.search('NVIDIA Tesla', hwinfo.decode()) # P3
+    if m_g3 or m_p3:
         return True
     return False
 
@@ -336,7 +340,7 @@ def script_name() -> str:
 
 def main():
     logging.getLogger().setLevel(os.environ.get('LOGLEVEL', logging.DEBUG))
-    logging.basicConfig(format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
+    logging.basicConfig(stream=sys.stdout, format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
 
 
     parser = argparse.ArgumentParser()
@@ -345,14 +349,13 @@ def main():
                         default=False,
 			action='store_true')
     args = parser.parse_args()
-    #if args.gpu:
-    if has_gpu():
+    if args.gpu:
         logging.info("GPU detected")
         install_nvdriver()
         install_cuda()
         install_cudnn()
     else:
-        logging.info("GPU not detected")
+        logging.info("GPU environment skipped")
     install_vs()
     install_cmake()
     install_openblas()
