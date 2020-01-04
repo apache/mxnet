@@ -37,6 +37,27 @@ class lecunn_uniform(mx.init.Initializer):
         limit = np.sqrt(3. / self._fan_in)
         mx.random.uniform(-limit, limit, out=arr)
 
+# only for inference model optimize
+def mlp_opt(user, item, factor_size, model_layers, max_user, max_item):
+    user_weight = mx.sym.Variable('fused_mlp_user_weight', init=mx.init.Normal(0.01))
+    item_weight = mx.sym.Variable('fused_mlp_item_weight', init=mx.init.Normal(0.01))
+    embed_user = mx.sym.Embedding(data=user, weight=user_weight, input_dim=max_user,
+                                  output_dim=factor_size * 2, name='fused_embed_user'+str(factor_size))
+    embed_item = mx.sym.Embedding(data=item, weight=item_weight, input_dim=max_item,
+                                  output_dim=factor_size * 2, name='fused_embed_item'+str(factor_size))
+    pre_gemm_concat = embed_user + embed_item
+
+    for i in range(1, len(model_layers)):
+        if i==1:
+            pre_gemm_concat = mx.sym.Activation(data=pre_gemm_concat, act_type='relu', name='act_'+str(i-1))
+            continue
+        else:
+            mlp_weight_init = golorot_uniform(model_layers[i-1], model_layers[i])
+        mlp_weight = mx.sym.Variable('fc_{}_weight'.format(i-1), init=mlp_weight_init)
+        pre_gemm_concat = mx.sym.FullyConnected(data=pre_gemm_concat, weight=mlp_weight, num_hidden=model_layers[i], name='fc_'+str(i-1))
+        pre_gemm_concat = mx.sym.Activation(data=pre_gemm_concat, act_type='relu', name='act_'+str(i-1))
+
+    return pre_gemm_concat
 
 def mlp(user, item, factor_size, model_layers, max_user, max_item):
     user_weight = mx.sym.Variable('mlp_user_weight', init=mx.init.Normal(0.01))
@@ -47,14 +68,11 @@ def mlp(user, item, factor_size, model_layers, max_user, max_item):
                                   output_dim=factor_size, name='embed_item'+str(factor_size))
     pre_gemm_concat = mx.sym.concat(embed_user, embed_item, dim=1, name='pre_gemm_concat')
 
-    for i, layer in enumerate(model_layers):
-        if i==0:
-            mlp_weight_init = golorot_uniform(2 * factor_size, model_layers[i])
-        else:
-            mlp_weight_init = golorot_uniform(model_layers[i-1], model_layers[i])
-        mlp_weight = mx.sym.Variable('fc_{}_weight'.format(i), init=mlp_weight_init)
-        pre_gemm_concat = mx.sym.FullyConnected(data=pre_gemm_concat, weight=mlp_weight, num_hidden=layer, name='fc_'+str(i))
-        pre_gemm_concat = mx.sym.Activation(data=pre_gemm_concat, act_type='relu', name='act_'+str(i))
+    for i in range(1, len(model_layers)):
+        mlp_weight_init = golorot_uniform(model_layers[i-1], model_layers[i])
+        mlp_weight = mx.sym.Variable('fc_{}_weight'.format(i-1), init=mlp_weight_init)
+        pre_gemm_concat = mx.sym.FullyConnected(data=pre_gemm_concat, weight=mlp_weight, num_hidden=model_layers[i], name='fc_'+str(i-1))
+        pre_gemm_concat = mx.sym.Activation(data=pre_gemm_concat, act_type='relu', name='act_'+str(i-1))
 
     return pre_gemm_concat
 
@@ -70,24 +88,34 @@ def gmf(user, item, factor_size, max_user, max_item):
     return pred
 
 def get_model(model_type='neumf', factor_size_mlp=128, factor_size_gmf=64,
-              model_layers=[256, 128, 64], num_hidden=1, 
-              max_user=138493, max_item=26744):
+              model_layers=[256, 256, 128, 64], num_hidden=1, 
+              max_user=138493, max_item=26744, opt=False):
     # input
     user = mx.sym.Variable('user')
     item = mx.sym.Variable('item')
 
     if model_type == 'mlp':
-        net = mlp(user=user, item=item,
-                  factor_size=factor_size_mlp, model_layers=model_layers,
-                  max_user=max_user, max_item=max_item)
+        if opt:
+            net = mlp_opt(user=user, item=item,
+                         factor_size=factor_size_mlp, model_layers=model_layers,
+                         max_user=max_user, max_item=max_item)
+        else:
+            net = mlp(user=user, item=item,
+                      factor_size=factor_size_mlp, model_layers=model_layers,
+                      max_user=max_user, max_item=max_item)
     elif model_type == 'gmf':
         net = gmf(user=user, item=item,
                   factor_size=factor_size_gmf,
                   max_user=max_user, max_item=max_item)
     elif model_type == 'neumf':
-        net_mlp = mlp(user=user, item=item,
-                      factor_size=factor_size_mlp, model_layers=model_layers,
-                      max_user=max_user, max_item=max_item)
+        if opt:
+            net_mlp = mlp_opt(user=user, item=item,
+                              factor_size=factor_size_mlp, model_layers=model_layers,
+                              max_user=max_user, max_item=max_item)
+        else:
+            net_mlp = mlp(user=user, item=item,
+                          factor_size=factor_size_mlp, model_layers=model_layers,
+                          max_user=max_user, max_item=max_item)
         net_gmf = gmf(user=user, item=item,
                       factor_size=factor_size_gmf,
                       max_user=max_user, max_item=max_item)

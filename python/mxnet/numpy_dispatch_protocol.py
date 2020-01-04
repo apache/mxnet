@@ -83,9 +83,12 @@ def with_array_ufunc_protocol(func):
 
 
 _NUMPY_ARRAY_FUNCTION_LIST = [
+    'all',
+    'any',
     'argmin',
     'argmax',
     'around',
+    'round',
     'argsort',
     'append',
     'broadcast_arrays',
@@ -101,12 +104,18 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'expand_dims',
     'fix',
     'flip',
+    'flipud',
+    'fliplr',
     'inner',
     'max',
+    'amax',
     'mean',
     'min',
     'nonzero',
     'ones_like',
+    'atleast_1d',
+    'atleast_2d',
+    'atleast_3d',
     'prod',
     'ravel',
     'repeat',
@@ -125,6 +134,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'transpose',
     'unique',
     'unravel_index',
+    'delete',
     'var',
     'vdot',
     'vstack',
@@ -135,6 +145,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.inv',
     'linalg.solve',
     'linalg.tensorinv',
+    'linalg.tensorsolve',
     'shape',
     'trace',
     'tril',
@@ -147,7 +158,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'resize',
     'where',
     'full_like',
-    'bincount'
+    'bincount',
+    'empty_like',
+    'nan_to_num',
 ]
 
 

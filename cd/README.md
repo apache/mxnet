@@ -27,7 +27,7 @@ The CD process is driven by the [CD pipeline job](Jenkinsfile_cd_pipeline), whic
 
 A variant is a specific environment or features for which MXNet is compiled. For instance CPU, GPU with CUDA v10.0, CUDA v9.0 with MKL-DNN support, etc. 
 
-Currently, 6 variants are supported. All of these variants except native have MKL-DNN backend enabled.
+Currently, below variants are supported. All of these variants except native have MKL-DNN backend enabled.
 
 * *cpu*: CPU
 * *native*: CPU without MKL-DNN
@@ -35,6 +35,7 @@ Currently, 6 variants are supported. All of these variants except native have MK
 * *cu92*: CUDA 9.2
 * *cu100*: CUDA 10
 * *cu101*: CUDA 10.1
+* *cu102*: CUDA 10.2
 
 *For more on variants, see [here](https://github.com/apache/incubator-mxnet/issues/8671)*
 
