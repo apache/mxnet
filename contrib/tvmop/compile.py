@@ -25,11 +25,60 @@ import argparse
 import re
 import json
 import logging
+import sys
+import subprocess
 from tvmop.opdef import __OP_DEF__
 from tvmop.space import ConfigSpaces, ConfigSpace
 from tvm.autotvm.measure.measure_methods import set_cuda_target_arch
 
 logging.basicConfig(level=logging.INFO)
+
+
+def create_shared(output,
+                  objects,
+                  options=None,
+                  cc="g++"):
+    """Create shared library.
+    Parameters
+    ----------
+    output : str
+        The target shared library.
+    objects : List[str]
+        List of object files.
+    options : List[str]
+        The list of additional options string.
+    cc : Optional[str]
+        The compiler command.
+    """
+    if sys.platform == "darwin" or sys.platform.startswith("linux"):
+        _linux_compile(output, objects, options, cc)
+    # TODO(yzhliu): elif sys.platform == "win32":
+    else:
+        raise ValueError("Unsupported platform")
+
+
+def _linux_compile(output, objects, options, compile_cmd="g++"):
+    cmd = [compile_cmd]
+    if output.endswith(".so") or output.endswith(".dylib"):
+        cmd += ["-shared", "-fPIC"]
+        if sys.platform == "darwin":
+            cmd += ["-undefined", "dynamic_lookup"]
+    elif output.endswith(".obj"):
+        cmd += ["-c"]
+    cmd += ["-o", output]
+    if isinstance(objects, str):
+        cmd += [objects]
+    else:
+        cmd += objects
+    if options:
+        cmd += options
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    (out, _) = proc.communicate()
+    if proc.returncode != 0:
+        msg = "Compilation error:\n"
+        msg += str(out)
+        raise RuntimeError(msg)
 
 
 def get_target(device):
@@ -76,6 +125,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate tvm operators")
     parser.add_argument("-o", action="store", required=True, dest="target_path",
                         help="Target path which stores compiled library")
+    parser.add_argument("-L", action="store", default=None, dest="ld_path",
+                        help="library link path")
     parser.add_argument('--cuda-arch', type=str, default=None, dest='cuda_arch',
                         help='The cuda arch for compiling kernels for')
     parser.add_argument("--config", action="store", required=True, dest="config_path",
@@ -106,7 +157,13 @@ if __name__ == "__main__":
             logging.info('Cuda arch {} set for compiling TVM operator kernels.'.format(cuda_arch))
             set_cuda_target_arch(cuda_arch)
     func_binary = tvm.build(lowered_funcs, name="tvmop")
-    func_binary.export_library(arguments.target_path)
+    # we create libtvmop.o first, which gives us chance to link tvm_runtime together with the libtvmop
+    # to allow mxnet find external helper functions in libtvm_runtime
+    func_binary.save(arguments.target_path + "/libtvmop.o")
+    ld_path = arguments.target_path if arguments.ld_path is None else arguments.ld_path
+    create_shared(arguments.target_path + "/libtvmop.so",
+                  arguments.target_path + "/libtvmop.o",
+                  options=["-L", ld_path, "-ltvm_runtime"])
 
     config_spaces = ConfigSpaces()
     for operator_def in __OP_DEF__:

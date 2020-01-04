@@ -272,6 +272,29 @@ void LogspaceCompute(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct AtleastNDParam : dmlc::Parameter<AtleastNDParam> {
+  int num_args;
+  DMLC_DECLARE_PARAMETER(AtleastNDParam) {
+    DMLC_DECLARE_FIELD(num_args)
+    .set_lower_bound(1)
+    .describe("Number of input arrays.");
+  }
+};
+
+template<typename xpu>
+void AtleastNDCompute(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+  auto &param = nnvm::get<AtleastNDParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), param.num_args);
+  CHECK_EQ(outputs.size(), param.num_args);
+  for (int i = 0; i < param.num_args; ++i) {
+    UnaryOp::IdentityCompute<xpu>(attrs, ctx, {inputs[i]}, {req[i]}, {outputs[i]});
+  }
+}
+
 }  // namespace op
 }  // namespace mxnet
 
