@@ -1172,8 +1172,8 @@ extern "C" {
       for (auto kv : attrs) {
         (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
         (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));
-        snprintf((*attr_keys)[i], kv.first.size()+1, kv.first.c_str());
-        snprintf((*attr_vals)[i], kv.seconds.size()+1, kv.second.c_str());
+        snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
+        snprintf((*attr_vals)[i], kv.second.size()+1, "%s", kv.second.c_str());
         i++;
       }
     }
