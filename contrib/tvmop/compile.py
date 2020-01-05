@@ -105,18 +105,13 @@ def get_cuda_arch(arch):
         return arch.split(';')
 
     # the arch string contains '-arch=sm_xx'
+    archs = []
     flags = arch.split()
     for flag in flags:
-        if flag.startswith('-arch='):
-            return flag[len('-arch='):]
+        if flag.startswith('-gencode') or flag.startswith('arch='):
+            archs.append(flag)
 
-    # find the highest compute capability
-    comp_caps = re.findall(r'\d+', arch)
-    if len(comp_caps) == 0:
-        return None
-
-    comp_caps = [int(c) for c in comp_caps]
-    return 'sm_' + str(max(comp_caps))
+    return archs
 
 
 if __name__ == "__main__":
