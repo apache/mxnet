@@ -20,8 +20,8 @@ def register_kl(typeP, typeQ):
         if (func_arg_num != 2):
             raise TypeError('Expect kl_divergence implementation '
                             + 'to have exactly two arguments, but got {}'.format(func_arg_num))
-        if not hasattr(kl_storage, func_name):
-            setattr(kl_storage, func_name, func)
+        if not hasattr(_KL_storage, func_name):
+            setattr(_KL_storage, func_name, func)
         else:
             # Behavior TBD.
             print("Error: Duplicate definition")
@@ -67,10 +67,14 @@ def _dispatch_kl(type_p, type_q):
     Get a class method with function name.
     """
     func_name = "_kl_" + str(type_p) + "_" + str(type_q)
-    return getattr(kl_storage, func_name)
+    func_impl = getattr(_KL_storage, func_name, None)
+    if (not callable(func_impl)):
+        raise NotImplementedError(
+            "KL divergence between {} and {} is not implemented.".format(type_p, type_q))
+    return func_impl
 
 
-class kl_storage():
+class _KL_storage():
     r"""Class for storing the definition of kl divergence 
     between distributions.
     All the class methods should be static
