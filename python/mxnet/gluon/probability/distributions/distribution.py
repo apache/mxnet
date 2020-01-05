@@ -43,8 +43,18 @@ class Distribution:
         """
         raise NotImplementedError
 
-    def broadcast_to(self, new_batch_size):
-        
+    def broadcast_to(self, batch_shape):
+        """
+        Returns a new distribution instance with parameters expanded
+        to `batch_shape`. This method calls `numpy.broadcast_to` on
+        the parameters.
+
+        Parameters
+        ----------
+        new_batch_size : Tuple
+            The batch shape of the desired distribution.
+
+        """
         raise NotImplementedError
 
     @property
