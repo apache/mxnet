@@ -57,6 +57,13 @@ class Distribution:
         """
         raise NotImplementedError
 
+    def enumerate_support(self):
+        r"""
+        Returns a tensor that contains all values supported
+        by a discrete distribution.
+        """
+        raise NotImplementedError
+
     @property
     def mean(self):
         r"""

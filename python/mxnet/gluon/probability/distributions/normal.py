@@ -105,6 +105,14 @@ class Normal(ExponentialFamily):
                                           self.scale,
                                           batch_size)
 
+    def broadcast_to(self, batch_shape):
+        new_instance = self.__new__(type(self))
+        F = self.F
+        new_instance.loc = F.np.broadcast_to(self.loc, batch_shape)
+        new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
+        super(Normal, new_instance).__init__(F=F)
+        return new_instance
+
     @property
     def _natural_params(self):
         r"""Return the natural parameters of normal distribution,
