@@ -39,7 +39,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """        
-        return self._prob if self._prob is not None else logit2prob(self._logit, self.F)
+        return self._prob if self._prob is not None else logit2prob(self._logit, True, self.F)
 
     def logit(self):
         """Get the log-odds of sampling `1`.
@@ -49,7 +49,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """        
-        return self._logit if self._logit is not None else prob2logit(self._prob, self.F)
+        return self._logit if self._logit is not None else prob2logit(self._prob, True, self.F)
 
     @property
     def mean(self):
