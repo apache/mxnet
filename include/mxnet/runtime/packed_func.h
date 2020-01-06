@@ -1,0 +1,1148 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/*!
+ * \file runtime/packed_func.h
+ * \brief Adapted from incubator-tvm/include/tvm/runtime/packed_func.h
+ * Type-erased function used across MXNET API.
+ */
+#ifndef MXNET_RUNTIME_PACKED_FUNC_H_
+#define MXNET_RUNTIME_PACKED_FUNC_H_
+
+#include <sstream>
+#include <dmlc/logging.h>
+#include <mxnet/runtime/c_runtime_api.h>
+#include <mxnet/runtime/object.h>
+#include <mxnet/runtime/ndarray.h>
+#include <mxnet/runtime/container.h>
+#include <mxnet/runtime/ffi_helper.h>
+#include <mxnet/ndarray.h>
+#include <mxnet/base.h>
+#include <functional>
+#include <tuple>
+#include <vector>
+#include <string>
+#include <limits>
+#include <memory>
+#include <utility>
+#include <type_traits>
+
+namespace mxnet {
+// forward declarations
+// class Integer;
+// class Expr;
+
+namespace runtime {
+
+/*!
+ * \brief Runtime utility for getting custom type name from code
+ * \param type_code Custom type code
+ * \return Custom type name
+ */
+// MXNET_DLL std::string GetCustomTypeName(uint8_t type_code);
+
+/*!
+ * \brief Runtime utility for checking whether custom type is registered
+ * \param type_code Custom type code
+ * \return Bool representing whether type is registered
+ */
+// MXNET_DLL bool GetCustomTypeRegistered(uint8_t type_code);
+
+/*!
+ * \brief Runtime utility for parsing string of the form "custom[<typename>]"
+ * \param s String to parse
+ * \param scan pointer to parsing pointer, which is scanning across s
+ * \return type code of custom type parsed
+ */
+// MXNET_DLL uint8_t ParseCustomDatatype(const std::string& s, const char** scan);
+
+// forward declarations
+class MXNetArgs;
+class MXNetArgValue;
+class MXNetRetValue;
+class MXNetArgsSetter;
+
+/*!
+ * \brief Packed function is a type-erased function.
+ *  The arguments are passed by packed format.
+ *
+ *  This is an useful unified interface to call generated functions,
+ *  It is the unified function function type of TVM.
+ *  It corresponds to TVMFunctionHandle in C runtime API.
+ */
+class PackedFunc {
+ public:
+  /*!
+   * \brief The internal std::function
+   * \param args The arguments to the function.
+   * \param rv The return value.
+   *
+   * \code
+   *   // Example code on how to implemented FType
+   *   void MyPackedFunc(MXNetArgs args, MXNetRetValue* rv) {
+   *     // automatically convert arguments to desired type.
+   *     int a0 = args[0];
+   *     float a1 = args[1];
+   *     ...
+   *     // automatically assign values to rv
+   *     std::string my_return_value = "x";
+   *     *rv = my_return_value;
+   *   }
+   * \endcode
+   */
+  using FType = std::function<void (MXNetArgs args, MXNetRetValue* rv)>;
+  /*! \brief default constructor */
+  PackedFunc() {}
+  /*! \brief constructor from null */
+  PackedFunc(std::nullptr_t null) {}  // NOLINT(*)
+  /*!
+   * \brief constructing a packed function from a std::function.
+   * \param body the internal container of packed function.
+   */
+  explicit PackedFunc(FType body) : body_(body) {}
+  /*!
+   * \brief Call packed function by directly passing in unpacked format.
+   * \param args Arguments to be passed.
+   * \tparam Args arguments to be passed.
+   *
+   * \code
+   *   // Example code on how to call packed function
+   *   void CallPacked(PackedFunc f) {
+   *     // call like normal functions by pass in arguments
+   *     // return value is automatically converted back
+   *     int rvalue = f(1, 2.0);
+   *   }
+   * \endcode
+   */
+  template<typename... Args>
+  inline MXNetRetValue operator()(Args&& ...args) const;
+  /*!
+   * \brief Call the function in packed format.
+   * \param args The arguments
+   * \param rv The return value.
+   */
+  inline void CallPacked(MXNetArgs args, MXNetRetValue* rv) const;
+  /*! \return the internal body function */
+  inline FType body() const;
+  /*! \return Whether the packed function is nullptr */
+  bool operator==(std::nullptr_t null) const {
+    return body_ == nullptr;
+  }
+  /*! \return Whether the packed function is not nullptr */
+  bool operator!=(std::nullptr_t null) const {
+    return body_ != nullptr;
+  }
+
+ private:
+  /*! \brief internal container of packed function */
+  FType body_;
+};
+
+/*!
+ * \brief Please refer to \ref TypedPackedFuncAnchor "TypedPackedFunc<R(Args..)>"
+ */
+template<typename FType>
+class TypedPackedFunc;
+
+/*!
+ * \anchor TypedPackedFuncAnchor
+ * \brief A PackedFunc wrapper to provide typed function signature.
+ * It is backed by a PackedFunc internally.
+ *
+ * TypedPackedFunc enables compile time type checking.
+ * TypedPackedFunc works with the runtime system:
+ * - It can be passed as an argument of PackedFunc.
+ * - It can be assigned to MXNetRetValue.
+ * - It can be directly converted to a type-erased PackedFunc.
+ *
+ * Developers should prefer TypedPackedFunc over PackedFunc in C++ code
+ * as it enables compile time checking.
+ * We can construct a TypedPackedFunc from a lambda function
+ * with the same signature.
+ *
+ * \code
+ *  // user defined lambda function.
+ *  auto addone = [](int x)->int {
+ *    return x + 1;
+ *  };
+ *  // We can directly convert
+ *  // lambda function to TypedPackedFunc
+ *  TypedPackedFunc<int(int)> ftyped(addone);
+ *  // invoke the function.
+ *  int y = ftyped(1);
+ *  // Can be directly converted to PackedFunc
+ *  PackedFunc packed = ftype;
+ * \endcode
+ * \tparam R The return value of the function.
+ * \tparam Args The argument signature of the function.
+ */
+template<typename R, typename ...Args>
+class TypedPackedFunc<R(Args...)> {
+ public:
+  /*! \brief short hand for this function type */
+  using TSelf = TypedPackedFunc<R(Args...)>;
+  /*! \brief default constructor */
+  TypedPackedFunc() {}
+  /*! \brief constructor from null */
+  TypedPackedFunc(std::nullptr_t null) {}  // NOLINT(*)
+  /*!
+   * \brief construct by wrap a PackedFunc
+   *
+   * Example usage:
+   * \code
+   * PackedFunc packed([](MXNetArgs args, MXNetRetValue *rv) {
+   *   int x = args[0];
+   *   *rv = x + 1;
+   *  });
+   * // construct from packed function
+   * TypedPackedFunc<int(int)> ftyped(packed);
+   * // call the typed version.
+   * CHECK_EQ(ftyped(1), 2);
+   * \endcode
+   *
+   * \param packed The packed function
+   */
+  inline TypedPackedFunc(PackedFunc packed);  // NOLINT(*)
+  /*!
+   * \brief constructor from MXNetRetValue
+   * \param value The MXNetRetValue
+   */
+  inline TypedPackedFunc(const MXNetRetValue& value);  // NOLINT(*)
+  /*!
+   * \brief constructor from MXNetArgValue
+   * \param value The MXNetArgValue
+   */
+  inline TypedPackedFunc(const MXNetArgValue& value);  // NOLINT(*)
+  /*!
+   * \brief construct from a lambda function with the same signature.
+   *
+   * Example usage:
+   * \code
+   * auto typed_lambda = [](int x)->int { return x + 1; }
+   * // construct from packed function
+   * TypedPackedFunc<int(int)> ftyped(typed_lambda);
+   * // call the typed version.
+   * CHECK_EQ(ftyped(1), 2);
+   * \endcode
+   *
+   * \param typed_lambda typed lambda function.
+   * \tparam FLambda the type of the lambda function.
+   */
+  template<typename FLambda,
+           typename = typename std::enable_if<
+             std::is_convertible<FLambda,
+                                 std::function<R(Args...)>
+                                 >::value>::type>
+  TypedPackedFunc(const FLambda& typed_lambda) {  // NOLINT(*)
+    this->AssignTypedLambda(typed_lambda);
+  }
+  /*!
+   * \brief copy assignment operator from typed lambda
+   *
+   * Example usage:
+   * \code
+   * // construct from packed function
+   * TypedPackedFunc<int(int)> ftyped;
+   * ftyped = [](int x) { return x + 1; }
+   * // call the typed version.
+   * CHECK_EQ(ftyped(1), 2);
+   * \endcode
+   *
+   * \param typed_lambda typed lambda function.
+   * \tparam FLambda the type of the lambda function.
+   * \returns reference to self.
+   */
+  template<typename FLambda,
+           typename = typename std::enable_if<
+             std::is_convertible<FLambda,
+                                 std::function<R(Args...)>
+                                 >::value>::type>
+  TSelf& operator=(FLambda typed_lambda) {  // NOLINT(*)
+    this->AssignTypedLambda(typed_lambda);
+    return *this;
+  }
+  /*!
+   * \brief copy assignment operator from PackedFunc.
+   * \param packed The packed function.
+   * \returns reference to self.
+   */
+  TSelf& operator=(PackedFunc packed) {
+    packed_ = packed;
+    return *this;
+  }
+  /*!
+   * \brief Invoke the operator.
+   * \param args The arguments
+   * \returns The return value.
+   */
+  inline R operator()(Args ...args) const;
+  /*!
+   * \brief convert to PackedFunc
+   * \return the internal PackedFunc
+   */
+  operator PackedFunc() const {
+    return packed();
+  }
+  /*!
+   * \return reference the internal PackedFunc
+   */
+  const PackedFunc& packed() const {
+    return packed_;
+  }
+  /*! \return Whether the packed function is nullptr */
+  bool operator==(std::nullptr_t null) const {
+    return packed_ == nullptr;
+  }
+  /*! \return Whether the packed function is not nullptr */
+  bool operator!=(std::nullptr_t null) const {
+    return packed_ != nullptr;
+  }
+
+ private:
+  friend class MXNetRetValue;
+  /*! \brief The internal packed function */
+  PackedFunc packed_;
+  /*!
+   * \brief Assign the packed field using a typed lambda function.
+   *
+   * \param flambda The lambda function.
+   * \tparam FLambda The lambda function type.
+   * \note We capture the lambda when possible for maximum efficiency.
+   */
+  template<typename FLambda>
+  inline void AssignTypedLambda(FLambda flambda);
+};
+
+/*! \brief Arguments into TVM functions. */
+class MXNetArgs {
+ public:
+  const MXNetValue* values;
+  const int* type_codes;
+  int num_args;
+  /*!
+   * \brief constructor
+   * \param values The argument values
+   * \param type_codes The argument type codes
+   * \param num_args number of arguments.
+   */
+  MXNetArgs(const MXNetValue* values,
+          const int* type_codes,
+          int num_args)
+      : values(values),
+        type_codes(type_codes),
+        num_args(num_args) { }
+  /*! \return size of the arguments */
+  inline int size() const;
+  /*!
+   * \brief Get i-th argument
+   * \param i the index.
+   * \return the ith argument.
+   */
+  inline MXNetArgValue operator[](int i) const;
+};
+
+/*!
+ * \brief Convert type code to its name
+ * \param type_code The type code .
+ * \return The name of type code.
+ */
+inline const char* TypeCode2Str(int type_code);
+
+/*!
+ * \brief convert a string to TVM type.
+ * \param s The string to be converted.
+ * \return The corresponding tvm type.
+ */
+// inline TVMType String2TVMType(std::string s);
+
+// macro to check type code.
+#define MXNET_CHECK_TYPE_CODE(CODE, T)                           \
+  CHECK_EQ(CODE, T) << " expected "                            \
+  << TypeCode2Str(T) << " but get " << TypeCode2Str(CODE)      \
+
+/*!
+ * \brief Type traits to mark if a class is tvm extension type.
+ *
+ * To enable extension type in C++ must be registered via marco.
+ * TVM_REGISTER_EXT_TYPE(TypeName) after defining this with this traits.
+ *
+ * Extension class can be passed and returned via PackedFunc in all tvm runtime.
+ * Internally extension class is stored as T*.
+ *
+ * \tparam T the typename
+ */
+template<typename T>
+struct extension_type_info {
+  static const int code = 0;
+};
+
+/*!
+ * \brief Runtime function table about extension type.
+ */
+// class ExtTypeVTable {
+//  public:
+//   /*! \brief function to be called to delete a handle */
+//   void (*destroy)(void* handle);
+//   /*! \brief function to be called when clone a handle */
+//   void* (*clone)(void* handle);
+//   /*!
+//    * \brief Register type
+//    * \tparam T The type to be register.
+//    * \return The registered vtable.
+//    */
+//   template <typename T>
+//   static inline ExtTypeVTable* Register_();
+//   /*!
+//    * \brief Get a vtable based on type code.
+//    * \param type_code The type code
+//    * \return The registered vtable.
+//    */
+//   MXNET_DLL static ExtTypeVTable* Get(int type_code);
+
+//  private:
+//   // Internal registration function.
+//   MXNET_DLL static ExtTypeVTable* RegisterInternal(int type_code, const ExtTypeVTable& vt);
+// };
+
+/*!
+ * \brief Internal base class to
+ *  handle conversion to POD values.
+ */
+class MXNetPODValue_ {
+ public:
+  operator double() const {
+    // Allow automatic conversion from int to float
+    // This avoids errors when user pass in int from
+    // the frontend while the API expects a float.
+    if (type_code_ == kDLInt) {
+      return static_cast<double>(value_.v_int64);
+    }
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLFloat);
+    return value_.v_float64;
+  }
+  operator int64_t() const {
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
+    return value_.v_int64;
+  }
+  operator uint64_t() const {
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
+    return value_.v_int64;
+  }
+  operator int() const {
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
+    CHECK_LE(value_.v_int64,
+             std::numeric_limits<int>::max());
+    return static_cast<int>(value_.v_int64);
+  }
+  operator bool() const {
+    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
+    return value_.v_int64 != 0;
+  }
+  operator void*() const {
+    if (type_code_ == kNull) return nullptr;
+    if (type_code_ == kArrayHandle) return value_.v_handle;
+    MXNET_CHECK_TYPE_CODE(type_code_, kHandle);
+    return value_.v_handle;
+  }
+  operator ObjectRef() const {
+    if (type_code_ == kNull) {
+      return ObjectRef(ObjectPtr<Object>(nullptr));
+    }
+    MXNET_CHECK_TYPE_CODE(type_code_, kObjectHandle);
+    return ObjectRef(
+        ObjectPtr<Object>(static_cast<Object*>(value_.v_handle)));
+  }
+  template<typename TObjectRef,
+           typename = typename std::enable_if<
+             std::is_class<TObjectRef>::value>::type>
+  inline bool IsObjectRef() const;
+  int type_code() const {
+    return type_code_;
+  }
+
+  /*!
+   * \brief return handle as specific pointer type.
+   * \tparam T the data type.
+   * \return The pointer type.
+   */
+  template<typename T>
+  T* ptr() const {
+    return static_cast<T*>(value_.v_handle);
+  }
+
+ protected:
+  friend class MXNetArgsSetter;
+  friend class MXNetRetValue;
+  MXNetPODValue_() : type_code_(kNull) {}
+  MXNetPODValue_(MXNetValue value, int type_code)
+      : value_(value), type_code_(type_code) {}
+
+  /*! \brief The value */
+  MXNetValue value_;
+  /*! \brief the type code */
+  int type_code_;
+};
+
+/*!
+ * \brief A single argument value to PackedFunc.
+ *  Containing both type_code and MXNetValue
+ *
+ *  Provides utilities to do type cast into other types.
+ */
+class MXNetArgValue : public MXNetPODValue_ {
+ public:
+  /*! \brief default constructor */
+  MXNetArgValue() {}
+  /*!
+   * \brief constructor
+   * \param value of the function
+   * \param type_code The type code.
+   */
+  MXNetArgValue(MXNetValue value, int type_code)
+      : MXNetPODValue_(value, type_code) {
+  }
+  // reuse converter from parent
+  using MXNetPODValue_::operator double;
+  using MXNetPODValue_::operator int64_t;
+  using MXNetPODValue_::operator uint64_t;
+  using MXNetPODValue_::operator int;
+  using MXNetPODValue_::operator bool;
+  using MXNetPODValue_::operator void*;
+  using MXNetPODValue_::operator ObjectRef;
+  using MXNetPODValue_::IsObjectRef;
+
+  // conversion operator.
+  operator std::string() const {
+    // if (type_code_ == kTVMType) {
+    //   return TVMType2String(operator TVMType());
+    // } else if (type_code_ == kBytes) {
+    if (type_code_ == kBytes) {
+      MXNetByteArray* arr = static_cast<MXNetByteArray*>(value_.v_handle);
+      return std::string(arr->data, arr->size);
+    } else {
+      MXNET_CHECK_TYPE_CODE(type_code_, kStr);
+      return std::string(value_.v_str);
+    }
+  }
+  operator ::mxnet::NDArray*() const {
+    if (type_code_ == kNull) {
+      return nullptr;
+    }
+    MXNET_CHECK_TYPE_CODE(type_code_, kNDArrayHandle);
+    return reinterpret_cast<::mxnet::NDArray*>(value_.v_handle);
+  }
+  operator ::mxnet::TShape() const {
+    MXNET_CHECK_TYPE_CODE(type_code_, kObjectHandle);
+    const ADTObj* obj = static_cast<ADTObj*>(value_.v_handle);
+    TShape ret(obj->size, 0);
+    for (uint32_t i = 0; i < obj->size; ++i) {
+      ret[i] = obj->operator[](i).as<IntegerObj>()->value;
+    }
+    return ret;
+  }
+  operator PackedFunc() const {
+    if (type_code_ == kNull) return PackedFunc();
+    MXNET_CHECK_TYPE_CODE(type_code_, kFuncHandle);
+    return *ptr<PackedFunc>();
+  }
+  template<typename FType>
+  operator TypedPackedFunc<FType>() const {
+    return TypedPackedFunc<FType>(operator PackedFunc());
+  }
+  const MXNetValue& value() const {
+    return value_;
+  }
+  // Deferred extension handler.
+  template<typename TObjectRef>
+  inline TObjectRef AsObjectRef() const;
+  template<typename T,
+           typename = typename std::enable_if<
+           std::is_class<T>::value>::type>
+  inline operator T() const;
+};
+
+/*!
+ * \brief Return Value container,
+ *  Unlike MXNetArgValue, which only holds reference and do not delete
+ *  the underlying container during destruction.
+ *
+ *  MXNetRetValue holds value and will manage the underlying containers
+ *  when it stores a complicated data type.
+ */
+class MXNetRetValue : public MXNetPODValue_ {
+ public:
+  /*! \brief default constructor */
+  MXNetRetValue() {}
+  /*!
+   * \brief move constructor from anoter return value.
+   * \param other The other return value.
+   */
+  MXNetRetValue(MXNetRetValue&& other)
+      : MXNetPODValue_(other.value_, other.type_code_) {
+    other.value_.v_handle = nullptr;
+    other.type_code_ = kNull;
+  }
+  /*! \brief destructor */
+  ~MXNetRetValue() {
+    this->Clear();
+  }
+  // reuse converter from parent
+  using MXNetPODValue_::operator double;
+  using MXNetPODValue_::operator int64_t;
+  using MXNetPODValue_::operator uint64_t;
+  using MXNetPODValue_::operator int;
+  using MXNetPODValue_::operator bool;
+  using MXNetPODValue_::operator void*;
+  using MXNetPODValue_::operator ObjectRef;
+  using MXNetPODValue_::IsObjectRef;
+
+  MXNetRetValue(const MXNetRetValue& other) : MXNetPODValue_() {
+    this->Assign(other);
+  }
+  // conversion operators
+  operator std::string() const {
+    if (type_code_ == kBytes) {
+      return *ptr<std::string>();
+    }
+    MXNET_CHECK_TYPE_CODE(type_code_, kStr);
+    return *ptr<std::string>();
+  }
+  operator PackedFunc() const {
+    if (type_code_ == kNull) return PackedFunc();
+    MXNET_CHECK_TYPE_CODE(type_code_, kFuncHandle);
+    return *ptr<PackedFunc>();
+  }
+  template<typename FType>
+  operator TypedPackedFunc<FType>() const {
+    return TypedPackedFunc<FType>(operator PackedFunc());
+  }
+  // Assign operators
+  MXNetRetValue& operator=(MXNetRetValue&& other) {
+    this->Clear();
+    value_ = other.value_;
+    type_code_ = other.type_code_;
+    other.type_code_ = kNull;
+    return *this;
+  }
+  MXNetRetValue& operator=(double value) {
+    this->SwitchToPOD(kDLFloat);
+    value_.v_float64 = value;
+    return *this;
+  }
+  MXNetRetValue& operator=(std::nullptr_t value) {
+    this->SwitchToPOD(kNull);
+    value_.v_handle = value;
+    return *this;
+  }
+  MXNetRetValue& operator=(void* value) {
+    this->SwitchToPOD(kHandle);
+    value_.v_handle = value;
+    return *this;
+  }
+  MXNetRetValue& operator=(int64_t value) {
+    this->SwitchToPOD(kDLInt);
+    value_.v_int64 = value;
+    return *this;
+  }
+  MXNetRetValue& operator=(int value) {
+    this->SwitchToPOD(kDLInt);
+    value_.v_int64 = value;
+    return *this;
+  }
+  MXNetRetValue& operator=(bool value) {
+    this->SwitchToPOD(kDLInt);
+    value_.v_int64 = value;
+    return *this;
+  }
+  MXNetRetValue& operator=(std::string value) {
+    this->SwitchToClass(kStr, value);
+    return *this;
+  }
+  MXNetRetValue& operator=(MXNetByteArray value) {
+    this->SwitchToClass(kBytes, std::string(value.data, value.size));
+    return *this;
+  }
+  MXNetRetValue& operator=(ObjectRef other) {
+    return operator=(std::move(other.data_));
+  }
+  template<typename T>
+  MXNetRetValue& operator=(ObjectPtr<T> other) {
+    SwitchToObject(kObjectHandle, std::move(other));
+    return *this;
+  }
+  MXNetRetValue& operator=(PackedFunc f) {
+    this->SwitchToClass(kFuncHandle, f);
+    return *this;
+  }
+  template<typename FType>
+  MXNetRetValue& operator=(const TypedPackedFunc<FType>& f) {
+    return operator=(f.packed());
+  }
+  MXNetRetValue& operator=(const MXNetRetValue& other) {  // NOLINT(*0
+    this->Assign(other);
+    return *this;
+  }
+  MXNetRetValue& operator=(const MXNetArgValue& other) {
+    this->Assign(other);
+    return *this;
+  }
+  MXNetRetValue& operator=(::mxnet::NDArray* value) {
+    this->SwitchToPOD(kNDArrayHandle);
+    value_.v_handle = reinterpret_cast<void*>(value);
+    return *this;
+  }
+  template<typename T,
+           typename = typename std::enable_if<
+             extension_type_info<T>::code != 0>::type>
+  MXNetRetValue& operator=(const T& other) {
+    this->SwitchToClass<T>(
+        extension_type_info<T>::code, other);
+    return *this;
+  }
+  /*!
+   * \brief Move the value back to front-end via C API.
+   *  This marks the current container as null.
+   *  The managed resources is moved to front-end and
+   *  the front end should take charge in managing them.
+   *
+   * \param ret_value The return value.
+   * \param ret_type_code The return type code.
+   */
+  void MoveToCHost(MXNetValue* ret_value,
+                   int* ret_type_code) {
+    // cannot move str; need specially handle.
+    CHECK(type_code_ != kStr && type_code_ != kBytes);
+    *ret_value = value_;
+    *ret_type_code = type_code_;
+    type_code_ = kNull;
+  }
+  /*! \return The value field, if the data is POD */
+  const MXNetValue& value() const {
+    CHECK(type_code_ != kObjectHandle &&
+          type_code_ != kFuncHandle &&
+          type_code_ != kStr) << "MXNetRetValue.value can only be used for POD data";
+    return value_;
+  }
+  // ObjectRef related extenstions: in tvm/packed_func_ext.h
+  template<typename T,
+           typename = typename std::enable_if<
+             std::is_class<T>::value>::type>
+  inline operator T() const;
+  template<typename TObjectRef>
+  inline TObjectRef AsObjectRef() const;
+
+ private:
+  template<typename T>
+  void Assign(const T& other) {
+    switch (other.type_code()) {
+      case kStr: {
+        SwitchToClass<std::string>(kStr, other);
+        break;
+      }
+      case kBytes: {
+        SwitchToClass<std::string>(kBytes, other);
+        break;
+      }
+      case kFuncHandle: {
+        SwitchToClass<PackedFunc>(kFuncHandle, other);
+        break;
+      }
+      case kObjectHandle: {
+        *this = other.operator ObjectRef();
+        break;
+      }
+      default: {
+        if (other.type_code() < kExtBegin) {
+          SwitchToPOD(other.type_code());
+          value_ = other.value_;
+        } else {
+          LOG(FATAL) << "Does not support ext type";
+        }
+        break;
+      }
+    }
+  }
+  // get the internal container.
+  void SwitchToPOD(int type_code) {
+    if (type_code_ != type_code) {
+      this->Clear();
+      type_code_ = type_code;
+    }
+  }
+  template<typename T>
+  void SwitchToClass(int type_code, T v) {
+    if (type_code_ != type_code) {
+      this->Clear();
+      type_code_ = type_code;
+      value_.v_handle = new T(v);
+    } else {
+      *static_cast<T*>(value_.v_handle) = v;
+    }
+  }
+  void SwitchToObject(int type_code, ObjectPtr<Object> other) {
+    if (other.data_ != nullptr) {
+      this->Clear();
+      type_code_ = type_code;
+      // move the handle out
+      value_.v_handle = other.data_;
+      other.data_ = nullptr;
+    } else {
+      SwitchToPOD(kNull);
+    }
+  }
+  void Clear() {
+    if (type_code_ == kNull) return;
+    switch (type_code_) {
+      case kStr: delete ptr<std::string>(); break;
+      case kFuncHandle: delete ptr<PackedFunc>(); break;
+      case kObjectHandle: {
+        static_cast<Object*>(value_.v_handle)->DecRef();
+        break;
+      }
+    }
+    if (type_code_ > kExtBegin) {
+      LOG(FATAL) << "Does not support ext type";
+    }
+    type_code_ = kNull;
+  }
+};
+
+// implementation details
+inline const char* TypeCode2Str(int type_code) {
+  switch (type_code) {
+    case kDLInt: return "int";
+    case kDLUInt: return "uint";
+    case kDLFloat: return "float";
+    case kStr: return "str";
+    case kBytes: return "bytes";
+    case kHandle: return "handle";
+    case kNull: return "NULL";
+    case kFuncHandle: return "FunctionHandle";
+    case kObjectHandle: return "ObjectCell";
+    default: LOG(FATAL) << "unknown type_code="
+                        << static_cast<int>(type_code); return "";
+  }
+}
+
+inline int String2MXNetTypeWithBool(const std::string& s) {
+  if (s == "float32") {
+    return mshadow::kFloat32;
+  } else if (s == "float64") {
+    return mshadow::kFloat64;
+  } else if (s == "flaot16") {
+    return mshadow::kFloat16;
+  } else if (s == "uint8") {
+    return mshadow::kUint8;
+  } else if (s == "int8") {
+    return mshadow::kInt8;
+  } else if (s == "int32") {
+    return mshadow::kInt32;
+  } else if (s == "int64") {
+    return mshadow::kInt64;
+  } else if (s == "bool") {
+    return mshadow::kBool;
+  } else {
+    LOG(FATAL) << "unknown type " << s;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return 0;
+}
+
+inline int String2MXNetType(const std::string& s) {
+  if (s == "float32") {
+    return mshadow::kFloat32;
+  } else if (s == "float64") {
+    return mshadow::kFloat64;
+  } else if (s == "flaot16") {
+    return mshadow::kFloat16;
+  } else if (s == "uint8") {
+    return mshadow::kUint8;
+  } else if (s == "int8") {
+    return mshadow::kInt8;
+  } else if (s == "int32") {
+    return mshadow::kInt32;
+  } else if (s == "int64") {
+    return mshadow::kInt64;
+  } else {
+    LOG(FATAL) << "unknown type " << s;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return 0;
+}
+
+inline MXNetArgValue MXNetArgs::operator[](int i) const {
+  CHECK_LT(i, num_args)
+      << "not enough argument passed, "
+      << num_args << " passed"
+      << " but request arg[" << i << "].";
+  return MXNetArgValue(values[i], type_codes[i]);
+}
+
+inline int MXNetArgs::size() const {
+  return num_args;
+}
+
+inline void PackedFunc::CallPacked(MXNetArgs args, MXNetRetValue* rv) const {
+  body_(args, rv);
+}
+
+inline PackedFunc::FType PackedFunc::body() const {
+  return body_;
+}
+
+// internal namespace
+namespace detail {
+
+template<bool stop, std::size_t I, typename F>
+struct for_each_dispatcher {
+  template<typename T, typename ...Args>
+  static void run(const F& f, T&& value, Args&&... args) {  // NOLINT(*)
+    f(I, std::forward<T>(value));
+    for_each_dispatcher<sizeof...(Args) == 0, (I+1), F>
+        ::run(f, std::forward<Args>(args)...);
+  }
+};
+
+template<std::size_t I, typename F>
+struct for_each_dispatcher<true, I, F>  {
+  static void run(const F& f) {}  // NOLINT(*)
+};
+
+template<typename F, typename ...Args>
+inline void for_each(const F& f, Args&&... args) {  // NOLINT(*)
+  for_each_dispatcher<sizeof...(Args) == 0, 0, F>
+      ::run(f, std::forward<Args>(args)...);
+}
+}  // namespace detail
+
+/* \brief argument settter to PackedFunc */
+class MXNetArgsSetter {
+ public:
+  MXNetArgsSetter(MXNetValue* values, int* type_codes)
+      : values_(values), type_codes_(type_codes) {}
+  // setters for POD types
+  template<typename T,
+           typename = typename std::enable_if<
+             std::is_integral<T>::value>::type>
+  void operator()(size_t i, T value) const {
+    values_[i].v_int64 = static_cast<int64_t>(value);
+    type_codes_[i] = kDLInt;
+  }
+  void operator()(size_t i, uint64_t value) const {
+    values_[i].v_int64 = static_cast<int64_t>(value);
+    CHECK_LE(value,
+             static_cast<uint64_t>(std::numeric_limits<int64_t>::max()));
+    type_codes_[i] = kDLInt;
+  }
+  void operator()(size_t i, double value) const {
+    values_[i].v_float64 = value;
+    type_codes_[i] = kDLFloat;
+  }
+  void operator()(size_t i, std::nullptr_t value) const {
+    values_[i].v_handle = value;
+    type_codes_[i] = kNull;
+  }
+  void operator()(size_t i, const MXNetArgValue& value) const {
+    values_[i] = value.value_;
+    type_codes_[i] = value.type_code_;
+  }
+  void operator()(size_t i, void* value) const {
+    values_[i].v_handle = value;
+    type_codes_[i] = kHandle;
+  }
+  void operator()(size_t i, DLTensor* value) const {
+    values_[i].v_handle = value;
+    type_codes_[i] = kArrayHandle;
+  }
+  void operator()(size_t i, const char* value) const {
+    values_[i].v_str = value;
+    type_codes_[i] = kStr;
+  }
+  // setters for container type
+  // They must be reference(instead of const ref)
+  // to make sure they are alive in the tuple(instead of getting converted)
+  void operator()(size_t i, const std::string& value) const {  // NOLINT(*)
+    values_[i].v_str = value.c_str();
+    type_codes_[i] = kStr;
+  }
+  void operator()(size_t i, const MXNetByteArray& value) const {  // NOLINT(*)
+    values_[i].v_handle = const_cast<MXNetByteArray*>(&value);
+    type_codes_[i] = kBytes;
+  }
+  void operator()(size_t i, const PackedFunc& value) const {  // NOLINT(*)
+    values_[i].v_handle = const_cast<PackedFunc*>(&value);
+    type_codes_[i] = kFuncHandle;
+  }
+  template<typename FType>
+  void operator()(size_t i, const TypedPackedFunc<FType>& value) const {  // NOLINT(*)
+    operator()(i, value.packed());
+  }
+  void operator()(size_t i, const ObjectRef& value) const {  // NOLINT(*)
+    if (value.defined()) {
+      values_[i].v_handle = value.data_.data_;
+      type_codes_[i] = kObjectHandle;
+    } else {
+      type_codes_[i] = kNull;
+    }
+  }
+  void operator()(size_t i, const MXNetRetValue& value) const {  // NOLINT(*)
+    if (value.type_code() == kStr) {
+      values_[i].v_str = value.ptr<std::string>()->c_str();
+      type_codes_[i] = kStr;
+    } else {
+      CHECK_NE(value.type_code(), kBytes) << "not handled.";
+      values_[i] = value.value_;
+      type_codes_[i] = value.type_code();
+    }
+  }
+
+ private:
+  /*! \brief The values fields */
+  MXNetValue* values_;
+  /*! \brief The type code fields */
+  int* type_codes_;
+};
+
+template<typename... Args>
+inline MXNetRetValue PackedFunc::operator()(Args&& ...args) const {
+  const int kNumArgs = sizeof...(Args);
+  const int kArraySize = kNumArgs > 0 ? kNumArgs : 1;
+  MXNetValue values[kArraySize];
+  int type_codes[kArraySize];
+  detail::for_each(MXNetArgsSetter(values, type_codes),
+                   std::forward<Args>(args)...);
+  MXNetRetValue rv;
+  body_(MXNetArgs(values, type_codes, kNumArgs), &rv);
+  return rv;
+}
+
+namespace detail {
+template<typename R, int nleft, int index, typename F>
+struct unpack_call_dispatcher {
+  template<typename ...Args>
+  static void run(const F& f,
+                  const MXNetArgs& args_pack,
+                  MXNetRetValue* rv,
+                  Args&&... unpacked_args) {
+    unpack_call_dispatcher<R, nleft - 1, index + 1, F>
+        ::run(f, args_pack, rv,
+              std::forward<Args>(unpacked_args)...,
+              args_pack[index]);
+  }
+};
+
+template<typename R, int index, typename F>
+struct unpack_call_dispatcher<R, 0, index, F> {
+  template<typename ...Args>
+  static void run(const F& f,
+                  const MXNetArgs& args_pack,
+                  MXNetRetValue* rv,
+                  Args&&... unpacked_args) {
+    *rv = R(f(std::forward<Args>(unpacked_args)...));
+  }
+};
+
+template<int index, typename F>
+struct unpack_call_dispatcher<void, 0, index, F> {
+  template<typename ...Args>
+  static void run(const F& f,
+                  const MXNetArgs& args_pack,
+                  MXNetRetValue* rv,
+                  Args&&... unpacked_args) {
+    f(std::forward<Args>(unpacked_args)...);
+  }
+};
+
+template<typename R, int nargs, typename F>
+inline void unpack_call(const F& f, const MXNetArgs& args, MXNetRetValue* rv) {
+  unpack_call_dispatcher<R, nargs, 0, F>::run(f, args, rv);
+}
+
+template<typename R, typename ...Args>
+inline R call_packed(const PackedFunc& pf, Args&& ...args) {
+  return R(pf(std::forward<Args>(args)...));
+}
+
+template<typename R>
+struct typed_packed_call_dispatcher {
+  template<typename ...Args>
+  static inline R run(const PackedFunc& pf, Args&& ...args) {
+    return pf(std::forward<Args>(args)...);
+  }
+};
+
+template<>
+struct typed_packed_call_dispatcher<void> {
+  template<typename ...Args>
+  static inline void run(const PackedFunc& pf, Args&& ...args) {
+    pf(std::forward<Args>(args)...);
+  }
+};
+}  // namespace detail
+
+template<typename R, typename ...Args>
+TypedPackedFunc<R(Args...)>::TypedPackedFunc(PackedFunc packed)
+  : packed_(packed) {}
+
+template<typename R, typename ...Args>
+TypedPackedFunc<R(Args...)>::TypedPackedFunc(const MXNetRetValue& value)
+    : packed_(value.operator PackedFunc()) {}
+
+template<typename R, typename ...Args>
+TypedPackedFunc<R(Args...)>::TypedPackedFunc(const MXNetArgValue& value)
+    : packed_(value.operator PackedFunc()) {}
+
+template<typename R, typename ...Args>
+template<typename FType>
+inline void TypedPackedFunc<R(Args...)>::AssignTypedLambda(FType flambda) {
+  packed_ = PackedFunc([flambda](const MXNetArgs& args, MXNetRetValue* rv) {
+      detail::unpack_call<R, sizeof...(Args)>(flambda, args, rv);
+    });
+}
+
+template<typename R, typename ...Args>
+inline R TypedPackedFunc<R(Args...)>::operator()(Args... args) const {
+  return detail::typed_packed_call_dispatcher<R>
+      ::run(packed_, std::forward<Args>(args)...);
+}
+
+// extension and node type handling
+namespace detail {
+template<typename T, typename TSrc, bool is_ext, bool is_nd>
+struct MXNetValueCast {
+  static T Apply(const TSrc* self) {
+    static_assert(!is_ext && !is_nd, "The default case accepts only non-extensions");
+    return self->template AsObjectRef<T>();
+  }
+};
+
+}  // namespace detail
+
+template<typename T, typename>
+inline MXNetRetValue::operator T() const {
+  return detail::
+      MXNetValueCast<T, MXNetRetValue,
+                   (extension_type_info<T>::code != 0),
+                   (array_type_info<T>::code > 0)>
+      ::Apply(this);
+}
+
+}  // namespace runtime
+}  // namespace mxnet
+#endif  // MXNET_RUNTIME_PACKED_FUNC_H_

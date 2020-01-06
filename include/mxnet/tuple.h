@@ -60,6 +60,17 @@ class Tuple {
     delete [] data_heap_;
   }
   /*!
+   * constructor to construct a tuple with all `value`.
+   * \param ndim the number of dimension
+   * \param value the dimension size for all dims
+   */
+  inline Tuple(const int ndim, const dim_t value) {  // NOLINT(*)
+    this->SetDim(ndim);
+    if (ndim > 0) {
+      std::fill_n(begin(), ndim, value);
+    }
+  }
+  /*!
    * \brief copy constructor from another tuple
    * \param s the source tuple
    */

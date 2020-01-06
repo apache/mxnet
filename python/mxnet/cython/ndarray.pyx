@@ -36,7 +36,10 @@ cdef class NDArrayBase:
         if handle is None:
             self.chandle = NULL
         else:
-            ptr = handle.value
+            if isinstance(handle, (int, long)):
+                ptr = handle
+            else:
+                ptr = handle.value
             self.chandle = <SymbolHandle>(ptr)
 
     property handle:
@@ -60,6 +63,9 @@ cdef class NDArrayBase:
 
     def __reduce__(self):
         return (_ndarray_cls, (None,), self.__getstate__())
+
+    def _get_handle(self):
+        return <size_t>self.chandle
 
 
 _ndarray_cls = None

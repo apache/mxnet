@@ -15,15 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Registering ops in mxnet.numpy for imperative programming."""
+""" Adapted from incubator-tvm/python/tvm/_ffi/_cython/ndarray.pxi """
+
+import ctypes
+from ...numpy import ndarray
+
+# cdef NewArray(NDArrayHandle handle, int stype=-1, int is_np_array=0):
+#     """Create a new array given handle"""
+#     create_array_fn = _np_ndarray_cls if is_np_array else _ndarray_cls
+#     return create_array_fn(_ctypes.cast(<unsigned long long>handle, _ctypes.c_void_p), stype=stype)
 
 
-from ..base import _init_np_op_module
-from ..ndarray.register import _make_ndarray_function
-from .._ffi.function import _init_api
-
-_init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
-                   mx_module_name=None, make_op_func=_make_ndarray_function)
-
-_init_api("np", "mxnet.numpy")
-_init_api("_npi", "mxnet.ndarray.numpy._internal")
+cdef c_make_array(void* handle):
+    # create_array_fn = _np_ndarray_cls
+    # print(create_array_fn)
+    # return return ndarray(handle=None if value[0].v_handle == 0 else ctypes.cast(value[0].v_handle, NDArrayHandle))
+    # return ctypes.cast(<unsigned long long>handle, ctypes.c_void_p)
+    return ndarray(handle=<unsigned long long>handle)

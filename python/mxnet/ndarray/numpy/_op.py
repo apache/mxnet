@@ -45,7 +45,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
            'diff', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount', 'pad']
+           'where', 'bincount', 'pad', 'zeros0', 'zeros1', 'tensordot1', 'tensordot0']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7490,3 +7490,187 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
             raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='minimum')
     return _npi.pad(x, pad_width, mode='constant', constant_value=0)
+
+
+@set_module('mxnet.ndarray.numpy')
+def zeros1(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+    """Return a new array of given shape and type, filled with zeros.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `numpy.float32`. Note that this
+        behavior is different from NumPy's `zeros` function where `float64`
+        is the default value, because `float32` is considered as the default
+        data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        Array of zeros with the given shape, dtype, and ctx.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    # if ctx is None:
+    #     ctx = str(current_context())
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _npi.zeros1(shape, dtype, ctx)
+
+
+@set_module('mxnet.ndarray.numpy')
+def zeros0(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+    """Return a new array of given shape and type, filled with zeros.
+    This function currently only supports storing multi-dimensional data
+    in row-major (C-style).
+
+    Parameters
+    ----------
+    shape : int or tuple of int
+        The shape of the empty array.
+    dtype : str or numpy.dtype, optional
+        An optional value type. Default is `numpy.float32`. Note that this
+        behavior is different from NumPy's `zeros` function where `float64`
+        is the default value, because `float32` is considered as the default
+        data type in deep learning.
+    order : {'C'}, optional, default: 'C'
+        How to store multi-dimensional data in memory, currently only row-major
+        (C-style) is supported.
+    ctx : Context, optional
+        An optional device context (default is the current default context).
+
+    Returns
+    -------
+    out : ndarray
+        Array of zeros with the given shape, dtype, and ctx.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    # if ctx is None:
+    #     ctx = str(current_context())
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _npi.zeros0(shape, dtype, ctx)
+
+
+@set_module('mxnet.ndarray.numpy')
+def tensordot1(a, b, axes=2):
+    r"""
+    tensordot(a, b, axes=2)
+    Compute tensor dot product along specified axes for arrays >= 1-D.
+    Given two tensors (arrays of dimension greater than or equal to one),
+    `a` and `b`, and an ndarray object containing two ndarray
+    objects, ``(a_axes, b_axes)``, sum the products of `a`'s and `b`'s
+    elements (components) over the axes specified by ``a_axes`` and
+    ``b_axes``. The third argument can be a single non-negative
+    integer_like scalar, ``N``; if it is such, then the last ``N``
+    dimensions of `a` and the first ``N`` dimensions of `b` are summed
+    over.
+    Parameters
+    ----------
+    a, b : ndarray, len(shape) >= 1
+        Tensors to "dot".
+    axes : int or (2,) ndarray
+        * integer_like
+        If an int N, sum over the last N axes of `a` and the first N axes
+        of `b` in order. The sizes of the corresponding axes must match.
+        * (2,) ndarray
+        Or, a list of axes to be summed over, first sequence applying to `a`,
+        second to `b`. Both elements ndarray must be of the same length.
+    See Also
+    --------
+    dot, einsum
+    Notes
+    -----
+    Three common use cases are:
+        * ``axes = 0`` : tensor product :math:`a\otimes b`
+        * ``axes = 1`` : tensor dot product :math:`a\cdot b`
+        * ``axes = 2`` : (default) tensor double contraction :math:`a:b`
+    When `axes` is integer_like, the sequence for evaluation will be: first
+    the -Nth axis in `a` and 0th axis in `b`, and the -1th axis in `a` and
+    Nth axis in `b` last.
+    When there is more than one axis to sum over - and they are not the last
+    (first) axes of `a` (`b`) - the argument `axes` should consist of
+    two sequences of the same length, with the first axis to sum over given
+    first in both sequences, the second axis second, and so forth.
+    Examples
+    --------
+    >>> a = np.arange(60.).reshape(3,4,5)
+    >>> b = np.arange(24.).reshape(4,3,2)
+    >>> c = np.tensordot(a,b, axes=([1,0],[0,1]))
+    >>> c.shape
+    (5, 2)
+    >>> c
+    array([[ 4400.,  4730.],
+           [ 4532.,  4874.],
+           [ 4664.,  5018.],
+           [ 4796.,  5162.],
+           [ 4928.,  5306.]])
+    """
+    return _npi.tensordot_dispatcher(a, b, axes)
+
+
+@set_module('mxnet.ndarray.numpy')
+def tensordot0(a, b, axes=2):
+    r"""
+    tensordot(a, b, axes=2)
+    Compute tensor dot product along specified axes for arrays >= 1-D.
+    Given two tensors (arrays of dimension greater than or equal to one),
+    `a` and `b`, and an ndarray object containing two ndarray
+    objects, ``(a_axes, b_axes)``, sum the products of `a`'s and `b`'s
+    elements (components) over the axes specified by ``a_axes`` and
+    ``b_axes``. The third argument can be a single non-negative
+    integer_like scalar, ``N``; if it is such, then the last ``N``
+    dimensions of `a` and the first ``N`` dimensions of `b` are summed
+    over.
+    Parameters
+    ----------
+    a, b : ndarray, len(shape) >= 1
+        Tensors to "dot".
+    axes : int or (2,) ndarray
+        * integer_like
+        If an int N, sum over the last N axes of `a` and the first N axes
+        of `b` in order. The sizes of the corresponding axes must match.
+        * (2,) ndarray
+        Or, a list of axes to be summed over, first sequence applying to `a`,
+        second to `b`. Both elements ndarray must be of the same length.
+    See Also
+    --------
+    dot, einsum
+    Notes
+    -----
+    Three common use cases are:
+        * ``axes = 0`` : tensor product :math:`a\otimes b`
+        * ``axes = 1`` : tensor dot product :math:`a\cdot b`
+        * ``axes = 2`` : (default) tensor double contraction :math:`a:b`
+    When `axes` is integer_like, the sequence for evaluation will be: first
+    the -Nth axis in `a` and 0th axis in `b`, and the -1th axis in `a` and
+    Nth axis in `b` last.
+    When there is more than one axis to sum over - and they are not the last
+    (first) axes of `a` (`b`) - the argument `axes` should consist of
+    two sequences of the same length, with the first axis to sum over given
+    first in both sequences, the second axis second, and so forth.
+    Examples
+    --------
+    >>> a = np.arange(60.).reshape(3,4,5)
+    >>> b = np.arange(24.).reshape(4,3,2)
+    >>> c = np.tensordot(a,b, axes=([1,0],[0,1]))
+    >>> c.shape
+    (5, 2)
+    >>> c
+    array([[ 4400.,  4730.],
+           [ 4532.,  4874.],
+           [ 4664.,  5018.],
+           [ 4796.,  5162.],
+           [ 4928.,  5306.]])
+    """
+    return _npi.tensordot_dispatcher0(a, b, axes)
