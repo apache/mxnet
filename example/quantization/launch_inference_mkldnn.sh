@@ -105,7 +105,7 @@ done
 wait
 
 fps=`grep image/sec BENCHMARK_*.log | awk '{ sum += $(NF) }; END { print sum }'`
-latency=$(echo "scale=2; 1000*$INS/$fps" | bc)
-echo "overall throughput: $fps"
-echo "latency per instance: $latency"
+latency=$(awk "BEGIN {printf \"%.2f\", 1000*${BS}*${INS}/${fps}}")
+echo "overall throughput (image/sec): $fps"
+echo "latency per batch per instance (ms): $latency"
 echo "benchmark finish:)"
