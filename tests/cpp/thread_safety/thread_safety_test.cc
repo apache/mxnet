@@ -826,20 +826,20 @@ TEST(ThreadSafety, CachedOpFullModel) {
   std::vector<std::string> models_list = {
       "imagenet1k-resnet-18", "imagenet1k-resnet-152", "imagenet1k-resnet-50"};
   for (const auto &model : models_list) {
-    run_inference_unsupported(model, 1, true, 20);
-    run_inference_unsupported(model, 2, true, 20);
-    run_inference_unsupported(model, 4, true, 5);
-    run_inference_unsupported(model, 4, true, 20);
-    run_inference_unsupported(model, 4, false, 20);
-    run_inference_unsupported(model, 8, true, 20);
+    run_inference(model, 1, true, 20);
+    run_inference(model, 2, true, 20);
+    run_inference(model, 4, true, 5);
+    run_inference(model, 4, true, 20);
+    run_inference(model, 4, false, 20);
+    run_inference(model, 8, true, 20);
     // static_alloc = true
-    run_inference_unsupported(model, 2, true, 20, true);
-    run_inference_unsupported(model, 4, true, 5, true);
-    run_inference_unsupported(model, 4, true, 20, true);
-    run_inference_unsupported(model, 8, true, 20, true);
+    run_inference(model, 2, true, 20, true);
+    run_inference(model, 4, true, 5, true);
+    run_inference(model, 4, true, 20, true);
+    run_inference(model, 8, true, 20, true);
     // static_alloc = true, static_shape = true
-    run_inference_unsupported(model, 4, true, 20, true, true);
-    run_inference_unsupported(model, 8, true, 20, true, true);
+    run_inference(model, 4, true, 20, true, true);
+    run_inference(model, 8, true, 20, true, true);
     // the below line may hang
     //run_inference_unsupported(model, 32, false, 20);
     // the below line won't hang, its a workaround for the above usecase
