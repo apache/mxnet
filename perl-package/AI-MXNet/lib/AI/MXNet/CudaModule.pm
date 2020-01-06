@@ -18,6 +18,7 @@
 package AI::MXNet::CudaModule;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -33,6 +34,11 @@ our %DTYPE_CPP_TO_STR = qw(
     char     int8
     int64_t  int64
 );
+
+=head1 NAME
+
+    AI::MXNet::CudaModule - Interface to runtime cuda kernel compile module.
+=cut
 
 =head1 DESCRIPTION
 
@@ -81,12 +87,12 @@ our %DTYPE_CPP_TO_STR = qw(
 
     Parameters
     ----------
-    source : str
+    source : Str
         Complete source code.
-    options : array ref of str
+    options : Str|ArrayRef[Str]
         Compiler flags. For example, use "-I/usr/local/cuda/include" to
         add cuda headers to include path.
-    exports : array ref of str
+    exports : Str|ArrayRef[Str]
         Export kernel names.
 =cut
 
@@ -124,9 +130,9 @@ sub DEMOLISH
 
         Parameters
         ----------
-        name : str
+        $name : Str
             String name of the kernel.
-        signature : str
+        $signature : Str
             Function signature for the kernel. For example, if a kernel is
             declared as::
 
@@ -190,13 +196,15 @@ method get_kernel(Str $name, Str $signature)
     return AI::MXNet::CudaKernel->new($handle, $name, \@is_ndarray, \@dtypes);
 }
 
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet');
+
 package AI::MXNet::CudaKernel;
 use Mouse;
 use AI::MXNet::Base;
 
 =head1 NAME
 
-    AI::MXNet::CudaKernel
+    AI::MXNet::CudaKernel - Constructs CUDA kernel.
 =cut
 
 =head1 DESCRIPTION
@@ -228,15 +236,15 @@ sub DEMOLISH
 
         Parameters
         ----------
-        $args : array ref of NDArray or numbers
+        $args : ArrayRef[AI::MXNet::NDArray|Num]
             List of arguments for kernel. NDArrays are expected for pointer
             types (e.g. `float*`, `double*`) while numbers are expected for
             non-pointer types (e.g. `int`, `float`).
         $ctx : AI::MXNet::Context
             The context to launch kernel on. Must be GPU context.
-        $grid_dims : array ref of 3 integers
+        $grid_dims : array ref of 3 integers (CudaKernelShape)
             Grid dimensions for CUDA kernel.
-        $block_dims : array ref of 3 integers
+        $block_dims : array ref of 3 integers (CudaKernelShape)
             Block dimensions for CUDA kernel.
         $shared_mem=0 : integer, optional
             Size of dynamically allocated shared memory. Defaults to 0.

@@ -45,6 +45,7 @@ around BUILDARGS => sub {
 # Base class for Initializers
 package AI::MXNet::Initializer;
 use Mouse;
+use AI::MXNet::NS;
 use AI::MXNet::Base qw(:DEFAULT pzeros pceil);
 use AI::MXNet::NDArray;
 use JSON::PP;
@@ -72,6 +73,24 @@ has '_print_func' => (is => 'rw', isa => 'CodeRef', lazy => 1,
 =head1 NAME
 
     AI::MXNet::Initializer - Base class for all Initializers
+
+=head1 DESCRIPTION
+
+    The base class AI::MXNet::Initializer defines the default behaviors to initialize various parameters,
+    such as set bias to 1, except for the weight. Other classes then define how to initialize the weights.
+    Currently following classes are available:
+    mx->init->Uniform    Initializes weights with random values uniformly sampled from a given range.
+    mx->init->Normal     Initializes weights with random values sampled from a normal distribution with a mean of zero and standard deviation of sigma.
+    mx->init->Load       Initializes variables by loading data from file or dict.
+    mx->init->Mixed      Initialize parameters using multiple initializers.
+    mx->init->Zero       Initializes weights to zero.
+    mx->init->One        Initializes weights to one.
+    mx->init->Constant   Initializes the weights to a given value.
+    mx->init->Orthogonal Initialize weight as orthogonal matrix.
+    mx->init->Xavier     Returns an initializer performing Xavier initialization for weights.
+    mx->init->MSRAPrelu  Initialize the weight according to a MSRA paper.
+    mx->init->Bilinear   Initialize weight for upsampling layers.
+    mx->init->FusedRNN   Initialize parameters for fused rnn layers.
 
 =head2 register
 
@@ -173,6 +192,16 @@ method call(Str|AI::MXNet::InitDesc $desc, AI::MXNet::NDArray $arr)
             $self->$method($desc, $arr);
             $self->_verbose_print($desc, $1, $arr);
         }
+        elsif($desc =~ /min$/)
+        {
+            $self->_init_zero($desc, $arr);
+            $self->_verbose_print($desc, 'min', $arr);
+        }
+        elsif($desc =~ /max$/)
+        {
+            $self->_init_one($desc, $arr);
+            $self->_verbose_print($desc, 'max', $arr);
+        }
         else
         {
             $self->_init_default($desc, $arr)
@@ -231,6 +260,14 @@ method _legacy_init(Str $name, AI::MXNet::NDArray $arr)
     elsif($name =~ /moving_avg$/)
     {
         $self->_init_zero($name, $arr);
+    }
+    elsif($name =~ /min$/)
+    {
+        $self->_init_zero($name, $arr);
+    }
+    elsif($name =~ /max$/)
+    {
+        $self->_init_one($name, $arr);
     }
     else
     {
@@ -372,7 +409,7 @@ method call(Str $name, AI::MXNet::NDArray $arr)
 
 =head1 NAME
 
-    AI::MXNet::Mixed - A container for multiple initializer patterns.
+    AI::MXNet::Mixed - A container with multiple initializer patterns.
 =cut
 
 =head2 new
@@ -485,7 +522,7 @@ __PACKAGE__->register;
 package AI::MXNet::Uniform;
 use Mouse;
 extends 'AI::MXNet::Initializer';
-has "scale" => (is => "ro", isa => "Num", default => 0.7);
+has "scale" => (is => "ro", isa => "Num", default => 0.07);
 around BUILDARGS => sub {
     my $orig  = shift;
     my $class = shift;

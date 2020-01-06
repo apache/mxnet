@@ -313,21 +313,368 @@ method update($index, $weight, $grad, $state)
     }
 }
 
+package PerlSparseSGD;
+# perl reference implemenation of sgd
+use Mouse;
+use AI::MXNet::TestUtils qw(almost_equal);
+extends 'AI::MXNet::Optimizer';
+has '+learning_rate' => (default => 0.01);
+has 'momentum'       => (is => "ro", isa => "Num",  default => 0);
+has 'multi_precision' => (is => 'ro', isa => 'Bool', default => 0);
+has 'lazy_update' => (is => 'ro', isa => 'Bool', default => 1);
+
+method create_state($index, $weight)
+{
+    if($self->momentum == 0)
+    {
+        return undef;
+    }
+    else
+    {
+        return mx->nd->zeros($weight->shape, ctx => $weight->context, dtype => $weight->dtype);
+    }
+}
+
+method update($index, $weight, $grad, $state)
+{
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    $self->_update_count($index);
+    my $num_rows = $weight->shape->[0];
+    if($self->momentum == 0)
+    {
+        # Update on a per row basis, skip all-zero rows
+        for my $row (0..$num_rows-1)
+        {
+            my $grad_row = $grad->at($row);
+            my $all_zeros = almost_equal($grad_row->aspdl, mx->nd->zeros($grad_row->shape, ctx => $grad_row->context, dtype => $grad_row->dtype)->aspdl);
+            if($all_zeros and $self->lazy_update)
+            {
+                next;
+            }
+            if(defined $self->clip_gradient)
+            {
+                $weight->at($row) .= (
+                    (1 - $lr*$wd)*$weight->at($row) -
+                    $lr * mx->nd->clip(
+                        $grad->at($row)*$self->rescale_grad,
+                        -$self->clip_gradient, $self->clip_gradient
+                    )
+                );
+            }
+            else
+            {
+                $weight->at($row) .= (1 - $lr*$wd)*$weight->at($row) - $lr*$self->rescale_grad*$grad->at($row);
+            }
+        }
+    }
+    else
+    {
+        my $mom = $state;
+        for my $row (0..$num_rows-1)
+        {
+            my $grad_row = $grad->at($row);
+            my $all_zeros = almost_equal($grad_row->aspdl, mx->nd->zeros($grad_row->shape, ctx => $grad_row->context, dtype => $grad_row->dtype)->aspdl);
+            if($all_zeros and $self->lazy_update)
+            {
+                next;
+            }
+            if(defined $self->clip_gradient)
+            {
+                $mom->at($row) .= ($self->momentum*$mom->at($row) - $lr*$wd*$weight->at($row) -
+                    $lr * mx->nd->clip($grad->at($row)*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)
+                );
+                $weight->at($row) += $mom->at($row);
+            }
+            else
+            {
+                $mom->at($row) .= $self->momentum*$mom->at($row) - $lr*$wd*$weight->at($row) - $lr*$self->rescale_grad*$grad->at($row);
+                $weight->at($row) += $mom->at($row);
+            }
+        }
+    }
+
+}
+
+package PerlNAG;
+use Mouse;
+extends 'PerlSGD';
+
+method create_state($index, $weight)
+{
+    my $momentum;
+    my $weight_master_copy;
+    my $do_multi_precision = ($self->multi_precision and $weight->dtype eq 'float16');
+    if($do_multi_precision)
+    {
+        if($self->momentum != 0)
+        {
+            $momentum = mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>'float32');
+        }
+        $weight_master_copy = mx->nd->array($weight, ctx=>$weight->context, dtype=>'float32');
+        return [$weight_master_copy, $momentum];
+    }
+    else
+    {
+        if($self->momentum != 0)
+        {
+            $momentum = mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype);
+        }
+        return $momentum;
+    }
+}
+
+method update($index, $weight, $grad, $state)
+{
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    $self->_update_count($index);
+    my $use_multi_precision = (defined $state and not Scalar::Util::blessed($state) and ref($state eq 'ARRAY'));
+    if(not $use_multi_precision)
+    {
+        $grad *= $self->rescale_grad;
+        if(defined $self->clip_gradient)
+        {
+            $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+        }
+        if($self->momentum == 0)
+        {
+            $weight += -$lr * ($grad + $wd * $weight);
+        }
+        else
+        {
+            my $mom = $state;
+            $mom *= $self->momentum;
+            $grad += $wd * $weight;
+            $mom += $grad;
+            $grad += $self->momentum * $mom;
+            $weight += -$lr * $grad;
+        }
+    }
+    else
+    {
+        my $grad32 = mx->nd->array($grad, ctx=>$grad->context, dtype=>'float32');
+        $grad32 *= $self->rescale_grad;
+        if(defined $self->clip_gradient)
+        {
+            $grad32 = mx->nd->clip($grad32, -$self->clip_gradient, $self->clip_gradient);
+        }
+        my $mom = $state->[1];
+        my $weight32 = $state->[0];
+        if($self->momentum == 0)
+        {
+            $weight32 += -$lr * ($grad32 + $wd * $weight32);
+        }
+        else
+        {
+            $mom *= $self->momentum;
+            $grad32 += $wd * $weight32;
+            $mom += $grad32;
+            $grad32 += $self->momentum * $mom;
+            $weight32 += -$lr * $grad32;
+        }
+        my $tmp = $weight32->astype($weight->dtype);
+        $tmp->copyto($weight);
+    }
+}
+
+package PerlFTML;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+has 'beta1' => (is => 'rw', default => 0.6);
+has 'beta2' => (is => 'rw', default => 0.999);
+has 'epsilon' => (is => 'rw', default => 1e-8);
+
+method create_state($index, $weight)
+{
+    return [mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # d_0
+            mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # v_0
+            mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype)] # z_0
+}
+
+method update($index, $weight, $grad, $state)
+{
+    $self->_update_count($index);
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    my $t = $self->_index_update_count->{$index};
+
+    my $grad = $grad * $self->rescale_grad + $wd * $weight;
+    if(defined $self->clip_gradient)
+    {
+        $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+    }
+    # get previous states
+    my ($prev_d, $prev_v, $prev_z) = @{ $state };
+    # compute states
+    my $v_t = $self->beta2 * $prev_v + (1 - $self->beta2) * mx->nd->square($grad);
+    my $d_t = (1 - ($self->beta1**$t)) / $lr * (mx->nd->sqrt($v_t / (1 - ($self->beta2**$t))) + $self->epsilon);
+    my $sigma_t = $d_t - $self->beta1 * $prev_d;
+    my $z_t = $self->beta1 * $prev_z + (1 - $self->beta1) * $grad - $sigma_t * $weight;
+    # update weight
+    $weight .= - $z_t / $d_t;
+    # update states
+    $prev_d .= $d_t;
+    $prev_v .= $v_t;
+    $prev_z .= $z_t;
+}
+
+package PerlSignum;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+has 'wd_lh' => (is => 'rw', default => 0);
+has 'momentum' => (is => 'rw', default => 0.9);
+
+method create_state($index, $weight)
+{
+    if($self->momentum != 0)
+    {
+        return mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype, stype=>$weight->stype);
+    }
+    return undef;
+}
+
+method update($index, $weight, $grad, $state)
+{
+    $self->_update_count($index);
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    if(defined $state)
+    {
+        my $mom = $state;
+        if(defined $self->clip_gradient)
+        {
+            $mom .= ($self->momentum*$mom - (1-$self->momentum)*($wd*$weight +
+                mx->nd->clip($grad*$self->rescale_grad, -$self->clip_gradient, $self->clip_gradient)));
+        }
+        else
+        {
+            $mom .= $self->momentum*$mom - (1-$self->momentum)*$wd*$weight - (1-$self->momentum)*$self->rescale_grad*$grad;
+        }
+        $weight .= (1 - $lr*$self->wd_lh)*$weight + $lr * mx->nd->sign($mom);
+    }
+    else
+    {
+        $weight .= (1 - $lr*($wd+$self->wd_lh))*$weight - $lr * mx->nd->sign($grad);
+    }
+}
+
+package PerlFtrl;
+use Mouse;
+use AI::MXNet::TestUtils qw(almost_equal);
+extends 'AI::MXNet::Optimizer';
+
+has 'lamda1' => (is => 'rw', default => 0.01);
+has '+learning_rate' => (default => 0.1);
+has 'beta' => (is => 'rw', default => 1);
+has 'sparse_update' => (is => 'rw', default => 0);
+
+method create_state($index, $weight)
+{
+    return [
+        mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype),  # dn
+        mx->nd->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype)   # n
+    ];
+}
+
+method update($index, $weight, $grad, $state)
+{
+    $self->_update_count($index);
+    my $wd = $self->_get_wd($index);
+    my $lr = $self->_get_lr($index);
+    my $num_rows = $weight->shape->[0];
+
+    my ($dn, $n) = @$state;
+    for my $row (0..$num_rows-1)
+    {
+        my $grad_row = $grad->at($row);
+        my $all_zeros = almost_equal($grad_row->aspdl, mx->nd->zeros($grad_row->shape, ctx => $grad_row->context, dtype => $grad_row->dtype)->aspdl);
+        if($all_zeros and $self->sparse_update)
+        {
+            next;
+        }
+        $grad_row *= $self->rescale_grad;
+        if(defined $self->clip_gradient)
+        {
+            $grad_row .= mx->nd->clip($grad_row, -$self->clip_gradient, $self->clip_gradient);
+        }
+
+        #update dn, n
+        $dn->at($row) += $grad_row - (mx->nd->sqrt($n->at($row) + $grad_row * $grad_row) - mx->nd->sqrt($n->at($row))) * $weight->at($row) / $lr;
+        $n->at($row) += $grad_row * $grad_row;
+
+        # update weight
+        $weight->at($row) .= (mx->nd->sign($dn->at($row)) * $self->lamda1 - $dn->at($row)) /
+                          (($self->beta + mx->nd->sqrt($n->at($row))) / $lr + $wd) * (mx->nd->abs($dn->at($row)) > $self->lamda1);
+    }
+}
+
+package PerlAdaGrad;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+
+has 'eps' => (is => 'rw', default => 1e-7);
+method create_state($index, $weight)
+{
+    mx->nd->zeros($weight->shape, ctx => $weight->context, stype => $weight->stype);
+}
+
+method update($index, $weight, $grad, $state)
+{
+    $self->_update_count($index);
+    my $wd = $self->_get_wd($index);
+    my $lr = $self->_get_lr($index);
+    my $num_rows = $weight->shape->[0];
+    my $history = $state;
+    $grad *= $self->rescale_grad;
+    if(defined $self->clip_gradient)
+    {
+        $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+    }
+    $history += mx->nd->square($grad);
+    my $div = $grad / mx->nd->sqrt($history + $self->eps);
+    $weight += ($div + $weight * $wd) * -$lr;
+}
 
 package main;
-use Test::More tests => 1314;
+use Carp;
+use Test::More tests => 7992;
 use AI::MXNet::Base;
 use PDL::NiceSlice;
-use AI::MXNet::TestUtils qw(same reldiff almost_equal);
+use AI::MXNet::TestUtils qw(same reldiff almost_equal rand_ndarray);
 use AI::MXNet::Function::Parameters;
 
-func compare_optimizer($opt1, $opt2, $shape, $dtype)
+func compare_optimizer($opt1, $opt2, $shape, $dtype, $w_stype='default', $g_stype='default')
 {
-    my $w1 = mx->random->uniform({shape => $shape, dtype=>$dtype});
-    my $g1 = mx->random->uniform({shape => $shape, dtype=>$dtype});
-
-    my $w2 = $w1->copyto(mx->cpu());
-    my $g2 = $g1->copyto(mx->cpu());
+    my ($w1, $w2, $g1, $g2);
+    if($w_stype eq 'default')
+    {
+        $w1 = mx->random->uniform({shape => $shape, ctx => mx->cpu, dtype=>$dtype});
+        $w2 = $w1->copyto(mx->cpu());
+    }
+    elsif($w_stype eq 'row_sparse' or $w_stype eq 'csr')
+    {
+        $w2 = rand_ndarray($shape, $w_stype, 1, $dtype);
+        $w1 = $w2->copyto(mx->cpu())->tostype('default');
+    }
+    else
+    {
+        Carp::confess("type not supported yet");
+    }
+    if($g_stype eq 'default')
+    {
+        $g2 = mx->random->uniform(shape=>$shape, ctx=>mx->cpu, dtype=>$dtype);
+        $g1 = $g2->copyto(mx->cpu);
+    }
+    elsif($g_stype eq 'row_sparse' or $g_stype eq 'csr')
+    {
+        $g2 = rand_ndarray($shape, $g_stype, rand(), $dtype);
+        $g1 = $g2->copyto(mx->cpu)->tostype('default');
+    }
+    else
+    {
+        Carp::confess("type not supported yet");
+    }
 
     my $state1 = $opt1->create_state(0, $w1);
     my $state2 = $opt2->create_state(0, $w2);
@@ -406,7 +753,6 @@ func test_rms()
     }
 }
 
-
 sub test_sgd
 {
     mx->random->seed(0);
@@ -450,6 +796,202 @@ sub test_sgd
     }
 }
 
+sub test_sparse_sgd
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlSparseSGD';
+    my $opt2 = mx->optimizer->SGD;
+    my $shape = [3, 4, 5];
+    my @mom_options = ({}, {momentum => 0.9});
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad  => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0.03}, {wd => 0.05}, {wd => 0.07});
+    my @mp_options = ({}, {multi_precision => 0}, {multi_precision => 1});
+    for my $dtype(qw/float32/)
+    {
+        for my $mom_option (@mom_options)
+        {
+            for my $cg_option (@cg_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        for my $mp_option (@mp_options)
+                        {
+                            my %kwarg;
+                            %kwarg = (%kwarg, %$mom_option);
+                            %kwarg = (%kwarg, %$cg_option);
+                            %kwarg = (%kwarg, %$rg_option);
+                            %kwarg = (%kwarg, %$wd_option);
+                            %kwarg = (%kwarg, %$mp_option);
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'row_sparse', 'row_sparse');
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+sub test_std_sparse_sgd
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlSparseSGD';
+    my $opt2 = mx->optimizer->SGD;
+    my $shape = [3, 4, 5];
+    my @mom_options = ({momentum => 0.9});
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad  => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0.03}, {wd => 0.05}, {wd => 0.07});
+    for my $dtype(qw/float32/)
+    {
+        for my $mom_option (@mom_options)
+        {
+            for my $cg_option (@cg_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        my %kwarg;
+                        %kwarg = (%kwarg, %$mom_option);
+                        %kwarg = (%kwarg, %$cg_option);
+                        %kwarg = (%kwarg, %$rg_option);
+                        %kwarg = (%kwarg, %$wd_option);
+                        compare_optimizer($opt1->new(lazy_update => 0, %kwarg), $opt2->new(lazy_update => 0, %kwarg), $shape, $dtype, 'row_sparse', 'row_sparse');
+                    }
+                }
+            }
+        }
+    }
+}
+
+sub test_nag
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlNAG';
+    my $opt2 = mx->optimizer->NAG;
+    my $shape = [3, 4, 5];
+    my @mom_options = ({}, {momentum => 0.9});
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0.03}, {wd => 0.05}, {wd => 0.07});
+    my @mp_options = ({}, {multi_precision => 0}, {multi_precision => 1});
+    for my $dtype(qw/float16 float32 float64/)
+    {
+        for my $mom_option (@mom_options)
+        {
+            for my $cg_option (@cg_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        for my $mp_option (@mp_options)
+                        {
+                            my %kwarg;
+                            %kwarg = (%kwarg, %$mom_option);
+                            %kwarg = (%kwarg, %$cg_option);
+                            %kwarg = (%kwarg, %$rg_option);
+                            %kwarg = (%kwarg, %$wd_option);
+                            # %kwarg = (%kwarg, %$mp_option);
+                            next if (
+                                $dtype eq 'float16'
+                                    and
+                                (not exists $kwarg{multi_precision} or not $kwarg{multi_precision})
+                            );
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+sub test_ftml
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlFTML';
+    my $opt2 = mx->optimizer->FTML;
+    my $shape = [3, 4, 5];
+    my @beta1_options = ({}, {beta1 => 0.5}, {beta1 => 0.7});
+    my @beta2_options = ({}, {beta1 => 0.8}, {beta1 => 0.9});
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0.03}, {wd => 0.05}, {wd => 0.07});
+    for my $dtype(qw/float32/)
+    {
+        for my $beta1_option (@beta1_options)
+        {
+            for my $beta2_option (@beta2_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        for my $cg_option (@cg_options)
+                        {
+                            my %kwarg;
+                            %kwarg = (%kwarg, %$beta1_option);
+                            %kwarg = (%kwarg, %$beta2_option);
+                            %kwarg = (%kwarg, %$cg_option);
+                            %kwarg = (%kwarg, %$rg_option);
+                            %kwarg = (%kwarg, %$wd_option);
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+sub test_signum
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlSignum';
+    my $opt2 = mx->optimizer->Signum;
+    my $shape = [3, 4, 5];
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0.03}, {wd => 0.05}, {wd => 0.07});
+    my @wd_lh_options = ({}, {wd_lh => 0.015}, {wd_lh => 0.0});
+    my @mom_options = ({}, {momentum => 0.9});
+    my @lr_options = ({learning_rate => 0.05}, {learning_rate => 0.01});
+    for my $dtype (qw/float32 float64/)
+    {
+        for my $wd_lh_option (@wd_lh_options)
+        {
+            for my $mom_option (@mom_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        for my $cg_option (@cg_options)
+                        {
+                            for my $lr_option (@lr_options)
+                            {
+                                my %kwarg;
+                                %kwarg = (%kwarg, %$wd_lh_option);
+                                %kwarg = (%kwarg, %$mom_option);
+                                %kwarg = (%kwarg, %$lr_option);
+                                %kwarg = (%kwarg, %$cg_option);
+                                %kwarg = (%kwarg, %$rg_option);
+                                %kwarg = (%kwarg, %$wd_option);
+                                compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 func test_lr_wd_mult()
 {
     my $data = mx->sym->Variable('data');
@@ -481,7 +1023,77 @@ func test_lr_wd_mult()
     ok(!almost_equal($args1{fc2_weight}, $args2{fc2_weight}, 1e-1), "fc2_weight");
 }
 
+sub test_ftrl
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlFtrl';
+    my $opt2 = mx->optimizer->Ftrl;
+    my $shape = [3, 4, 5];
+    my @kwargs = ({},
+              {clip_gradient => 0.5},
+              {clip_gradient => 0.4, rescale_grad => 0.14},
+              {rescale_grad =>  0.8},
+              {clip_gradient =>  0.5, wd => 0.07},
+              {clip_gradient => 0.4, rescale_grad => 0.14, wd => 0.03},
+              {rescale_grad => 0.8, wd => 0.05},
+              {rescale_grad => 0.8, wd => 0.05, lamda1 => 0.01},
+              {clip_gradient => 0.5, wd => 0.07, lamda1 => 1.0});
+    for my $kwarg (@kwargs)
+    {
+        compare_optimizer($opt1->new(%$kwarg), $opt2->new(%$kwarg), $shape, 'float32');
+        compare_optimizer($opt1->new(sparse_update=>1, %$kwarg), $opt2->new(%$kwarg), $shape,
+                          'float32', 'row_sparse', 'row_sparse');
+    }
+}
+
+sub test_adagrad
+{
+    mx->random->seed(0);
+    my $opt1 = 'PerlAdaGrad';
+    my $opt2 = mx->optimizer->AdaGrad;
+    my $shape = [3, 4, 5];
+    my @eps_options= ({}, {eps => 1e-9});
+    my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
+    my @rg_options = ({}, {rescale_grad  => 0.14}, {rescale_grad => 0.8});
+    my @wd_options = ({}, {wd => 0});
+    for my $dtype(qw/float32/)
+    {
+        for my $eps_option (@eps_options)
+        {
+            for my $cg_option (@cg_options)
+            {
+                for my $rg_option (@rg_options)
+                {
+                    for my $wd_option (@wd_options)
+                    {
+                        my %kwarg;
+                        %kwarg = (%kwarg, %$eps_option);
+                        %kwarg = (%kwarg, %$cg_option);
+                        %kwarg = (%kwarg, %$rg_option);
+                        %kwarg = (%kwarg, %$wd_option);
+                        compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype);
+                        if(($wd_option->{wd}//0) == 0)
+                        {
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'row_sparse', 'row_sparse');
+                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'default', 'row_sparse');
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 test_adam();
 test_rms();
 test_sgd();
+test_std_sparse_sgd();
+test_sparse_sgd();
+test_nag();
+test_ftml();
+test_signum();
+test_ftrl();
+test_adagrad();
 test_lr_wd_mult();
+
+

@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=unused-argument, too-many-arguments
+# pylint: disable=unused-argument, too-many-arguments, unnecessary-pass
 """Extra symbol documents"""
 from __future__ import absolute_import as _abs
 import re as _re
@@ -103,6 +103,21 @@ class BroadcastToDoc(NDArrayDoc):
     (2L, 1L, 1L, 3L)
     >>> d.shape
     (2L, 2L, 2L, 3L)
+    """
+
+class StackDoc(NDArrayDoc):
+    """
+    Example
+    --------
+    Join a sequence of arrays along a new axis.
+    >>> x = mx.nd.array([1, 2])
+    >>> y = mx.nd.array([3, 4])
+    >>> stack(x, y)
+    [[1, 2],
+     [3, 4]]
+    >>> stack(x, y, axis=1)
+    [[1, 3],
+     [2, 4]]
     """
 
 class CustomDoc(NDArrayDoc):

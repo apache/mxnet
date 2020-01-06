@@ -18,6 +18,7 @@
 package AI::MXNet::Optimizer;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::NDArray;
 use AI::MXNet::Random;
@@ -44,7 +45,7 @@ method register()
 {
     my $name = $self;
     ($name) = $name =~ /::(\w+)$/;
-    {  no strict 'refs'; *{__PACKAGE__."::$name"} = sub { $self }; }
+    {  no strict 'refs'; *{__PACKAGE__."::$name"} = sub { shift; $self->new(@_)  }; }
     $name = lc $name;
     if(exists $opt_registry{ $name })
     {
@@ -63,14 +64,14 @@ method register()
 
         Parameters
         ----------
-        name: str
+        $name: Str
             Name of required optimizer. Should be the name
             of a subclass of Optimizer. Case insensitive.
 
-        rescale_grad : float
+        :$rescale_grad : Num
             Rescaling factor on gradient. Normally should be 1/batch_size.
 
-        kwargs: dict
+        %kwargs: Hash
             Parameters for optimizer
 
         Returns
@@ -267,41 +268,65 @@ method _get_wd(Index $index)
 
     A very simple SGD optimizer with momentum and weight regularization.
 
+    If the storage types of weight and grad are both 'row_sparse', and 'lazy_update' is True,
+    **lazy updates** are applied by
+
+        for row in grad.indices:
+            rescaled_grad[row] = lr * rescale_grad * clip(grad[row], clip_gradient) + wd * weight[row]
+            state[row] = momentum[row] * state[row] + rescaled_grad[row]
+            weight[row] = weight[row] - state[row]
+
+    The sparse update only updates the momentum for the weights whose row_sparse
+    gradient indices appear in the current batch, rather than updating it for all
+    indices. Compared with the original update, it can provide large
+    improvements in model training throughput for some applications. However, it
+    provides slightly different semantics than the original update, and
+    may lead to different empirical results.
+
+    Otherwise, **standard updates** are applied by::
+
+        rescaled_grad = lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + rescaled_grad
+        weight = weight - state
+
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         learning_rate of SGD
 
-    momentum : float, optional
+    momentum : Num, optional
        momentum value
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 
-    param_idx2name : hash of string/int to float, optional
+    param_idx2name : hash ref of Str/Int to Num, optional
         special treat weight decay in parameter ends with bias, gamma, and beta
 
-    multi_precision: bool, optional
+    multi_precision: Bool, optional
         Flag to control the internal precision of the optimizer.
         False results in using the same precision as the weights (default),
         True makes internal 32-bit copy of the weights and applies gradients
         in 32-bit precision even if actual weights used in the model have lower precision.
         Turning this on can improve convergence and accuracy when training with float16.
+
+    lazy_update: Bool, optional, default true
 =cut
 
 package AI::MXNet::SGD;
 use Mouse;
 extends 'AI::MXNet::Optimizer';
 
-has 'kwargs'   => (is => "rw", isa => "HashRef[Num]");
-has 'momentum' => (is => "rw", isa => "Num", default => 0);
+has 'kwargs'          => (is => "rw", isa => "HashRef[Num]");
+has 'momentum'        => (is => "rw", isa => "Num", default => 0);
 has 'multi_precision' => (is => "ro", isa => "Bool", default => 0);
+has 'lazy_update'     => (is => "ro", isa => "Bool", default => 1);
 
 sub BUILD
 {
@@ -321,12 +346,13 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     my $momentum;
     my $weight_master_copy;
+    my $stype = $self->lazy_update ? $weight->stype : 'default';
     if($self->multi_precision and $weight->dtype eq 'float16')
     {
         my $weight_master_copy = AI::MXNet::NDArray->array($weight, ctx => $weight->context, dtype => 'float32');
         if($self->momentum != 0)
         {
-            $momentum = AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype => 'float32');
+            $momentum = AI::MXNet::NDArray->zeros($weight->shape, stype => $stype, ctx => $weight->context, dtype => 'float32');
         }
         return [$momentum, $weight_master_copy];
     }
@@ -341,7 +367,7 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
     }
     if($self->momentum != 0)
     {
-        $momentum = AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype => $weight->dtype);
+        $momentum = AI::MXNet::NDArray->zeros($weight->shape, stype => $stype, ctx => $weight->context, dtype => $weight->dtype);
     }
     return $momentum;
 }
@@ -353,9 +379,9 @@ method update(
     Maybe[AI::MXNet::NDArray|ArrayRef[Maybe[AI::MXNet::NDArray]]] $state
 )
 {
+    $self->_update_count($index);
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
-    $self->_update_count($index);
     my $kwargs = {
         out => $weight,
         lr  => $lr,
@@ -398,6 +424,457 @@ method update(
 
 __PACKAGE__->register;
 
+=head1 NAME
+
+    AI::MXNet::Signum - The Signum optimizer that takes the sign of gradient or momentum.
+=cut
+
+=head1 DESCRIPTION
+
+    The optimizer updates the weight by:
+
+        rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + (1-momentum)*rescaled_grad
+        weight = (1 - lr * wd_lh) * weight - lr * sign(state)
+
+    See the original paper at: https://jeremybernste.in/projects/amazon/signum.pdf
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by AI::MXNet::Optimizer
+
+    Parameters
+    ----------
+    momentum : Num, optional
+       The momentum value.
+    wd_lh : Num, optional
+       The amount of decoupled weight decay regularization, see details in the original paper at:
+       https://arxiv.org/abs/1711.05101
+=cut
+
+package AI::MXNet::Signum;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+
+has 'momentum' => (is => "rw", isa => "Num", default => 0.9);
+has 'wd_lh'    => (is => "rw", isa => "Num", default => 0);
+
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+
+    my $momentum;
+    if($self->momentum != 0)
+    {
+        $momentum = AI::MXNet::NDArray->zeros(
+            $weight->shape,
+            ctx => $weight->context,
+            dtype=>$weight->dtype,
+            stype=>$weight->stype
+        );
+    }
+    return $momentum;
+}
+
+method update(
+    Index                     $index,
+    AI::MXNet::NDArray        $weight,
+    AI::MXNet::NDArray        $grad,
+    Maybe[AI::MXNet::NDArray|ArrayRef[Maybe[AI::MXNet::NDArray]]] $state
+)
+{
+    $self->_update_count($index);
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    my %kwargs = (
+        out => $weight,
+        lr  => $lr,
+        wd  => $wd,
+        rescale_grad => $self->rescale_grad,
+    );
+    if($self->momentum > 0)
+    {
+        $kwargs{momentum} = $self->momentum;
+    }
+    if($self->clip_gradient)
+    {
+        $kwargs{clip_gradient} = $self->clip_gradient;
+    }
+    if($self->wd_lh)
+    {
+        $kwargs{wd_lh} = $self->wd_lh;
+    }
+    if(defined $state)
+    {
+        AI::MXNet::NDArray->signum_update(
+            $weight, $grad, $state, %kwargs
+        );
+    }
+    else
+    {
+        AI::MXNet::NDArray->signsgd_update(
+            $weight, $grad, %kwargs
+        );
+    }
+}
+
+__PACKAGE__->register;
+
+=head1 NAME
+
+    AI::MXNet::FTML - The FTML optimizer.
+=cut
+
+=head1 DESCRIPTION
+
+    This class implements the optimizer described in
+    *FTML - Follow the Moving Leader in Deep Learning*,
+    available at http://proceedings.mlr.press/v70/zheng17a/zheng17a.pdf.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by AI::MXNet::Optimizer
+
+    Parameters
+    ----------
+    beta1 : Num, optional
+        0 < beta1 < 1. Generally close to 0.5.
+    beta2 : Num, optional
+        0 < beta2 < 1. Generally close to 1.
+    epsilon : Num, optional
+        Small value to avoid division by 0.
+=cut
+
+package AI::MXNet::FTML;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+
+has 'beta1'   => (is => "rw", isa => "Num", default => 0.6);
+has 'beta2'   => (is => "rw", isa => "Num", default => 0.999);
+has 'epsilon' => (is => "rw", isa => "Num", default => 1e-8);
+
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+    return [
+        AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # d_0
+        AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # v_0
+        AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # z_0
+    ];
+}
+
+method update(
+    Index                     $index,
+    AI::MXNet::NDArray        $weight,
+    AI::MXNet::NDArray        $grad,
+    Maybe[AI::MXNet::NDArray|ArrayRef[Maybe[AI::MXNet::NDArray]]] $state
+)
+{
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    my $t = $self->_update_count($index);
+    my %kwargs = (
+        out => $weight,
+        lr  => $lr,
+        wd  => $wd,
+        t   => $t,
+        beta1 => $self->beta1,
+        beta2 => $self->beta2,
+        epsilon => $self->epsilon,
+        rescale_grad => $self->rescale_grad
+    );
+    if($self->clip_gradient)
+    {
+        $kwargs{clip_grad} = $self->clip_gradient;
+    }
+    AI::MXNet::NDArray->ftml_update($weight, $grad, @{ $state }, \%kwargs);
+}
+
+__PACKAGE__->register;
+
+=head1 NAME
+
+    AI::MXNet::LBSGD - The Large Batch SGD optimizer with momentum and weight decay.
+=cut
+
+=head1 DESCRIPTION
+
+    The optimizer updates the weight by::
+
+        state = momentum * state + lr * rescale_grad * clip(grad, clip_gradient) + wd * weight
+        weight = weight - state
+
+    Parameters
+    ----------
+    momentum : Num, optional
+       The momentum value.
+    multi_precision: Bool, optional
+       Flag to control the internal precision of the optimizer.
+       0 results in using the same precision as the weights (default),
+       1 makes internal 32-bit copy of the weights and applies gradients
+                in 32-bit precision even if actual weights used in the model have lower precision.`<
+                Turning this on can improve convergence and accuracy when training with float16.
+    warmup_strategy: string ('linear', 'power2', 'sqrt'. , 'lars'   default : 'linear')
+    warmup_epochs: unsigned, default: 5
+    batch_scale:   unsigned, default: 1 (same as batch size*numworkers)
+    updates_per_epoch: updates_per_epoch (default: 32, Default might not reflect true number batches per epoch. Used for warmup.)
+    begin_epoch: unsigned, default 0, starting epoch.
+=cut
+
+package AI::MXNet::LBSGD;
+use Mouse;
+extends 'AI::MXNet::Optimizer';
+
+has 'momentum'          => (is => 'rw', isa => 'Num', default => 0);
+has 'multi_precision'   => (is => 'rw', isa => 'Bool', default => 0);
+has 'warmup_startegy'   => (is => 'rw', isa => 'Str', default => 'linear');
+has 'warmup_epochs'     => (is => 'rw', isa => 'Int', default => 5);
+has 'batch_scale'       => (is => 'rw', isa => 'Num', default => 1);
+has 'updates_per_epoch' => (is => 'rw', isa => 'Int', default => 32);
+has 'begin_epoch'       => (is => 'rw', isa => 'Int', default => 0);
+has 'num_epochs'        => (is => 'rw', isa => 'Int', default => 60);
+has 'beta2'             => (is => 'rw', isa => 'Num', default => 0.999);
+has 'epsilon'           => (is => 'rw', isa => 'Num', default => 1e-8);
+has 'init_updates'      => (is => 'rw', init_arg => undef);
+has [qw/lbmult
+        cumgrads
+        adaptive
+        init_updates
+        admult/]        => (is => 'rw', init_arg => undef);
+
+sub BUILD
+{
+    my $self = shift;
+    AI::MXNet::Logging->info('Running Large-Batch SGD Algorithm');
+    AI::MXNet::Logging->info(
+        '(Batch_scale=%f, warmup_epochs=%d, warmup_strategy=%s, updates_per_epoch=%d)',
+        map { $self->$_ } qw/batch_scale warmup_epochs warmup_strategy updates_per_epoch/
+    );
+    $self->init_updates($self->begin_epoch * $self->updates_per_epoch);
+    $self->lbmult(1);
+    $self->cumgrads({});
+    $self->adaptive(0);
+    $self->admult(1);
+}
+
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+    return [
+        AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # d_0
+        AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # v_0
+        AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype), # z_0
+    ];
+    my $momentum;
+    my $weight_master_copy;
+    if($self->multi_precision and $weight->dtype eq 'float16')
+    {
+        $weight_master_copy = AI::MXNet::NDArray->array($weight, ctx=>$weight->context, dtype=>'float32');
+        if($self->momentum != 0)
+        {
+            $momentum = AI::MXNet::NDArray->zeros(
+                $weight->shape, ctx => $weight->context, dtype => 'float32',
+                stype => $weight->stype
+            );
+        }
+        return [$momentum, $weight_master_copy];
+    }
+    if($weight->dtype eq 'float16' and not $self->multi_precision)
+    {
+        AI::MXNet::Logging->warning(
+            "Accumulating with float16 in optimizer can lead to "
+            ."poor accuracy or slow convergence. "
+            ."Consider using multi_precision=True option of the "
+            ."LBSGD optimizer"
+        );
+    }
+    if($self->momentum != 0)
+    {
+        $momentum = AI::MXNet::NDArray->zeros(
+            $weight->shape, ctx => $weight->context, dtype => $weight->dtype,
+            stype => $weight->stype
+        );
+    }
+    return $momentum;
+}
+
+method _get_lbmult($nup)
+{
+    my $nwup = $self->warmup_epochs * $self->updates_per_epoch;
+    my $strategy = $self->warmup_strategy;
+    my $maxmult = $self->batch_scale;
+    my $mult;
+    if($nup >= $nwup)
+    {
+        $mult = $maxmult;
+    }
+    elsif($nwup <= 1)
+    {
+        $mult = 1;
+    }
+    else
+    {
+        if ($strategy eq 'linear')
+        {
+            $mult = 1 + ($maxmult - 1) * $nup / $nwup;
+        }
+        elsif($strategy eq 'power2')
+        {
+            $mult = 1 + ($maxmult-1) * ($nup*$nup)/($nwup*$nwup);
+        }
+        elsif($strategy eq 'sqrt')
+        {
+            $mult = 1 + ($maxmult - 1) * sqrt($nup / $nwup);
+        }
+        else
+        {
+            $mult = 1;
+        }
+    }
+    return $mult;
+}
+
+
+method _get_lars($weight, $g, $wd)
+{
+    my $weight2 = $self->_l2norm($weight);
+    my $grad2 = $self->_l2norm($g);
+    my $lars = sqrt($weight2 / ($grad2 + $wd * $weight2 + 1e-18));
+    if($lars < 0.01)
+    {
+        $lars = 0.01;
+    }
+    elsif($lars > 100)
+    {
+        $lars = 100;
+    }
+    return $lars;
+}
+
+method _l2norm($v)
+{
+    my $norm = AI::MXNet::NDArray->multiply($v, $v)->aspdl->sum;
+    return $norm;
+}
+
+method  _reset_cum_gradient($index)
+{
+    $self->cumgrads->{$index}{cum_grad} = 0;
+}
+
+method _get_cum_gradient($index)
+{
+    if(exists $self->cumgrads->{$index})
+    {
+        return $self->cumgrads->{$index};
+    }
+    else
+    {
+        return {}
+    }
+}
+
+method _put_cum_gradient($index, $cgrad)
+{
+    $self->cumgrads->{$index} = $cgrad;
+}
+
+method _cumulate_gradient($grad, $index)
+{
+    my $cgrad = $self->_get_cum_gradient($index);
+    my ($num_cums, $cum_grad);
+    if(%{ $cgrad })
+    {
+        my $num_cums = $cgrad->{num_cums};
+        if($num_cums > 0)
+        {
+            $cum_grad = $cgrad->{cum_grad} + $grad;
+            $num_cums += 1;
+        }
+        else
+        {
+            $cum_grad = $grad;
+            $num_cums = $self->init_updates + 1;
+        }
+    }
+    else
+    {
+        $cum_grad = $grad;
+        $num_cums = $self->init_updates + 1;
+    }
+    $cgrad = {cum_grad => $cum_grad, num_cums => $num_cums};
+    $self->_put_cum_gradient($index, $cgrad);
+    return $cgrad;
+}
+
+
+
+method update(
+    Index                     $index,
+    AI::MXNet::NDArray        $weight,
+    AI::MXNet::NDArray        $grad,
+    Maybe[AI::MXNet::NDArray|ArrayRef[Maybe[AI::MXNet::NDArray]]] $state
+)
+{
+    my $lr = $self->_get_lr($index);
+    my $wd = $self->_get_wd($index);
+    my $t = $self->_update_count($index);
+    my $cgrad = $self->_cumulate_gradient($grad, $index);
+    if(($cgrad->{num_cums} % $self->batch_scale) == 0)
+    {
+        my $lbmult;
+        $grad = $cgrad->{cum_grad} / $self->batch_scale;
+        if($self->warmup_strategy eq 'lars')
+        {
+            $lbmult = $self->_get_lars($weight, $grad, $wd);
+        }
+        else
+        {
+            $lbmult = $self->_get_lbmult($cgrad->{num_cums});
+        }
+        $lr = $lr * $lbmult;
+        my %kwargs = (
+            out => $weight,
+            lr  => $lr,
+            wd  => $wd,
+            rescale_grad => $self->rescale_grad
+        );
+        if($self->clip_gradient)
+        {
+            $kwargs{clip_gradient} = $self->clip_gradient;
+        }
+        if($self->momentum > 0)
+        {
+            $kwargs{momentum} = $self->momentum;
+        }
+        my $use_multi_precision = ref($state) eq 'ARRAY';
+        if(not $use_multi_precision)
+        {
+            if(defined $state)
+            {
+                AI::MXNet::NDArray->sgd_mom_update($weight, $grad, $state, %kwargs);
+            }
+            else
+            {
+                AI::MXNet::NDArray->sgd_update($weight, $grad, %kwargs);
+            }
+        }
+        else
+        {
+            if(defined $state->[0])
+            {
+                AI::MXNet::NDArray->mp_sgd_mom_update($weight, $grad, @{ $state }, %kwargs);
+            }
+            else
+            {
+                AI::MXNet::NDArray->mp_sgd_update($weight, $grad, $state->[1], %kwargs);
+            }
+        }
+        $self->_reset_cum_gradient($index);
+    }
+    else
+    {
+        AI::MXNet::NDArray->sgd_update($weight, $grad, out => $weight, lr => 0, wd => $wd);
+    }
+}
+
+__PACKAGE__->register;
+
 package AI::MXNet::DCASGD;
 use Mouse;
 use AI::MXNet::Base;
@@ -417,26 +894,26 @@ extends 'AI::MXNet::Optimizer';
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         learning_rate of SGD
 
-    momentum : float, optional
+    momentum : Num, optional
        momentum value
 
-    lamda : float, optional
+    lamda : NUm, optional
        scale DC value
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 
-    param_idx2name : hash ref of string/int to float, optional
-        special treat weight decay in parameter ends with bias, gamma, and beta
+    param_idx2name : hash ref of Str/Int to Num, optional
+        special threating of weight decay for parameters that end with bias, gamma, and beta
 =cut
 has 'momentum'        => (is => 'ro', isa => 'Num', default => 0);
 has 'lamda'           => (is => 'ro', isa => 'Num', default => 0.04);
@@ -515,41 +992,83 @@ __PACKAGE__->register;
 
 package AI::MXNet::NAG;
 use Mouse;
-
 extends 'AI::MXNet::SGD';
 
-method update(
-    Index $index,
-    AI::MXNet::NDArray $weight,
-    AI::MXNet::NDArray $grad,
-    AI::MXNet::NDArray|Undef $state
-)
+method create_state(Index $index, AI::MXNet::NDArray $weight)
+{
+    my $momentum;
+    my $weight_master_copy;
+    my $do_multi_precision = ($self->multi_precision and $weight->dtype eq 'float16');
+    if($do_multi_precision)
+    {
+        if($self->momentum != 0)
+        {
+            $momentum = AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>'float32');
+        }
+        $weight_master_copy = AI::MXNet::NDArray->array($weight, ctx=>$weight->context, dtype=>'float32');
+        return [$weight_master_copy, $momentum];
+    }
+    else
+    {
+        if($self->momentum != 0)
+        {
+            $momentum = AI::MXNet::NDArray->zeros($weight->shape, ctx => $weight->context, dtype=>$weight->dtype);
+        }
+        return $momentum;
+    }
+}
+
+method update($index, $weight, $grad, $state)
 {
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    $grad = $grad * $self->rescale_grad;
-    if($self->clip_gradient)
+    my $use_multi_precision = (defined $state and not Scalar::Util::blessed($state) and ref($state eq 'ARRAY'));
+    if(not $use_multi_precision)
     {
-        $grad = AI::MXNet::NDArray->clip(
-            $grad,
-            -$self->clip_gradient,
-            $self->clip_gradient
-        );
-    }
-    if($state)
-    {
-        my $mom  = $state;
-        $mom    *= $self->momentum;
-        $grad   += $wd * $weight;
-        $mom    += $grad;
-        $grad   += $self->momentum * $mom;
-        $weight += -$lr * $grad;
+        $grad *= $self->rescale_grad;
+        if(defined $self->clip_gradient)
+        {
+            $grad = AI::MXNet::NDArray->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+        }
+        if($self->momentum == 0)
+        {
+            $weight += -$lr * ($grad + $wd * $weight);
+        }
+        else
+        {
+            my $mom = $state;
+            $mom *= $self->momentum;
+            $grad += $wd * $weight;
+            $mom += $grad;
+            $grad += $self->momentum * $mom;
+            $weight += -$lr * $grad;
+        }
     }
     else
     {
-        confess("momentum != 0") unless $self->momentum == 0;
-        $weight += -$lr * ($grad + $wd * $weight);
+        my $grad32 = AI::MXNet::NDArray->array($grad, ctx=>$grad->context, dtype=>'float32');
+        $grad32 *= $self->rescale_grad;
+        if(defined $self->clip_gradient)
+        {
+            $grad32 = AI::MXNet::NDArray->clip($grad32, -$self->clip_gradient, $self->clip_gradient);
+        }
+        my $mom = $state->[1];
+        my $weight32 = $state->[0];
+        if($self->momentum == 0)
+        {
+            $weight32 += -$lr * ($grad32 + $wd * $weight32);
+        }
+        else
+        {
+            $mom *= $self->momentum;
+            $grad32 += $wd * $weight32;
+            $mom += $grad32;
+            $grad32 += $self->momentum * $mom;
+            $weight32 += -$lr * $grad32;
+        }
+        my $tmp = $weight32->astype($weight->dtype);
+        $tmp->copyto($weight);
     }
 }
 
@@ -557,32 +1076,33 @@ __PACKAGE__->register;
 
 =head1 NAME
 
-    AI::MXNet::SLGD - Stochastic Langevin Dynamics Updater to sample from a distribution.
+    AI::MXNet::SGLD - Stochastic Gradient Riemannian Langevin Dynamics.
 =cut
 
 =head1 DESCRIPTION
 
-    Stochastic Langevin Dynamics Updater to sample from a distribution.
+    Stochastic Gradient Riemannian Langevin Dynamics.
+
+    This class implements the optimizer described in the paper *Stochastic Gradient
+    Riemannian Langevin Dynamics on the Probability Simplex*, available at
+    https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf.
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         learning_rate of SGD
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
-
-    param_idx2name : dict of string/int to float, optional
-        special treat weight decay in parameter ends with bias, gamma, and beta
 =cut
 
-package AI::MXNet::SLGD;
+package AI::MXNet::SGLD;
 use Mouse;
 
 extends 'AI::MXNet::Optimizer';
@@ -615,8 +1135,9 @@ method update(
                     +
                 AI::MXNet::Random->normal(
                         0, sqrt($lr),
-                        $weight->shape,
-                        $weight->context
+                        shape => $weight->shape,
+                        ctx   => $weight->context,
+                        dtype => $weight->dtype
                 );
 }
 
@@ -635,31 +1156,26 @@ __PACKAGE__->register;
        *Adam: A Method for Stochastic Optimization*,
        http://arxiv.org/abs/1412.6980
 
-    the code in this class was adapted from
-    https://github.com/mila-udem/blocks/blob/master/blocks/algorithms/__init__.py#L765
-
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         Step size.
         Default value is set to 0.001.
-    beta1 : float, optional
+    beta1 : Num, optional
         Exponential decay rate for the first moment estimates.
         Default value is set to 0.9.
-    beta2 : float, optional
+    beta2 : Num, optional
         Exponential decay rate for the second moment estimates.
         Default value is set to 0.999.
-    epsilon : float, optional
+    epsilon : Num, optional
         Default value is set to 1e-8.
-    decay_factor : float, optional
-        Default value is set to 1 - 1e-8.
 
-    wd : float, optional
+    wd : NUm, optional
         L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 package AI::MXNet::Adam;
@@ -672,7 +1188,7 @@ has '+learning_rate' => (default => 0.001);
 has 'beta1'    => (is => "rw", isa => "Num", default => 0.9);
 has 'beta2'    => (is => "rw", isa => "Num", default => 0.999);
 has 'epsilon'  => (is => "rw", isa => "Num", default => 1e-8);
-has 'decay_factor'  => (is => "rw", isa => "Num", default => (1 - 1e-8));
+has 'lazy_update' => (is => 'rw', isa => 'Bool', default => 1);
 
 sub BUILD
 {
@@ -690,15 +1206,18 @@ sub BUILD
 
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
+    my $stype = $self->lazy_update ? $weight->stype : 'default';
     return [AI::MXNet::NDArray->zeros(
                 $weight->shape,
                 ctx => $weight->context,
-                dtype => $weight->dtype
+                dtype => $weight->dtype,
+                stype => $stype
             ),  # mean
             AI::MXNet::NDArray->zeros(
                 $weight->shape,
                 ctx => $weight->context,
-                dtype => $weight->dtype
+                dtype => $weight->dtype,
+                stype => $stype
             )  # variance
     ];
 }
@@ -747,21 +1266,21 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         Step size.
         Default value is set to 0.05.
 
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
 
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    eps: float, optional
+    eps: Num, optional
         A small float number to make the updating processing stable
         Default value is set to 1e-7.
 
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 package AI::MXNet::AdaGrad;
@@ -769,14 +1288,14 @@ use Mouse;
 
 extends 'AI::MXNet::Optimizer';
 
-has 'float_stable_eps'    => (is => "rw", isa => "Num", default => 1e-7);
-has '+learning_rate'       => (default => 0.05);
+has 'eps'    => (is => "rw", isa => "Num", default => 1e-7);
 
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return AI::MXNet::NDArray->zeros(
                 $weight->shape,
-                ctx => $weight->context
+                ctx => $weight->context,
+                stype => $weight->stype
     );  # history
 }
 
@@ -790,30 +1309,31 @@ method update(
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    $grad *= $self->rescale_grad;
-    if($self->clip_gradient)
-    {
-        $grad = AI::MXNet::NDArray->clip(
-            $grad,
-            -$self->clip_gradient,
-             $self->clip_gradient
-        );
-    }
+    my $is_sparse = $grad->stype eq 'row_sparse' ? 1 : 0;
     my $history = $state;
-    $history += ($grad * $grad);
-    $weight  += -$lr
-                    *
-                (
-                    $grad
-                        /
-                    AI::MXNet::NDArray->sqrt(
-                        $history
-                            +
-                        $self->float_stable_eps
-                    )
-                        +
-                    $wd * $weight
-                );
+    if($is_sparse)
+    {
+        my %kwargs = (
+            epsilon => $self->eps,
+            rescale_grad => $self->rescale_grad
+        );
+        if($self->clip_gradient)
+        {
+            $kwargs{clip_gradient} = $self->clip_gradient;
+        }
+        AI::MXNet::NDArray::Sparse->adagrad_update($weight, $grad, $history, { out=>$weight, lr=>$lr, wd=>$wd, %kwargs });
+    }
+    else
+    {
+        $grad *= $self->rescale_grad;
+        if(defined $self->clip_gradient)
+        {
+            $grad = AI::MXNet::NDArray->clip($grad, -$self->clip_gradient, $self->clip_gradient);
+        }
+        $history += $grad->square;
+        my $div = $grad / ($history + $self->eps)->sqrt;
+        $weight += ($div + $weight * $wd) * -$lr;
+    }
 }
 
 __PACKAGE__->register;
@@ -836,27 +1356,27 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    learning_rate : float, optional
+    learning_rate : Num, optional
         Step size.
         Default value is set to 0.001.
-    gamma1: float, optional
+    gamma1: Num, optional
         decay factor of moving average for gradient^2.
         Default value is set to 0.9.
-    gamma2: float, optional
+    gamma2: Num, optional
         "momentum" factor.
         Default value if set to 0.9.
         Only used if centered=True
-    epsilon : float, optional
+    epsilon : Num, optional
         Default value is set to 1e-8.
-    centered : bool, optional
+    centered : Bool, optional
         Use Graves or Tielemans & Hintons version of RMSProp
-    wd : float, optional
+    wd : Num, optional
         L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient.
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
-    clip_weights : float, optional
+    clip_weights : Num, optional
         clip weights in range [-clip_weights, clip_weights]
 =cut
 
@@ -903,21 +1423,25 @@ method create_state(Index $index, AI::MXNet::NDArray $weight)
             ? (
                 AI::MXNet::NDArray->zeros(
                     $weight->shape,
-                    ctx => $weight->context
+                    ctx => $weight->context,
+                    stype => $weight->stype
                 ),  # n
                 AI::MXNet::NDArray->zeros(
                     $weight->shape,
-                    ctx => $weight->context
+                    ctx => $weight->context,
+                    stype => $weight->stype
                 ),  # g
                 AI::MXNet::NDArray->zeros(
                     $weight->shape,
-                    ctx => $weight->context
+                    ctx => $weight->context,
+                    stype => $weight->stype
                 )
             )   # delta
             : (
                 AI::MXNet::NDArray->zeros(
                     $weight->shape,
-                    ctx => $weight->context
+                    ctx => $weight->context,
+                    stype => $weight->stype
                 ),  # n
             )
     ];
@@ -979,15 +1503,15 @@ __PACKAGE__->register;
 
     Parameters
     ----------
-    rho: float
+    rho: Num
         Decay rate for both squared gradients and delta x
-    epsilon : float
+    epsilon : Num
         The constant as described in the thesis
-    wd : float
+    wd : Num
         L2 regularization coefficient add to all the weights
-    rescale_grad : float, optional
+    rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
-    clip_gradient : float, optional
+    clip_gradient : Num, optional
         clip gradient in range [-clip_gradient, clip_gradient]
 =cut
 package AI::MXNet::AdaDelta;
@@ -1074,6 +1598,7 @@ __PACKAGE__->register;
 
 package AI::MXNet::Ftrl;
 
+
 =head1 NAME
 
     AI::MXNet::Ftrl
@@ -1081,37 +1606,63 @@ package AI::MXNet::Ftrl;
 
 =head1 DESCRIPTION
 
-    Reference:Ad Click Prediction: a View from the Trenches
+    Referenced from *Ad Click Prediction: a View from the Trenches*, available at
+    http://dl.acm.org/citation.cfm?id=2488200.
+
+    The optimizer updates the weight by:
+
+        rescaled_grad = clip(grad * rescale_grad, clip_gradient)
+        z += rescaled_grad - (sqrt(n + rescaled_grad**2) - sqrt(n)) * weight / learning_rate
+        n += rescaled_grad**2
+        w = (sign(z) * lamda1 - z) / ((beta + sqrt(n)) / learning_rate + wd) * (abs(z) > lamda1)
+
+    If the storage types of weight, state and grad are all row_sparse,
+    **sparse updates** are applied by::
+
+        for row in grad.indices:
+            rescaled_grad[row] = clip(grad[row] * rescale_grad, clip_gradient)
+            z[row] += rescaled_grad[row] - (sqrt(n[row] + rescaled_grad[row]**2) - sqrt(n[row])) * weight[row] / learning_rate
+            n[row] += rescaled_grad[row]**2
+            w[row] = (sign(z[row]) * lamda1 - z[row]) / ((beta + sqrt(n[row])) / learning_rate + wd) * (abs(z[row]) > lamda1)
+
+    The sparse update only updates the z and n for the weights whose row_sparse
+    gradient indices appear in the current batch, rather than updating it for all
+    indices. Compared with the original update, it can provide large
+    improvements in model training throughput for some applications. However, it
+    provides slightly different semantics than the original update, and
+    may lead to different empirical results.
+
+    This optimizer accepts the following parameters in addition to those accepted
+    by AI::MXNet::Optimizer
 
     Parameters
     ----------
-    lamda1 : float, optional
+    lamda1 : Num, optional
         L1 regularization coefficient.
-
-    learning_rate : float, optional
+    learning_rate : Num, optional
         The initial learning rate.
-
-    beta : float, optional
+    beta : Num, optional
         Per-coordinate learning rate correlation parameter.
-    eta_{t,i}=frac{learning_rate}{beta+sqrt{sum_{s=1^}tg_{s,i}^t}
 =cut
 
 use Mouse;
 extends 'AI::MXNet::Optimizer';
 has '+learning_rate' => (default => 0.1);
 has 'beta'           => (is => "ro", isa => "Num",  default => 1);
-has 'lambda1'        => (is => "ro", isa => "Num",  default => 0.9);
+has 'lamda1'         => (is => "ro", isa => "Num",  default => 0.01);
 
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
     return [
             AI::MXNet::NDArray->zeros(
                 $weight->shape,
-                ctx => $weight->context
-            ),  # dn
+                ctx => $weight->context,
+                stype => $weight->stype
+            ),  # z
             AI::MXNet::NDArray->zeros(
                 $weight->shape,
-                ctx => $weight->context
+                ctx => $weight->context,
+                stype => $weight->stype
             )   # n
     ];
 }
@@ -1126,22 +1677,17 @@ method update(
     $self->_update_count($index);
     my $wd = $self->_get_wd($index);
     my $lr = $self->_get_lr($index);
-    $grad *= $self->rescale_grad;
+    my %kwargs = (lamda1 => $self->lamda1, beta => $self->beta, rescale_grad => $self->rescale_grad);
     if($self->clip_gradient)
     {
-        $grad = AI::MXNet::NDArray->clip(
-            $grad,
-            -$self->clip_gradient,
-             $self->clip_gradient
-        );
+        $kwargs{clip_gradient} = $self->clip_gradient;
     }
-    my ($dn, $n) = @{ $state };
-    $dn += $grad - (($n + $grad * $grad)->sqrt - $n->sqrt) * $weight / $lr;
-    $n += $grad * $grad;
-
-    $weight .= ($dn->sign * $self->lamda1 - $dn)
-                    /
-               (($self->beta + $n->sqrt) / $lr + $wd) * ($dn->abs > $self->lamda1);
+    # accumulated g and delta initialization
+    my ($z, $n) = @{ $state };
+    AI::MXNet::NDArray->ftrl_update(
+        $weight, $grad, $z, $n,
+        { lr => $lr, wd => $wd, %kwargs, out => $weight }
+    );
 }
 
 __PACKAGE__->register;
@@ -1163,9 +1709,9 @@ package AI::MXNet::Adamax;
 
     Parameters
     ----------
-    beta1 : float, optional
+    beta1 : Num, optional
         Exponential decay rate for the first moment estimates.
-    beta2 : float, optional
+    beta2 : Num, optional
         Exponential decay rate for the second moment estimates.
 =cut
 
@@ -1241,17 +1787,17 @@ package AI::MXNet::Nadam;
     at http://cs229.stanford.edu/proj2015/054_report.pdf.
 
     This optimizer accepts the following parameters in addition to those accepted
-    AI::MXNet::Optimizer.
+    by AI::MXNet::Optimizer.
 
     Parameters
     ----------
-    beta1 : float, optional
+    beta1 : Num, optional
         Exponential decay rate for the first moment estimates.
-    beta2 : float, optional
+    beta2 : Num, optional
         Exponential decay rate for the second moment estimates.
-    epsilon : float, optional
+    epsilon : Num, optional
         Small value to avoid division by 0.
-    schedule_decay : float, optional
+    schedule_decay : Num, optional
         Exponential decay rate for the momentum schedule
 =cut
 
@@ -1322,7 +1868,11 @@ method update(
 
 __PACKAGE__->register;
 
-# updater for kvstore
+=head1 NAME
+
+    AI::MXNet::Updater - Updater for kvstore
+=cut
+
 package AI::MXNet::Updater;
 use Mouse;
 use Storable qw(thaw freeze);
@@ -1393,7 +1943,15 @@ method set_states($states)
 
 method get_states(Bool $dump_optimizer=0)
 {
-    return freeze($dump_optimizer ? [$self->states, $self->optimizer] : $self->states);
+    if($dump_optimizer)
+    {
+        my $param_dict = $self->optimizer->param_dict;
+        $self->optimizer->param_dict({});
+        my $freezed = freeze([$self->states, $self->optimizer]);
+        $self->optimizer->param_dict($param_dict);
+        return $freezed;
+    }
+    return freeze($self->states);
 }
 
 package AI::MXNet::Optimizer;

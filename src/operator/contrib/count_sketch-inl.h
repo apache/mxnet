@@ -76,8 +76,8 @@ class CountSketchOp : public Operator {
         // h and s should be 1d vectors
         Tensor<xpu, 2, DType> data = in_data[CountSketch::kData].FlatTo2D<xpu, DType>(s);
 
-        const TShape& hshape = in_data[CountSketch::kH].shape_;
-        const TShape& sshape = in_data[CountSketch::kS].shape_;
+        const mxnet::TShape& hshape = in_data[CountSketch::kH].shape_;
+        const mxnet::TShape& sshape = in_data[CountSketch::kS].shape_;
         Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get_with_shape<xpu, 1, DType>(
             Shape1(hshape.ProdShape(0, hshape.ndim())), s);
         Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get_with_shape<xpu, 1, DType>(
@@ -103,8 +103,8 @@ class CountSketchOp : public Operator {
     Tensor<xpu, 2, DType> ograd = out_grad[CountSketch::kOut].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> dgrad = in_grad[CountSketch::kData].FlatTo2D<xpu, DType>(s);
 
-    const TShape& hshape = in_data[CountSketch::kH].shape_;
-    const TShape& sshape = in_data[CountSketch::kS].shape_;
+    const mxnet::TShape& hshape = in_data[CountSketch::kH].shape_;
+    const mxnet::TShape& sshape = in_data[CountSketch::kS].shape_;
         Tensor<xpu, 1, DType> h = in_data[CountSketch::kH].get_with_shape<xpu, 1, DType>(
                                             Shape1(hshape.ProdShape(0, hshape.ndim())), s);
     Tensor<xpu, 1, DType> ss = in_data[CountSketch::kS].get_with_shape<xpu, 1, DType>(
@@ -144,14 +144,14 @@ class CountSketchProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3) <<"Input:[data, h, s]";
-    const TShape &dshape = (*in_shape)[CountSketch::kData];
+    const mxnet::TShape &dshape = (*in_shape)[CountSketch::kData];
     // require data to be known
-    if (dshape.ndim() == 0) return false;
+    if (mxnet::op::shape_is_none(dshape)) return false;
 
     out_shape->clear();
     if (dshape.ndim() == 4) {
@@ -185,7 +185,7 @@ class CountSketchProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
@@ -229,7 +229,7 @@ class CountSketchProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                               std::vector<int> *in_type) const override;
 
  private:

@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
- * \brief CPU Implementation of unary function.
+ * \file elemwise_binary_scalar_op_basic.cc
+ * \brief CPU Implementation of basic binary scalar functions.
  */
 #include "../../common/utils.h"
 #include "./elemwise_binary_op.h"
@@ -33,7 +33,7 @@
   .set_attr_parser([](NodeAttrs* attrs) {                           \
       attrs->parsed = std::stod(attrs->dict["scalar"]);             \
     })                                                              \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<FInferStorageType>("FInferStorageType",                 \
     BinaryScalarStorageTypeWithDenseResultStorageType)              \

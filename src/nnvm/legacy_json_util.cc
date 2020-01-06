@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2016 by Contributors
  * \file legacy_json_util.cc
@@ -41,7 +60,7 @@ Graph UpgradeJSON_FixParsing(Graph g) {
         for (const auto key : kHiddenKeys) {
           size_t pos = it->first.rfind(key);
           if (pos == 0 || (pos != std::string::npos && pos == it->first.length() - key.length())) {
-            hidden_keys.push_back(*it);
+            hidden_keys.emplace_back(*it);
             erase = true;
             break;
           }
@@ -57,9 +76,9 @@ Graph UpgradeJSON_FixParsing(Graph g) {
         n->op()->attr_parser(&(n->attrs));
 
       // add back removed hidden keys
-      for (const auto &kv : hidden_keys) {
+      for (const auto& kv : hidden_keys) {
         bool flag = false;
-        for (const auto &key : kHiddenKeys) {
+        for (const auto& key : kHiddenKeys) {
           size_t pos = kv.first.rfind(key);
           if (pos == 0 && key.length() == kv.first.length()) {
             n->attrs.dict["__"+key+"__"] = kv.second;
@@ -192,8 +211,8 @@ Graph LoadLegacyJSONPass(Graph g) {
               << ". Attempting to upgrade...";
     upgrading = true;
   }
-  for (auto it = upgrader_list.begin(); it != upgrader_list.end(); ++it) {
-    if (it->first > version) load = it->second(load);
+  for (auto& upgrader : upgrader_list) {
+    if (upgrader.first > version) load = upgrader.second(load);
   }
   if (upgrading) LOG(INFO) << "Symbol successfully upgraded!";
   return load;

@@ -77,11 +77,12 @@ CUfunction CudaModule::Chunk::GetFunction(
   CHECK_EQ(ctx.dev_mask(), Context::kGPU)
       << "CUDA Runtime compilation only supports Nvidia GPU.";
   auto iter = mod_.find(ctx.dev_id);
+  mxnet::common::cuda::DeviceStore device_store;
   CUmodule module;
   if (iter != mod_.end()) {
     module = iter->second;
   } else {
-    CUDA_CALL(cudaSetDevice(ctx.dev_id));
+    device_store.SetDevice(ctx.dev_id);
     CUDA_DRIVER_CALL(cuModuleLoadDataEx(&module, ptx_, 0, 0, 0));
     mod_[ctx.dev_id] = module;
   }
@@ -178,7 +179,7 @@ void CudaModule::Kernel::Launch(
         p_args.data(), 0));
     CUDA_CALL(cudaStreamSynchronize(s->stream_));
   }, ctx, read_vars, write_vars, FnProperty::kNormal, 0,
-  PROFILER_MESSAGE(mangled_name_.c_str()));
+  mangled_name_.c_str());
 }
 
 

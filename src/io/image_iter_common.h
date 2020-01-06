@@ -42,7 +42,7 @@ class ImageLabelMap {
    * \param label_width predefined label_width
    */
   explicit ImageLabelMap(const char *path_imglist,
-                         mshadow::index_t label_width,
+                         index_t label_width,
                          bool silent) {
     this->label_width = label_width;
     image_index_.clear();
@@ -58,7 +58,7 @@ class ImageLabelMap {
       // skip space
       while (isspace(*p) && p != end) ++p;
       image_index_.push_back(static_cast<size_t>(atol(p)));
-      for (size_t i = 0; i < label_width; ++i) {
+      for (index_t i = 0; i < label_width; ++i) {
         // skip till space
         while (!isspace(*p) && p != end) ++p;
         // skip space
@@ -85,6 +85,14 @@ class ImageLabelMap {
     CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
     return mshadow::Tensor<cpu, 1>(it->second, mshadow::Shape1(label_width));
   }
+  /*! \brief find a label for corresponding index, return vector as copy */
+  inline std::vector<float> FindCopy(size_t imid) const {
+    std::unordered_map<size_t, real_t*>::const_iterator it
+        = idx2label_.find(imid);
+    CHECK(it != idx2label_.end()) << "fail to find imagelabel for id " << imid;
+    const real_t *ptr = it->second;
+    return std::vector<float>(ptr, ptr + label_width);
+  }
 
  private:
   // label with_
@@ -110,19 +118,23 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
   /*! \brief label-width */
   int label_width;
   /*! \brief input shape */
-  TShape data_shape;
+  mxnet::TShape data_shape;
   /*! \brief number of threads */
   int preprocess_threads;
   /*! \brief whether to remain silent */
   bool verbose;
   /*! \brief partition the data into multiple parts */
   int num_parts;
-  /*! \brief the index of the part will read*/
+  /*! \brief the index of the part will read */
   int part_index;
-  /*! \brief the size of a shuffle chunk*/
+  /*! \brief device id used to create context for internal NDArray */
+  int device_id;
+  /*! \brief the size of a shuffle chunk */
   size_t shuffle_chunk_size;
-  /*! \brief the seed for chunk shuffling*/
+  /*! \brief the seed for chunk shuffling */
   int shuffle_chunk_seed;
+  /*! \brief random seed for augmentations */
+  dmlc::optional<int> seed_aug;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(ImageRecParserParam) {
@@ -153,17 +165,24 @@ struct ImageRecParserParam : public dmlc::Parameter<ImageRecParserParam> {
         .describe("Virtually partition the data into these many parts.");
     DMLC_DECLARE_FIELD(part_index).set_default(0)
         .describe("The *i*-th virtual partition to be read.");
+    DMLC_DECLARE_FIELD(device_id).set_default(0)
+        .describe("The device id used to create context for internal NDArray. "\
+                  "Setting device_id to -1 will create Context::CPU(0). Setting "
+                  "device_id to valid positive device id will create "
+                  "Context::CPUPinned(device_id). Default is 0.");
     DMLC_DECLARE_FIELD(shuffle_chunk_size).set_default(0)
         .describe("The data shuffle buffer size in MB. Only valid if shuffle is true.");
     DMLC_DECLARE_FIELD(shuffle_chunk_seed).set_default(0)
         .describe("The random seed for shuffling");
+    DMLC_DECLARE_FIELD(seed_aug).set_default(dmlc::optional<int>())
+        .describe("Random seed for augmentations.");
   }
 };
 
 // Batch parameters
 struct BatchParam : public dmlc::Parameter<BatchParam> {
   /*! \brief label width */
-  index_t batch_size;
+  uint32_t batch_size;
   /*! \brief use round roubin to handle overflow batch */
   bool round_batch;
   // declare parameters
@@ -327,8 +346,13 @@ struct ImageDetNormalizeParam :  public dmlc::Parameter<ImageDetNormalizeParam> 
 
 // Define prefetcher parameters
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
+  enum CtxType { kGPU = 0, kCPU};
   /*! \brief number of prefetched batches */
   size_t prefetch_buffer;
+
+  /*! \brief Context data loader optimized for */
+  int ctx;
+
   /*! \brief data type */
   dmlc::optional<int> dtype;
 
@@ -336,12 +360,18 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
     DMLC_DECLARE_FIELD(prefetch_buffer).set_default(4)
         .describe("Maximum number of batches to prefetch.");
+    DMLC_DECLARE_FIELD(ctx).set_default(kGPU)
+        .add_enum("cpu", kCPU)
+        .add_enum("gpu", kGPU)
+        .describe("Context data loader optimized for.");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
       .add_enum("float16", mshadow::kFloat16)
+      .add_enum("int64", mshadow::kInt64)
       .add_enum("int32", mshadow::kInt32)
       .add_enum("uint8", mshadow::kUint8)
+      .add_enum("int8", mshadow::kInt8)
       .set_default(dmlc::optional<int>())
       .describe("Output data type. ``None`` means no change.");
   }

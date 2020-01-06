@@ -15,12 +15,14 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=fixme, too-many-arguments, too-many-locals, too-many-public-methods, too-many-branches
+# pylint: disable=fixme, too-many-arguments, too-many-locals, no-else-raise
+# pylint: disable=too-many-public-methods, too-many-branches, too-many-lines
 """`BaseModule` defines an API for modules."""
 
 import time
 import logging
 import warnings
+import numpy as np
 
 from .. import metric
 from .. import ndarray
@@ -28,7 +30,7 @@ from .. import ndarray
 from ..context import cpu
 from ..model import BatchEndParam
 from ..initializer import Uniform
-from ..io import DataDesc
+from ..io import DataDesc, DataIter, DataBatch
 from ..base import _as_list
 
 
@@ -136,6 +138,7 @@ class BaseModule(object):
     - setup
         - `bind()`: prepare environment for computation.
         - `init_optimizer()`: install optimizer for parameter updating.
+        - `prepare()`: prepare the module based on the current data batch.
 
     - computation
         - `forward(data_batch)`: forward operation.
@@ -144,7 +147,8 @@ class BaseModule(object):
         - `get_outputs()`: get outputs of the previous forward operation.
         - `get_input_grads()`: get the gradients with respect to the inputs computed
           in the previous backward operation.
-        - `update_metric(metric, labels)`: update performance metric for the previous forward
+        - `update_metric(metric, labels, pre_sliced=False)`: update performance metric
+          for the previous forward
           computed results.
 
     - other properties (mostly for backward compatibility)
@@ -193,12 +197,12 @@ class BaseModule(object):
 
     def score(self, eval_data, eval_metric, num_batch=None, batch_end_callback=None,
               score_end_callback=None,
-              reset=True, epoch=0):
+              reset=True, epoch=0, sparse_row_id_fn=None):
         """Runs prediction on ``eval_data`` and evaluates the performance according to
         the given ``eval_metric``.
 
-        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
-        a end-to-end use-case.
+        Checkout `Module Tutorial <https://mxnet.apache.org/api/python/tutorials/packages/module/index.html>`_
+        to see an end-to-end use-case.
 
         Parameters
         ----------
@@ -217,6 +221,11 @@ class BaseModule(object):
         epoch : int
             Defaults to 0. For compatibility, this will be passed to callbacks (if any).
             During training, this will correspond to the training epoch number.
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
 
         Examples
         --------
@@ -240,9 +249,12 @@ class BaseModule(object):
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
-
+            self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
-            self.update_metric(eval_metric, eval_batch.label)
+            if isinstance(eval_batch, list):
+                self.update_metric(eval_metric, [eb.label for eb in eval_batch], pre_sliced=True)
+            else:
+                self.update_metric(eval_metric, eval_batch.label)
 
             if batch_end_callback is not None:
                 batch_end_params = BatchEndParam(epoch=epoch,
@@ -263,11 +275,11 @@ class BaseModule(object):
 
         return eval_metric.get_name_value()
 
-    def iter_predict(self, eval_data, num_batch=None, reset=True):
+    def iter_predict(self, eval_data, num_batch=None, reset=True, sparse_row_id_fn=None):
         """Iterates over predictions.
 
-        Example Usage:
-        ----------
+        Examples
+        --------
         >>> for pred, i_batch, batch in module.iter_predict(eval_data):
         ...     # pred is a list of outputs from the module
         ...     # i_batch is a integer
@@ -282,6 +294,11 @@ class BaseModule(object):
         reset : bool
             Default is ``True``, indicating whether we should reset the data iter before start
             doing prediction.
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
         """
         assert self.binded and self.params_initialized
 
@@ -291,6 +308,7 @@ class BaseModule(object):
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
+            self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
             outputs = [out[0:out.shape[0]-pad] for out in self.get_outputs()]
@@ -298,7 +316,7 @@ class BaseModule(object):
             yield (outputs, nbatch, eval_batch)
 
     def predict(self, eval_data, num_batch=None, merge_batches=True, reset=True,
-                always_output_list=False):
+                always_output_list=False, sparse_row_id_fn=None):
         """Runs prediction and collects the outputs.
 
         When `merge_batches` is ``True`` (by default), the return value will be a list
@@ -316,7 +334,7 @@ class BaseModule(object):
 
         Parameters
         ----------
-        eval_data : DataIter
+        eval_data : DataIter or NDArray or numpy array
             Evaluation data to run prediction on.
         num_batch : int
             Defaults to ``None``, indicates running all the batches in the data iterator.
@@ -327,6 +345,11 @@ class BaseModule(object):
             doing prediction.
         always_output_list : bool
             Defaults to ``False``, see above for return values.
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
 
         Returns
         -------
@@ -341,6 +364,15 @@ class BaseModule(object):
         """
         assert self.binded and self.params_initialized
 
+        if isinstance(eval_data, (ndarray.NDArray, np.ndarray)):
+            if isinstance(eval_data, np.ndarray):
+                eval_data = ndarray.array(eval_data)
+            self.forward(DataBatch([eval_data]))
+            return self.get_outputs()[0]
+
+        if not isinstance(eval_data, DataIter):
+            raise ValueError('eval_data must be of type NDArray or DataIter')
+
         if reset:
             eval_data.reset()
 
@@ -349,6 +381,7 @@ class BaseModule(object):
         for nbatch, eval_batch in enumerate(eval_data):
             if num_batch is not None and nbatch == num_batch:
                 break
+            self.prepare(eval_batch, sparse_row_id_fn=sparse_row_id_fn)
             self.forward(eval_batch, is_train=False)
             pad = eval_batch.pad
             outputs = [out[0:out.shape[0]-pad].copy() for out in self.get_outputs()]
@@ -380,11 +413,11 @@ class BaseModule(object):
             eval_batch_end_callback=None, initializer=Uniform(0.01),
             arg_params=None, aux_params=None, allow_missing=False,
             force_rebind=False, force_init=False, begin_epoch=0, num_epoch=None,
-            validation_metric=None, monitor=None):
+            validation_metric=None, monitor=None, sparse_row_id_fn=None):
         """Trains the module parameters.
 
-        Checkout `Module Tutorial <http://mxnet.io/tutorials/basic/module.html>`_ to see
-        a end-to-end use-case.
+        Checkout `Module Tutorial <https://mxnet.apache.org/api/python/tutorials/packages/module/index.html>`_
+        to see an end-to-end use-case.
 
         Parameters
         ----------
@@ -442,6 +475,11 @@ class BaseModule(object):
             N+1.
         num_epoch : int
             Number of epochs for training.
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
 
         Examples
         --------
@@ -486,17 +524,26 @@ class BaseModule(object):
                     monitor.tic()
                 self.forward_backward(data_batch)
                 self.update()
+
+                if isinstance(data_batch, list):
+                    self.update_metric(eval_metric,
+                                       [db.label for db in data_batch],
+                                       pre_sliced=True)
+                else:
+                    self.update_metric(eval_metric, data_batch.label)
+
                 try:
                     # pre fetch next batch
                     next_data_batch = next(data_iter)
-                    self.prepare(next_data_batch)
+                    self.prepare(next_data_batch, sparse_row_id_fn=sparse_row_id_fn)
                 except StopIteration:
                     end_of_batch = True
 
-                self.update_metric(eval_metric, data_batch.label)
-
                 if monitor is not None:
                     monitor.toc_print()
+
+                if end_of_batch:
+                    eval_name_vals = eval_metric.get_global_name_value()
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
@@ -507,7 +554,7 @@ class BaseModule(object):
                 nbatch += 1
 
             # one epoch of training is finished
-            for name, val in eval_metric.get_name_value():
+            for name, val in eval_name_vals:
                 self.logger.info('Epoch[%d] Train-%s=%f', epoch, name, val)
             toc = time.time()
             self.logger.info('Epoch[%d] Time cost=%.3f', epoch, (toc-tic))
@@ -572,7 +619,7 @@ class BaseModule(object):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Gets parameters, those are potentially copies of the the actual parameters used
+        """Gets parameters, those are potentially copies of the actual parameters used
         to do computation on the device.
 
         Returns
@@ -740,16 +787,34 @@ class BaseModule(object):
     ################################################################################
     # Computations
     ################################################################################
-    def prepare(self, data_batch):
+    # pylint: disable=unused-argument
+    def prepare(self, data_batch, sparse_row_id_fn=None):
         '''Prepares the module for processing a data batch.
 
         Usually involves switching bucket and reshaping.
+        For modules that contain `row_sparse` parameters in KVStore,
+        it prepares the `row_sparse` parameters based on the sparse_row_id_fn.
+
+        When KVStore is used to update parameters for multi-device or multi-machine training,
+        a copy of the parameters are stored in KVStore. Note that for `row_sparse` parameters,
+        the `update()` updates the copy of parameters in KVStore, but doesn't broadcast
+        the updated parameters to all devices / machines. The `prepare` function is used to
+        broadcast `row_sparse` parameters with the next batch of data.
 
         Parameters
         ----------
         data_batch : DataBatch
+            The current batch of data for forward computation.
+
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
         '''
-        pass
+        if sparse_row_id_fn is not None:
+            warnings.warn(UserWarning("sparse_row_id_fn is not invoked for BaseModule."))
+    # pylint: enable=unused-argument
 
     def forward(self, data_batch, is_train=None):
         """Forward computation. It supports data batches with different shapes, such as
@@ -877,6 +942,12 @@ class BaseModule(object):
         """Updates parameters according to the installed optimizer and the gradients computed
         in the previous forward-backward batch.
 
+        When KVStore is used to update parameters for multi-device or multi-machine training,
+        a copy of the parameters are stored in KVStore. Note that for `row_sparse` parameters,
+        this function does update the copy of parameters in KVStore, but doesn't broadcast the
+        updated parameters to all devices / machines. Please call `prepare` to broadcast
+        `row_sparse` parameters with the next batch of data.
+
         Examples
         --------
         >>> # An example of updating module parameters.
@@ -892,7 +963,7 @@ class BaseModule(object):
         """
         raise NotImplementedError()
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward
         computation.
 
@@ -900,8 +971,10 @@ class BaseModule(object):
         ----------
         eval_metric : EvalMetric
             Evaluation metric to use.
-        labels : list of NDArray
-            Typically `data_batch.label`.
+        labels : list of NDArray if `pre_sliced` parameter is set to `False`,
+            list of lists of NDArray otherwise. Typically `data_batch.label`.
+        pre_sliced: bool
+            Whether the labels are already sliced per device (default: False).
 
         Examples
         --------

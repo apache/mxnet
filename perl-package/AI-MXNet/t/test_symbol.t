@@ -17,9 +17,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 98;
+use Test::More tests => 103;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate);
+use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal same);
 use Storable qw(freeze thaw);
 use PDL;
 
@@ -237,6 +237,58 @@ sub test_load_000800
 }
 
 test_load_000800();
+
+sub test_linalg_gemm2
+{
+    # Single matrix multiply
+    my $sym_gemm2 = mx->sym->linalg->gemm2(
+        mx->sym->var('A'),
+        mx->sym->var('B'),
+        transpose_b => 1,
+        alpha => 2.0
+    );
+    my $A = mx->nd->array([[1.0, 1.0], [1.0, 1.0]]);
+    my $B = mx->nd->array([[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]);
+    ok(almost_equal(
+        $sym_gemm2->eval(args => { A => $A, B => $B })->[0]->aspdl,
+        pdl([[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]])
+    ));
+
+    # Batch matrix multiply
+    $A = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    $B = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    ok(almost_equal(
+        $sym_gemm2->eval(args => { A => $A, B => $B })->[0]->aspdl,
+        pdl([[[4.0]], [[0.04]]])
+    ));
+}
+
+test_linalg_gemm2();
+
+sub test_image_to_tensor
+{
+    my $sym_to_tensor = mx->sym->image->to_tensor(
+        mx->sym->var('A')
+    );
+    my $A = mx->nd->zeros([28, 28, 3]);
+    ok(same(
+        $sym_to_tensor->eval(args => { A => $A })->[0]->aspdl,
+        zeros(28, 28, 3)
+    ));
+}
+
+test_image_to_tensor();
+
+sub test_histogram
+{
+    my $z = mx->nd->array([0..99]);
+    my $b = mx->nd->array([10, 20, 30, 60]);
+    my ($hist, $bins) = @{ mx->sym->histogram(mx->sym->var("z"), bins => mx->sym->var("bins"))->eval(args => { z => $z, bins => $b }) };
+    ok(same($hist->aspdl, pdl([10, 10, 31])));
+    ok(same($bins->aspdl, pdl([10, 20, 30, 60])));
+}
+
+test_histogram();
 
 __DATA__
 {

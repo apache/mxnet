@@ -31,7 +31,7 @@ from . import ndarray
 
 
 class Monitor(object):
-    """Monitor outputs, weights, and gradients for debugging.
+    """Monitor inputs, outputs, weights, and gradients for debugging.
 
     Parameters
     ----------
@@ -40,14 +40,16 @@ class Monitor(object):
     stat_func : function
         A function that computes statistics of tensors.
         Takes an `NDArray` and returns an `NDArray`. Defaults to mean
-        absolute value |x|/size(x).
+        absolute value abs(x)/size(x).
     pattern : str
         A regular expression specifying which tensors to monitor.
         Only tensors with names that match `name_pattern` will be included.
         For example, '.*weight|.*output' will print all weights and outputs and
         '.*backward.*' will print all gradients.
+    monitor_all : bool, default False
+        If true, monitor both input and output, otherwise monitor output only.
     """
-    def __init__(self, interval, stat_func=None, pattern='.*', sort=False):
+    def __init__(self, interval, stat_func=None, pattern='.*', sort=False, monitor_all=False):
         if stat_func is None:
             def asum_stat(x):
                 """returns |x|/size(x), async execution."""
@@ -61,6 +63,7 @@ class Monitor(object):
         self.exes = []
         self.re_prog = re.compile(pattern)
         self.sort = sort
+        self.monitor_all = monitor_all
         def stat_helper(name, array):
             """wrapper for executor callback"""
             array = ctypes.cast(array, NDArrayHandle)
@@ -79,7 +82,7 @@ class Monitor(object):
         exe : mx.executor.Executor
             The Executor (returned by symbol.bind) to install to.
         """
-        exe.set_monitor_callback(self.stat_helper)
+        exe.set_monitor_callback(self.stat_helper, self.monitor_all)
         self.exes.append(exe)
 
     def tic(self):

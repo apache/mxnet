@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cc
+ * \file elemwise_binary_op_logic.cc
  * \brief CPU Implementation of unary function.
  */
 #include "./elemwise_unary_op.h"
@@ -55,6 +55,21 @@ MXNET_OPERATOR_REGISTER_BINARY(_lesser)
 MXNET_OPERATOR_REGISTER_BINARY(_lesser_equal)
 .add_alias("_Lesser_Equal")
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::le>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_BINARY(_logical_and)
+.add_alias("_Logical_And")
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_and>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_BINARY(_logical_or)
+.add_alias("_Logical_Or")
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_or>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+MXNET_OPERATOR_REGISTER_BINARY(_logical_xor)
+.add_alias("_Logical_Xor")
+.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, mshadow_op::logical_xor>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op

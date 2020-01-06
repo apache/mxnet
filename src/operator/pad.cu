@@ -56,9 +56,9 @@ __global__ void image_2d_pad_edge_kernel(Tensor<gpu, 4, DType> dst,
   int oStartY = max(0, padT);
 
   int inputPointX =
-      min(max(padL, outputPointX), src.size(3) + padL - 1) - oStartX + iStartX;
+      min(max(padL, outputPointX), static_cast<int>(src.size(3)) + padL - 1) - oStartX + iStartX;
   int inputPointY =
-      min(max(padT, outputPointY), src.size(2) + padT - 1) - oStartY + iStartY;
+      min(max(padT, outputPointY), static_cast<int>(src.size(2)) + padT - 1) - oStartY + iStartY;
 
   DType valueToCopy = src[batch][plane][inputPointY][inputPointX];
   dst[batch][plane][outputPointY][outputPointX] = valueToCopy;
@@ -98,9 +98,9 @@ __global__ void image_2d_pad_edge_grad_kernel(
   int iStartY = max(0, -padT);
   int oStartX = max(0, padL);
   int oStartY = max(0, padT);
-  int inputPointX = min(max(padL, outputPointX), grad_in.size(3) + padL - 1) -
+  int inputPointX = min(max(padL, outputPointX), static_cast<int>(grad_in.size(3)) + padL - 1) -
                     oStartX + iStartX;
-  int inputPointY = min(max(padT, outputPointY), grad_in.size(2) + padT - 1) -
+  int inputPointY = min(max(padT, outputPointY), static_cast<int>(grad_in.size(2)) + padT - 1) -
                     oStartY + iStartY;
   DType valueToCopy = grad_out[batch][plane][outputPointY][outputPointX];
   atomicAdd(&grad_in[batch][plane][inputPointY][inputPointX], valueToCopy);
@@ -346,11 +346,11 @@ __global__ void image_3d_pad_edge_kernel(Tensor<gpu, 5, DType> dst,
   int oStartZ = max(0, padF);
 
   int inputPointX =
-      min(max(padL, outputPointX), src.size(4) + padL - 1) - oStartX + iStartX;
+      min(max(padL, outputPointX), static_cast<int>(src.size(4)) + padL - 1) - oStartX + iStartX;
   int inputPointY =
-      min(max(padT, outputPointY), src.size(3) + padT - 1) - oStartY + iStartY;
+      min(max(padT, outputPointY), static_cast<int>(src.size(3)) + padT - 1) - oStartY + iStartY;
   int inputPointZ =
-      min(max(padF, outputPointZ), src.size(2) + padF - 1) - oStartZ + iStartZ;
+      min(max(padF, outputPointZ), static_cast<int>(src.size(2)) + padF - 1) - oStartZ + iStartZ;
 
   DType valueToCopy = src[batch][plane][inputPointZ][inputPointY][inputPointX];
   dst[batch][plane][outputPointZ][outputPointY][outputPointX] = valueToCopy;
@@ -395,11 +395,11 @@ __global__ void image_3d_pad_edge_grad_kernel(
   int oStartY = max(0, padT);
   int oStartZ = max(0, padF);
 
-  int inputPointX = min(max(padL, outputPointX), grad_in.size(4) + padL - 1) -
+  int inputPointX = min(max(padL, outputPointX), static_cast<int>(grad_in.size(4)) + padL - 1) -
                     oStartX + iStartX;
-  int inputPointY = min(max(padT, outputPointY), grad_in.size(3) + padT - 1) -
+  int inputPointY = min(max(padT, outputPointY), static_cast<int>(grad_in.size(3)) + padT - 1) -
                     oStartY + iStartY;
-  int inputPointZ = min(max(padF, outputPointZ), grad_in.size(2) + padF - 1) -
+  int inputPointZ = min(max(padF, outputPointZ), static_cast<int>(grad_in.size(2)) + padF - 1) -
                     oStartZ + iStartZ;
   DType valueToCopy =
       grad_out[batch][plane][outputPointZ][outputPointY][outputPointX];

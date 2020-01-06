@@ -53,6 +53,9 @@ ADD_LDFLAGS =
 # the additional compile flags you want to add
 ADD_CFLAGS =
 
+# whether to build operators written in TVM
+USE_TVM_OP = 0
+
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
 #---------------------------------------------
@@ -75,12 +78,17 @@ USE_CUDNN = 0
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 # use openmp for parallelization
+# apple-clang by default does not have openmp built-in
 USE_OPENMP = 0
 
 # choose the version of blas you want to use
-# can be: mkl, blas, atlas, openblas
+# can be: mkl, blas, atlas, openblas, apple
 USE_BLAS = apple
 
 # whether use lapack during compilation
@@ -88,7 +96,7 @@ USE_BLAS = apple
 USE_LAPACK = 1
 
 # by default, disable lapack when using MKL
-# switch on when there is a full installation of MKL available (not just MKL2017/MKL_ML)
+# switch on when there is a full installation of MKL available (not just MKL_ML)
 ifeq ($(USE_BLAS), mkl)
 USE_LAPACK = 0
 endif
@@ -129,6 +137,12 @@ EXTRA_OPERATORS =
 
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
+
+# Use int64_t type to represent the total number of elements in a tensor
+# This will cause performance degradation reported in issue #14496
+# Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
+# Note: the size of each dimension is still bounded by INT32_MAX
+USE_INT64_TENSOR_SIZE = 0
 
 #----------------------------
 # plugins

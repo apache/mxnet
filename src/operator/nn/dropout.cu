@@ -21,7 +21,7 @@
  * Copyright (c) 2015 by Contributors
  * \file dropout.cc
  * \brief
- * \author Bing Xu, Da Zheng
+ * \author Bing Xu, Da Zheng, Hang Zhang
 */
 
 #include "./dropout-inl.h"
@@ -30,10 +30,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(Dropout)
-.set_attr<FCompute>("FCompute<gpu>", DropoutCompute<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Dropout)
-.set_attr<FCompute>("FCompute<gpu>", DropoutGradCompute<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

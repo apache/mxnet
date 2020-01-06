@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,11 +19,10 @@
 # under the License.
 
 import argparse
-import tools.find_mxnet
 import mxnet as mx
 import os
-import sys
 from train.train_net import train_net
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a Single-shot detection network')
@@ -101,6 +103,8 @@ def parse_args():
                         help='use difficult ground-truths in evaluation')
     parser.add_argument('--no-voc07', dest='use_voc07_metric', action='store_false',
                         help='dont use PASCAL VOC 07 11-point metric')
+    parser.add_argument('--kv-store', type=str, default='local',
+                        help='key-value store type')
     args = parser.parse_args()
     return args
 
@@ -148,4 +152,5 @@ if __name__ == '__main__':
               force_nms=args.force_nms,
               ovp_thresh=args.overlap_thresh,
               use_difficult=args.use_difficult,
-              voc07_metric=args.use_voc07_metric)
+              voc07_metric=args.use_voc07_metric,
+              kv_store=args.kv_store)

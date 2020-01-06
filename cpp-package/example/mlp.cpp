@@ -24,9 +24,8 @@
 #include <vector>
 #include <string>
 #include "mxnet-cpp/MxNetCpp.h"
+#include "utils.h"
 
-
-using namespace std;
 using namespace mxnet::cpp;
 
 /*
@@ -48,27 +47,28 @@ void OutputAccuracy(mx_float* pred, mx_float* target) {
     }
     if (p_y == target[i]) right++;
   }
-  cout << "Accuracy: " << right / 128.0 << endl;
+  std::cout << "Accuracy: " << right / 128.0 << std::endl;
 }
 
-void MLP() {
+void MLP(int max_epoch) {
   auto sym_x = Symbol::Variable("X");
   auto sym_label = Symbol::Variable("label");
 
   const int nLayers = 2;
-  vector<int> layerSizes({512, 10});
-  vector<Symbol> weights(nLayers);
-  vector<Symbol> biases(nLayers);
-  vector<Symbol> outputs(nLayers);
+  std::vector<int> layerSizes({512, 10});
+  std::vector<Symbol> weights(nLayers);
+  std::vector<Symbol> biases(nLayers);
+  std::vector<Symbol> outputs(nLayers);
 
+  Symbol null_sym;
   for (int i = 0; i < nLayers; i++) {
-    string istr = to_string(i);
-    weights[i] = Symbol::Variable(string("w") + istr);
-    biases[i] = Symbol::Variable(string("b") + istr);
-    Symbol fc = FullyConnected(string("fc") + istr,
+    std::string istr = std::to_string(i);
+    weights[i] = Symbol::Variable(std::string("w") + istr);
+    biases[i] = Symbol::Variable(std::string("b") + istr);
+    Symbol fc = FullyConnected(std::string("fc") + istr,
       i == 0? sym_x : outputs[i-1],
       weights[i], biases[i], layerSizes[i]);
-    outputs[i] = LeakyReLU(string("act") + istr, fc, LeakyReLUActType::kLeaky);
+    outputs[i] = LeakyReLU(std::string("act") + istr, fc, null_sym, LeakyReLUActType::kLeaky);
   }
   auto sym_out = SoftmaxOutput("softmax", outputs[nLayers - 1], sym_label);
 
@@ -140,18 +140,17 @@ void MLP() {
   grad_req_type.push_back(kNullOp);
   std::vector<NDArray> aux_states;
 
-  cout << "make the Executor" << endl;
+  std::cout << "make the Executor" << std::endl;
   Executor* exe = new Executor(sym_out, ctx_dev, in_args, arg_grad_store,
                                grad_req_type, aux_states);
 
-  cout << "Training" << endl;
-  int max_iters = 20000;
+  std::cout << "Training" << std::endl;
   mx_float learning_rate = 0.0001;
-  for (int iter = 0; iter < max_iters; ++iter) {
+  for (int epoch_num = 0; epoch_num < max_epoch; ++epoch_num) {
     exe->Forward(true);
-
-    if (iter % 100 == 0) {
-      cout << "epoch " << iter << endl;
+    // print accuracy every 100 epoch
+    if (epoch_num % 100 == 0) {
+      std::cout << "epoch " << epoch_num << std::endl;
       std::vector<NDArray>& out = exe->outputs;
       float* cptr = new float[128 * 10];
       out[0].SyncCopyToCPU(cptr, 128 * 10);
@@ -174,8 +173,10 @@ void MLP() {
 }
 
 int main(int argc, char** argv) {
-  MLP();
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 15000;
+  TRY
+  MLP(max_epoch);
   MXNotifyShutdown();
+  CATCH
   return 0;
 }
-

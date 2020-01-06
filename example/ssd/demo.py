@@ -25,6 +25,9 @@ import os
 import sys
 from detect.detector import Detector
 from symbol.symbol_factory import get_symbol
+from dataset.cv2Iterator import CameraIterator
+import logging
+import cv2
 
 def get_detector(net, prefix, epoch, data_shape, mean_pixels, ctx, num_class,
                  nms_thresh=0.5, force_nms=True, nms_topk=400):
@@ -72,6 +75,8 @@ def parse_args():
                         type=str, nargs='?')
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
                         default=0, type=int)
+    parser.add_argument('--batch-size', dest='batch_size', help='batch size',
+                        default=1, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
                         default=os.path.join(os.getcwd(), 'model', 'ssd_'),
                         type=str)
@@ -102,6 +107,10 @@ def parse_args():
                         car, cat, chair, cow, diningtable, dog, horse, motorbike, \
                         person, pottedplant, sheep, sofa, train, tvmonitor',
                         help='string of comma separated names, or text filename')
+    parser.add_argument('--camera', action='store_true',
+                        help="use camera for image capturing")
+    parser.add_argument('--frame-resize', type=str, default=None,
+                        help="resize camera frame to x,y pixels or a float scaling factor")
     args = parser.parse_args()
     return args
 
@@ -120,6 +129,15 @@ def parse_class_names(class_names):
         raise RuntimeError("No valid class_name provided...")
     return class_names
 
+def parse_frame_resize(x):
+    if not x:
+        return x
+    x = list(map(float, x.strip().split(',')))
+    assert len(x) >= 1 and len(x) <= 2, "frame_resize should be a float scaling factor or a tuple of w,h pixels"
+    if len(x) == 1:
+        x = x[0]
+    return x
+
 def parse_data_shape(data_shape_str):
     """Parse string to tuple or int"""
     ds = data_shape_str.strip().split(',')
@@ -131,13 +149,59 @@ def parse_data_shape(data_shape_str):
         raise ValueError("Unexpected data_shape: %s", data_shape_str)
     return data_shape
 
-if __name__ == '__main__':
-    args = parse_args()
-    if args.cpu:
-        ctx = mx.cpu()
-    else:
-        ctx = mx.gpu(args.gpu_id)
+def draw_detection(frame, det, class_names):
+    (klass, score, x0, y0, x1, y1) = det
+    klass_name = class_names[int(klass)]
+    h = frame.shape[0]
+    w = frame.shape[1]
+    # denormalize detections from [0,1] to the frame size
+    p0 = tuple(map(int, (x0*w,y0*h)))
+    p1 = tuple(map(int, (x1*w,y1*h)))
+    logging.info("detection: %s %s", klass_name, score)
+    cv2.rectangle(frame, p0, p1, (0,0,255), 2)
+    # Where to draw the text, a few pixels above the top y coordinate
+    tp0 = (p0[0], p0[1]-5)
+    draw_text = "{} {}".format(klass_name, score)
+    cv2.putText(frame, draw_text, tp0, cv2.FONT_HERSHEY_COMPLEX_SMALL, 0.5, (0,0,255))
 
+
+def network_path(prefix, network, data_shape):
+    return "{}{}_{}".format(prefix, network, data_shape)
+
+def run_camera(args,ctx):
+    assert args.batch_size == 1, "only batch size of 1 is supported"
+    logging.info("Detection threshold is {}".format(args.thresh))
+    iter = CameraIterator(frame_resize=parse_frame_resize(args.frame_resize))
+    class_names = parse_class_names(args.class_names)
+    mean_pixels = (args.mean_r, args.mean_g, args.mean_b)
+    data_shape = int(args.data_shape)
+    batch_size = int(args.batch_size)
+    detector = Detector(
+        get_symbol(args.network, data_shape, num_classes=len(class_names)),
+        network_path(args.prefix, args.network, data_shape),
+        args.epoch,
+        data_shape,
+        mean_pixels,
+        batch_size,
+        ctx
+    )
+    for frame in iter:
+        logging.info("Frame info: shape %s type %s", frame.shape, frame.dtype)
+        logging.info("Generating batch")
+        data_batch = detector.create_batch(frame)
+        logging.info("Detecting objects")
+        detections_batch = detector.detect_batch(data_batch)
+        #detections = [mx.nd.array((1,1,0.2,0.2,0.4,0.4))]
+        detections = detections_batch[0]
+        logging.info("%d detections", len(detections))
+        for det in detections:
+            obj = det.asnumpy()
+            (klass, score, x0, y0, x1, y1) = obj
+            if score > args.thresh:
+                draw_detection(frame, obj, class_names)
+        cv2.imshow('frame', frame)
+
+def run_images(args,ctx):
     # parse image list
     image_list = [i.strip() for i in args.images.split(',')]
     assert len(image_list) > 0, "No valid image specified to detect"
@@ -156,3 +220,22 @@ if __name__ == '__main__':
     # run detection
     detector.detect_and_visualize(image_list, args.dir, args.extension,
                                   class_names, args.thresh, args.show_timer)
+
+def main():
+    logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(format='%(asctime)-15s %(message)s')
+    args = parse_args()
+    if args.cpu:
+        ctx = mx.cpu()
+    else:
+        ctx = mx.gpu(args.gpu_id)
+
+    if args.camera:
+        run_camera(args, ctx)
+    else:
+        run_images(args, ctx)
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
+

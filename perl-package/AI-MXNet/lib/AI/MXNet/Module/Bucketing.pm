@@ -33,11 +33,11 @@ AI::MXNet::Module::Bucketing
     my $invalid_label = 0;
 
     my ($train_sentences, $vocabulary) = tokenize_text(
-        './data/ptb.train.txt', start_label => $start_label,
+        './data/sherlockholmes.train.txt', start_label => $start_label,
         invalid_label => $invalid_label
     );
     my ($validation_sentences) = tokenize_text(
-        './data/ptb.test.txt', vocab => $vocabulary,
+        './data/sherlockholmes.test.txt', vocab => $vocabulary,
         start_label => $start_label, invalid_label => $invalid_label
     );
     my $data_train  = mx->rnn->BucketSentenceIter(

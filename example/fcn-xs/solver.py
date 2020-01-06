@@ -63,7 +63,7 @@ class Solver(object):
         else:
             self.grad_params = None
         aux_names = self.symbol.list_auxiliary_states()
-        self.aux_params = {k : nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
+        self.aux_params = {k: mx.nd.zeros(s) for k, s in zip(aux_names, aux_shapes)}
         data_name = train_data.data_name
         label_name = train_data.label_name
         input_names = [data_name, label_name]

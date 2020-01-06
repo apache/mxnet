@@ -30,3 +30,13 @@ make install || exit -1
 cd ${MXNET_HOME}/perl-package/AI-MXNet/
 perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
 make test TEST_VERBOSE=1 || exit -1 # Add debug output to test log
+make install || exit -1
+
+cd ${MXNET_HOME}/perl-package/AI-MXNet-Gluon-Contrib/
+perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
+make install || exit -1
+
+cd ${MXNET_HOME}/perl-package/AI-MXNet-Gluon-ModelZoo/
+perl Makefile.PL INSTALL_BASE=${MXNET_HOME}/perl5
+make test TEST_VERBOSE=1 || exit -1
+

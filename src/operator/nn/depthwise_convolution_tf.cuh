@@ -384,6 +384,101 @@ DepthwiseConv2dBackwardDataKernel(const DepthwiseArgs args,
   }
 }
 
+// A Cuda kernel to compute the depthwise convolution backprop w.r.t. filter.
+template <typename DType, int kFilterWidth, int kFilterHeight>
+__global__ void __launch_bounds__(640, 2)
+DepthwiseConv2dBackwardFilterKernel(const DepthwiseArgs args,
+                                    const DType* out_backprop,
+                                    const DType* input,
+                                    DType* filter_backprop,
+                                    int num_out_backprop) {
+  const int in_channel = args.in_channel;
+  const int in_height = args.in_height;
+  const int in_width = args.in_width;
+  const int filter_height = kFilterHeight > 0 ? kFilterHeight : args.filter_height;
+  const int filter_width = kFilterWidth > 0 ? kFilterWidth : args.filter_width;
+  const int stride_height = args.stride_height;
+  const int stride_width = args.stride_width;
+  const int pad_height = args.pad_height;
+  const int pad_width = args.pad_width;
+  const int out_channel = args.out_channel;
+  const int out_height = args.out_height;
+  const int out_width = args.out_width;
+
+  CUDA_KERNEL_LOOP(thread_id, num_out_backprop) {
+    // Compute the indexes of this thread in the output.
+    const int out_w = thread_id % out_width;
+    const int out_h = (thread_id / out_width) % out_height;
+    const int out_c = (thread_id / out_width / out_height) % out_channel;
+    const int out_b = thread_id / out_width / out_height / out_channel;
+    const int in_c = out_c;
+
+    // Decide if all input is valid, if yes, we can skip the boundary checks
+    // for each input.
+    const int in_row_start = out_h * stride_height - pad_height;
+    const int in_col_start = out_w * stride_width - pad_width;
+    const int in_row_end = in_row_start + filter_height;
+    const int in_col_end = in_col_start + filter_width;
+
+    const int out_backprop_offset =
+        (out_b * out_channel * out_height * out_width) +
+        (out_c * out_height * out_width) + (out_h * out_width) +
+        (out_w);
+
+    const DType out_bp = ldg(out_backprop + out_backprop_offset);
+    if (in_row_start >= 0 && in_col_start >= 0 &&
+        in_row_end < in_height && in_col_end < in_width) {
+      CUDA_UNROLL for (int f_h = 0; f_h < filter_height; ++f_h) {
+        const int in_row = in_row_start + f_h;
+        // Avoid repeated computation.
+        const int input_offset_temp =
+            (out_b * in_channel * in_height * in_width) +
+            (in_c * in_height * in_width) + (in_row * in_width);
+        const int filter_backprop_temp =
+            (in_c * filter_width * filter_height) +
+            (filter_width * f_h);
+
+        CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
+          const int in_col = in_col_start + f_w;
+          const int input_offset = input_offset_temp + in_col;
+          DType partial_sum = ldg(input + input_offset) * out_bp;
+          DType* addr = filter_backprop + (filter_backprop_temp + f_w);
+          atomicAdd(addr, partial_sum);
+        }
+      }
+    } else {
+      CUDA_UNROLL for (int f_h = 0; f_h < filter_height; ++f_h) {
+        const int in_row = in_row_start + f_h;
+        // Avoid repeated computation.
+        const int input_offset_temp =
+            (out_b * in_channel * in_height * in_width) +
+            (in_c * in_height * in_width) + (in_row * in_width);
+        const int filter_backprop_temp =
+            (in_c * filter_width * filter_height) +
+            (filter_width * f_h);
+        CUDA_UNROLL for (int f_w = 0; f_w < filter_width; ++f_w) {
+          const int in_col = in_col_start + f_w;
+
+          if (in_row >= 0 && in_row < in_height && in_col >= 0 && in_col < in_width) {
+            const int input_offset = input_offset_temp + in_col;
+            DType partial_sum = ldg(input + input_offset) * out_bp;
+            DType* addr = filter_backprop + (filter_backprop_temp + f_w);
+            // Potentially many threads can add to the same address so we have
+            // to use atomic add here.
+            // TODO(jmchen): If atomic add turns out to be slow, we can:
+            // 1. allocate multiple buffers for the gradients (one for each
+            // example in a batch, for example). This can reduce the
+            // contention on the destination; 2. Have each thread compute one
+            // gradient for an element in the filters. This should work well
+            // when the input depth is big and filter size is not too small.
+            atomicAdd(addr, partial_sum);
+          }
+        }
+      }
+    }
+  }
+}
+
 // CUDA kernel to compute the depthwise convolution backward w.r.t. filter in
 // NCHW format, tailored for small images up to 32x32. Only use this kernel if
 // CanLaunchDepthwiseConv2dGPUSmall(args) returns true.

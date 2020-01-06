@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 **deepSpeech.mxnet: Rich Speech Example**
 =========================================
   
@@ -19,16 +36,18 @@ With rich functionalities and convenience explained above, you can build your ow
 ## **Environments**
 - MXNet version: 0.9.5+
 - GPU memory size: 2.4GB+
-- Install tensorboard for logging
+- Install mxboard for logging
 <pre>
-<code>pip install tensorboard</code>
+<code>pip install mxboard</code>
 </pre>  
 
 - [SoundFile](https://pypi.python.org/pypi/SoundFile/0.8.1) for audio preprocessing (If encounter errors about libsndfile, follow [this tutorial](http://www.linuxfromscratch.org/blfs/view/svn/multimedia/libsndfile.html).)
 <pre>
 <code>pip install soundfile</code>
 </pre>
-- Warp CTC: Follow [this instruction](https://github.com/dmlc/mxnet/tree/master/example/warpctc) to install Baidu's Warp CTC.
+- Warp CTC: Follow [this instruction](https://github.com/baidu-research/warp-ctc) to compile Baidu's Warp CTC. (Note: If you are using V100, make sure to use this [fix](https://github.com/baidu-research/warp-ctc/pull/118))
+- You need to compile MXNet with WarpCTC, follow the instructions [here](https://github.com/apache/incubator-mxnet/tree/master/example/ctc)
+- You might need to set `LD_LIBRARY_PATH` to the right path if MXNet fails to find your `libwarpctc.so`
 - **We strongly recommend that you first test a model of small networks.**
 
 

@@ -1,7 +1,25 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  * Copyright (c) 2017 by Contributors
  * Copyright (c) 2017 Microsoft
- * Licensed under The Apache-2.0 License [see LICENSE for details]
  * \file psroi_pooling-inl.h
  * \brief psroi pooling operator and symbol
  * \author Yi Li, Tairui Chen, Guodong Zhang, Haozhi Qi, Jifeng Dai
@@ -31,7 +49,7 @@ enum PSROIPoolingOpOutputs {kOut};
 }  // psroipool
 
 struct PSROIPoolingParam : public dmlc::Parameter<PSROIPoolingParam> {
-  // TShape pooled_size;
+  // mxnet::TShape pooled_size;
   float spatial_scale;
   int output_dim;
   int pooled_size;
@@ -150,18 +168,18 @@ class PSROIPoolingProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2) << "Input:[data, rois]";
 
     // data: [batch_size, c, h, w]
-    TShape dshape = in_shape->at(psroipool::kData);
+    mxnet::TShape dshape = in_shape->at(psroipool::kData);
     CHECK_EQ(dshape.ndim(), 4) << "data should be a 4D tensor";
 
     // bbox: [num_rois, 5]
-    TShape bshape = in_shape->at(psroipool::kBox);
+    mxnet::TShape bshape = in_shape->at(psroipool::kBox);
     CHECK_EQ(bshape.ndim(), 2) << "bbox should be a 2D tensor of shape [batch, 5]";
     CHECK_EQ(bshape[1], 5) << "bbox should be a 2D tensor of shape [batch, 5]";
 
@@ -209,7 +227,7 @@ class PSROIPoolingProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
 

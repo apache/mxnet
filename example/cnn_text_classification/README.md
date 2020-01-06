@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 Implementing CNN for Text Classification in MXNet
 ============
 It is a slightly simplified implementation of Kim's [Convolutional Neural Networks for Sentence Classification](http://arxiv.org/abs/1408.5882) paper in MXNet.
@@ -12,6 +29,10 @@ Finally, I got a best dev accuracy 80.1%, close to 81% that reported in the orig
 ## Data
 Please download the corpus from this repository [cnn-text-classification-tf](https://github.com/dennybritz/cnn-text-classification-tf), :)
 
+Note: The dataset is from cnn-text-classification-tf [repository](https://github.com/dennybritz/cnn-text-classification-tf/tree/master/data/rt-polaritydata).
+The dataset is copyright to Denny Britz and licensed under Apache License 2.0.
+For full text of the license, see [repository license](https://github.com/dennybritz/cnn-text-classification-tf/blob/master/LICENSE)
+    
 'data/rt.vec', this file was trained on the corpus by word2vec tool. I recommend to use GoogleNews word2vec, which could get better performance, since
 this corpus is small (contains about 10K sentences).
 

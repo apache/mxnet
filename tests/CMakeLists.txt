@@ -26,6 +26,7 @@ if(GTEST_FOUND AND NOT MSVC)
 
   file(GLOB_RECURSE UNIT_TEST_SOURCE "cpp/*.cc" "cpp/*.h")
 
+  include_directories(${GTEST_INCLUDE_DIR})
   include_directories(cpp/include)
 
   if (NOT PRIVATE_RUNTIME_DIR)
@@ -57,6 +58,6 @@ if(GTEST_FOUND AND NOT MSVC)
 
   add_test(AllTestsIn${PROJECT_NAME}UnitTests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${PROJECT_NAME}_unit_tests)
 else()
-  message(WARNING "Google Test not found")
+  message(STATUS "Google Test not found")
 endif()
 

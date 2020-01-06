@@ -21,6 +21,7 @@
 """Lint helper to generate lint summary of source.
 Copyright by Contributors
 """
+from __future__ import print_function
 import codecs
 import sys
 import re
@@ -91,7 +92,7 @@ class LintHelper(object):
         (pylint_stdout, pylint_stderr) = epylint.py_run(
             ' '.join([str(path)] + self.pylint_opts), return_std=True)
         emap = {}
-        print pylint_stderr.read()
+        print(pylint_stderr.read())
         for line in pylint_stdout:
             sys.stderr.write(line)
             key = line.split(':')[-1].split('(')[0].strip()

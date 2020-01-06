@@ -34,7 +34,7 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "../fully_connected-inl.h"
+#include "../nn/fully_connected-inl.h"
 #include "nnpack.h"
 #include "nnpack_util.h"
 
@@ -64,8 +64,8 @@ class NNPACKFullyConnectedOp : public FullyConnectedOp<xpu, DType> {
     size_t expected = param_.no_bias ? 2 : 3;
     CHECK_EQ(in_data.size(), expected);
     CHECK_EQ(out_data.size(), 1);
-    const TShape& ishape = in_data[fullc::kData].shape_;
-    const TShape& oshape = out_data[fullc::kOut].shape_;
+    const mxnet::TShape& ishape = in_data[fullc::kData].shape_;
+    const mxnet::TShape& oshape = out_data[fullc::kOut].shape_;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> data = in_data[fullc::kData].get_with_shape<xpu, 2, DType>(
         Shape2(ishape[0], ishape.ProdShape(1, ishape.ndim())), s);

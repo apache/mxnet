@@ -68,6 +68,20 @@ class OpenMP {
   int reserve_cores() const { return reserve_cores_; }
 
   /*!
+   * \brief Call at the beginning of a worker thread's life.  This will set the omp_num_threads
+   *        for omp regions created by this thread
+   * \param use_omp true if this thread plans to utilize parallel omp regions
+   */
+  void on_start_worker_thread(bool use_omp);
+
+  /*!
+   * \brief Initialize a new process to use omp (after a fork,
+   *        in case you're starting threads in the atfork() that may interfere
+   *        with the initialization. Can serialize the init with this first.
+   */
+  void initialize_process();
+
+  /*!
    * \brief Get the OpenMP object's singleton pointer
    * \return Singleton OpenMP object pointer
    */
@@ -91,7 +105,7 @@ class OpenMP {
    * \brief Whether OMP_NUM_THREADS was set in the environment.  If it is, we fall back to
    *        the OMP's implementation's handling of that environment variable
    */
-  const bool omp_num_threads_set_in_environment;
+  const bool omp_num_threads_set_in_environment_;
 };
 
 }  // namespace engine

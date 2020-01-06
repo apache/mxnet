@@ -47,10 +47,10 @@ Operator* CreateOp<cpu>(CaffeOpParam param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from static_operator_common.h
-Operator *CaffeOpProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *CaffeOpProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
   std::vector<int> out_type, aux_type;
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   out_type.resize(this->ListOutputs().size());
   out_shape.resize(this->ListOutputs().size());
   aux_type.resize(this->ListAuxiliaryStates().size());

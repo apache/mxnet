@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -98,4 +99,4 @@ def get_iterator(args, kv):
 # train
 tic=time.time()
 train_model.fit(args, net, get_iterator)
-print "time elapsed to train model", time.time()-tic
+print("time elapsed to train model", time.time()-tic)

@@ -23,6 +23,11 @@ from mxnet import autograd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.test_utils import assert_almost_equal
 import sys
+import os
+import unittest
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, with_seed, teardown
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -32,6 +37,7 @@ def download_data():
     return mx.test_utils.download(
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
+@with_seed()
 def test_inference():
     all_models = ['resnet50_v1', 'vgg19_bn', 'alexnet', #'inceptionv3',
                   'densenet201', 'squeezenet1.0', 'mobilenet0.25']
@@ -75,13 +81,17 @@ def test_inference():
             gpu_param = gpu_params.get(k)
             gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
 
-        # Run inference.
-        with autograd.record(train_mode=False):
-            cpu_out = cpu_model(mx.nd.array(data, ctx=mx.cpu()))
-            gpu_out = gpu_model(gpu_data)
-        out = cpu_out.asnumpy()
-        max_val = np.max(out)
-        assert_almost_equal(out / max_val, gpu_out.asnumpy() / max_val, rtol=1e-2, atol=1e-2)
+        cpu_data = mx.nd.array(data, ctx=mx.cpu())
+        for i in range(5):
+            # Run inference.
+            with autograd.record(train_mode=False):
+                cpu_out = cpu_model(cpu_data)
+                gpu_out = gpu_model(gpu_data)
+
+            max_val = np.max(np.abs(cpu_out.asnumpy()))
+            gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
+            eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
+            assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val, rtol=1e-3, atol=1e-3)
 
 def get_nn_model(name):
     if "densenet" in name:
@@ -89,6 +99,10 @@ def get_nn_model(name):
     else:
         return get_model(name)
 
+# Seed 1521019752 produced a failure on the Py2 MKLDNN-GPU CI runner
+# on 2/16/2018 that was not reproducible.  Problem could be timing related or
+# based on non-deterministic algo selection.
+@with_seed()
 def test_training():
     # We use network models without dropout for testing.
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
@@ -145,18 +159,26 @@ def test_training():
             gpu_out = gpu_model(gpu_data)
             cpu_loss = softmax_cross_entropy(cpu_out, label)
             gpu_loss = softmax_cross_entropy(gpu_out, gpu_label)
-        assert_almost_equal(cpu_out.asnumpy(), gpu_out.asnumpy(), rtol=1e-2, atol=1e-2)
+        max_val = np.max(np.abs(cpu_out.asnumpy()))
+        gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
+        eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
+        assert_almost_equal(cpu_out / max_val, gpu_out / max_val, rtol=1e-3, atol=1e-3)
         cpu_loss.backward()
         gpu_loss.backward()
         cpu_trainer.step(batch_size)
         gpu_trainer.step(batch_size)
 
         # Compare the parameters of the two models.
+        start_test = False
         for k in cpu_params.keys():
-            k = k.replace(cpu_params.prefix, '')
-            cpu_param = cpu_params.get(k)
-            gpu_param = gpu_params.get(k)
-            assert_almost_equal(cpu_param.data().asnumpy(), gpu_param.data().asnumpy(), rtol=1e-2, atol=1e-2)
+            print(k)
+            if "stage3" in k:
+                start_test = True
+            if (start_test):
+                k = k.replace(cpu_params.prefix, '')
+                cpu_param = cpu_params.get(k)
+                gpu_param = gpu_params.get(k)
+                assert_almost_equal(cpu_param.data(), gpu_param.data(), rtol=1e-3, atol=1e-3)
 
 if __name__ == '__main__':
     import nose

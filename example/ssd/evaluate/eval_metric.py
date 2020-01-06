@@ -140,7 +140,7 @@ class MApMetric(mx.metric.EvalMetric):
                 dets = pred[indices]
                 pred = np.delete(pred, indices, axis=0)
                 # sort by score, desceding
-                dets[dets[:,1].argsort()[::-1]]
+                dets = dets[dets[:,1].argsort()[::-1]]
                 records = np.hstack((dets[:, 1][:, np.newaxis], np.zeros((dets.shape[0], 1))))
                 # ground-truths
                 label_indices = np.where(label[:, 0].astype(int) == cid)[0]

@@ -34,7 +34,7 @@ try:
 except ImportError:
     spsp = None
 
-__all__ = ['zeros', 'empty', 'array', 'load', 'save']
+__all__ = ['zeros', 'empty', 'array', 'load', 'load_frombuffer', 'save']
 
 
 def zeros(shape, ctx=None, dtype=None, stype=None, **kwargs):
@@ -182,6 +182,43 @@ def load(fname):
             for i in range(out_size.value))
 
 
+def load_frombuffer(buf):
+    """Loads an array dictionary or list from a buffer
+
+    See more details in ``save``.
+
+    Parameters
+    ----------
+    buf : str
+        Buffer containing contents of a file as a string or bytes.
+
+    Returns
+    -------
+    list of NDArray, RowSparseNDArray or CSRNDArray, or \
+    dict of str to NDArray, RowSparseNDArray or CSRNDArray
+        Loaded data.
+    """
+    if not isinstance(buf, string_types + tuple([bytes])):
+        raise TypeError('buf required to be a string or bytes')
+    out_size = mx_uint()
+    out_name_size = mx_uint()
+    handles = ctypes.POINTER(NDArrayHandle)()
+    names = ctypes.POINTER(ctypes.c_char_p)()
+    check_call(_LIB.MXNDArrayLoadFromBuffer(buf,
+                                            mx_uint(len(buf)),
+                                            ctypes.byref(out_size),
+                                            ctypes.byref(handles),
+                                            ctypes.byref(out_name_size),
+                                            ctypes.byref(names)))
+    if out_name_size.value == 0:
+        return [_ndarray_cls(NDArrayHandle(handles[i])) for i in range(out_size.value)]
+    else:
+        assert out_name_size.value == out_size.value
+        return dict(
+            (py_str(names[i]), _ndarray_cls(NDArrayHandle(handles[i])))
+            for i in range(out_size.value))
+
+
 def save(fname, data):
     """Saves a list of arrays or a dict of str->array to file.
 
@@ -211,6 +248,7 @@ def save(fname, data):
     >>> mx.nd.load('my_dict')
     {'y': <NDArray 1x4 @cpu(0)>, 'x': <NDArray 2x3 @cpu(0)>}
     """
+    from ..numpy import ndarray as np_ndarray
     if isinstance(data, NDArray):
         data = [data]
         handles = c_array(NDArrayHandle, [])
@@ -220,11 +258,17 @@ def save(fname, data):
         if any(not isinstance(k, string_types) for k in str_keys) or \
            any(not isinstance(v, NDArray) for v in nd_vals):
             raise TypeError('save only accept dict str->NDArray or list of NDArray')
+        if any(isinstance(v, np_ndarray) for v in nd_vals):
+            raise TypeError('cannot save mxnet.numpy.ndarray using mxnet.ndarray.save;'
+                            ' use mxnet.numpy.save instead.')
         keys = c_str_array(str_keys)
         handles = c_handle_array(nd_vals)
     elif isinstance(data, list):
         if any(not isinstance(v, NDArray) for v in data):
             raise TypeError('save only accept dict str->NDArray or list of NDArray')
+        if any(isinstance(v, np_ndarray) for v in data):
+            raise TypeError('cannot save mxnet.numpy.ndarray using mxnet.ndarray.save;'
+                            ' use mxnet.numpy.save instead.')
         keys = None
         handles = c_handle_array(data)
     else:

@@ -57,10 +57,10 @@ class LogMetricsCallback(object):
     def __init__(self, logging_dir, prefix=None):
         self.prefix = prefix
         try:
-            from tensorboard import SummaryWriter
+            from mxboard import SummaryWriter
             self.summary_writer = SummaryWriter(logging_dir)
         except ImportError:
-            logging.error('You can install tensorboard via `pip install tensorboard`.')
+            logging.error('You can install mxboard via `pip install mxboard`.')
 
     def __call__(self, param):
         """Callback to log training speed and metrics in TensorBoard."""
@@ -70,4 +70,4 @@ class LogMetricsCallback(object):
         for name, value in name_value:
             if self.prefix is not None:
                 name = '%s-%s' % (self.prefix, name)
-            self.summary_writer.add_scalar(name, value)
+            self.summary_writer.add_scalar(name, value, global_step=param.epoch)

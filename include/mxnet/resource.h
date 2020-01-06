@@ -28,7 +28,7 @@
 #include <dmlc/logging.h>
 #include "./base.h"
 #include "./engine.h"
-#include "../../src/common/random_generator.h"
+#include "./random_generator.h"
 
 namespace mxnet {
 
@@ -44,6 +44,11 @@ struct ResourceRequest {
     kTempSpace,
     /*! \brief common::RandGenerator<xpu> object, which can be used in GPU kernel functions */
     kParallelRandom
+#if MXNET_USE_CUDNN == 1
+    ,
+    /*! \brief cudnnDropoutDescriptor_t object for GPU dropout kernel functions */
+    kCuDNNDropoutDesc
+#endif  // MXNET_USE_CUDNN == 1
   };
   /*! \brief type of resources */
   Type type;
@@ -157,6 +162,21 @@ struct Resource {
         reinterpret_cast<DType*>(get_space_internal(shape.Size() * sizeof(DType))),
         shape, shape[ndim - 1], stream);
   }
+#if MXNET_USE_CUDNN == 1
+  /*!
+   * \brief Get cudnn dropout descriptor from shared state space.
+   *
+   * \param dropout_desc reference to previously created cudnn dropout descriptor.
+   * \param stream the stream of retruning tensor.
+   * \return the mshadow tensor requested.
+   */
+  void get_cudnn_dropout_desc(
+      cudnnDropoutDescriptor_t* dropout_desc,
+      mshadow::Stream<gpu> *stream,
+      const float dropout,
+      uint64_t seed) const;
+#endif  // MXNET_USE_CUDNN == 1
+
   /*!
    * \brief Get CPU space as mshadow Tensor in specified type.
    * The caller can request arbitrary size.
@@ -200,10 +220,15 @@ class ResourceManager {
    */
   virtual Resource Request(Context ctx, const ResourceRequest &req) = 0;
   /*!
-   * \brief Seed all the allocated random numbers.
+   * \brief Seed all the allocated random number generators.
    * \param seed the seed to the random number generators on all devices.
    */
   virtual void SeedRandom(uint32_t seed) = 0;
+  /*!
+   * \brief Seed the random number generators of the given context.
+   * \param seed the seed to the random number generators.
+   */
+  virtual void SeedRandom(Context ctx, uint32_t seed) = 0;
   /*! \brief virtual destructor */
   virtual ~ResourceManager() DMLC_THROW_EXCEPTION {}
   /*!

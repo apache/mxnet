@@ -41,22 +41,22 @@ gtest-all.o : $(GTEST_SRCS_)
 gtest.a : gtest-all.o
 	$(AR) $(ARFLAGS) $@ $^
 
-build/tests/cpp/%.o : tests/cpp/%.cc
+build/tests/cpp/%.o : tests/cpp/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/$* $< > build/tests/cpp/$*.d
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/$*.o $(filter %.cc %.a, $^)
 
-build/tests/cpp/operator/%.o : tests/cpp/operator/%.cc
+build/tests/cpp/operator/%.o : tests/cpp/operator/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/operator/$* $< > build/tests/cpp/operator/$*.d
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/operator/$*.o $(filter %.cc %.a, $^)
 
-build/tests/cpp/storage/%.o : tests/cpp/storage/%.cc
+build/tests/cpp/storage/%.o : tests/cpp/storage/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/storage/$* $< > build/tests/cpp/storage/$*.d
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/storage/$*.o $(filter %.cc %.a, $^)
 
-build/tests/cpp/engine/%.o : tests/cpp/engine/%.cc
+build/tests/cpp/engine/%.o : tests/cpp/engine/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -MM -MT tests/cpp/engine/$* $< > build/tests/cpp/engine/$*.d
 	$(CXX) -c -std=c++11 $(TEST_CFLAGS) -I$(GTEST_INC) -o build/tests/cpp/engine/$*.o $(filter %.cc %.a, $^)

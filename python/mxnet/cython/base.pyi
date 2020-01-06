@@ -1,14 +1,19 @@
-from ..base import MXNetError
+from ..base import get_last_ffi_error
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
+from libcpp cimport bool as _bool
 from cpython.version cimport PY_MAJOR_VERSION
 
 ctypedef void* SymbolHandle
 ctypedef void* NDArrayHandle
 ctypedef void* OpHandle
 ctypedef void* CachedOpHandle
+ctypedef void* MonitorCallbackHandle
 ctypedef unsigned nn_uint
+ctypedef void (*CachedOpMonitorCallback)(const char*,
+                                         const char*,
+                                         NDArrayHandle)
 
 cdef py_str(const char* x):
     if PY_MAJOR_VERSION < 3:
@@ -33,7 +38,7 @@ cdef c_str(pystr):
 
 cdef CALL(int ret):
     if ret != 0:
-        raise MXNetError(NNGetLastError())
+        raise get_last_ffi_error()
 
 
 cdef const char** CBeginPtr(vector[const char*]& vec):
@@ -63,6 +68,8 @@ cdef extern from "nnvm/c_api.h":
                     const char ***arg_descriptions,
                     const char **return_type);
     int NNSymbolFree(SymbolHandle symbol);
+    int NNSymbolGetNumOutputs(SymbolHandle sym,
+                              nn_uint* output_count);
     int NNSymbolCompose(SymbolHandle sym,
                         const char* name,
                         nn_uint num_args,
@@ -90,20 +97,28 @@ cdef extern from "mxnet/c_api.h":
     int MXSymbolSetAttr(SymbolHandle symbol,
                         const char* key,
                         const char* value);
-    int MXImperativeInvoke(OpHandle creator,
+    int MXImperativeInvokeEx(OpHandle creator,
+                             int num_inputs,
+                             NDArrayHandle *inputs,
+                             int *num_outputs,
+                             NDArrayHandle **outputs,
+                             int num_params,
+                             const char **param_keys,
+                             const char **param_vals,
+                             const int **out_stypes);
+    int MXNDArrayFree(NDArrayHandle handle);
+    int MXCreateCachedOpEx(SymbolHandle handle,
+                            int num_flags,
+                            const char** keys,
+                            const char** vals,
+                            CachedOpHandle *out);
+    int MXFreeCachedOp(CachedOpHandle handle);
+    int MXInvokeCachedOpEx(CachedOpHandle handle,
                            int num_inputs,
                            NDArrayHandle *inputs,
                            int *num_outputs,
                            NDArrayHandle **outputs,
-                           int num_params,
-                           const char **param_keys,
-                           const char **param_vals);
-    int MXNDArrayFree(NDArrayHandle handle);
-    int MXCreateCachedOp(SymbolHandle handle,
-                         CachedOpHandle *out);
-    int MXFreeCachedOp(CachedOpHandle handle);
-    int MXInvokeCachedOp(CachedOpHandle handle,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs);
+                           const int **out_stypes);
+    int MXCachedOpRegisterOpHook(NDArrayHandle handle,
+                                 CachedOpMonitorCallback callback,
+                                 _bool monitor_all);

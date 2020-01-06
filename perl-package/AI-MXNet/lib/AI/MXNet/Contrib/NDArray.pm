@@ -18,13 +18,18 @@
 package AI::MXNet::Contrib::NDArray;
 use strict;
 use warnings;
+use AI::MXNet::NS;
+use parent 'AI::MXNet::AutoLoad';
+sub config { ('contrib', 'AI::MXNet::NDArray') }
 
-sub AUTOLOAD {
-    my $sub = $AI::MXNet::Contrib::NDArray::AUTOLOAD;
-    $sub =~ s/.*:://;
-    $sub = "_contrib_$sub";
-    shift;
-    return AI::MXNet::NDArray->$sub(@_);
-}
+=head1 NAME
+
+    AI::MXNet::Contrib::NDArray - An interface to experimental NDArray operators defined in C++ space.
+=cut
+
+=head1 SYNOPSIS
+
+    mx->contrib->ndarray->fft(nd->random->normal(0, 1, [3, 4], ctx => mx->gpu));
+=cut
 
 1;

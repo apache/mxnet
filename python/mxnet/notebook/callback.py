@@ -165,7 +165,11 @@ class PandasLogger(object):
             param.eval_metric.reset()
         else:
             metrics = {}
-        speed = self.frequent / (now - self.last_time)
+        # #11504
+        try:
+            speed = self.frequent / (now - self.last_time)
+        except ZeroDivisionError:
+            speed = float('inf')
         metrics['batches_per_sec'] = speed * self.batch_size
         metrics['records_per_sec'] = speed
         metrics['elapsed'] = self.elapsed()

@@ -138,7 +138,7 @@ def test(ctx, data_iter, best, mode='validation', num_iter=-1):
         if test_r >= best:
             best = test_r
             logging.info('New optimum found: {}. Checkpointing.'.format(best))
-            net.collect_params().save('childsum_tree_lstm_{}.params'.format(num_iter))
+            net.save_parameters('childsum_tree_lstm_{}.params'.format(num_iter))
             test(ctx, test_iter, -1, 'test')
         return best
 
@@ -148,11 +148,10 @@ def train(epoch, ctx, train_data, dev_data):
     # initialization with context
     if isinstance(ctx, mx.Context):
         ctx = [ctx]
-    net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx[0])
+    net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx[0])
     net.embed.weight.set_data(vocab.embed.as_in_context(ctx[0]))
     train_data.set_context(ctx[0])
     dev_data.set_context(ctx[0])
-
     # set up trainer for optimizing the network.
     trainer = gluon.Trainer(net.collect_params(), optimizer, {'learning_rate': opt.lr, 'wd': opt.wd})
 

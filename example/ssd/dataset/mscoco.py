@@ -97,6 +97,12 @@ class Coco(Imdb):
         labels = []
         coco = COCO(anno_file)
         img_ids = coco.getImgIds()
+        # deal with class names
+        cats = [cat['name'] for cat in coco.loadCats(coco.getCatIds())]
+        class_to_coco_ind = dict(zip(cats, coco.getCatIds()))
+        class_to_ind = dict(zip(self.classes, range(len(self.classes))))
+        coco_ind_to_class_ind = dict([(class_to_coco_ind[cls], class_to_ind[cls])
+                                     for cls in self.classes[0:]])
         for img_id in img_ids:
             # filename
             image_info = coco.loadImgs(img_id)[0]
@@ -109,7 +115,7 @@ class Coco(Imdb):
             annos = coco.loadAnns(anno_ids)
             label = []
             for anno in annos:
-                cat_id = int(anno["category_id"])
+                cat_id = coco_ind_to_class_ind[anno['category_id']]
                 bbox = anno["bbox"]
                 assert len(bbox) == 4
                 xmin = float(bbox[0]) / width
@@ -123,7 +129,7 @@ class Coco(Imdb):
 
         if shuffle:
             import random
-            indices = range(len(image_set_index))
+            indices = list(range(len(image_set_index)))
             random.shuffle(indices)
             image_set_index = [image_set_index[i] for i in indices]
             labels = [labels[i] for i in indices]

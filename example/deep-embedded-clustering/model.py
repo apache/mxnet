@@ -18,11 +18,11 @@
 # pylint: disable=missing-docstring
 from __future__ import print_function
 
-import mxnet as mx
 import numpy as np
+import mxnet as mx
 try:
     import cPickle as pickle
-except ModuleNotFoundError:
+except ImportError:
     import pickle
 
 

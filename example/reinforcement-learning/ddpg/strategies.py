@@ -61,7 +61,7 @@ class OUStrategy(BaseStrategy):
     def get_action(self, obs, policy):
 
         # get_action accepts a 2D tensor with one row
-    	obs = obs.reshape((1, -1))
+        obs = obs.reshape((1, -1))
         action = policy.get_action(obs)
         increment = self.evolve_state()
 
@@ -94,5 +94,3 @@ if __name__ == "__main__":
 
     plt.plot(states)
     plt.show()
-
-

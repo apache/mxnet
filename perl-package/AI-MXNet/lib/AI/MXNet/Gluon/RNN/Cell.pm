@@ -24,12 +24,12 @@ use AI::MXNet::Function::Parameters;
 
 method _cells_state_info($cells, $batch_size)
 {
-    return [map { @{ $_->state_info($batch_size) } } @{ $cells }];
+    return [map { @{ $_->state_info($batch_size) } } $cells->values];
 }
 
 method _cells_begin_state($cells, %kwargs)
 {
-    return [map { @{ $_->begin_state(%kwargs) } } @{ $cells }];
+    return [map { @{ $_->begin_state(%kwargs) } } $cells->values];
 }
 
 method _get_begin_state(GluonClass $F, $begin_state, GluonInput $inputs, $batch_size)
@@ -56,6 +56,7 @@ method _get_begin_state(GluonClass $F, $begin_state, GluonInput $inputs, $batch_
     }
     return $begin_state;
 }
+
 
 method _format_sequence($length, $inputs, $layout, $merge, $in_layout=)
 {
@@ -118,7 +119,7 @@ method _format_sequence($length, $inputs, $layout, $merge, $in_layout=)
         if($merge)
         {
             $inputs  = [map { $F->expand_dims($_, axis => $axis) } @{ $inputs }];
-            $inputs  = $F->concat(@{ $inputs }, dim => $axis);
+            $inputs  = $F->stack(@{ $inputs }, axis => $axis);
             $in_axis = $axis;
         }
     }
@@ -127,6 +128,54 @@ method _format_sequence($length, $inputs, $layout, $merge, $in_layout=)
         $inputs = $F->swapaxes($inputs, dim1=>$axis, dim2=>$in_axis);
     }
     return ($inputs, $axis, $F, $batch_size);
+}
+
+method _mask_sequence_variable_length($F, $data, $length, $valid_length, $time_axis, $merge)
+{
+    assert(defined $valid_length);
+    if(not blessed $data)
+    {
+        $data = $F->stack(@$data, axis=>$time_axis);
+    }
+    my $outputs = $F->SequenceMask($data, { sequence_length=>$valid_length, use_sequence_length=>1,
+                             axis=>$time_axis});
+    if(not $merge)
+    {
+        $outputs = $F->split($outputs, { num_outputs=>$length, axis=>$time_axis,
+                                   squeeze_axis=>1});
+        if(not ref $outputs eq 'ARRAY')
+        {
+            $outputs = [$outputs];
+        }
+    }
+    return $outputs;
+}
+
+method _reverse_sequences($sequences, $unroll_step, $valid_length=)
+{
+    my $F;
+    if($sequences->[0]->isa('AI::MXNet::Symbol'))
+    {
+        $F = 'AI::MXNet::Symbol';
+    }
+    else
+    {
+        $F = 'AI::MXNet::NDArray';
+    }
+
+    my $reversed_sequences;
+    if(not defined $valid_length)
+    {
+        $reversed_sequences = [reverse(@$sequences)];
+    }
+    else
+    {
+        $reversed_sequences = $F->SequenceReverse($F->stack(@$sequences, axis=>0),
+                                               {sequence_length=>$valid_length,
+                                               use_sequence_length=>1});
+        $reversed_sequences = $F->split($reversed_sequences, {axis=>0, num_outputs=>$unroll_step, squeeze_axis=>1});
+    }
+    return $reversed_sequences;
 }
 
 =head1 NAME
@@ -158,7 +207,7 @@ method reset()
 {
     $self->init_counter(-1);
     $self->counter(-1);
-    $_->reset for @{ $self->_children };
+    $_->reset for $self->_children->values;
 }
 
 =head2 state_info
@@ -280,22 +329,39 @@ method unroll(
     Maybe[GluonInput] $inputs,
     Maybe[GluonInput] :$begin_state=,
     Str :$layout='NTC',
-    Maybe[Bool] :$merge_outputs=
+    Maybe[Bool] :$merge_outputs=,
+    Maybe[Bool] :$valid_length=
 )
 {
     $self->reset();
-    my ($F, $batch_size);
-    ($inputs, undef, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout, 0);
+    my ($F, $batch_size, $axis);
+    ($inputs, $axis, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout, 0);
     $begin_state //= $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
 
     my $states = $begin_state;
     my $outputs = [];
-    use Data::Dumper;
+    my $all_states = [];
     for my $i (0..$length-1)
     {
         my $output;
         ($output, $states) = $self->($inputs->[$i], $states);
         push @$outputs, $output;
+        if(defined $valid_length)
+        {
+            push @$all_states, $states;
+        }
+    }
+    if(defined $valid_length)
+    {
+        $states = [];
+        for(zip(@$all_states))
+        {
+            push @$states, $F->SequenceLast($F->stack(@$_, axis=>0),
+                                     sequence_length=>$valid_length,
+                                     use_sequence_length=>1,
+                                     axis=>0);
+        }
+        $outputs = $self->_mask_sequence_variable_length($F, $outputs, $length, $valid_length, $axis, 1);
     }
     ($outputs) = $self->_format_sequence($length, $outputs, $layout, $merge_outputs);
     return ($outputs, $states);
@@ -305,7 +371,16 @@ method _get_activation(GluonClass $F, GluonInput $inputs, Activation $activation
 {
     if(not blessed $activation)
     {
+        my %act = map { $_ => 1 } qw(tanh relu sigmoid softsign);
+        if(exists $act{$activation})
+        {
+            return $F->$activation($inputs, %kwargs)
+        }
         return $F->Activation($inputs, act_type=>$activation, %kwargs);
+    }
+    elsif(ref($activation) =~ /LeakyReLU/)
+    {
+        return $F->LeakyReLU($inputs, act_type=>'leaky', slope => $activation->alpha, %kwargs);
     }
     else
     {
@@ -431,7 +506,7 @@ has [qw/
 method python_constructor_arguments()
 {
     [qw/
-        hidden_size activation 
+        hidden_size activation
         i2h_weight_initializer h2h_weight_initializer
         i2h_bias_initializer h2h_bias_initializer
         input_size
@@ -477,16 +552,17 @@ method hybrid_forward(
 {
     my $prefix = "t${\ $self->counter}_";
     my $i2h = $F->FullyConnected(
-        $inputs, $i2h_weight, $i2h_bias,
+        data => $inputs, weight => $i2h_weight, bias => $i2h_bias,
         num_hidden => $self->hidden_size,
         name => "${prefix}i2h"
     );
     my $h2h = $F->FullyConnected(
-        $states->[0], $h2h_weight, $h2h_bias,
+        data => $states->[0], weight => $h2h_weight, bias => $h2h_bias,
         num_hidden => $self->hidden_size,
         name => "${prefix}h2h"
     );
-    my $output = $self->_get_activation($F, $i2h + $h2h, $self->activation, name => "${prefix}out");
+    my $i2h_plus_h2h = $F->elemwise_add($i2h, $h2h, name => "${prefix}plus0");
+    my $output = $self->_get_activation($F, $i2h_plus_h2h, $self->activation, name => "${prefix}out");
     return ($output, [$output]);
 }
 
@@ -556,6 +632,7 @@ method python_constructor_arguments()
     /];
 }
 
+
 sub BUILD
 {
     my $self = shift;
@@ -607,14 +684,18 @@ method hybrid_forward(
         num_hidden => $self->hidden_size*4,
         name => "${prefix}h2h"
     );
-    my $gates = $i2h + $h2h;
+    my $gates = $F->elemwise_add($i2h, $h2h, name => "${prefix}plus0");
     my @slice_gates = @{ $F->SliceChannel($gates, num_outputs => 4, name => "${prefix}slice") };
     my $in_gate = $F->Activation($slice_gates[0], act_type=>"sigmoid", name => "${prefix}i");
     my $forget_gate = $F->Activation($slice_gates[1], act_type=>"sigmoid", name => "${prefix}f");
     my $in_transform = $F->Activation($slice_gates[2], act_type=>"tanh", name => "${prefix}c");
     my $out_gate = $F->Activation($slice_gates[3], act_type=>"sigmoid", name => "${prefix}o");
-    my $next_c = $F->_plus($forget_gate * $states->[1], $in_gate * $in_transform, name => "${prefix}state");
-    my $next_h = $F->_mul($out_gate, $F->Activation($next_c, act_type=>"tanh"), name => "${prefix}out");
+    my $next_c = $F->_plus(
+        $F->elemwise_mul($forget_gate, $states->[1], name => "${prefix}mul0"),
+        $F->elemwise_mul($in_gate, $in_transform, name => "${prefix}mul1"),
+        name => "${prefix}state"
+    );
+    my $next_h = $F->_mul($out_gate, $F->Activation($next_c, act_type=>"tanh", name => "${prefix}activation0"), name => "${prefix}out");
     return ($next_h, [$next_h, $next_c]);
 }
 
@@ -736,10 +817,29 @@ method hybrid_forward(
     my ($i2h_r, $i2h_z, $h2h_r, $h2h_z);
     ($i2h_r, $i2h_z, $i2h) = @{ $F->SliceChannel($i2h, num_outputs => 3, name => "${prefix}i2h_slice") };
     ($h2h_r, $h2h_z, $h2h) = @{ $F->SliceChannel($h2h, num_outputs => 3, name => "${prefix}h2h_slice") };
-    my $reset_gate  = $F->Activation($i2h_r + $h2h_r, act_type=>"sigmoid", name => "${prefix}r_act");
-    my $update_gate = $F->Activation($i2h_z + $h2h_z, act_type=>"sigmoid", name => "${prefix}z_act");
-    my $next_h_tmp = $F->Activation($i2h + $reset_gate * $h2h, act_type => "tanh", name => "${prefix}h_act");
-    my $next_h = $F->_plus((1 - $update_gate) * $next_h_tmp, $update_gate * $prev_state_h, name => "${prefix}out");
+    my $reset_gate  = $F->Activation($F->elemwise_add($i2h_r, $h2h_r, name => "${prefix}plus0"), act_type=>"sigmoid", name => "${prefix}r_act");
+    my $update_gate = $F->Activation($F->elemwise_add($i2h_z, $h2h_z, name => "${prefix}plus1"), act_type=>"sigmoid", name => "${prefix}z_act");
+    my $next_h_tmp = $F->Activation(
+        $F->elemwise_add(
+            $i2h,
+            $F->elemwise_mul(
+                $reset_gate, $h2h, name => "${prefix}mul0"
+            ),
+            name => "${prefix}plus2"
+        ),
+        act_type => "tanh",
+        name => "${prefix}h_act"
+    );
+    my $ones = $F->ones_like($update_gate, name => "${prefix}ones_like0");
+    my $next_h = $F->_plus(
+        $F->elemwise_mul(
+            $F->elemwise_sub($ones, $update_gate, name => "${prefix}minus0"),
+            $next_h_tmp,
+            name => "${prefix}mul1"
+        ),
+        $F->elemwise_mul($update_gate, $prev_state_h, name => "${prefix}mul2"),
+        name => "${prefix}out"
+    );
     return ($next_h, [$next_h]);
 }
 
@@ -805,7 +905,7 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
     $self->reset();
     my ($F, $batch_size);
     ($inputs, undef, $F, $batch_size) = $self->_format_sequence($length, $inputs, $layout, undef);
-    my $num_cells = @{ $self->_children };
+    my $num_cells = $self->_children->keys;
     $begin_state = $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
     my $p = 0;
     my @next_states;
@@ -820,7 +920,7 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
             merge_outputs => ($i < ($num_cells - 1)) ? undef : $merge_outputs
         );
         push @next_states, @{ $states };
-    }, $self->_children);
+    }, [$self->_children->values]);
     return ($inputs, \@next_states);
 }
 
@@ -829,7 +929,7 @@ method call($inputs, $states)
     $self->counter($self->counter + 1);
     my @next_states;
     my $p = 0;
-    for my $cell (@{ $self->_children })
+    for my $cell ($self->_children->values)
     {
         assert(not $cell->isa('AI::MXNet::Gluon::RNN::BidirectionalCell'));
         my $n = @{ $cell->state_info() };
@@ -841,7 +941,7 @@ method call($inputs, $states)
     return ($inputs, \@next_states);
 }
 
-use overload '@{}' => sub { shift->_children };
+use overload '@{}' => sub { [shift->_children->values] };
 use overload '""'  => sub {
     my $self = shift;
     my $s = "%s(\n%s\n)";
@@ -849,7 +949,7 @@ use overload '""'  => sub {
     enumerate(sub {
         my ($i, $m) = @_;
         push @children, "($i): ". AI::MXNet::Base::_indent("$m", 2);
-    }, $self->_children);
+    }, [$self->_children->values]);
     return sprintf($s, $self->_class_name, join("\n", @children));
 };
 
@@ -1178,7 +1278,7 @@ method unroll(Int $length, GluonInput $inputs, Maybe[GluonInput] :$begin_state=,
     $begin_state //= $self->_get_begin_state($F, $begin_state, $inputs, $batch_size);
 
     my $states = $begin_state;
-    my ($l_cell, $r_cell) = @{ $self->_children };
+    my ($l_cell, $r_cell) = $self->_children->values;
     $l_cell->state_info($batch_size);
     my ($l_outputs, $l_states) = $l_cell->unroll(
             $length, $inputs,

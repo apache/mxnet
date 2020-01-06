@@ -18,8 +18,8 @@
  */
 
 /*!
- * \file elemwise_unary_op.cu
- * \brief GPU Implementation of unary function.
+ * \file elemwise_unary_op_trig.cu
+ * \brief GPU Implementation of unary trigonometric function.
  */
 #include "./elemwise_binary_op.h"
 

@@ -35,9 +35,9 @@ Operator *CreateOp<cpu>(BatchNormV1Param param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator *BatchNormV1Prop::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *BatchNormV1Prop::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
     std::vector<int> *in_type) const {
-    std::vector<TShape> out_shape, aux_shape;
+    mxnet::ShapeVector out_shape, aux_shape;
     std::vector<int> out_type, aux_type;
     CHECK(InferType(in_type, &out_type, &aux_type));
     CHECK(InferShape(in_shape, &out_shape, &aux_shape));
@@ -48,6 +48,8 @@ DMLC_REGISTER_PARAMETER(BatchNormV1Param);
 
 MXNET_REGISTER_OP_PROPERTY(BatchNorm_v1, BatchNormV1Prop)
 .describe(R"code(Batch normalization.
+
+This operator is DEPRECATED. Perform BatchNorm on the input.
 
 Normalizes a data batch by mean and variance, and applies a scale ``gamma`` as
 well as offset ``beta``.
@@ -86,6 +88,9 @@ the output. It is often used during inference.
 
 Both ``gamma`` and ``beta`` are learnable parameters. But if ``fix_gamma`` is true,
 then set ``gamma`` to 1 and its gradient to 0.
+
+There's no sparse support for this operator, and it will exhibit problematic behavior if used with
+sparse tensors.
 
 )code" ADD_FILELINE)
 .add_argument("data", "NDArray-or-Symbol", "Input data to batch normalization")

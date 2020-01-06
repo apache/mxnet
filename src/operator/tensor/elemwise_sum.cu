@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2015 by Contributors
  * \file elemwise_sum.cu
- * \brief elementwise sum operator
+ * \brief GPU implementation of elementwise sum operator
 */
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
@@ -38,7 +38,11 @@ void ElementWiseSumComputeExGPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
   CHECK_EQ(req[0], kWriteTo) << "ElementWiseSumComputeExGPU only supports req = kWriteTo";
-  if (inputs[0].storage_type() == kRowSparseStorage) {
+  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
+      (inputs.size() == 3U && inputs[0].storage_type() == kDefaultStorage &&
+       inputs[1].storage_type() == kCSRStorage && inputs[2].storage_type() == kDefaultStorage) ||
+      (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
+       outputs[0].storage_type() == kDefaultStorage)) {
     mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<gpu>(s, ctx.requested[0], inputs, &out_nd);

@@ -18,10 +18,13 @@
 # coding: utf-8
 """Attribute scoping support for symbolic API."""
 from __future__ import absolute_import
+import threading
+import warnings
+from collections import defaultdict
 
-from .base import string_types
+from .base import string_types, classproperty, with_metaclass, _MXClassPropertyMetaClass
 
-class AttrScope(object):
+class AttrScope(with_metaclass(_MXClassPropertyMetaClass, object)):
     """Attribute manager for scoping.
 
     User can also inherit this object to change naming behavior.
@@ -31,7 +34,8 @@ class AttrScope(object):
     kwargs
         The attributes to set for all symbol creations in the scope.
     """
-    current = None
+    _current = threading.local()
+    _subgraph_names = defaultdict(int)
 
     def __init__(self, **kwargs):
         self._old_scope = None
@@ -64,15 +68,35 @@ class AttrScope(object):
 
     def __enter__(self):
         # pylint: disable=protected-access
-        self._old_scope = AttrScope.current
-        attr = AttrScope.current._attr.copy()
+        if not hasattr(AttrScope._current, "value"):
+            AttrScope._current.value = AttrScope()
+        self._old_scope = AttrScope._current.value
+        attr = AttrScope._current.value._attr.copy()
         attr.update(self._attr)
         self._attr = attr
-        AttrScope.current = self
+        AttrScope._current.value = self
         return self
 
     def __exit__(self, ptype, value, trace):
         assert self._old_scope
-        AttrScope.current = self._old_scope
+        AttrScope._current.value = self._old_scope
 
-AttrScope.current = AttrScope()
+    #pylint: disable=no-self-argument
+    @classproperty
+    def current(cls):
+        warnings.warn("AttrScope.current has been deprecated. "
+                      "It is advised to use the `with` statement with AttrScope.",
+                      DeprecationWarning)
+        if not hasattr(AttrScope._current, "value"):
+            cls._current.value = AttrScope()
+        return cls._current.value
+
+    @current.setter
+    def current(cls, val):
+        warnings.warn("AttrScope.current has been deprecated. "
+                      "It is advised to use the `with` statement with AttrScope.",
+                      DeprecationWarning)
+        cls._current.value = val
+    #pylint: enable=no-self-argument
+
+AttrScope._current.value = AttrScope()

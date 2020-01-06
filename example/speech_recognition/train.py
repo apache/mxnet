@@ -16,15 +16,14 @@
 # under the License.
 
 import sys
-
+import json
 sys.path.insert(0, "../../python")
 import os.path
+#mxboard setting
+from mxboard import SummaryWriter
 import mxnet as mx
 from config_util import get_checkpoint_path, parse_contexts
 from stt_metric import STTMetric
-#tensorboard setting
-from tensorboard import SummaryWriter
-import json
 from stt_bucketing_module import STTBucketingModule
 
 
@@ -52,7 +51,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     from distutils.dir_util import mkpath
     from log_util import LogUtil
 
-    log = LogUtil().getlogger()
+    log = LogUtil.getInstance().getlogger()
     mkpath(os.path.dirname(get_checkpoint_path(args)))
 
     #seq_len = args.config.get('arch', 'max_t_count')
@@ -65,7 +64,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
     contexts = parse_contexts(args)
     num_gpu = len(contexts)
     eval_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_validation_metric,is_epoch_end=True)
-    # tensorboard setting
+    # mxboard setting
     loss_metric = STTMetric(batch_size=batch_size, num_gpu=num_gpu, is_logging=enable_logging_train_metric,is_epoch_end=False)
 
     optimizer = args.config.get('optimizer', 'optimizer')
@@ -131,9 +130,9 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         data_train.reset()
         data_train.is_first_epoch = True
 
-    #tensorboard setting
-    tblog_dir = args.config.get('common', 'tensorboard_log_dir')
-    summary_writer = SummaryWriter(tblog_dir)
+    #mxboard setting
+    mxlog_dir = args.config.get('common', 'mxboard_log_dir')
+    summary_writer = SummaryWriter(mxlog_dir)
 
     while True:
 
@@ -144,7 +143,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         for nbatch, data_batch in enumerate(data_train):
             module.forward_backward(data_batch)
             module.update()
-            # tensorboard setting
+            # mxboard setting
             if (nbatch + 1) % show_every == 0:
                 module.update_metric(loss_metric, data_batch.label)
             #summary_writer.add_scalar('loss batch', loss_metric.get_batch_loss(), nbatch)
@@ -160,7 +159,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
             module.forward(data_batch, is_train=True)
             module.update_metric(eval_metric, data_batch.label)
 
-        # tensorboard setting
+        # mxboard setting
         val_cer, val_n_label, val_l_dist, _ = eval_metric.get_name_value()
         log.info("Epoch[%d] val cer=%f (%d / %d)", n_epoch, val_cer, int(val_n_label - val_l_dist), val_n_label)
         curr_acc = val_cer
@@ -170,7 +169,7 @@ def do_training(args, module, data_train, data_val, begin_epoch=0):
         data_train.reset()
         data_train.is_first_epoch = False
 
-        # tensorboard setting
+        # mxboard setting
         train_cer, train_n_label, train_l_dist, train_ctc_loss = loss_metric.get_name_value()
         summary_writer.add_scalar('loss epoch', train_ctc_loss, n_epoch)
         summary_writer.add_scalar('CER train', train_cer, n_epoch)

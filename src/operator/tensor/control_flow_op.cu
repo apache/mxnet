@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file control_flow_op.cu
- * \brief
+ * \brief GPU implementation of control flow
  */
 #include "./control_flow_op.h"
 

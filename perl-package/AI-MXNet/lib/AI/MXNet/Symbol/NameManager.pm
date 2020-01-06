@@ -21,7 +21,11 @@ use warnings;
 use Mouse;
 use AI::MXNet::Function::Parameters;
 
-=head1
+=head1 NAME
+
+    AI::MXNet::Symbol::NameManager - Automated symbol naming.
+
+=head1 DESCRIPTION
 
     NameManager that does an automatic naming.
 
@@ -75,15 +79,13 @@ method get(Maybe[Str] $name, Str $hint)
 
 method current()
 {
-    $AI::MXNet::Symbol::NameManager;
+    $AI::MXNet::NameManager;
 }
 
 method set_current(AI::MXNet::Symbol::NameManager $new)
 {
-    $AI::MXNet::Symbol::NameManager = $new;
+    $AI::MXNet::NameManager = $new;
 }
-
-$AI::MXNet::Symbol::NameManager = __PACKAGE__->new;
 
 package AI::MXNet::Symbol::Prefix;
 use Mouse;

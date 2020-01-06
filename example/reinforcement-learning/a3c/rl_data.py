@@ -16,23 +16,25 @@
 # under the License.
 
 from __future__ import print_function
-import mxnet as mx
-import numpy as np
-import gym
-import cv2
+
 import math
-from threading import Thread
-import time
 import multiprocessing
 import multiprocessing.pool
-from flask import Flask, render_template, Response
-import signal
-import sys
-is_py3 = sys.version[0] == '3'
-if is_py3:
+import time
+from threading import Thread
+
+import numpy as np
+from flask import Flask, Response, render_template
+
+import cv2
+import gym
+import mxnet as mx
+
+try:
     import queue as queue
-else:
+except ImportError:
     import Queue as queue
+
 
 def make_web(queue):
     app = Flask(__name__)
@@ -136,7 +138,7 @@ class RLDataIter(object):
             try:
                 while self.queue.qsize() > 10:
                     self.queue.get(False)
-            except Empty:
+            except queue.Empty:
                 pass
             frame = self.visual()
             self.queue.put(frame)
@@ -173,5 +175,3 @@ if __name__ == '__main__':
             dataiter.next()
         print(batch_size*100/(time.time() - tic))
         tic = time.time()
-
-

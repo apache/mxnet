@@ -32,7 +32,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 DESCRIPTION
 
-    A convenience class that loads all C++m symbol related functions at runtime.
+    A convenience class that loads all C++ symbol related functions at runtime.
 =cut
 
 my %function_meta;
@@ -155,7 +155,7 @@ func _make_atomic_symbol_function($handle, $name)
         }
         for my $key (keys %kwargs)
         {
-            $kwargs{ $key } = "(" .join(", ", @{ $kwargs{ $key } }) .")"
+            $kwargs{ $key } = "(" .join(", ", map { defined($_) ? $_ : 'None' } @{ $kwargs{ $key } }) .")"
                 if ref $kwargs{ $key } eq 'ARRAY';
         }
         while(my ($k, $v) = each %kwargs)

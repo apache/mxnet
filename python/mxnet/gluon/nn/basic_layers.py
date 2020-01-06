@@ -18,15 +18,17 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
-__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Activation',
-           'Dropout', 'BatchNorm', 'LeakyReLU', 'Embedding', 'Flatten',
-           'Lambda', 'HybridLambda']
+__all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
+           'BatchNorm', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
+           'Flatten', 'Lambda', 'HybridLambda']
 import warnings
 import numpy as np
 
+from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import nd, sym
+from ...util import is_np_array
 
 
 class Sequential(Block):
@@ -49,7 +51,7 @@ class Sequential(Block):
             self.register_child(block)
 
     def forward(self, x):
-        for block in self._children:
+        for block in self._children.values():
             x = block(x)
         return x
 
@@ -57,19 +59,25 @@ class Sequential(Block):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
 
     def hybridize(self, active=True, **kwargs):
-        """Activates or deactivates `HybridBlock`s recursively. Has no effect on
+        """Activates or deactivates `HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
         Parameters
@@ -79,9 +87,10 @@ class Sequential(Block):
         **kwargs : string
             Additional flags for hybridized operator.
         """
-        if self._children and all(isinstance(c, HybridBlock) for c in self._children):
-            warnings.warn('All children of this Sequential layer are HybridBlocks. Consider ' \
-                          'using HybridSequential for the best performance.')
+        if self._children and all(isinstance(c, HybridBlock) for c in self._children.values()):
+            warnings.warn(
+                "All children of this Sequential layer '%s' are HybridBlocks. Consider "
+                "using HybridSequential for the best performance."%self.prefix, stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 
@@ -106,7 +115,7 @@ class HybridSequential(HybridBlock):
             self.register_child(block)
 
     def hybrid_forward(self, F, x):
-        for block in self._children:
+        for block in self._children.values():
             x = block(x)
         return x
 
@@ -114,13 +123,19 @@ class HybridSequential(HybridBlock):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
                                                         block=_indent(block.__repr__(), 2))
-                            for key, block in enumerate(self._children)
-                            if isinstance(block, Block)])
+                            for key, block in self._children.items()])
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
     def __getitem__(self, key):
-        return self._children[key]
+        layers = list(self._children.values())[key]
+        if isinstance(layers, list):
+            net = type(self)(prefix=self._prefix)
+            with net.name_scope():
+                net.add(*layers)
+            return net
+        else:
+            return layers
 
     def __len__(self):
         return len(self._children)
@@ -136,8 +151,9 @@ class Dense(HybridBlock):
     created by the layer, and `bias` is a bias vector created by the layer
     (only applicable if `use_bias` is `True`).
 
-    Note: the input must be a tensor with rank 2. Use `flatten` to convert it
-    to rank 2 manually if necessary.
+    .. note::
+        the input must be a tensor with rank 2. Use `flatten` to convert it
+        to rank 2 manually if necessary.
 
     Parameters
     ----------
@@ -147,13 +163,15 @@ class Dense(HybridBlock):
         Activation function to use. See help on `Activation` layer.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
-    use_bias : bool
+    use_bias : bool, default True
         Whether the layer uses a bias vector.
-    flatten: bool
+    flatten: bool, default True
         Whether the input tensor should be flattened.
         If true, all but the first axis of input data are collapsed together.
         If false, all but the last axis of input data are kept the same, and the transformation
         applies on the last axis.
+    dtype : str or np.dtype, default 'float32'
+        Data type of output embeddings.
     weight_initializer : str or `Initializer`
         Initializer for the `kernel` weights matrix.
     bias_initializer: str or `Initializer`
@@ -180,7 +198,7 @@ class Dense(HybridBlock):
           `(x1, x2, ..., xn, units)`.
     """
     def __init__(self, units, activation=None, use_bias=True, flatten=True,
-                 weight_initializer=None, bias_initializer='zeros',
+                 dtype='float32', weight_initializer=None, bias_initializer='zeros',
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         self._flatten = flatten
@@ -188,11 +206,11 @@ class Dense(HybridBlock):
             self._units = units
             self._in_units = in_units
             self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer,
+                                          init=weight_initializer, dtype=dtype,
                                           allow_deferred_init=True)
             if use_bias:
                 self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer,
+                                            init=bias_initializer, dtype=dtype,
                                             allow_deferred_init=True)
             else:
                 self.bias = None
@@ -202,8 +220,9 @@ class Dense(HybridBlock):
                 self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
-        act = F.FullyConnected(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
-                               flatten=self._flatten, name='fwd')
+        fc = F.npx.fully_connected if is_np_array() else F.FullyConnected
+        act = fc(x, weight, bias, no_bias=bias is None, num_hidden=self._units,
+                 flatten=self._flatten, name='fwd')
         if self.act is not None:
             act = self.act(act)
         return act
@@ -216,38 +235,6 @@ class Dense(HybridBlock):
                         layout='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]))
 
 
-class Activation(HybridBlock):
-    r"""Applies an activation function to input.
-
-    Parameters
-    ----------
-    activation : str
-        Name of activation function to use.
-        See :func:`~mxnet.ndarray.Activation` for available choices.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data`.
-    """
-    def __init__(self, activation, **kwargs):
-        self._act_type = activation
-        super(Activation, self).__init__(**kwargs)
-
-    def _alias(self):
-        return self._act_type
-
-    def hybrid_forward(self, F, x):
-        return F.Activation(x, act_type=self._act_type, name='fwd')
-
-    def __repr__(self):
-        s = '{name}({_act_type})'
-        return s.format(name=self.__class__.__name__,
-                        **self.__dict__)
-
-
 class Dropout(HybridBlock):
     """Applies Dropout to the input.
 
@@ -258,6 +245,8 @@ class Dropout(HybridBlock):
     ----------
     rate : float
         Fraction of the input units to drop. Must be a number between 0 and 1.
+    axes : tuple of int, default ()
+        The axes on which dropout mask is shared. If empty, regular dropout is applied.
 
 
     Inputs:
@@ -271,15 +260,21 @@ class Dropout(HybridBlock):
         `Dropout: A Simple Way to Prevent Neural Networks from Overfitting
         <http://www.cs.toronto.edu/~rsalakhu/papers/srivastava14a.pdf>`_
     """
-    def __init__(self, rate, **kwargs):
+    def __init__(self, rate, axes=(), **kwargs):
         super(Dropout, self).__init__(**kwargs)
         self._rate = rate
+        self._axes = axes
 
     def hybrid_forward(self, F, x):
-        return F.Dropout(x, p=self._rate, name='fwd')
+        if self._rate > 0:
+            dropout = F.npx.dropout if is_np_array() else F.Dropout
+            return dropout(x, p=self._rate, axes=self._axes, name='fwd', cudnn_off=False)
+        else:
+            copy = F.np.copy if is_np_array() else F.identity
+            return copy(x)
 
     def __repr__(self):
-        s = '{name}(p = {_rate})'
+        s = '{name}(p = {_rate}, axes={_axes})'
         return s.format(name=self.__class__.__name__,
                         **self.__dict__)
 
@@ -316,10 +311,10 @@ class BatchNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
-    moving_mean_initializer: str or `Initializer`, default 'zeros'
-        Initializer for the moving mean.
-    moving_variance_initializer: str or `Initializer`, default 'ones'
-        Initializer for the moving variance.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
     in_channels : int, default 0
         Number of channels (feature maps) in input data. If not specified,
         initialization will be deferred to the first time `forward` is called
@@ -367,8 +362,9 @@ class BatchNorm(HybridBlock):
         super(BatchNorm, self).cast(dtype)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        return F.BatchNorm(x, gamma, beta, running_mean, running_var,
-                           name='fwd', **self._kwargs)
+        batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
+        return batch_norm(x, gamma, beta, running_mean, running_var,
+                          name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{name}({content}'
@@ -380,50 +376,17 @@ class BatchNorm(HybridBlock):
                                            for k, v in self._kwargs.items()]))
 
 
-class LeakyReLU(HybridBlock):
-    r"""Leaky version of a Rectified Linear Unit.
-
-    It allows a small gradient when the unit is not active
-
-    .. math::
-
-        f\left(x\right) = \left\{
-            \begin{array}{lr}
-               \alpha x & : x \lt 0 \\
-                      x & : x \geq 0 \\
-            \end{array}
-        \right.\\
-
-    Parameters
-    ----------
-    alpha : float
-        slope coefficient for the negative half axis. Must be >= 0.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data`.
-    """
-    def __init__(self, alpha, **kwargs):
-        assert alpha >= 0, "Slope coefficient for LeakyReLU must be no less than 0."
-        super(LeakyReLU, self).__init__(**kwargs)
-        self._alpha = alpha
-
-    def hybrid_forward(self, F, x):
-        return F.LeakyReLU(x, act_type='leaky', slope=self._alpha, name='fwd')
-
-    def __repr__(self):
-        s = '{name}({alpha})'
-        return s.format(name=self.__class__.__name__,
-                        alpha=self._alpha)
-
-
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
-    of fixed size. eg. [[4], [20]] -> [[0.25, 0.1], [0.6, -0.2]]
+    of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
 
+    .. note::
+        if `sparse_grad` is set to True, the gradient w.r.t weight will be
+        sparse. Only a subset of optimizers support sparse gradients, including SGD,
+        AdaGrad and Adam. By default lazy updates is turned on, which may perform
+        differently from standard updates. For more details, please check the
+        Optimization API at:
+        https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
 
     Parameters
     ----------
@@ -435,25 +398,28 @@ class Embedding(HybridBlock):
         Data type of output embeddings.
     weight_initializer : Initializer
         Initializer for the `embeddings` matrix.
-
+    sparse_grad: bool
+        If True, gradient w.r.t. weight will be a 'row_sparse' NDArray.
 
     Inputs:
-        - **data**: 2D tensor with shape: `(x1, x2)`.
+        - **data**: (N-1)-D tensor with shape: `(x1, x2, ..., xN-1)`.
 
     Output:
-        - **out**: 3D tensor with shape: `(x1, x2, output_dim)`.
+        - **out**: N-D tensor with shape: `(x1, x2, ..., xN-1, output_dim)`.
     """
     def __init__(self, input_dim, output_dim, dtype='float32',
-                 weight_initializer=None, **kwargs):
+                 weight_initializer=None, sparse_grad=False, **kwargs):
         super(Embedding, self).__init__(**kwargs)
+        grad_stype = 'row_sparse' if sparse_grad else 'default'
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
-                        'dtype': dtype}
+                        'dtype': dtype, 'sparse_grad': sparse_grad}
         self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer,
-                                      allow_deferred_init=True)
+                                      init=weight_initializer, dtype=dtype,
+                                      allow_deferred_init=True, grad_stype=grad_stype)
 
     def hybrid_forward(self, F, x, weight):
-        return F.Embedding(x, weight, name='fwd', **self._kwargs)
+        embedding = F.npx.embedding if is_np_array() else F.Embedding
+        return embedding(x, weight, name='fwd', **self._kwargs)
 
     def __repr__(self):
         s = '{block_name}({input_dim} -> {output_dim}, {dtype})'
@@ -474,10 +440,279 @@ class Flatten(HybridBlock):
         super(Flatten, self).__init__(**kwargs)
 
     def hybrid_forward(self, F, x):
-        return x.reshape((0, -1))
+        flatten = F.npx.batch_flatten if is_np_array() else F.flatten
+        return flatten(x)
 
     def __repr__(self):
         return self.__class__.__name__
+
+
+class InstanceNorm(HybridBlock):
+    r"""
+    Applies instance normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array where (n>2) and normalizes
+    the input using the following formula:
+
+    .. math::
+
+      \bar{C} = \{i \mid i \neq 0, i \neq axis\}
+
+      out = \frac{x - mean[data, \bar{C}]}{ \sqrt{Var[data, \bar{C}]} + \epsilon}
+       * gamma + beta
+
+    Parameters
+    ----------
+    axis : int, default 1
+        The axis that will be excluded in the normalization process. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `InstanceNorm`. If `layout='NHWC'`, then set `axis=3`. Data will be
+        normalized along axes excluding the first axis and the axis given.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    References
+    ----------
+        `Instance Normalization: The Missing Ingredient for Fast Stylization
+        <https://arxiv.org/abs/1607.08022>`_
+
+    Examples
+    --------
+    >>> # Input of shape (2,1,2)
+    >>> x = mx.nd.array([[[ 1.1,  2.2]],
+    ...                 [[ 3.3,  4.4]]])
+    >>> # Instance normalization is calculated with the above formula
+    >>> layer = InstanceNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[[-0.99998355  0.99998331]]
+     [[-0.99998319  0.99998361]]]
+    <NDArray 2x1x2 @cpu(0)>
+    """
+    def __init__(self, axis=1, epsilon=1e-5, center=True, scale=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 in_channels=0, **kwargs):
+        super(InstanceNorm, self).__init__(**kwargs)
+        self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
+        self._axis = axis
+        self._epsilon = epsilon
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
+
+    def hybrid_forward(self, F, x, gamma, beta):
+        if self._axis == 1:
+            return F.InstanceNorm(x, gamma, beta,
+                                  name='fwd', eps=self._epsilon)
+        x = x.swapaxes(1, self._axis)
+        return F.InstanceNorm(x, gamma, beta, name='fwd',
+                              eps=self._epsilon).swapaxes(1, self._axis)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
+
+
+class LayerNorm(HybridBlock):
+    r"""
+    Applies layer normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array and normalizes
+    the input using the given axis:
+
+    .. math::
+
+      out = \frac{x - mean[data, axis]}{ \sqrt{Var[data, axis] + \epsilon}} * gamma + beta
+
+    Parameters
+    ----------
+    axis : int, default -1
+        The axis that should be normalized. This is typically the axis of the channels.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    References
+    ----------
+        `Layer Normalization
+        <https://arxiv.org/pdf/1607.06450.pdf>`_
+
+    Examples
+    --------
+    >>> # Input of shape (2, 5)
+    >>> x = mx.nd.array([[1, 2, 3, 4, 5], [1, 1, 2, 2, 2]])
+    >>> # Layer normalization is calculated with the above formula
+    >>> layer = LayerNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[-1.41421    -0.707105    0.          0.707105    1.41421   ]
+     [-1.2247195  -1.2247195   0.81647956  0.81647956  0.81647956]]
+    <NDArray 2x5 @cpu(0)>
+    """
+    def __init__(self, axis=-1, epsilon=1e-5, center=True, scale=True,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 in_channels=0, prefix=None, params=None):
+        super(LayerNorm, self).__init__(prefix=prefix, params=params)
+        self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
+        self._axis = axis
+        self._epsilon = epsilon
+        self._center = center
+        self._scale = scale
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True)
+
+    def hybrid_forward(self, F, data, gamma, beta):
+        layer_norm = F.npx.layer_norm if is_np_array() else F.LayerNorm
+        return layer_norm(data, gamma=gamma, beta=beta, axis=self._axis, eps=self._epsilon)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
+
+
+class GroupNorm(HybridBlock):
+    r"""
+    Applies group normalization to the n-dimensional input array.
+    This operator takes an n-dimensional input array where the leftmost 2 axis are
+    `batch` and `channel` respectively:
+
+    .. math::
+
+      x = x.reshape((N, num_groups, C // num_groups, ...))
+      axis = (2, ...)
+      out = \frac{x - mean[x, axis]}{ \sqrt{Var[x, axis] + \epsilon}} * gamma + beta
+
+    Parameters
+    ----------
+    num_groups: int, default 1
+        Number of groups to separate the channel axis into.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+
+
+    Inputs:
+        - **data**: input tensor with shape (N, C, ...).
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+
+    References
+    ----------
+        `Group Normalization
+        <https://arxiv.org/pdf/1803.08494.pdf>`_
+
+    Examples
+    --------
+    >>> # Input of shape (2, 3, 4)
+    >>> x = mx.nd.array([[[ 0,  1,  2,  3],
+                          [ 4,  5,  6,  7],
+                          [ 8,  9, 10, 11]],
+                         [[12, 13, 14, 15],
+                          [16, 17, 18, 19],
+                          [20, 21, 22, 23]]])
+    >>> # Group normalization is calculated with the above formula
+    >>> layer = GroupNorm()
+    >>> layer.initialize(ctx=mx.cpu(0))
+    >>> layer(x)
+    [[[-1.5932543 -1.3035717 -1.0138891 -0.7242065]
+      [-0.4345239 -0.1448413  0.1448413  0.4345239]
+      [ 0.7242065  1.0138891  1.3035717  1.5932543]]
+     [[-1.5932543 -1.3035717 -1.0138891 -0.7242065]
+      [-0.4345239 -0.1448413  0.1448413  0.4345239]
+      [ 0.7242065  1.0138891  1.3035717  1.5932543]]]
+    <NDArray 2x3x4 @cpu(0)>
+    """
+    def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 prefix=None, params=None):
+        super(GroupNorm, self).__init__(prefix=prefix, params=params)
+        self._kwargs = {'eps': epsilon, 'num_groups': num_groups, 'center': center, 'scale': scale}
+        self._num_groups = num_groups
+        self._epsilon = epsilon
+        self._center = center
+        self._scale = scale
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(num_groups,), init=gamma_initializer,
+                                     allow_deferred_init=True)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(num_groups,), init=beta_initializer,
+                                    allow_deferred_init=True)
+
+    def hybrid_forward(self, F, data, gamma, beta):
+        norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon)
+        return norm_data
+
+    def __repr__(self):
+        s = '{name}({content})'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
 
 
 class Lambda(Block):
@@ -492,7 +727,7 @@ class Lambda(Block):
 
             block = Lambda('tanh')
 
-        2) a function that conforms to "def function(*args)". For example::
+        2) a function that conforms to ``def function(*args)``. For example::
 
             block = Lambda(lambda x: nd.LeakyReLU(x, slope=0.1))
 
@@ -526,25 +761,25 @@ class Lambda(Block):
 class HybridLambda(HybridBlock):
     r"""Wraps an operator or an expression as a HybridBlock object.
 
-
     Parameters
     ----------
     function : str or function
         Function used in lambda must be one of the following:
-        1) the name of an operator that is available in both symbol and ndarray. For example::
+        1) The name of an operator that is available in both symbol and ndarray. For example::
 
             block = HybridLambda('tanh')
 
-        2) a function that conforms to "def function(F, data, *args)". For example::
+        2) A function that conforms to ``def function(F, data, *args)``. For example::
 
             block = HybridLambda(lambda F, x: F.LeakyReLU(x, slope=0.1))
 
     Inputs:
-        - ** *args **: one or more input data. First argument must be symbol or ndarray.
-        Their shapes depend on the function.
+        - ** *args **: one or more input data. First argument must be symbol or ndarray. Their \
+            shapes depend on the function.
 
     Output:
         - ** *outputs **: one or more output data. Their shapes depend on the function.
+
     """
     def __init__(self, function, prefix=None):
         super(HybridLambda, self).__init__(prefix=prefix)

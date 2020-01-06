@@ -20,7 +20,7 @@ import mxnet as mx
 import argparse
 import os
 
-parser = argparse.ArgumentParser(description="Train RNN on Penn Tree Bank",
+parser = argparse.ArgumentParser(description="Train RNN on Sherlock Holmes",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--num-layers', type=int, default=2,
                     help='number of stacked RNN layers')
@@ -50,7 +50,7 @@ parser.add_argument('--disp-batches', type=int, default=50,
 
 def tokenize_text(fname, vocab=None, invalid_label=-1, start_label=0):
     if not os.path.isfile(fname):
-        raise IOError("Please use get_ptb_data.sh to download requied file (data/ptb.train.txt)")
+        raise IOError("Please use get_sherlockholmes_data.sh to download requied file (data/sherlockholmes.train.txt)")
     lines = open(fname).readlines()
     lines = [filter(None, i.split(' ')) for i in lines]
     sentences, vocab = mx.rnn.encode_sentences(lines, vocab=vocab, invalid_label=invalid_label,
@@ -71,9 +71,9 @@ if __name__ == '__main__':
     start_label = 1
     invalid_label = 0
 
-    train_sent, vocab = tokenize_text("./data/ptb.train.txt", start_label=start_label,
+    train_sent, vocab = tokenize_text("./data/sherlockholmes.train.txt", start_label=start_label,
                                       invalid_label=invalid_label)
-    val_sent, _ = tokenize_text("./data/ptb.test.txt", vocab=vocab, start_label=start_label,
+    val_sent, _ = tokenize_text("./data/sherlockholmes.test.txt", vocab=vocab, start_label=start_label,
                                 invalid_label=invalid_label)
 
     data_train  = mx.rnn.BucketSentenceIter(train_sent, args.batch_size, buckets=buckets,
@@ -92,7 +92,7 @@ if __name__ == '__main__':
                                  output_dim=args.num_embed, name='embed')
 
         stack.reset()
-        outputs, states = stack.unroll(seq_len, inputs=embed, merge_outputs=True)
+        outputs = stack.unroll(seq_len, inputs=embed, merge_outputs=True)[0]
 
         pred = mx.sym.Reshape(outputs, shape=(-1, args.num_hidden))
         pred = mx.sym.FullyConnected(data=pred, num_hidden=len(vocab), name='pred')

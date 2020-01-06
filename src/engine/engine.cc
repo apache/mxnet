@@ -48,7 +48,7 @@ inline Engine* CreateEngine() {
   ret = CreateNaiveEngine();
   #endif
 
-  if (ret ==nullptr) {
+  if (ret == nullptr) {
     LOG(FATAL) << "Cannot find Engine " << type;
   }
   if (!default_engine) {

@@ -97,7 +97,7 @@ def train_net(net, train_path, num_classes, batch_size,
               use_difficult=False, class_names=None,
               voc07_metric=False, nms_topk=400, force_suppress=False,
               train_list="", val_path="", val_list="", iter_monitor=0,
-              monitor_pattern=".*", log_file=None):
+              monitor_pattern=".*", log_file=None, kv_store=None):
     """
     Wrapper for training phase.
 
@@ -258,6 +258,9 @@ def train_net(net, train_path, num_classes, batch_size,
     else:
         valid_metric = MApMetric(ovp_thresh, use_difficult, class_names, pred_idx=3)
 
+    # create kvstore when there are gpus
+    kv = mx.kvstore.create(kv_store) if kv_store else None
+
     mod.fit(train_iter,
             val_iter,
             eval_metric=MultiBoxMetric(),
@@ -272,4 +275,5 @@ def train_net(net, train_path, num_classes, batch_size,
             arg_params=args,
             aux_params=auxs,
             allow_missing=True,
-            monitor=monitor)
+            monitor=monitor,
+            kvstore=kv)

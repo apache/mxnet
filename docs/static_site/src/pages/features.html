@@ -1,0 +1,106 @@
+---
+layout: page
+title: Features
+subtitle: Whether you are looking for a flexible library to quickly develop cutting-edge deep learning research or a robust framework to push production workload, MXNet caters to all needs.
+permalink: /features/
+action: Get Started
+action_url: /get_started
+---
+
+<!-- HYBRID FRONTEND -->
+<div class="row">
+    <div class="col-12">
+        <h3 class="feature-title">Hybrid Front-End</h3>
+    </div>
+    <div class="col-5">
+        <p class="feature-paragraph">The Gluon Python API lets you use MXNet in a fully imperative manner. It also
+            allows you to simply switch to
+            symbolic mode by calling the <a
+                    href="/api/python/docs/tutorials/packages/gluon/blocks/hybridize.html">hybridize</a>
+            functionality. The symbolic execution provides faster and more optimized
+            execution as well as the ability to export the network for inference in different language bindings like
+            java or C++.
+        </p>
+    </div>
+    <div class="col-1">
+
+    </div>
+    <div class="col-6 code-block">
+        {% highlight python %}
+net = model_zoo.vision.resnet50_v2(pretrained=True)
+net.hybridize()
+
+dummy_input = mx.nd.ones(shape=(1,3,224,224))
+net(dummy_input)
+
+net.export("symbolic_resnet50")
+        {% endhighlight %}
+    </div>
+</div>
+
+<!-- DISTRIBUTED TRAINING -->
+<br>
+<br>
+<div class="row ">
+    <div class="col-7"></div>
+    <div class="col-5">
+        <h3 class="feature-title">Distributed Training</h3>
+    </div>
+
+    <div class="col-6 code-block">
+        {% highlight python %}
+import horovod.mxnet as hvd
+
+# Horovod: initialize Horovod
+hvd.init()
+
+# Horovod: pin a GPU to be used to local rank
+context = mx.gpu(hvd.local_rank())
+        {% endhighlight %}
+    </div>
+
+    <div class="col-1"></div>
+    <div class="col-5">
+        <p class="feature-paragraph">MXNet allows you to make the most out of your hardware, whether it is multi-gpu or
+            multi-host training with near-linear scaling efficiency. MXNet recently introduced support for
+            <a href="https://medium.com/apache-mxnet/distributed-training-using-apache-mxnet-with-horovod-44f98bf0e7b7">Horovod</a>,
+            the distributed learning framework developed by Uber.
+        </p>
+    </div>
+</div>
+
+
+<!-- 8 Language Bindings -->
+<br><br>
+<div class="row">
+    <div class="col-12">
+        <h3 class="feature-title">8 Language Bindings</h3>
+    </div>
+    <div class="col-5">
+        <p class="feature-paragraph">Deep integration into Python and support for Scala, Julia, Clojure, Java, C++, R
+            and Perl.
+            Combined with the hybridization feature, this allows a very smooth transition from Python training to
+            deployment
+            in the language of your choice to shorten the time to production.
+        </p>
+    </div>
+    <div class="col-1">
+
+    </div>
+    <div class="col-6 code-block">
+        {% highlight java %}
+import org.apache.mxnet.javaapi.*;
+...
+List
+<DataDesc> inputDesc = new ArrayList<>();
+Shape inputShape = new Shape(new int[]{1, 3, 224, 224});
+inputDesc.add(new DataDesc("data", inputShape, DType.Float32(), "NCHW"));
+Predictor predictor = new Predictor(inst.modelPathPrefix, inputDesc, context,0);
+...
+float[][] result = predictor.predict(new float[][]{img.toArray()});
+            {% endhighlight %}
+    </div>
+</div>
+
+
+</div>

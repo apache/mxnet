@@ -72,15 +72,15 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
-template<typename Reducer, int ndim, typename DType, typename OP, int unroll>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP, int unroll>
 __launch_bounds__(nthread_reduce)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
-                              const DType* __restrict big, DType *small,
+                              const DType* __restrict big, OType *small,
                               const Shape<ndim> big_shape0, const Shape<ndim> small_shape,
                               const Shape<ndim> big_shape, const Shape<ndim> big_stride,
                               const int Mnext, const bool do_transpose) {
   extern __shared__ char shTileChar[];
-  DType* shTile = (DType*)(shTileChar);
+  AType* shTile = (AType*)(shTileChar);
   const int tid = threadIdx.x + threadIdx.y*blockDim.x;
   const int bx = (do_transpose) ? blockDim.y : blockDim.x;
   const int by = (do_transpose) ? blockDim.x : blockDim.y;
@@ -95,7 +95,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       Shape<ndim> coord = unravel(idx, small_shape);
       int idx_big0 = ravel(coord, big_shape0);
 
-      DType val, residual;
+      AType val, residual;
       Reducer::SetInitValue(val, residual);
       if (idx < N) {
         for (int k = tidy + Mstart; k < Mend; k += by*unroll) {
@@ -113,7 +113,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u], residual);
+            if (k + u*by < Mend) Reducer::Reduce(val, AType(tmp[u]), residual);
           }
         }
       }
@@ -123,27 +123,32 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         // Fix bx to avoid bank conflicts. Assumes warpSize number of banks
         const int fbx = (do_transpose && ((bx & (warpSize - 1)) == 0)) ? (bx + 1) : bx;
         const int it0 = tidx + tidy*fbx;
-        shTile[it0] = val;
+        shTile[it0 * 2] = val;
+        shTile[it0 * 2 + 1] = residual;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp, residual;
-          Reducer::SetInitValue(tmp, residual);
-          if (tidy + t < by) tmp = shTile[it0 + t*fbx];
+          AType tmp, tmp_residual;
+          Reducer::SetInitValue(tmp, tmp_residual);
+          if (tidy + t < by) {
+            tmp = shTile[(it0 + t*fbx) * 2];
+            tmp_residual = shTile[(it0 + t*fbx) * 2 + 1];
+          }
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp, residual);
+          Reducer::Merge(shTile[it0 * 2], shTile[it0 * 2 + 1], tmp, tmp_residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
-          assign(&small[idx + m0*N], addto, shTile[tidx]);
+          Reducer::Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
+          assign(&small[idx + m0*N], addto, OType(shTile[tidx * 2]));
         }
       } else {
         if (idx < N) {
-          assign(&small[idx + m0*N], addto, val);
+          Reducer::Finalize(val, residual);
+          assign(&small[idx + m0*N], addto, OType(val));
         }
       }
     }
   }
-
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2, int unroll>
@@ -207,27 +212,32 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         // Fix bx to avoid bank conflicts. Assumes warpSize number of banks
         const int fbx = (do_transpose && ((bx & (warpSize - 1)) == 0)) ? (bx + 1) : bx;
         const int it0 = tidx + tidy*fbx;
-        shTile[it0] = val;
+        shTile[it0 * 2] = val;
+        shTile[it0 * 2 + 1] = residual;
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
-          DType tmp, residual;
-          Reducer::SetInitValue(tmp, residual);
-          if (tidy + t < by) tmp = shTile[it0 + t*fbx];
+          DType tmp, tmp_residual;
+          Reducer::SetInitValue(tmp, tmp_residual);
+          if (tidy + t < by) {
+            tmp = shTile[(it0 + t*fbx) * 2];
+            tmp_residual = shTile[(it0 + t*fbx) * 2 + 1];
+          }
           __syncthreads();
-          Reducer::Reduce(shTile[it0], tmp, residual);
+          Reducer::Merge(shTile[it0 * 2], shTile[it0 * 2 + 1], tmp, tmp_residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
-          assign(&small[idx + m0*N], addto, shTile[tidx]);
+          Reducer::Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
+          assign(&small[idx + m0*N], addto, shTile[tidx * 2]);
         }
       } else {
         if (idx < N) {
+          Reducer::Finalize(val, residual);
           assign(&small[idx + m0*N], addto, val);
         }
       }
     }
   }
-
 }
 
 // Simple reduction of lines when M is small
@@ -244,24 +254,31 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
     }
 
     if (idx < N) {
+      Reducer::Finalize(val, residual);
       assign(&small_out[idx], addto, val);
     }
 
   }
 }
 
-template<typename Reducer, int ndim, typename DType, typename OP>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N, const bool addto,
-                                const DType* __restrict big, DType *small, const Shape<ndim> bshape,
+                                const DType* __restrict big, OType *small, const Shape<ndim> bshape,
                                 const Shape<ndim> sshape) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     Shape<ndim> coord = unravel(idx, sshape);
     int j = ravel(coord, bshape);
-    assign(&small[idx], addto, OP::Map(big[j]));
+    AType val, residual;
+    Reducer::SetInitValue(val, residual);
+    Reducer::Reduce(val, AType(OP::Map(big[j])), residual);
+    Reducer::Finalize(val, residual);
+    assign(&small[idx], addto, OType(val));
   }
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N, const bool addto,
                                  const DType* __restrict big,
                                  const DType* __restrict lhs,
@@ -276,7 +293,10 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
     int idx_big = ravel(coord, big_shape);
     int idx_lhs = ravel(coord, lhs_shape);
     int idx_rhs = ravel(coord, rhs_shape);
-    DType val = OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs]));
+    DType val, residual;
+    Reducer::SetInitValue(val, residual);
+    Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
+    Reducer::Finalize(val, residual);
     assign(&small[idx], addto, val);
   }
 }
@@ -348,21 +368,22 @@ static inline uint64_t calc_num_load(const int X, const int Y, const int* stride
 }
 
 template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big, const TBlob* lhs,
-  const TBlob* rhs) {
-
+ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
+                                           const mxnet::TShape& big,
+                                           const mxnet::TShape* lhs,
+                                           const mxnet::TShape* rhs) {
   ReduceImplConfig<ndim> config;
 
-  diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &config.rshape, &config.rstride);
-  config.N = small.shape_.Size();
+  diff(small.get<ndim>(), big.get<ndim>(), &config.rshape, &config.rstride);
+  config.N = small.Size();
   config.M = config.rshape.Size();
 
   bool multiOp = false;
   if (lhs != NULL) {
     CHECK_NOTNULL(rhs);
-    diff(small.shape_.get<ndim>(), lhs->shape_.get<ndim>(), &config.lhs_shape,
+    diff(small.get<ndim>(), lhs->get<ndim>(), &config.lhs_shape,
       &config.lhs_stride);
-    diff(small.shape_.get<ndim>(), rhs->shape_.get<ndim>(), &config.rhs_shape,
+    diff(small.get<ndim>(), rhs->get<ndim>(), &config.rhs_shape,
       &config.rhs_stride);
     multiOp = true;
   }
@@ -376,20 +397,20 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
   } else {
 
     int reduce_strides[3];
-    reduce_strides[0] = fastest_stride(small.shape_.get<ndim>(), big.shape_.get<ndim>(),
-      big.shape_.get<ndim>());
-    reduce_strides[1] = (multiOp) ? fastest_stride(small.shape_.get<ndim>(),
-      lhs->shape_.get<ndim>(), lhs->shape_.get<ndim>()) : 1;
-    reduce_strides[2] = (multiOp) ? fastest_stride(small.shape_.get<ndim>(),
-      rhs->shape_.get<ndim>(), rhs->shape_.get<ndim>()) : 1;
+    reduce_strides[0] = fastest_stride(small.get<ndim>(), big.get<ndim>(),
+      big.get<ndim>());
+    reduce_strides[1] = (multiOp) ? fastest_stride(small.get<ndim>(),
+      lhs->get<ndim>(), lhs->get<ndim>()) : 1;
+    reduce_strides[2] = (multiOp) ? fastest_stride(small.get<ndim>(),
+      rhs->get<ndim>(), rhs->get<ndim>()) : 1;
 
     int reduce_strides_transp[3];
-    reduce_strides_transp[0] = fastest_stride(small.shape_.get<ndim>(), config.rshape,
+    reduce_strides_transp[0] = fastest_stride(small.get<ndim>(), config.rshape,
       config.rstride);
     reduce_strides_transp[1] = (multiOp) ?
-      fastest_stride(small.shape_.get<ndim>(), config.lhs_shape, config.lhs_stride) : 1;
+      fastest_stride(small.get<ndim>(), config.lhs_shape, config.lhs_stride) : 1;
     reduce_strides_transp[2] = (multiOp) ?
-      fastest_stride(small.shape_.get<ndim>(), config.rhs_shape, config.rhs_stride) : 1;
+      fastest_stride(small.get<ndim>(), config.rhs_shape, config.rhs_stride) : 1;
 
     uint64_t num_load = calc_num_load(config.N, config.M, reduce_strides);
     uint64_t num_load_transp = calc_num_load(config.M, config.N, reduce_strides_transp);
@@ -453,7 +474,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
         by++;
       }
       config.kernel_1.shMemSize = (config.kernel_1.blockDim.x > 1) ?
-        config.kernel_1.blockDim.x*by*sizeof(DType) : 0;
+        config.kernel_1.blockDim.x*by*sizeof(DType) * 2 : 0;
       // Maximum number of times we want TB to loop in M
       // Max size of M-block each TB can handle
       int maxMblock = config.kernel_1.blockDim.x*config.maxLoopPerTB;
@@ -464,7 +485,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
         ceil_idiv<unsigned int>(config.N, config.kernel_1.blockDim.x));
       config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
       config.kernel_1.shMemSize = (config.kernel_1.blockDim.y > 1) ?
-        config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType) : 0;
+        config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType) * 2 : 0;
       // Maximum number of times we want TB to loop in M
       // Max size of M-block each TB can handle
       int maxMblock = config.kernel_1.blockDim.y*config.maxLoopPerTB;
@@ -473,7 +494,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
 
     if (config.Mnext > 1) {
       // small_dptr[] is N*Mnext*sizeof(DType) bytes
-      config.workspace_size += config.N*config.Mnext*sizeof(DType);
+      config.workspace_size += config.N*config.Mnext*sizeof(double);
       // Set gridDim.y to Mnext
       config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
     }
@@ -498,23 +519,22 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const TBlob& small, const TBlob& big,
     {__VA_ARGS__}                                                     \
   }
 
-template<typename Reducer, int ndim, typename DType, typename OP>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
 void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
                 const TBlob& big, const Tensor<gpu, 1, char>& workspace,
                 const ReduceImplConfig<ndim>& config) {
   if (config.M == 1) {
-    reduce_kernel_M1<Reducer, ndim, DType, OP>
+    reduce_kernel_M1<Reducer, ndim, AType, DType, OType, OP>
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
-      config.N, req == kAddTo, big.dptr<DType>(), small.dptr<DType>(), big.shape_.get<ndim>(),
+      config.N, req == kAddTo, big.dptr<DType>(), small.dptr<OType>(), big.shape_.get<ndim>(),
       small.shape_.get<ndim>());
     MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel_M1);
   } else {
-
-    DType* small_dptr = small.dptr<DType>();
+    OType* small_dptr = small.dptr<OType>();
     bool addto = (req == kAddTo);
     if (config.Mnext > 1) {
       // small_dptr[] is N*Mnext*sizeof(DType) bytes
-      small_dptr = reinterpret_cast<DType*>(workspace.dptr_);
+      small_dptr = reinterpret_cast<OType*>(workspace.dptr_);
       addto = false;
       // Check that the workspace is contigiuous
       CHECK_EQ(workspace.CheckContiguous(), true);
@@ -526,7 +546,7 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
       config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
     const bool do_unroll = ( config.M / (by*config.Mnext) >= config.unroll_reduce );
     KERNEL_UNROLL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_reduce, UNROLL, {
-      reduce_kernel<Reducer, ndim, DType, OP, UNROLL>
+      reduce_kernel<Reducer, ndim, AType, DType, OType, OP, UNROLL>
       <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
         config.N, config.M, addto, big.dptr<DType>(), small_dptr, big.shape_.get<ndim>(),
         small.shape_.get<ndim>(), config.rshape, config.rstride, config.Mnext,
@@ -535,9 +555,9 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
     MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
 
     if (config.Mnext > 1) {
-      reduce_lines_kernel<Reducer, DType>
+      reduce_lines_kernel<Reducer, OType>
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
-        (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<DType>());
+        (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<OType>());
       MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_lines_kernel);
     }
   }
@@ -592,14 +612,41 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
 
 #undef KERNEL_UNROLL_SWITCH
 
-template<typename Reducer, int ndim, typename DType, typename OP>
+template<typename Reducer, int ndim, typename DType, typename OP, bool safe_acc = false>
 void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
-  ReduceImpl<Reducer, ndim, DType, OP>(stream, small, req, big, workspace, config);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+  if (safe_acc) {
+    MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
+      typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
+      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+        typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
+        ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
+          stream, small, req, big, workspace, config);
+      });
+    });
+  } else {
+    ReduceImpl<Reducer, ndim, DType, DType, DType, OP>(stream, small, req, big, workspace, config);
+  }
 }
+
+template<typename Reducer, int ndim, typename DType, typename OP, bool safe_acc = false>
+void ReduceBool(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+                const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
+  if (req == kNullOp) return;
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+  ReduceImpl<Reducer, ndim, bool, DType, bool, OP>(stream, small, req, big, workspace, config);
+}
+
+template <typename Reducer, int ndim, typename DType, typename OP>
+void ReduceWithExtraMem(Stream<gpu>* s, const TBlob& small, const OpReqType req,
+                        const Tensor<gpu, 1, char>& workspace, const TBlob& big) {};
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
@@ -607,21 +654,22 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const TBlob& lhs, const TBlob& rhs) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_);
   ReduceImpl<Reducer, ndim, DType, OP1, OP2>(stream, small, lhs, rhs, req, big, workspace, config);
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
   return config.workspace_size;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const TBlob& small, const OpReqType req,
-                           const TBlob& big, const TBlob& lhs, const TBlob& rhs) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big, const mxnet::TShape& lhs, const mxnet::TShape& rhs) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
   return config.workspace_size;

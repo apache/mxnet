@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <utility>
 #include <type_traits>
+
 #include "./util/tensor_util-inl.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -45,6 +46,7 @@ namespace op {
 struct DotParam : public dmlc::Parameter<DotParam> {
   bool transpose_a;
   bool transpose_b;
+  dmlc::optional<int> forward_stype;
   DMLC_DECLARE_PARAMETER(DotParam) {
     DMLC_DECLARE_FIELD(transpose_a)
       .describe("If true then transpose the first input before dot.")
@@ -52,6 +54,15 @@ struct DotParam : public dmlc::Parameter<DotParam> {
     DMLC_DECLARE_FIELD(transpose_b)
       .describe("If true then transpose the second input before dot.")
       .set_default(false);
+    DMLC_DECLARE_FIELD(forward_stype)
+      .describe("The desired storage type of the forward output given by user, if the"
+                "combination of input storage types and this hint does not match"
+                "any implemented ones, the dot operator will perform fallback operation"
+                "and still produce an output of the desired storage type.")
+      .add_enum("default", kDefaultStorage)
+      .add_enum("row_sparse", kRowSparseStorage)
+      .add_enum("csr", kCSRStorage)
+      .set_default(dmlc::optional<int>());
   }
 };
 
@@ -69,17 +80,19 @@ void DotForward_(const nnvm::NodeAttrs& attrs,
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
-      << "dot only supports float32 and float64";
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1) {
+  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 ||
+      (outputs[0].type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+      << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    // VectorDot() with fp16 is not supported in mshadow. Dispatch to dot() instead.
+    if (inputs[0].ndim() == 1 && inputs[1].ndim() == 1 && inputs[0].type_flag_ != kFloat16) {
       CHECK_NE(req[0], kAddTo) << "AddTo not yet supported";
       Tensor<xpu, 1, DType> out = outputs[0].get<xpu, 1, DType>(s);
       VectorDot(out,
                 inputs[0].get<xpu, 1, DType>(s),
                 inputs[1].get<xpu, 1, DType>(s));
     } else {
-      int ma, na, mb, nb, m, n;
+      index_t ma, na, mb, nb, m, n;
       if (param.transpose_a) {
         ma = inputs[0].size(0);
         na = inputs[0].Size()/ma;
@@ -129,7 +142,7 @@ void DotBackward_(const nnvm::NodeAttrs& attrs,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK_NE(req[0], kWriteInplace);
   CHECK_NE(req[1], kWriteInplace);
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (inputs[1].ndim() == 1 && inputs[2].ndim() == 1) {
       Tensor<xpu, 1, DType> mout_grad = inputs[0].get<xpu, 1, DType>(s);
       Tensor<xpu, 1, DType> mlhs_data = inputs[1].get<xpu, 1, DType>(s);
@@ -216,35 +229,65 @@ inline bool DotForwardInferStorageType(const nnvm::NodeAttrs& attrs,
   bool only_lhs_transpose = param.transpose_a && !param.transpose_b;
   bool rhs_rsp_or_dns =
       rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage;
+  bool hint_has_value = param.forward_stype.has_value();
+  NDArrayStorageType target_stype = hint_has_value ?
+                                    static_cast<NDArrayStorageType>(param.forward_stype.value()) :
+                                    kUndefinedStorage;
   if (!dispatched && lhs_stype == kDefaultStorage &&
       rhs_stype == kDefaultStorage) {
     // dns, dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFCompute);
+    target_stype = hint_has_value ? target_stype : kDefaultStorage;
+    if (target_stype == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFCompute);
+    }
   }
-  if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose &&
-      (rhs_stype == kRowSparseStorage || rhs_stype == kDefaultStorage)) {
+  if (!dispatched && lhs_stype == kCSRStorage && only_lhs_transpose && rhs_rsp_or_dns) {
     // csr.T, rsp/dns -> rsp
-    dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+    target_stype = hint_has_value ? target_stype : kRowSparseStorage;
+    if (target_stype == kRowSparseStorage) {
+      dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    // csr.T, rsp/dns -> dns
+    } else if (target_stype == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFComputeEx);
+    }
   }
   if (!dispatched && lhs_stype == kCSRStorage && rhs_rsp_or_dns &&
       !param.transpose_a && !param.transpose_b) {
     // csr, rsp/dns -> dns
-    dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
-                                     DispatchMode::kFComputeEx);
+    target_stype = hint_has_value ? target_stype : kDefaultStorage;
+    if (target_stype == kDefaultStorage) {
+      dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                       DispatchMode::kFComputeEx);
+    }
   }
   if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
-      !param.transpose_a && !param.transpose_b) {
-    // dns, csr -> csr
-    const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
-    const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback
-                                         : DispatchMode::kFComputeEx;
-    dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
-                                     dispatch_ex);
+      !param.transpose_a) {
+    target_stype = hint_has_value ? target_stype : kCSRStorage;
+    if (dev_mask == mshadow::cpu::kDevMask) {
+      // dns, csr -> csr on CPU
+      if (target_stype == kCSRStorage && !param.transpose_b) {
+        dispatched = storage_type_assign(&out_stype, kCSRStorage, dispatch_mode,
+                                         DispatchMode::kFComputeEx);
+      // dns, csr/csr.T -> dns on CPU
+      } else if (target_stype == kDefaultStorage) {
+        dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                         DispatchMode::kFComputeEx);
+      }
+    // dns, csr/csr.T -> dns on GPU
+    } else if (dev_mask == mshadow::gpu::kDevMask) {
+      if (target_stype == kDefaultStorage) {
+        dispatched = storage_type_assign(&out_stype, kDefaultStorage, dispatch_mode,
+                                         DispatchMode::kFComputeEx);
+      }
+    }
   }
   if (!dispatched) {
-    dispatched = dispatch_fallback(out_attrs, dispatch_mode);
+    target_stype = (target_stype == kUndefinedStorage)? kDefaultStorage : target_stype;
+    dispatched = storage_type_assign(&out_stype, target_stype, dispatch_mode,
+                                     DispatchMode::kFComputeFallback);
   }
   return dispatched;
 }
@@ -286,6 +329,15 @@ inline bool DotBackwardInferStorageType(const nnvm::NodeAttrs& attrs,
     // backward: csr, rsp/dns -> dns, dns, rsp/dns -> dns
     if (type_assign(&rhs_grad_stype, kDefaultStorage) &&
         type_assign(&lhs_grad_stype, kDefaultStorage)) {
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+      dispatched = true;
+    }
+  }
+  if (!dispatched && !param.transpose_a &&
+      lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
+      ograd_stype == kDefaultStorage) {
+    if (type_assign(&lhs_grad_stype, kDefaultStorage) &&
+        type_assign(&rhs_grad_stype, kDefaultStorage)) {
       DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
       dispatched = true;
     }
@@ -609,7 +661,101 @@ struct DotDnsCsrCsrByRowBlocks {
   }
 };
 
+/*!
+ * \brief CPU Kernel of dot(dns1, csr) = dns2
+ * Parallelization by row blocks
+ */
+struct DotDnsCsrDnsByRowBlocks {
+  /*!
+   * \brief
+   * \param i           the i-th thread
+   * \param out         output matrix
+   * \param data_l      data of lhs
+   * \param data_r      values of csr
+   * \param indptr_r    row offsets of csr
+   * \param col_idx_r   column indices of csr
+   * \param seg_len     workload of this thread
+   * \param num_rows_l  number of rows in lhs
+   * \param num_cols_l  number of columns in lhs
+   * \param num_rows_r  number of rows in rhs
+   * \param num_cols_r  number of columns in rhs
+   */
+  template<typename DType, typename IType, typename CType>
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  const DType* data_l,
+                                  const DType* data_r,
+                                  const IType* indptr_r,
+                                  const CType* col_idx_r,
+                                  const nnvm::dim_t seg_len,
+                                  const nnvm::dim_t num_rows_l,
+                                  const nnvm::dim_t num_cols_l,
+                                  const nnvm::dim_t num_rows_r,
+                                  const nnvm::dim_t num_cols_r) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
+    if (seg_start >= num_rows_l) return;
+    const dim_t seg_end = std::min(seg_start + seg_len, num_rows_l);
+    for (dim_t j = 0; j < num_rows_r; ++j) {
+      if (indptr_r[j] == indptr_r[j+1]) continue;
+      for (IType k = indptr_r[j]; k < indptr_r[j+1]; ++k) {
+        const CType col_idx = col_idx_r[k];
+        const DType val = data_r[k];
+        for (dim_t r = seg_start; r < seg_end; ++r) {
+          out[r*num_cols_r+col_idx] += data_l[r*num_cols_l+j] * val;
+        }
+      }
+    }
+  }
+};
 
+/*!
+ * \brief CPU Kernel of dot(dns1, csr.T) = dns2
+ * Parallelization by row blocks
+ */
+struct DotDnsCsrTransDnsByRowBlocks {
+  /*!
+   * \brief
+   * \param i           the i-th thread
+   * \param out         output matrix
+   * \param data_l      data of lhs
+   * \param data_r      values of csr
+   * \param indptr_r    row offsets of csr
+   * \param col_idx_r   column indices of csr
+   * \param seg_len     workload of this thread
+   * \param num_rows_l  number of rows in lhs
+   * \param num_cols_l  number of columns in lhs
+   * \param num_rows_r  number of rows in rhs
+   * \param num_cols_r  number of columns in rhs
+   */
+  template<typename DType, typename IType, typename CType>
+  MSHADOW_CINLINE static void Map(int i,
+                                  DType* out,
+                                  const DType* data_l,
+                                  const DType* data_r,
+                                  const IType* indptr_r,
+                                  const CType* col_idx_r,
+                                  const nnvm::dim_t seg_len,
+                                  const nnvm::dim_t num_rows_l,
+                                  const nnvm::dim_t num_cols_l,
+                                  const nnvm::dim_t num_rows_r,
+                                  const nnvm::dim_t num_cols_r) {
+    using nnvm::dim_t;
+    const dim_t seg_start = i * seg_len;
+    if (seg_start >= num_rows_l) return;
+    const dim_t seg_end = std::min(seg_start + seg_len, num_rows_l);
+    for (dim_t j = 0; j < num_rows_r; ++j) {
+      if (indptr_r[j] == indptr_r[j+1]) continue;
+      for (IType k = indptr_r[j]; k < indptr_r[j+1]; ++k) {
+        const CType col_idx = col_idx_r[k];
+        const DType val = data_r[k];
+        for (dim_t r = seg_start; r < seg_end; ++r) {
+          out[r*num_rows_r+j] += data_l[r*num_cols_l+col_idx] * val;
+        }
+      }
+    }
+  }
+};
 
 /*!
  * \brief CPU Impl of dot(csr, dns1) = dns2 and dot(csr.T, dns1) = dns2
@@ -647,6 +793,14 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
               s, num_threads, data_out.dptr<DType>());
         }
         num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+        bool dynamic = false;
+        const dim_t large_matrix_threshold = 1024 * 10;
+        if (data_out.shape_[0] > large_matrix_threshold) {
+          dynamic = true;
+          // each unit of work processes at least 1024 elements in the output
+          const dim_t unit_work_per_thread = 1024;
+          num_threads = data_out.Size() / unit_work_per_thread;
+        }
         dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
         if (trans_lhs) {
           mxnet_op::Kernel<DotCsrTransDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
@@ -654,10 +808,17 @@ inline void DotCsrDnsDnsImpl(const OpContext& ctx,
               col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
               lhs.shape()[0], data_out.shape_[0], data_out.shape_[1]);
         } else {
-          mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
-              data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
-              col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
-              data_out.shape_[0], data_out.shape_[1]);
+          if (dynamic) {
+            mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::LaunchDynamic(s, num_threads,
+                data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
+                data_out.shape_[0], data_out.shape_[1]);
+          } else {
+            mxnet_op::Kernel<DotCsrDnsDnsByRowBlocks, cpu>::Launch(s, num_threads,
+                data_out.dptr<DType>(), data_l.dptr<DType>(), indptr_l.dptr<IType>(),
+                col_idx_l.dptr<CType>(), data_r.dptr<DType>(), seg_len,
+                data_out.shape_[0], data_out.shape_[1]);
+          }
         }
       });
     });
@@ -896,10 +1057,9 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
 }
 
 /*
- * \brief CPU Impl of dot(dns, csr) = csr
+ * \brief Impl of dot(dns, csr) = csr
  */
-template<typename xpu>
-inline void DotDnsCsrCsrImpl(const OpContext& ctx,
+inline void DotDnsCsrCsrImpl(const OpContext& ctx, const cpu& cpu_dev,
                              const TBlob& lhs, const NDArray& rhs,
                              const OpReqType req, NDArray* ret) {
   if (kNullOp == req) return;
@@ -985,34 +1145,96 @@ inline void DotDnsCsrCsrImpl(const OpContext& ctx,
   });
 }
 
+/*
+ * \brief Impl of dot(dns, csr) = dns and dot(dns, csr.T) = dns
+ */
+inline void DotDnsCsrDnsImpl(const OpContext& ctx, const cpu& cpu_dev,
+  const TBlob& dns, const NDArray& rhs,
+  const OpReqType req, NDArray* ret,
+  const bool transpose_b) {
+  if (req == kNullOp) return;
+  CHECK_EQ(rhs.storage_type(), kCSRStorage);
+  mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
+  if (!rhs.storage_initialized()) {
+    Fill(s, ret->data(), req, 0);
+    return;
+  }
+
+  using nnvm::dim_t;
+
+  const TBlob data_r = rhs.data();
+  const TBlob indptr_r = rhs.aux_data(csr::kIndPtr);
+  const TBlob col_idx_r = rhs.aux_data(csr::kIdx);
+  const TBlob& data_l = dns;
+  const TBlob data_out = ret->data();
+
+  MSHADOW_REAL_TYPE_SWITCH(data_r.type_flag_, DType, {  // data type
+    MSHADOW_IDX_TYPE_SWITCH(indptr_r.type_flag_, IType, {  // indptr type
+      MSHADOW_IDX_TYPE_SWITCH(col_idx_r.type_flag_, CType, {  // col idx type
+        dim_t num_threads;
+        if (req == kWriteTo || req == kWriteInplace) {
+          num_threads = data_out.Size();
+          mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(
+              s, num_threads, data_out.dptr<DType>());
+        }
+        num_threads = mxnet_op::get_num_threads<cpu>(data_out.shape_[0]);
+        // seg by output row
+        dim_t seg_len = (data_out.shape_[0] + num_threads - 1) / num_threads;
+        if (transpose_b) {
+          mxnet_op::Kernel<DotDnsCsrTransDnsByRowBlocks, cpu>::Launch(s, num_threads,
+              data_out.dptr<DType>(), data_l.dptr<DType>(),
+              data_r.dptr<DType>(), indptr_r.dptr<IType>(),
+              col_idx_r.dptr<CType>(), seg_len,
+              dns.shape_[0], dns.shape_[1],
+              rhs.shape()[0], rhs.shape()[1]);
+        } else {
+          mxnet_op::Kernel<DotDnsCsrDnsByRowBlocks, cpu>::Launch(s, num_threads,
+              data_out.dptr<DType>(), data_l.dptr<DType>(),
+              data_r.dptr<DType>(), indptr_r.dptr<IType>(),
+              col_idx_r.dptr<CType>(), seg_len,
+              dns.shape_[0], dns.shape_[1],
+              rhs.shape()[0], rhs.shape()[1]);
+        }
+      });
+    });
+  });
+}
+
 inline bool DotShape(const nnvm::NodeAttrs& attrs,
-                     std::vector<TShape> *in_attrs,
-                     std::vector<TShape> *out_attrs) {
+                     mxnet::ShapeVector *in_attrs,
+                     mxnet::ShapeVector *out_attrs) {
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
+  if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
+  CHECK_GT(lshape.ndim(), 0) << "scalar tensor is not supported by this operator.";
+  CHECK_GT(rshape.ndim(), 0) << "scalar tensor is not supported by this operator.";
   if (lshape.ndim() == 1 && rshape.ndim() == 1) {
     CHECK(!param.transpose_a && !param.transpose_b) << "Cannot transpose vectors";
     CHECK_EQ(lshape[0], rshape[0]) << "dot shape error: " << lshape << " X " << rshape;
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape1(1));
   } else {
     bool Ta = param.transpose_a, Tb = param.transpose_b;
-    TShape L[2], R[2];
+    mxnet::TShape L[2], R[2];
     if (Ta) {
       L[0] = mshadow::Shape1(lshape[0]);
-      L[1] = lshape.ndim() > 1 ? TShape(&lshape[1], &lshape[lshape.ndim()]) : TShape(1);
+      L[1] = lshape.ndim() > 1 ?
+             mxnet::TShape(&lshape[1], lshape.end()) : mxnet::TShape(1, 1);
     } else {
-      L[0] = lshape.ndim() > 1 ? TShape(&lshape[0], &lshape[lshape.ndim()-1]) : TShape(1);
+      L[0] = lshape.ndim() > 1 ?
+             mxnet::TShape(&lshape[0], &lshape[lshape.ndim()-1]) : mxnet::TShape(1, 1);
       L[1] = mshadow::Shape1(lshape[lshape.ndim()-1]);
     }
     if (Tb) {
-      R[0] = rshape.ndim() > 1 ? TShape(&rshape[0], &rshape[rshape.ndim()-1]) : TShape(1);
+      R[0] = rshape.ndim() > 1 ?
+             mxnet::TShape(&rshape[0], &rshape[rshape.ndim()-1]) : mxnet::TShape(1, 1);
       R[1] = mshadow::Shape1(rshape[rshape.ndim()-1]);
     } else {
       R[0] = mshadow::Shape1(rshape[0]);
-      R[1] = rshape.ndim() > 1 ? TShape(&rshape[1], &rshape[rshape.ndim()]) : TShape(1);
+      R[1] = rshape.ndim() > 1 ?
+             mxnet::TShape(&rshape[1], rshape.end()) : mxnet::TShape(1, 1);
     }
 
     if (L[!Ta].Size() != 0 && R[Tb].Size() != 0) {
@@ -1020,12 +1242,13 @@ inline bool DotShape(const nnvm::NodeAttrs& attrs,
         << "dot shape error: " << lshape << " X " << rshape;
     }
     std::vector<index_t> buf;
-    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], &L[Ta][L[Ta].ndim()]);
-    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], &R[!Tb][R[!Tb].ndim()]);
-    TShape oshape(buf.begin(), buf.end());
+    if (lshape.ndim() > 1) buf.insert(buf.end(), &L[Ta][0], L[Ta].end());
+    if (rshape.ndim() > 1) buf.insert(buf.end(), &R[!Tb][0], R[!Tb].end());
+    mxnet::TShape oshape(buf.begin(), buf.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   }
-  return true;
+  // return true if output shape is fully inferred
+  return shape_is_known((*out_attrs)[0]);
 }
 
 template<typename xpu>
@@ -1038,7 +1261,6 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK(!param.transpose_b) << "transposing rhs of the sparse dot op is not supported";
   CHECK_EQ(inputs[0].shape().ndim(), 2) << "sparse dot only supports 2 dimensional lhs";
   CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";
   auto lhs_stype = inputs[0].storage_type();
@@ -1064,7 +1286,11 @@ void DotForwardEx(const nnvm::NodeAttrs& attrs,
              out_stype == kCSRStorage &&
              !(param.transpose_a || param.transpose_b)) {
     NDArray ret = outputs[0];
-    DotDnsCsrCsrImpl<xpu>(ctx, inputs[0].data(), inputs[1], req[0], &ret);
+    DotDnsCsrCsrImpl(ctx, xpu(), inputs[0].data(), inputs[1], req[0], &ret);
+  } else if (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage &&
+             out_stype == kDefaultStorage && !(param.transpose_a)) {
+    NDArray ret = outputs[0];
+    DotDnsCsrDnsImpl(ctx, xpu(), inputs[0].data(), inputs[1], req[0], &ret, param.transpose_b);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -1079,16 +1305,18 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 2U);
   CHECK_EQ(req.size(), 2U);
-  CHECK_EQ(kNullOp, req[0])
-    << "sparse dot does not support computing the gradient of the csr/lhs";
+  CHECK(!(req[0] != kNullOp && outputs[0].storage_type() == kCSRStorage))
+    << "sparse dot does not support computing the gradient of csr";
+  CHECK(!(req[1] != kNullOp && outputs[1].storage_type() == kCSRStorage))
+    << "sparse dot does not support computing the gradient of csr";
   CHECK_NE(req[1], kWriteInplace) << "DotBackwardEx does not support WriteInplace";
 
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK(!param.transpose_b) << "sparse dot only supports dot(A, X) and dot(A.T(), X)";
   CHECK_EQ(inputs[0].shape().ndim(), 2) << "sparse dot only supports 2 dimensional lhs";
   CHECK_EQ(inputs[1].shape().ndim(), 2) << "sparse dot only supports 2 dimensional rhs";
   const auto ograd_stype = inputs[0].storage_type();
   const auto lhs_stype = inputs[1].storage_type();
+  const auto rhs_stype = inputs[2].storage_type();
   const auto grad_rhs_stype = outputs[1].storage_type();
   if (ograd_stype == kDefaultStorage  // ograd dns format
       && lhs_stype == kCSRStorage  // csr input lhs of the op
@@ -1107,6 +1335,11 @@ void DotBackwardEx(const nnvm::NodeAttrs& attrs,
       && grad_rhs_stype == kDefaultStorage && !param.transpose_b) {
     TBlob ret = outputs[1].data();
     DotCsrRspDnsImpl(ctx, xpu(), inputs[1], inputs[0], req[1], !param.transpose_a, &ret);
+  } else if (ograd_stype == kDefaultStorage &&  // ograd dns format
+             lhs_stype == kDefaultStorage &&  // lhs dns format
+             rhs_stype == kCSRStorage && !param.transpose_a) {
+    NDArray ret = outputs[0];
+    DotDnsCsrDnsImpl(ctx, xpu(), inputs[0].data(), inputs[2], req[0], &ret, !param.transpose_b);
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
@@ -1121,151 +1354,102 @@ void BatchDotForward_(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mshadow::expr;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  if (req[0] == kNullOp) return;
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
   CHECK_EQ(outputs[0].type_flag_, inputs[0].type_flag_)
       << "Binary function only support input/output with the same type";
   CHECK_EQ(outputs[0].type_flag_, inputs[1].type_flag_)
       << "Binary function only support input/output with the same type";
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
-      << "dot only supports float32 and float64";
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Tensor<xpu, 3, DType> out = outputs[0].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 3, DType> mlhs = inputs[0].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 3, DType> mrhs = inputs[1].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 1, DType*> workspace =
-      ctx.requested[0].get_space_typed<xpu, 1, DType*>(mshadow::Shape1(3 * out.size(0)), s);
-    if (kNullOp != req[0]) {
-      if (param.transpose_a && param.transpose_b) {
-        mshadow::BatchGEMM<true, true>(out, mlhs, mrhs, (DType)1.0f,
-                                       (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                       workspace);
-      } else if (!param.transpose_a && param.transpose_b) {
-        mshadow::BatchGEMM<false, true>(out, mlhs, mrhs, (DType)1.0f,
-                                       (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                       workspace);
-      } else if (param.transpose_a && !param.transpose_b) {
-        mshadow::BatchGEMM<true, false>(out, mlhs, mrhs, (DType)1.0f,
-                                       (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                       workspace);
-      } else {
-        mshadow::BatchGEMM<false, false>(out, mlhs, mrhs, (DType)1.0f,
-                                       (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                       workspace);
+  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64 ||
+    (outputs[0].type_flag_ == kFloat16 && ctx.run_ctx.ctx.dev_mask() == mshadow::gpu::kDevMask))
+    << "dot only supports float32/float64 for CPU, and float16/float32/float64 for GPU";
+  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    int ndim = outputs[0].ndim();
+    if (outputs[0].shape_.Size() == 0 || inputs[0].shape_.Size() == 0
+                                      || inputs[1].shape_.Size() == 0) {
+      if (outputs[0].shape_.Size() != 0 && req[0] != kAddTo) {
+        mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                                          outputs[0].dptr<DType>());
       }
+      return;
     }
-  });
-}
-
-template<typename xpu>
-void BatchDotBackward_(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
-  using namespace mshadow::expr;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  CHECK_NE(req[1], kWriteInplace);
-  CHECK_NE(req[0], kWriteInplace);
-  CHECK(outputs[0].type_flag_ == kFloat32 || outputs[0].type_flag_ == kFloat64)
-      << "dot only supports float32 and float64";
-  MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    mshadow::Tensor<xpu, 3, DType> mout_grad = inputs[0].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 3, DType> mlhs_data = inputs[1].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 3, DType> mrhs_data = inputs[2].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 3, DType> mlhs_grad = outputs[0].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 3, DType> mrhs_grad = outputs[1].get<xpu, 3, DType>(s);
-    mshadow::Tensor<xpu, 2, DType*> workspace =
-      ctx.requested[0].get_space_typed<xpu, 2, DType*>(
-        mshadow::Shape2(2, 3 * mout_grad.size(0)), s);
-    mshadow::Tensor<xpu, 1, DType*> rhs_workspace = workspace[0];
-    mshadow::Tensor<xpu, 1, DType*> lhs_workspace = workspace[1];
+    size_t batch_size = outputs[0].shape_.ProdShape(0, ndim - 2);
+    mshadow::Tensor<xpu, 3, DType> out =
+        outputs[0].get_with_shape<xpu, 3, DType>(Shape3(batch_size,
+                                                        outputs[0].shape_[ndim - 2],
+                                                        outputs[0].shape_[ndim - 1]), s);
+    mshadow::Tensor<xpu, 3, DType> mlhs =
+        inputs[0].get_with_shape<xpu, 3, DType>(Shape3(batch_size,
+                                                       inputs[0].shape_[ndim - 2],
+                                                       inputs[0].shape_[ndim - 1]), s);
+    mshadow::Tensor<xpu, 3, DType> mrhs =
+        inputs[1].get_with_shape<xpu, 3, DType>(Shape3(batch_size,
+                                                       inputs[1].shape_[ndim - 2],
+                                                       inputs[1].shape_[ndim - 1]), s);
+    mshadow::Tensor<xpu, 1, DType*> workspace =
+        ctx.requested[0].get_space_typed<xpu, 1, DType*>(mshadow::Shape1(3 * out.size(0)), s);
     if (param.transpose_a && param.transpose_b) {
-      // Gradient of z = dot(x.T, y.T)
-      // dy = dot(x, dz).T = dot(dz.T, x.T)
-      // dx = dot(dz, y).T = dot(y.T, dz.T)
-      if (kNullOp != req[1]) {
-        mshadow::BatchGEMM<true, true>(mrhs_grad, mout_grad, mlhs_data, (DType)1.0f,
-                                        (kAddTo == req[1]) ? (DType)1.0f :  (DType)0.0f,
-                                        rhs_workspace);
-      }
-      if (kNullOp != req[0]) {
-        mshadow::BatchGEMM<true, true>(mlhs_grad, mrhs_data, mout_grad, (DType)1.0f,
-                                        (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                        lhs_workspace);
-      }
+      mshadow::BatchGEMM<true, true>(out, mlhs, mrhs, (DType)1.0f,
+                                     (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
+                                     workspace);
     } else if (!param.transpose_a && param.transpose_b) {
-      // Gradient of z = dot(x, y.T)
-      // dy = dot(x.T, dz).T = dot(dz.T, x)
-      // dx = dot(dz, y)
-      if (kNullOp != req[1]) {
-        mshadow::BatchGEMM<true, false>(mrhs_grad, mout_grad, mlhs_data, (DType)1.0f,
-                                        (kAddTo == req[1]) ? (DType)1.0f : (DType)0.0f,
-                                        rhs_workspace);
-      }
-      if (kNullOp != req[0]) {
-        mshadow::BatchGEMM<false, false>(mlhs_grad, mout_grad, mrhs_data, (DType)1.0f,
-                                        (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                        lhs_workspace);
-      }
+      mshadow::BatchGEMM<false, true>(out, mlhs, mrhs, (DType)1.0f,
+                                     (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
+                                     workspace);
     } else if (param.transpose_a && !param.transpose_b) {
-      // Gradient of z = dot(x.T, y)
-      // dy = dot(x, dz)
-      // dx = dot(dz, y.T).T = dot(y, dz.T)
-      if (kNullOp != req[1]) {
-        mshadow::BatchGEMM<false, false>(mrhs_grad, mlhs_data, mout_grad, (DType)1.0f,
-                                        (kAddTo == req[1]) ? (DType)1.0f : (DType)0.0f,
-                                        rhs_workspace);
-      }
-      if (kNullOp != req[0]) {
-        mshadow::BatchGEMM<false, true>(mlhs_grad, mrhs_data, mout_grad, (DType)1.0f,
-                                        (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                        lhs_workspace);
-      }
+      mshadow::BatchGEMM<true, false>(out, mlhs, mrhs, (DType)1.0f,
+                                     (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
+                                     workspace);
     } else {
-      // Gradient of z = dot(x, y)
-      // dy = dot(x.T, dz)
-      // dx = dot(dz, y.T)
-      if (kNullOp != req[1]) {
-        mshadow::BatchGEMM<true, false>(mrhs_grad, mlhs_data, mout_grad, (DType)1.0f,
-                                        (kAddTo == req[1]) ? (DType)1.0f : (DType)0.0f,
-                                        rhs_workspace);
-      }
-      if (kNullOp != req[0]) {
-        mshadow::BatchGEMM<false, true>(mlhs_grad, mout_grad, mrhs_data, (DType)1.0f,
-                                        (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
-                                        lhs_workspace);
-      }
+      mshadow::BatchGEMM<false, false>(out, mlhs, mrhs, (DType)1.0f,
+                                     (kAddTo == req[0]) ? (DType)1.0f : (DType)0.0f,
+                                     workspace);
     }
   });
 }
 
 inline bool BatchDotShape(const nnvm::NodeAttrs& attrs,
-                          std::vector<TShape> *in_attrs,
-                          std::vector<TShape> *out_attrs) {
+                          mxnet::ShapeVector *in_attrs,
+                          mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   const DotParam& param = nnvm::get<DotParam>(attrs.parsed);
-  TShape& lshape = (*in_attrs)[0];
-  TShape& rshape = (*in_attrs)[1];
-  if (lshape.ndim() == 3 && rshape.ndim() == 3) {
-    CHECK(lshape[0] == rshape[0])
-      << "batch_dot shape error(batch_size must be equal): " << lshape << " X " << rshape
+  mxnet::TShape& lshape = (*in_attrs)[0];
+  mxnet::TShape& rshape = (*in_attrs)[1];
+  // return false if lhs and rhs both have fully unknown shape
+  if (!ndim_is_known(lshape) || !ndim_is_known(rshape)) return false;
+  if (lshape.ndim() >= 3 && rshape.ndim() >= 3 && lshape.ndim() == rshape.ndim()) {
+    int ndim = lshape.ndim();
+    // only partially infer shape if last dim of lhs and second dim of rhs is known
+    bool last_dim_known = dim_size_is_known(lshape, ndim - 1);
+    bool second_dim_known = dim_size_is_known(rshape, ndim - 2);
+    if ( !last_dim_known || !second_dim_known) return false;
+    for (int i = 0; i < ndim - 2; i++) {
+      CHECK_EQ(lshape[i], rshape[i])
+        << "batch_dot shape error (the leading batch dimensions must be equal): "
+        << lshape << " X " << rshape
+        << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
+    }
+    dim_t out_m = param.transpose_a ? lshape[ndim - 1] : lshape[ndim - 2];
+    dim_t lshape_k = param.transpose_a ? lshape[ndim - 2] : lshape[ndim - 1];
+    dim_t out_n = param.transpose_b ? rshape[ndim - 2] : rshape[ndim - 1];
+    dim_t rshape_k = param.transpose_b ? rshape[ndim - 1] : rshape[ndim - 2];
+    CHECK_EQ(lshape_k, rshape_k)
+      << "batch_dot shape error (shape mismatch): " << lshape << " X " << rshape
       << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
-    index_t out_m = param.transpose_a ? lshape[2] : lshape[1];
-    index_t lshape_k = param.transpose_a ? lshape[1] : lshape[2];
-    index_t out_n = param.transpose_b ? rshape[1] : rshape[2];
-    index_t rshape_k = param.transpose_b ? rshape[2] : rshape[1];
-    CHECK(lshape_k == rshape_k)
-      << "batch_dot shape error(shape mismatch): " << lshape << " X " << rshape
-      << " trans_a=" << param.transpose_a << " trans_b=" << param.transpose_b;
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::Shape3(lshape[0], out_m, out_n));
+    std::vector<dim_t> out_shape_vec;
+    for (int i = 0; i < ndim - 2; i++) {
+      out_shape_vec.push_back(lshape[i]);
+    }
+    out_shape_vec.push_back(out_m);
+    out_shape_vec.push_back(out_n);
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(out_shape_vec));
   } else {
-    LOG(FATAL) << "batch_dot currently only support 3D*3D array"
+    LOG(FATAL) << "batch_dot currently only support N-D*N-D array (N >= 3)"
                << lshape << " v.s. " << rshape;
   }
-  return true;
+  // return true if output shape is fully inferred
+  return shape_is_known((*out_attrs)[0]);
 }
 
 }  // namespace op

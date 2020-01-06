@@ -28,11 +28,13 @@
 
 namespace mxnet {
 namespace op {
-template <> Operator *CreateOp<gpu>(SequenceReverseParam param, int dtype) {
-  Operator *op = NULL;
+template <> Operator *CreateOp<gpu>(SequenceReverseParam param, int dtype, int itype) {
+  Operator *op = nullptr;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
-    op = new SequenceReverseOp<gpu, DType>(param);
-  })
+      MSHADOW_TYPE_SWITCH(itype, IType, {
+          op = new SequenceReverseOp<gpu, DType, IType>(param);
+        });
+    });
   return op;
 }
 

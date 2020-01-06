@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-instance-attributes, too-many-arguments
+# pylint: disable=too-many-instance-attributes, too-many-arguments, unnecessary-pass
 """Provide some handy classes for user to implement a simple computation module
 in Python easily.
 """
@@ -94,7 +94,7 @@ class PythonModule(BaseModule):
     # Parameters of a module
     ################################################################################
     def get_params(self):
-        """Gets parameters, those are potentially copies of the the actual parameters used
+        """Gets parameters, those are potentially copies of the actual parameters used
         to do computation on the device. Subclass should override this method if contains
         parameters.
 
@@ -138,7 +138,7 @@ class PythonModule(BaseModule):
         """
         pass
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
         Subclass should override this method if needed.
 
@@ -152,6 +152,9 @@ class PythonModule(BaseModule):
             # since we do not need labels, we are probably not a module with a loss
             # function or predictions, so just ignore this call
             return
+
+        if pre_sliced:
+            raise RuntimeError("PythonModule does not support presliced labels")
 
         # by default we expect our outputs are some scores that could be evaluated
         eval_metric.update(labels, self.get_outputs())

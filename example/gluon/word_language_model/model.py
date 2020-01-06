@@ -19,7 +19,7 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn, rnn
 
-class RNNModel(gluon.Block):
+class RNNModel(gluon.HybridBlock):
     """A model with an encoder, recurrent layer, and a decoder."""
 
     def __init__(self, mode, vocab_size, num_embed, num_hidden,
@@ -30,10 +30,10 @@ class RNNModel(gluon.Block):
             self.encoder = nn.Embedding(vocab_size, num_embed,
                                         weight_initializer=mx.init.Uniform(0.1))
             if mode == 'rnn_relu':
-                self.rnn = rnn.RNN(num_hidden, 'relu', num_layers, dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'rnn_tanh':
-                self.rnn = rnn.RNN(num_hidden, num_layers, dropout=dropout,
+                self.rnn = rnn.RNN(num_hidden, num_layers, 'tanh', dropout=dropout,
                                    input_size=num_embed)
             elif mode == 'lstm':
                 self.rnn = rnn.LSTM(num_hidden, num_layers, dropout=dropout,
@@ -53,7 +53,7 @@ class RNNModel(gluon.Block):
 
             self.num_hidden = num_hidden
 
-    def forward(self, inputs, hidden):
+    def hybrid_forward(self, F, inputs, hidden):
         emb = self.drop(self.encoder(inputs))
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)

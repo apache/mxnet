@@ -44,11 +44,12 @@ inline void MultiBoxPriorForward(const Tensor<cpu, 2, DType> &out,
     float center_y = (r + offsets[0]) * step_y;
     for (int c = 0; c < in_width; ++c) {
       float center_x = (c + offsets[1]) * step_x;
-      // ratio = 1, various sizes
+      // ratio = first ratio, various sizes
+      float ratio = num_ratios > 0? sqrtf(ratios[0]) : 1.f;
       for (int i = 0; i < num_sizes; ++i) {
         float size = sizes[i];
-        float w = size * in_height / in_width / 2;
-        float h = size / 2;
+        float w = size * in_height / in_width * ratio / 2;
+        float h = size / ratio / 2;
         out[count][0] = center_x - w;  // xmin
         out[count][1] = center_y - h;  // ymin
         out[count][2] = center_x + w;  // xmax
@@ -76,16 +77,16 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(MultiBoxPriorParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new MultiBoxPriorOp<cpu, DType>(param);
   });
   return op;
 }
 
-Operator* MultiBoxPriorProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator* MultiBoxPriorProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                        std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   CHECK(InferType(in_type, &out_type, &aux_type));
@@ -98,6 +99,9 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxPrior, MultiBoxPriorProp)
 .add_argument("data", "NDArray-or-Symbol", "Input data.")
 .add_arguments(MultiBoxPriorParam::__FIELDS__())
 .describe("Generate prior(anchor) boxes from data, sizes and ratios.");
+
+NNVM_REGISTER_OP(_contrib_MultiBoxPrior)
+.add_alias("_npx_multibox_prior");
 
 }  // namespace op
 }  // namespace mxnet

@@ -40,6 +40,101 @@ class Dataset(object):
     def __len__(self):
         raise NotImplementedError
 
+    def filter(self, fn):
+        """Returns a new dataset with samples filtered by the
+        filter function `fn`.
+
+        Note that if the Dataset is the result of a lazily transformed one with
+        transform(lazy=False), the filter is eagerly applied to the transformed
+        samples without materializing the transformed result. That is, the
+        transformation will be applied again whenever a sample is retrieved after
+        filter().
+
+        Parameters
+        ----------
+        fn : callable
+            A filter function that takes a sample as input and
+            returns a boolean. Samples that return False are discarded.
+
+        Returns
+        -------
+        Dataset
+            The filtered dataset.
+        """
+        from . import FilterSampler
+        return _SampledDataset(self, FilterSampler(fn, self))
+
+    def shard(self, num_shards, index):
+        """Returns a new dataset includes only 1/num_shards of this dataset.
+
+        For distributed training, be sure to shard before you randomize the dataset
+        (such as shuffle), if you want each worker to reach a unique subset.
+
+        Parameters
+        ----------
+        num_shards : int
+            A integer representing the number of data shards.
+        index : int
+            A integer representing the index of the current shard.
+
+        Returns
+        -------
+        Dataset
+            The result dataset.
+        """
+        assert index < num_shards, 'Shard index of out bound: %d out of %d'%(index, num_shards)
+        assert num_shards > 0, 'Number of shards must be greater than 0'
+        assert index >= 0, 'Index must be non-negative'
+        length = len(self)
+        shard_len = length // num_shards
+        rest = length % num_shards
+        # Compute the start index for this partition
+        start = shard_len * index + min(index, rest)
+        # Compute the end index for this partition
+        end = start + shard_len + (index < rest)
+        from . import SequentialSampler
+        return _SampledDataset(self, SequentialSampler(end - start, start))
+
+    def take(self, count):
+        """Returns a new dataset with at most `count` number of samples in it.
+
+        Parameters
+        ----------
+        count : int or None
+            A integer representing the number of elements of this dataset that
+            should be taken to form the new dataset. If count is None, or if count
+            is greater than the size of this dataset, the new dataset will contain
+            all elements of this dataset.
+
+        Returns
+        -------
+        Dataset
+            The result dataset.
+        """
+        if count is None or count > len(self):
+            count = len(self)
+        from . import SequentialSampler
+        return _SampledDataset(self, SequentialSampler(count))
+
+    def sample(self, sampler):
+        """Returns a new dataset with elements sampled by the sampler.
+
+        Parameters
+        ----------
+        sampler : Sampler
+            A Sampler that returns the indices of sampled elements.
+
+        Returns
+        -------
+        Dataset
+            The result dataset.
+        """
+        from . import Sampler
+        if not isinstance(sampler, Sampler):
+            raise TypeError('Invalid sampler type: %s. Expected gluon.data.Sampler instead.'%
+                            type(sampler))
+        return _SampledDataset(self, sampler)
+
     def transform(self, fn, lazy=True):
         """Returns a new dataset with each sample transformed by the
         transformer function `fn`.
@@ -88,11 +183,7 @@ class Dataset(object):
         Dataset
             The transformed dataset.
         """
-        def base_fn(x, *args):
-            if args:
-                return (fn(x),) + args
-            return fn(x)
-        return self.transform(base_fn, lazy)
+        return self.transform(_TransformFirstClosure(fn), lazy)
 
 
 class SimpleDataset(Dataset):
@@ -128,6 +219,41 @@ class _LazyTransformDataset(Dataset):
             return self._fn(*item)
         return self._fn(item)
 
+
+class _TransformFirstClosure(object):
+    """Use callable object instead of nested function, it can be pickled."""
+    def __init__(self, fn):
+        self._fn = fn
+
+    def __call__(self, x, *args):
+        if args:
+            return (self._fn(x),) + args
+        return self._fn(x)
+
+class _FilteredDataset(Dataset):
+    """Dataset with a filter applied"""
+    def __init__(self, dataset, fn):
+        self._dataset = dataset
+        self._indices = [i for i, sample in enumerate(dataset) if fn(sample)]
+
+    def __len__(self):
+        return len(self._indices)
+
+    def __getitem__(self, idx):
+        return self._dataset[self._indices[idx]]
+
+class _SampledDataset(Dataset):
+    """Dataset with elements chosen by a sampler"""
+    def __init__(self, dataset, sampler):
+        self._dataset = dataset
+        self._sampler = sampler
+        self._indices = list(iter(sampler))
+
+    def __len__(self):
+        return len(self._sampler)
+
+    def __getitem__(self, idx):
+        return self._dataset[self._indices[idx]]
 
 class ArrayDataset(Dataset):
     """A dataset that combines multiple dataset-like objects, e.g.
@@ -173,8 +299,9 @@ class RecordFileDataset(Dataset):
         Path to rec file.
     """
     def __init__(self, filename):
-        idx_file = os.path.splitext(filename)[0] + '.idx'
-        self._record = recordio.MXIndexedRecordIO(idx_file, filename, 'r')
+        self.idx_file = os.path.splitext(filename)[0] + '.idx'
+        self.filename = filename
+        self._record = recordio.MXIndexedRecordIO(self.idx_file, self.filename, 'r')
 
     def __getitem__(self, idx):
         return self._record.read_idx(self._record.keys[idx])
@@ -182,24 +309,18 @@ class RecordFileDataset(Dataset):
     def __len__(self):
         return len(self._record.keys)
 
-apache_repo_url = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
 
 class _DownloadedDataset(Dataset):
     """Base class for MNIST, cifar10, etc."""
-    def __init__(self, repo_dir, root, transform):
-        self._root = os.path.expanduser(root)
-        self._repo_dir = repo_dir
+    def __init__(self, root, transform):
+        super(_DownloadedDataset, self).__init__()
         self._transform = transform
         self._data = None
         self._label = None
-
-        repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
-        if repo_url[-1] != '/':
-            repo_url = repo_url+'/'
-        self._base_url = repo_url
-
-        if not os.path.isdir(self._root):
-            os.makedirs(self._root)
+        root = os.path.expanduser(root)
+        self._root = root
+        if not os.path.isdir(root):
+            os.makedirs(root)
         self._get_data()
 
     def __getitem__(self, idx):
@@ -212,8 +333,3 @@ class _DownloadedDataset(Dataset):
 
     def _get_data(self):
         raise NotImplementedError
-
-    def _get_url(self, filename):
-        return '{base_url}gluon/dataset/{repo_dir}/{filename}'.format(base_url=self._base_url,
-                                                                      repo_dir=self._repo_dir,
-                                                                      filename=filename)

@@ -245,6 +245,46 @@ class BinaryScalarOp : public UnaryOp {
   }
 
   template<typename xpu, typename OP>
+  static void ComputeInt(const nnvm::NodeAttrs &attrs,
+                         const OpContext &ctx,
+                         const std::vector<TBlob> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &outputs) {
+    DCHECK_EQ(inputs.size(), 1);
+    DCHECK_EQ(outputs.size(), 1);
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const double alpha = nnvm::get<double>(attrs.parsed);
+    MXNET_INT_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+          s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>(), DType(alpha));
+      });
+    });
+  }
+
+  template<typename xpu, typename OP>
+  static void ComputeLogic(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
+    DCHECK_EQ(inputs.size(), 1);
+    DCHECK_EQ(outputs.size(), 1);
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const double alpha = nnvm::get<double>(attrs.parsed);
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+              s, inputs[0].Size(), outputs[0].dptr<bool>(), inputs[0].dptr<DType>(), DType(alpha));
+        });
+    });
+  }
+
+  template<typename xpu, typename OP>
   static void ComputeEx(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
                         const std::vector<NDArray> &inputs,
@@ -268,6 +308,28 @@ class BinaryScalarOp : public UnaryOp {
           ComputeExDenseResult<xpu, OP, DType, IType>(attrs, ctx, inputs[0], req[0], outputs[0]);
         });
       });
+    } else {
+      LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
+    }
+  }
+
+  template<typename xpu, typename OP>
+  static void LogicComputeEx(const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
+                             const std::vector<NDArray> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<NDArray> &outputs) {
+    DCHECK_EQ(inputs.size(), 1);
+    DCHECK_EQ(outputs.size(), 1);
+    const auto in_stype = inputs[0].storage_type();
+    const auto out_stype = outputs[0].storage_type();
+    if (req[0] == kNullOp) {
+      return;
+    }
+    if ((in_stype == kRowSparseStorage && out_stype == kRowSparseStorage) ||
+        (in_stype == kCSRStorage && out_stype == kCSRStorage)) {
+      // csr -> csr, or rsp -> rsp
+      UnaryOp::MapToFCompute<xpu>(attrs, ctx, inputs, req, outputs, Compute<xpu, OP>);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
@@ -302,7 +364,7 @@ class BinaryScalarOp : public UnaryOp {
   .set_attr_parser([](NodeAttrs* attrs) {                           \
       attrs->parsed = std::stod(attrs->dict["scalar"]);             \
     })                                                              \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \

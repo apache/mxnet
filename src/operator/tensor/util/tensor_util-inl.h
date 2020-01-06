@@ -76,6 +76,20 @@ struct FillRspRowIdxKernel {
   }
 };
 
+/*
+ * \brief the kernel to generate a lookup table for positions of row ids
+ * \param i thread id
+ * \param out output table
+ * \param data the input row id in sorted order
+ */
+struct MarkLookupTable {
+  template<typename IType, typename DType>
+  MSHADOW_XINLINE static void Map(int i, IType* out, const DType* data) {
+    out[static_cast<nnvm::dim_t>(data[i])] = i;
+  }
+};
+
+
 }  // namespace op
 }  // namespace mxnet
 

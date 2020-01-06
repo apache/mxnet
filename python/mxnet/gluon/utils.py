@@ -18,22 +18,26 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+from __future__ import absolute_import
+
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
 import os
+import sys
 import hashlib
+import uuid
 import warnings
-try:
-    import requests
-except ImportError:
-    class requests_failed_to_import(object):
-        pass
-    requests = requests_failed_to_import
+import collections
+import weakref
+import requests
 
 import numpy as np
 
 from .. import ndarray
+from ..util import is_np_shape, is_np_array
+from .. import numpy as _mx_np  # pylint: disable=reimported
+
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
     """Splits an NDArray into `num_slice` slices along `batch_axis`.
@@ -59,10 +63,6 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
         Return value is a list even if `num_slice` is 1.
     """
     size = data.shape[batch_axis]
-    if size < num_slice:
-        raise ValueError(
-            "Too many slices for data with shape %s. Arguments are " \
-            "num_slice=%d and batch_axis=%d."%(str(data.shape), num_slice, batch_axis))
     if even_split and size % num_slice != 0:
         raise ValueError(
             "data with shape %s cannot be evenly split into %d slices along axis %d. " \
@@ -70,17 +70,18 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    step = size // num_slice
-    if batch_axis == 0:
-        slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
-                  for i in range(num_slice)]
-    elif even_split:
-        slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
+    n_each_section, extras = divmod(size, num_slice)
+    section_sizes = [0] + (extras * [n_each_section + 1] +
+                           (num_slice - extras) * [n_each_section])
+    div_points = np.array(section_sizes).cumsum()
+    if is_np_array():
+        slices = _mx_np.split(data, indices_or_sections=list(div_points[1: -1]), axis=batch_axis)
     else:
-        slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
-                  if i < num_slice - 1 else
-                  ndarray.slice_axis(data, batch_axis, i*step, size)
-                  for i in range(num_slice)]
+        slices = []
+        for i in range(num_slice):
+            st = div_points[i]
+            end = div_points[i + 1]
+            slices.append(ndarray.slice_axis(data, axis=batch_axis, begin=st, end=end))
     return slices
 
 
@@ -90,7 +91,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Parameters
     ----------
-    data : NDArray
+    data : NDArray or ndarray
         A batch of data.
     ctx_list : list of Context
         A list of Contexts.
@@ -101,11 +102,12 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Returns
     -------
-    list of NDArray
+    list of NDArrays or ndarrays
         Each corresponds to a context in `ctx_list`.
     """
+    array_fn = _mx_np.array if is_np_array() else ndarray.array
     if not isinstance(data, ndarray.NDArray):
-        data = ndarray.array(data, ctx=ctx_list[0])
+        data = array_fn(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
         return [data.as_in_context(ctx_list[0])]
 
@@ -113,22 +115,46 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
     return [i.as_in_context(ctx) for i, ctx in zip(slices, ctx_list)]
 
 
-def clip_global_norm(arrays, max_norm):
+def clip_global_norm(arrays, max_norm, check_isfinite=True):
     """Rescales NDArrays so that the sum of their 2-norm is smaller than `max_norm`.
+
+    Parameters
+    ----------
+    arrays : list of NDArray
+    max_norm : float
+    check_isfinite : bool, default True
+         If True, check that the total_norm is finite (not nan or inf). This
+         requires a blocking .asscalar() call.
+
+    Returns
+    -------
+    NDArray or float
+      Total norm. Return type is NDArray of shape (1,) if check_isfinite is
+      False. Otherwise a float is returned.
+
     """
+    def _norm(array):
+        if array.stype == 'default':
+            x = array.reshape((-1,))
+            return ndarray.dot(x, x)
+        return array.norm().square()
     assert len(arrays) > 0
     ctx = arrays[0].context
-    total_norm = ndarray.add_n(*[ndarray.dot(x, x).as_in_context(ctx)
-                                 for x in (arr.reshape((-1,)) for arr in arrays)])
-    total_norm = ndarray.sqrt(total_norm).asscalar()
-    if not np.isfinite(total_norm):
-        warnings.warn(UserWarning('nan or inf is detected. Clipping results will be undefined.'),
-                      stacklevel=2)
+    total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
+    total_norm = ndarray.sqrt(total_norm)
+    if check_isfinite:
+        if not np.isfinite(total_norm.asscalar()):
+            warnings.warn(
+                UserWarning('nan or inf is detected. '
+                            'Clipping results will be undefined.'), stacklevel=2)
     scale = max_norm / (total_norm + 1e-8)
-    if scale < 1.0:
-        for arr in arrays:
-            arr *= scale
-    return total_norm
+    scale = ndarray.min(ndarray.concat(scale, ndarray.ones(1, ctx=ctx), dim=0))
+    for arr in arrays:
+        arr *= scale.as_in_context(arr.context)
+    if check_isfinite:
+        return total_norm.asscalar()
+    else:
+        return total_norm
 
 
 def _indent(s_, numSpaces):
@@ -169,7 +195,63 @@ def check_sha1(filename, sha1_hash):
     return sha1.hexdigest() == sha1_hash
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None):
+if not sys.platform.startswith('win32'):
+    # refer to https://github.com/untitaker/python-atomicwrites
+    def _replace_atomic(src, dst):
+        """Implement atomic os.replace with linux and OSX. Internal use only"""
+        try:
+            os.rename(src, dst)
+        except OSError:
+            try:
+                os.remove(src)
+            except OSError:
+                pass
+            finally:
+                raise OSError(
+                    'Moving downloaded temp file - {}, to {} failed. \
+                    Please retry the download.'.format(src, dst))
+else:
+    import ctypes
+
+    _MOVEFILE_REPLACE_EXISTING = 0x1
+    # Setting this value guarantees that a move performed as a copy
+    # and delete operation is flushed to disk before the function returns.
+    # The flush occurs at the end of the copy operation.
+    _MOVEFILE_WRITE_THROUGH = 0x8
+    _windows_default_flags = _MOVEFILE_WRITE_THROUGH
+
+    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
+
+    def _str_to_unicode(x):
+        """Handle text decoding. Internal use only"""
+        if not isinstance(x, text_type):
+            return x.decode(sys.getfilesystemencoding())
+        return x
+
+    def _handle_errors(rv, src):
+        """Handle WinError. Internal use only"""
+        if not rv:
+            msg = ctypes.FormatError(ctypes.GetLastError())
+            # if the MoveFileExW fails(e.g. fail to acquire file lock), removes the tempfile
+            try:
+                os.remove(src)
+            except OSError:
+                pass
+            finally:
+                raise OSError(msg)
+
+    def _replace_atomic(src, dst):
+        """Implement atomic os.replace with windows.
+        refer to https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-movefileexw
+        The function fails when one of the process(copy, flush, delete) fails.
+        Internal use only"""
+        _handle_errors(ctypes.windll.kernel32.MoveFileExW(
+            _str_to_unicode(src), _str_to_unicode(dst),
+            _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
+        ), src)
+
+
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
     """Download an given URL
 
     Parameters
@@ -184,6 +266,10 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
     sha1_hash : str, optional
         Expected sha1 hash in hexadecimal digits. Will ignore existing file when hash is specified
         but doesn't match.
+    retries : integer, default 5
+        The number of times to attempt the download in case of failure or non 200 return codes
+    verify_ssl : bool, default True
+        Verify SSL certificates.
 
     Returns
     -------
@@ -192,29 +278,192 @@ def download(url, path=None, overwrite=False, sha1_hash=None):
     """
     if path is None:
         fname = url.split('/')[-1]
-    elif os.path.isdir(path):
-        fname = os.path.join(path, url.split('/')[-1])
+        # Empty filenames are invalid
+        assert fname, 'Can\'t construct file-name from this URL. ' \
+            'Please set the `path` option manually.'
     else:
-        fname = path
+        path = os.path.expanduser(path)
+        if os.path.isdir(path):
+            fname = os.path.join(path, url.split('/')[-1])
+        else:
+            fname = path
+    assert retries >= 0, "Number of retries should be at least 0, currently it's {}".format(
+        retries)
+
+    if not verify_ssl:
+        warnings.warn(
+            'Unverified HTTPS request is being made (verify_ssl=False). '
+            'Adding certificate verification is strongly advised.')
 
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
             os.makedirs(dirname)
+        while retries + 1 > 0:
+            # Disable pyling too broad Exception
+            # pylint: disable=W0703
+            try:
+                print('Downloading {} from {}...'.format(fname, url))
+                r = requests.get(url, stream=True, verify=verify_ssl)
+                if r.status_code != 200:
+                    raise RuntimeError('Failed downloading url {}'.format(url))
+                # create uuid for temporary files
+                random_uuid = str(uuid.uuid4())
+                with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk: # filter out keep-alive new chunks
+                            f.write(chunk)
+                # if the target file exists(created by other processes)
+                # and have the same hash with target file
+                # delete the temporary file
+                if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
+                    # atmoic operation in the same file system
+                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
+                else:
+                    try:
+                        os.remove('{}.{}'.format(fname, random_uuid))
+                    except OSError:
+                        pass
+                    finally:
+                        warnings.warn(
+                            'File {} exists in file system so the downloaded file is deleted'.format(fname))
+                if sha1_hash and not check_sha1(fname, sha1_hash):
+                    raise UserWarning(
+                        'File {} is downloaded but the content hash does not match.'
+                        ' The repo may be outdated or download may be incomplete. '
+                        'If the "repo_url" is overridden, consider switching to '
+                        'the default repo.'.format(fname))
+                break
+            except Exception as e:
+                retries -= 1
+                if retries <= 0:
+                    raise e
 
-        print('Downloading %s from %s...'%(fname, url))
-        r = requests.get(url, stream=True)
-        if r.status_code != 200:
-            raise RuntimeError("Failed downloading url %s"%url)
-        with open(fname, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk: # filter out keep-alive new chunks
-                    f.write(chunk)
-
-        if sha1_hash and not check_sha1(fname, sha1_hash):
-            raise UserWarning('File {} is downloaded but the content hash does not match. ' \
-                              'The repo may be outdated or download may be incomplete. ' \
-                              'If the "repo_url" is overridden, consider switching to ' \
-                              'the default repo.'.format(fname))
+                print('download failed due to {}, retrying, {} attempt{} left'
+                      .format(repr(e), retries, 's' if retries > 1 else ''))
 
     return fname
+
+def _get_repo_url():
+    """Return the base URL for Gluon dataset and model repository."""
+    default_repo = 'https://apache-mxnet.s3-accelerate.dualstack.amazonaws.com/'
+    repo_url = os.environ.get('MXNET_GLUON_REPO', default_repo)
+    if repo_url[-1] != '/':
+        repo_url = repo_url+'/'
+    return repo_url
+
+def _get_repo_file_url(namespace, filename):
+    """Return the URL for hosted file in Gluon repository.
+
+    Parameters
+    ----------
+    namespace : str
+        Namespace of the file.
+    filename : str
+        Name of the file
+    """
+    return '{base_url}{namespace}/{filename}'.format(base_url=_get_repo_url(),
+                                                     namespace=namespace,
+                                                     filename=filename)
+
+def _brief_print_list(lst, limit=7):
+    """Print at most `limit` elements of list."""
+    lst = list(lst)
+    if len(lst) > limit:
+        return _brief_print_list(lst[:limit//2], limit) + ', ..., ' + \
+            _brief_print_list(lst[-limit//2:], limit)
+    return ', '.join(["'%s'"%str(i) for i in lst])
+
+
+class HookHandle(object):
+    """A handle that can attach/detach a hook."""
+
+    def __init__(self):
+        self._hooks_dict_ref = None
+        self._id = None
+
+    def attach(self, hooks_dict, hook):
+        assert not self._hooks_dict_ref, 'The same handle cannot be attached twice.'
+        self._id = id(hook)
+        hooks_dict[self._id] = hook
+        self._hooks_dict_ref = weakref.ref(hooks_dict)
+
+    def detach(self):
+        hooks_dict = self._hooks_dict_ref()
+        if hooks_dict is not None and self._id in hooks_dict:
+            del hooks_dict[self._id]
+
+    def __getstate__(self):
+        return (self._hooks_dict_ref(), self._id)
+
+    def __setstate__(self, state):
+        if state[0] is None:
+            self._hooks_dict_ref = weakref.ref(collections.OrderedDict())
+        else:
+            self._hooks_dict_ref = weakref.ref(state[0])
+        self._id = state[1]
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        self.detach()
+
+
+def shape_is_known(shape):
+    """Check whether a shape is completely known with or without np semantics.
+
+    Please see the doc of is_np_shape for more details.
+    """
+    if shape is None:
+        return False
+    unknown_dim_size = -1 if is_np_shape() else 0
+    if len(shape) == 0:
+        return unknown_dim_size == -1
+    for dim_size in shape:
+        if dim_size == unknown_dim_size:
+            return False
+        assert dim_size > unknown_dim_size, "shape dimension size cannot be less than {}, while " \
+                                            "received {}".format(unknown_dim_size, dim_size)
+    return True
+
+
+def _check_same_symbol_type(symbols):
+    """Check whether all the symbols in the list are of the same type.
+    Raise type error if the types are different. Return the class of
+    the symbols."""
+    from ..symbol.numpy import _Symbol as np_symbol
+    from ..symbol import Symbol as nd_symbol
+    is_np_sym = isinstance(symbols[0], np_symbol)
+    for s in symbols[1:]:
+        if is_np_sym != isinstance(s, np_symbol):
+            raise TypeError('Found both classic symbol (mx.sym.Symbol) and numpy symbol '
+                            '(mx.sym.np._Symbol) in outputs. This will prevent you from building '
+                            'a computation graph by grouping them since different types of symbols '
+                            'are not allowed to be grouped in Gluon to form a computation graph. '
+                            'You will need to convert them to the same type of symbols, either '
+                            'classic or numpy following this rule: if you want numpy ndarray '
+                            'output(s) from the computation graph, please convert all the classic '
+                            'symbols in the list to numpy symbols by calling `as_np_ndarray()` '
+                            'on each of them; if you want classic ndarray output(s) from the '
+                            'computation graph, please convert all the numpy symbols in the list '
+                            'to classic symbols by calling `as_nd_ndarray()` on each of them.')
+    return np_symbol if is_np_sym else nd_symbol
+
+
+def _check_all_np_ndarrays(out):
+    """Check if ndarrays/symbols in out are all np.ndarray/np._Symbol."""
+    from ..numpy import ndarray as np_ndarray
+    from ..symbol.numpy import _Symbol as np_symbol
+    from ..symbol import Symbol as nd_symbol
+    from ..ndarray import NDArray as nd_ndarray
+
+    # pylint: disable=no-else-raise
+    if isinstance(out, (nd_ndarray, nd_symbol)) and not isinstance(out, (np_ndarray, np_symbol)):
+        raise TypeError("Block's output ndarrays/symbols must be of type `mxnet.numpy.ndarray`"
+                        " or `mxnet.symbol.numpy._Symbol`, while got output type {}"
+                        .format(str(type(out))))
+    elif isinstance(out, (list, tuple)):
+        for i in out:
+            _check_all_np_ndarrays(i)
+    # pylint: enable=no-else-raise

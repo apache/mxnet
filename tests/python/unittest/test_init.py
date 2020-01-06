@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+import json
 
 def test_default_init():
     data = mx.sym.Variable('data')
@@ -60,8 +61,33 @@ def test_rsp_const_init():
     check_rsp_const_init(mx.initializer.Zero(), 0.)
     check_rsp_const_init(mx.initializer.One(), 1.)
 
+def test_bilinear_init():
+    bili = mx.init.Bilinear()
+    bili_weight = mx.ndarray.empty((1,1,4,4))
+    bili._init_weight(None, bili_weight)
+    bili_1d = np.array([[1/float(4), 3/float(4), 3/float(4), 1/float(4)]])
+    bili_2d = bili_1d * np.transpose(bili_1d)
+    assert (bili_2d == bili_weight.asnumpy()).all()
+
+def test_const_init_dumps():
+    shape = tuple(np.random.randint(1, 10, size=np.random.randint(1, 5)))
+    # test NDArray input
+    init = mx.init.Constant(mx.nd.ones(shape))
+    val = init.dumps()
+    assert val == json.dumps([init.__class__.__name__.lower(), init._kwargs])
+    # test scalar input
+    init = mx.init.Constant(1)
+    assert init.dumps() == '["constant", {"value": 1}]'
+    # test numpy input
+    init = mx.init.Constant(np.ones(shape))
+    val = init.dumps()
+    assert val == json.dumps([init.__class__.__name__.lower(), init._kwargs])
+
+
 if __name__ == '__main__':
     test_variable_init()
     test_default_init()
     test_aux_init()
     test_rsp_const_init()
+    test_bilinear_init()
+    test_const_init_dumps()

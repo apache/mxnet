@@ -22,11 +22,12 @@
 from __future__ import absolute_import
 
 import ctypes
-from .base import _LIB, check_call
+from .base import _LIB, check_call, integer_types
 from .ndarray.random import *
+from .context import Context
 
 
-def seed(seed_state):
+def seed(seed_state, ctx="all"):
     """Seeds the random number generators in MXNet.
 
     This affects the behavior of modules in MXNet that uses random number generators,
@@ -35,12 +36,23 @@ def seed(seed_state):
     Parameters
     ----------
     seed_state : int
-        The random number seed to set to all devices.
+        The random number seed.
+
+    ctx : Context
+        The device context of the generator. The default is "all" which means seeding random
+        number generators of all devices.
 
     Notes
     -----
-    Random number generators in MXNet are device specific. Therefore, random numbers
-    generated from two devices can be different even if they are seeded using the same seed.
+    Random number generators in MXNet are device specific.
+    `mx.random.seed(seed_state)` sets the state of each generator using `seed_state` and the
+    device id. Therefore, random numbers generated from different devices can be different
+    even if they are seeded using the same seed.
+
+    To produce identical random number sequences independent of the device id,
+    set optional `ctx` argument. This produces the same sequence of random numbers independent
+    of the device id, but the sequence can be different on different kind of devices as MXNet's
+    random number generators for CPU and GPU use different algorithms.
 
     Example
     -------
@@ -50,7 +62,7 @@ def seed(seed_state):
     >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 1.09544981 -0.20014545]
      [-0.20808885  0.2527658 ]]
-    >>>
+    # Same results on the same device with the same seed
     >>> mx.random.seed(128)
     >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
@@ -59,8 +71,30 @@ def seed(seed_state):
     >>> print(mx.nd.random.normal(shape=(2,2)).asnumpy())
     [[ 0.47400656 -0.75213492]
      [ 0.20251541  0.95352972]]
+    # Different results on gpu(0) and gpu(1) with the same seed
+    >>> mx.random.seed(128)
+    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(0)).asnumpy())
+    [[ 2.5020072 -1.6884501]
+     [-0.7931333 -1.4218881]]
+    >>> mx.random.seed(128)
+    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(1)).asnumpy())
+    [[ 0.24336822 -1.664805  ]
+     [-1.0223296   1.253198  ]]
+    # Seeding with `ctx` argument produces identical results on gpu(0) and gpu(1)
+    >>> mx.random.seed(128, ctx=mx.gpu(0))
+    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(0)).asnumpy())
+    [[ 2.5020072 -1.6884501]
+     [-0.7931333 -1.4218881]]
+    >>> mx.random.seed(128, ctx=mx.gpu(1))
+    >>> print(mx.nd.random.normal(shape=(2,2), ctx=mx.gpu(1)).asnumpy())
+    [[ 2.5020072 -1.6884501]
+     [-0.7931333 -1.4218881]]
     """
-    if not isinstance(seed_state, int):
-        raise ValueError('sd must be int')
+    if not isinstance(seed_state, integer_types):
+        raise ValueError('seed_state must be int')
     seed_state = ctypes.c_int(int(seed_state))
-    check_call(_LIB.MXRandomSeed(seed_state))
+    if ctx == "all":
+        check_call(_LIB.MXRandomSeed(seed_state))
+    else:
+        ctx = Context(ctx)
+        check_call(_LIB.MXRandomSeedContext(seed_state, ctx.device_typeid, ctx.device_id))

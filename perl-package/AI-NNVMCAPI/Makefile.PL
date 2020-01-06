@@ -47,7 +47,7 @@ WriteMakefile(
     VERSION_FROM    => 'lib/AI/NNVMCAPI.pm',
     ABSTRACT_FROM   => 'lib/AI/NNVMCAPI.pm',
     LIBS           => ['-L../../lib -lmxnet'],
-    INC            => '-I../../nnvm/include/nnvm',
+    INC            => '-I../../3rdparty/tvm/nnvm/include/nnvm',
     OBJECT         => 'nnvm_wrap.o',
     LDDLFLAGS      => join(' ', @lddlflags),
     PREREQ_PM      => {

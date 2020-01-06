@@ -21,9 +21,11 @@
  */
 #include <map>
 #include <string>
+#include <fstream>
 #include <vector>
+#include <cstdlib>
+#include "utils.h"
 #include "mxnet-cpp/MxNetCpp.h"
-
 
 using namespace mxnet::cpp;
 
@@ -151,51 +153,91 @@ Symbol ResNetSymbol(int num_class, int num_level = 3, int num_block = 9,
   return SoftmaxOutput("softmax", fc, data_label);
 }
 
+NDArray ResizeInput(NDArray data, const Shape new_shape) {
+  NDArray pic = data.Reshape(Shape(0, 1, 28, 28));
+  NDArray pic_1channel;
+  Operator("_contrib_BilinearResize2D")
+    .SetParam("height", new_shape[2])
+    .SetParam("width", new_shape[3])
+    (pic).Invoke(pic_1channel);
+  NDArray output;
+  Operator("tile")
+    .SetParam("reps", Shape(1, 3, 1, 1))
+    (pic_1channel).Invoke(output);
+  return output;
+}
+
 int main(int argc, char const *argv[]) {
-  int batch_size = 50;
-  int max_epoch = 100;
+  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 
+  TRY
   auto resnet = ResNetSymbol(10);
   std::map<std::string, NDArray> args_map;
   std::map<std::string, NDArray> aux_map;
 
-  args_map["data"] = NDArray(Shape(batch_size, 3, 256, 256), Context::gpu());
-  args_map["data_label"] = NDArray(Shape(batch_size), Context::gpu());
-  resnet.InferArgsMap(Context::gpu(), &args_map, args_map);
+  /*context*/
+  auto ctx = Context::cpu();
+  int num_gpu;
+  MXGetGPUCount(&num_gpu);
+  int batch_size = 8;
+#if !MXNET_USE_CPU
+  if (num_gpu > 0) {
+    ctx = Context::gpu();
+    batch_size = 32;
+  }
+#endif
 
-  auto train_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./sf1_train.lst")
-      .SetParam("path_imgrec", "./sf1_train.rec")
-      .SetParam("data_shape", Shape(3, 256, 256))
-      .SetParam("batch_size", batch_size)
-      .SetParam("shuffle", 1)
-      .CreateDataIter();
+  const Shape data_shape = Shape(batch_size, 3, 224, 224),
+              label_shape = Shape(batch_size);
+  args_map["data"] = NDArray(data_shape, ctx);
+  args_map["data_label"] = NDArray(label_shape, ctx);
+  resnet.InferArgsMap(ctx, &args_map, args_map);
 
-  auto val_iter = MXDataIter("ImageRecordIter")
-      .SetParam("path_imglist", "./sf1_val.lst")
-      .SetParam("path_imgrec", "./sf1_val.rec")
-      .SetParam("data_shape", Shape(3, 256, 256))
-      .SetParam("batch_size", batch_size)
-      .CreateDataIter();
+  std::vector<std::string> data_files = { "./data/mnist_data/train-images-idx3-ubyte",
+                                          "./data/mnist_data/train-labels-idx1-ubyte",
+                                          "./data/mnist_data/t10k-images-idx3-ubyte",
+                                          "./data/mnist_data/t10k-labels-idx1-ubyte"
+                                        };
 
-  Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  auto train_iter =  MXDataIter("MNISTIter");
+  if (!setDataIter(&train_iter, "Train", data_files, batch_size)) {
+    return 1;
+  }
+
+  auto val_iter = MXDataIter("MNISTIter");
+  if (!setDataIter(&val_iter, "Label", data_files, batch_size)) {
+    return 1;
+  }
+
+  // initialize parameters
+  Xavier xavier = Xavier(Xavier::gaussian, Xavier::in, 2);
+  for (auto &arg : args_map) {
+    xavier(arg.first, &arg.second);
+  }
+
+  Optimizer* opt = OptimizerRegistry::Find("sgd");
   opt->SetParam("lr", learning_rate)
      ->SetParam("wd", weight_decay)
      ->SetParam("momentum", 0.9)
      ->SetParam("rescale_grad", 1.0 / batch_size)
      ->SetParam("clip_gradient", 10);
 
-  auto *exec = resnet.SimpleBind(Context::gpu(), args_map);
+  auto *exec = resnet.SimpleBind(ctx, args_map);
   auto arg_names = resnet.ListArguments();
 
-  for (int iter = 0; iter < max_epoch; ++iter) {
-    LG << "Epoch: " << iter;
+  // Create metrics
+  Accuracy train_acc, val_acc;
+  LogLoss logloss_train, logloss_val;
+  for (int epoch = 0; epoch < max_epoch; ++epoch) {
+    LG << "Epoch: " << epoch;
     train_iter.Reset();
+    train_acc.Reset();
+    int iter = 0;
     while (train_iter.Next()) {
       auto data_batch = train_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
 
@@ -207,22 +249,35 @@ int main(int argc, char const *argv[]) {
         opt->Update(i, exec->arg_arrays[i], exec->grad_arrays[i]);
       }
       NDArray::WaitAll();
+      train_acc.Update(data_batch.label, exec->outputs[0]);
+      logloss_train.Reset();
+      logloss_train.Update(data_batch.label, exec->outputs[0]);
+      ++iter;
+      LG << "EPOCH: " << epoch << " ITER: " << iter
+         << " Train Accuracy: " << train_acc.Get()
+         << " Train Loss: " << logloss_train.Get();
     }
+    LG << "EPOCH: " << epoch << " Train Accuracy: " << train_acc.Get();
 
-    Accuracy acu;
     val_iter.Reset();
+    val_acc.Reset();
+    iter = 0;
     while (val_iter.Next()) {
       auto data_batch = val_iter.GetDataBatch();
-      data_batch.data.CopyTo(&args_map["data"]);
+      ResizeInput(data_batch.data, data_shape).CopyTo(&args_map["data"]);
       data_batch.label.CopyTo(&args_map["data_label"]);
       NDArray::WaitAll();
       exec->Forward(false);
       NDArray::WaitAll();
-      acu.Update(data_batch.label, exec->outputs[0]);
+      val_acc.Update(data_batch.label, exec->outputs[0]);
+      LG << "EPOCH: " << epoch << " ITER: " << iter << " Val Accuracy: " << val_acc.Get();
+      ++iter;
     }
-    LG << "Accuracy: " << acu.Get();
+    LG << "Validation Accuracy: " << val_acc.Get();
   }
   delete exec;
+  delete opt;
   MXNotifyShutdown();
+  CATCH
   return 0;
 }

@@ -42,8 +42,8 @@ namespace op {
 
 inline bool KhatriRaoShape(
       const nnvm::NodeAttrs& attrs,
-      std::vector<TShape> *in_attrs,
-      std::vector<TShape> *out_attrs) {
+      mxnet::ShapeVector *in_attrs,
+      mxnet::ShapeVector *out_attrs) {
   CHECK_EQ(out_attrs->size(), 1);
   CHECK_GE(in_attrs->size(), 1);
 
@@ -51,7 +51,7 @@ inline bool KhatriRaoShape(
   // (when inputs_transposed is set to true/false)
   int num_columns = static_cast<int>((*in_attrs)[0][1]);
   int num_rows = 1;
-  for (const TShape& attr_shape : (*in_attrs)) {
+  for (const mxnet::TShape& attr_shape : (*in_attrs)) {
     CHECK_EQ(num_columns, static_cast<int>(attr_shape[1]));
     num_rows *= attr_shape[0];
   }
@@ -85,7 +85,7 @@ the (column-wise) Khatri-Rao product is defined as the matrix,
 .. math::
    X = A_1 \otimes \cdots \otimes A_n \in \mathbb{R}^{(M_1 \cdots M_n) \times N},
 
-where the :math:`k`th column is equal to the column-wise outer product
+where the :math:`k` th column is equal to the column-wise outer product
 :math:`{A_1}_k \otimes \cdots \otimes {A_n}_k` where :math:`{A_i}_k` is the kth
 column of the ith matrix.
 
@@ -112,7 +112,7 @@ Example::
     return ret;
   })
 .set_num_outputs(1)
-.set_attr<nnvm::FInferShape>("FInferShape", KhatriRaoShape)
+.set_attr<mxnet::FInferShape>("FInferShape", KhatriRaoShape)
 .set_attr<nnvm::FInferType>("FInferType",
   [](const nnvm::NodeAttrs& attrs,
      std::vector<int> *in_attrs,

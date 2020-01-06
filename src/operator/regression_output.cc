@@ -23,36 +23,41 @@
 */
 
 #include "./regression_output-inl.h"
+#include "./elemwise_op_common.h"
 
-#define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)   \
-  NNVM_REGISTER_OP(__name$)                                                    \
-  .set_num_inputs(2)                                                           \
-  .set_num_outputs(1)                                                          \
-  .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
-    [](const NodeAttrs& attrs) {                                               \
-      return std::vector<std::string>{"data", "label"};                        \
-    })                                                                         \
-  .set_attr<nnvm::FInferShape>("FInferShape", RegressionOpShape)               \
-  .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})          \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
-  [](const NodeAttrs& attrs){                                                  \
-    return std::vector<std::pair<int, int> >{{0, 0}};                          \
-  })                                                                           \
-  .set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, __kernel$>)      \
-  .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")    \
-  .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")  \
+
+#define MXNET_OPERATOR_REGISTER_REGRESSION_FWD(__name$, __kernel$, __bwdop$)           \
+  NNVM_REGISTER_OP(__name$)                                                            \
+  MXNET_ADD_SPARSE_OP_ALIAS(__name$)                                                   \
+  .set_num_inputs(2)                                                                   \
+  .set_num_outputs(1)                                                                  \
+  .set_attr<nnvm::FListInputNames>("FListInputNames",                                  \
+    [](const NodeAttrs& attrs) {                                                       \
+      return std::vector<std::string>{"data", "label"};                                \
+    })                                                                                 \
+  .set_attr<mxnet::FInferShape>("FInferShape", RegressionOpShape)                       \
+  .set_attr<nnvm::FGradient>("FGradient", RegressionOpGrad{__bwdop$})                  \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)                        \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                    \
+  [](const NodeAttrs& attrs){                                                          \
+    return std::vector<std::pair<int, int> >{{0, 0}};                                  \
+  })                                                                                   \
+  .set_attr<FCompute>("FCompute<cpu>", RegressionForward<cpu, __kernel$>)              \
+  .add_argument("data", "NDArray-or-Symbol", "Input data to the function.")            \
+  .add_argument("label", "NDArray-or-Symbol", "Input label to the function.")          \
   .add_arguments(RegressionOutputParam::__FIELDS__())
 
-#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$)         \
-  NNVM_REGISTER_OP(__name$)                                                \
-  .set_num_inputs(2)                                                       \
-  .set_num_outputs(2)                                                      \
-  .set_attr_parser(ParamParser<RegressionOutputParam>)                     \
-  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                        \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                        \
-  [](const NodeAttrs& attrs){                                              \
-    return std::vector<std::pair<int, int> >{{1, 0}};                      \
-  })                                                                       \
+#define MXNET_OPERATOR_REGISTER_REGRESSION_BWD(__name$, __kernel$)                      \
+  NNVM_REGISTER_OP(__name$)                                                             \
+  .set_num_inputs(2)                                                                    \
+  .set_num_outputs(2)                                                                   \
+  .set_attr_parser(ParamParser<RegressionOutputParam>)                                  \
+  .set_attr<nnvm::TIsBackward>("TIsBackward", true)                                     \
+  .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 2>)                         \
+  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                     \
+  [](const NodeAttrs& attrs){                                                           \
+    return std::vector<std::pair<int, int> >{{1, 0}};                                   \
+  })                                                                                    \
   .set_attr<FCompute>("FCompute<cpu>", RegressionBackward<cpu, __kernel$>)
 
 namespace mxnet {
@@ -63,6 +68,8 @@ DMLC_REGISTER_PARAMETER(RegressionOutputParam);
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LinearRegressionOutput,
   mshadow_op::identity, "_backward_linear_reg_out")
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<true>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionForwardEx<cpu, mshadow_op::identity>)
 .describe(R"code(Computes and optimizes for squared loss during backward propagation.
 Just outputs ``data`` during forward propagation.
 
@@ -74,12 +81,19 @@ then the squared loss estimated over :math:`n` samples is defined as
 .. note::
    Use the LinearRegressionOutput as the final output layer of a net.
 
+The storage type of ``label`` can be ``default`` or ``csr``
+
+- LinearRegressionOutput(default, default) = default
+- LinearRegressionOutput(default, csr) = default
+
 By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
 
-MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_linear_reg_out, mshadow_op::minus);
+MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_linear_reg_out, mshadow_op::minus)
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<false>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionBackwardEx<cpu, mshadow_op::minus>);
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(MAERegressionOutput,
   mshadow_op::identity, "_backward_mae_reg_out")
@@ -95,6 +109,11 @@ then the mean absolute error (MAE) estimated over :math:`n` samples is defined a
 .. note::
    Use the MAERegressionOutput as the final output layer of a net.
 
+The storage type of ``label`` can be ``default`` or ``csr``
+
+- MAERegressionOutput(default, default) = default
+- MAERegressionOutput(default, csr) = default
+
 By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
@@ -104,24 +123,37 @@ MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_mae_reg_out, mshadow_op::minus_
 
 MXNET_OPERATOR_REGISTER_REGRESSION_FWD(LogisticRegressionOutput,
   mshadow_op::sigmoid, "_backward_logistic_reg_out")
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<true>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionForwardEx<cpu, mshadow_op::sigmoid>)
 .describe(R"code(Applies a logistic function to the input.
 
 The logistic function, also known as the sigmoid function, is computed as
 :math:`\frac{1}{1+exp(-\textbf{x})}`.
 
 Commonly, the sigmoid is used to squash the real-valued output of a linear model
-:math:wTx+b into the [0,1] range so that it can be interpreted as a probability.
+:math:`wTx+b` into the [0,1] range so that it can be interpreted as a probability.
 It is suitable for binary classification or probability prediction tasks.
 
 .. note::
    Use the LogisticRegressionOutput as the final output layer of a net.
 
-By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
+The storage type of ``label`` can be ``default`` or ``csr``
+
+- LogisticRegressionOutput(default, default) = default
+- LogisticRegressionOutput(default, csr) = default
+
+The loss function used is the Binary Cross Entropy Loss:
+
+:math:`-{(y\log(p) + (1 - y)\log(1 - p))}`
+
+Where `y` is the ground truth probability of positive outcome for a given example, and `p` the probability predicted by the model. By default, gradients of this loss function are scaled by factor `1/m`, where m is the number of regression outputs of a training example.
 The parameter `grad_scale` can be used to change this scale to `grad_scale/m`.
 
 )code" ADD_FILELINE);
 
-MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_logistic_reg_out, mshadow_op::minus);
+MXNET_OPERATOR_REGISTER_REGRESSION_BWD(_backward_logistic_reg_out, mshadow_op::minus)
+.set_attr<FInferStorageType>("FInferStorageType", RegressionInferStorageType<false>)
+.set_attr<FComputeEx>("FComputeEx<cpu>", RegressionBackwardEx<cpu, mshadow_op::minus>);
 
 }  // namespace op
 }  // namespace mxnet

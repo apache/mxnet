@@ -18,7 +18,7 @@
  */
 
 /*!
- * \file elementwise_scatter_op.h
+ * \file elemwise_scatter_op.h
  * \brief Function definition of elementwise scatter operators
  */
 #ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_SCATTER_OP_H_
@@ -184,12 +184,8 @@ class ElemwiseScatterBinaryOp : public ElemwiseBinaryOp,
         && (input1_stype == kRowSparseStorage || input1_stype == kDefaultStorage)
         && outputs[0].storage_type() == kRowSparseStorage) {
       mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
-      MSHADOW_TYPE_SWITCH(inputs[0].dtype(), DType, {
-        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-          RspRspOp<DType, IType, OP>(s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0],
-                                     false, true, false, true);
-        });
-      });
+      RspRspOp<OP>(s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0],
+                   false, true, false, true);
       CHECK_EQ(inputs[0].aux_shape(rowsparse::kIdx).Size(),
                outputs[0].aux_shape(rowsparse::kIdx).Size());
     } else {

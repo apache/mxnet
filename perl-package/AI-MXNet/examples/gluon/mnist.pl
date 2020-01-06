@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -48,7 +48,7 @@ $net->name_scope(sub {
     $net->add(nn->Dense(10));
 });
 $net->hybridize() if $hybridize;
-$net->load_params('mnist.params') if $load_params;
+$net->load_parameters('mnist.params') if $load_params;
 # data
 
 sub transformer
@@ -130,7 +130,7 @@ sub train
         my ($val_name, $val_acc) = test($ctx);
         print "[Epoch $epoch] Validation: $val_name=$val_acc\n"
     }
-    $net->save_params('mnist.params');
+    $net->save_parameters('mnist.params');
 }
 
 train($epochs, $cuda ? mx->gpu(0) : mx->cpu);

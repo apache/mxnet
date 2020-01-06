@@ -113,7 +113,7 @@ def log_train_metric(period, auto_reset=False):
                 logging.info('Iter[%d] Batch[%d] Train-%s=%f',
                              param.epoch, param.nbatch, name, value)
             if auto_reset:
-                param.eval_metric.reset()
+                param.eval_metric.reset_local()
     return _callback
 
 
@@ -156,14 +156,22 @@ class Speedometer(object):
 
         if self.init:
             if count % self.frequent == 0:
-                speed = self.frequent * self.batch_size / (time.time() - self.tic)
+                # #11504
+                try:
+                    speed = self.frequent * self.batch_size / (time.time() - self.tic)
+                except ZeroDivisionError:
+                    speed = float('inf')
                 if param.eval_metric is not None:
                     name_value = param.eval_metric.get_name_value()
                     if self.auto_reset:
-                        param.eval_metric.reset()
-                    msg = 'Epoch[%d] Batch [%d]\tSpeed: %.2f samples/sec'
-                    msg += '\t%s=%f'*len(name_value)
-                    logging.info(msg, param.epoch, count, speed, *sum(name_value, ()))
+                        param.eval_metric.reset_local()
+                        msg = 'Epoch[%d] Batch [%d-%d]\tSpeed: %.2f samples/sec'
+                        msg += '\t%s=%f'*len(name_value)
+                        logging.info(msg, param.epoch, count-self.frequent, count, speed, *sum(name_value, ()))
+                    else:
+                        msg = 'Epoch[%d] Batch [0-%d]\tSpeed: %.2f samples/sec'
+                        msg += '\t%s=%f'*len(name_value)
+                        logging.info(msg, param.epoch, count, speed, *sum(name_value, ()))
                 else:
                     logging.info("Iter[%d] Batch [%d]\tSpeed: %.2f samples/sec",
                                  param.epoch, count, speed)

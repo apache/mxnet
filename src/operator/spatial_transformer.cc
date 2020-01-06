@@ -51,8 +51,8 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
           const index_t grid_index = n * o_h * o_w * 2 + h * o_w + w;
           const DType y_real = (*(grid + grid_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           const DType x_real = (*(grid + grid_index) + 1) * (i_w - 1) / 2;
-          const auto top_left_y = static_cast<int>(floor(y_real));
-          const auto top_left_x = static_cast<int>(floor(x_real));
+          const auto top_left_y = static_cast<int>(std::floor(y_real));
+          const auto top_left_x = static_cast<int>(std::floor(x_real));
           const DType top_left_y_w = 1.0 - (y_real - top_left_y);
           const DType top_left_x_w = 1.0 - (x_real - top_left_x);
           const int data_index = n * i_c * i_h * i_w + c * i_h * i_w +
@@ -99,14 +99,14 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
           const index_t grid_src_index = n * o_h * o_w * 2 + h * o_w + w;
           const DType y_real = (*(grid_src + grid_src_index + o_h * o_w) + 1) * (i_h - 1) / 2;
           const DType x_real = (*(grid_src + grid_src_index) + 1) * (i_w - 1) / 2;
-          const auto top_left_y = static_cast<int>(floor(y_real));
-          const auto top_left_x = static_cast<int>(floor(x_real));
+          const auto top_left_y = static_cast<int>(std::floor(y_real));
+          const auto top_left_x = static_cast<int>(std::floor(x_real));
           const DType top_left_y_w = 1.0 - (y_real - top_left_y);
           const DType top_left_x_w = 1.0 - (x_real - top_left_x);
           for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
             index_t grad_index = n * o_c * o_h * o_w + c * o_h * o_w + h * o_w + w;
-            index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w + top_left_y * i_w
-                                 + top_left_x;
+            const int data_index = n * i_c * i_h * i_w + c * i_h * i_w +
+                                   top_left_y * i_w + top_left_x;
             // calc 4 vertex value in input data
             DType top_left_v = 0;
             DType top_right_v = 0;
@@ -153,14 +153,14 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<cpu>(SpatialTransformerParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new SpatialTransformerOp<cpu, DType>(param);
   })
   return op;
 }
 
-Operator *SpatialTransformerProp::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator *SpatialTransformerProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
   DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
 }

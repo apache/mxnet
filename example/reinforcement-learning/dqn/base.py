@@ -23,8 +23,9 @@ import numpy
 import os
 import pickle
 from collections import OrderedDict
+from utils import (get_bucket_key, save_params,
+                   save_misc, load_params)
 import logging
-from utils import *
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ class Base(object):
                                         params=self.params,
                                         aux_states=self.aux_states)
         misc_saving_path = save_misc(dir_path=dir_path, epoch=epoch, name=self.name,
-                                     content={'data_shapes': {k: map(int, v) for k, v in self.data_shapes.items()}})
+                                     content={'data_shapes': {k: list(map(int, v)) for k, v in self.data_shapes.items()}})
         logging.info('Saving %s, params: \"%s\", misc: \"%s\"',
                      self.name, param_saving_path, misc_saving_path)
 

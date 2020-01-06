@@ -29,8 +29,10 @@ import warnings
 import numpy as np
 
 from .. import dataset
-from ...utils import download, check_sha1
-from .... import nd, image, recordio
+from ...utils import download, check_sha1, _get_repo_file_url
+from .... import nd, image, recordio, base
+from .... import numpy as _mx_np  # pylint: disable=reimported
+from ....util import is_np_array
 
 
 class MNIST(dataset._DownloadedDataset):
@@ -40,18 +42,17 @@ class MNIST(dataset._DownloadedDataset):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/mnist'
+    root : str, default $MXNET_HOME/datasets/mnist
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'mnist'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'mnist'),
                  train=True, transform=None):
         self._train = train
         self._train_data = ('train-images-idx3-ubyte.gz',
@@ -62,7 +63,8 @@ class MNIST(dataset._DownloadedDataset):
                            'c3a25af1f52dad7f726cce8cacb138654b760d48')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '763e7fa3757d93b0cdec073cef058b2004252c17')
-        super(MNIST, self).__init__('mnist', root, transform)
+        self._namespace = 'mnist'
+        super(MNIST, self).__init__(root, transform)
 
     def _get_data(self):
         if self._train:
@@ -70,23 +72,27 @@ class MNIST(dataset._DownloadedDataset):
         else:
             data, label = self._test_data, self._test_label
 
-        data_file = download(self._get_url(data[0]),
+        namespace = 'gluon/dataset/'+self._namespace
+        data_file = download(_get_repo_file_url(namespace, data[0]),
                              path=self._root,
                              sha1_hash=data[1])
-        label_file = download(self._get_url(label[0]),
+        label_file = download(_get_repo_file_url(namespace, label[0]),
                               path=self._root,
                               sha1_hash=label[1])
 
         with gzip.open(label_file, 'rb') as fin:
             struct.unpack(">II", fin.read(8))
-            label = np.fromstring(fin.read(), dtype=np.uint8).astype(np.int32)
+            label = np.frombuffer(fin.read(), dtype=np.uint8).astype(np.int32)
+            if is_np_array():
+                label = _mx_np.array(label, dtype=label.dtype)
 
         with gzip.open(data_file, 'rb') as fin:
             struct.unpack(">IIII", fin.read(16))
-            data = np.fromstring(fin.read(), dtype=np.uint8)
+            data = np.frombuffer(fin.read(), dtype=np.uint8)
             data = data.reshape(len(label), 28, 28, 1)
 
-        self._data = nd.array(data, dtype=data.dtype)
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        self._data = array_fn(data, dtype=data.dtype)
         self._label = label
 
 
@@ -99,18 +105,17 @@ class FashionMNIST(MNIST):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/fashion-mnist'
+    root : str, default $MXNET_HOME/datasets/fashion-mnist'
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'fashion-mnist'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'fashion-mnist'),
                  train=True, transform=None):
         self._train = train
         self._train_data = ('train-images-idx3-ubyte.gz',
@@ -121,28 +126,28 @@ class FashionMNIST(MNIST):
                            '626ed6a7c06dd17c0eec72fa3be1740f146a2863')
         self._test_label = ('t10k-labels-idx1-ubyte.gz',
                             '17f9ab60e7257a1620f4ad76bbbaf857c3920701')
-        super(MNIST, self).__init__('fashion-mnist', root, transform) # pylint: disable=bad-super-call
+        self._namespace = 'fashion-mnist'
+        super(MNIST, self).__init__(root, transform) # pylint: disable=bad-super-call
 
 
 class CIFAR10(dataset._DownloadedDataset):
     """CIFAR10 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
-    Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
+    Each sample is an image (in 3D NDArray) with shape (32, 32, 3).
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar10'
+    root : str, default $MXNET_HOME/datasets/cifar10
         Path to temp folder for storing data.
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar10'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'cifar10'),
                  train=True, transform=None):
         self._train = train
         self._archive_file = ('cifar-10-binary.tar.gz', 'fab780a1e191a7eda0f345501ccd62d20f7ed891')
@@ -152,11 +157,12 @@ class CIFAR10(dataset._DownloadedDataset):
                             ('data_batch_4.bin', 'aab85764eb3584312d3c7f65fd2fd016e36a258e'),
                             ('data_batch_5.bin', '26e2849e66a845b7f1e4614ae70f4889ae604628')]
         self._test_data = [('test_batch.bin', '67eb016db431130d61cd03c7ad570b013799c88c')]
-        super(CIFAR10, self).__init__('cifar10', root, transform)
+        self._namespace = 'cifar10'
+        super(CIFAR10, self).__init__(root, transform)
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
-            data = np.fromstring(fin.read(), dtype=np.uint8).reshape(-1, 3072+1)
+            data = np.frombuffer(fin.read(), dtype=np.uint8).reshape(-1, 3072+1)
 
         return data[:, 1:].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1), \
                data[:, 0].astype(np.int32)
@@ -165,7 +171,8 @@ class CIFAR10(dataset._DownloadedDataset):
         if any(not os.path.exists(path) or not check_sha1(path, sha1)
                for path, sha1 in ((os.path.join(self._root, name), sha1)
                                   for name, sha1 in self._train_data + self._test_data)):
-            filename = download(self._get_url(self._archive_file[0]),
+            namespace = 'gluon/dataset/'+self._namespace
+            filename = download(_get_repo_file_url(namespace, self._archive_file[0]),
                                 path=self._root,
                                 sha1_hash=self._archive_file[1])
 
@@ -181,42 +188,43 @@ class CIFAR10(dataset._DownloadedDataset):
         data = np.concatenate(data)
         label = np.concatenate(label)
 
-        self._data = nd.array(data, dtype=data.dtype)
-        self._label = label
+        array_fn = _mx_np.array if is_np_array() else nd.array
+        self._data = array_fn(data, dtype=data.dtype)
+        self._label = array_fn(label, dtype=label.dtype) if is_np_array() else label
 
 
 class CIFAR100(CIFAR10):
     """CIFAR100 image classification dataset from https://www.cs.toronto.edu/~kriz/cifar.html
 
-    Each sample is an image (in 3D NDArray) with shape (32, 32, 1).
+    Each sample is an image (in 3D NDArray) with shape (32, 32, 3).
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar100'
+    root : str, default $MXNET_HOME/datasets/cifar100
         Path to temp folder for storing data.
     fine_label : bool, default False
         Whether to load the fine-grained (100 classes) or coarse-grained (20 super-classes) labels.
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'cifar100'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'cifar100'),
                  fine_label=False, train=True, transform=None):
         self._train = train
         self._archive_file = ('cifar-100-binary.tar.gz', 'a0bb982c76b83111308126cc779a992fa506b90b')
         self._train_data = [('train.bin', 'e207cd2e05b73b1393c74c7f5e7bea451d63e08e')]
         self._test_data = [('test.bin', '8fb6623e830365ff53cf14adec797474f5478006')]
         self._fine_label = fine_label
-        super(CIFAR10, self).__init__('cifar100', root, transform) # pylint: disable=bad-super-call
+        self._namespace = 'cifar100'
+        super(CIFAR10, self).__init__(root, transform) # pylint: disable=bad-super-call
 
     def _read_batch(self, filename):
         with open(filename, 'rb') as fin:
-            data = np.fromstring(fin.read(), dtype=np.uint8).reshape(-1, 3072+2)
+            data = np.frombuffer(fin.read(), dtype=np.uint8).reshape(-1, 3072+2)
 
         return data[:, 2:].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1), \
                data[:, 0+self._fine_label].astype(np.int32)
@@ -232,14 +240,12 @@ class ImageRecordDataset(dataset.RecordFileDataset):
     filename : str
         Path to rec file.
     flag : {0, 1}, default 1
-        If 0, always convert images to greyscale.
-
+        If 0, always convert images to greyscale. \
         If 1, always convert images to colored (RGB).
     transform : function, default None
-        A user defined callback that transforms each sample. For example:
-    ::
+        A user defined callback that transforms each sample. For example::
 
-        transform=lambda data, label: (data.astype(np.float32)/255, label)
+            transform=lambda data, label: (data.astype(np.float32)/255, label)
 
     """
     def __init__(self, filename, flag=1, transform=None):
@@ -256,7 +262,9 @@ class ImageRecordDataset(dataset.RecordFileDataset):
 
 
 class ImageFolderDataset(dataset.Dataset):
-    """A dataset for loading image files stored in a folder structure like::
+    """A dataset for loading image files stored in a folder structure.
+
+    like::
 
         root/car/0001.jpg
         root/car/xxxa.jpg
@@ -273,10 +281,9 @@ class ImageFolderDataset(dataset.Dataset):
         If 0, always convert loaded images to greyscale (1 channel).
         If 1, always convert loaded images to colored (3 channels).
     transform : callable, default None
-        A function that takes data and label and transforms them:
-    ::
+        A function that takes data and label and transforms them::
 
-        transform = lambda data, label: (data.astype(np.float32)/255, label)
+            transform = lambda data, label: (data.astype(np.float32)/255, label)
 
     Attributes
     ----------

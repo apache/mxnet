@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: " en" }}">
+
+{%- include head.html -%}
+
+<body>
+
+{%- include header.html -%}
+
+<main class="page-content-home" aria-label="Content">
+    <div class="wrapper">
+        <div class="home">
+            <h1 style="margin-bottom:40px;"> A FLEXIBLE AND EFFICIENT<br> <span
+                    style="margin-left:100px"> LIBRARY FOR DEEP LEARNING</span>
+            </h1>
+
+            <p style="margin-bottom:40px;">A truly open source deep learning framework suited<br>for flexible research
+                prototyping and
+                production.</p>
+            <div>
+                <a href="{{'/get_started' | relative_url }}" class="btn" style="float:left; margin-bottom:20px; margin-top:0px">Get Started
+                    <span class="span-accented">›</span></a>
+            </div>
+
+        </div>
+
+
+    </div>
+    </div>
+    <div class="key-features-section section">
+        <div class="wrapper">
+            <div class="row">
+                <div class="col-8">
+                    <h2>Key Features &amp;<br>Capabilities</h2>
+                </div>
+                <div class="col-4">
+                    <div>
+                        <a href="{{'/features' | relative_url}}" class="btn btn-action">All Features <span class="span-accented">›</span></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row key-features">
+                {{ layout.landing }}
+                {%- for feature in page.key_features -%}
+                <div class="col-3">
+                    <div class="card">
+                        <div class="card-text">
+                            <h3>{{feature.title}}</h3>
+                            <p>{{feature.text}}</p>
+                        </div>
+                        <div class="key-feature-image">
+                            <img width=50px src="{{feature.icon | relative_url}}">
+                        </div>
+                    </div>
+                </div>
+                {%- endfor -%}
+            </div>
+
+        </div>
+    </div>
+    <div class="ecosystem-section section">
+        <div class="wrapper">
+            <div class="row">
+                <div class="col-8">
+                    <h2>Ecosystem </h2>
+                </div>
+                <div class="col-4">
+                    <div>
+                        <a href="{{'/ecosystem' | relative_url}}" class="btn btn-action">All Projects <span
+                                class="span-accented">›</span></a>
+                    </div>
+                </div>
+                <div class="col-8">
+                    <p>Explore a rich ecosystem of libraries, tools, and more to support development.</p>
+                </div>
+            </div>
+
+            <div class="row">
+                {%- for feature in page.ecosystem -%}
+                <div class="col-3">
+                    <div class="card">
+                        <a href="{{feature.link}}">
+                            <div class="card-text">
+                                <div class="card-header-title">
+                                    <h3>{{feature.title}}</h3>
+                                    <img src="{{feature.icon | relative_url}}">
+                                </div>
+                                <p class="card-summary">{{feature.text}}</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                {%- endfor -%}
+            </div>
+        </div>
+    </div>
+
+    <div class="news-section section ">
+        <div class="wrapper">
+            <div class="row">
+                <div class="col-8">
+                    <h2>Latest News</h2>
+                </div>
+                <div class="col-4">
+                    <div>
+                        <a href="{{'/blog' | relative_url}}" class="btn btn-action">More Blog Posts <span
+                                class="span-accented">›</span></a>
+                    </div>
+                </div>
+                <div class="col-8">
+                    <p>Follow our blog post publications to get the latest news on MXNet and its ecosystem</p>
+                </div>
+            </div>
+
+            <div id="medium-widget"></div>
+            <script>
+                MediumWidget.Init({renderTo: '#medium-widget',
+                    params: {
+                        "resource": "https://medium.com/apache-mxnet",
+                        "postsPerLine": 3,
+                        "limit": 3,
+                        "picture": "big",
+                        "fields": ["description", "claps", "publishAt"],
+                        "ratio": "landscape"
+                    }
+                })
+            </script>
+        </div>
+    </div>
+
+    <div class="community-section section ">
+        <div class="wrapper">
+            <div class="row">
+                <div class="col-6">
+                    <h2>Community</h2>
+                </div>
+                <div class="col-8">
+                    <p>Join the MXNet scientific community to contribute, learn, and get
+                        answers to your questions.</p>
+                </div>
+            </div>
+
+            <div class="row">
+                {%- for feature in page.community -%}
+                <div class="col-4">
+                    <div class="card">
+                        <a href="{{feature.link}}">
+                            <div>
+                                <div class="card-header-title">
+                                    <h3>{{feature.title}}</h3>
+                                    <img src="{{feature.icon | relative_url}}">
+                                </div>
+                                <p class="card-summary">{{feature.text}}</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                {%- endfor -%}
+            </div>
+        </div>
+    </div>
+    <div class="trusted-by-section section ">
+        <div class="wrapper">
+            <div class="trusted-by">
+                <h2>Already trusted by</h2>
+                <img src="{{'/assets/img/logos.png' | relative_url}}">
+            </div>
+        </div>
+    </div>
+</main>
+
+{%- include footer.html -%}
+
+</body>
+
+</html>

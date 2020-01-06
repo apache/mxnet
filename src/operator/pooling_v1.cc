@@ -30,7 +30,7 @@ namespace op {
 
 template<>
 Operator *CreateOp<cpu>(PoolingV1Param param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     switch (param.pool_type) {
       case pool_v1_enum::kMaxPooling:
@@ -44,7 +44,7 @@ Operator *CreateOp<cpu>(PoolingV1Param param, int dtype) {
         break;
       default:
         LOG(FATAL) << "unknown pooling type";
-        return NULL;
+        return nullptr;
     }
   })
 
@@ -52,9 +52,9 @@ Operator *CreateOp<cpu>(PoolingV1Param param, int dtype) {
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
-Operator* PoolingV1Prop::CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+Operator* PoolingV1Prop::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                                      std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferType(in_type, &out_type, &aux_type));
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));

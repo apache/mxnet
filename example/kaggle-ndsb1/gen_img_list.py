@@ -18,7 +18,6 @@
 from __future__ import print_function
 import csv
 import os
-import sys
 import random
 import numpy as np
 import argparse
@@ -57,7 +56,7 @@ head = "acantharia_protist_big_center,acantharia_protist_halo,acantharia_protist
 img_lst = []
 cnt = 0
 if args.train:
-    for i in xrange(len(head)):
+    for i in range(len(head)):
         path = args.image_folder + head[i]
         lst = os.listdir(args.image_folder + head[i])
         for img in lst:
@@ -104,5 +103,3 @@ if args.train:
         tr_fo.writerow(item)
     for item in va_lst:
         va_fo.writerow(item)
-
-

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-parent</artifactId>
+    <version>INTERNAL</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+
+  <artifactId>mxnet-deployment</artifactId>
+  <version>${revision}</version>
+  <name>MXNet Scala Package - Full ${platform}-only</name>
+  <packaging>pom</packaging>
+  <description>
+    Scala Package for Apache MXNet (Incubating) - flexible and efficient library for deep learning.
+  </description>
+
+  <properties>
+    <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
+    <ARTIFACT_ID>mxnet-full_2.11-${platform}-${flavor}</ARTIFACT_ID>
+    <revision>${base.revision}-SNAPSHOT</revision>
+    <repositoryId>apache.snapshots.https</repositoryId>
+    <deploy_asc_types/>
+    <deploy_asc_classifers/>
+    <deploy_asc_files/>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.mxnet</groupId>
+      <artifactId>mxnet-full_2.11</artifactId>
+      <version>INTERNAL</version>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>staging</id>
+      <properties>
+        <revision>${base.revision}</revision>
+        <repositoryId>apache.releases.https</repositoryId>
+        <repo_url>https://repository.apache.org/service/local/staging/deploy/maven2</repo_url>
+        <deploy_asc_types>jar.asc,asc,asc,pom.asc</deploy_asc_types>
+        <deploy_asc_classifers>,sources.jar,javadoc.jar,</deploy_asc_classifers>
+        <deploy_asc_files>
+          ../assembly/target/mxnet-full_2.11-INTERNAL.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-src.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar.asc,../externalPom/target/deploy.xml.asc
+        </deploy_asc_files>
+      </properties>
+    </profile>
+    <profile>
+      <id>nightly</id>
+      <properties>
+        <repositoryId>apache.snapshots.https</repositoryId>
+        <repo_url>https://repository.apache.org/content/repositories/snapshots</repo_url>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <attach>false</attach>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-deploy-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>deploy-file</id>
+            <phase>deploy</phase>
+            <goals>
+              <goal>deploy-file</goal>
+            </goals>
+            <configuration>
+              <description>${project.description}</description>
+              <skip>false</skip>
+              <repositoryId>${repositoryId}</repositoryId>
+              <url>${repo_url}</url>
+              <groupId>${project.groupId}</groupId>
+              <artifactId>${ARTIFACT_ID}</artifactId>
+              <version>${project.version}</version>
+              <packaging>jar</packaging>
+              <pomFile>${rootdir}/externalPom/target/deploy.xml</pomFile>
+              <file>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL.jar</file>
+              <sources>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL-src.jar</sources>
+              <javadoc>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar</javadoc>
+              <types>${deploy_asc_types}</types>
+              <classifiers>${deploy_asc_classifers}</classifiers>
+              <files>${deploy_asc_files}</files>
+            </configuration>
+          </execution>
+        </executions>
+        <configuration>
+            <skip>true</skip> <!-- Skip deploy-plugin:deploy and only use deploy-plugin:deploy-file -->
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

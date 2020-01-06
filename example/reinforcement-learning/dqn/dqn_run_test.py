@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -26,7 +28,7 @@ import logging
 import sys
 from base import Base
 from atari_game import AtariGame
-from utils import *
+from utils import get_numpy_rng
 from operators import *
 
 root = logging.getLogger()
@@ -89,8 +91,8 @@ def calculate_avg_reward(game, qnet, test_steps=125000, exploartion=0.05):
                     current_state = game.current_state()
                     state = nd.array(current_state.reshape((1,) + current_state.shape),
                                      ctx=qnet.ctx) / float(255.0)
-                    action = nd.argmax_channel(
-                        qnet.forward(is_train=False, data=state)[0]).asscalar()
+                    action = int(nd.argmax_channel(
+                        qnet.forward(is_train=False, data=state)[0]).asscalar())
             else:
                 action = npy_rng.randint(action_num)
 
@@ -120,7 +122,7 @@ def main():
                         help='Running Context. E.g `-c gpu` or `-c gpu1` or `-c cpu`')
     parser.add_argument('-e', '--epoch-range', required=False, type=str, default='22',
                         help='Epochs to run testing. E.g `-e 0,80`, `-e 0,80,2`')
-    parser.add_argument('-v', '--visualization', required=False, type=int, default=0,
+    parser.add_argument('-v', '--visualization', action='store_true',
                         help='Visualize the runs.')
     parser.add_argument('--symbol', required=False, type=str, default="nature",
                         help='type of network, nature or nips')

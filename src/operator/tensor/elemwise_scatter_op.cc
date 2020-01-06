@@ -16,6 +16,11 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
+/*!
+ * \file elemwise_scatter_op.cc
+ * \brief CPU implementation of elementwise scatter operators
+ */
 #include "./elemwise_binary_op-inl.h"
 #include "./elemwise_binary_scalar_op.h"
 #include "./elemwise_scatter_op.h"
@@ -88,6 +93,7 @@ with default storage
                             [](const NodeAttrs& attrs) {
                               return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                             })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 
 /*! \brief _scatter_plus_scalar */

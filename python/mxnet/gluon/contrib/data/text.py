@@ -28,16 +28,16 @@ import numpy as np
 
 from . import _constants as C
 from ...data import dataset
-from ...utils import download, check_sha1
+from ...utils import download, check_sha1, _get_repo_file_url
 from ....contrib import text
-from .... import nd
-
+from .... import nd, base
 
 class _LanguageModelDataset(dataset._DownloadedDataset): # pylint: disable=abstract-method
-    def __init__(self, repo_dir, root, vocabulary):
+    def __init__(self, root, namespace, vocabulary):
         self._vocab = vocabulary
         self._counter = None
-        super(_LanguageModelDataset, self).__init__(repo_dir, root, None)
+        self._namespace = namespace
+        super(_LanguageModelDataset, self).__init__(root, None)
 
     @property
     def vocabulary(self):
@@ -66,7 +66,7 @@ class _WikiText(_LanguageModelDataset):
                     if line]
         for line in raw_data:
             line.append(C.EOS_TOKEN)
-        raw_data = self.vocabulary.to_indices([x for x in line for line in raw_data if x])
+        raw_data = self.vocabulary.to_indices([x for line in raw_data for x in line if x])
         data = raw_data[0:-1]
         label = raw_data[1:]
         return np.array(data, dtype=np.int32), np.array(label, dtype=np.int32)
@@ -76,7 +76,8 @@ class _WikiText(_LanguageModelDataset):
         data_file_name, data_hash = self._data_file[self._segment]
         path = os.path.join(self._root, data_file_name)
         if not os.path.exists(path) or not check_sha1(path, data_hash):
-            downloaded_file_path = download(self._get_url(archive_file_name),
+            namespace = 'gluon/dataset/'+self._namespace
+            downloaded_file_path = download(_get_repo_file_url(namespace, archive_file_name),
                                             path=self._root,
                                             sha1_hash=archive_hash)
 
@@ -89,17 +90,23 @@ class _WikiText(_LanguageModelDataset):
                              open(dest, "wb") as target:
                             shutil.copyfileobj(source, target)
 
-        data, label = self._read_batch(os.path.join(self._root, data_file_name))
+        data, label = self._read_batch(path)
 
         self._data = nd.array(data, dtype=data.dtype).reshape((-1, self._seq_len))
         self._label = nd.array(label, dtype=label.dtype).reshape((-1, self._seq_len))
+
+    def __getitem__(self, idx):
+        return self._data[idx], self._label[idx]
+
+    def __len__(self):
+        return len(self._label)
 
 
 class WikiText2(_WikiText):
     """WikiText-2 word-level dataset for language modeling, from Salesforce research.
 
     From
-    https://einstein.ai/research/the-wikitext-long-term-dependency-language-modeling-dataset
+    https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/
 
     License: Creative Commons Attribution-ShareAlike
 
@@ -108,7 +115,7 @@ class WikiText2(_WikiText):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar10'
+    root : str, default $MXNET_HOME/datasets/wikitext-2
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.
@@ -119,7 +126,7 @@ class WikiText2(_WikiText):
         The sequence length of each sample, regardless of the sentence boundary.
 
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-2'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'wikitext-2'),
                  segment='train', vocab=None, seq_len=35):
         self._archive_file = ('wikitext-2-v1.zip', '3c914d17d80b1459be871a5039ac23e752a53cbe')
         self._data_file = {'train': ('wiki.train.tokens',
@@ -130,14 +137,14 @@ class WikiText2(_WikiText):
                                     'c7b8ce0aa086fb34dab808c5c49224211eb2b172')}
         self._segment = segment
         self._seq_len = seq_len
-        super(WikiText2, self).__init__('wikitext-2', root, vocab)
+        super(WikiText2, self).__init__(root, 'wikitext-2', vocab)
 
 
 class WikiText103(_WikiText):
     """WikiText-103 word-level dataset for language modeling, from Salesforce research.
 
     From
-    https://einstein.ai/research/the-wikitext-long-term-dependency-language-modeling-dataset
+    https://blog.einstein.ai/the-wikitext-long-term-dependency-language-modeling-dataset/
 
     License: Creative Commons Attribution-ShareAlike
 
@@ -146,7 +153,7 @@ class WikiText103(_WikiText):
 
     Parameters
     ----------
-    root : str, default '~/.mxnet/datasets/cifar10'
+    root : str, default $MXNET_HOME/datasets/wikitext-103
         Path to temp folder for storing data.
     segment : str, default 'train'
         Dataset segment. Options are 'train', 'validation', 'test'.
@@ -156,7 +163,7 @@ class WikiText103(_WikiText):
     seq_len : int, default 35
         The sequence length of each sample, regardless of the sentence boundary.
     """
-    def __init__(self, root=os.path.join('~', '.mxnet', 'datasets', 'wikitext-103'),
+    def __init__(self, root=os.path.join(base.data_dir(), 'datasets', 'wikitext-103'),
                  segment='train', vocab=None, seq_len=35):
         self._archive_file = ('wikitext-103-v1.zip', '0aec09a7537b58d4bb65362fee27650eeaba625a')
         self._data_file = {'train': ('wiki.train.tokens',
@@ -167,4 +174,4 @@ class WikiText103(_WikiText):
                                     '8a5befc548865cec54ed4273cf87dbbad60d1e47')}
         self._segment = segment
         self._seq_len = seq_len
-        super(WikiText103, self).__init__('wikitext-103', root, vocab)
+        super(WikiText103, self).__init__(root, 'wikitext-103', vocab)

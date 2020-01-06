@@ -24,13 +24,18 @@ mini-batch of data.
 
 import logging
 import warnings
+import numpy as np
 
 from .. import context as ctx
 
 from ..initializer import Uniform
+from .. import ndarray as nd
+from .. import symbol as sym
 
 from .base_module import BaseModule, _check_input_names
 from .module import Module
+from ..model import load_params
+from ..name import NameManager
 
 class BucketingModule(BaseModule):
     """This module helps to deal efficiently with varying-length inputs.
@@ -71,7 +76,7 @@ class BucketingModule(BaseModule):
         self._default_bucket_key = default_bucket_key
         self._sym_gen = sym_gen
 
-        symbol, data_names, label_names = sym_gen(default_bucket_key)
+        symbol, data_names, label_names = self._call_sym_gen(default_bucket_key)
         data_names = list(data_names) if data_names is not None else []
         label_names = list(label_names) if label_names is not None else []
         state_names = list(state_names) if state_names is not None else []
@@ -94,6 +99,7 @@ class BucketingModule(BaseModule):
         self._curr_bucket_key = None
         self._params_dirty = False
         self._monitor = None
+        self._grad_req = None
 
     def _reset_bind(self):
         """Internal utility function to reset binding."""
@@ -102,13 +108,17 @@ class BucketingModule(BaseModule):
         self._curr_module = None
         self._curr_bucket_key = None
 
+    def _call_sym_gen(self, *args, **kwargs):
+        with NameManager():
+            return self._sym_gen(*args, **kwargs)
+
     @property
     def data_names(self):
         """A list of names for data required by this module."""
         if self.binded:
             return self._curr_module.data_names
         else:
-            _, data_names, _ = self._sym_gen(self._default_bucket_key)
+            _, data_names, _ = self._call_sym_gen(self._default_bucket_key)
             return data_names
 
     @property
@@ -117,7 +127,7 @@ class BucketingModule(BaseModule):
         if self.binded:
             return self._curr_module.output_names
         else:
-            symbol, _, _ = self._sym_gen(self._default_bucket_key)
+            symbol, _, _ = self._call_sym_gen(self._default_bucket_key)
             return symbol.list_outputs()
 
     @property
@@ -164,7 +174,7 @@ class BucketingModule(BaseModule):
         `(arg_params, aux_params)`
             A pair of dictionaries each mapping parameter names to NDArray values.
         """
-        assert self.binded and self.params_initialized
+        assert self.params_initialized
         self._curr_module._params_dirty = self._params_dirty
         params = self._curr_module.get_params()
         self._params_dirty = False
@@ -326,16 +336,21 @@ class BucketingModule(BaseModule):
         self.for_training = for_training
         self.inputs_need_grad = inputs_need_grad
         self.binded = True
+        self._grad_req = grad_req
 
-        symbol, data_names, label_names = self._sym_gen(self._default_bucket_key)
-        module = Module(symbol, data_names, label_names, logger=self.logger,
-                        context=self._context, work_load_list=self._work_load_list,
-                        fixed_param_names=self._fixed_param_names,
-                        state_names=self._state_names,
-                        group2ctxs=self._group2ctxs,
-                        compression_params=self._compression_params)
+        symbol, data_names, label_names = self._call_sym_gen(self._default_bucket_key)
+        module = None
+        if not self._default_bucket_key in self._buckets:
+            module = Module(symbol, data_names, label_names, logger=self.logger,
+                            context=self._context, work_load_list=self._work_load_list,
+                            fixed_param_names=self._fixed_param_names,
+                            state_names=self._state_names,
+                            group2ctxs=self._group2ctxs,
+                            compression_params=self._compression_params)
+        else:
+            module = self._buckets[self._default_bucket_key]
         module.bind(data_shapes, label_shapes, for_training, inputs_need_grad,
-                    force_rebind=False, shared_module=None, grad_req=grad_req)
+                    force_rebind=False, shared_module=None, grad_req=self._grad_req)
         self._curr_module = module
         self._curr_bucket_key = self._default_bucket_key
         self._buckets[self._default_bucket_key] = module
@@ -358,7 +373,7 @@ class BucketingModule(BaseModule):
         """
         assert self.binded, 'call bind before switching bucket'
         if not bucket_key in self._buckets:
-            symbol, data_names, label_names = self._sym_gen(bucket_key)
+            symbol, data_names, label_names = self._call_sym_gen(bucket_key)
             module = Module(symbol, data_names, label_names,
                             logger=self.logger, context=self._context,
                             work_load_list=self._work_load_list,
@@ -368,10 +383,18 @@ class BucketingModule(BaseModule):
                             compression_params=self._compression_params)
             module.bind(data_shapes, label_shapes, self._curr_module.for_training,
                         self._curr_module.inputs_need_grad,
-                        force_rebind=False, shared_module=self._buckets[self._default_bucket_key])
+                        force_rebind=False, shared_module=self._buckets[self._default_bucket_key],
+                        grad_req=self._grad_req)
             if self._monitor is not None:
                 module.install_monitor(self._monitor)
             self._buckets[bucket_key] = module
+        else:
+            module = self._buckets[bucket_key]
+            if not module.binded:
+                module.bind(data_shapes, label_shapes, self._curr_module.for_training,
+                            self._curr_module.inputs_need_grad,
+                            force_rebind=False, shared_module=self._buckets[self._default_bucket_key],
+                            grad_req=self._grad_req)
 
         self._curr_module = self._buckets[bucket_key]
         self._curr_bucket_key = bucket_key
@@ -407,13 +430,24 @@ class BucketingModule(BaseModule):
 
         self.optimizer_initialized = True
 
-    def prepare(self, data_batch):
-        """Prepares a data batch for forward.
+    def prepare(self, data_batch, sparse_row_id_fn=None):
+        '''Prepares the module for processing a data batch.
+
+        Usually involves switching bucket and reshaping.
+        For modules that contain `row_sparse` parameters in KVStore,
+        it prepares the `row_sparse` parameters based on the sparse_row_id_fn.
 
         Parameters
         ----------
         data_batch : DataBatch
-        """
+            The current batch of data for forward computation.
+
+        sparse_row_id_fn : A callback function
+            The function  takes `data_batch` as an input and returns a dict of
+            str -> NDArray. The resulting dict is used for pulling row_sparse
+            parameters from the kvstore, where the str key is the name of the param,
+            and the value is the row id of the param to pull.
+        '''
         # perform bind if haven't done so
         assert self.binded and self.params_initialized
         bucket_key = data_batch.bucket_key
@@ -421,6 +455,7 @@ class BucketingModule(BaseModule):
         data_shapes = data_batch.provide_data
         label_shapes = data_batch.provide_label
         self.switch_bucket(bucket_key, data_shapes, label_shapes)
+        self._curr_module.prepare(data_batch, sparse_row_id_fn=sparse_row_id_fn)
         # switch back
         self.switch_bucket(original_bucket_key, None, None)
 
@@ -446,6 +481,13 @@ class BucketingModule(BaseModule):
     def update(self):
         """Updates parameters according to installed optimizer and the gradient computed
         in the previous forward-backward cycle.
+
+        When KVStore is used to update parameters for multi-device or multi-machine training,
+        a copy of the parameters are stored in KVStore. Note that for `row_sparse` parameters,
+        this function does update the copy of parameters in KVStore, but doesn't broadcast the
+        updated parameters to all devices / machines. Please call `prepare` to broadcast
+        `row_sparse` parameters with the next batch of data.
+
         """
         assert self.binded and self.params_initialized and self.optimizer_initialized
         self._params_dirty = True
@@ -493,7 +535,7 @@ class BucketingModule(BaseModule):
         assert self.binded and self.params_initialized and self.inputs_need_grad
         return self._curr_module.get_input_grads(merge_multi_context=merge_multi_context)
 
-    def update_metric(self, eval_metric, labels):
+    def update_metric(self, eval_metric, labels, pre_sliced=False):
         """Evaluates and accumulates evaluation metric on outputs of the last forward computation.
 
         Parameters
@@ -503,7 +545,7 @@ class BucketingModule(BaseModule):
             Typically ``data_batch.label``.
         """
         assert self.binded and self.params_initialized
-        self._curr_module.update_metric(eval_metric, labels)
+        self._curr_module.update_metric(eval_metric, labels, pre_sliced)
 
     @property
     def symbol(self):
@@ -517,3 +559,144 @@ class BucketingModule(BaseModule):
         self._monitor = mon
         for mod in self._buckets.values():
             mod.install_monitor(mon)
+
+    def save_checkpoint(self, prefix, epoch, remove_amp_cast=False):
+        """Saves current progress to checkpoint for all buckets in BucketingModule
+        Use `mx.callback.module_checkpoint` as `epoch_end_callback` to save during training.
+
+        Parameters
+        ----------
+        prefix : str
+            The file prefix to checkpoint to.
+        epoch : int
+            The current epoch number.
+        """
+
+        assert len(self._buckets) > 0, "Empty BucketingModule cannot be saved"
+        param_name = "%s-%04d.params" % (prefix, epoch)
+        self.save_params(param_name)
+        for bucket_key in self._buckets:
+            symbol, _, _ = self._sym_gen(bucket_key)
+            symbol.save("%s-%s-symbol.json" % (prefix, bucket_key), remove_amp_cast=remove_amp_cast)
+        nd.save("%s.buckets" % (prefix), nd.array(list(self._buckets.keys()), dtype=np.int32))
+
+    @staticmethod
+    def load(prefix, epoch, sym_gen=None, default_bucket_key=None, **kwargs):
+        """Creates a model from previously saved checkpoint.
+
+        Parameters
+        ----------
+        prefix : str
+            path prefix of saved model files. You should have
+            "prefix-symbol.json", "prefix-xxxx.params", and
+            optionally "prefix-xxxx.states", where xxxx is the
+            epoch number.
+        epoch : int
+            epoch to load.
+        sym_gen : function
+            A function when called with a bucket key, returns a triple
+            ``(symbol, data_names, label_names)``.
+            provide sym_gen which was used when saving bucketing module.
+        logger : Logger
+            Default is `logging`.
+        context : Context or list of Context
+            Default is ``cpu()``.
+        work_load_list : list of number
+            Default ``None``, indicating uniform workload.
+        fixed_param_names: list of str
+            Default ``None``, indicating no network parameters are fixed.
+        state_names : list of str
+            States are similar to data and label, but not provided by data iterator.
+            Instead they are initialized to 0 and can be set by set_states()
+        group2ctxs : dict of str to context or list of context,
+                     or list of dict of str to context
+            Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
+        compression_params : dict
+            Specifies type of gradient compression and additional arguments depending
+            on the type of compression being used. For example, 2bit compression requires a threshold.
+            Arguments would then be {'type':'2bit', 'threshold':0.5}
+            See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
+        """
+        assert sym_gen is not None, \
+            "sym_gen is required for loading BucketingModule"
+        assert default_bucket_key is not None, \
+            "default_bucket_key is required for loading BucketingModule"
+        buckets = nd.load("%s.buckets" % prefix)
+        buckets = list(buckets[0].asnumpy().astype('int32'))
+        bucketing_mod = BucketingModule(sym_gen, default_bucket_key, **kwargs)
+        for bucket_key in buckets:
+            _, data_names, label_names = sym_gen(bucket_key)
+            symbol = sym.load("%s-%s-symbol.json" % (prefix, bucket_key))
+            bucketing_mod._buckets[bucket_key] = Module(symbol, data_names, label_names, **kwargs)
+            if bucket_key == default_bucket_key:
+                bucketing_mod._curr_module = bucketing_mod._buckets[bucket_key]
+        arg_params, aux_params = load_params(prefix, epoch)
+        bucketing_mod._curr_module._arg_params = arg_params
+        bucketing_mod._curr_module._aux_params = aux_params
+        bucketing_mod._curr_module.params_initialized = True
+        bucketing_mod.params_initialized = True
+        return bucketing_mod
+
+    @staticmethod
+    def load_dict(sym_dict=None, sym_gen=None, default_bucket_key=None, arg_params=None,
+                  aux_params=None, **kwargs):
+        """Creates a model from a dict mapping bucket_key to symbols and shared arg_params
+        and aux_params.
+
+        Parameters
+        ----------
+        sym_dict : dict mapping bucket_key to symbol
+            Dict mapping bucket key to symbol
+        sym_gen : function
+            A function when called with a bucket key, returns a triple
+            ``(symbol, data_names, label_names)``.
+            provide sym_gen which was used when saving bucketing module.
+        default_bucket_key : str (or any python object)
+            The key for the default bucket.
+        arg_params : dict
+            Required for loading the BucketingModule.
+            Dict of name to parameter ndarrays.
+        aux_params : dict
+            Required for loading the BucketingModule.
+            Dict of name to auxiliary state ndarrays.
+        logger : Logger
+            Default is `logging`.
+        context : Context or list of Context
+            Default is ``cpu()``.
+        work_load_list : list of number
+            Default ``None``, indicating uniform workload.
+        fixed_param_names: list of str
+            Default ``None``, indicating no network parameters are fixed.
+        state_names : list of str
+            States are similar to data and label, but not provided by data iterator.
+            Instead they are initialized to 0 and can be set by set_states()
+        group2ctxs : dict of str to context or list of context,
+                     or list of dict of str to context
+            Default is `None`. Mapping the `ctx_group` attribute to the context assignment.
+        compression_params : dict
+            Specifies type of gradient compression and additional arguments depending
+            on the type of compression being used. For example, 2bit compression requires a threshold.
+            Arguments would then be {'type':'2bit', 'threshold':0.5}
+            See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
+        """
+
+        assert sym_dict is not None, \
+            "sym_dict needs to be provided for BucketingModule.load_dict"
+        assert arg_params is not None, \
+            "arg_params need to be provided for BucketingModule.load_dict"
+        assert aux_params is not None, \
+            "aux_params need to be provided for BucketingModule.load_dict"
+        assert default_bucket_key is not None, \
+            "default_bucket_key needs to be provided for BucketingModule.load_dict"
+
+        bucketing_mod = BucketingModule(sym_gen, default_bucket_key, **kwargs)
+        for bucket_key, loaded_sym in sym_dict.items():
+            _, data_names, label_names = sym_gen(default_bucket_key)
+            bucketing_mod._buckets[bucket_key] = Module(loaded_sym, data_names, label_names, **kwargs)
+            if bucket_key == default_bucket_key:
+                bucketing_mod._curr_module = bucketing_mod._buckets[bucket_key]
+        bucketing_mod._curr_module._arg_params = arg_params
+        bucketing_mod._curr_module._aux_params = aux_params
+        bucketing_mod._curr_module.params_initialized = True
+        bucketing_mod.params_initialized = True
+        return bucketing_mod

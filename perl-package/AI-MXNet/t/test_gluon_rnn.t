@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
 use strict;
 use warnings;
 use Test::More tests => 77;
@@ -276,14 +277,15 @@ sub check_rnn_layer_forward
     $inputs->attach_grad;
     my $out;
     mx->autograd->record(sub {
-        $out = $layer->($inputs, $states);
         if(defined $states)
         {
+            $out = $layer->($inputs, $states);
             ok(@$out == 2);
             $out = $out->[0];
         }
         else
         {
+            $out = $layer->($inputs);
             ok(blessed $out and $out->isa('AI::MXNet::NDArray'));
         }
         $out->backward();
@@ -292,21 +294,19 @@ sub check_rnn_layer_forward
     my $pdl_out = $out->aspdl;
     my $pdl_dx = $inputs->grad->aspdl;
     $layer->hybridize;
-
     mx->autograd->record(sub {
-        $out = $layer->($inputs, $states);
         if(defined $states)
         {
-            ok(@$out == 2);
-            $out = $out->[0]
+            ($out, $states) = $layer->($inputs, $states);
+            ok(blessed $out and $out->isa('AI::MXNet::NDArray'));
         }
         else
         {
+            $out = $layer->($inputs, $states);
             ok(blessed $out and $out->isa('AI::MXNet::NDArray'));
         }
         $out->backward();
     });
-
     ok(almost_equal($pdl_out, $out->aspdl, 1e-3));
     ok(almost_equal($pdl_dx, $inputs->grad->aspdl, 1e-3));
 }
@@ -314,21 +314,12 @@ sub check_rnn_layer_forward
 sub test_rnn_layers
 {
     check_rnn_layer_forward(gluon->rnn->RNN(10, 2), mx->nd->ones([8, 3, 20]));
-    check_rnn_layer_forward(gluon->rnn->RNN(10, 2), mx->nd->ones([8, 3, 20]), mx->nd->ones([2, 3, 10]));
+    check_rnn_layer_forward(gluon->rnn->RNN(10, 2, bidirectional=>1), mx->nd->ones([8, 3, 20]), mx->nd->ones([4, 3, 10]));
     check_rnn_layer_forward(gluon->rnn->LSTM(10, 2), mx->nd->ones([8, 3, 20]));
-    check_rnn_layer_forward(gluon->rnn->LSTM(10, 2), mx->nd->ones([8, 3, 20]), [mx->nd->ones([2, 3, 10]), mx->nd->ones([2, 3, 10])]);
+    check_rnn_layer_forward(gluon->rnn->LSTM(10, 2, bidirectional=>1), mx->nd->ones([8, 3, 20]), [mx->nd->ones([4, 3, 10]), mx->nd->ones([4, 3, 10])]);
     check_rnn_layer_forward(gluon->rnn->GRU(10, 2), mx->nd->ones([8, 3, 20]));
-    check_rnn_layer_forward(gluon->rnn->GRU(10, 2), mx->nd->ones([8, 3, 20]), mx->nd->ones([2, 3, 10]));
-
-#    my $net = gluon->nn->Sequential();
-#    $net->add(gluon->rnn->LSTM(10, 2, bidirectional=>1));
-#    $net->add(gluon->nn->BatchNorm(axis=>2));
-#    $net->add(gluon->nn->Flatten());
-#    $net->add(gluon->nn->Dense(3, activation=>'relu'));
-#    $net->collect_params()->initialize();
-#    mx->autograd->record(sub {
-#        $net->(mx->nd->ones([2, 3, 10]))->backward();
-#    });
+    check_rnn_layer_forward(gluon->rnn->GRU(10, 2, bidirectional=>1), mx->nd->ones([8, 3, 20]), mx->nd->ones([4, 3, 10]));
 }
 
 test_rnn_layers();
+

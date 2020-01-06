@@ -62,8 +62,8 @@ inline void TransformLocations(DType *out, const DType *anchors,
   DType ph = loc_pred[3];
   DType ox = px * vx * aw + ax;
   DType oy = py * vy * ah + ay;
-  DType ow = exp(pw * vw) * aw / 2;
-  DType oh = exp(ph * vh) * ah / 2;
+  DType ow = std::exp(pw * vw) * aw / 2;
+  DType oh = std::exp(ph * vh) * ah / 2;
   out[0] = clip ? std::max(DType(0), std::min(DType(1), ox - ow)) : (ox - ow);
   out[1] = clip ? std::max(DType(0), std::min(DType(1), oy - oh)) : (oy - oh);
   out[2] = clip ? std::max(DType(0), std::min(DType(1), ox + ow)) : (ox + ow);
@@ -87,7 +87,7 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
                                      const Tensor<cpu, 3, DType> &temp_space,
                                      const float threshold,
                                      const bool clip,
-                                     const nnvm::Tuple<float> &variances,
+                                     const mxnet::Tuple<float> &variances,
                                      const float nms_threshold,
                                      const bool force_suppress,
                                      const int nms_topk) {
@@ -96,11 +96,15 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
   const int num_anchors = cls_prob.size(2);
   const int num_batches = cls_prob.size(0);
   const DType *p_anchor = anchors.dptr_;
+
+  const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  std::vector<DType> outputs(num_anchors * 6);
   for (int nbatch = 0; nbatch < num_batches; ++nbatch) {
     const DType *p_cls_prob = cls_prob.dptr_ + nbatch * num_classes * num_anchors;
     const DType *p_loc_pred = loc_pred.dptr_ + nbatch * num_anchors * 4;
     DType *p_out = out.dptr_ + nbatch * num_anchors * 6;
-    int valid_count = 0;
+
+#pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < num_anchors; ++i) {
       // find the predicted class id and probability
       DType score = -1;
@@ -112,20 +116,33 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
           id = j;
         }
       }
+
       if (id > 0 && score < threshold) {
         id = 0;
       }
-      if (id > 0) {
-        // [id, prob, xmin, ymin, xmax, ymax]
-        p_out[valid_count * 6] = id - 1;  // remove background, restore original id
-        p_out[valid_count * 6 + 1] = (id == 0 ? DType(-1) : score);
-        int offset = i * 4;
-        TransformLocations(p_out + valid_count * 6 + 2, p_anchor + offset,
-          p_loc_pred + offset, clip, variances[0], variances[1],
-          variances[2], variances[3]);
+
+      // [id, prob, xmin, ymin, xmax, ymax]
+      outputs[i * 6] = id - 1;
+      outputs[i * 6 + 1] = score;
+      int offset = i * 4;
+      TransformLocations(outputs.data() + i * 6 + 2, p_anchor + offset, p_loc_pred + offset, clip,
+                         variances[0], variances[1], variances[2], variances[3]);
+    }
+
+    int valid_count = 0;
+    for (int i = 0; i < num_anchors; ++i) {
+      int offset1 = valid_count * 6;
+      int offset2 = i * 6;
+      if (outputs[offset2] >= 0) {
+        p_out[offset1]     = outputs[offset2];
+        p_out[offset1 + 1] = outputs[offset2 + 1];
+        p_out[offset1 + 2] = outputs[offset2 + 2];
+        p_out[offset1 + 3] = outputs[offset2 + 3];
+        p_out[offset1 + 4] = outputs[offset2 + 4];
+        p_out[offset1 + 5] = outputs[offset2 + 5];
         ++valid_count;
       }
-    }  // end iter num_anchors
+    }
 
     if (valid_count < 1 || nms_threshold <= 0 || nms_threshold > 1) continue;
 
@@ -138,22 +155,28 @@ inline void MultiBoxDetectionForward(const Tensor<cpu, 3, DType> &out,
       sorter.push_back(SortElemDescend<DType>(p_out[i * 6 + 1], i));
     }
     std::stable_sort(sorter.begin(), sorter.end());
+
     // re-order output
     DType *ptemp = temp_space.dptr_ + nbatch * num_anchors * 6;
     int nkeep = static_cast<int>(sorter.size());
     if (nms_topk > 0 && nms_topk < nkeep) {
+      // keep topk detections
       nkeep = nms_topk;
+      for (int i = nkeep; i < valid_count; ++i) {
+        p_out[i * 6] = -1;
+      }
     }
     for (int i = 0; i < nkeep; ++i) {
       for (int j = 0; j < 6; ++j) {
         p_out[i * 6 + j] = ptemp[sorter[i].index * 6 + j];
       }
     }
+
     // apply nms
-    for (int i = 0; i < valid_count; ++i) {
+    for (int i = 0; i < nkeep; ++i) {
       int offset_i = i * 6;
       if (p_out[offset_i] < 0) continue;  // skip eliminated
-      for (int j = i + 1; j < valid_count; ++j) {
+      for (int j = i + 1; j < nkeep; ++j) {
         int offset_j = j * 6;
         if (p_out[offset_j] < 0) continue;  // skip eliminated
         if (force_suppress || (p_out[offset_i] == p_out[offset_j])) {
@@ -173,7 +196,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<cpu>(MultiBoxDetectionParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new MultiBoxDetectionOp<cpu, DType>(param);
   });
@@ -181,9 +204,9 @@ Operator *CreateOp<cpu>(MultiBoxDetectionParam param, int dtype) {
 }
 
 Operator* MultiBoxDetectionProp::CreateOperatorEx(Context ctx,
-                                                  std::vector<TShape> *in_shape,
+                                                  mxnet::ShapeVector *in_shape,
                                                   std::vector<int> *in_type) const {
-  std::vector<TShape> out_shape, aux_shape;
+  mxnet::ShapeVector out_shape, aux_shape;
   std::vector<int> out_type, aux_type;
   CHECK(InferShape(in_shape, &out_shape, &aux_shape));
   CHECK(InferType(in_type, &out_type, &aux_type));
@@ -197,5 +220,9 @@ MXNET_REGISTER_OP_PROPERTY(_contrib_MultiBoxDetection, MultiBoxDetectionProp)
 .add_argument("loc_pred", "NDArray-or-Symbol", "Location regression predictions.")
 .add_argument("anchor", "NDArray-or-Symbol", "Multibox prior anchor boxes")
 .add_arguments(MultiBoxDetectionParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_contrib_MultiBoxDetection)
+.add_alias("_npx_multibox_detection");
+
 }  // namespace op
 }  // namespace mxnet

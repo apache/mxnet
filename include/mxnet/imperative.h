@@ -35,23 +35,17 @@
 #include "./ndarray.h"
 
 namespace mxnet {
-/*! \brief CachedOp Parameters */
-struct CachedOpParam : public dmlc::Parameter<CachedOpParam> {
-  uint32_t inline_limit;
-  uint32_t forward_bulk_size;
-  uint32_t backward_bulk_size;
-  DMLC_DECLARE_PARAMETER(CachedOpParam) {
-    DMLC_DECLARE_FIELD(inline_limit)
-    .set_default(2)
-    .describe("Maximum number of operators that can be inlined.");
-    DMLC_DECLARE_FIELD(forward_bulk_size)
-    .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
-    .describe("Segment size of bulk execution during forward pass.");
-    DMLC_DECLARE_FIELD(backward_bulk_size)
-    .set_default(dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15))
-    .describe("Segment size of bulk execution during backward pass.");
-  }
-};
+  /*! \brief there are three numpy shape flags based on priority.
+   * GlobalOn
+   *   turn on numpy shape flag globally, it includes thread local.
+   *   The flag can be seen in any thread.
+   * ThreadLocalOn
+   *   only turn on thread local numpy shape flag, it cannot be seen
+   *   in other threads.
+   * Off
+   *   turn off numpy shape flag globally.
+   * */
+  enum NumpyShape{Off, ThreadLocalOn, GlobalOn};
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
@@ -94,61 +88,6 @@ class Imperative {
              && info.out_grads.size() == 1;
     }
   };
-  class CachedOp {
-   public:
-    CachedOp(const nnvm::Symbol& sym,
-             const std::vector<std::pair<std::string, std::string> >& kwargs);
-    uint32_t num_inputs() {
-      return fwd_graph_.indexed_graph().input_nodes().size();
-    }
-    uint32_t num_outputs() {
-      return fwd_graph_.outputs.size();
-    }
-    uint32_t num_backward_inputs() {
-      return bwd_ograd_dep_.size() + bwd_in_dep_.size() + bwd_out_dep_.size();
-    }
-    std::vector<bool>& save_inputs() {
-      return save_inputs_;
-    }
-    std::vector<bool>& save_outputs() {
-      return save_outputs_;
-    }
-    const std::unordered_set<uint32_t>& mutable_input_nodes() {
-      return fwd_graph_.indexed_graph().mutable_input_nodes();
-    }
-    nnvm::Graph GetForwardGraph(const bool recording,
-                                const std::vector<NDArray*>& inputs);
-    nnvm::Graph GetBackwardGraph(const OpStatePtr& state,
-                                 const std::vector<OpReqType>& reqs,
-                                 const std::vector<NDArray*>& inputs);
-    std::vector<nnvm::NodeEntry> Gradient(const nnvm::NodePtr& node,
-                                          const std::vector<nnvm::NodeEntry>& ograds);
-    void Forward(const std::shared_ptr<CachedOp>& op_ptr,
-                 const std::vector<NDArray*>& inputs,
-                 const std::vector<NDArray*>& outputs);
-    void Backward(const bool retain_graph,
-                  const OpStatePtr& state,
-                  const std::vector<NDArray*>& inputs,
-                  const std::vector<OpReqType>& reqs,
-                  const std::vector<NDArray*>& outputs);
-
-   private:
-    struct CachedOpState {
-      std::vector<NDArray> buff;
-      std::vector<OpStatePtr> states;
-    };
-    std::mutex mutex_;
-    CachedOpParam param_;
-    nnvm::Graph fwd_graph_;
-    nnvm::Graph grad_graph_;
-    nnvm::Graph full_graph_;
-    bool inlining_;
-    std::vector<nnvm::NodeEntry> ograd_entries_;
-    std::vector<bool> curr_grad_req_;
-    std::vector<uint32_t> bwd_in_dep_, bwd_out_dep_, bwd_ograd_dep_;
-    std::vector<uint32_t> bwd_input_eid_;
-    std::vector<bool> save_inputs_, save_outputs_;
-  };
   /*! \brief whether operator recording is on. */
   bool is_training() const {
     return is_train_;
@@ -168,6 +107,34 @@ class Imperative {
       bool old = is_recording_;
       is_recording_ = is_recording;
       return old;
+  }
+  /*! \brief return current numpy compatibility status,
+   *  GlobalOn(2), ThreadLocalOn(1), Off(0).
+   * */
+  int is_np_shape() const {
+    if (is_np_shape_global_) {
+      return 2;
+    }
+    return is_np_shape_thread_local_ ? 1 : 0;
+  }
+  /*! \brief specify numpy compatibility off, thread local on or global on. */
+  bool set_is_np_shape(int is_np_shape) {
+    NumpyShape flag = static_cast<NumpyShape>(is_np_shape);
+    bool old = this->is_np_shape();
+    switch (flag) {
+      case GlobalOn:
+        is_np_shape_global_ = true;
+        is_np_shape_thread_local_ = true;
+        break;
+      case ThreadLocalOn:
+        is_np_shape_thread_local_ = true;
+        break;
+      case Off:
+        is_np_shape_global_ = false;
+        is_np_shape_thread_local_ = false;
+        break;
+    }
+    return old;
   }
   /*! \brief to record operator, return corresponding node. */
   void RecordOp(nnvm::NodeAttrs&& attrs,
@@ -191,7 +158,7 @@ class Imperative {
                       OpStatePtr state = OpStatePtr());
   /*! \brief mark variables for computing gradients. */
   void MarkVariables(const std::vector<NDArray*>& variables,
-                     const std::vector<mx_uint>& grad_reqs,
+                     const std::vector<uint32_t>& grad_reqs,
                      const std::vector<NDArray*>& gradients);
   /*! \brief compute the gradient of outputs w.r.t variables. */
   std::vector<NDArray*> Backward(const std::vector<NDArray*>& outputs,
@@ -201,14 +168,31 @@ class Imperative {
                                  bool create_graph);
   /*! \return AutogradRuntime singleton */
   static Imperative* Get();
+  /*! \brief Should op execution bulking be employed during inference. */
+  static bool PreferBulkExecInference() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_INFERENCE", true);
+  }
+  /*! \brief Should op execution bulking be employed during training. */
+  static bool PreferBulkExecTrain() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", true);
+  }
+  /*! \brief The max number of op nodes in a bulk during forward pass of training. */
+  static int BulkExecMaxNodeTrainFwd() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD",
+                        dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
+  }
+  /*! \brief The max number of op nodes in a bulk during backward pass of training. */
+  static int BulkExecMaxNodeTrainBwd() {
+    return dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD",
+                        dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15));
+  }
 
  private:
   friend class NDArray;
   /*! \brief make constructor protected. */
   Imperative() {
-    if (dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_TRAIN", 1)) {
-      backward_bulk_size_ =  dmlc::GetEnv("MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN", 15);
-    }
+    if (PreferBulkExecTrain())
+      backward_bulk_size_ = BulkExecMaxNodeTrainBwd();
   }
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
@@ -216,23 +200,21 @@ class Imperative {
       uint32_t num_inputs, uint32_t num_outputs,
       std::vector<bool> *p_save_inputs,
       std::vector<bool> *p_save_outputs);
-  void RunGraph(
-      const bool retain_graph,
-      const nnvm::IndexedGraph& idx,
-      const std::vector<NDArray*> arrays,
-      size_t node_start, size_t node_end,
-      std::vector<OpReqType>&& array_reqs,
-      std::vector<uint32_t>&& ref_count,
-      std::vector<OpStatePtr> *p_states,
-      const DispatchModeVector& dispatch_modes);
   /*! \brief indicate whether is training. */
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
   static thread_local bool is_recording_;
+  // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
+  // Delete it in the next major release.
+  static thread_local bool is_np_shape_thread_local_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
+  // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
+  // Delete it in the next major release.
+  static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
 #endif
+  bool is_np_shape_global_{false};
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */
@@ -240,8 +222,6 @@ class Imperative {
   /*! \brief default backward bulk size */
   int backward_bulk_size_{0};
 };
-
-using CachedOpPtr = std::shared_ptr<Imperative::CachedOp>;
 
 }  // namespace mxnet
 #endif  // MXNET_IMPERATIVE_H_

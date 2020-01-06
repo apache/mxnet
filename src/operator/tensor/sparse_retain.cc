@@ -19,7 +19,7 @@
 
 /*!
  * \file sparse_retain.cc
- * \brief
+ * \brief CPU implementation of sparse_retain operator
 */
 
 #include "./sparse_retain-inl.h"
@@ -31,7 +31,7 @@ namespace op {
 // accepts row-sparse format ndarrays. It will be registered
 // under mxnet.ndarray.sparse with name retain.
 NNVM_REGISTER_OP(_sparse_retain)
-.describe(R"code(pick rows specified by user input index array from a row sparse matrix
+.describe(R"code(Pick rows specified by user input index array from a row sparse matrix
 and save them in the output sparse matrix.
 
 Example::
@@ -39,10 +39,10 @@ Example::
   data = [[1, 2], [3, 4], [5, 6]]
   indices = [0, 1, 3]
   shape = (4, 2)
-  rsp_in = row_sparse(data, indices)
+  rsp_in = row_sparse_array(data, indices)
   to_retain = [0, 3]
   rsp_out = retain(rsp_in, to_retain)
-  rsp_out.values = [[1, 2], [5, 6]]
+  rsp_out.data = [[1, 2], [5, 6]]
   rsp_out.indices = [0, 3]
 
 The storage type of ``retain`` output depends on storage types of inputs
@@ -57,7 +57,7 @@ The storage type of ``retain`` output depends on storage types of inputs
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"data", "indices"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", SparseRetainOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SparseRetainOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SparseRetainOpType)
 .set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)

@@ -18,6 +18,7 @@
 package AI::MXNet::KVStore;
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::NDArray;
 use AI::MXNet::Optimizer;
@@ -37,7 +38,6 @@ use AI::MXNet::Function::Parameters;
 
 has 'handle' => (is => 'ro', isa => 'KVStoreHandle', required => 1);
 has '_updater' => (is => 'rw',  isa => 'AI::MXNet::Updater');
-has '_updater_func' => (is => 'rw', isa => 'CodeRef');
 
 sub DEMOLISH
 {
@@ -53,9 +53,9 @@ sub DEMOLISH
 
     Parameters
     ----------
-    key : str or an array ref of str
+    $key : Str|ArrayRef[Str]
         The keys.
-    value : NDArray or an array ref of NDArray objects
+    $value : AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
         The values.
 
     Examples
@@ -100,9 +100,9 @@ method init(
 
     Parameters
     ----------
-    key : str or array ref of str
-    value : NDArray or array ref of NDArray or array ref of array refs of NDArray
-    priority : int, optional
+    $key : Str|ArrayRef[Str]
+    $value : AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
+    :$priority=0 : Int, optional
         The priority of the push operation.
         The higher the priority, the faster this action is likely
         to be executed before other push actions.
@@ -171,12 +171,12 @@ method push(
 
     Parameters
     ----------
-    key : str or array ref of str
+    $key : Str|ArrayRef[Str]
         Keys
-    out: NDArray or array ref of NDArray or array ref of array refs of NDArray
+    :$out: AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
         According values
 
-    priority : int, optional
+    :$priority=0 : Int, optional
         The priority of the push operation.
         The higher the priority, the faster this action is likely
         to be executed before other push actions.
@@ -216,15 +216,180 @@ method push(
 method pull(
     Str|ArrayRef[Str] $key,
     AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$out,
-    Int :$priority=0
+    Int :$priority=0,
+    Bool :$ignore_sparse=1
 )
 {
     my ($keys, $vals) = _key_value($key, $out);
     check_call(
-        AI::MXNetCAPI::KVStorePullEx(
-            $self->handle, scalar(@{ $keys }), $keys, $vals, $priority
+        AI::MXNetCAPI::KVStorePullWithSparseEx(
+            $self->handle, scalar(@{ $keys }), $keys, $vals, $priority, $ignore_sparse
         )
     );
+}
+
+=head2  row_sparse_pull
+
+        Pulls a single AI::MXNet::NDArray::RowSparse value or an array ref of AI::MXNet::NDArray::RowSparse values
+        from the store with specified row_ids. When there is only one row_id, KVStoreRowSparsePull
+        is invoked just once and the result is broadcast to all the rest of outputs.
+
+        `row_sparse_pull` is executed asynchronously after all previous
+        `pull`/`row_sparse_pull` calls and the last `push` call for the
+        same input key(s) are finished.
+
+        The returned values are guaranteed to be the latest values in the store.
+
+        Parameters
+        ----------
+        $key : Str|ArrayRef[Str] $key
+            Keys.
+
+        :$out: AI::MXNet::NDArray::RowSparse|ArrayRef[AI::MXNet::NDArray::RowSparse]|ArrayRef[ArrayRef[AI::MXNet::NDArray::RowSparse]]
+            Values corresponding to the keys. The stype is expected to be row_sparse
+
+        :$priority=0 : Int, optional
+            The priority of the pull operation.
+            Higher priority pull operations are likely to be executed before
+            other pull actions.
+
+        :$row_ids : AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]]
+            The row_ids for which to pull for each value. Each row_id is an 1D NDArray
+            whose values don't have to be unique nor sorted.
+
+        Examples
+        --------
+        >>> $shape = [3, 3]
+        >>> $kv->init('3', mx->nd->ones($shape)->tostype('row_sparse'))
+        >>> $a = mx->nd->sparse->zeros('row_sparse', $shape)
+        >>> $row_ids = mx->nd->array([0, 2], dtype=>'int64')
+        >>> $kv->row_sparse_pull('3', out=>$a, row_ids=>$row_ids)
+        >>> print $a->aspdl
+        [[ 1.  1.  1.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> $duplicate_row_ids = mx->nd->array([2, 2], dtype=>'int64')
+        >>> $kv->row_sparse_pull('3', out=>$a, row_ids=>$duplicate_row_ids)
+        >>> print $a->aspdl
+        [[ 0.  0.  0.]
+        [ 0.  0.  0.]
+        [ 1.  1.  1.]]
+        >>> $unsorted_row_ids = mx->nd->array([1, 0], dtype=>'int64')
+        >>> $kv->row_sparse_pull('3', out=>$a, row_ids=>$unsorted_row_ids)
+        >>> print $a->aspdl
+        [[ 1.  1.  1.]
+        [ 1.  1.  1.]
+        [ 0.  0.  0.]]
+=cut
+
+
+method row_sparse_pull(
+    Str|ArrayRef[Str] $key,
+    AI::MXNet::NDArray::RowSparse|ArrayRef[AI::MXNet::NDArray::RowSparse]|ArrayRef[ArrayRef[AI::MXNet::NDArray::RowSparse]] :$out,
+    Int :$priority=0,
+    AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]|ArrayRef[ArrayRef[AI::MXNet::NDArray]] :$row_ids
+)
+{
+    if(blessed $row_ids)
+    {
+        $row_ids = [$row_ids];
+    }
+    my $first_out = $out;
+    # whether row_ids are the same
+    my $single_rowid = 0;
+    if(@$row_ids == 1 and ref $out eq 'ARRAY')
+    {
+        $single_rowid = 1;
+        $first_out = [$out->[0]];
+    }
+    my ($ckeys, $cvals) = _key_value($key, $first_out);
+    my (undef, $crow_ids) = _key_value($key, $row_ids);
+    assert(
+        (@$crow_ids == @$cvals),
+        "the number of row_ids doesn't match the number of values"
+    );
+    check_call(
+        AI::MXNetCAPI::KVStorePullRowSparseEx(
+            $self->handle, scalar(@$ckeys), $ckeys, $cvals, $crow_ids, $priority
+        )
+    );
+    # the result can be copied to other devices without invoking row_sparse_pull
+    # if the indices are the same
+    if($single_rowid)
+    {
+        for my $out_i (@{ $out } [1..@{ $out }-1])
+        {
+            $out->[0]->copyto($out_i);
+        }
+    }
+}
+
+=head2  set_gradient_compression
+
+        Specifies type of low-bit quantization for gradient compression \
+         and additional arguments depending on the type of compression being used.
+
+        2bit Gradient Compression takes a positive float `threshold`.
+        The technique works by thresholding values such that positive values in the
+        gradient above threshold will be set to threshold. Negative values whose absolute
+        values are higher than threshold, will be set to the negative of threshold.
+        Values whose absolute values are less than threshold will be set to 0.
+        By doing so, each value in the gradient is in one of three states. 2bits are
+        used to represent these states, and every 16 float values in the original
+        gradient can be represented using one float. This compressed representation
+        can reduce communication costs. The difference between these thresholded values and
+        original values is stored at the sender's end as residual and added to the
+        gradient in the next iteration.
+
+        When kvstore is 'local', gradient compression is used to reduce communication
+        between multiple devices (gpus). Gradient is quantized on each GPU which
+        computed the gradients, then sent to the GPU which merges the gradients. This
+        receiving GPU dequantizes the gradients and merges them. Note that this
+        increases memory usage on each GPU because of the residual array stored.
+
+        When kvstore is 'dist', gradient compression is used to reduce communication
+        from worker to sender. Gradient is quantized on each worker which
+        computed the gradients, then sent to the server which dequantizes
+        this data and merges the gradients from each worker. Note that this
+        increases CPU memory usage on each worker because of the residual array stored.
+        Only worker to server communication is compressed in this setting.
+        If each machine has multiple GPUs, currently this GPU to GPU or GPU to CPU communication
+        is not compressed. Server to worker communication (in the case of pull)
+        is also not compressed.
+
+        To use 2bit compression, we need to specify `type` as `2bit`.
+        Only specifying `type` would use default value for the threshold.
+        To completely specify the arguments for 2bit compression, we would need to pass
+        a dictionary which includes `threshold` like:
+        {'type': '2bit', 'threshold': 0.5}
+
+        Parameters
+        ----------
+        $compression_params : HashRef[Str]
+            A dictionary specifying the type and parameters for gradient compression.
+            The key `type` in this dictionary is a
+            required string argument and specifies the type of gradient compression.
+            Currently `type` can be only `2bit`
+            Other keys in this dictionary are optional and specific to the type
+            of gradient compression.
+=cut
+
+method set_gradient_compression(HashRef[Str] $compression_params)
+{
+    if($self->type =~ /(?:device|dist)/)
+    {
+        check_call(
+            AI::MXNetCAPI::KVStoreSetGradientCompression(
+                $self->handle,
+                scalar(keys %$compression_params),
+                $compression_params
+            )
+        );
+    }
+    else
+    {
+        confess('Gradient compression is not supported for this type of kvstore');
+    }
 }
 
 =head2  set_optimizer
@@ -237,7 +402,7 @@ method pull(
 
     Parameters
     ----------
-    optimizer : Optimizer
+    $optimizer : AI::MXNet::Optimizer
         the optimizer
 =cut
 
@@ -262,7 +427,7 @@ method set_optimizer(AI::MXNet::Optimizer $optimizer)
 
     Returns
     -------
-    type : str
+    $type : Str
         the string type
 =cut
 
@@ -277,7 +442,7 @@ method type()
 
     Returns
     -------
-    rank : int
+    $rank : Int
         The rank of this node, which is in [0, get_num_workers())
 =cut
 
@@ -292,7 +457,7 @@ method rank()
 
     Returns
     -------
-    size :int
+    $size : Int
         The number of worker nodes
 =cut
 
@@ -307,9 +472,9 @@ method num_workers()
 
     Parameters
     ----------
-    fname : str
+    $fname : Str
         Path to output states file.
-    dump_optimizer : bool, default False
+    :$dump_optimizer=0 : Bool, default False
             Whether to also save the optimizer itself. This would also save optimizer
             information such as learning rate and weight decay schedules.
 =cut
@@ -329,7 +494,7 @@ method save_optimizer_states(Str $fname, Bool :$dump_optimizer=0)
 
     Parameters
     ----------
-    fname : str
+    $fname : Str
         Path to input states file.
 =cut
 
@@ -353,7 +518,7 @@ method load_optimizer_states(Str $fname)
 
     Parameters
     ----------
-    updater : function
+    $updater : Undater
         the updater function
 
     Examples
@@ -376,20 +541,17 @@ method load_optimizer_states(Str $fname)
 
 method _set_updater(Updater $updater_func)
 {
-    $self->_updater_func(
-        sub {
-            my ($index, $input_handle, $storage_handle) = @_;
-            $updater_func->(
-                $index,
-                AI::MXNet::NDArray->new(handle => $input_handle),
-                AI::MXNet::NDArray->new(handle => $storage_handle)
-            );
-        }
-    );
     check_call(
         AI::MXNetCAPI::KVStoreSetUpdater(
             $self->handle,
-            $self->_updater_func
+            sub {
+                my ($index, $input_handle, $storage_handle) = @_;
+                $updater_func->(
+                    $index,
+                    AI::MXNet::NDArray->_ndarray_cls($input_handle),
+                    AI::MXNet::NDArray->_ndarray_cls($storage_handle)
+                );
+            }
         )
     );
 }
@@ -419,9 +581,9 @@ method _barrier()
 
     Parameters
     ----------
-    head : int
+    $head : Int
         the head of the command
-    body : str
+    $body : Str
         the body of the command
 =cut
 
@@ -442,7 +604,7 @@ method _send_command_to_servers(Int $head, Str $body)
 
     Parameters
     ----------
-    name : {'local'}
+    $name='local' : Str
     The type of KVStore
         - local works for multiple devices on a single machine (single process)
         - dist works for multi-machines (multiple processes)

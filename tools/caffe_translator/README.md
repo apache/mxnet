@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Caffe Translator
 Caffe Translator is a migration tool that helps developers migrate their existing Caffe code to MXNet and continue further development using MXNet. Note that this is different from the Caffe to MXNet model converter which is available [here](https://github.com/apache/incubator-mxnet/tree/master/tools/caffe_converter).
 
@@ -27,9 +44,9 @@ Here is the list of command line parameters accepted by the Caffe Translator:
 - *solver-prototxt*: specifies the path to the solver prototxt to be translated.
 - *output-file*: specifies the file to write the translated output into.
 - *params-file* (optional): specifies the .caffemodel file to initialize parameters from.
-- *custom-data-layers* (optional): Specifies a comma-separated list of types of the custom data layers used in the prototxt. The translator will use [`CaffeDataIter`](https://mxnet.incubator.apache.org/faq/caffe.html#use-io-caffedataiter) to translate these layers to MXNet.
+- *custom-data-layers* (optional): Specifies a comma-separated list of types of the custom data layers used in the prototxt. The translator will use [`CaffeDataIter`](https://mxnet.apache.org/faq/caffe.html#use-io-caffedataiter) to translate these layers to MXNet.
 
-**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.incubator.apache.org/faq/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#CaffeToMXNet` directive like shown below:
+**Note:** Translated code uses [`CaffeDataIter`](https://mxnet.apache.org/faq/caffe.html#use-io-caffedataiter) to read from LMDB files. `CaffeDataIter` requires the number of examples in LMDB file to be specified as a parameter. You can provide this information before translation using a `#CaffeToMXNet` directive like shown below:
 
 ```
   data_param {

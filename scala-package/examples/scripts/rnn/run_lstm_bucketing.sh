@@ -19,12 +19,7 @@
 
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-OS=$(uname)
-if [ "$OS" = "Darwin" ]; then
-  CLASS_PATH=$MXNET_ROOT/scala-package/assembly/osx-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
-else
-  CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
-fi
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
 DATA_TRAIN=$1
 DATA_VAL=$2
@@ -33,7 +28,7 @@ GPUS="0"
 SAVE_MODEL_PATH=./model/lstm
 
 java -Xmx4G -cp $CLASS_PATH \
-  ml.dmlc.mxnetexamples.rnn.LstmBucketing \
+  org.apache.mxnetexamples.rnn.LstmBucketing \
   --data-train $DATA_TRAIN \
   --data-val $DATA_VAL \
   --num-epoch $NUM_EPOCH \

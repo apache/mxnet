@@ -27,10 +27,12 @@
 #define MXNET_OPERATOR_MSHADOW_OP_H_
 
 #include <mxnet/base.h>
+#include <mshadow/base.h>
 #include "math.h"
 #include "math_functions-inl.h"
 #include "special_functions-inl.h"
 #include "./operator_tune.h"
+#include "./contrib/erfinv-inl.h"
 
 #ifdef __CUDACC__
 #include <cuda_fp16.h>
@@ -40,14 +42,23 @@ namespace mxnet {
 namespace op {
 namespace mshadow_op {
 
+using mshadow::isnan_typed::IsNan;
+using mshadow::isinf_typed::IsInf;
+
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
+__constant__ const float SELU_ALPHA = 1.6732632423543772848170429916717;
+__constant__ const float SELU_LAMBDA = 1.0507009873554804934193349852946;
+__constant__ const float SQRT_2 = 1.4142135623730950488016887242096;
 #else
 const float PI = 3.14159265358979323846;
-using std::isnan;
+const float SELU_ALPHA = 1.6732632423543772848170429916717;
+const float SELU_LAMBDA = 1.0507009873554804934193349852946;
+const float SQRT_2 = 1.4142135623730950488016887242096;
 #endif
 using std::enable_if;
 using std::is_unsigned;
+using std::is_integral;
 
 #define MXNET_UNARY_MATH_OP(name, expr) \
   struct name : public mxnet_op::tunable { \
@@ -61,6 +72,14 @@ using std::is_unsigned;
   struct name : public mxnet_op::tunable { \
     template<typename DType> \
     MSHADOW_XINLINE static DType Map(DType a) { \
+      return (expr); \
+    } \
+  }
+
+#define MXNET_UNARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a) { \
       return (expr); \
     } \
   }
@@ -81,6 +100,26 @@ using std::is_unsigned;
     } \
   }
 
+#define MXNET_BINARY_MATH_OP_NC_WITH_BOOL(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType, \
+             typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0> \
+    MSHADOW_XINLINE static DType Map(DType a, DType b) { \
+      return (expr); \
+    } \
+    MSHADOW_XINLINE static bool Map(bool a, bool b) { \
+      return (expr); \
+    } \
+  }
+
+#define MXNET_BINARY_LOGIC_OP_NC(name, expr) \
+  struct name : public mxnet_op::tunable  { \
+    template<typename DType> \
+    MSHADOW_XINLINE static bool Map(DType a, DType b) { \
+      return (expr); \
+    } \
+  }
+
 #define MXNET_SIMPLE_UNARY_MATH_OP(name) MXNET_UNARY_MATH_OP(name, math::name(a))
 
 #define MXNET_SIMPLE_BINARY_MATH_OP(name) MXNET_BINARY_MATH_OP(name, math::name(a, b))
@@ -89,21 +128,248 @@ MXNET_UNARY_MATH_OP_NC(identity, a);
 
 MXNET_UNARY_MATH_OP(identity_grad, 1);
 
+struct identity_with_cast {
+  template<typename DTypeIn, typename DTypeOut>
+  MSHADOW_XINLINE static void Map(index_t i, DTypeOut *out, DTypeIn *in) {
+    out[i] = DTypeOut(in[i]);
+  }
+};
+
+struct true_divide : public mxnet_op::tunable  {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return a / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, DType b) {
+    return static_cast<float>(a) / static_cast<float>(b);
+  }
+
+#ifndef _WIN32
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(a) / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(a) / b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(a) / b;
+  }
+#endif
+};
+
+struct rtrue_divide : public mxnet_op::tunable  {
+  template<typename DType,
+           typename std::enable_if<!std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    return b / a;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, DType b) {
+    return static_cast<float>(b) / static_cast<float>(a);
+  }
+
+#ifndef _WIN32
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return b / static_cast<mshadow::half::half_t>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return b / static_cast<float>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return b / static_cast<double>(a);
+  }
+#endif
+};
+
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
 
-MXNET_BINARY_MATH_OP_NC(mul, a * b);
+#ifndef _WIN32
+struct mixed_plus {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(a) + b;
+  }
 
-MXNET_BINARY_MATH_OP_NC(div, a / b);
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(a) + b;
+  }
 
-MXNET_BINARY_MATH_OP_NC(plus, a + b);
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(a) + b;
+  }
+};
 
-MXNET_BINARY_MATH_OP_NC(minus, a - b);
+struct mixed_minus {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(a) - b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(a) - b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(a) - b;
+  }
+};
+
+struct mixed_rminus {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return b - static_cast<mshadow::half::half_t>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return b - static_cast<float>(a);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return b - static_cast<double>(a);
+  }
+};
+
+struct mixed_mul {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(a) * b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(a) * b;
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(a) * b;
+  }
+};
+
+struct mixed_power {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(math::pow(a, b));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(math::pow(a, b));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(math::pow(a, b));
+  }
+};
+
+struct mixed_rpower {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(math::pow(b, a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(math::pow(b, a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(math::pow(b, a));
+  }
+};
+#endif
+
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(mul, a * b);
+
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(div, a / b);
+
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(plus, a + b);
+
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(minus, a - b);
 
 MXNET_UNARY_MATH_OP(negation, -a);
 
 MXNET_UNARY_MATH_OP(reciprocal, 1.0f / math::id(a));
+
+struct bitwise_not : public mxnet_op::tunable {
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return ~static_cast<int64_t>(a);
+  }
+
+  MSHADOW_XINLINE static bool Map(bool a) {
+    return !a;
+  }
+};
 
 MXNET_UNARY_MATH_OP(reciprocal_grad, -1.0f / math::sqr(a));
 
@@ -111,17 +377,25 @@ MXNET_UNARY_MATH_OP(sigmoid, 1.0f / (1.0f + math::exp(-a)));
 
 MXNET_UNARY_MATH_OP(sigmoid_grad, math::id(a) * (1.0f - math::id(a)));
 
-MXNET_UNARY_MATH_OP_NC(relu, a > DType(0) ? a : DType(0));
+MXNET_UNARY_MATH_OP(softsign, a / (1.0f + math::fabs(a)));
 
-MXNET_UNARY_MATH_OP_NC(relu_grad, a > DType(0) ? DType(1) : DType(0));
+MXNET_UNARY_MATH_OP(softsign_grad, 1.0f /  math::sqr(1.0f + math::fabs(a)));
 
-MXNET_BINARY_MATH_OP(xelu, a > DType(0) ? math::id(a) :
-                     math::id(a) * math::id(b));
+MXNET_UNARY_MATH_OP_NC(selu, DType(SELU_LAMBDA) *
+                         (a > DType(0) ? a : DType(math::id(SELU_ALPHA) * math::expm1(a))));
+
+MXNET_UNARY_MATH_OP_NC(selu_grad,
+                       DType(SELU_LAMBDA) * (a > DType(0) ? DType(1) : DType(SELU_ALPHA + a)));
+
+MXNET_BINARY_MATH_OP_NC(prelu_grad, a > DType(0) ? DType(0) : a);
+
+MXNET_BINARY_MATH_OP_NC(xelu, a > DType(0) ? a :
+                        DType(static_cast<float>(a) * static_cast<float>(b)));
 
 MXNET_BINARY_MATH_OP_NC(xelu_grad, a > DType(0) ? DType(1) : b);
 
-MXNET_BINARY_MATH_OP(elu, a > DType(0) ? math::id(a) :
-                     math::id(b) * math::expm1(a));
+MXNET_BINARY_MATH_OP_NC(elu, a > DType(0) ? a :
+                        DType(math::id(b) * math::expm1(a)));
 
 MXNET_BINARY_MATH_OP_NC(elu_grad, a > DType(0) ? DType(1) : DType(b + a));
 
@@ -145,6 +419,19 @@ struct softrelu : public mxnet_op::tunable {
 };
 
 MXNET_UNARY_MATH_OP(softrelu_grad, -math::expm1(-a));
+
+MXNET_UNARY_MATH_OP(erfinv_grad, 0.5 * math::sqrt(PI) * math::exp(math::sqr(a)));
+
+MXNET_UNARY_MATH_OP(erf_grad, 2.0 / math::sqrt(PI) * math::exp(-(a * a)));
+
+MXNET_SIMPLE_UNARY_MATH_OP(erf);
+
+MXNET_UNARY_MATH_OP(gelu,
+  DType(0.5f * static_cast<float>(a) * (1.0f + math::erf(static_cast<float>(a) / SQRT_2))));
+
+MXNET_BINARY_MATH_OP_NC(gelu_grad,
+  DType(0.5f * (1.0f + math::erf(static_cast<float>(a) / SQRT_2) +
+                static_cast<float>(a) * erf_grad::Map(static_cast<float>(a) / SQRT_2) / SQRT_2)));
 
 MXNET_SIMPLE_UNARY_MATH_OP(exp);
 
@@ -252,6 +539,7 @@ MXNET_UNARY_MATH_OP(square_grad, 2.0f * math::id(a));
 
 /*! \brief used for generate Bernoulli mask */
 MXNET_BINARY_MATH_OP_NC(threshold, a < b ? DType(1) : DType(0));
+MXNET_BINARY_MATH_OP_NC(threshold_eq, a <= b ? DType(1) : DType(0));
 
 /*! \brief used for generate element of abs */
 MXNET_UNARY_MATH_OP(abs, math::fabs(a)); // NOLINT(*)
@@ -286,11 +574,19 @@ MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
 
-/*! \brief used for generate element of maximum */
-MXNET_BINARY_MATH_OP(maximum, a > b ? a : b);
+MXNET_BINARY_MATH_OP(arctan2, math::atan2(a, b));
 
-/*! \brief used for generate element of minimum */
-MXNET_BINARY_MATH_OP_NC(minimum, a < b ? a : b);
+MXNET_BINARY_MATH_OP(arctan2_grad, math::id(b) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(arctan2_rgrad, -math::id(a) / (math::id(a * a + b * b)));
+
+MXNET_BINARY_MATH_OP(rarctan2, math::atan2(b, a));
+
+MXNET_BINARY_MATH_OP(rarctan2_grad, math::id(a) / (math::id(a * a + b * b)));
+
+MXNET_UNARY_MATH_OP_NC(nt, a != DType(0) ? DType(0) : DType(1));
+
+MXNET_UNARY_LOGIC_OP_NC(np_logical_not, !static_cast<bool>(a));
 
 MXNET_BINARY_MATH_OP_NC(ge, a >= b ? DType(1) : DType(0));
 
@@ -304,10 +600,31 @@ MXNET_BINARY_MATH_OP_NC(eq, a == b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP_NC(ne, a != b ? DType(1) : DType(0));
 
+MXNET_BINARY_LOGIC_OP_NC(np_greater_equal, a >= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_greater, a > b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less, a < b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_less_equal, a <= b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_equal, a == b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_not_equal, a != b ? true : false);
+
+MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
+
+MXNET_BINARY_MATH_OP(bitwise_xor, static_cast<int64_t>(a) ^ static_cast<int64_t>(b));
+
+MXNET_BINARY_MATH_OP(bitwise_or, static_cast<int64_t>(a) | static_cast<int64_t>(b));
+
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(square_root_grad, 0.5f / math::id(a));
-
 MXNET_UNARY_MATH_OP(reciprocal_square_root, 1.0f / math::sqrt(a));
 
 MXNET_UNARY_MATH_OP(reciprocal_square_root_grad, -0.5f / (math::sqrt(a) * math::id(a)));
@@ -319,6 +636,17 @@ MXNET_UNARY_MATH_OP(cube_root_grad, 1.0f / (3.0f * math::sqr(a)));
 MXNET_UNARY_MATH_OP(reciprocal_cube_root, 1.0f / math::cbrt(a));
 
 MXNET_UNARY_MATH_OP(reciprocal_cube_root_grad, -1.0f / (3.0f * math::cbrt(a) * math::id(a)));
+
+/*! \brief used for generate element of ldexp */
+MXNET_BINARY_MATH_OP(ldexp, math::id(a) * math::pow(2.0f, b));
+
+MXNET_BINARY_MATH_OP(ldexp_grad, math::pow(2.0f, b));
+
+MXNET_BINARY_MATH_OP(ldexp_rgrad, math::id(a) * math::pow(2.0f, b) * math::log(2.0f));
+
+MXNET_BINARY_MATH_OP(rldexp, math::id(b) * math::pow(2.0f, a));  // swap a and b if a is scalar.
+
+MXNET_BINARY_MATH_OP(rldexp_grad, math::id(b) * math::pow(2.0f, a) * math::log(2.0f));
 
 /*! \brief used for generate element of round */
 MXNET_SIMPLE_UNARY_MATH_OP(round);
@@ -379,6 +707,16 @@ MSHADOW_XINLINE mshadow::half::half2_t div_rgrad::Map<mshadow::half::half2_t>
 MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
 MXNET_BINARY_MATH_OP(rdiv_grad, -math::id(b) / math::sqr(a));
+
+MXNET_BINARY_MATH_OP(copysign, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? a : -a);
+
+MXNET_BINARY_MATH_OP(copysign_grad, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1: -1);
+
+MXNET_BINARY_MATH_OP(copysign_rgrad, 0);
+
+MXNET_BINARY_MATH_OP(rcopysign, (b >= 0 && a >= 0) || (b < 0 && a < 0) ? b : -b);
+
+MXNET_BINARY_MATH_OP(rcopysign_grad, 0);
 
 struct mod : public mxnet_op::tunable {
   template<typename DType>
@@ -580,6 +918,15 @@ struct clip : public mxnet_op::tunable {
       return x;
     }
   }
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType x, DType lower_bound, DType upper_bound) {
+    if (x > upper_bound) {
+      return upper_bound;
+    } else if (x < lower_bound) {
+      return lower_bound;
+    }
+    return x;
+  }
 };
 
 /***** gamma ******/
@@ -676,6 +1023,22 @@ struct product {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& none) {} // NOLINT(*)
   /*!
   *\brief calculate gradient of redres with respect to redsrc,
   * redres: reduced result, redsrc: one of reduction element
@@ -700,47 +1063,89 @@ struct product {
   }
 };
 
-namespace isnan_typed {
-  template<typename DType>
-  MSHADOW_XINLINE bool IsNan(volatile DType val) {
-    return false;
-  }
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile float val) {
-    return isnan(val);
-  }
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile double val) {
-    return isnan(val);
-  }
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile long double val) {
-    return isnan(val);
-  }
+MXNET_UNARY_MATH_OP_NC(relu, IsNan(a) || (a > DType(0)) ? a : DType(0));
 
-  template<>
-  MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
-    return (val.half_ & 0x7fff) > 0x7c00;
+/*! \brief used for computing gradient of relu operator */
+struct relu_grad : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    if (IsNan(a)) {
+      return a;
+    } else {
+      return a > DType(0) ? DType(1) : DType(0);
+    }
   }
-};  // namespace isnan_typed
+};
+
+/*! \brief used for computing binary operator maximum */
+struct maximum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (IsNan(a)) {
+      return a;
+    } else {
+      return (a > b ? a : b);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator minimum */
+struct minimum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (IsNan(a)) {
+      return a;
+    } else {
+      return DType(a < b ? a : b);
+    }
+  }
+};
+
+/*! \brief boolean any/all kernel that determines whether elem is NonZero */
+struct NonZero {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return (a != DType(0));
+  }
+};
 
 /*! \brief sum reducer that ignores NaN values in the input */
 struct nansum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(src)) return;
+    if (IsNan(src)) return;
     dst += src;
   }
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& residual) { // NOLINT(*)
-    if (isnan_typed::IsNan(src)) return;
+    if (IsNan(src)) return;
     DType y = src - residual;
     DType t = dst + y;
     residual = (t - dst) - y;
     dst = t;
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    DType t1 = dst_val + src_val;
+    DType e = t1 - src_val;
+    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+    dst_val = t1 + t2;
+    dst_residual = t2 - (dst_val - t1);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
   /*!
   *\brief set the initial value during reduction
   */
@@ -761,7 +1166,7 @@ struct nansum {
 struct nansum_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return isnan_typed::IsNan(a) ? DType(0) : DType(1);
+    return IsNan(a) ? DType(0) : DType(1);
   }
 };
 
@@ -770,7 +1175,7 @@ struct nanprod {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (isnan_typed::IsNan(src)) return;
+    if (IsNan(src)) return;
     dst *= src;
   }
   /*! \brief do reduction into dst */
@@ -778,6 +1183,22 @@ struct nanprod {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& none) { // NOLINT(*)
     Reduce(dst, src);
   }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& none) {} // NOLINT(*)
   /*!
   *\brief set the initial value during reduction
   */
@@ -785,6 +1206,7 @@ struct nanprod {
   MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
     initv = 1;
   }
+
   /*!
   *\brief set the initial value during reduction
   */
@@ -794,10 +1216,182 @@ struct nanprod {
   }
 };
 
+/*! \brief compute l2 norm */
+struct nrm2 {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares, volatile DType src) { // NOLINT(*)
+    sum_of_squares += src * src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& sum_of_squares,  volatile DType src, volatile DType& scale) { // NOLINT(*)
+    if (src != 0) {
+      DType abs = mshadow_op::abs::Map(src);
+      if (scale < abs) {
+        sum_of_squares = 1 + sum_of_squares * (scale / abs) * (scale / abs);
+        scale = abs;
+      } else {
+        sum_of_squares = sum_of_squares + (abs / scale) * (abs / scale);
+      }
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    dst_val += src_val;
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_ssq, volatile DType& dst_scale, volatile DType& src_ssq, volatile DType& src_scale) { // NOLINT(*)
+    if (dst_scale != 0 && dst_scale >= src_scale) {
+      dst_ssq = dst_ssq + src_ssq * (src_scale / dst_scale) * (src_scale / dst_scale);
+    } else if (src_scale != 0 && dst_scale < src_scale) {
+      dst_ssq = src_ssq + dst_ssq * (dst_scale / src_scale) * (dst_scale / src_scale);
+      dst_scale = src_scale;
+    }
+  }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares) { // NOLINT(*)
+    sum_of_squares = math::sqrt(sum_of_squares);
+  }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares, volatile DType& scale) { // NOLINT(*)
+    sum_of_squares = scale * math::sqrt(sum_of_squares);
+  }
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return redsrc / redres;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares) { // NOLINT(*)
+    sum_of_squares = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares, DType &scale) { // NOLINT(*)
+    SetInitValue(sum_of_squares);
+    scale = 0;
+  }
+};
+
+/*! \brief sum reducer */
+struct sum {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
+    dst += src;
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    DType y = src - residual;
+    DType t = dst + y;
+    residual = (t - dst) - y;
+    dst = t;
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    Reduce(dst_val, src_val);
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    DType t1 = dst_val + src_val;
+    DType e = t1 - dst_val;
+    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+    dst_val = t1 + t2;
+    dst_residual = t2 - (dst_val - t1);
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = 0;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    SetInitValue(initv);
+    residual = 0;
+  }
+};
+
 struct nanprod_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    return isnan_typed::IsNan(a) ? DType(0) : b / a;
+    return IsNan(a) ? DType(0) : b / a;
+  }
+};
+
+/*! \brief used for computing binary lowest common multiple */
+struct lcm : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<is_integral<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    // minus cases.
+    if (a < 0) {
+      a = -a;
+    }
+    if (b < 0) {
+      b = -b;
+    }
+    // handle zero-valued cases.
+    DType c;
+    if (a == 0 || b == 0) {
+      c = 0;
+    } else {
+      DType tmp;
+      DType tmp_a = a;
+      DType tmp_b = b;
+      if (a < b) {
+        tmp = a;
+        a = b;
+        b = tmp;
+      }
+      while (a % b != 0) {
+        a = a % b;
+        tmp = a;
+        a = b;
+        b = tmp;
+      }
+      c = tmp_a / b * tmp_b;
+    }
+    return c;
+  }
+  template<typename DType>
+  MSHADOW_XINLINE static typename enable_if<!is_integral<DType>::value, DType>::type
+  Map(DType a, DType b) {
+    return DType(0.0f);
   }
 };
 

@@ -14,6 +14,7 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""Contains a class for handling multi-process data generation"""
 
 from __future__ import print_function
 from ctypes import c_bool
@@ -25,12 +26,9 @@ except ImportError:
     from Queue import Full as QFullExcept
     from Queue import Empty as QEmptyExcept
 
-import numpy as np
-
 
 class MPData(object):
-    """
-    Handles multi-process data generation.
+    """Handles multi-process data generation.
 
     Operation:
         - call start() to start the data generation
@@ -38,9 +36,7 @@ class MPData(object):
         - call reset() to stop data generation
     """
     def __init__(self, num_processes, max_queue_size, fn):
-        """
-
-        Parameters
+        """Parameters
         ----------
         num_processes: int
             Number of processes to spawn
@@ -56,22 +52,12 @@ class MPData(object):
         self.fn = fn
 
     def start(self):
-        """
-        Starts the processes
-        Parameters
-        ----------
-        fn: function
-
-        """
-        """
-        Starts the processes
-        """
+        """Starts the processes"""
         self._init_proc()
 
     @staticmethod
     def _proc_loop(proc_id, alive, queue, fn):
-        """
-        Thread loop for generating data
+        """Thread loop for generating data
 
         Parameters
         ----------
@@ -102,9 +88,7 @@ class MPData(object):
         queue.close()
 
     def _init_proc(self):
-        """
-        Start processes if not already started
-        """
+        """Start processes if not already started"""
         if not self.proc:
             self.proc = [
                 mp.Process(target=self._proc_loop, args=(i, self.alive, self.queue, self.fn))
@@ -115,8 +99,7 @@ class MPData(object):
                 p.start()
 
     def get(self):
-        """
-        Get a datum from the queue
+        """Get a datum from the queue
 
         Returns
         -------
@@ -127,9 +110,7 @@ class MPData(object):
         return self.queue.get()
 
     def reset(self):
-        """
-        Resets the generator by stopping all processes
-        """
+        """Resets the generator by stopping all processes"""
         self.alive.value = False
         qsize = 0
         try:

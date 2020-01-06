@@ -50,8 +50,8 @@ struct SFrameParam : public dmlc::Parameter<SFrameParam> {
   std::string path_sframe;
   std::string data_field;
   std::string label_field;
-  TShape data_shape;
-  TShape label_shape;
+  mxnet::TShape data_shape;
+  mxnet::TShape label_shape;
   DMLC_DECLARE_PARAMETER(SFrameParam) {
     DMLC_DECLARE_FIELD(path_sframe).set_default("")
     .describe("Dataset Param: path to image dataset sframe");

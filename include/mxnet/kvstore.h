@@ -38,6 +38,18 @@
 #endif  // MXNET_USE_DIST_KVSTORE
 
 namespace mxnet {
+
+/*!
+ * \brief enum to denote types of commands kvstore sends to server regarding profiler
+ * kSetConfig sets profiler configs. Similar to mx.profiler.set_config()
+ * kState allows changing state of profiler to stop or run
+ * kPause allows pausing and resuming of profiler
+ * kDump asks profiler to dump output
+ */
+enum class KVStoreServerProfilerCommand {
+  kSetConfig, kState, kPause, kDump
+};
+
 /*!
  * \brief distributed key-value store
  *
@@ -170,20 +182,49 @@ class KVStore {
    * \param keys the list of keys
    * \param values the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
+   * \param ignore_sparse whether to ignore sparse arrays in the request
    */
   virtual void Pull(const std::vector<int>& keys,
                     const std::vector<NDArray*>& values,
-                    int priority = 0) = 0;
+                    int priority = 0, bool ignore_sparse = true) = 0;
   /*!
    * \brief pull a list of key-value pairs from the store
    * \param keys the list of keys in string format
    * \param values the list of buffers for the pulled data, they should be preallocated
    * \param priority Priority of the action.
+   * \param ignore_sparse whether to ignore sparse arrays in the request
    */
   virtual void Pull(const std::vector<std::string>& str_keys,
                     const std::vector<NDArray*>& values,
-                    int priority = 0) = 0;
+                    int priority = 0, bool ignore_sparse = true) = 0;
 
+  /*!
+   * \brief push and pull a list of key-value pairs from the store
+   * \param vkeys the list of keys to be pushed
+   * \param okeys the list of keys to be pulled. Should be the same set of keys in vkeys.
+   * \param values the list of values to be pushed
+   * \param outs the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
+   */
+  virtual void PushPull(const std::vector<int>& vkeys,
+                        const std::vector<int>& okeys,
+                        const std::vector<NDArray>& values,
+                        const std::vector<NDArray*>& outs,
+                        int priority = 0) = 0;
+
+  /*!
+   * \brief push and pull a list of key-value pairs from the store
+   * \param vkeys the list of keys to be pushed in string format
+   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in vkeys.
+   * \param values the list of values to be pushed
+   * \param outs the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
+   */
+  virtual void PushPull(const std::vector<std::string>& str_vkeys,
+                        const std::vector<std::string>& str_okeys,
+                        const std::vector<NDArray>& values,
+                        const std::vector<NDArray*>& outs,
+                        int priority = 0) = 0;
   /*!
    * \brief pull a list of key-value pairs from the store.
    *        The NDArray pulled back will be in row_sparse storage with only the
@@ -229,6 +270,7 @@ class KVStore {
     CHECK(updater) << "invalid updater";
     updater_ = updater;
   }
+
   /*!
    * \brief set an updater with string keys
    *
@@ -360,6 +402,20 @@ class KVStore {
    * \param cmd_body the body of the command
    */
   virtual void SendCommandToServers(int cmd_id, const std::string& cmd_body) { }
+
+  /**
+   * \brief Sends server profiler commands to all server nodes
+   * Only the worker with rank=0 sends the command which will be received by all servers
+   * \param type ProfilerCommand type
+   * \param params parameters for that command in the form of a string
+   */
+  virtual void SetServerProfilerCommand(const KVStoreServerProfilerCommand type,
+                                        const std::string& params) {
+    LOG(INFO) << "Unable to pass server the profiler command. If you are using "
+              << "distributed kvstore, you need to compile with USE_DIST_KVSTORE=1."
+              << "If you are training on single machine, then there is no server process"
+              << "to profile. Please profile the worker process instead.";
+  }
 
   /**
    * \brief the prototype of a server controller

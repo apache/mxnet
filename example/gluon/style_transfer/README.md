@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # MXNet-Gluon-Style-Transfer
 
 This repo provides MXNet Implementation of **[Neural Style Transfer](#neural-style)** and **[MSG-Net](#real-time-style-transfer)**. 
@@ -95,6 +112,10 @@ python main.py optim --content-image images/content/venice-boat.jpg --style-imag
 
 ### Train Your Own MSG-Net Model
 0. Download the style images and COCO dataset
+Note: Dataset from [COCO 2014](http://cocodataset.org/#download).
+The dataset annotations and site are Copyright COCO Consortium and licensed CC BY 4.0 Attribution.
+The images within the dataset are available under the Flickr Terms of Use.
+See original [dataset source](http://cocodataset.org/#termsofuse) for details
 	```bash
     python download_images.py 
 	python dataset/download_dataset.py

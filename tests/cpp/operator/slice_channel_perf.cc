@@ -38,7 +38,7 @@ const kwargs_t basic_activation_args = { };
  * \brief Generic bidirectional sanity test
  */
 TEST(SLICE_CHANNEL_PERF, ExecuteBidirectional) {
-  TShape shape({1, 160, 200});
+  mxnet::TShape shape({1, 160, 200});
   kwargs_t kwargs = basic_activation_args;
   kwargs.push_back({"num_outputs", "160"});
   test::op::LegacyOpRunner<mxnet::op::SliceChannelProp, float, float> runner;
@@ -54,9 +54,9 @@ TEST(SLICE_CHANNEL_PERF, TimingCPU) {
   kwargs.push_back({"num_outputs", "160"});
   test::op::LegacyOpRunner<mxnet::op::SliceChannelProp, float, float> runner;
   runner.RunBidirectional(false,
-                          { TShape({1, 160, 200}) },
+                          { mxnet::TShape({1, 160, 200}) },
                           kwargs, 1);  // prime code and cache
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1, 160, 200},
@@ -71,7 +71,7 @@ TEST(SLICE_CHANNEL_PERF, TimingCPU) {
       {1, 160, 200}
     };
   }
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest("SliceChannel Operator CPU", false, false, kwargs, 2, 10, { shape });
   }
 }
@@ -87,16 +87,16 @@ TEST(SLICE_CHANNEL_PERF, TimingGPU) {
   test::OperatorRunner<mxnet::op::SliceChannelProp,
     test::op::LegacyOperatorExecutor<float, float>> runner;
   runner.RunBidirectional(true,
-                          { TShape({1, 160, 200}) },
+                          { mxnet::TShape({1, 160, 200}) },
                           kwargs, 1);  // prime code and cache
-  std::vector <TShape> shapes = {
+  std::vector <mxnet::TShape> shapes = {
       {1, 160, 200},
       {1, 160, 200},
       {1, 160, 200},
       {1, 160, 200},
       {1, 160, 200}
     };
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest("SliceChannel Operator GPU", true, false, kwargs, 2, 10, { shape });
   }
 }

@@ -339,7 +339,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Tool for testing caffe to mxnet conversion layer by layer')
     parser.add_argument('--image_url', type=str,
-                        default='http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg',
+                        default='https://github.com/dmlc/web-data/raw/master/mxnet/doc/'\
+                                'tutorials/python/predict_image/cat.jpg',
                         help='input image to test inference, can be either file path or url')
     parser.add_argument('--caffe_prototxt_path', type=str,
                         default='./model.prototxt',

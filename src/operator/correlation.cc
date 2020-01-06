@@ -73,8 +73,8 @@ inline void CorrelationForward(const Tensor<cpu, 4, Dtype> &out,
                         out[nbatch][top_channel][i][j] += \
                         tmp1[nbatch][y1+h][x1+w][channel]*tmp2[nbatch][y2+h][x2+w][channel];
                     else
-                        out[nbatch][top_channel][i][j] += \
-                        fabsf(tmp1[nbatch][y1+h][x1+w][channel]-tmp2[nbatch][y2+h][x2+w][channel]);
+                        out[nbatch][top_channel][i][j] += std::abs(\
+                        tmp1[nbatch][y1+h][x1+w][channel]-tmp2[nbatch][y2+h][x2+w][channel]);
                   }
               out[nbatch][top_channel][i][j] /= sumelems;
             }
@@ -148,11 +148,16 @@ inline void CorrelationBackward(const Tensor<cpu, 4, Dtype> &out_grad,
 namespace mxnet {
 namespace op {
 template<>
-Operator *CreateOp<cpu>(CorrelationParam param) {
-  return new CorrelationOp<cpu>(param);
+Operator *CreateOp<cpu>(CorrelationParam param, int dtype) {
+  Operator* op = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new CorrelationOp<cpu, DType>(param);
+  });
+  return op;
 }
-Operator* CorrelationProp::CreateOperator(Context ctx) const {
-  DO_BIND_DISPATCH(CreateOp, param_);
+Operator* CorrelationProp::CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+                                            std::vector<int> *in_type) const {
+  DO_BIND_DISPATCH(CreateOp, param_, in_type->at(0));
 }
 DMLC_REGISTER_PARAMETER(CorrelationParam);
 MXNET_REGISTER_OP_PROPERTY(Correlation, CorrelationProp)
@@ -170,6 +175,7 @@ For now we consider only a single comparison of two patches. The 'correlation' o
 :math:`x_{2}` in the second map is then defined as:
 
 .. math::
+
    c(x_{1}, x_{2}) = \sum_{o \in [-k,k] \times [-k,k]} <f_{1}(x_{1} + o), f_{2}(x_{2} + o)>
 
 for a square patch of size :math:`K:=2k+1`.

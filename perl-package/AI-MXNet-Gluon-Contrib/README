@@ -1,0 +1,7 @@
+This archive contains the distribution AI-MXNet-Gluon-Contrib,
+version 1.33:
+
+  Perl interface to MXNet Gluon Contib modules, a collection of supplemental Gluon blocks.
+
+This library is licensed under Apache 2.0 license https://www.apache.org/licenses/LICENSE-2.0
+

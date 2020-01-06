@@ -30,29 +30,32 @@ except ImportError:
 
 import ctypes
 import warnings
+import operator
 from array import array as native_array
 
 __all__ = ["_ndarray_cls", "csr_matrix", "row_sparse_array",
-           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray"]
+           "BaseSparseNDArray", "CSRNDArray", "RowSparseNDArray",
+           "add", "subtract", "multiply", "divide"]
 
 import numpy as np
 from ..base import NotSupportedForSparseNDArray
 from ..base import _LIB, numeric_types
 from ..base import c_array_buf, mx_real_t, integer_types
 from ..base import mx_uint, NDArrayHandle, check_call
-from ..context import Context
+from ..context import Context, current_context
 from . import _internal
 from . import op
 try:
-    from .gen_sparse import * # pylint: disable=redefined-builtin
+    from .gen_sparse import retain as gs_retain # pylint: disable=redefined-builtin
 except ImportError:
-    pass
+    gs_retain = None
 from ._internal import _set_ndarray_class
 from .ndarray import NDArray, _storage_type, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from .ndarray import _STORAGE_TYPE_STR_TO_ID, _STORAGE_TYPE_ROW_SPARSE, _STORAGE_TYPE_CSR
 from .ndarray import _STORAGE_TYPE_UNDEFINED, _STORAGE_TYPE_DEFAULT
 from .ndarray import zeros as _zeros_ndarray
 from .ndarray import array as _array
+from .ndarray import _ufunc_helper
 
 
 try:
@@ -114,6 +117,18 @@ class BaseSparseNDArray(NDArray):
         return '\n<%s %s @%s>' % (self.__class__.__name__,
                                   shape_info, self.context)
 
+    def __add__(self, other):
+        return add(self, other)
+
+    def __sub__(self, other):
+        return subtract(self, other)
+
+    def __mul__(self, other):
+        return multiply(self, other)
+
+    def __div__(self, other):
+        return divide(self, other)
+
     def __iadd__(self, other):
         raise NotImplementedError()
 
@@ -138,7 +153,7 @@ class BaseSparseNDArray(NDArray):
     def _slice(self, start, stop):
         raise NotSupportedForSparseNDArray(self._slice, None, start, stop)
 
-    def reshape(self, shape):
+    def reshape(self, *shape, **kwargs):
         raise NotSupportedForSparseNDArray(self.reshape, None, shape)
 
     @property
@@ -179,12 +194,19 @@ class BaseSparseNDArray(NDArray):
         """
         return self.tostype('default').asnumpy()
 
-    def astype(self, dtype):
-        """Returns a copy of the array after casting to a specified type.
+    def astype(self, dtype, copy=True):
+        """Return a copy of the array after casting to a specified type.
+
         Parameters
         ----------
         dtype : numpy.dtype or str
             The type of the returned array.
+        copy : bool
+            Default `True`. By default, astype always returns a newly
+            allocated ndarray on the same context. If this is set to
+            `False`, and the dtype requested is the same as the ndarray's
+            dtype, the ndarray is returned instead of a copy.
+
         Examples
         --------
         >>> x = mx.nd.sparse.zeros('row_sparse', (2,3), dtype='float32')
@@ -192,6 +214,9 @@ class BaseSparseNDArray(NDArray):
         >>> y.dtype
         <type 'numpy.int32'>
         """
+        if not copy and np.dtype(dtype) == self.dtype:
+            return self
+
         res = zeros(shape=self.shape, ctx=self.context,
                     dtype=dtype, stype=self.stype)
         self.copyto(res)
@@ -210,10 +235,11 @@ class BaseSparseNDArray(NDArray):
         NDArray or CSRNDArray or RowSparseNDArray
             The copied array.
         """
+        # pylint: disable= no-member, protected-access
         if isinstance(other, NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
-                return
+                return False
             return _internal._copyto(self, out=other)
         elif isinstance(other, Context):
             hret = _ndarray_cls(_new_alloc_handle(self.stype, self.shape, other,
@@ -221,6 +247,7 @@ class BaseSparseNDArray(NDArray):
             return _internal._copyto(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
+        # pylint: enable= no-member, protected-access
 
     def check_format(self, full_check=True):
         """Check whether the NDArray format is valid.
@@ -310,11 +337,11 @@ class CSRNDArray(BaseSparseNDArray):
     def __getitem__(self, key):
         """x.__getitem__(i) <=> x[i]
 
-        Returns a sliced view of this array.
+        Returns a newly created NDArray based on the indexing key.
 
         Parameters
         ----------
-        key : int or slice
+        key : int or mxnet.ndarray.NDArray.slice
             Indexing key.
 
         Examples
@@ -334,6 +361,7 @@ class CSRNDArray(BaseSparseNDArray):
         >>> a[-1].asnumpy()
         array([[ 4.,  5.,  6.]], dtype=float32)
         """
+        # pylint: disable= no-member, protected-access
         if isinstance(key, int):
             if key == -1:
                 begin = self.shape[0] - 1
@@ -351,6 +379,8 @@ class CSRNDArray(BaseSparseNDArray):
                 return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+        raise ValueError('Undefined behaviour for {}'.format(key))
+        # pylint: enable= no-member, protected-access
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -359,7 +389,7 @@ class CSRNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : mxnet.ndarray.NDArray.slice
             The indexing key.
         value : NDArray or CSRNDArray or numpy.ndarray
             The value to set.
@@ -372,7 +402,7 @@ class CSRNDArray(BaseSparseNDArray):
                [ 0.,  0.,  0.],
                [ 0.,  0.,  0.]], dtype=float32)
         >>> # assign CSRNDArray with same storage type
-        >>> x = mx.nd.ones('row_sparse', (3,3)).tostype('csr')
+        >>> x = mx.nd.ones((3,3)).tostype('csr')
         >>> x[:] = src
         >>> x.asnumpy()
         array([[ 1.,  1.,  1.],
@@ -390,7 +420,7 @@ class CSRNDArray(BaseSparseNDArray):
         if isinstance(key, py_slice):
             if key.step is not None or key.start is not None or key.stop is not None:
                 raise ValueError('Assignment with slice for CSRNDArray is not ' \
-                                 'implmented yet.')
+                                 'implemented yet.')
             if isinstance(value, NDArray):
                 # avoid copying to itself
                 if value.handle is not self.handle:
@@ -468,9 +498,11 @@ class CSRNDArray(BaseSparseNDArray):
         NDArray or CSRNDArray
             A copy of the array with the chosen storage stype
         """
+        # pylint: disable= no-member, protected-access
         if stype == 'row_sparse':
             raise ValueError("cast_storage from csr to row_sparse is not supported")
         return op.cast_storage(self, stype=stype)
+        # pylint: enable= no-member, protected-access
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -497,7 +529,7 @@ class CSRNDArray(BaseSparseNDArray):
             return super(CSRNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
-            if stype == 'default' or stype == 'csr':
+            if stype in ('default', 'csr'):
                 return super(CSRNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
@@ -521,8 +553,8 @@ class CSRNDArray(BaseSparseNDArray):
         indices = self.indices.asnumpy()
         indptr = self.indptr.asnumpy()
         if not spsp:
-            raise ImportError("scipy is not available. \
-                               Please check if the scipy python bindings are installed.")
+            raise ImportError("scipy could not be imported. "
+                              "Please make sure that the scipy is installed.")
         return spsp.csr_matrix((data, indices, indptr), shape=self.shape, dtype=self.dtype)
 
 # pylint: disable=abstract-method
@@ -594,7 +626,7 @@ class RowSparseNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : mxnet.ndarray.NDArray.slice
             Indexing key.
 
         Examples
@@ -609,10 +641,11 @@ class RowSparseNDArray(BaseSparseNDArray):
         if isinstance(key, py_slice):
             if key.step is not None or key.start is not None or key.stop is not None:
                 raise Exception('RowSparseNDArray only supports [:] for __getitem__')
-            else:
-                return self
+
+            return self
         if isinstance(key, tuple):
             raise ValueError('Multi-dimension indexing is not supported')
+        raise ValueError('Undefined behaviour for {}'.format(key))
 
     def __setitem__(self, key, value):
         """x.__setitem__(i, y) <=> x[i]=y
@@ -621,7 +654,7 @@ class RowSparseNDArray(BaseSparseNDArray):
 
         Parameters
         ----------
-        key : slice
+        key : mxnet.ndarray.NDArray.slice
             The indexing key.
         value : NDArray or numpy.ndarray
             The value to set.
@@ -647,6 +680,7 @@ class RowSparseNDArray(BaseSparseNDArray):
                [ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
         """
+        # pylint: disable= no-member, protected-access
         if not self.writable:
             raise ValueError('Failed to assign to a readonly RowSparseNDArray')
         if isinstance(key, py_slice):
@@ -669,6 +703,7 @@ class RowSparseNDArray(BaseSparseNDArray):
         else:
             assert(isinstance(key, (int, tuple)))
             raise TypeError('RowSparseNDArray only supports [:] for assignment')
+        # pylint: enable= no-member, protected-access
 
     @property
     def indices(self):
@@ -710,9 +745,11 @@ class RowSparseNDArray(BaseSparseNDArray):
         NDArray or RowSparseNDArray
             A copy of the array with the chosen storage stype
         """
+        # pylint: disable= no-member, protected-access
         if stype == 'csr':
             raise ValueError("cast_storage from row_sparse to csr is not supported")
         return op.cast_storage(self, stype=stype)
+        # pylint: enable= no-member, protected-access
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -739,7 +776,7 @@ class RowSparseNDArray(BaseSparseNDArray):
             return super(RowSparseNDArray, self).copyto(other)
         elif isinstance(other, NDArray):
             stype = other.stype
-            if stype == 'default' or stype == 'row_sparse':
+            if stype in ('default', 'row_sparse'):
                 return super(RowSparseNDArray, self).copyto(other)
             else:
                 raise TypeError('copyto does not support destination NDArray stype ' + str(stype))
@@ -752,7 +789,9 @@ class RowSparseNDArray(BaseSparseNDArray):
         The arguments are the same as for :py:func:`retain`, with
         this array as data.
         """
-        return retain(self, *args, **kwargs)
+        if not gs_retain:
+            raise ImportError("gen_sparse could not be imported")
+        return gs_retain(*args, **kwargs)
 
 def _prepare_src_array(source_array, dtype):
     """Prepare `source_array` so that it can be used to construct NDArray.
@@ -901,6 +940,9 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
                     row = row.asnumpy()
                 if isinstance(col, NDArray):
                     col = col.asnumpy()
+                if not spsp:
+                    raise ImportError("scipy could not be imported. "
+                                      "Please make sure that the scipy is installed.")
                 coo = spsp.coo_matrix((data, (row, col)), shape=shape)
                 _check_shape(coo.shape, shape)
                 csr = coo.tocsr()
@@ -939,9 +981,10 @@ def csr_matrix(arg1, shape=None, ctx=None, dtype=None):
 def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
                                 dtype=None, indices_type=None, indptr_type=None):
     """Create a `CSRNDArray` based on data, indices and indptr"""
+    # pylint: disable= no-member, protected-access
     storage_type = 'csr'
     # context
-    ctx = Context.default_ctx if ctx is None else ctx
+    ctx = current_context() if ctx is None else ctx
     # types
     dtype = _prepare_default_dtype(data, dtype)
     indptr_type = _STORAGE_AUX_TYPES[storage_type][0] if indptr_type is None else indptr_type
@@ -975,6 +1018,7 @@ def _csr_matrix_from_definition(data, indices, indptr, shape=None, ctx=None,
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indptr.handle, ctypes.c_int(0)))
     check_call(_LIB.MXNDArraySyncCopyFromNDArray(result.handle, indices.handle, ctypes.c_int(1)))
     return result
+    # pylint: enable= no-member, protected-access
 
 def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
     """Creates a `RowSparseNDArray`, a multidimensional row sparse array with a set of \
@@ -984,28 +1028,28 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
 
     - row_sparse_array(D):
         to construct a RowSparseNDArray with a dense ndarray ``D``
-            -  **D** (*array_like*) - An object exposing the array interface, an object whose \
-            `__array__` method returns an array, or any (nested) sequence.
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is ``D.dtype`` if ``D`` is an NDArray or numpy.ndarray, \
-            float32 otherwise.
+        -  **D** (*array_like*) - An object exposing the array interface, an object whose \
+        `__array__` method returns an array, or any (nested) sequence.
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        The default dtype is ``D.dtype`` if ``D`` is an NDArray or numpy.ndarray, \
+        float32 otherwise.
 
     - row_sparse_array(S)
         to construct a RowSparseNDArray with a sparse ndarray ``S``
-            -  **S** (*RowSparseNDArray*) - A sparse ndarray.
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is ``S.dtype``.
+        -  **S** (*RowSparseNDArray*) - A sparse ndarray.
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        The default dtype is ``S.dtype``.
 
     - row_sparse_array((D0, D1 .. Dn))
         to construct an empty RowSparseNDArray with shape ``(D0, D1, ... Dn)``
-            -  **D0, D1 .. Dn** (*int*) - The shape of the ndarray
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        -  **D0, D1 .. Dn** (*int*) - The shape of the ndarray
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
             The default dtype is float32.
 
     - row_sparse_array((data, indices))
@@ -1016,35 +1060,35 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
         represented by RowSparseNDArray ``rsp`` has \
         ``dense[rsp.indices[i], :, :, :, ...] = rsp.data[i, :, :, :, ...]``
         The row indices for are expected to be **sorted in ascending order.** \
-            - **data** (*array_like*) - An object exposing the array interface, which \
-            holds all the non-zero row slices of the array.
-            - **indices** (*array_like*) - An object exposing the array interface, which \
-            stores the row index for each row slice with non-zero elements.
-            - **shape** (*tuple of int, optional*) - The shape of the array. The default \
-            shape is inferred from the indices and indptr arrays.
-            - **ctx** (*Context, optional*) - Device context \
-            (default is the current default context).
-            - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
-            The default dtype is float32.
+        - **data** (*array_like*) - An object exposing the array interface, which \
+        holds all the non-zero row slices of the array.
+        - **indices** (*array_like*) - An object exposing the array interface, which \
+        stores the row index for each row slice with non-zero elements.
+        - **shape** (*tuple of int, optional*) - The shape of the array. The default \
+        shape is inferred from the indices and indptr arrays.
+        - **ctx** (*Context, optional*) - Device context \
+        (default is the current default context).
+        - **dtype** (*str or numpy.dtype, optional*) - The data type of the output array. \
+        The default dtype is float32.
 
     Parameters
     ----------
-    arg1: NDArray, numpy.ndarray, RowSparseNDArray, tuple of int or tuple of array_like
+    arg1 : NDArray, numpy.ndarray, RowSparseNDArray, tuple of int or tuple of array_like
         The argument to help instantiate the row sparse ndarray. See above for further details.
     shape : tuple of int, optional
-        The shape of the row sparse ndarray.
+        The shape of the row sparse ndarray. (Default value = None)
     ctx : Context, optional
         Device context (default is the current default context).
     dtype : str or numpy.dtype, optional
-        The data type of the output array.
+        The data type of the output array. (Default value = None)
 
     Returns
     -------
     RowSparseNDArray
         An `RowSparseNDArray` with the `row_sparse` storage representation.
 
-    Example
-    -------
+    Examples
+    --------
     >>> a = mx.nd.sparse.row_sparse_array(([[1, 2], [3, 4]], [1, 4]), shape=(6, 2))
     >>> a.asnumpy()
     array([[ 0.,  0.],
@@ -1063,7 +1107,7 @@ def row_sparse_array(arg1, shape=None, ctx=None, dtype=None):
         arg_len = len(arg1)
         if arg_len < 2:
             raise ValueError("Unexpected length of input tuple: " + str(arg_len))
-        elif arg_len > 2:
+        if arg_len > 2:
             # empty ndarray with shape
             _check_shape(arg1, shape)
             return empty('row_sparse', arg1, ctx=ctx, dtype=dtype)
@@ -1103,7 +1147,7 @@ def _row_sparse_ndarray_from_definition(data, indices, shape=None, ctx=None,
     """Create a `RowSparseNDArray` based on data and indices"""
     storage_type = 'row_sparse'
     # context
-    ctx = Context.default_ctx if ctx is None else ctx
+    ctx = current_context() if ctx is None else ctx
     # types
     dtype = _prepare_default_dtype(data, dtype)
     indices_type = _STORAGE_AUX_TYPES[storage_type][0] if indices_type is None else indices_type
@@ -1149,6 +1193,320 @@ def _ndarray_cls(handle, writable=True, stype=_STORAGE_TYPE_UNDEFINED):
 _set_ndarray_class(_ndarray_cls)
 
 
+def add(lhs, rhs):
+    """Returns element-wise sum of the input arrays with broadcasting.
+
+    Equivalent to ``lhs + rhs``, ``mx.nd.broadcast_add(lhs, rhs)`` and
+    ``mx.nd.broadcast_plus(lhs, rhs)`` when shapes of lhs and rhs do not
+    match. If lhs.shape == rhs.shape, this is equivalent to
+    ``mx.nd.elemwise_add(lhs, rhs)``
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+        then the arrays are broadcastable to a common shape.abs
+
+    Parameters
+    ----------
+    lhs : scalar or mxnet.ndarray.sparse.array
+        First array to be added.
+    rhs : scalar or mxnet.ndarray.sparse.array
+         Second array to be added.
+        If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        The element-wise sum of the input arrays.
+
+    Examples
+    --------
+    >>> a = mx.nd.ones((2,3)).tostype('csr')
+    >>> b = mx.nd.ones((2,3)).tostype('csr')
+    >>> a.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> b.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> (a+b).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> c = mx.nd.ones((2,3)).tostype('row_sparse')
+    >>> d = mx.nd.ones((2,3)).tostype('row_sparse')
+    >>> c.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> d.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> (c+d).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.elemwise_add,
+            operator.add,
+            _internal._plus_scalar,
+            None)
+
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_add,
+        operator.add,
+        _internal._plus_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+
+def subtract(lhs, rhs):
+    """Returns element-wise difference of the input arrays with broadcasting.
+
+    Equivalent to ``lhs - rhs``, ``mx.nd.broadcast_sub(lhs, rhs)`` and
+    ``mx.nd.broadcast_minus(lhs, rhs)`` when shapes of lhs and rhs do not
+    match. If lhs.shape == rhs.shape, this is equivalent to
+    ``mx.nd.elemwise_sub(lhs, rhs)``
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+        then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or mxnet.ndarray.sparse.array
+        First array to be subtracted.
+    rhs : scalar or mxnet.ndarray.sparse.array
+         Second array to be subtracted.
+        If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.__spec__
+
+    Returns
+    -------
+    NDArray
+        The element-wise difference of the input arrays.
+
+    Examples
+    --------
+    >>> a = mx.nd.ones((2,3)).tostype('csr')
+    >>> b = mx.nd.ones((2,3)).tostype('csr')
+    >>> a.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> b.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> (a-b).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    >>> c = mx.nd.ones((2,3)).tostype('row_sparse')
+    >>> d = mx.nd.ones((2,3)).tostype('row_sparse')
+    >>> c.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> d.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> (c-d).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 0.,  0.,  0.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.elemwise_sub,
+            operator.sub,
+            _internal._minus_scalar,
+            None)
+
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_sub,
+        operator.sub,
+        _internal._minus_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+
+def multiply(lhs, rhs):
+    """Returns element-wise product of the input arrays with broadcasting.
+
+        Equivalent to ``lhs * rhs`` and ``mx.nd.broadcast_mul(lhs, rhs)``
+        when shapes of lhs and rhs do not match. If lhs.shape == rhs.shape,
+        this is equivalent to ``mx.nd.elemwise_mul(lhs, rhs)``
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+        then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or mxnet.ndarray.sparse.array
+        First array to be multiplied.
+    rhs : scalar or mxnet.ndarray.sparse.array
+         Second array to be multiplied.
+        If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        The element-wise multiplication of the input arrays.
+
+    Examples
+    --------
+    >>> x = mx.nd.ones((2,3)).tostype('csr')
+    >>> y = mx.nd.arange(2).reshape((2,1))
+    >>> z = mx.nd.arange(3)
+    >>> x.asnumpy()
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 0.],
+           [ 1.]], dtype=float32)
+    >>> z.asnumpy()
+    array([ 0.,  1.,  2.], dtype=float32)
+    >>> (x*2).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> (x*y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> mx.nd.sparse.multiply(x, y).asnumpy()
+    array([[ 0.,  0.,  0.],
+           [ 1.,  1.,  1.]], dtype=float32)
+    >>> (x*z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    >>> mx.nd.sparse.multiply(x, z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    >>> z = z.reshape((1, 3))
+    >>> z.asnumpy()
+    array([[ 0.,  1.,  2.]], dtype=float32)
+    >>> (x*z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    >>> mx.nd.sparse.multiply(x, z).asnumpy()
+    array([[ 0.,  1.,  2.],
+           [ 0.,  1.,  2.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.elemwise_mul,
+            operator.mul,
+            _internal._mul_scalar,
+            None)
+
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_mul,
+        operator.mul,
+        _internal._mul_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+
+def divide(lhs, rhs):
+    """Returns element-wise division of the input arrays with broadcasting.
+
+    Equivalent to ``lhs / rhs`` and ``mx.nd.broadcast_div(lhs, rhs)``
+    when shapes of lhs and rhs do not match. If lhs.shape == rhs.shape,
+    this is equivalent to ``mx.nd.elemwise_div(lhs, rhs)``
+
+    .. note::
+
+        If the corresponding dimensions of two arrays have the same size or one of them has size 1,
+        then the arrays are broadcastable to a common shape.
+
+    Parameters
+    ----------
+    lhs : scalar or mxnet.ndarray.sparse.array
+        First array in division.
+    rhs : scalar or mxnet.ndarray.sparse.array
+         Second array in division.
+        The arrays to be divided. If ``lhs.shape != rhs.shape``, they must be
+        broadcastable to a common shape.
+
+    Returns
+    -------
+    NDArray
+        The element-wise division of the input arrays.
+
+    Examples
+    --------
+    >>> x = (mx.nd.ones((2,3))*6).tostype('csr')
+    >>> y = mx.nd.arange(2).reshape((2,1)) + 1
+    >>> z = mx.nd.arange(3) + 1
+    >>> x.asnumpy()
+    array([[ 6.,  6.,  6.],
+           [ 6.,  6.,  6.]], dtype=float32)
+    >>> y.asnumpy()
+    array([[ 1.],
+           [ 2.]], dtype=float32)
+    >>> z.asnumpy()
+    array([ 1.,  2.,  3.], dtype=float32)
+    >>> x/2
+    <NDArray 2x3 @cpu(0)>
+    >>> (x/3).asnumpy()
+    array([[ 2.,  2.,  2.],
+           [ 2.,  2.,  2.]], dtype=float32)
+    >>> (x/y).asnumpy()
+    array([[ 6.,  6.,  6.],
+           [ 3.,  3.,  3.]], dtype=float32)
+    >>> mx.nd.sparse.divide(x,y).asnumpy()
+    array([[ 6.,  6.,  6.],
+           [ 3.,  3.,  3.]], dtype=float32)
+    >>> (x/z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    >>> mx.nd.sprase.divide(x,z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    >>> z = z.reshape((1,3))
+    >>> z.asnumpy()
+    array([[ 1.,  2.,  3.]], dtype=float32)
+    >>> (x/z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    >>> mx.nd.sparse.divide(x,z).asnumpy()
+    array([[ 6.,  3.,  2.],
+           [ 6.,  3.,  2.]], dtype=float32)
+    """
+    # pylint: disable= no-member, protected-access
+    if isinstance(lhs, NDArray) and isinstance(rhs, NDArray) and lhs.shape == rhs.shape:
+        return _ufunc_helper(
+            lhs,
+            rhs,
+            op.elemwise_div,
+            operator.truediv,
+            _internal._div_scalar,
+            None)
+
+    return _ufunc_helper(
+        lhs,
+        rhs,
+        op.broadcast_div,
+        operator.truediv,
+        _internal._div_scalar,
+        None)
+    # pylint: enable= no-member, protected-access
+
+
 def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     """Return a new array of given shape and type, filled with zeros.
 
@@ -1174,17 +1532,19 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     >>> mx.nd.sparse.zeros('row_sparse', (1,2), ctx=mx.cpu(), dtype='float16').asnumpy()
     array([[ 0.,  0.]], dtype=float16)
     """
+    # pylint: disable= no-member, protected-access
     if stype == 'default':
         return _zeros_ndarray(shape, ctx=ctx, dtype=dtype, **kwargs)
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     dtype = mx_real_t if dtype is None else dtype
-    if stype == 'row_sparse' or stype == 'csr':
+    if stype in ('row_sparse', 'csr'):
         aux_types = _STORAGE_AUX_TYPES[stype]
     else:
         raise ValueError("unknown storage type" + stype)
     out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
+    # pylint: enable= no-member, protected-access
 
 
 def empty(stype, shape, ctx=None, dtype=None):
@@ -1209,11 +1569,11 @@ def empty(stype, shape, ctx=None, dtype=None):
     if isinstance(shape, int):
         shape = (shape, )
     if ctx is None:
-        ctx = Context.default_ctx
+        ctx = current_context()
     if dtype is None:
         dtype = mx_real_t
     assert(stype is not None)
-    if stype == 'csr' or stype == 'row_sparse':
+    if stype in ('csr', 'row_sparse'):
         return zeros(stype, shape, ctx=ctx, dtype=dtype)
     else:
         raise Exception("unknown stype : " + str(stype))
@@ -1250,7 +1610,7 @@ def array(source_array, ctx=None, dtype=None):
     >>> mx.nd.sparse.array(mx.nd.sparse.zeros('row_sparse', (3, 2)))
     <RowSparseNDArray 3x2 @cpu(0)>
     """
-    ctx = Context.default_ctx if ctx is None else ctx
+    ctx = current_context() if ctx is None else ctx
     if isinstance(source_array, NDArray):
         assert(source_array.stype != 'default'), \
                "Please use `tostype` to create RowSparseNDArray or CSRNDArray from an NDArray"

@@ -38,7 +38,7 @@ static void RunCoreOpBidirectional(const bool isGPU,
                                    const kwargs_t& op_kwargs,
                                    const char *op_name,
                                    const char *backward_op_name = "") {
-  const TShape shape({5, 5});
+  const mxnet::TShape shape({5, 5});
   test::op::CoreOpExecutor<DType> op(isGPU, { shape });
   op.set_verbose(false);
 
@@ -69,7 +69,7 @@ static void RunCoreOpTimingTest(const bool isGPU,
   runner.RunBidirectional(false, { {20, 3, 128, 128} }, kwargs, 1);
 
   // Do the performance runs
-  std::vector <TShape> shapes;
+  std::vector <mxnet::TShape> shapes;
   if (test::performance_run) {
     shapes = {
       {1,  1, 28,  28},
@@ -85,7 +85,7 @@ static void RunCoreOpTimingTest(const bool isGPU,
     };
   }
   const char *pu = isGPU ? "GPU" : "CPU";
-  for (const TShape &shape : shapes) {
+  for (const mxnet::TShape &shape : shapes) {
     runner.TimingTest(std::string(op_name) + " Operator " + pu, isGPU, false, kwargs,
                       2, 10, { shape });
   }

@@ -44,7 +44,10 @@ enum BilinearSamplerOpOutputs {kOut, kTmp};
 }
 
 struct BilinearSamplerParam : public dmlc::Parameter<BilinearSamplerParam> {
+  dmlc::optional<bool> cudnn_off;
   DMLC_DECLARE_PARAMETER(BilinearSamplerParam) {
+    DMLC_DECLARE_FIELD(cudnn_off).set_default(dmlc::optional<bool>())
+        .describe("whether to turn cudnn off");
   }
 };
 
@@ -92,19 +95,16 @@ class BilinearSamplerOp : public Operator {
     Tensor<xpu, 4, DType> gdata = in_grad[bs::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> ggrid = in_grad[bs::kGrid].get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> grad = out_grad[bs::kOut].get<xpu, 4, DType>(s);
-    if (req[bs::kData] != kNullOp && req[bs::kGrid] != kNullOp) {
+    if (req[bs::kData] == kNullOp && req[bs::kGrid] == kNullOp) {
+      return;
+    } else {
       if (req[bs::kData] == kWriteTo) {
         gdata = scalar<DType>(0.0f);
       }
       if (req[bs::kGrid] == kWriteTo) {
         ggrid = scalar<DType>(0.0f);
       }
-      BilinearSamplerBackward(gdata, ggrid, grad, data, grid);
-    } else if (req[bs::kData] == kNullOp && req[bs::kGrid] == kNullOp) {
-      return;
-    } else {
-      LOG(FATAL) << "Have not implemented the data req combinations! gdata_req="
-                 << req[bs::kData] << " ggrid_req=" << req[bs::kGrid];
+      BilinearSamplerBackward(gdata, ggrid, grad, data, grid, req[bs::kData], req[bs::kGrid]);
     }
   }
 
@@ -142,17 +142,17 @@ class BilinearSamplerProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 2U) << "Input:[data, grid]";
-    const TShape &dshape = (*in_shape)[bs::kData];
-    const TShape &lshape = (*in_shape)[bs::kGrid];
-    if (dshape.ndim() == 0) return false;
+    const mxnet::TShape &dshape = (*in_shape)[bs::kData];
+    const mxnet::TShape &lshape = (*in_shape)[bs::kGrid];
+    if (!shape_is_known(dshape)) return false;
     CHECK_EQ(dshape.ndim(), 4U) \
         << "input data should be 4D in batch-num_filter-y-x";
-    if (lshape.ndim() ==  0) return false;
+    if (!shape_is_known(lshape)) return false;
     CHECK_EQ(lshape.ndim(), 4U) \
       << "Sampler grid should be 4D in batch-2-y-x";
     CHECK_EQ(dshape[0], lshape[0]);
@@ -176,12 +176,12 @@ class BilinearSamplerProp : public OperatorProperty {
                    std::vector<int> *out_type,
                    std::vector<int> *aux_type) const override {
       int dtype = -1;
-      for (size_t i = 0; i < in_type->size(); ++i) {
+      for (int type : *in_type) {
         if (dtype == -1) {
-          dtype = in_type->at(i);
+          dtype = type;
         } else {
-          CHECK(in_type->at(i) == dtype ||
-                in_type->at(i) == -1) <<
+          CHECK(type == dtype ||
+              type == -1) <<
                 "Non-uniform data type in BilinearSampler";
         }
       }
@@ -226,7 +226,7 @@ class BilinearSamplerProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

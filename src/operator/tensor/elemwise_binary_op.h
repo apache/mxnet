@@ -99,11 +99,13 @@ class ElemwiseBinaryOp : public OpBase {
     return a1.var() == a2.var();
   }
 
+ public:
   /*! \brief Minimum of three */
   static MSHADOW_XINLINE size_t minthree(const size_t a, const size_t b, const size_t c) {
     return a < b ? (a < c ? a : c) : (b < c ? b : c);
   }
 
+ private:
   template<typename xpu, typename LOP, typename ROP, typename DType>
   static void BackwardUseNone_(const nnvm::NodeAttrs &attrs,
                                const OpContext &ctx,
@@ -165,12 +167,11 @@ class ElemwiseBinaryOp : public OpBase {
     typename xpu,
     typename LOP,
     typename ROP,
-    typename DType,
     bool in0_ok_dense = false,
     bool in1_ok_dense = false,
     bool in2_ok_dense = false,
     typename BackupCompute>
-  static inline void BackwardUseInEx_(const nnvm::NodeAttrs &attrs,
+  static inline void RspRspOpBackward(const nnvm::NodeAttrs &attrs,
                                       const OpContext &ctx,
                                       const std::vector<NDArray> &inputs,
                                       const std::vector<OpReqType> &req,
@@ -180,37 +181,56 @@ class ElemwiseBinaryOp : public OpBase {
     // lhs grad
     if (req[0] != kNullOp) {
       // RspRspOp can handle dense outputs so long as OP(0, 0) == 0
-      MSHADOW_IDX_TYPE_SWITCH(inputs[1].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, LOP>(
+      RspRspOp<LOP>(
           s, attrs, ctx, inputs[1], inputs[2], req[0], outputs[0],
           false, false, false, false);
-      });
       // lhs in-place
-      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, op::mshadow_op::mul>(
+      RspRspOp<op::mshadow_op::mul>(
           s, attrs, ctx, outputs[0], inputs[0], req[0], outputs[0],
           false, false, true, false);
-      });
     }
     // rhs grad
     if (req[1] != kNullOp) {
-      MSHADOW_IDX_TYPE_SWITCH(inputs[1].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, ROP>(
-          s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
-          false, false, false, false);
-      });
+      RspRspOp<ROP>(
+        s, attrs, ctx, inputs[1], inputs[2], req[1], outputs[1],
+        false, false, false, false);
       // rhs in-place
-      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(rowsparse::kIdx), IType, {
-        RspRspOp<DType, IType, op::mshadow_op::mul>(
-          s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
-          false, false, true, false);
-      });
+      RspRspOp<op::mshadow_op::mul>(
+        s, attrs, ctx, inputs[0], outputs[1], req[1], outputs[1],
+        false, false, true, false);
     }
   }
 
- protected:
+  template<typename xpu, typename LOP, typename ROP>
+  static inline void DnsCsrCsrOpBackward(const nnvm::NodeAttrs &attrs,
+                                         const OpContext &ctx,
+                                         const std::vector<NDArray> &inputs,
+                                         const std::vector<OpReqType> &req,
+                                         const std::vector<NDArray> &outputs) {
+    const bool supported_ops = std::is_same<mshadow_op::right, LOP>::value &&
+                                std::is_same<mshadow_op::left, ROP>::value;
+    CHECK(supported_ops)
+      << "Only backward for mul is supported (LOP should be right, ROP should be left)";
+    const NDArray& out_grad = inputs[0];
+    const NDArray& lhs_in = inputs[1];
+    const NDArray& rhs_in = inputs[2];
+    const NDArray& lhs_grad = outputs[0];
+    const NDArray& rhs_grad = outputs[1];
+    const bool reverse = (outputs[0].storage_type() == kCSRStorage);
+    if (reverse) {
+      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, rhs_in, req[0], lhs_grad, false);
+      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), lhs_in.data()}, {req[1]},
+                                    {rhs_grad.data()});
+    } else {
+      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, lhs_in, req[1], rhs_grad, false);
+      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), rhs_in.data()}, {req[0]},
+                                    {lhs_grad.data()});
+    }
+  }
+
+ public:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
-  template<typename DType, typename IType, typename OP>
+  template<typename OP>
   static void RspRspOp(mshadow::Stream<cpu> *s,
                        const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
@@ -223,15 +243,82 @@ class ElemwiseBinaryOp : public OpBase {
                        bool allow_inplace,
                        bool scatter);
 
+  /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
+  template<typename OP>
+  static void RspRspOp(mshadow::Stream<gpu> *s,
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       OpReqType req,
+                       const NDArray &output,
+                       bool lhs_may_be_dense,
+                       bool rhs_may_be_dense,
+                       bool allow_inplace,
+                       bool scatter);
+
   /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
-  template<typename DType, typename IType, typename CType, typename OP>
-  static inline void CsrCsrOp(mshadow::Stream<cpu> *s,
-                              const nnvm::NodeAttrs &attrs,
-                              const OpContext &ctx,
-                              const NDArray &lhs,
-                              const NDArray &rhs,
-                              OpReqType req,
-                              const NDArray &output);
+  template<typename OP>
+  static void CsrCsrOp(mshadow::Stream<cpu> *s,
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       OpReqType req,
+                       const NDArray &output);
+
+  /*! \brief CSR -op- CSR binary operator for non-canonical NDArray */
+  template<typename OP>
+  static void CsrCsrOp(mshadow::Stream<gpu> *s,
+                       const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const NDArray &lhs,
+                       const NDArray &rhs,
+                       OpReqType req,
+                       const NDArray &output);
+
+  /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+  template<typename OP>
+  static void DnsCsrDnsOp(mshadow::Stream<cpu> *s,
+                          const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
+
+  /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+  template<typename OP>
+  static void DnsCsrDnsOp(mshadow::Stream<gpu> *s,
+                          const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
+
+  /*! \brief DNS -op- CSR binary operator for non-canonical NDArray */
+  template<typename xpu, typename OP>
+  static void DnsCsrCsrOp(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
+
+  /*! \brief DNS -op- RSP binary operator for non-canonical NDArray */
+  template<typename xpu, typename OP>
+  static void DnsRspDnsOp(mshadow::Stream<xpu> *s,
+                          const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const NDArray &lhs,
+                          const NDArray &rhs,
+                          OpReqType req,
+                          const NDArray &output,
+                          const bool reverse);
 
  public:
   /*!
@@ -250,7 +337,9 @@ class ElemwiseBinaryOp : public OpBase {
                                           std::vector<int> *out_attrs);
 
   /*!
-   * \brief Allow one of the inputs to be dense and still produce a sparse output
+   * \brief Allow one of the binary inputs to be dense and still produce a sparse output.
+   *        Typically used for sparse * dense = sparse.
+   *        Note: for csr, it dispatches to fallback other than csr, csr -> csr
    * \param attrs Attributes
    * \param dev_mask Device mask
    * \param dispatch_mode Dispatch Mode
@@ -258,12 +347,12 @@ class ElemwiseBinaryOp : public OpBase {
    * \param out_attrs Output storage attributes
    * \return true if handled
    */
-  template<bool lhs_dense_ok = true, bool rhs_dense_ok = true>
-  static bool AllowLRDenseInputWithSparseOutputStorageType(const nnvm::NodeAttrs& attrs,
-                                                           int dev_mask,
-                                                           DispatchMode* dispatch_mode,
-                                                           std::vector<int> *in_attrs,
-                                                           std::vector<int> *out_attrs) {
+  static bool PreferSparseStorageType(const nnvm::NodeAttrs& attrs,
+                                      int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int> *in_attrs,
+                                      std::vector<int> *out_attrs) {
+    using namespace common;
     CHECK_EQ(in_attrs->size(), 2U) << " in operator " << attrs.name;
     CHECK_EQ(out_attrs->size(), 1U) << " in operator " << attrs.name;
     const auto& lhs_stype = in_attrs->at(0);
@@ -273,37 +362,102 @@ class ElemwiseBinaryOp : public OpBase {
     const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
     const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
                              DispatchMode::kFComputeEx;
-    if (!dispatched && lhs_stype == kDefaultStorage && rhs_stype == kDefaultStorage) {
+    if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
       // dns, dns -> dns
       dispatched = storage_type_assign(&out_stype, kDefaultStorage,
                                        dispatch_mode, DispatchMode::kFCompute);
     }
-    if (!dispatched) {
-      if ((lhs_stype == kRowSparseStorage && rhs_stype == kRowSparseStorage) ||
-          (rhs_dense_ok && lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
-          (lhs_dense_ok && lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) {
+    if (!dispatched && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
         // rsp, rsp -> rsp
+        dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
+                                         dispatch_mode, dispatch_ex);
+    }
+    if (!dispatched && ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+        // csr, csr -> csr
+        dispatched = storage_type_assign(&out_stype, kCSRStorage,
+                                         dispatch_mode, dispatch_ex);
+    }
+    if (!dispatched &&
+        ((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+         (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage))) {
         // rsp, dns -> rsp
         // dns, rsp -> rsp
         dispatched = storage_type_assign(&out_stype, kRowSparseStorage,
                                          dispatch_mode, dispatch_ex);
-      } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
-        // csr, csr -> csr
-        dispatched = storage_type_assign(&out_stype, kCSRStorage,
-                                         dispatch_mode, dispatch_ex);
-      } else if ((lhs_stype == kCSRStorage && rhs_dense_ok) ||
-        (rhs_stype == kCSRStorage && lhs_dense_ok)) {
+    }
+    if (!dispatched &&
+        ((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
+         (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage))) {
         // csr, dns -> csr
         // dns, csr -> csr
         dispatched = storage_type_assign(&out_stype, kCSRStorage,
-                                         dispatch_mode, DispatchMode::kFComputeFallback);
-      }
+                                         dispatch_mode, DispatchMode::kFComputeEx);
     }
     if (!dispatched) {
       dispatched = dispatch_fallback(out_attrs, dispatch_mode);
     }
     return dispatched;
   }
+
+
+  /*!
+   * \brief Allow one of the inputs to be dense and produce a dense output,
+   *        for rsp inputs only support when both inputs are rsp type.
+   * \param attrs Attributes
+   * \param dev_mask Device mask
+   * \param dispatch_mode Dispatch Mode
+   * \param in_attrs Input storage attributes
+   * \param out_attrs Output storage attributes
+   * \return true if handled
+   */
+  template<bool cpu_only, bool rsp, bool csr>
+  static bool PreferDenseStorageType(const nnvm::NodeAttrs& attrs,
+                                     const int dev_mask,
+                                     DispatchMode* dispatch_mode,
+                                     std::vector<int> *in_attrs,
+                                     std::vector<int> *out_attrs) {
+    using namespace common;
+    CHECK_EQ(in_attrs->size(), 2);
+    CHECK_EQ(out_attrs->size(), 1);
+    const auto lhs_stype = (*in_attrs)[0];
+    const auto rhs_stype = (*in_attrs)[1];
+    bool dispatched = false;
+    const bool invalid_ctx = cpu_only && dev_mask != mshadow::cpu::kDevMask;
+    const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
+                                           DispatchMode::kFComputeEx;
+    if (!dispatched && ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
+      // dns, dns ... -> dns
+      dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFCompute);
+    }
+    if (!dispatched && rsp && ContainsOnlyStorage(*in_attrs, kRowSparseStorage)) {
+      // rsp, rsp, ... -> rsp
+      dispatched = storage_type_assign(out_attrs, kRowSparseStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
+    if (!dispatched && csr && ContainsOnlyStorage(*in_attrs, kCSRStorage)) {
+      // csr, csr, ... -> csr
+      dispatched = storage_type_assign(out_attrs, kCSRStorage,
+                                       dispatch_mode, dispatch_ex);
+    }
+    if (!dispatched && ((lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage) ||
+                        (lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage))) {
+      // dense, csr -> dense / csr, dense -> dense
+      dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
+    if (!dispatched && ((lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage) ||
+                        (lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage))) {
+      // dense, rsp -> dense / rsp, dense -> dense
+      dispatched = storage_type_assign(out_attrs, kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+    }
+    if (!dispatched) {
+      dispatch_fallback(out_attrs, dispatch_mode);
+    }
+    return true;
+  }
+
 
   /*!
    * \brief Backward pass computing input gradient using forward inputs
@@ -321,26 +475,103 @@ class ElemwiseBinaryOp : public OpBase {
                                        std::vector<int> *out_attrs);
 
   template<typename xpu, typename OP>
+  static void ComputeInt(const nnvm::NodeAttrs &attrs,
+                         const OpContext &ctx,
+                         const std::vector<TBlob> &inputs,
+                         const std::vector<OpReqType> &req,
+                         const std::vector<TBlob> &outputs) {
+    using namespace mxnet_op;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MXNET_INT_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
+        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+          outputs[0].dptr<DType>(),
+          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+        }
+      });
+    });
+  }
+
+  template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
                       const std::vector<OpReqType> &req,
                       const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
-    if (req[0] != kNullOp) {
-      Stream<xpu> *s = ctx.get_stream<xpu>();
-      CHECK_EQ(inputs.size(), 2U);
-      CHECK_EQ(outputs.size(), 1U);
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-          const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
-          + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    if (outputs[0].type_flag_ == mshadow::kBool) {
+      LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
+    }
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
+        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+        if (size != 0) {
           Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
-        });
+        }
       });
-    }
+    });
+  }
+
+  template<typename xpu, typename OP>
+  static void ComputeWithBool(const nnvm::NodeAttrs &attrs,
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
+    using namespace mxnet_op;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
+        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+        if (size != 0) {
+          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+          outputs[0].dptr<DType>(),
+          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
+        }
+      });
+    });
+  }
+
+  template<typename xpu, typename OP>
+  static void ComputeLogic(const nnvm::NodeAttrs &attrs,
+                           const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs) {
+    using namespace mxnet_op;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+          const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
+          + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+          if (size != 0) {
+            Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+                                                                outputs[0].dptr<bool>(),
+                                                                inputs[0].dptr<DType>(),
+                                                                inputs[1].dptr<DType>());
+          }
+      });
+    });
   }
 
   template<typename xpu, typename OP>
@@ -350,20 +581,21 @@ class ElemwiseBinaryOp : public OpBase {
                                const std::vector<OpReqType> &req,
                                const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
-    if (req[0] != kNullOp) {
-      Stream<xpu> *s = ctx.get_stream<xpu>();
-      CHECK_EQ(inputs.size(), 2U);
-      CHECK_EQ(outputs.size(), 1U);
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-          const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
-          + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+    if (req[0] == kNullOp) return;
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
+        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
+        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
+        if (size != 0) {
           Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
-        });
+        }
       });
-    }
+    });
   }
 
   template<typename xpu, typename OP>
@@ -372,33 +604,39 @@ class ElemwiseBinaryOp : public OpBase {
                         const std::vector<NDArray> &inputs,
                         const std::vector<OpReqType> &req,
                         const std::vector<NDArray> &outputs) {
+    using namespace common;
     CHECK_EQ(inputs.size(), 2);
     CHECK_EQ(outputs.size(), 1);
     if (req[0] == kNullOp) return;
     const auto lhs_stype = inputs[0].storage_type();
+    const auto rhs_stype = inputs[1].storage_type();
     const auto out_stype = outputs[0].storage_type();
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    if ((common::ContainsOnlyStorage(inputs, kRowSparseStorage))
-        && (out_stype == kRowSparseStorage || out_stype == kDefaultStorage)) {
+    if ((ContainsOnlyStorage(inputs, kRowSparseStorage)) &&
+        (out_stype == kRowSparseStorage || out_stype == kDefaultStorage)) {
       // rsp, rsp -> rsp
       // rsp, rsp -> dns
-      const int rsp_input_idx = lhs_stype == kRowSparseStorage ? 0 : 1;
-      MSHADOW_IDX_TYPE_SWITCH(inputs[rsp_input_idx].aux_type(rowsparse::kIdx), IType, {
-        MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-          RspRspOp<DType, IType, OP>(
+      RspRspOp<OP>(
             s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0], false, false, false, false);
-        });
-      });
-    } else if (common::ContainsOnlyStorage(inputs, kCSRStorage) && out_stype == kCSRStorage) {
+    } else if (ContainsOnlyStorage(inputs, kCSRStorage) && out_stype == kCSRStorage) {
       // csr, csr -> csr
-      MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIdx), IType, {
-        MSHADOW_IDX_TYPE_SWITCH(inputs[0].aux_type(csr::kIndPtr), CType, {
-          MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-            CsrCsrOp<DType, IType, CType, OP>(
-              s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0]);
-          });
-        });
-      });
+      CsrCsrOp<OP>(s, attrs, ctx, inputs[0], inputs[1], req[0], outputs[0]);
+    } else if (((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
+                (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage)) &&
+                out_stype == kDefaultStorage) {
+      const NDArray& dns = (lhs_stype == kDefaultStorage)? inputs[0] : inputs[1];
+      const NDArray& csr = (lhs_stype == kCSRStorage)? inputs[0] : inputs[1];
+      const bool reverse = (lhs_stype == kCSRStorage);
+
+      DnsCsrDnsOp<OP>(s, attrs, ctx, dns, csr, req[0], outputs[0], reverse);
+    } else if (((lhs_stype == kRowSparseStorage && rhs_stype == kDefaultStorage) ||
+                (lhs_stype == kDefaultStorage && rhs_stype == kRowSparseStorage)) &&
+                out_stype == kDefaultStorage) {
+      const NDArray& dns = (lhs_stype == kDefaultStorage)? inputs[0] : inputs[1];
+      const bool reverse = (lhs_stype == kRowSparseStorage);
+      const NDArray& rsp = (reverse)? inputs[0] : inputs[1];
+
+      DnsRspDnsOp<xpu, OP>(s, attrs, ctx, dns, rsp, req[0], outputs[0], reverse);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
@@ -432,15 +670,19 @@ class ElemwiseBinaryOp : public OpBase {
       //   rsp, dns -> dns  <-- NOT ALLOWED
       //   dns, rsp -> dns  <-- NOT ALLOWED
       mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-      MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-        MSHADOW_IDX_TYPE_SWITCH(outputs[0].aux_type(rowsparse::kIdx), IType, {
-          RspRspOp<DType, IType, OP>(
+      RspRspOp<OP>(
             s, attrs, ctx, inputs[0], inputs[1],
             req[0], outputs[0], lhs_may_be_dense, rhs_may_be_dense, false, false);
-        });
-      });
     } else if (lhs_stype == kCSRStorage && rhs_stype == kCSRStorage) {
       ComputeEx<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    } else if (((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
+                (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage)) &&
+                out_stype == kCSRStorage) {
+      const NDArray& dns = (lhs_stype == kDefaultStorage)? inputs[0] : inputs[1];
+      const NDArray& csr = (lhs_stype == kCSRStorage)? inputs[0] : inputs[1];
+      const bool reverse = (lhs_stype == kCSRStorage);
+
+      DnsCsrCsrOp<xpu, OP>(attrs, ctx, dns, csr, req[0], outputs[0], reverse);
     } else {
       LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
     }
@@ -484,7 +726,7 @@ class ElemwiseBinaryOp : public OpBase {
       if (in_stype == lhs_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
         CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> rsp, _. op requires 0-input returns 0-output
-        DCHECK_LT(fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
+        DCHECK_LT(std::fabs(static_cast<float>(LOP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, LOP>(attrs, ctx, inputs, req, {outputs[0]});
       } else {
         LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
@@ -495,7 +737,7 @@ class ElemwiseBinaryOp : public OpBase {
       if (in_stype == rhs_stype && (in_stype == kRowSparseStorage || in_stype == kCSRStorage)) {
         CHECK_EQ(outputs[0].storage_type(), in_stype);
         // rsp -> _, rsp. op requires 0-input returns 0-output
-        DCHECK_LT(fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
+        DCHECK_LT(std::fabs(static_cast<float>(ROP::Map(0))), 1e-5f);
         UnaryOp::ComputeEx<xpu, ROP>(attrs, ctx, inputs, req, {outputs[1]});
       } else {
         LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
@@ -536,16 +778,21 @@ class ElemwiseBinaryOp : public OpBase {
     using namespace common;
     CHECK_EQ(inputs.size(), 3U);
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
+    const auto out_grad_stype = inputs[0].storage_type();
     const auto lhs_grad_stype = outputs[0].storage_type();
     const auto rhs_grad_stype = outputs[1].storage_type();
     if (ContainsOnlyStorage(inputs, kRowSparseStorage) &&
         (lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
       // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-      MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-        BackwardUseInEx_<xpu, LOP, ROP, DType, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
-          attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
-      });
+      RspRspOpBackward<xpu, LOP, ROP, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+        attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
+    }
+    if (((lhs_grad_stype == kDefaultStorage && rhs_grad_stype == kCSRStorage) ||
+         (lhs_grad_stype == kCSRStorage && rhs_grad_stype == kDefaultStorage)) &&
+        out_grad_stype == kDefaultStorage) {
+      // dns, csr, dns -> [csr, dns] / csr, dns, dns -> [dns, csr]
+      DnsCsrCsrOpBackward<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
     }
   }
 };  // class ElemwiseBinaryOp
@@ -559,7 +806,7 @@ class ElemwiseBinaryOp : public OpBase {
     [](const NodeAttrs& attrs) {                                    \
       return std::vector<std::string>{"lhs", "rhs"};                \
     })                                                              \
-  .set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<2, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)     \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
@@ -579,6 +826,19 @@ class ElemwiseBinaryOp : public OpBase {
     [](const NodeAttrs& attrs) { \
       return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
 
+/*! \brief Binary launch, with FComputeEx for csr and rsp available.
+           when inputs contain both sparse and dense, sparse output is preferred. */
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PS(__name$, __kernel$)           \
+  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                               \
+  .set_attr<FInferStorageType>("FInferStorageType",                                     \
+                               ElemwiseBinaryOp::PreferSparseStorageType)               \
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)       \
+  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>) \
+  .set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */ \
+    [](const NodeAttrs& attrs) { \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
+
+
 /*! \brief Binary launch, dense result
  *         FInferStorageType attr is not set using this macro.
  *         By default DefaultStorageType is used.
@@ -590,6 +850,16 @@ class ElemwiseBinaryOp : public OpBase {
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)              \
   .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>)
 
+/*! \brief Binary launch, with FComputeEx for prefer dense */
+#define MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(__name$, __kernel$)              \
+  MXNET_OPERATOR_REGISTER_BINARY(__name$)                                               \
+  .set_attr<FInferStorageType>("FInferStorageType",                                     \
+    ElemwiseBinaryOp::PreferDenseStorageType<true, true, true>)                         \
+  .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::Compute<cpu, __kernel$>)       \
+  .set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::ComputeEx<cpu, __kernel$>) \
+  .set_attr<FResourceRequest>("FResourceRequest",  /* For Sparse CSR */ \
+    [](const NodeAttrs& attrs) { \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};})
 
 }  // namespace op
 }  // namespace mxnet

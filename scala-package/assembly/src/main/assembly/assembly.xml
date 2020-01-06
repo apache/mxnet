@@ -1,0 +1,73 @@
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~    http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<assembly>
+  <id>full</id>
+  <formats>
+    <format>jar</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <dependencySets>
+    <dependencySet>
+      <includes>
+        <include>*:*:jar</include>
+      </includes>
+      <excludes>
+        <exclude>org.scala-lang:*</exclude>
+        <exclude>org.scala-lang.modules:*</exclude>
+        <exclude>commons-io:commons-io</exclude>
+        <exclude>commons-codec:commons-codec</exclude>
+        <exclude>org.slf4j:slf4j-api</exclude>
+        <exclude>args4j:args4j</exclude>
+      </excludes>
+      <outputDirectory>.</outputDirectory>
+      <useProjectArtifact>false</useProjectArtifact>
+      <unpack>true</unpack>
+      <scope>runtime</scope>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/native</outputDirectory>
+      <outputFileNameMapping>libmxnet-scala.${libtype}</outputFileNameMapping>
+      <unpack>false</unpack>
+      <useProjectArtifact>false</useProjectArtifact>
+      <useStrictFiltering>false</useStrictFiltering>
+      <includes>
+        <include>org.apache.mxnet:libmxnet-scala:${libtype}</include>
+      </includes>
+    </dependencySet>
+  </dependencySets>
+  <fileSets>
+    <fileSet>
+      <directory>${MXNET_DIR}/lib</directory>
+      <includes>
+        <include>libmxnet.so</include>
+        <include>libtvm_runtime.so</include>
+        <include>libgfortran.so.3</include>
+        <include>libquadmath.so.0</include>
+      </includes>
+      <outputDirectory>lib/native</outputDirectory>
+    </fileSet>
+    <fileSet>
+      <directory>${MXNET_DIR}/licenses</directory>
+      <includes>
+        <include>LICENSE.binary.dependencies</include>
+        <include>NOTICE</include>
+        <include>LICENSE</include>
+      </includes>
+      <outputDirectory>.</outputDirectory>
+    </fileSet>
+  </fileSets>
+</assembly>

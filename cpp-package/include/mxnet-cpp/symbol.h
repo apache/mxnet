@@ -138,7 +138,7 @@ class Symbol {
   /*!
   * \return the SymbolHandle
   */
-  SymbolHandle GetHandle() const { return blob_ptr_->handle_; }
+  SymbolHandle GetHandle() const { return (blob_ptr_) ? blob_ptr_->handle_: NULL; }
   /*!
   * \brief construct an operator Symbol, with given input Symbol and config
   * \param name the name of the Symbol
@@ -178,6 +178,25 @@ class Symbol {
   std::vector<std::string> ListOutputs() const;
   /*! \return get the descriptions of auxiliary data for this symbol */
   std::vector<std::string> ListAuxiliaryStates() const;
+  /*! \return get all attributes for this symbol */
+  std::map<std::string, std::string> ListAttributes() const;
+  /*!
+   * \brief set key-value attribute to the symbol
+   * @param key string represent the key for the attribute
+   * @param value string represent the value for the attribute
+   */
+  void SetAttribute(const std::string& key, const std::string& value);
+  /*!
+   * \brief set a series of key-value attribute to the symbol
+   * @param attrs string:string map represent the key value attributes
+   */
+  void SetAttributes(const std::map<std::string, std::string>& attrs);
+  /*! \return get number of outputs for this symbol */
+  mx_uint GetNumOutputs() const;
+  /*! \return get the new symbol through subgraph API for this symbol */
+  mxnet::cpp::Symbol GetBackendSymbol(const std::string& backendName) const;
+  /*! \return get the name of the symbol */
+  std::string GetName() const;
   /*!
   * \brief infer and construct all the arrays to bind to executor by providing
   * some known arrays.

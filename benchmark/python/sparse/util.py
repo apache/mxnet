@@ -24,7 +24,7 @@ def estimate_density(DATA_PATH, feature_size):
         raise Exception("Data is not there!")
     density = []
     P = 0.01
-    for _ in xrange(10):
+    for _ in range(10):
         num_non_zero = 0
         num_sample = 0
         with open(DATA_PATH) as f:

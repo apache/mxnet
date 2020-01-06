@@ -21,7 +21,7 @@ use AI::MXNet::Function::Parameters;
 
 =head1 NAME
 
-    AI::MXNet::RNN::Params
+    AI::MXNet::RNN::Params - A container for holding variables.
 =cut
 
 =head1 DESCRIPTION

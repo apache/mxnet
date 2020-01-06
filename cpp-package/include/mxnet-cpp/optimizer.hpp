@@ -125,13 +125,16 @@ inline float Optimizer::GetWD_(int index) {
 }
 
 inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
-  MXNETCPP_REGISTER_OPTIMIZER(sgd, SGDOptimizer);
-  MXNETCPP_REGISTER_OPTIMIZER(ccsgd, SGDOptimizer);  // For backward compatibility
-  MXNETCPP_REGISTER_OPTIMIZER(rmsprop, RMSPropOptimizer);
-  MXNETCPP_REGISTER_OPTIMIZER(adam, AdamOptimizer);
-  MXNETCPP_REGISTER_OPTIMIZER(adagrad, AdaGradOptimizer);
-  MXNETCPP_REGISTER_OPTIMIZER(adadelta, AdaDeltaOptimizer);
-  MXNETCPP_REGISTER_OPTIMIZER(signum, SignumOptimizer);
+  if (cmap().empty()) {
+    // Optimizers should only be registered once
+    MXNETCPP_REGISTER_OPTIMIZER(sgd, SGDOptimizer);
+    MXNETCPP_REGISTER_OPTIMIZER(ccsgd, SGDOptimizer);  // For backward compatibility
+    MXNETCPP_REGISTER_OPTIMIZER(rmsprop, RMSPropOptimizer);
+    MXNETCPP_REGISTER_OPTIMIZER(adam, AdamOptimizer);
+    MXNETCPP_REGISTER_OPTIMIZER(adagrad, AdaGradOptimizer);
+    MXNETCPP_REGISTER_OPTIMIZER(adadelta, AdaDeltaOptimizer);
+    MXNETCPP_REGISTER_OPTIMIZER(signum, SignumOptimizer);
+  }
   auto it = cmap().find(name);
   if (it == cmap().end())
     return nullptr;

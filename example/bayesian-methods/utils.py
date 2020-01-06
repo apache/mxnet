@@ -14,11 +14,10 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
+"""Generate helper functions to Stochastic Gradient Langevin Dynamics (SGLD) and Bayesian Dark Knowledge (BDK)"""
+import numpy
 import mxnet as mx
 import mxnet.ndarray as nd
-import numpy
-import logging
 
 
 class BiasXavier(mx.initializer.Xavier):
@@ -26,7 +25,9 @@ class BiasXavier(mx.initializer.Xavier):
         scale = numpy.sqrt(self.magnitude / arr.shape[0])
         mx.random.uniform(-scale, scale, out=arr)
 
+
 class SGLDScheduler(mx.lr_scheduler.LRScheduler):
+    """Create SGLDScheduler class"""
     def __init__(self, begin_rate, end_rate, total_iter_num, factor):
         super(SGLDScheduler, self).__init__()
         if factor >= 1.0:
@@ -44,7 +45,9 @@ class SGLDScheduler(mx.lr_scheduler.LRScheduler):
         self.count += 1
         return self.base_lr
 
+
 def get_executor(sym, ctx, data_inputs, initializer=None):
+    """Get executor to Stochastic Gradient Langevin Dynamics and/or Bayesian Dark Knowledge"""
     data_shapes = {k: v.shape for k, v in data_inputs.items()}
     arg_names = sym.list_arguments()
     aux_names = sym.list_auxiliary_states()
@@ -62,14 +65,18 @@ def get_executor(sym, ctx, data_inputs, initializer=None):
             initializer(k, v)
     return exe, params, params_grad, aux_states
 
+
 def copy_param(exe, new_param=None):
+    """Create copy of parameters"""
     if new_param is None:
-        new_param = {k: nd.empty(v.shape, ctx=mx.cpu()) for k,v in exe.arg_dict.items()}
+        new_param = {k: nd.empty(v.shape, ctx=mx.cpu()) for k, v in exe.arg_dict.items()}
     for k, v in new_param.items():
         exe.arg_dict[k].copyto(v)
     return new_param
 
+
 def sample_test_acc(exe, X, Y, sample_pool=None, label_num=None, minibatch_size=100):
+    """Generate sample test to evaluate accuracy"""
     if label_num is None:
         pred = numpy.zeros((X.shape[0],)).astype('float32')
     else:
@@ -89,12 +96,12 @@ def sample_test_acc(exe, X, Y, sample_pool=None, label_num=None, minibatch_size=
     else:
         old_param = copy_param(exe)
         for sample in sample_pool:
-            if type(sample) is list:
+            if isinstance(sample, list):
                 denominator += sample[0]
             else:
                 denominator += 1.0
         for sample in sample_pool:
-            if type(sample) is list:
+            if isinstance(sample, list):
                 ratio = sample[0]/denominator
                 param = sample[1]
             else:
@@ -118,11 +125,12 @@ def sample_test_acc(exe, X, Y, sample_pool=None, label_num=None, minibatch_size=
 
 
 def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save_path="regression.txt"):
+    """Generate a sample test regression"""
     old_param = copy_param(exe)
     if sample_pool is not None:
         pred = numpy.zeros(Y.shape + (len(sample_pool),))
         ratio = numpy.zeros((len(sample_pool),))
-        if type(sample_pool[0]) is list:
+        if isinstance(sample_pool[0], list):
             denominator = sum(sample[0] for sample in sample_pool)
             for i, sample in enumerate(sample_pool):
                 ratio[i] = sample[0]/float(denominator)
@@ -130,7 +138,7 @@ def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save
             ratio[:] = 1.0/ Y.shape[0]
         iterator = mx.io.NDArrayIter(data=X, label=Y, batch_size=minibatch_size, shuffle=False)
         for i, sample in enumerate(sample_pool):
-            if type(sample) is list:
+            if isinstance(sample, list):
                 sample_param = sample[1]
             else:
                 sample_param = sample
@@ -146,7 +154,7 @@ def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save
                 curr_instance += batch_len
         mean = pred.mean(axis=2)
         var = pred.std(axis=2)**2
-        #print numpy.concatenate((Y, mean), axis=1)
+        # print numpy.concatenate((Y, mean), axis=1)
         mse = numpy.square(Y.reshape((Y.shape[0], )) - mean.reshape((mean.shape[0], ))).mean()
         numpy.savetxt(save_path, numpy.concatenate((mean, var), axis=1))
     else:
@@ -157,15 +165,19 @@ def sample_test_regression(exe, X, Y, sample_pool=None, minibatch_size=100, save
         for batch in iterator:
             exe.arg_dict['data'][:] = batch.data[0]
             exe.forward(is_train=False)
-            mean_var[curr_instance:curr_instance + minibatch_size - batch.pad, 0] = exe.outputs[0].asnumpy()[:minibatch_size - batch.pad].flatten()
-            mean_var[curr_instance:curr_instance + minibatch_size - batch.pad, 1] = numpy.exp(exe.outputs[1].asnumpy())[:minibatch_size - batch.pad].flatten()
+            mean_var[curr_instance:curr_instance + minibatch_size - batch.pad, 0] =\
+                exe.outputs[0].asnumpy()[:minibatch_size - batch.pad].flatten()
+            mean_var[curr_instance:curr_instance + minibatch_size - batch.pad, 1] = \
+                numpy.exp(exe.outputs[1].asnumpy())[:minibatch_size - batch.pad].flatten()
             curr_instance += minibatch_size - batch.pad
         mse = numpy.square(Y.reshape((Y.shape[0],)) - mean_var[:, 0]).mean()
         numpy.savetxt(save_path, mean_var)
     exe.copy_params_from(old_param)
     return mse
 
+
 def pred_test(testing_data, exe, param_list=None, save_path=""):
+    """Generate prediction on testset"""
     ret = numpy.zeros((testing_data.shape[0], 2))
     if param_list is None:
         for i in range(testing_data.shape[0]):
@@ -177,8 +189,8 @@ def pred_test(testing_data, exe, param_list=None, save_path=""):
     else:
         for i in range(testing_data.shape[0]):
             pred = numpy.zeros((len(param_list),))
-            for j in range(len(param_list)):
-                exe.copy_params_from(param_list[j])
+            for (j, param) in enumerate(param_list):
+                exe.copy_params_from(param)
                 exe.arg_dict['data'][:] = testing_data[i, 0]
                 exe.forward(is_train=False)
                 pred[j] = exe.outputs[0].asnumpy()

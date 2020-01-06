@@ -40,7 +40,7 @@ def readme():
         return f.read()
 
 setup(name='mxnet-to-coreml',
-      version='0.1.0',
+      version='0.1.3',
       description='Tool to convert MXNet models into Apple CoreML model format.',
       long_description=readme(),
       classifiers=[

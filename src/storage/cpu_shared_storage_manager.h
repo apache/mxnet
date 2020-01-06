@@ -20,10 +20,7 @@
 #ifndef MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 
-#if MXNET_USE_CUDA
-  #include <cuda_runtime.h>
-#endif  // MXNET_USE_CUDA
-#include <mxnet/base.h>
+#if !defined(ANDROID) && !defined(__ANDROID__)
 
 #ifndef _WIN32
 #include <sys/mman.h>
@@ -46,8 +43,6 @@
 #include <limits>
 
 #include "./storage_manager.h"
-#include "../common/cuda_utils.h"
-
 
 namespace mxnet {
 namespace storage {
@@ -74,6 +69,7 @@ class CPUSharedStorageManager final : public StorageManager {
 
   void Alloc(Storage::Handle* handle) override;
   void Free(Storage::Handle handle) override {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     pool_.erase(handle.dptr);
     FreeImpl(handle);
   }
@@ -119,13 +115,19 @@ class CPUSharedStorageManager final : public StorageManager {
 };  // class CPUSharedStorageManager
 
 void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
+  if (handle->size == 0) {
+    handle->dptr = nullptr;
+    return;
+  }
+
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
   int fid = -1;
+  std::string filename;
   bool is_new = false;
   size_t size = handle->size + alignment_;
-  void *ptr = nullptr;
-  #ifdef _WIN32
+  void* ptr = nullptr;
+#ifdef _WIN32
   CheckAndRealFree();
   HANDLE map_handle = nullptr;
   uint32_t error = 0;
@@ -134,7 +136,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
     handle->shared_pid = _getpid();
     for (int i = 0; i < 10; ++i) {
       handle->shared_id = dis(rand_gen_);
-      auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
+      filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
       map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                      NULL, PAGE_READWRITE, 0, size, filename.c_str());
       if ((error = GetLastError()) == ERROR_SUCCESS) {
@@ -142,7 +144,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
       }
     }
   } else {
-    auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
+    filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
     map_handle = OpenFileMapping(FILE_MAP_READ | FILE_MAP_WRITE,
                                  FALSE, filename.c_str());
     error = GetLastError();
@@ -163,18 +165,26 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
     handle->shared_pid = getpid();
     for (int i = 0; i < 10; ++i) {
       handle->shared_id = dis(rand_gen_);
-      auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
+      filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
       fid = shm_open(filename.c_str(), O_EXCL|O_CREAT|O_RDWR, 0666);
       if (fid != -1) break;
     }
   } else {
-    auto filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
+#ifdef __linux__
+    fid = handle->shared_id;
+#else
+    filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
     fid = shm_open(filename.c_str(), O_RDWR, 0666);
+#endif  // __linux__
   }
 
   if (fid == -1) {
-    LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
-               << strerror(errno);
+    if (is_new) {
+      LOG(FATAL) << "Failed to open shared memory. shm_open failed with error "
+                 << strerror(errno);
+    } else {
+      LOG(FATAL) << "Invalid file descriptor from shared array.";
+    }
   }
 
   if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
@@ -182,7 +192,18 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
   ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
-  close(fid);
+#ifdef __linux__
+  handle->shared_id = fid;
+  if (is_new) {
+    CHECK_EQ(shm_unlink(filename.c_str()), 0)
+      << "Failed to unlink shared memory. shm_unlink failed with error "
+      << strerror(errno);
+  }
+#else
+  CHECK_EQ(close(fid), 0)
+      << "Failed to close shared memory. close failed with error "
+      << strerror(errno);
+#endif  // __linux__
 #endif  // _WIN32
 
   if (is_new) {
@@ -203,12 +224,20 @@ void CPUSharedStorageManager::FreeImpl(const Storage::Handle& handle) {
       << "Failed to unmap shared memory. munmap failed with error "
       << strerror(errno);
 
+#ifdef __linux__
+  if (handle.shared_id != -1) {
+  CHECK_EQ(close(handle.shared_id), 0)
+      << "Failed to close shared memory. close failed with error "
+      << strerror(errno);
+  }
+#else
   if (count == 0) {
     auto filename = SharedHandleToString(handle.shared_pid, handle.shared_id);
     CHECK_EQ(shm_unlink(filename.c_str()), 0)
         << "Failed to unlink shared memory. shm_unlink failed with error "
         << strerror(errno);
   }
+#endif  // __linux__
 #endif  // _WIN32
 }
 
@@ -234,5 +263,7 @@ inline void CPUSharedStorageManager::CheckAndRealFree() {
 #endif  // _WIN32
 }  // namespace storage
 }  // namespace mxnet
+
+#endif  // !defined(ANDROID) && !defined(__ANDROID__)
 
 #endif  // MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_

@@ -17,10 +17,12 @@
 
 use strict;
 use warnings;
-use Test::More tests => 257;
+use Test::More tests => 428;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
-use AI::MXNet::TestUtils qw(almost_equal enumerate same_array dies_like);
+use AI::MXNet::TestUtils qw(almost_equal enumerate same_array dies_like rand_ndarray);
+$ENV{MXNET_STORAGE_FALLBACK_LOG_VERBOSE} = 0;
+$ENV{MXNET_SUBGRAPH_VERBOSE} = 0;
 
 sub test_module_layout
 {
@@ -351,7 +353,7 @@ sub test_module_input_grads
 
 sub test_executor_group
 {
-    my $get_rnn_sym = sub { my ($num_layers, $num_words, $num_hidden, $num_embed, $seq_len) = @_;
+    my $get_rnn_sym = sub { my ($num_layers, $num_words, $num_hidden, $num_embed, $seq_len, $sparse_embedding) = @_;
         my $stack = mx->rnn->SequentialRNNCell();
         for my $i (0..$num_layers-1)
         {
@@ -359,8 +361,20 @@ sub test_executor_group
         }
         my $data = mx->sym->Variable('data');
         my $label = mx->sym->Variable('softmax_label');
-        my $embed = mx->sym->Embedding(data=>$data, input_dim=>$num_words,
+        my $embed;
+        if($sparse_embedding)
+        {
+            my $embed_weight = mx->sym->Variable('embed_weight', stype=>'row_sparse');
+            $embed = mx->sym->contrib->SparseEmbedding(data=>$data, input_dim=>$num_words,
+                                                   weight=>$embed_weight, output_dim=>$num_embed,
+                                                   name=>'embed');
+
+        }
+        else
+        {
+            $embed = mx->sym->Embedding(data=>$data, input_dim=>$num_words,
                                  output_dim=>$num_embed, name=>'embed');
+        }
 
         $stack->reset();
         my ($outputs, $states) = $stack->unroll($seq_len, inputs=>$embed, merge_outputs=>1);
@@ -373,7 +387,7 @@ sub test_executor_group
         return $pred;
     };
 
-    my $test_shared_exec_group = sub { my ($exec_grp_shared, $exec_grp_created, $shared_arg_names, $extra_args) = @_;
+    my $test_shared_exec_group = sub { my ($exec_grp_shared, $exec_grp_created, $shared_arg_names, $extra_args, $check_grads) = @_;
         # Test shared data arrays
         for my $i (0..@{ $exec_grp_shared->execs }-1)
         {
@@ -408,8 +422,11 @@ sub test_executor_group
                 # test shared argument gradients
                 for my $arg_name (@$shared_arg_names)
                 {
-                    ok(exists $exec_created->grad_dict->{$arg_name});
-                    ok(same_array($exec_shared->grad_dict->{$arg_name}, $exec_created->grad_dict->{$arg_name}));
+                    if($check_grads)
+                    {
+                        ok(exists $exec_created->grad_dict->{$arg_name});
+                        ok(same_array($exec_shared->grad_dict->{$arg_name}, $exec_created->grad_dict->{$arg_name}));
+                    }
                 }
             }
             my $grad_req = $exec_grp_shared->grad_req;
@@ -419,52 +436,199 @@ sub test_executor_group
             }
         }
     };
-    my $contexts = [mx->cpu(0), mx->cpu(1)];
-    my $workload = [(1) x scalar(@$contexts)];
-    my $batch_size = 32;
-    my $max_bucket_size = 80;
-    my $num_words = 1000;
-    my $num_hidden = 100;
-    my $num_embed = 200;
-    my $data_shapes = [['data', [$batch_size, $max_bucket_size]]];
-    my $label_shapes = [['softmax_label', [$batch_size, $max_bucket_size]]];
 
-    # generate an rnn sym with #layers=5
-    my $sym = $get_rnn_sym->(3, $num_words, $num_hidden,
-                      $num_embed, $max_bucket_size);
-    my $arg_names1 = $sym->list_arguments();
-    my $input_names = ['data', 'softmax_label'];
-    my $shared_arg_names = [grep { !/^(?:data|softmax_label)$/ } @$arg_names1];
-    my $exec_group1 = AI::MXNet::DataParallelExecutorGroup->new(
-        symbol=>$sym, contexts=>$contexts,
-        workload=>$workload, data_shapes=>$data_shapes,
-        label_shapes=>$label_shapes, param_names=>$shared_arg_names,
-        for_training=>1, inputs_need_grad=>0
-    );
-    # shared_data_arrays should only have input "data" and "softmax_label" arrays
-    for my $i (0..@{$contexts}-1)
+    for my $sparse_embedding (0, 1)
     {
-        ok(keys(%{$exec_group1->shared_data_arrays->[$i]}) == @$input_names);
-        for my $name (@$input_names)
+        my $contexts = [mx->cpu(0), mx->cpu(1)];
+        my $workload = [(1) x scalar(@$contexts)];
+        my $batch_size = 32;
+        my $max_bucket_size = 80;
+        my $num_words = 1000;
+        my $num_hidden = 100;
+        my $num_embed = 200;
+        my $data_shapes = [['data', [$batch_size, $max_bucket_size]]];
+        my $label_shapes = [['softmax_label', [$batch_size, $max_bucket_size]]];
+
+        # generate an rnn sym with #layers=5
+        my $sym = $get_rnn_sym->(3, $num_words, $num_hidden,
+                      $num_embed, $max_bucket_size, $sparse_embedding);
+        my $arg_names1 = $sym->list_arguments();
+        my $input_names = ['data', 'softmax_label'];
+        my $shared_arg_names = [grep { !/^(?:data|softmax_label)$/ } @$arg_names1];
+        my $exec_group1 = AI::MXNet::DataParallelExecutorGroup->new(
+            symbol=>$sym, contexts=>$contexts,
+            workload=>$workload, data_shapes=>$data_shapes,
+            label_shapes=>$label_shapes, param_names=>$shared_arg_names,
+            for_training=>1, inputs_need_grad=>0
+        );
+        # shared_data_arrays should only have input "data" and "softmax_label" arrays
+        for my $i (0..@{$contexts}-1)
         {
-            ok(exists $exec_group1->shared_data_arrays->[$i]->{$name});
+            ok(keys(%{$exec_group1->shared_data_arrays->[$i]}) == @$input_names);
+            for my $name (@$input_names)
+            {
+                ok(exists $exec_group1->shared_data_arrays->[$i]->{$name});
+            }
         }
-    }
-    # generate an rnn sym with #layers=5
-    $sym = $get_rnn_sym->(5, $num_words, $num_hidden,
-                      $num_embed, $max_bucket_size);
-    my $arg_names2 = $sym->list_arguments();
-    my $exec_group2 = AI::MXNet::DataParallelExecutorGroup->new(symbol=>$sym, contexts=>$contexts,
+        # generate an rnn sym with #layers=5
+        $sym = $get_rnn_sym->(5, $num_words, $num_hidden,
+                         $num_embed, $max_bucket_size, $sparse_embedding);
+        my $arg_names2 = $sym->list_arguments();
+        my $exec_group2 = AI::MXNet::DataParallelExecutorGroup->new(symbol=>$sym, contexts=>$contexts,
                                             workload=>$workload, data_shapes=>$data_shapes,
                                             label_shapes=>$label_shapes, param_names=>$shared_arg_names,
                                             for_training=>1, inputs_need_grad=>0,
                                             shared_group=>$exec_group1);
-    my %shared_arg_names = map { $_ => 1 } @$shared_arg_names;
-    my $extra_args = [grep { not exists $shared_arg_names{$_} } @$arg_names2];
-    $test_shared_exec_group->(
-        $exec_group1, $exec_group2,
-        $shared_arg_names, $extra_args
-    );
+        my %shared_arg_names = map { $_ => 1 } @$shared_arg_names;
+        my $extra_args = [grep { not exists $shared_arg_names{$_} } @$arg_names2];
+        $test_shared_exec_group->(
+            $exec_group1, $exec_group2,
+            $shared_arg_names, $extra_args, not $sparse_embedding
+        );
+    }
+}
+
+sub test_factorization_machine_module
+{
+    mx->random->seed(11);
+    my $check_factorization_machine_module = sub { my ($optimizer, $num_epochs) = @_;
+        my $fm = sub { my ($factor_size, $feature_dim, $init) = @_;
+            my $x = mx->symbol->Variable("data", stype=>'csr');
+            my $v = mx->symbol->Variable("v", shape=>[$feature_dim, $factor_size],
+                                   init=>$init, stype=>'row_sparse');
+
+            my $w1_weight = mx->symbol->var('w1_weight', shape=>[$feature_dim, 1],
+                                      init=>$init, stype=>'row_sparse');
+            my $w1_bias = mx->symbol->var('w1_bias', shape=>[1]);
+            my $w1 = mx->symbol->broadcast_add(mx->symbol->dot($x, $w1_weight), $w1_bias);
+
+            my $v_s = mx->symbol->_square_sum(data=>$v, axis=>1, keepdims=>1);
+            my $x_s = mx->symbol->square(data=>$x);
+            my $bd_sum = mx->sym->dot($x_s, $v_s);
+
+            my $w2 = mx->symbol->dot($x, $v);
+            my $w2_squared = 0.5 * mx->symbol->square(data=>$w2);
+
+            my $w_all = mx->symbol->Concat($w1, $w2_squared, dim=>1);
+            my $sum1 = mx->symbol->sum(data=>$w_all, axis=>1, keepdims=>1);
+            my $sum2 = 0.5 * mx->symbol->negative($bd_sum);
+            my $model = mx->sym->elemwise_add($sum1, $sum2);
+
+            my $y = mx->symbol->Variable("label");
+            $model = mx->symbol->LinearRegressionOutput(data=>$model, label=>$y);
+            return $model
+        };
+
+        # model
+        my $init = mx->initializer->Normal(sigma=>0.01);
+        my $factor_size = 4;
+        my $feature_dim = 10000;
+        my $model = $fm->($factor_size, $feature_dim, $init);
+
+        # data iter
+        my $num_batches = 5;
+        my $batch_size = 64;
+        my $num_samples = $batch_size * $num_batches;
+        # generate some random csr data
+        my $csr_nd = rand_ndarray([$num_samples, $feature_dim], 'csr', 0.1);
+        my $label = mx->nd->ones([$num_samples,1]);
+        # the alternative is to use LibSVMIter
+        my $train_iter = mx->io->NDArrayIter(data=>$csr_nd,
+                                       label=>Hash::Ordered->new(label => $label),
+                                       batch_size=>$batch_size,
+                                       last_batch_handle=>'discard');
+        # create module
+        my $mod = mx->mod->Module(symbol=>$model, data_names=>['data'], label_names=>['label']);
+        # allocate memory by given the input data and lable shapes
+        $mod->bind(data_shapes=>$train_iter->provide_data, label_shapes=>$train_iter->provide_label);
+        # initialize parameters by uniform random numbers
+        $mod->init_params(initializer=>$init);
+        my $expected_accuracy;
+        if($optimizer eq 'sgd')
+        {
+            # use Sparse SGD with learning rate 0.1 to train
+            my $sgd = mx->optimizer->SGD(momentum=>0.1, clip_gradient=>5.0, learning_rate=>0.01,
+                                   rescale_grad=>1.0/$batch_size);
+            $mod->init_optimizer(optimizer=>$sgd);
+            $num_epochs //= 10;
+            $expected_accuracy = 0.02;
+        }
+        elsif($optimizer eq 'adam')
+        {
+            # use Sparse Adam to train
+            my $adam = mx->optimizer->Adam(clip_gradient=>5.0, learning_rate=>0.0005,
+                                     rescale_grad=>1.0/$batch_size);
+            $mod->init_optimizer(optimizer=>$adam);
+            $num_epochs //= 10;
+            $expected_accuracy = 0.05;
+        }
+        elsif($optimizer eq 'adagrad')
+        {
+            # use Sparse AdaGrad with learning rate 0.1 to train
+            my $adagrad = mx->optimizer->AdaGrad(clip_gradient=>5.0, learning_rate=>0.01,
+                                           rescale_grad=>1.0/$batch_size);
+            $mod->init_optimizer(optimizer=>$adagrad);
+            $num_epochs //= 20;
+            $expected_accuracy = 0.09;
+        }
+        else
+        {
+            die "Unsupported optimizer type $optimizer specified";
+        }
+        # use accuracy as the metric
+        my $metric = mx->metric->create('MSE');
+        # train 'num_epochs' epoch
+        for my $epoch (1..$num_epochs)
+        {
+            $train_iter->reset();
+            $metric->reset();
+            while(my $batch = <$train_iter>)
+            {
+                $mod->forward($batch, is_train=>1);       # compute predictions
+                $mod->update_metric($metric, $batch->label);  # accumulate prediction accuracy
+                $mod->backward();                          # compute gradients
+                $mod->update();                            # update parameters
+            }
+        }
+        if($num_epochs > 1)
+        {
+            ok(($metric->get)[1] < $expected_accuracy);
+        }
+    };
+
+    $check_factorization_machine_module->('sgd');
+    $check_factorization_machine_module->('adam');
+    $check_factorization_machine_module->('adagrad');
+}
+
+
+sub test_module_initializer
+{
+    my $regression_model = sub { my ($m) = @_;
+         my $x = mx->symbol->var("data", stype=>'csr');
+         my $v = mx->symbol->var("v", shape=>[$m, 1], init=>mx->init->Uniform(scale=>.1),
+                                stype=>'row_sparse');
+         my $model = mx->symbol->dot(lhs=>$x, rhs=>$v);
+         my $y = mx->symbol->Variable("label");
+         $model = mx->symbol->LinearRegressionOutput(data=>$model, label=>$y, name=>"out");
+         return $model
+    };
+
+    my ($n, $m) = (128, 100);
+    my $model = $regression_model->($m);
+
+    my $data = mx->nd->zeros([$n, $m], stype=>'csr');
+    my $label = mx->nd->zeros([$n, 1]);
+    my $iterator = mx->io->NDArrayIter(data=>$data, label=>Hash::Ordered->new(label => $label),
+                                 batch_size=>$n, last_batch_handle=>'discard');
+
+    # create module
+    my $mod = mx->mod->Module(symbol=>$model, data_names=>['data'], label_names=>['label']);
+    $mod->bind(data_shapes=>$iterator->provide_data, label_shapes=>$iterator->provide_label);
+    $mod->init_params();
+    my $v = $mod->_arg_params->{v};
+    ok($v->stype eq 'row_sparse');
+    ok($v->aspdl->sum != 0);
 }
 
 sub test_module_set_params
@@ -626,6 +790,17 @@ sub test_forward_reshape
 
 }
 
+sub test_forward_acceptable_input
+{
+    my $data = mx->sym->Variable('data');
+    my $out = $data * 2;
+    my $mod = mx->mod->Module(symbol => $out);
+    $mod->bind(data_shapes => [['data', [1, 10]]]);
+    $mod->init_params();
+    is_deeply($mod->predict(mx->nd->ones([1, 10]))->shape, [1, 10]);
+    is_deeply($mod->predict(mx->nd->ones([1, 10])->aspdl)->shape, [1, 10]);
+}
+
 test_module_input_grads();
 test_module_dtype();
 test_monitor();
@@ -637,3 +812,6 @@ test_save_load();
 test_executor_group();
 test_module_set_params();
 test_forward_reshape();
+test_module_initializer();
+test_factorization_machine_module();
+test_forward_acceptable_input();

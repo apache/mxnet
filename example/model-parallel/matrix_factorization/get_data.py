@@ -21,6 +21,10 @@ import mxnet as mx
 
 def get_movielens_data(prefix):
     if not os.path.exists("%s.zip" % prefix):
+        # MovieLens 10M dataset from https://grouplens.org/datasets/movielens/
+        # This dataset is copy right to GroupLens Research Group at the University of Minnesota,
+        # and licensed under their usage license.
+        # For full text of the license, see http://files.grouplens.org/datasets/movielens/ml-10m-README.html
         print("Dataset MovieLens 10M not present. Downloading now ...")
         os.system("wget http://files.grouplens.org/datasets/movielens/%s.zip" % prefix)
         os.system("unzip %s.zip" % prefix)

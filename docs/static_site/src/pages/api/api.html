@@ -1,0 +1,192 @@
+---
+layout: page
+title: Docs
+subtitle: Documentation for the supported language bindings
+action: Get Started
+action_url: /get_started
+permalink: /api/
+tag: main_docs
+
+faq_categories:
+- Deployment Environments
+- Model
+- Speed
+- Security
+- Extend and Contribute to MXNet
+
+docs:
+- title: Python
+  guide_link: /api/python.html
+  api_link: /api/python/docs/api
+  tutorial_link: /api/python/docs/tutorials
+  icon: /assets/img/python_logo.svg
+  tag: python
+- title: Scala
+  guide_link: /api/scala.html
+  api_link: /api/scala/docs/api
+  tutorial_link: /api/scala/docs/tutorials
+  description:
+  icon: /assets/img/scala_logo.svg
+  tag: scala
+- title: Java
+  guide_link: /api/java.html
+  api_link: /api/java/docs/api
+  tutorial_link: /api/java/docs/tutorials
+  description:
+  icon: /assets/img/java_logo.svg
+  tag: java
+- title: Clojure
+  guide_link: /api/clojure
+  api_link: /api/clojure/docs/api
+  tutorial_link: /api/clojure/docs/tutorials
+  description:
+  icon: /assets/img/clojure_logo.svg
+  tag: clojure
+- title: C/C++
+  guide_link: /api/cpp
+  api_link: /api/cpp/docs/api
+  tutorial_link: /api/cpp/docs/tutorials
+  description:
+  icon: /assets/img/cpp_logo.svg
+  tag: cpp
+- title: Julia
+  guide_link: /api/julia
+  api_link: /api/julia/docs/api
+  tutorial_link: https://mxnet.incubator.apache.org/api/julia/docs/api/#tutorials
+  description:
+  icon: /assets/img/julia_logo.svg
+  tag: julia
+- title: R
+  guide_link: /api/r
+  api_link: /api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf
+  tutorial_link: /api/r/docs/tutorials
+  description:
+  icon: /assets/img/R_logo.svg
+  tag: r
+- title: Perl
+  guide_link: /api/perl
+  api_link: https://metacpan.org/release/AI-MXNet
+  tutorial_link: /api/perl/docs/tutorials
+  description:
+  icon: /assets/img/perl_logo.svg
+  tag: perl
+---
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+{%- for doc in page.docs -%}
+  {%- if doc.tag == 'python' -%}
+    <h2>Python API</h2>
+    <div class="row docs-hero">
+      <div class="col-4 docs-hero-left">
+        <div class="docs-card">
+            <div class="docs-logo-container">
+                <img class="docs-logo-image" src="{{doc.icon | relative_url}}">
+            </div>
+            <div class="docs-action-btn">
+              <a href="{{doc.guide_link | relative_url}}"> <img src="{{'assets/img/compass.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} Guide  <span class="span-accented">›</span></a>
+            </div>
+            <div class="docs-action-btn">
+              <a href="{{doc.tutorial_link | relative_url}}"> <img src="{{'assets/img/video-tutorial.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} Tutorials  <span class="span-accented">›</span></a>
+            </div>
+            <div class="docs-action-btn">
+              <a href="{{doc.api_link | relative_url}}"> <img src="{{'assets/img/api.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} API Reference  <span class="span-accented">›</span></a>
+            </div>
+        </div>
+      </div>
+
+    <div class="col-8 docs-hero-right">
+        <h4>Python-first API</h4>
+        <p>MXNet provides a comprehensive and flexible Python API to serve a broad community of developers with different levels of experience and wide ranging requirements. Current efforts are focused on the
+        <a href="{{doc.api_link | relative_url}}"></a>Gluon API. Gluon provides a clear, concise, and simple API for deep learning. It makes it easy to prototype, build, and train deep learning models without sacrificing training speed.</p>
+        <p>You can checkout the <a href="{{'/ecosystem'|relative_url}}">rich ecosystem</a> built around Apache MXNet Gluon, including <a href="https://d2l.ai">D2L.ai</a>, <a href="https://gluon-cv.mxnet.io">GluonCV</a>,
+        <a href="https://gluon-nlp.mxnet.io">GluonNLP</a> and <a href="https://gluon-ts.mxnet.io">GluonTS</a>.</p>
+        <p>While most of the usability improvement around training are focused on the python API, the performance of MXNet is accessible through a variety of different language bindings, checkout their respective API and guides below!</p>
+      </div>
+
+    </div>
+  {%- endif -%}
+{%- endfor -%}
+<h2>Other Bindings</h2>
+<div class="row">
+{%- for doc in page.docs -%}
+  {%- if doc.tag != 'python' -%}
+  <div class="col-4">
+      <div class="docs-card">
+          <div class="docs-logo-container">
+              <img class="docs-logo-image" src="{{doc.icon | relative_url}}">
+          </div>
+          <div class="docs-action-btn">
+            <a href="{{doc.guide_link | relative_url}}"> <img src="{{'assets/img/compass.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} Guide  <span class="span-accented">›</span></a>
+          </div>
+          <div class="docs-action-btn">
+            <a href="{{doc.tutorial_link | relative_url}}"> <img src="{{'assets/img/video-tutorial.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} Tutorials  <span class="span-accented">›</span></a>
+          </div>
+          <div class="docs-action-btn">
+            <a href="{{doc.api_link | relative_url}}"> <img src="{{'assets/img/api.svg' | relative_url}}" class="docs-logo-docs">{{doc.title}} API Reference  <span class="span-accented">›</span></a>
+          </div>
+      </div>
+  </div>
+  {%- endif -%}
+{%- endfor -%}
+</div>
+</div> <!-- closing outer wrapper -->
+<div class="docs-architecture">
+    <div class="wrapper">
+        <h2>MXNet Architecture</h2>
+        <p>
+        Building a high-performance deep learning library
+        requires many systems-level design decisions.
+        In this design note, we share the rationale
+        for the specific choices made when designing _MXNet_.
+        We imagine that these insights may be useful
+        to both deep learning practitioners
+        and builders of other deep learning systems.
+        </p>
+        <h4>Deep Learning System Design Concepts</h4>
+        <p>
+        The following pages address general design concepts for deep learning systems.
+        Mainly, they focus on the following 3 areas:
+        abstraction, optimization, and trade-offs between efficiency and flexibility.
+        Additionally, we provide an overview of the complete MXNet system.
+        </p>
+        <ul>
+        {%- for p in site.pages -%}
+          {%- if p.category == 'architecture' -%}
+            <li><a href="{{p.url | relative_url}}">{{p.title}}</a></li>
+          {%- endif -%}
+        {%- endfor -%}
+        </ul>
+    </div>
+</div>
+<div class="docs-faq">
+    <div class="wrapper">
+        <h2>FAQ</h2>
+        <ul>
+        {%- for faq_c in page.faq_categories -%}
+            <h3>{{faq_c}}</h3>
+            {%- for p in site.pages -%}
+                {%- if p.faq_c == faq_c -%}
+                  <li><a href="{{p.url | relative_url}}">{{p.question}}</a></li>
+                {%- endif -%}
+            {%- endfor -%}
+            <br>
+        {%- endfor -%}
+        </ul>
+    </div>
+</div>
+<div> <!-- reopening to close wrapper -->

@@ -67,7 +67,7 @@ Examples::
     return param.get_prob ? 2U : 1U;
   })
 .set_attr_parser(ParamParser<SampleMultinomialParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", SampleMultinomialOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", SampleMultinomialOpShape)
 .set_attr<nnvm::FInferType>("FInferType", SampleMultinomialOpType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
@@ -97,7 +97,8 @@ struct SampleMultinomialBackwardCPUKernel {
                                   DType* ograd, DType* dist, IType* out,
                                   DType* igrad) {
     for (index_t j = 0; j < M; ++j) {
-      igrad[i*K + out[i*M + j]] += ograd[i*M + j] / dist[i*K + out[i*M + j]];
+      igrad[i*K + static_cast<size_t>(out[i*M + j])] +=
+        ograd[i*M + j] / dist[i*K + static_cast<size_t>(out[i*M + j])];
     }
   }
 };

@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -24,7 +25,8 @@ import time
 import argparse
 
 from mxnet.base import check_call, _LIB
-from util import get_data, estimate_density
+from mxnet.test_utils import get_bz2_data
+from util import estimate_density
 
 parser = argparse.ArgumentParser(description="Benchmark sparse operators",
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -78,7 +80,7 @@ def test_dot_real(data_dict):
 
     path = os.path.join(data_dir, data_dict['data_name'])
     if not os.path.exists(path):
-        get_data(
+        get_bz2_data(
             data_dir,
             data_dict['data_name'],
             data_dict['url'],
@@ -95,9 +97,9 @@ def test_dot_real(data_dict):
         os.system("head -n 2000 %r > %r" % (path, mini_path))
         assert os.path.exists(mini_path)
 
-    print "Running Benchmarking on %r data" % data_dict['data_mini']
+    print("Running Benchmarking on %r data" % data_dict['data_mini'])
     for batch_size in data_dict['batch_size']:  # iterator through different batch size of choice
-        print "batch_size is %d" % batch_size
+        print("batch_size is %d" % batch_size)
         # model
         data_shape = (k, )
         train_iter = get_iter(mini_path, data_shape, batch_size)

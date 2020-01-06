@@ -20,7 +20,7 @@
 /*!
  *  Copyright (c) 2017 by Contributors
  * \file cast_storage-inl.cuh
- * \brief implementation of cast_storage op on GPU
+ * \brief GPU implementation of cast_storage op
  */
 #ifndef MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_CAST_STORAGE_INL_CUH_
@@ -28,7 +28,6 @@
 #include <cub/cub.cuh>
 #include <mxnet/base.h>
 #include <mxnet/operator.h>
-#include <nnvm/tuple.h>
 #include "./util/tensor_util-inl.h"
 #include "../mxnet_op.h"
 #include "./util/tensor_util-inl.cuh"
@@ -163,7 +162,9 @@ void CastStorageDnsRspGPUImpl_(const OpContext& ctx,
 
   // Get total number of non-zero rows from device
   dim_t nnr = 0;
-  CUDA_CALL(cudaMemcpy(&nnr, &row_flg[num_rows - 1], sizeof(dim_t), cudaMemcpyDeviceToHost));
+  CUDA_CALL(cudaMemcpyAsync(&nnr, &row_flg[num_rows - 1], sizeof(dim_t),
+                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
 
   // Allocate rsp tensor row index array and fill
   rsp->CheckAndAllocAuxData(rowsparse::kIdx, Shape1(nnr));
@@ -436,6 +437,8 @@ struct CastDnsCsrColIdxAndValsBlockKernel {
             nnz++;
           }
         }
+        // make sure k was updated using block_nnz in the previous iter
+        __syncthreads();
         if (threadIdx.x == kBaseThreadNum-1) {
           block_nnz = nnz;
         }
@@ -554,7 +557,9 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
 
         // Receive total number of nnz values from device
         IType nnz = 0;
-        CUDA_CALL(cudaMemcpy(&nnz, &(indptr[num_rows]), sizeof(IType), cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpyAsync(&nnz, &(indptr[num_rows]), sizeof(IType), cudaMemcpyDeviceToHost,
+                                  mshadow::Stream<gpu>::GetStream(s)));
+        CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
 
         // Allocate column index array and data array of the csr matrix
         csr->CheckAndAllocAuxData(csr::kIdx, Shape1(static_cast<dim_t>(nnz)));

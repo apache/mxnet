@@ -66,6 +66,7 @@ def read_caffemodel(prototxt_fname, caffemodel_fname):
         return (get_layers(proto), None)
 
 def layer_iter(layers, layer_names):
+    """Iterate over all layers"""
     if use_caffe:
         for layer_idx, layer in enumerate(layers):
             layer_name = re.sub('[-/]', '_', layer_names[layer_idx])

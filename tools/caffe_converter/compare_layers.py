@@ -22,9 +22,9 @@ import logging
 import os
 import warnings
 
+import numpy as np
 import cv2
 import mxnet as mx
-import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 
@@ -142,8 +142,6 @@ def convert_and_compare_caffe_to_mxnet(image_url, gpu, caffe_prototxt_path, caff
 
     compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_to_record,
                              top_to_layers, mean_diff_allowed, max_diff_allowed)
-
-    return
 
 
 def _bfs(root_node, process_node):
@@ -280,7 +278,6 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
             warnings.warn('No handling for layer %s of type %s, should we ignore it?', layer.name,
                           layer.type)
 
-        return
 
     def _process_layer_output(caffe_blob_name):
 
@@ -332,8 +329,6 @@ def compare_layers_from_nets(caffe_net, arg_params, aux_params, exe, layer_name_
     for caffe_blob_name in caffe_net.blobs.keys():
         _process_layer_output(caffe_blob_name)
 
-    return
-
 
 def main():
     """Entrypoint for compare_layers"""
@@ -341,7 +336,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Tool for testing caffe to mxnet conversion layer by layer')
     parser.add_argument('--image_url', type=str,
-                        default='http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg',
+                        default='https://github.com/dmlc/web-data/raw/master/mxnet/doc/'\
+                                'tutorials/python/predict_image/cat.jpg',
                         help='input image to test inference, can be either file path or url')
     parser.add_argument('--caffe_prototxt_path', type=str,
                         default='./model.prototxt',

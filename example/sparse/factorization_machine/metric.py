@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+from operator import itemgetter
 
 @mx.metric.register
 @mx.metric.alias('log_loss')
@@ -52,7 +53,7 @@ class LogLossMetric(mx.metric.EvalMetric):
     >>> labels   = [mx.nd.array([0, 1, 1])]
     >>> log_loss= mx.metric.NegativeLogLikelihood()
     >>> log_loss.update(labels, predicts)
-    >>> print log_loss.get()
+    >>> print(log_loss.get())
     ('log-loss', 0.57159948348999023)
     """
     def __init__(self, eps=1e-12, name='log-loss',
@@ -86,3 +87,39 @@ class LogLossMetric(mx.metric.EvalMetric):
             prob = pred[np.arange(num_examples, dtype=np.int64), np.int64(label)]
             self.sum_metric += (-np.log(prob + self.eps)).sum()
             self.num_inst += num_examples
+
+@mx.metric.register
+@mx.metric.alias('auc')
+class AUCMetric(mx.metric.EvalMetric):
+    def __init__(self, eps=1e-12):
+        super(AUCMetric, self).__init__(
+            'auc')
+        self.eps = eps
+
+    def update(self, labels, preds):
+        mx.metric.check_label_shapes(labels, preds)
+        label_weight = labels[0].asnumpy()
+        preds = preds[0].asnumpy()
+        tmp = []
+        for i in range(preds.shape[0]):
+            tmp.append((label_weight[i], preds[i]))
+        tmp = sorted(tmp, key=itemgetter(1), reverse=True)
+        label_sum = label_weight.sum()
+        if label_sum == 0 or label_sum == label_weight.size:
+            raise Exception("AUC with one class is undefined")
+
+        label_one_num = np.count_nonzero(label_weight)
+        label_zero_num = len(label_weight) - label_one_num
+        total_area = label_zero_num * label_one_num
+        height = 0
+        width = 0
+        area = 0
+        for a, _ in tmp:
+            if a == 1.0:
+                height += 1.0
+            else:
+                width += 1.0
+                area += height
+
+        self.sum_metric += area / total_area
+        self.num_inst += 1

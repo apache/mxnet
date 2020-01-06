@@ -72,7 +72,7 @@ struct GPUStreamScope {
     : opContext_(*opContext) {
     CHECK_EQ(opContext_.run_ctx.stream == nullptr, true)
       << "Invalid runtime context stream state";
-    opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true);
+    opContext_.run_ctx.stream = mshadow::NewStream<gpu>(true, true, opContext_.run_ctx.ctx.dev_id);
     CHECK_EQ(opContext_.run_ctx.stream != nullptr, true)
       << "Unable to allocate a GPU stream";
   }
@@ -100,12 +100,12 @@ class OperatorDataInitializer {
    * \brief Fill a blob with random values
    * \param blob Blob which to fill with random values
    */
-  void FillRandom(const TBlob& blob) const {
+  void FillRandom(const RunContext& run_ctx, const TBlob& blob) const {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wabsolute-value"
     std::uniform_real_distribution<> dis_real(-5.0, 5.0);
     std::uniform_int_distribution<> dis_int(-128, 127);
-    test::patternFill<DType>(&blob, [this, &dis_real, &dis_int]() -> DType {
+    test::patternFill(run_ctx, &blob, [this, &dis_real, &dis_int]() -> DType {
       if (!std::is_integral<DType>::value) {
         DType val;
         do {
@@ -123,8 +123,8 @@ class OperatorDataInitializer {
 #pragma clang diagnostic pop
   }
 
-  void FillZero(const TBlob& blob) const {
-    test::patternFill<DType>(&blob, []() -> DType { return DType(0); });
+  void FillZero(const RunContext& run_ctx, const TBlob& blob) const {
+    test::patternFill(run_ctx, &blob, []() -> DType { return DType(0); });
   }
 
  private:
@@ -153,9 +153,9 @@ struct OpInfo {
   /*! \brief The operator data */
   std::shared_ptr< OperatorExecutor > executor_;
   /*! \brief The operator prop class */
-  std::shared_ptr<OperatorProp>                         prop_;
+  std::shared_ptr<OperatorProp> prop_;
   /*! \brief The input type(s) */
-  std::vector<int>                                      in_type_;
+  std::vector<int> in_type_;
 };
 
 /*! \brief Pair of op info objects, generally for validating ops against each other */
@@ -223,8 +223,8 @@ class Validator {
   /*! \brief Compare blob data */
   static bool compare(const TBlob& b1, const TBlob& b2) {
     if (b1.shape_ == b2.shape_) {
+      CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
       MSHADOW_REAL_TYPE_SWITCH(b1.type_flag_, DTypeX, {
-        CHECK_EQ(b1.type_flag_, b2.type_flag_) << "Can't compare blobs of different data types";
         const DTypeX *d1 = b1.dptr<DTypeX>();
         const DTypeX *d2 = b2.dptr<DTypeX>();
         CHECK_NE(d1, d2);  // don't compare the same memory
@@ -255,7 +255,7 @@ class Validator {
       const DTypeX v2 = *valuePtr++;
       EXPECT_NEAR(v1, v2, kErrorBound);
       if (!isNear(v1, v2, kErrorBound) && !warningCount++) {
-        LOG(WARNING) << "Near test failure: " << i << ", " << n << std::endl << std::flush;
+        on_failure(i, n, v1, v2, kErrorBound);
       }
     }
     return true;
@@ -281,8 +281,8 @@ static test::op::OpInfo<OperatorProp, OperatorExecutor> createOpAndInfoF(const k
   return info;
 }
 
-inline std::vector<TShape> ShapesOf(const std::vector<NDArray>& arrays) {
-  std::vector<TShape> res;
+inline mxnet::ShapeVector ShapesOf(const std::vector<NDArray>& arrays) {
+  mxnet::ShapeVector res;
   res.reserve(arrays.size());
   for (const NDArray& ar : arrays) {
     res.emplace_back(ar.shape());

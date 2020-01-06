@@ -27,13 +27,14 @@
 #include <dmlc/thread_local.h>
 #include <mxnet/base.h>
 #include <mxnet/engine.h>
+#include <mxnet/random_generator.h>
 #include <mxnet/resource.h>
 #include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
 #include "./common/lazy_alloc_array.h"
-#include "./common/random_generator.h"
 #include "./common/utils.h"
+#include "./common/cuda_utils.h"
 
 namespace mxnet {
 namespace resource {
@@ -53,30 +54,29 @@ struct SpaceAllocator {
     host_handle.dptr = nullptr;
     host_handle.size = 0;
   }
+
   inline void ReleaseAll() {
-    if (handle.size != 0) {
-      Storage::Get()->DirectFree(handle);
-      handle.size = 0;
-    }
-    if (host_handle.size != 0) {
-      Storage::Get()->DirectFree(host_handle);
-      host_handle.size = 0;
-    }
+    Storage::Get()->DirectFree(handle);
+    handle.dptr = nullptr;
+    handle.size = 0;
+
+    Storage::Get()->DirectFree(host_handle);
+    host_handle.dptr = nullptr;
+    host_handle.size = 0;
   }
+
   inline void* GetSpace(size_t size) {
     if (handle.size >= size) return handle.dptr;
-    if (handle.size != 0) {
-      Storage::Get()->DirectFree(handle);
-    }
+
+    Storage::Get()->DirectFree(handle);
     handle = Storage::Get()->Alloc(size, ctx);
     return handle.dptr;
   }
 
   inline void* GetHostSpace(size_t size) {
     if (host_handle.size >= size) return host_handle.dptr;
-    if (host_handle.size != 0) {
-      Storage::Get()->DirectFree(host_handle);
-    }
+
+    Storage::Get()->DirectFree(host_handle);
     host_handle = Storage::Get()->Alloc(size, Context());
     return host_handle.dptr;
   }
@@ -92,11 +92,14 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_PARALLEL_RAND_COPY", 1);
     gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_PARALLEL_RAND_COPY", 4);
+#if MXNET_USE_CUDNN == 1
+    gpu_cudnn_dropout_state_copy_ = dmlc::GetEnv("MXNET_GPU_CUDNN_DROPOUT_STATE_COPY", 4);
+#endif  // MXNET_USE_CUDNN == 1
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
         Context::CPU(), global_seed_));
-    cpu_space_.reset(new ResourceTempSpace(
+    cpu_space_.reset(new ResourceTempSpace<ResourceRequest::kTempSpace>(
         Context::CPU(), cpu_temp_space_copy_));
     cpu_parallel_rand_.reset(new ResourceParallelRandom<cpu>(
         Context::CPU(), cpu_native_rand_copy_, global_seed_));
@@ -110,6 +113,9 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_rand_.Clear();
     gpu_space_.Clear();
     gpu_parallel_rand_.Clear();
+#if MXNET_USE_CUDNN == 1
+    gpu_cudnn_dropout_state_.Clear();
+#endif  // MXNET_USE_CUDNN == 1
 #endif
     if (engine_ref_ != nullptr) {
       engine_ref_ = nullptr;
@@ -139,7 +145,7 @@ class ResourceManagerImpl : public ResourceManager {
         }
         case ResourceRequest::kTempSpace: {
           return gpu_space_.Get(ctx.dev_id, [ctx, this]() {
-              return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
+              return new ResourceTempSpace<ResourceRequest::kTempSpace>(ctx, gpu_temp_space_copy_);
             })->GetNext();
         }
         case ResourceRequest::kParallelRandom: {
@@ -147,6 +153,14 @@ class ResourceManagerImpl : public ResourceManager {
             return new ResourceParallelRandom<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
           })->GetNext();
         }
+#if MXNET_USE_CUDNN == 1
+        case ResourceRequest::kCuDNNDropoutDesc: {
+          return gpu_cudnn_dropout_state_.Get(ctx.dev_id, [ctx, this]() {
+            return new ResourceTempSpace<ResourceRequest::kCuDNNDropoutDesc>(
+                ctx, gpu_cudnn_dropout_state_copy_);
+          })->GetNext();
+        }
+#endif  // MXNET_USE_CUDNN == 1
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
 #else
@@ -159,15 +173,30 @@ class ResourceManagerImpl : public ResourceManager {
 
   void SeedRandom(uint32_t seed) override {
     global_seed_ = seed;
-    cpu_rand_->Seed(global_seed_);
-    cpu_parallel_rand_->Seed(global_seed_);
+    cpu_rand_->SeedWithDeviceID(global_seed_);
+    cpu_parallel_rand_->SeedWithDeviceID(global_seed_);
 #if MXNET_USE_CUDA
     gpu_rand_.ForEach([seed](size_t i, ResourceRandom<gpu> *p) {
-        p->Seed(seed);
+        p->SeedWithDeviceID(seed);
       });
     gpu_parallel_rand_.ForEach([seed](size_t i, ResourceParallelRandom<gpu> *p) {
-      p->Seed(seed);
+      p->SeedWithDeviceID(seed);
     });
+#endif
+  }
+
+  void SeedRandom(Context ctx, uint32_t seed) override {
+    cpu_rand_->Seed(seed);
+    cpu_parallel_rand_->Seed(seed);
+#if MXNET_USE_CUDA
+    if (ctx.dev_type == Context::kGPU) {
+      gpu_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
+        return new ResourceRandom<gpu>(ctx, seed);
+      })->Seed(seed);
+      gpu_parallel_rand_.Get(ctx.dev_id, [ctx, seed, this]() {
+        return new ResourceParallelRandom<gpu>(ctx, gpu_native_rand_copy_, seed);
+      })->Seed(seed);
+    }
 #endif
   }
 
@@ -201,9 +230,12 @@ class ResourceManagerImpl : public ResourceManager {
             MSHADOW_CATCH_ERROR(delete r);
           }, ctx, resource.var);
     }
+    // set seed to a PRNG using global_seed and device id
+    inline void SeedWithDeviceID(uint32_t global_seed) {
+      Seed(ctx.dev_id + global_seed * kRandMagic);
+    }
     // set seed to a PRNG
-    inline void Seed(uint32_t global_seed) {
-      uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
+    inline void Seed(uint32_t seed) {
       mshadow::Random<xpu> *r = prnd;
       Engine::Get()->PushAsync(
         [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
@@ -211,11 +243,12 @@ class ResourceManagerImpl : public ResourceManager {
           r->Seed(seed);
           on_complete();
         }, ctx, {}, {resource.var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceRandomSetSeed"));
+        FnProperty::kNormal, 0, "ResourceRandomSetSeed");
     }
   };
 
-  // temporal space resource.
+  // temporary space resource.
+  template<ResourceRequest::Type req>
   struct ResourceTempSpace {
     /*! \brief the context of the device */
     Context ctx;
@@ -232,7 +265,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].var = Engine::Get()->NewVariable();
         resource[i].id = static_cast<int32_t>(i);
         resource[i].ptr_ = &space[i];
-        resource[i].req = ResourceRequest(ResourceRequest::kTempSpace);
+        resource[i].req = ResourceRequest(req);
         space[i].ctx = ctx;
         CHECK_EQ(space[i].handle.size, 0U);
       }
@@ -284,7 +317,7 @@ class ResourceManagerImpl : public ResourceManager {
           common::random::RandGenerator<xpu>::AllocState(r);
           r->Seed(rctx.get_stream<xpu>(), seed);
         }, ctx, {}, {resource[i].var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceParallelRandomSetSeed"));
+        FnProperty::kNormal, 0, "ResourceParallelRandomSetSeed");
         sampler[i] = r;
         resource[i].ptr_ = sampler[i];
         resource[i].req = ResourceRequest(ResourceRequest::kParallelRandom);
@@ -300,20 +333,31 @@ class ResourceManagerImpl : public ResourceManager {
         }, ctx, resource[i].var);
       }
     }
-    // set seed to a sampler
-    inline void Seed(uint32_t global_seed) {
+    // set seed to a sampler using global_seed and device id
+    inline void SeedWithDeviceID(uint32_t global_seed) {
       for (size_t i = 0; i < sampler.size(); ++i) {
-        const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
-        common::random::RandGenerator<xpu> *r = sampler[i];
-        Engine::Get()->PushAsync(
-        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          r->Seed(rctx.get_stream<xpu>(), seed);
-          on_complete();
-        }, ctx, {}, {resource[i].var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
+        SeedOne(i, ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic);
       }
       // reset pointer to ensure the same result with the same seed.
       curr_ptr.store(0);
+    }
+    // set seed to a sampler
+    inline void Seed(uint32_t seed) {
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        SeedOne(i, i * kMaxNumGPUs + seed * kRandMagic);
+      }
+      // reset pointer to ensure the same result with the same seed.
+      curr_ptr.store(0);
+    }
+    // set seed to a sampler
+    inline void SeedOne(size_t i, uint32_t seed) {
+      common::random::RandGenerator<xpu> *r = sampler[i];
+      Engine::Get()->PushAsync(
+      [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        r->Seed(rctx.get_stream<xpu>(), seed);
+        on_complete();
+      }, ctx, {}, {resource[i].var},
+      FnProperty::kNormal, 0, "ResourceNativeRandomSetSeed");
     }
     // get next resource in round roubin matter
     inline Resource GetNext() {
@@ -345,16 +389,23 @@ class ResourceManagerImpl : public ResourceManager {
   /*! \brief CPU random number resources */
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
-  std::unique_ptr<ResourceTempSpace> cpu_space_;
+  std::unique_ptr<ResourceTempSpace<ResourceRequest::kTempSpace>> cpu_space_;
   /*! \brief CPU parallel random number resources */
   std::unique_ptr<ResourceParallelRandom<cpu> > cpu_parallel_rand_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;
   /*! \brief temp space for GPU */
-  common::LazyAllocArray<ResourceTempSpace> gpu_space_;
+  common::LazyAllocArray<ResourceTempSpace<ResourceRequest::kTempSpace>> gpu_space_;
   /*! \brief GPU parallel (on device) random number resources */
   common::LazyAllocArray<ResourceParallelRandom<gpu> > gpu_parallel_rand_;
+#if MXNET_USE_CUDNN == 1
+  /*! \brief number of copies in GPU cudnn dropout descriptor resources */
+  int gpu_cudnn_dropout_state_copy_;
+  /*! \brief GPU parallel (on device) random number resources */
+  common::LazyAllocArray<ResourceTempSpace<ResourceRequest::kCuDNNDropoutDesc>>
+    gpu_cudnn_dropout_state_;
+#endif  // MXNET_USE_CUDNN == 1
 #endif
 };
 }  // namespace resource
@@ -366,6 +417,41 @@ void* Resource::get_space_internal(size_t size) const {
 void* Resource::get_host_space_internal(size_t size) const {
   return static_cast<resource::SpaceAllocator*>(ptr_)->GetHostSpace(size);
 }
+
+#if MXNET_USE_CUDNN == 1
+void Resource::get_cudnn_dropout_desc(
+    cudnnDropoutDescriptor_t* dropout_desc,
+    mshadow::Stream<gpu> *stream,
+    const float dropout,
+    uint64_t seed) const {
+
+  CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
+  auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
+  CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
+    << "The device id of cudnn dropout state space doesn't match that from stream.";
+  if (!state_space->handle.size) {
+    // not initialized yet.
+    size_t dropout_state_size;
+    CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
+    // reserve GPU space
+    Storage::Get()->DirectFree(
+      Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
+    CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                         dropout,
+                                         state_space->GetSpace(dropout_state_size),
+                                         dropout_state_size,
+                                         seed));
+  } else {
+    // cudnnRestoreDropoutDescriptor() introduced with cuDNN v7
+    STATIC_ASSERT_CUDNN_VERSION_GE(7000);
+    CUDNN_CALL(cudnnRestoreDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                             dropout,
+                                             state_space->handle.dptr,
+                                             state_space->handle.size,
+                                             seed));
+  }
+}
+#endif  // MXNET_USE_CUDNN == 1
 
 ResourceManager* ResourceManager::Get() {
   typedef dmlc::ThreadLocalStore<resource::ResourceManagerImpl> inst;

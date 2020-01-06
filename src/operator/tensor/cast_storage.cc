@@ -31,7 +31,7 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(CastStorageParam);
 NNVM_REGISTER_OP(cast_storage)
-.add_alias("_sparse_cast_storage")
+MXNET_ADD_SPARSE_OP_ALIAS(cast_storage)
 .describe(R"code(Casts tensor storage type to the new type.
 
 When an NDArray with default storage type is cast to csr or row_sparse storage,
@@ -46,6 +46,8 @@ The storage type of ``cast_storage`` output depends on stype parameter:
 - cast_storage(row_sparse, 'default') = default
 - cast_storage(default, 'csr') = csr
 - cast_storage(default, 'row_sparse') = row_sparse
+- cast_storage(csr, 'csr') = csr
+- cast_storage(row_sparse, 'row_sparse') = row_sparse
 
 Example::
 
@@ -70,13 +72,14 @@ Example::
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<CastStorageParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", CastStorageInferStorageType)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", CastStorageComputeEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_copy"})

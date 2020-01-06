@@ -45,8 +45,8 @@ enum CropOpOutputs {kOut};
 
 struct CropParam : public dmlc::Parameter<CropParam> {
   int num_args;
-  TShape offset;
-  TShape h_w;
+  mxnet::TShape offset;
+  mxnet::TShape h_w;
   bool center_crop;
   DMLC_DECLARE_PARAMETER(CropParam) {
     DMLC_DECLARE_FIELD(num_args).set_range(1, 3)
@@ -54,9 +54,9 @@ struct CropParam : public dmlc::Parameter<CropParam> {
       "for crop height and width, else if equals two, then we will use the height"
       "and width of the second input symbol, we name crop_like here");
     int shape[] = {0, 0};
-    DMLC_DECLARE_FIELD(offset).set_default(TShape(shape, shape + 2))
+    DMLC_DECLARE_FIELD(offset).set_default(mxnet::TShape(shape, shape + 2))
     .describe("crop offset coordinate: (y, x)");
-    DMLC_DECLARE_FIELD(h_w).set_default(TShape(shape, shape + 2))
+    DMLC_DECLARE_FIELD(h_w).set_default(mxnet::TShape(shape, shape + 2))
     .describe("crop height and width: (h, w)");
     DMLC_DECLARE_FIELD(center_crop).set_default(false)
     .describe("If set to true, then it will use be the center_crop,"
@@ -169,12 +169,12 @@ class CropProp : public OperatorProperty {
     return ret;
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
-    TShape data_shape = in_shape->at(crop_enum::kData);
+    mxnet::TShape data_shape = in_shape->at(crop_enum::kData);
     if (data_shape.ndim() == 0) return false;
     CHECK_EQ(data_shape.ndim(), 4U) << \
         "Input data should be 4D in batch-num_filter-y-x";
@@ -191,7 +191,7 @@ class CropProp : public OperatorProperty {
       crop_shape.push_back(param_.h_w[0]);
       crop_shape.push_back(param_.h_w[1]);
     } else if (param_.num_args == 2) {
-      TShape crop_like_shape = in_shape->at(crop_enum::kCropLike);
+      mxnet::TShape crop_like_shape = in_shape->at(crop_enum::kCropLike);
       crop_shape.push_back(crop_like_shape[2]);
       crop_shape.push_back(crop_like_shape[3]);
     }

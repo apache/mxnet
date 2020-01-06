@@ -24,6 +24,7 @@ package AI::MXNet::Symbol;
 
 use strict;
 use warnings;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Symbol::Base;
 use AI::MXNet::Symbol::Random;
@@ -229,6 +230,16 @@ method hypot(AI::MXNet::Symbol|Num $other)
     );
 }
 
+method reshape(@args)
+{
+    if(@args%2)
+    {
+        unshift @args, 'shape';
+    }
+    return $self->SUPER::reshape(@args);
+}
+
+
 method deepcopy()
 {
     my $handle = check_call(AI::MXNetCAPI::SymbolCopy($self->handle));
@@ -242,8 +253,14 @@ method call(@args)
     return $s;
 }
 
-method slice(Str|Index $index)
+method slice(@slices)
 {
+    confess("No slices supplied") unless @slices;
+    if(@slices > 1)
+    {
+        return $self->SUPER::slice(@slices);
+    }
+    my $index = $slices[0];
     ## __getitem__ tie needs to die
     if(not find_type_constraint('Index')->check($index))
     {
@@ -512,7 +529,7 @@ method list_inputs()
 =cut
 
 
-method infer_type(Str|Undef @args)
+method infer_type(Maybe[Str] @args)
 {
     my ($positional_arguments, $kwargs, $kwargs_order) = _parse_arguments("Dtype", @args);
     my $sdata = [];
@@ -646,7 +663,7 @@ method _infer_shape_impl(Maybe[Str|Shape] @args)
             push @{ $indptr }, scalar(@{ $sdata });
         }
     }
-    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartial : \&AI::MXNetCAPI::SymbolInferShape;
+    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartialEx : \&AI::MXNetCAPI::SymbolInferShapeEx;
     my ($arg_shapes, $out_shapes, $aux_shapes, $complete) = check_call(
         $infer_func->(
             $self->handle,
@@ -778,6 +795,9 @@ method _get_ndarray_inputs(
     :$type_dict  : hash ref of str->Dtype
         Input type map, name->dtype
 
+    :$type_dict  : hash ref of str->Stype
+        Storage type map, name->stype (for sparse operations)
+
     :$group2ctx : hash ref of string to AI::MXNet::Context
         The mapping of the ctx_group attribute to the context assignment.
 
@@ -808,13 +828,14 @@ method simple_bind(
     GradReq|ArrayRef[GradReq]|HashRef[GradReq]     :$grad_req='write',
     Maybe[HashRef[Shape]]                          :$shapes=,
     Maybe[HashRef[Dtype]]                          :$type_dict=,
+    Maybe[HashRef[Stype]]                          :$stype_dict=,
     Maybe[HashRef[AI::MXNet::Context]]             :$group2ctx=,
     Maybe[ArrayRef[Str]]                           :$shared_arg_names=,
     Maybe[AI::MXNet::Executor]                     :$shared_exec=,
     Maybe[HashRef[AI::MXNet::NDArray]]             :$shared_buffer=
 )
 {
-    my $num_provided_arg_types;
+    my $num_provided_arg_types = 0;
     my @provided_arg_type_names;
     my @provided_arg_type_data;
     if(defined $type_dict)
@@ -825,6 +846,18 @@ method simple_bind(
             push @provided_arg_type_data, DTYPE_STR_TO_MX->{$v};
         }
         $num_provided_arg_types = @provided_arg_type_names;
+    }
+    my $num_provided_arg_stypes = 0;
+    my @provided_arg_stype_names;
+    my @provided_arg_stype_data;
+    if(defined $stype_dict)
+    {
+        while(my ($k, $v) = each %{ $stype_dict })
+        {
+            push @provided_arg_stype_names, $k;
+            push @provided_arg_stype_data, STORAGE_TYPE_STR_TO_ID->{$v};
+        }
+        $num_provided_arg_stypes = @provided_arg_stype_names;
     }
     my @provided_arg_shape_data;
     # argument shape index in sdata,
@@ -905,7 +938,7 @@ method simple_bind(
         ($updated_shared_data, $in_arg_handles, $arg_grad_handles, $aux_state_handles, $exe_handle)
             =
         check_call(
-            AI::MXNetCAPI::ExecutorSimpleBind(
+            AI::MXNetCAPI::ExecutorSimpleBindEx(
                 $self->handle,
                 $ctx->device_type_id,
                 $ctx->device_id,
@@ -923,6 +956,9 @@ method simple_bind(
                 $num_provided_arg_types,
                 \@provided_arg_type_names,
                 \@provided_arg_type_data,
+                $num_provided_arg_stypes,
+                \@provided_arg_stype_names,
+                \@provided_arg_stype_data,
                 scalar(@shared_arg_name_list),
                 \@shared_arg_name_list,
                 defined $shared_buffer ? \%shared_data : undef,
@@ -943,12 +979,12 @@ method simple_bind(
     {
         while(my ($k, $v) = each %{ $updated_shared_data })
         {
-            $shared_buffer->{$k} = AI::MXNet::NDArray->new(handle => $v);
+            $shared_buffer->{$k} = AI::MXNet::NDArray->_ndarray_cls($v);
         }
     }
-    my @arg_arrays  = map { AI::MXNet::NDArray->new(handle => $_) } @{ $in_arg_handles };
-    my @grad_arrays = map { defined $_ ? AI::MXNet::NDArray->new(handle => $_) : undef  } @{ $arg_grad_handles };
-    my @aux_arrays  = map { AI::MXNet::NDArray->new(handle => $_) } @{ $aux_state_handles };
+    my @arg_arrays  = map { AI::MXNet::NDArray->_ndarray_cls($_) } @{ $in_arg_handles };
+    my @grad_arrays = map { defined $_ ? AI::MXNet::NDArray->_ndarray_cls($_) : undef  } @{ $arg_grad_handles };
+    my @aux_arrays  = map { AI::MXNet::NDArray->_ndarray_cls($_) } @{ $aux_state_handles };
     my $executor = AI::MXNet::Executor->new(
         handle    => $exe_handle,
         symbol    => $self,
@@ -1237,6 +1273,7 @@ method Variable(
     Maybe[Num]                    :$lr_mult=,
     Maybe[Num]                    :$wd_mult=,
     Maybe[Dtype]                  :$dtype=,
+    Maybe[Stype]                  :$stype=,
     Maybe[Initializer]            :$init=,
     HashRef[Str]                  :$kwargs={},
     Maybe[Str]                    :$__layout__=
@@ -1251,6 +1288,7 @@ method Variable(
     $attr->{__dtype__}   = DTYPE_STR_TO_MX->{ $dtype } if $dtype;
     $attr->{__init__}    = "$init" if defined $init;
     $attr->{__layout__}  = $__layout__ if defined $__layout__;
+    $attr->{__storage_type__} = STORAGE_TYPE_STR_TO_ID->{$stype} if defined $stype;
     while(my ($k, $v) = each %{ $kwargs })
     {
         if($k =~ /^__/ and $k =~ /__$/)
@@ -1333,6 +1371,7 @@ method load(Str $fname)
 }
 
 =head2 load_json
+
     Load symbol from json string.
 
     Parameters
@@ -1373,16 +1412,19 @@ method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[St
 
     Parameters
     ----------
-    start : number
+    :$start=0 : number
         Start of interval. The interval includes this value. The default start value is 0.
-    stop : number, optional
+    :$stop= : number, optional
         End of interval. The interval does not include this value.
-    step : number, optional
+    :$step=1.0 : number, optional
         Spacing between values
-    repeat : int, optional
+    :$repeat=1 : int, optional
         "The repeating time of all elements.
         E.g repeat=3, the element a will be repeated three times --> a, a, a.
-    dtype : type, optional
+    :$infer_range=0 : Bool
+        When set to 1, infer stop position from start, step, repeat, and
+        output tensor size.
+    :$dtype='float32' : type, optional
         The value type of the NDArray, default to np.float32
 
     Returns
@@ -1391,11 +1433,12 @@ method ones(Shape :$shape, Dtype :$dtype='float32', Maybe[Str] :$name=, Maybe[St
         The created Symbol
 =cut
 
-method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, Maybe[Str] :$name=, Dtype :$dtype='float32')
+method arange(Index :$start=0, Index :$stop=, Num :$step=1.0, Index :$repeat=1, Bool :$infer_range=0, Maybe[Str] :$name=, Dtype :$dtype='float32')
 {
     return __PACKAGE__->_arange({
                  start => $start, (defined $stop ? (stop => $stop) : ()),
-                 step => $step, repeat => $repeat, name => $name, dtype => $dtype
+                 step => $step, repeat => $repeat, name => $name, dtype => $dtype,
+                 infer_range => $infer_range
     });
 }
 
@@ -1432,12 +1475,12 @@ sub _parse_arguments
             }
             else
             {
-                confess("Argument need to be of type $type");
+                confess("Argument needs to be of type $type");
             }
         }
         else
         {
-            confess("Argument need to be one type $type");
+            confess("Argument needs to be one type $type");
         }
     }
     return (\@positional_arguments, \%kwargs, \@kwargs_order);
@@ -1468,7 +1511,12 @@ sub  _ufunc_helper
     }
 }
 
+method histogram(@args) { __PACKAGE__->_histogram(@args%2 ? ('data', @args) : @args) }
+
 sub contrib { 'AI::MXNet::Contrib::Symbol' }
 sub random  { 'AI::MXNet::Symbol::Random' }
+sub sparse  { 'AI::MXNet::Symbol::Sparse' }
+sub linalg  { 'AI::MXNet::LinAlg::Symbol' }
+sub image   { 'AI::MXNet::Image::Symbol' }
 
 1;

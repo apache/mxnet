@@ -50,7 +50,7 @@ export PATH="$PATH:/usr/bin:/opt/local/bin"        # for macports
 
 export MACPORTS_WEB="https://guide.macports.org/chunked/installing.macports.html"
 
-export BREW_PKGS="pkg-config python   opencv graphviz homebrew/science/openblas"
+export BREW_PKGS="pkg-config python   opencv graphviz homebrew/core/openblas"
 export PORT_PKGS="pkgconfig  python36 opencv graphviz openblas-devel"
 
 # graphviz, opencv-python skipped since already installed via brew/port
@@ -193,7 +193,7 @@ install_brew() {
 
 	echo "BEGIN: Install dependent brew packages for MXNet: ${BREW_PKGS}"
 
-	chkret brew tap homebrew/science
+	chkret brew tap homebrew/core
 
 	# install each individually to see progress for each
 	for pkg in ${BREW_PKGS}
@@ -506,8 +506,8 @@ print ((a*2).asnumpy());
 END
 	rm -f mxnet_test.expected
 	cat << END > mxnet_test.expected
-[[ 2.  2.  2.]
- [ 2.  2.  2.]]
+[[2. 2. 2.]
+ [2. 2. 2.]]
 END
 	diff mxnet_test.log mxnet_test.expected
 	if [[ $? = 0 ]]; then
@@ -520,9 +520,9 @@ END
 		echo ":-)"
 		echo " "
 		echo "FYI : You can fine-tune MXNet run-time behavior using environment variables described at:"
-		echo "      http://mxnet.io/faq/env_var.html"
+		echo "      https://mxnet.apache.org/api/faq/env_var"
 		echo " "
-		echo "NEXT: Try the tutorials at: http://mxnet.io/tutorials"
+		echo "NEXT: Try the tutorials at: https://mxnet.io/api"
 		echo " "
 		echo $LINE
 		echo " "

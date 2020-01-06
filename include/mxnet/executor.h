@@ -104,6 +104,29 @@ class Executor {
    */
   virtual const std::unordered_map<std::string, NDArray>& aux_state_map() const = 0;
   /*!
+   * \brief Return a new executor with the same symbol and shared memory,
+   *  but different input/output shapes.
+   *
+   * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
+   * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
+   * \param default_ctx the default context of binding.
+   * \param ctx_map Context mapping group to context.
+   * \param provided_arg_shapes New shape for arguments.
+   * \param in_args the NDArray that stores the input arguments.
+   * \param arg_grads NDArray that is used to store the gradient output of the input arguments.
+   * \param aux_states NDArray that is used as internal states.
+   * \return a new executor.
+   */
+  virtual Executor* Reshape(const bool partial_shaping,
+                            const bool allow_up_sizing,
+                            const Context& default_ctx,
+                            const std::map<std::string, Context>& ctx_map,
+                            const std::unordered_map<std::string, mxnet::TShape>&
+                              provided_arg_shapes,
+                            std::vector<NDArray>* in_args,
+                            std::vector<NDArray>* arg_grads,
+                            std::vector<NDArray>* aux_states) = 0;
+  /*!
    * \brief Create an operator by bind symbol with context and arguments.
    *  If user do not want to compute the gradients of i-th argument, grad_req_type[i] can be kNullOp.
    *
@@ -132,7 +155,7 @@ class Executor {
                               const std::vector<Context>& in_arg_ctxes,
                               const std::vector<Context>& arg_grad_ctxes,
                               const std::vector<Context>& aux_state_ctxes,
-                              const std::unordered_map<std::string, TShape>& arg_shape_map,
+                              const std::unordered_map<std::string, mxnet::TShape>& arg_shape_map,
                               const std::unordered_map<std::string, int>& arg_dtype_map,
                               const std::unordered_map<std::string, int>& arg_stype_map,
                               const std::vector<OpReqType>& grad_req_types,
@@ -143,6 +166,7 @@ class Executor {
                               std::unordered_map<std::string, NDArray>*
                                 shared_data_arrays = nullptr,
                               Executor* shared_exec = nullptr);
+
   /*!
    * \brief the prototype of user-defined monitor callback
    */
@@ -150,7 +174,7 @@ class Executor {
   /*!
    * \brief Install a callback to notify the completion of operation.
    */
-  virtual void SetMonitorCallback(const MonitorCallback& callback) {}
+  virtual void SetMonitorCallback(const MonitorCallback& callback, bool monitor_all = false) {}
 };  // class executor
 }  // namespace mxnet
 #endif  // MXNET_EXECUTOR_H_

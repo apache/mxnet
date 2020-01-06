@@ -76,24 +76,23 @@ def test_model_weights_and_outputs(model_name, image_url, gpu):
     convert_and_compare_caffe_to_mxnet(image_url, gpu, prototxt, caffemodel, mean,
                                        mean_diff_allowed=1e-03, max_diff_allowed=1e-01)
 
-    return
-
 
 def main():
     """Entrypoint for test_converter"""
     parser = argparse.ArgumentParser(description='Test Caffe converter')
     parser.add_argument('--cpu', action='store_true', help='use cpu?')
     parser.add_argument('--image_url', type=str,
-                        default='http://writm.com/wp-content/uploads/2016/08/Cat-hd-wallpapers.jpg',
+                        default='https://github.com/dmlc/web-data/raw/master/mxnet/doc/'\
+                                'tutorials/python/predict_image/cat.jpg',
                         help='input image to test inference, can be either file path or url')
     args = parser.parse_args()
     if args.cpu:
         gpus = [-1]
         default_batch_size = 32
     else:
-        gpus = mx.test_utils.list_gpus()
-        assert gpus, 'At least one GPU is needed to run test_converter in GPU mode'
-        default_batch_size = 32 * len(gpus)
+        num_gpus = mx.context.num_gpus()
+        assert num_gpus, 'At least one GPU is needed to run test_converter in GPU mode'
+        default_batch_size = 32 * num_gpus
 
     models = ['bvlc_googlenet', 'vgg-16', 'resnet-50']
 

@@ -3,5 +3,6 @@ src/*.so$
 \.dll$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+dummy.NAMESPACE
 
 README.md

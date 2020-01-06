@@ -37,18 +37,21 @@
 # choice of compiler
 #--------------------
 
+ifndef CC
 export CC = gcc
+endif
+ifndef CXX
 export CXX = g++
+endif
+ifndef NVCC
 export NVCC = nvcc
+endif
 
 # whether compile with options for MXNet developer
 DEV = 0
 
 # whether compile with debug
 DEBUG = 0
-
-# whether compile with profiler
-USE_PROFILER =
 
 # whether to turn on segfault signal handler to log the stack trace
 USE_SIGNAL_HANDLER =
@@ -58,6 +61,9 @@ ADD_LDFLAGS =
 
 # the additional compile flags you want to add
 ADD_CFLAGS =
+
+# whether to build operators written in TVM
+USE_TVM_OP = 0
 
 #---------------------------------------------
 # matrix computation libraries for CPU/GPU
@@ -77,6 +83,9 @@ ENABLE_CUDA_RTC = 1
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 
+# whether to use NVTX when profiling
+USE_NVTX = 0
+
 #whether to use NCCL library
 USE_NCCL = 0
 #add the path to NCCL library
@@ -86,6 +95,10 @@ USE_NCCL_PATH = NONE
 # you can disable it, however, you will not able to use
 # imbin iterator
 USE_OPENCV = 1
+# Add OpenCV include path, in which the directory `opencv2` exists
+USE_OPENCV_INC_PATH = NONE
+# Add OpenCV shared library path, in which the shared library exists
+USE_OPENCV_LIB_PATH = NONE
 
 #whether use libjpeg-turbo for image decode without OpenCV wrapper
 USE_LIBJPEG_TURBO = 0
@@ -95,20 +108,10 @@ USE_LIBJPEG_TURBO_PATH = NONE
 # use openmp for parallelization
 USE_OPENMP = 1
 
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
+# whether use MKL-DNN library: 0 = disabled, 1 = enabled
+# if USE_MKLDNN is not defined, MKL-DNN will be enabled by default on x86 Linux.
+# you can disable it explicity with USE_MKLDNN = 0
+USE_MKLDNN =
 
 # whether use NNPACK library
 USE_NNPACK = 0
@@ -147,9 +150,18 @@ endif
 ARCH := $(shell uname -a)
 ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
 	USE_SSE=0
+	USE_F16C=0
 else
 	USE_SSE=1
 endif
+
+#----------------------------
+# F16C instruction support for faster arithmetic of fp16 on CPU
+#----------------------------
+# For distributed training with fp16, this helps even if training on GPUs
+# If left empty, checks CPU support and turns it on.
+# For cross compilation, please check support for F16C on target device and turn off if necessary.
+USE_F16C =
 
 #----------------------------
 # distributed computing
@@ -177,10 +189,23 @@ USE_S3 = 0
 USE_OPERATOR_TUNING = 1
 
 # Use gperftools if found
-USE_GPERFTOOLS = 1
+# Disable because of #8968
+USE_GPERFTOOLS = 0
+
+# path to gperftools (tcmalloc) library in case of a non-standard installation
+USE_GPERFTOOLS_PATH =
+
+# Link gperftools statically
+USE_GPERFTOOLS_STATIC =
 
 # Use JEMalloc if found, and not using gperftools
 USE_JEMALLOC = 1
+
+# path to jemalloc library in case of a non-standard installation
+USE_JEMALLOC_PATH =
+
+# Link jemalloc statically
+USE_JEMALLOC_STATIC =
 
 #----------------------------
 # additional operators
@@ -195,6 +220,15 @@ EXTRA_OPERATORS =
 
 # Create C++ interface package
 USE_CPP_PACKAGE = 0
+
+# Use int64_t type to represent the total number of elements in a tensor
+# This will cause performance degradation reported in issue #14496
+# Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
+# Note: the size of each dimension is still bounded by INT32_MAX
+USE_INT64_TENSOR_SIZE = 0
+
+# Python executable. Needed for cython target
+PYTHON = python
 
 #----------------------------
 # plugins

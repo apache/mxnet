@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 505;
+use Test::More tests => 515;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(same enumerate);
 
@@ -32,6 +32,15 @@ sub check_with_device
             ndop   => sub { mx->nd->random->normal(@_)  },
             params => { loc => 10.0, scale => 0.5 },
             inputs => [ [loc => [ [ 0.0, 2.5 ], [ -9.75, -7.0 ] ]] , [scale => [ [ 1.0, 3.7 ], [ 4.2, 1.5 ] ]] ],
+            checks => [
+                [mean => sub { my ($x, $params) = @_; $x->astype('float64')->aspdl->avg - $params->{loc} }, $tol],
+                [std  => sub { my ($x, $params) = @_; ($x->astype('float64')->aspdl->stats)[6] - $params->{scale} }, $tol]
+            ]
+        },
+        {
+            name => 'randn',
+            ndop => sub { mx->nd->random->randn(@_) },
+            params => { loc => 10.0, scale => 0.5 },
             checks => [
                 [mean => sub { my ($x, $params) = @_; $x->astype('float64')->aspdl->avg - $params->{loc} }, $tol],
                 [std  => sub { my ($x, $params) = @_; ($x->astype('float64')->aspdl->stats)[6] - $params->{scale} }, $tol]
@@ -126,6 +135,7 @@ sub check_with_device
         }
 
         # check multi-distribution sampling, only supports cpu for now
+        next unless $symbdic->{inputs};
         %params = (shape=>$shape, dtype=>$dtype, ctx=>$device);
         %params = (%params, map { $_->[0] => mx->nd->array($_->[1], ctx=>$device, dtype=>$dtype) } @{ $symbdic->{inputs} });
         mx->random->seed(128);
@@ -149,6 +159,7 @@ sub check_with_device
 
         # check symbolic
         my $symbol = $symbdic->{symbol};
+        next if not $symbol;
         my $X = mx->sym->Variable("X");
         %params = %{ $symbdic->{params} };
         %params = (%params, shape=>$shape, dtype=>$dtype);
@@ -225,3 +236,13 @@ sub test_sample_multinomial
 
 test_sample_multinomial();
 
+sub test_seed_context
+{
+    ## only checking perl/swig interaction
+    ## c++ implementation is tested on python's side thoroughly already
+    mx->random->seed(1234);
+    mx->random->seed(1234, ctx => mx->cpu(0));
+    ok(1);
+}
+
+test_seed_context();

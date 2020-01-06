@@ -108,9 +108,11 @@ class DistanceWeightedSampling(HybridBlock):
         mask = np.ones(weights.shape)
         for i in range(0, n, k):
             mask[i:i+k, i:i+k] = 0
+        mask_uniform_probs = mask * (1.0/(n-k))
 
         weights = weights * F.array(mask) * (distance < self.nonzero_loss_cutoff)
-        weights = weights / F.sum(weights, axis=1, keepdims=True)
+        weights_sum = F.sum(weights, axis=1, keepdims=True)
+        weights = weights / weights_sum
 
         a_indices = []
         p_indices = []
@@ -120,10 +122,11 @@ class DistanceWeightedSampling(HybridBlock):
         for i in range(n):
             block_idx = i // k
 
-            try:
+            if weights_sum[i] != 0:
                 n_indices += np.random.choice(n, k-1, p=np_weights[i]).tolist()
-            except:
-                n_indices += np.random.choice(n, k-1).tolist()
+            else:
+                # all samples are above the cutoff so we sample uniformly
+                n_indices += np.random.choice(n, k-1, p=mask_uniform_probs[i]).tolist()
             for j in range(block_idx * k, (block_idx + 1) * k):
                 if j != i:
                     a_indices.append(i)
@@ -217,8 +220,11 @@ class MarginLoss(gluon.loss.Loss):
         pos_loss = F.maximum(d_ap - beta + self._margin, 0.0)
         neg_loss = F.maximum(beta - d_an + self._margin, 0.0)
 
-        pair_cnt = float(F.sum((pos_loss > 0.0) + (neg_loss > 0.0)).asscalar())
-
-        # Normalize based on the number of pairs.
-        loss = (F.sum(pos_loss + neg_loss) + beta_reg_loss) / pair_cnt
+        pair_cnt = F.sum((pos_loss > 0.0) + (neg_loss > 0.0))
+        if pair_cnt == 0.0:
+            # When poss_loss and neg_loss is zero then total loss is zero as well
+            loss = F.sum(pos_loss + neg_loss)
+        else:
+            # Normalize based on the number of pairs.
+            loss = (F.sum(pos_loss + neg_loss) + beta_reg_loss) / pair_cnt
         return gluon.loss._apply_weighting(F, loss, self._weight, None)

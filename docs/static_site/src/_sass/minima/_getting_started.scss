@@ -1,0 +1,178 @@
+.install-selector {
+  max-width: 800px;
+  margin: auto;
+  margin-bottom: 40px;
+
+  .highlight {
+    margin-left: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px !important;
+  }
+}
+
+
+.install-content, .install-widget {
+  visibility: hidden;
+}
+
+.get-started-from-source {
+  background-color: $grey-color-light;
+  padding-top: 50px;
+  padding-bottom: 50px;
+}
+
+#lang-demo ul {
+  margin-top: 20px;
+  margin-bottom: 15px;
+}
+
+.option-title {
+  width: 100px;
+  float: left;
+  clear: none;
+  text-align: right;
+  font-size: 15px;
+  padding-top: 7px;
+  padding-bottom: 8px;
+  padding-right: 10px;
+  font-weight: bold;
+}
+
+.option-row {
+  padding-bottom: 8px;
+}
+
+.install-inst {
+}
+
+#setup-options {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  margin-left: 30px;
+}
+
+/*
+ * Drop down
+ */
+
+.dropbtn {
+  background-color: $color-mxnet;
+  color: white;
+  font-size: $base-font-size;
+  margin: 0px;
+  border: none;
+  min-width: 100%;
+  padding: 10px;
+}
+
+li.opt.versions {
+  padding: 10px;
+}
+
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+  margin: 5px;
+  font-size: $base-font-size;
+
+}
+
+ul.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 40%;
+  text-align: center;
+  background-color: whitesmoke;
+  box-shadow: none;
+  z-index: 1;
+  margin: 0px;
+  padding: 0px;
+  list-style-type: none;
+}
+
+.dropdown-content a {
+  color: $grey-color-dark;
+  text-decoration: none;
+  display: block;
+  padding-left: 5px;
+  padding-right: 5px;
+  font-size: $base-font-size;
+
+  &:hover {
+    color: orangered;
+  }
+}
+
+.dropdown-content .active a {
+  color: $grey-color-light;
+}
+
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown:hover .dropbtn {
+  background-color: $color-mxnet
+}
+
+/*
+ * selector
+ */
+
+.col-3.install-left {
+  margin: auto;
+
+  span {
+    padding-left: 20px;
+    border-left: 2px $color-mxnet dashed;
+    @media screen and (max-width: $on-palm) {
+      border: none;
+    }
+  }
+
+}
+
+.col-9.install-right {
+  margin: auto;
+}
+
+.install-selector {
+  .active {
+    background-color: $color-mxnet !important;
+    color: $grey-color-light !important;
+  }
+}
+
+.btn-group.opt-group {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+
+
+  .opt {
+    padding-bottom: 10px;
+    padding-top: 10px;
+    font-size: $base-font-size;
+    width: 100%;
+    border: none;
+    color: $dark-gray;
+    margin-left: 5px;
+    margin-right: 5px;
+    background-color: $grey-color-light;
+
+    @media screen and (max-width: $on-palm) {
+      font-size: 11px;
+      margin-left: 2px;
+      margin-right: 2px;
+    }
+
+    &:hover {
+      background-color: $color-mxnet;
+      color: $grey-color-light;
+    }
+  }
+
+
+}

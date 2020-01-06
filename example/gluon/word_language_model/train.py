@@ -18,32 +18,32 @@
 import argparse
 import time
 import math
+import os
 import mxnet as mx
 from mxnet import gluon, autograd
 from mxnet.gluon import contrib
 import model
-import data
 
 parser = argparse.ArgumentParser(description='MXNet Autograd RNN/LSTM Language Model on Wikitext-2.')
 parser.add_argument('--model', type=str, default='lstm',
                     help='type of recurrent net (rnn_tanh, rnn_relu, lstm, gru)')
-parser.add_argument('--emsize', type=int, default=200,
+parser.add_argument('--emsize', type=int, default=650,
                     help='size of word embeddings')
-parser.add_argument('--nhid', type=int, default=200,
+parser.add_argument('--nhid', type=int, default=650,
                     help='number of hidden units per layer')
 parser.add_argument('--nlayers', type=int, default=2,
                     help='number of layers')
-parser.add_argument('--lr', type=float, default=1.0,
+parser.add_argument('--lr', type=float, default=20,
                     help='initial learning rate')
-parser.add_argument('--clip', type=float, default=0.2,
+parser.add_argument('--clip', type=float, default=0.25,
                     help='gradient clipping')
 parser.add_argument('--epochs', type=int, default=40,
                     help='upper epoch limit')
-parser.add_argument('--batch_size', type=int, default=32, metavar='N',
+parser.add_argument('--batch_size', type=int, default=20, metavar='N',
                     help='batch size')
 parser.add_argument('--bptt', type=int, default=35,
                     help='sequence length')
-parser.add_argument('--dropout', type=float, default=0.2,
+parser.add_argument('--dropout', type=float, default=0.5,
                     help='dropout applied to layers (0 = no dropout)')
 parser.add_argument('--tied', action='store_true',
                     help='tie the word embedding and softmax weights')
@@ -58,8 +58,17 @@ parser.add_argument('--gctype', type=str, default='none',
                           takes `2bit` or `none` for now.')
 parser.add_argument('--gcthreshold', type=float, default=0.5,
                     help='threshold for 2bit gradient compression')
+parser.add_argument('--hybridize', action='store_true',
+                    help='whether to hybridize in mxnet>=1.3 (default=False)')
+parser.add_argument('--static-alloc', action='store_true',
+                    help='whether to use static-alloc hybridize in mxnet>=1.3 (default=False)')
+parser.add_argument('--static-shape', action='store_true',
+                    help='whether to use static-shape hybridize in mxnet>=1.3 (default=False)')
+parser.add_argument('--export-model', action='store_true',
+                    help='export a symbol graph and exit (default=False)')
 args = parser.parse_args()
 
+print(args)
 
 ###############################################################################
 # Load data
@@ -71,28 +80,42 @@ if args.cuda:
 else:
     context = mx.cpu(0)
 
-train_dataset = contrib.data.text.WikiText2('./data', 'train', seq_len=args.bptt)
+if args.export_model:
+    args.hybridize = True
+
+# optional parameters only for mxnet >= 1.3
+hybridize_optional = dict(filter(lambda kv:kv[1],
+    {'static_alloc':args.static_alloc, 'static_shape':args.static_shape}.items()))
+if args.hybridize:
+    print('hybridize_optional', hybridize_optional)
+
+dirname = './data'
+dirname = os.path.expanduser(dirname)
+if not os.path.exists(dirname):
+    os.makedirs(dirname)
+
+train_dataset = contrib.data.text.WikiText2(dirname, 'train', seq_len=args.bptt)
 vocab = train_dataset.vocabulary
-val_dataset, test_dataset = [contrib.data.text.WikiText2('./data', segment,
+val_dataset, test_dataset = [contrib.data.text.WikiText2(dirname, segment,
                                                          vocab=vocab,
                                                          seq_len=args.bptt)
                              for segment in ['validation', 'test']]
 
-nbatch_train = len(train_dataset) / args.batch_size
+nbatch_train = len(train_dataset) // args.batch_size
 train_data = gluon.data.DataLoader(train_dataset,
                                    batch_size=args.batch_size,
                                    sampler=contrib.data.IntervalSampler(len(train_dataset),
                                                                         nbatch_train),
                                    last_batch='discard')
 
-nbatch_val = len(val_dataset) / args.batch_size
+nbatch_val = len(val_dataset) // args.batch_size
 val_data = gluon.data.DataLoader(val_dataset,
                                  batch_size=args.batch_size,
                                  sampler=contrib.data.IntervalSampler(len(val_dataset),
                                                                       nbatch_val),
                                  last_batch='discard')
 
-nbatch_test = len(test_dataset) / args.batch_size
+nbatch_test = len(test_dataset) // args.batch_size
 test_data = gluon.data.DataLoader(test_dataset,
                                   batch_size=args.batch_size,
                                   sampler=contrib.data.IntervalSampler(len(test_dataset),
@@ -108,7 +131,9 @@ test_data = gluon.data.DataLoader(test_dataset,
 ntokens = len(vocab)
 model = model.RNNModel(args.model, ntokens, args.emsize, args.nhid,
                        args.nlayers, args.dropout, args.tied)
-model.collect_params().initialize(mx.init.Xavier(), ctx=context)
+if args.hybridize:
+    model.hybridize(**hybridize_optional)
+model.initialize(mx.init.Xavier(), ctx=context)
 
 compression_params = None if args.gctype == 'none' else {'type': args.gctype, 'threshold': args.gcthreshold}
 trainer = gluon.Trainer(model.collect_params(), 'sgd',
@@ -117,6 +142,8 @@ trainer = gluon.Trainer(model.collect_params(), 'sgd',
                          'wd': 0},
                         compression_params=compression_params)
 loss = gluon.loss.SoftmaxCrossEntropyLoss()
+if args.hybridize:
+    loss.hybridize(**hybridize_optional)
 
 ###############################################################################
 # Training code
@@ -154,22 +181,26 @@ def train():
             hidden = detach(hidden)
             with autograd.record():
                 output, hidden = model(data, hidden)
+                # Here L is a vector of size batch_size * bptt size
                 L = loss(output, target)
+                L = L / (args.bptt * args.batch_size)
                 L.backward()
 
             grads = [p.grad(context) for p in model.collect_params().values()]
-            # Here gradient is for the whole batch.
-            # So we multiply max_norm by batch_size and bptt size to balance it.
-            gluon.utils.clip_global_norm(grads, args.clip * args.bptt * args.batch_size)
+            gluon.utils.clip_global_norm(grads, args.clip)
 
-            trainer.step(args.batch_size)
+            trainer.step(1)
             total_L += mx.nd.sum(L).asscalar()
 
             if i % args.log_interval == 0 and i > 0:
-                cur_L = total_L / args.bptt / args.batch_size / args.log_interval
+                cur_L = total_L / args.log_interval
                 print('[Epoch %d Batch %d] loss %.2f, ppl %.2f'%(
                     epoch, i, cur_L, math.exp(cur_L)))
                 total_L = 0.0
+
+            if args.export_model:
+                model.export('model')
+                return
 
         val_L = eval(val_data)
 
@@ -179,18 +210,16 @@ def train():
         if val_L < best_val:
             best_val = val_L
             test_L = eval(test_data)
-            model.collect_params().save(args.save)
+            model.save_parameters(args.save)
             print('test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
         else:
             args.lr = args.lr*0.25
-            trainer._init_optimizer('sgd',
-                                    {'learning_rate': args.lr,
-                                     'momentum': 0,
-                                     'wd': 0})
-            model.collect_params().load(args.save, context)
+            trainer.set_learning_rate(args.lr)
 
 if __name__ == '__main__':
     train()
-    model.collect_params().load(args.save, context)
-    test_L = eval(test_data)
-    print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
+    if not args.export_model:
+        model.load_parameters(args.save, context)
+        test_L = eval(test_data)
+        print('Best test loss %.2f, test ppl %.2f'%(test_L, math.exp(test_L)))
+

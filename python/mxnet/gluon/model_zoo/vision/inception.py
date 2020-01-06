@@ -26,6 +26,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from ...contrib.nn import HybridConcurrent
+from .... import base
 
 # Helpers
 def _make_basic_conv(**kwargs):
@@ -199,7 +200,7 @@ class Inception3(HybridBlock):
 
 # Constructor
 def inception_v3(pretrained=False, ctx=cpu(),
-                 root=os.path.join('~', '.mxnet', 'models'), **kwargs):
+                 root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""Inception v3 model from
     `"Rethinking the Inception Architecture for Computer Vision"
     <http://arxiv.org/abs/1512.00567>`_ paper.
@@ -210,11 +211,11 @@ def inception_v3(pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = Inception3(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('inceptionv3', root=root), ctx=ctx)
+        net.load_parameters(get_model_file('inceptionv3', root=root), ctx=ctx)
     return net

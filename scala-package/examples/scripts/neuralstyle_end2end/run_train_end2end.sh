@@ -19,7 +19,7 @@
 
 
 MXNET_ROOT=$(cd "$(dirname $0)/../../../.."; pwd)
-CLASS_PATH=$MXNET_ROOT/scala-package/assembly/linux-x86_64-gpu/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
+CLASS_PATH=$MXNET_ROOT/scala-package/assembly/target/*:$MXNET_ROOT/scala-package/examples/target/*:$MXNET_ROOT/scala-package/examples/target/classes/lib/*
 
 # more details please refer to
 # https://github.com/Ldpe2G/mxnet/blob/develop/example/neural-style/end_to_end/README.md
@@ -30,7 +30,7 @@ SAVE_MODEL_DIR=$4
 GPU=0
 
 java -Xmx1024m -cp $CLASS_PATH \
-	ml.dmlc.mxnetexamples.neuralstyle.end2end.BoostTrain \
+	org.apache.mxnetexamples.neuralstyle.end2end.BoostTrain \
 	--data-path $TRAIN_DATA_PATH  \
 	--vgg--model-path  $VGG_MODEL_PATH \
 	--save--model-path $SAVE_MODEL_DIR \

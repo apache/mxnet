@@ -63,8 +63,8 @@ inline void BBoxTransformInv(const mshadow::Tensor<cpu, 2>& boxes,
 
         float pred_ctr_x = dx * width + ctr_x;
         float pred_ctr_y = dy * height + ctr_y;
-        float pred_w = exp(dw) * width;
-        float pred_h = exp(dh) * height;
+        float pred_w = std::exp(dw) * width;
+        float pred_h = std::exp(dh) * height;
 
         float pred_x1 = pred_ctr_x - 0.5 * (pred_w - 1.0);
         float pred_y1 = pred_ctr_y - 0.5 * (pred_h - 1.0);
@@ -192,7 +192,7 @@ inline void CopyScore(const mshadow::Tensor<cpu, 2>& dets,
 inline void ReverseArgsort(const mshadow::Tensor<cpu, 1>& score,
                            mshadow::Tensor<cpu, 1> *order) {
   ReverseArgsortCompl cmpl(score.dptr_);
-  std::sort(order->dptr_, order->dptr_ + score.size(0), cmpl);
+  std::stable_sort(order->dptr_, order->dptr_ + score.size(0), cmpl);
 }
 
 // reorder proposals according to order and keep the pre_nms_top_n proposals
@@ -400,8 +400,8 @@ class ProposalOp : public Operator{
                                  &keep,
                                  &out_size);
 
-    // fill in output rois
-    for (index_t i = 0; i < out.size(0); ++i) {
+    // fill in output rois and output score
+    for (index_t i = 0; i < static_cast<index_t>(param_.rpn_post_nms_top_n); ++i) {
       // batch index 0
       out[i][0] = 0;
       if (i < out_size) {
@@ -409,21 +409,12 @@ class ProposalOp : public Operator{
         for (index_t j = 0; j < 4; ++j) {
           out[i][j + 1] =  workspace_ordered_proposals[index][j];
         }
+        out_score[i][0] = workspace_ordered_proposals[index][4];
       } else {
         index_t index = keep[i % out_size];
         for (index_t j = 0; j < 4; ++j) {
           out[i][j + 1] = workspace_ordered_proposals[index][j];
         }
-      }
-    }
-
-    // fill in output score
-    for (index_t i = 0; i < out_score.size(0); i++) {
-      if (i < out_size) {
-        index_t index = keep[i];
-        out_score[i][0] = workspace_ordered_proposals[index][4];
-      } else {
-        index_t index = keep[i % out_size];
         out_score[i][0] = workspace_ordered_proposals[index][4];
       }
     }
@@ -468,7 +459,7 @@ DMLC_REGISTER_PARAMETER(ProposalParam);
 
 MXNET_REGISTER_OP_PROPERTY(_contrib_Proposal, ProposalProp)
 .describe("Generate region proposals via RPN")
-.add_argument("cls_score", "NDArray-or-Symbol", "Score of how likely proposal is object.")
+.add_argument("cls_prob", "NDArray-or-Symbol", "Score of how likely proposal is object.")
 .add_argument("bbox_pred", "NDArray-or-Symbol", "BBox Predicted deltas from anchors for proposals")
 .add_argument("im_info", "NDArray-or-Symbol", "Image size and scale.")
 .add_arguments(ProposalParam::__FIELDS__());

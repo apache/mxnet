@@ -39,5 +39,6 @@
 #include "mxnet-cpp/io.hpp"
 #include "mxnet-cpp/metric.h"
 #include "mxnet-cpp/initializer.h"
+#include "mxnet-cpp/contrib.h"
 
 #endif  // MXNET_CPP_MXNETCPP_H_

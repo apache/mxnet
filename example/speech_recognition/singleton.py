@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,37 +18,41 @@
 
 import logging as log
 
+
 class Singleton:
-    def __init__(self, decrated):
-        log.debug("Singleton Init %s" % decrated)
-        self._decorated = decrated
+    """
+    A non-thread-safe helper class to ease implementing singletons.
+    This should be used as a decorator -- not a metaclass -- to the
+    class that should be a singleton.
+
+    The decorated class can define one `__init__` function that
+    takes only the `self` argument. Also, the decorated class cannot be
+    inherited from. Other than that, there are no restrictions that apply
+    to the decorated class.
+
+    To get the singleton instance, use the `instance` method. Trying
+    to use `__call__` will result in a `TypeError` being raised.
+
+    """
+
+    def __init__(self, decorated):
+        self._decorated = decorated
 
     def getInstance(self):
+        """
+        Returns the singleton instance. Upon its first call, it creates a
+        new instance of the decorated class and calls its `__init__` method.
+        On all subsequent calls, the already created instance is returned.
+
+        """
         try:
             return self._instance
         except AttributeError:
             self._instance = self._decorated()
             return self._instance
 
-    def __new__(class_, *args, **kwargs):
-        print "__new__"
-        class_.instances[class_] = super(Singleton, class_).__new__(class_, *args, **kwargs)
-        return class_.instances[class_]
-
     def __call__(self):
-        raise TypeError("Singletons must be accessed through 'getInstance()'")
+        raise TypeError('Singletons must be accessed through `getInstance()`.')
 
-
-class SingletonInstane:
-  __instance = None
-
-  @classmethod
-  def __getInstance(cls):
-    return cls.__instance
-
-  @classmethod
-  def instance(cls, *args, **kargs):
-    cls.__instance = cls(*args, **kargs)
-    cls.instance = cls.__getInstance
-    return cls.__instance
-
+    def __instancecheck__(self, inst):
+        return isinstance(inst, self._decorated)

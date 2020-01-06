@@ -54,6 +54,7 @@ using namespace mshadow;
 // CPU/GPU-versions of BLAS3 function "gemm". Please refer to the BLAS3-documentation
 // for further information about the function and its parameters.
 // Note that this is C = gemm(A,B,C), so C is input and output parameter.
+// C = alpha * A * B + beta * C
 template<typename xpu, typename DType>
 void linalg_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DType>& B,
                  const Tensor<xpu, 2, DType>& C, DType alpha, DType beta,
@@ -63,6 +64,13 @@ template<typename xpu, typename DType>
 void linalg_batch_gemm(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType>& B,
                        const Tensor<xpu, 3, DType>& C, DType alpha, DType beta,
                        bool tA, bool tB, Stream<xpu> *s = 0);
+
+// Version of batch gemmm where rows are indexed at axis 1 and columns at axis 3.
+template<typename xpu, typename DType>
+void linalg_batch_gemm(const Tensor<xpu, 4, DType>& A, const Tensor<xpu, 4, DType>& B,
+                       const Tensor<xpu, 4, DType>& C, DType alpha, DType beta,
+                       bool tA, bool tB, Stream<xpu> *s = 0);
+
 
 template<typename xpu, typename DType>
 inline void linalg_gemm(const Tensor<xpu, 2, DType>& A,
@@ -183,6 +191,94 @@ template<typename xpu, typename DType>
 int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
                                  const Tensor<xpu, 1, DType>& L,
                                  Stream<xpu> *s = 0);
+
+//////////////////////////////// GESVD ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "gesvd". Please refer to the
+// LAPACK documentation for further details.
+// Note: V is input and output parameter (it overwrites A)
+
+template<typename xpu, typename DType>
+void linalg_gesvd(const Tensor<xpu, 2, DType>& UT,
+                  const Tensor<xpu, 1, DType>& L,
+                  const Tensor<xpu, 2, DType>& V,
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu>* s = 0);
+
+// This function determines the amount of workspace needed for linalg_gesvd
+// which is returned as number of elements of type DType.
+template<typename xpu, typename DType>
+int linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
+                                 const Tensor<xpu, 1, DType>& L,
+                                 const Tensor<xpu, 2, DType>& V,
+                                 Stream<xpu>* s = 0);
+
+//////////////////////////////// GETRF ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getrf". Please refer to the
+// LAPACK documentation for further details.
+
+// Note:
+// - A is input and output parameter (overwritten by LU)
+// - Param check_singular is only useful in cpu version. If check_singular is false,
+//   don't throw error when A is non-invertible matrix.
+template<typename xpu, typename DType>
+void linalg_getrf(const Tensor<xpu, 2, DType>& A,
+                  const Tensor<xpu, 1, int>& pivot,
+                  bool check_singular,
+                  Stream<xpu> *s = 0);
+
+template<typename xpu, typename DType>
+void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
+                        const Tensor<xpu, 2, int>& pivot,
+                        bool check_singular,
+                        Stream<xpu> *s = 0);
+
+//////////////////////////////// GETRI ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "getri". Please refer to the
+// LAPACK documentation for further details.
+
+// Note:
+// - pivot and LU is the output of getrf(A)
+// - LU is also the output parameter (overwritten by inverse(A))
+template<typename xpu, typename DType>
+void linalg_getri(const Tensor<xpu, 2, DType>& LU,
+                  const Tensor<xpu, 1, int>& pivot, \
+                  const Tensor<xpu, 1, DType>& work,
+                  Stream<xpu> *s = 0);
+
+// Note that this function only implements GPU version with "getriBatched" in cuBLAS.
+// Unlike lapack routines in cpu, it is computed out-of-place, so the final matrix
+// inverse is stored in A.
+template<typename xpu, typename DType>
+void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
+                        const Tensor<xpu, 3, DType>& LU,
+                        const Tensor<xpu, 2, int>& pivot,
+                        Stream<xpu> *s = 0);
+
+//////////////////////////////// INVERSE ////////////////////////////////////////////
+
+// CPU/GPU-versions of matrix inverse combining LAPACK function "getrf" and "getri"
+// Note that A = inverse(B)
+template<typename xpu, typename DType>
+void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
+                          const Tensor<xpu, 3, DType>& B,
+                          const mxnet::OpContext& ctx);
+
+//////////////////////////////// DET ////////////////////////////////////////////
+
+// CPU/GPU-versions of helper functions used in matrix determinant operators
+
+// Helper function in determinant backward computation: compute matrix inverse
+// from LU and pivot using temp workspace, the result is stored back to LU
+template<typename xpu, typename DType>
+void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
+                                      const Tensor<xpu, 2, int>& pivot,
+                                      const Tensor<xpu, 1, DType>& det,
+                                      const Tensor<xpu, 3, DType>& temp,
+                                      const DType zero_det,
+                                      const mxnet::OpContext& ctx);
 
 #include "linalg_impl.h"
 

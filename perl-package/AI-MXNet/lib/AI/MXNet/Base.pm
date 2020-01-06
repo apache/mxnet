@@ -19,21 +19,27 @@ package AI::MXNet::Base;
 use strict;
 use warnings;
 use PDL;
-use PDL::Types qw();
-use AI::MXNetCAPI 1.1;
-use AI::NNVMCAPI 1.1;
+use PDL::Types ();
+use PDL::CCS::Nd;
+use AI::MXNetCAPI 1.32;
+use AI::NNVMCAPI 1.3;
 use AI::MXNet::Types;
 use Time::HiRes;
+use Scalar::Util qw(blessed);
 use Carp;
 use Exporter;
 use base qw(Exporter);
 use List::Util qw(shuffle);
+use Data::Dumper;
 
-@AI::MXNet::Base::EXPORT = qw(product enumerate assert zip check_call build_param_doc
-                              pdl cat dog svd bisect_left pdl_shuffle as_array
-                              DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
-                              DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP);
-@AI::MXNet::Base::EXPORT_OK = qw(pzeros pceil);
+our @EXPORT = qw(product enumerate assert zip check_call build_param_doc
+                 pdl cat dog svd bisect_left pdl_shuffle as_array ascsr rand_sparse
+                 DTYPE_STR_TO_MX DTYPE_MX_TO_STR DTYPE_MX_TO_PDL
+                 DTYPE_PDL_TO_MX DTYPE_MX_TO_PERL GRAD_REQ_MAP
+                 STORAGE_TYPE_UNDEFINED STORAGE_TYPE_DEFAULT
+                 STORAGE_TYPE_ROW_SPARSE STORAGE_TYPE_CSR
+                 STORAGE_TYPE_STR_TO_ID STORAGE_TYPE_ID_TO_STR STORAGE_AUX_TYPES);
+our @EXPORT_OK = qw(pzeros pceil pones digitize hash array_index range);
 
 use constant DTYPE_STR_TO_MX => {
     float32 => 0,
@@ -97,6 +103,29 @@ use constant GRAD_REQ_MAP => {
     write => 1,
     add   => 3
 };
+use constant {
+    STORAGE_TYPE_UNDEFINED  => -1,
+    STORAGE_TYPE_DEFAULT    =>  0,
+    STORAGE_TYPE_ROW_SPARSE =>  1,
+    STORAGE_TYPE_CSR        =>  2
+};
+use constant STORAGE_TYPE_STR_TO_ID => {
+    undefined  => STORAGE_TYPE_UNDEFINED,
+    default    => STORAGE_TYPE_DEFAULT,
+    row_sparse => STORAGE_TYPE_ROW_SPARSE,
+    csr        => STORAGE_TYPE_CSR
+};
+use constant STORAGE_TYPE_ID_TO_STR => {
+    STORAGE_TYPE_UNDEFINED()  => 'undefined',
+    STORAGE_TYPE_DEFAULT()    => 'default',
+    STORAGE_TYPE_ROW_SPARSE() => 'row_sparse',
+    STORAGE_TYPE_CSR()        => 'csr'
+};
+use constant STORAGE_AUX_TYPES => {
+    row_sparse => ['int64'],
+    csr => ['int64', 'int64']
+};
+
 
 =head1 NAME
 
@@ -141,9 +170,16 @@ sub zip
 
 sub enumerate
 {
-    my ($sub, @arrays) = @_;
-    my $len = @{ $arrays[0] };
-    zip($sub, [0..$len-1], @arrays);
+    if('CODE' eq ref $_[0])
+    {
+        # continue supporting the callback style
+        my $code = shift;
+        my $len = @{ $_[0] };
+        $code->(@$_) for AI::MXNetCAPI::py_zip([0..$len-1], map { \@$_ } @_);
+        return;
+    }
+    my $len = @{ $_[0] };
+    return AI::MXNetCAPI::py_zip([0..$len-1], map { \@$_ } @_);
 }
 
 =head2 product
@@ -198,18 +234,11 @@ sub bisect_left
     as shuffled last dimension's indexes
 =cut
 
-
 sub pdl_shuffle
 {
     my ($pdl, $preshuffle) = @_;
-    my $c = $pdl->copy;
     my @shuffle = $preshuffle ? @{ $preshuffle } : shuffle(0..$pdl->dim(-1)-1);
-    my $rem = $pdl->ndims-1;
-    for my $i (0..$pdl->dim(-1)-1)
-    {
-        $c->slice(('X')x$rem, $i) .= $pdl->slice(('X')x$rem, $shuffle[$i])
-    }
-    $c;
+    return $pdl->dice_axis(-1, pdl(\@shuffle));
 }
 
 =head2 assert
@@ -327,7 +356,7 @@ sub process_arguments
             %{ $attributes_per_class{$class} } = map { $_->name => 1 } $class->meta->get_all_attributes;
         }
         my %kwargs;
-        while(@_ >= 2 and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
+        while(@_ >= 2 and defined $_[-2] and not ref $_[-2] and (exists $attributes_per_class{$class}{ $_[-2] } or exists $internal_arguments{ $_[-2] }))
         {
             my $v = pop(@_);
             my $k = pop(@_);
@@ -335,7 +364,10 @@ sub process_arguments
         }
         if(@_)
         {
-            @kwargs{ @{ $class->python_constructor_arguments }[0..@_-1] } = @_;
+            my @named_params = @{ $class->python_constructor_arguments };
+            Carp::confess("Paramers mismatch expected ".Dumper(\@named_params).", but got ".Dumper(\@_))
+                if @_ > @named_params;
+            @kwargs{ @named_params[0..@_-1] } = @_;
         }
         return $class->$orig(%kwargs);
     }
@@ -348,10 +380,76 @@ END {
 }
 
 *pzeros = \&zeros;
+*pones = \&ones;
 *pceil  = \&ceil;
 ## making sure that we can stringify arbitrarily large piddles
 $PDL::toolongtoprint = 1000_000_000;
 ## convenience subs
+
+sub ascsr
+{
+    my ($data, $indptr, $indices, $shape) = @_;
+    my @which;
+    my $i = 0;
+    my $j = 0;
+    while($i < $indices->nelem)
+    {
+        for($i = $indptr->at($j); $i < $indptr->at($j+1); $i++)
+        {
+            push @which, [$j, $indices->at($i)];
+        }
+        $j++;
+    }
+    return PDL::CCS::Nd->newFromWhich(
+            pdl(\@which), $data, pdims => blessed $shape ? $shape : pdl($shape)
+    )->xchg(0, 1);
+}
+
+package AI::MXNet::COO::Nd;
+use Mouse;
+has ['data', 'row', 'col'] => (is => 'rw');
+no Mouse;
+
+package AI::MXNet::Base;
+
+sub tocoo
+{
+    my $csr = shift;
+    return AI::MXNet::COO::Nd->new(
+        data => $csr->data,
+        row  => $csr->_whichND->slice(0)->flat,
+        col  => $csr->_whichND->slice(1)->flat
+    );
+}
+
+sub rand_sparse
+{
+    my ($num_rows, $num_cols, $density, $dtype, $format) = @_;
+    $dtype  //= 'float32';
+    $format //= 'csr';
+    my $pdl_type = PDL::Type->new(DTYPE_MX_TO_PDL->{ $dtype });
+    my $dense = random($pdl_type, $num_cols, $num_rows);
+    my $missing = 0;
+    $dense->where(random($num_cols, $num_rows)<=1-$density) .= $missing;
+    if($format eq 'csr')
+    {
+        return $dense->tocsr;
+    }
+    return $dense;
+}
+
+{
+    no warnings 'once';
+    *PDL::CCS::Nd::data    = sub { shift->_nzvals };
+    *PDL::CCS::Nd::indptr  = sub { my $self = shift; ($self->hasptr ? $self->getptr : $self->ptr)[0] };
+    *PDL::CCS::Nd::indices = sub { shift->_whichND->slice(1)->flat };
+    *PDL::CCS::Nd::tocoo   = sub { tocoo(shift) };
+    *PDL::CCS::Nd::shape   = sub { shift->pdims };
+    *PDL::CCS::Nd::dtype   = sub { DTYPE_MX_TO_STR->{ DTYPE_PDL_TO_MX->{ shift->type->numval } } };
+    *PDL::tocsr            = sub { shift->xchg(0, 1)->toccs->xchg(0, 1) };
+    *PDL::rand_sparse      = sub { shift; rand_sparse(@_) };
+}
+
 {
     my $orig_at = PDL->can('at');
     no warnings 'redefine';
@@ -364,5 +462,21 @@ $PDL::toolongtoprint = 1000_000_000;
     *PDL::len    = sub { shift->dim(-1) };
     *PDL::dtype  = sub { DTYPE_MX_TO_STR->{ DTYPE_PDL_TO_MX->{ shift->type->numval } } };
 }
+
+sub digitize
+{
+    my ($d, $bins) = @_;
+    for(my $i = 0; $i < @$bins; $i++)
+    {
+        return $i if $d < $bins->[$i];
+    }
+    return scalar(@$bins);
+}
+
+use B;
+sub hash { hex(B::hash(shift)) }
+use List::Util ();
+sub array_index { my ($s, $array) = @_; return List::Util::first { $array->[$_] eq $s } 0..@$array-1 }
+sub range { my ($begin, $end, $step) = @_; $step //= 1; grep { not (($_-$begin) % $step) } $begin..$end-1 }
 
 1;

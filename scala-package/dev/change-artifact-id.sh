@@ -44,7 +44,7 @@ find "$BASEDIR" -name 'pom.xml' -not -path '*target*' -print \
 
 # Change assembly including settings
 # <includes>
-# 	<include>ml.dmlc.mxnet:libmxnet-scala-linux-x86_64-cpu:so</include>
+# 	<include>org.apache.mxnet:libmxnet-scala-linux-x86_64-cpu:so</include>
 # </includes>
 find "$BASEDIR" -name 'assembly.xml' -not -path '*target*' -print \
   -exec bash -c \

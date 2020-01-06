@@ -28,14 +28,12 @@
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<gpu>(SoftmaxOutputParam param, int dtype) {
-  Operator *op = NULL;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new SoftmaxOutputOp<gpu, DType>(param);
-  })
-  return op;
-}
+
+NNVM_REGISTER_OP(SoftmaxOutput)
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxOutputCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_SoftmaxOutput)
+.set_attr<FCompute>("FCompute<gpu>", SoftmaxOutputGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

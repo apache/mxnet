@@ -1,0 +1,7 @@
+[deps]
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterMarkdown = "997ab1e6-3595-5248-9280-8efb232c3433"
+MXNet = "a7949054-b901-59c6-b8e3-7238c29bf7f0"
+
+[compat]
+Documenter = "~0.23"

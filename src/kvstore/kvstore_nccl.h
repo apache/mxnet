@@ -91,7 +91,8 @@ class KVStoreNCCL : public KVStoreLocal {
                 int priority) override {
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray> > grouped_vals;
-    GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals);
+    // nccl kvstore doesn't support sparse ndarray
+    GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals, true);
 
     std::vector<const NDArray*> merged_ptrs;
     std::vector<NDArray*> local_ptrs;
@@ -146,10 +147,11 @@ class KVStoreNCCL : public KVStoreLocal {
 
   void PullImpl(const std::vector<int>& keys,
                 const std::vector<NDArray*>& values,
-                int priority) override {
+                int priority, bool ignore_sparse) override {
+    CHECK(ignore_sparse) << "nccl kvstore pull doesn't support ignore_sparse=False";
     std::vector<int> uniq_keys;
     std::vector<std::vector<NDArray*> > grouped_vals;
-    GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals);
+    GroupKVPairsHelper(keys, values, &uniq_keys, &grouped_vals, true);
     std::vector<NDArray> locals;
     bool nccl_called = false;
 
@@ -191,9 +193,11 @@ class KVStoreNCCL : public KVStoreLocal {
   void GroupKVPairsHelper(const std::vector<int>& keys,
                           const std::vector<T>& values,
                           std::vector<int> *uniq_keys,
-                          std::vector<std::vector<T>> *grouped_vals) {
+                          std::vector<std::vector<T>> *grouped_vals,
+                          bool ignore_sparse) {
     // check if the storage type of a value is valid
-    auto validator = [this](const int key, const T nd) -> bool {
+    auto validator = [this](const int key, const T nd, bool ignore_sparse) -> bool {
+      CHECK(ignore_sparse) << "nccl kvstore pull doesn't support ignore_sparse=False";
       auto stype = ptr(nd)->storage_type();
       // valid NDArray
       if (stype == kDefaultStorage) return true;
@@ -201,7 +205,7 @@ class KVStoreNCCL : public KVStoreLocal {
       LOG(FATAL) << "NCCL kvstore does not support sparse storage type";
       return false;
     };
-    GroupKVPairs(keys, values, uniq_keys, grouped_vals, validator);
+    GroupKVPairs(keys, values, uniq_keys, grouped_vals, validator, ignore_sparse);
   }
 
  private:
@@ -309,7 +313,7 @@ class KVStoreNCCL : public KVStoreLocal {
       mutate_vars,
       FnProperty::kCPUPrioritized,
       priority,
-      PROFILER_MESSAGE("KVStoreReduce"));
+      "KVStoreReduce");
   }
 
   virtual void Broadcast(const std::vector<int> keys,
@@ -338,7 +342,7 @@ class KVStoreNCCL : public KVStoreLocal {
       } else {
         auto& buf = merge_buf_[key];
         int root = src.ctx().dev_id;
-        assert(root == buf.ctx().dev_id);
+        assert(root == buf.merged.ctx().dev_id);
         root_id = FindRootId(dst, root);
 
         // Check whether we got the same set of devices
@@ -413,7 +417,7 @@ class KVStoreNCCL : public KVStoreLocal {
       mutable_vars,
       FnProperty::kCPUPrioritized,
       priority,
-      PROFILER_MESSAGE("KVStoreBCast"));
+      "KVStoreBCast");
   }
 
   // Function that waits for NCCL collective to complete
@@ -424,8 +428,9 @@ class KVStoreNCCL : public KVStoreLocal {
         mutate_vars.push_back(ptr(dst[i])->var());
     }
     Engine::Get()->PushSync([this](RunContext rctx) {
+        mxnet::common::cuda::DeviceStore device_store;
         for (auto cur : nccl_data_) {
-          CUDA_CALL(cudaSetDevice(cur.second.dev_id));
+          device_store.SetDevice(cur.second.dev_id);
           CUDA_CALL(cudaStreamSynchronize(cur.second.stream));
         }
       },
@@ -434,11 +439,11 @@ class KVStoreNCCL : public KVStoreLocal {
       mutate_vars,
       FnProperty::kCPUPrioritized,
       priority,
-      PROFILER_MESSAGE("KVStoreStreamSync"));
+      "KVStoreStreamSync");
   }
 
   // Initialize single key
-  void InitKey(int key, const NDArrayStorageType stype, const TShape& shape,
+  void InitKey(int key, const NDArrayStorageType stype, const mxnet::TShape& shape,
             int dtype = mshadow::kFloat32) {
     if (stype == kDefaultStorage) {
       key_attrs_.push_back(std::make_tuple(key, shape, dtype));
@@ -475,22 +480,23 @@ class KVStoreNCCL : public KVStoreLocal {
     std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
     std::vector<ncclComm_t> comms(devs.size());
     ncclCommInitAll(&(comms[0]), devs.size(), &(device_ids_[0]));
+    mxnet::common::cuda::DeviceStore device_store;
     for (size_t i = 0; i < devs.size(); ++i) {
       NCCLEntry e;
       e.dev_id = device_ids_[i];
       e.comm = comms[i];
       e.rank = i;
-      cudaSetDevice(e.dev_id);
+      device_store.SetDevice(e.dev_id);
       cudaStreamCreate(&(e.stream));
       nccl_data_[device_ids_[i]] = e;
     }
   }
 
-  using KeyAttrs = std::tuple<int, TShape, int>;
+  using KeyAttrs = std::tuple<int, mxnet::TShape, int>;
   void InitMergeBuffer(const std::vector<Context>& devs) {
     for (size_t i = 0; i < key_attrs_.size(); ++i) {
       int key  = std::get<0>(key_attrs_[i]);
-      TShape s = std::get<1>(key_attrs_[i]);
+      mxnet::TShape s = std::get<1>(key_attrs_[i]);
       int type = std::get<2>(key_attrs_[i]);
       auto& buf = merge_buf_[key];
       // always use devs[0] as root

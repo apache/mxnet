@@ -34,7 +34,7 @@ namespace op {
  * \brief Compute the number of elements of every row.
  */
 struct SliceMarkCsrIndPtr {
-  /*! 
+  /*!
    * \brief
    * \param i           the i-th row of the output csr ndarray
    * \param prefix_sum  indptr array of the output csr ndarray
@@ -67,8 +67,8 @@ struct SliceMarkCsrIndPtr {
 
 
 template<>
-void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpContext& ctx,
-                             const NDArray &in, const NDArray &out) {
+void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &end,
+                             const OpContext& ctx, const NDArray &in, const NDArray &out) {
   using namespace mshadow;
   using namespace mxnet_op;
   using namespace csr;
@@ -114,8 +114,9 @@ void SliceDimTwoCsrImpl<gpu>(const TShape &begin, const TShape &end, const OpCon
                                       Stream<gpu>::GetStream(s));
         // retrieve nnr
         RType nnr = 0;
-        CUDA_CALL(cudaMemcpy(&nnr, &out_indptr[indptr_len-1], sizeof(RType),
-            cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpyAsync(&nnr, &out_indptr[indptr_len-1], sizeof(RType),
+                                  cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+        CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
 
         // returns zeros in csr format if nnr = 0
         if (nnr == 0) {
@@ -168,6 +169,12 @@ NNVM_REGISTER_OP(slice_axis)
 NNVM_REGISTER_OP(_backward_slice_axis)
 .set_attr<FCompute>("FCompute<gpu>", SliceAxisGrad_<gpu>);
 
+NNVM_REGISTER_OP(slice_like)
+.set_attr<FCompute>("FCompute<gpu>", SliceLikeForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_slice_like)
+.set_attr<FCompute>("FCompute<gpu>", SliceLikeBackward<gpu>);
+
 NNVM_REGISTER_OP(clip)
 .set_attr<FCompute>("FCompute<gpu>", Clip<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", ClipEx<gpu>);
@@ -198,5 +205,24 @@ NNVM_REGISTER_OP(stack)
 
 NNVM_REGISTER_OP(_backward_stack)
 .set_attr<FCompute>("FCompute<gpu>", StackOpBackward<gpu>);
+
+NNVM_REGISTER_OP(squeeze)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_squeeze)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
+
+NNVM_REGISTER_OP(depth_to_space)
+.set_attr<FCompute>("FCompute<gpu>", DepthToSpaceOpForward<gpu>);
+
+NNVM_REGISTER_OP(space_to_depth)
+.set_attr<FCompute>("FCompute<gpu>", SpaceToDepthOpForward<gpu>);
+
+NNVM_REGISTER_OP(_split_v2)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpForward<gpu>);
+
+NNVM_REGISTER_OP(_split_v2_backward)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

@@ -39,13 +39,14 @@ OpenMP *OpenMP::Get() {
 }
 
 OpenMP::OpenMP()
-  : omp_num_threads_set_in_environment(is_env_set("OMP_NUM_THREADS")) {
+  : omp_num_threads_set_in_environment_(is_env_set("OMP_NUM_THREADS")) {
 #ifdef _OPENMP
+  initialize_process();
   const int max = dmlc::GetEnv("MXNET_OMP_MAX_THREADS", INT_MIN);
   if (max != INT_MIN) {
     omp_thread_max_ = max;
   } else {
-    if (!omp_num_threads_set_in_environment) {
+    if (!omp_num_threads_set_in_environment_) {
       omp_thread_max_ = omp_get_num_procs();
 #ifdef ARCH_IS_INTEL_X86
       omp_thread_max_ >>= 1;
@@ -58,6 +59,20 @@ OpenMP::OpenMP()
 #else
   enabled_ = false;
   omp_thread_max_ = 1;
+#endif
+}
+
+void OpenMP:: initialize_process() {
+#ifdef _OPENMP
+  omp_get_num_procs();  // will force OpenMP to be initialized
+#endif
+}
+
+void OpenMP::on_start_worker_thread(bool use_omp) {
+#ifdef _OPENMP
+  if (!omp_num_threads_set_in_environment_) {
+    omp_set_num_threads(use_omp ? GetRecommendedOMPThreadCount(true) : 1);
+  }
 #endif
 }
 
@@ -75,10 +90,11 @@ void OpenMP::set_reserve_cores(int cores) {
 
 int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
 #ifdef _OPENMP
-  if (omp_num_threads_set_in_environment) {
-    return omp_get_max_threads();
-  }
   if (enabled_) {
+    // OMP_NUM_THREADS was set in the environment at the time of static initialization
+    if (omp_num_threads_set_in_environment_) {
+      return omp_get_max_threads();
+    }
     int thread_count = omp_get_max_threads();
     if (exclude_reserved) {
       if (reserve_cores_ >= thread_count) {
@@ -92,8 +108,9 @@ int OpenMP::GetRecommendedOMPThreadCount(bool exclude_reserved) const {
       return thread_count;
     }
     return omp_thread_max_;
+  } else {
+    return 1;
   }
-  return 1;
 #else
   return 1;
 #endif

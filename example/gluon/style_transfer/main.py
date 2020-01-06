@@ -44,7 +44,8 @@ def train(args):
                                utils.ToTensor(ctx),
                                ])
     train_dataset = data.ImageFolder(args.dataset, transform)
-    train_loader = gluon.data.DataLoader(train_dataset, batch_size=args.batch_size, last_batch='discard')
+    train_loader = gluon.data.DataLoader(train_dataset, batch_size=args.batch_size,
+                                         last_batch='discard')
     style_loader = utils.StyleLoader(args.style_folder, args.style_size, ctx=ctx)
     print('len(style_loader):',style_loader.size())
     # models
@@ -54,7 +55,7 @@ def train(args):
     style_model.initialize(init=mx.initializer.MSRAPrelu(), ctx=ctx)
     if args.resume is not None:
         print('Resuming, initializing using weight from {}.'.format(args.resume))
-        style_model.collect_params().load(args.resume, ctx=ctx)
+        style_model.load_parameters(args.resume, ctx=ctx)
     print('style_model:',style_model)
     # optimizer and loss
     trainer = gluon.Trainer(style_model.collect_params(), 'adam',
@@ -79,7 +80,7 @@ def train(args):
             xc = utils.subtract_imagenet_mean_preprocess_batch(x.copy())
             f_xc_c = vgg(xc)[1]
             with autograd.record():
-                style_model.setTarget(style_image)
+                style_model.set_target(style_image)
                 y = style_model(x)
 
                 y = utils.subtract_imagenet_mean_batch(y)
@@ -92,11 +93,12 @@ def train(args):
                     gram_y = net.gram_matrix(features_y[m])
                     _, C, _ = gram_style[m].shape
                     gram_s = F.expand_dims(gram_style[m], 0).broadcast_to((args.batch_size, 1, C, C))
-                    style_loss = style_loss + 2 * args.style_weight * mse_loss(gram_y, gram_s[:n_batch, :, :])
+                    style_loss = style_loss + 2 * args.style_weight * \
+                        mse_loss(gram_y, gram_s[:n_batch, :, :])
 
                 total_loss = content_loss + style_loss
                 total_loss.backward()
-                
+
             trainer.step(args.batch_size)
             mx.nd.waitall()
 
@@ -112,20 +114,21 @@ def train(args):
                 )
                 print(mesg)
 
-            
+
             if (batch_id + 1) % (4 * args.log_interval) == 0:
                 # save model
-                save_model_filename = "Epoch_" + str(e) + "iters_" + str(count) + "_" + str(time.ctime()).replace(' ', '_') + "_" + str(
+                save_model_filename = "Epoch_" + str(e) + "iters_" + \
+                    str(count) + "_" + str(time.ctime()).replace(' ', '_') + "_" + str(
                     args.content_weight) + "_" + str(args.style_weight) + ".params"
                 save_model_path = os.path.join(args.save_model_dir, save_model_filename)
-                style_model.collect_params().save(save_model_path)
+                style_model.save_parameters(save_model_path)
                 print("\nCheckpoint, trained model saved at", save_model_path)
 
     # save model
     save_model_filename = "Final_epoch_" + str(args.epochs) + "_" + str(time.ctime()).replace(' ', '_') + "_" + str(
         args.content_weight) + "_" + str(args.style_weight) + ".params"
     save_model_path = os.path.join(args.save_model_dir, save_model_filename)
-    style_model.collect_params().save(save_model_path)
+    style_model.save_parameters(save_model_path)
     print("\nDone, trained model saved at", save_model_path)
 
 
@@ -140,9 +143,9 @@ def evaluate(args):
     style_image = utils.preprocess_batch(style_image)
     # model
     style_model = net.Net(ngf=args.ngf)
-    style_model.collect_params().load(args.model, ctx=ctx)
+    style_model.load_parameters(args.model, ctx=ctx)
     # forward
-    style_model.setTarget(style_image)
+    style_model.set_target(style_image)
     output = style_model(content_image)
     utils.tensor_save_bgrimage(output[0], args.output_image, args.cuda)
 
@@ -195,7 +198,7 @@ def optimize(args):
         trainer.step(1)
         if (e + 1) % args.log_interval == 0:
             print('loss:{:.2f}'.format(total_loss.asnumpy()[0]))
-        
+
     # save the image
     output = utils.add_imagenet_mean_batch(output.data())
     utils.tensor_save_bgrimage(output[0], args.output_image, args.cuda)
@@ -209,7 +212,7 @@ def main():
         raise ValueError("ERROR: specify the experiment type")
 
     if args.subcommand == "train":
-        # Training the model 
+        # Training the model
         train(args)
 
     elif args.subcommand == 'eval':

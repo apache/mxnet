@@ -46,8 +46,8 @@ done
 # generate lst files
 CUR_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MX_DIR=${CUR_DIR}/../../../
-python ${MX_DIR}/tools/im2rec.py --list True --recursive True caltech256-train ${TRAIN_DIR}/
-python ${MX_DIR}/tools/im2rec.py --list True --recursive True caltech256-val 256_ObjectCategories/
+python ${MX_DIR}/tools/im2rec.py --list --recursive caltech256-train ${TRAIN_DIR}/
+python ${MX_DIR}/tools/im2rec.py --list --recursive caltech256-val 256_ObjectCategories/
 mv caltech256-train_train.lst caltech256-train.lst
 rm caltech256-train_*
 mv caltech256-val_train.lst caltech256-val.lst

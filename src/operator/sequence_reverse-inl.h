@@ -64,51 +64,48 @@ struct SequenceReverseParam : public dmlc::Parameter<SequenceReverseParam> {
   }
 };
 
+template <OpReqType req>
 struct ReverseKernel {
-  template <typename DType>
-  MSHADOW_XINLINE static void Map(const int i, DType *const out_data,
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(const index_t i, DType *const out_data,
                                   const DType *const in_data,
-                                  const OpReqType req,
                                   const index_t max_seq_len,
                                   const index_t batch_size,
                                   const index_t other_dim, const index_t numel,
-                                  const DType *const indices) {
-    for (index_t batch = 0; batch < batch_size; ++batch) {
-      const index_t num_seq =
-          indices ? static_cast<index_t>(indices[batch]) : max_seq_len;
-      const index_t padded_periods = max_seq_len - num_seq;
-      // padded part
-      if (padded_periods > 0 && i < static_cast<int>(padded_periods)) {
-        const int padded_in_offset =
-            (i + num_seq) * batch_size * other_dim + batch * other_dim;
+                                  const IType *const indices) {
+    const index_t batch = i / (max_seq_len * other_dim);
+    const index_t id = (i / other_dim) % max_seq_len;
+    const index_t j = i % other_dim;
+    const index_t num_seq =
+        indices ? static_cast<index_t>(indices[batch]) : max_seq_len;
+    const index_t padded_periods = max_seq_len - num_seq;
+    // padded part
+    if (padded_periods > 0 && id < padded_periods) {
+      const index_t padded_in_offset =
+          (id + num_seq) * batch_size * other_dim + batch * other_dim;
 
-        for (index_t j = 0; j < other_dim; ++j) {
-          KERNEL_ASSIGN(out_data[padded_in_offset + j], req,
-                        in_data[padded_in_offset + j]);
-        }
-      }
-      // unpadded part
-      if (i < static_cast<int>(num_seq)) {
-        const int in_offset = i * batch_size * other_dim + batch * other_dim;
-        const int out_offset =
-            numel - (i + 1 + padded_periods) * batch_size * other_dim +
-            batch * other_dim;
+      KERNEL_ASSIGN(out_data[padded_in_offset + j], req,
+                    in_data[padded_in_offset + j]);
+    }
+    // unpadded part
+    if (id < num_seq) {
+      const index_t in_offset = id * batch_size * other_dim + batch * other_dim;
+      const index_t out_offset =
+          numel - (id + 1 + padded_periods) * batch_size * other_dim +
+          batch * other_dim;
 
-        for (index_t j = 0; j < other_dim; ++j) {
-          KERNEL_ASSIGN(out_data[out_offset + j], req, in_data[in_offset + j]);
-        }
-      }
+      KERNEL_ASSIGN(out_data[out_offset + j], req, in_data[in_offset + j]);
     }
   }
 };
 
-template <typename xpu, typename DType>
+template <typename xpu, typename DType, typename IType>
 class SequenceReverseOp : public Operator {
  public:
   explicit SequenceReverseOp(SequenceReverseParam p) { this->param_ = p; }
   void sequence_reverse(const mshadow::Tensor<xpu, 3, DType> &data,
                         const mshadow::Tensor<xpu, 3, DType> &out,
-                        const OpReqType req, const DType *const indices,
+                        const OpReqType req, const IType *const indices,
                         mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
@@ -118,9 +115,11 @@ class SequenceReverseOp : public Operator {
     const index_t other_dim = data.size(2);
     const index_t tensor_numel = data.shape_.Size();
 
-    mxnet_op::Kernel<ReverseKernel, xpu>::Launch(
-        s, max_seq_len, out.dptr_, data.dptr_, req, max_seq_len, batch_size,
-        other_dim, tensor_numel, indices);
+    MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
+      mxnet_op::Kernel<ReverseKernel<req_type>, xpu>::Launch(
+          s, max_seq_len * batch_size * other_dim, out.dptr_, data.dptr_,
+          max_seq_len, batch_size, other_dim, tensor_numel, indices);
+    });
   }
 
   virtual void Forward(const OpContext &ctx, const std::vector<TBlob> &in_data,
@@ -145,9 +144,9 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 3, DType> out =
         out_data[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
 
-    const DType *const indices =
+    const IType *const indices =
         param_.use_sequence_length
-            ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
+            ? in_data[seq_reverse::kSequenceLength].dptr<IType>()
             : nullptr;
 
     sequence_reverse(data, out, req[seq_reverse::kOut], indices, s);
@@ -179,9 +178,9 @@ class SequenceReverseOp : public Operator {
     Tensor<xpu, 3, DType> output_grad =
         out_grad[seq_reverse::kOut].get_with_shape<xpu, 3, DType>(s3, s);
 
-    const DType *const indices =
+    const IType *const indices =
         param_.use_sequence_length
-            ? in_data[seq_reverse::kSequenceLength].dptr<DType>()
+            ? in_data[seq_reverse::kSequenceLength].dptr<IType>()
             : nullptr;
 
     sequence_reverse(output_grad, data_grad, req[seq_reverse::kData], indices,
@@ -193,7 +192,7 @@ class SequenceReverseOp : public Operator {
 };  // class SequenceReverseOp
 
 template <typename xpu>
-Operator *CreateOp(SequenceReverseParam param, int dtype);
+Operator *CreateOp(SequenceReverseParam param, int dtype, int itype);
 
 #if DMLC_USE_CXX11
 class SequenceReverseProp : public OperatorProperty {
@@ -220,14 +219,14 @@ class SequenceReverseProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
     CHECK_EQ(param_.axis, 0) << "Current implementation expects axis to be 0.";
 
-    const TShape &dshape = (*in_shape)[seq_reverse::kData];
+    const mxnet::TShape &dshape = (*in_shape)[seq_reverse::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
@@ -235,7 +234,7 @@ class SequenceReverseProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, seq_reverse::kSequenceLength,
                          Shape1(dshape[1]));
 
-    const TShape &oshape = dshape;
+    const mxnet::TShape &oshape = dshape;
     out_shape->clear();
     out_shape->push_back(oshape);
     return true;
@@ -246,11 +245,9 @@ class SequenceReverseProp : public OperatorProperty {
     CHECK_GE(in_type->size(), param_.use_sequence_length ? 2U : 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();
@@ -277,7 +274,7 @@ class SequenceReverseProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -286,7 +283,7 @@ class SequenceReverseProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

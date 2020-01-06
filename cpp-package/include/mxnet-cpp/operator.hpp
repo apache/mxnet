@@ -134,9 +134,11 @@ inline void Operator::Invoke(std::vector<NDArray> &outputs) {
     outputs_receiver = output_handles.data();
   }
 
-  MXImperativeInvoke(handle_, num_inputs, input_ndarrays_.data(),
-      &num_outputs, &outputs_receiver,
-      param_keys.size(), param_keys.data(), param_values.data());
+  if (MXImperativeInvoke(handle_, num_inputs, input_ndarrays_.data(),
+                         &num_outputs, &outputs_receiver,
+                         param_keys.size(), param_keys.data(),
+                         param_values.data()))
+      LOG(FATAL) << MXGetLastError();
 
   if (outputs.size() > 0)
     return;
@@ -158,13 +160,15 @@ inline void Operator::Invoke(NDArray &output) {
   Invoke(outputs);
 }
 
-inline Operator &Operator::SetInput(const std::string &name, Symbol symbol) {
-  input_keys_.push_back(name.c_str());
-  input_symbols_.push_back(symbol.GetHandle());
-  return *this;
+inline Operator &Operator::SetInput(const std::string &name, const Symbol &symbol) {
+    if (symbol.GetHandle()) {
+      input_keys_.push_back(name.c_str());
+      input_symbols_.push_back(symbol.GetHandle());
+    }
+    return *this;
 }
 
-inline Operator &Operator::SetInput(const std::string &name, NDArray ndarray) {
+inline Operator &Operator::SetInput(const std::string &name, const NDArray &ndarray) {
   input_keys_.push_back(name.c_str());
   input_ndarrays_.push_back(ndarray.GetHandle());
   return *this;

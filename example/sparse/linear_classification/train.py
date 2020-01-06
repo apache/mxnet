@@ -31,10 +31,10 @@ parser.add_argument('--batch-size', type=int, default=8192,
                     help='number of examples per batch')
 parser.add_argument('--kvstore', type=str, default=None,
                     help='what kvstore to use',
-                    choices=["dist_async", "local"])
-parser.add_argument('--optimizer', type=str, default='ftrl',
+                    choices=["dist_sync", "dist_async", "local"])
+parser.add_argument('--optimizer', type=str, default='sgd',
                     help='what optimizer to use',
-                    choices=["ftrl", "sgd", "adam"])
+                    choices=["adagrad", "sgd", "adam"])
 
 AVAZU = {
     'train': 'avazu-app',
@@ -43,6 +43,15 @@ AVAZU = {
     # 1000000 + 1 since LibSVMIter uses zero-based indexing
     'num_features': 1000001,
 }
+
+def batch_row_ids(data_batch):
+    """ Generate row ids based on the current mini-batch """
+    return {'weight': data_batch.data[0].indices}
+
+def all_row_ids(data_batch):
+    """ Generate row ids for all rows """
+    all_rows = mx.nd.arange(0, AVAZU['num_features'], dtype='int64')
+    return {'weight': all_rows}
 
 if __name__ == '__main__':
     import logging
@@ -94,9 +103,6 @@ if __name__ == '__main__':
     metric = mx.metric.create(['nll_loss'])
 
     # get the sparse weight parameter
-    weight_index = mod._exec_group.param_names.index('weight')
-    weight_param = mod._exec_group.param_arrays[weight_index]
-    all_row_ids = mx.nd.arange(0, num_features, dtype='int64')
     speedometer = mx.callback.Speedometer(batch_size, 100)
 
     logging.info('Training started ...')
@@ -106,10 +112,7 @@ if __name__ == '__main__':
         for batch in train_data:
             nbatch += 1
             # for distributed training, we need to manually pull sparse weights from kvstore
-            if kv:
-                row_ids = batch.data[0].indices
-                kv.row_sparse_pull('weight', weight_param, row_ids=[row_ids],
-                                   priority=-weight_index)
+            mod.prepare(batch, sparse_row_id_fn=batch_row_ids)
             mod.forward_backward(batch)
             # update all parameters (including the weight parameter)
             mod.update()
@@ -118,15 +121,18 @@ if __name__ == '__main__':
             speedometer_param = mx.model.BatchEndParam(epoch=epoch, nbatch=nbatch,
                                                        eval_metric=metric, locals=locals())
             speedometer(speedometer_param)
-        # pull all rows before making a checkpoint
-        if kv:
-            kv.row_sparse_pull('weight', weight_param, row_ids=[all_row_ids],
-                               priority=-weight_index)
+
+        # prepare the module weight with all row ids for inference. Alternatively, one could call
+        # score = mod.score(val_iter, ['MSE'], sparse_row_id_fn=batch_row_ids)
+        # to fetch the weight per mini-batch
+        mod.prepare(None, all_row_ids)
         # evaluate metric on validation dataset
         score = mod.score(eval_data, ['nll_loss'])
         logging.info('epoch %d, eval nll = %s ' % (epoch, score[0][1]))
-        save_optimizer_states = 'dist' not in kv.type if kv else True
-        mod.save_checkpoint("checkpoint", epoch, save_optimizer_states=save_optimizer_states)
+
+        # prepare the module weight with all row ids before making a checkpoint.
+        mod.prepare(None, all_row_ids)
+        mod.save_checkpoint("checkpoint", epoch)
         # reset the iterator for next pass of data
         train_data.reset()
         eval_data.reset()

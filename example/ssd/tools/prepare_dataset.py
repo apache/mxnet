@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -104,6 +107,9 @@ def parse_args():
                         type=str)
     parser.add_argument('--no-shuffle', dest='shuffle', help='shuffle list',
                         action='store_false')
+    parser.add_argument('--num-thread', dest='num_thread', type=int, default=1,
+                        help='number of thread to use while runing im2rec.py')
+
     args = parser.parse_args()
     return args
 
@@ -122,9 +128,14 @@ if __name__ == '__main__':
 
     print("List file {} generated...".format(args.target))
 
-    subprocess.check_call(["python",
-        os.path.join(curr_path, "../../../tools/im2rec.py"),
-        os.path.abspath(args.target), os.path.abspath(args.root_path),
-        "--shuffle", str(int(args.shuffle)), "--pack-label", "1"])
+    cmd_arguments = ["python",
+                    os.path.join(curr_path, "../../../tools/im2rec.py"),
+                    os.path.abspath(args.target), os.path.abspath(args.root_path),
+                    "--pack-label", "--num-thread", str(args.num_thread)]
+
+    if not args.shuffle:
+        cmd_arguments.append("--no-shuffle")
+
+    subprocess.check_call(cmd_arguments)
 
     print("Record file {} generated...".format(args.target.split('.')[0] + '.rec'))

@@ -29,6 +29,7 @@
 # are performed, which can be controlled by either increasing the batch size or
 # decreasing the number of epochs
 
+from __future__ import print_function
 import os, sys
 curr_path = os.path.abspath(os.path.dirname(__file__))
 sys.path.append(os.path.join(curr_path, "../../example/image-classification"))
@@ -89,7 +90,7 @@ def get_XY(data_iter):
 def test_data(data_iter):
     # test whether we will get the identical data each time
     X, Y = get_XY(data_iter)
-    print X.shape, Y.shape
+    print(X.shape, Y.shape)
     for i in range(4):
         A, B = get_XY(data_iter)
         assert(A.shape == X.shape)

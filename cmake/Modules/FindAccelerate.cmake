@@ -22,11 +22,13 @@
 #  Accelerate_INCLUDE_DIRS
 #  Accelerate_LIBRARIES
 
+file(TO_CMAKE_PATH "$ENV{Accelerate_HOME}" Accelerate_HOME)
 set(Accelerate_INCLUDE_SEARCH_PATHS
-  /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current/Headers/
+  /System/Library/Frameworks/Accelerate.framework/Versions/Current/Frameworks/vecLib.framework/Versions/Current
+  ${Accelerate_HOME}
 )
 
-find_path(Accelerate_CBLAS_INCLUDE_DIR NAMES cblas.h   PATHS ${Accelerate_INCLUDE_SEARCH_PATHS})
+find_path(Accelerate_CBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Accelerate_INCLUDE_SEARCH_PATHS} PATH_SUFFIXES Headers)
 
 set(LOOKED_FOR
     Accelerate_CBLAS_INCLUDE_DIR

@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""A simple demo of new RNN cell with PTB language model."""
+"""A simple demo of new RNN cell with sherlockholmes language model."""
 
 import os
 
@@ -50,15 +50,15 @@ if __name__ == '__main__':
     momentum = 0.0
 
     contexts = [mx.context.gpu(i) for i in range(4)]
-    vocab = default_build_vocab(os.path.join(data_dir, 'ptb.train.txt'))
+    vocab = default_build_vocab(os.path.join(data_dir, 'sherlockholmes.train.txt'))
 
     init_h = [('LSTM_init_h', (batch_size, num_lstm_layer, num_hidden))]
     init_c = [('LSTM_init_c', (batch_size, num_lstm_layer, num_hidden))]
     init_states = init_c + init_h
 
-    data_train = BucketSentenceIter(os.path.join(data_dir, 'ptb.train.txt'),
+    data_train = BucketSentenceIter(os.path.join(data_dir, 'sherlockholmes.train.txt'),
                                     vocab, buckets, batch_size, init_states)
-    data_val = BucketSentenceIter(os.path.join(data_dir, 'ptb.valid.txt'),
+    data_val = BucketSentenceIter(os.path.join(data_dir, 'sherlockholmes.valid.txt'),
                                   vocab, buckets, batch_size, init_states)
 
     def sym_gen(seq_len):

@@ -1,7 +1,24 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+
 MXNET -> CoreML Converter
 =========================
 
-`Apache MXNet <https://github.com/apache/incubator-mxnet>`_ (incubating) is a deep learning framework designed for both efficiency and flexibility. It allows you to mix `symbolic and imperative programming <http://mxnet.io/architecture/index.html#deep-learning-system-design-concepts>`_ to maximize efficiency and productivity. At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly. A graph optimization layer on top of that makes symbolic execution fast and memory efficient. MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
+`Apache MXNet <https://github.com/apache/incubator-mxnet>`_ (incubating) is a deep learning framework designed for both efficiency and flexibility. It allows you to mix `symbolic and imperative programming <https://mxnet.apache.org/api/architecture/program_model>`_ to maximize efficiency and productivity. At its core, MXNet contains a dynamic dependency scheduler that automatically parallelizes both symbolic and imperative operations on the fly. A graph optimization layer on top of that makes symbolic execution fast and memory efficient. MXNet is portable and lightweight, scaling effectively to multiple GPUs and multiple machines.
 
 `Core ML <http://developer.apple.com/documentation/coreml>`_ is an Apple framework which allows developers to simply and easily integrate machine learning (ML) models into apps running on Apple devices (including iOS, watchOS, macOS, and tvOS). Core ML introduces a public file format (.mlmodel) for a broad set of ML methods including deep neural networks (both convolutional and recurrent), tree ensembles with boosting, and generalized linear models. Models in this format can be directly integrated into apps through Xcode.
 

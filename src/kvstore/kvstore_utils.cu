@@ -40,63 +40,73 @@
 namespace mxnet {
 namespace kvstore {
 
-
 template<typename IType>
-size_t UniqueImplGPU(const Resource& rsc, mshadow::Stream<gpu> *s,
-                     IType *dptr, nnvm::dim_t size) {
-#ifndef SORT_WITH_THRUST
-  size_t sort_temp_bytes = 0;
-  cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes,
-    dptr, dptr, size, 0, sizeof(IType)*8, mshadow::Stream<gpu>::GetStream(s));
-  mshadow::Tensor<gpu, 1, char> sort_space = rsc
-    .get_space_typed<gpu, 1, char>(
-      mshadow::Shape1(sort_temp_bytes), s);
-  void *sort_temp_storage = static_cast<void*>(sort_space.dptr_);
-  cub::DeviceRadixSort::SortKeys(sort_temp_storage, sort_temp_bytes,
-    dptr, dptr, size, 0, sizeof(IType)*8, mshadow::Stream<gpu>::GetStream(s));
-#else
-  thrust::sort(thrust::cuda::par.on(mshadow::Stream<gpu>::GetStream(s)),
-    dptr, dptr + size, thrust::greater<IType>());
-#endif
+size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
+                   IType *dptr, const size_t size, Context ctx) {
+  // estimate unique temp space. The first byte is reserved to store the number
+  // of unique values selected
+  const size_t num_selected_bytes = sizeof(size_t);
   size_t unique_temp_bytes = 0;
-  mshadow::Tensor<gpu, 1, char> dummy_space = rsc
-    .get_space_typed<gpu, 1, char>(
-      mshadow::Shape1(sizeof(size_t)), s);
-  size_t *dummy_ptr = reinterpret_cast<size_t*>(dummy_space.dptr_);
-  cub::DeviceSelect::Unique(NULL, unique_temp_bytes, dptr, dptr,
-    dummy_ptr, size, mshadow::Stream<gpu>::GetStream(s));
-
-  mshadow::Tensor<gpu, 1, char> unique_space = rsc
-    .get_space_typed<gpu, 1, char>(
-      mshadow::Shape1((unique_temp_bytes + sizeof(size_t) + 7) / 8 * 8), s);
-
-  void *unique_temp_storage = static_cast<void*>(
-    unique_space.dptr_);
-  size_t *d_num_selected_out = reinterpret_cast<size_t*>(
-    unique_space.dptr_ + (unique_temp_bytes + 7) / 8 * 8);
-
-  cub::DeviceSelect::Unique(unique_temp_storage, unique_temp_bytes, dptr, dptr,
-    d_num_selected_out, size, mshadow::Stream<gpu>::GetStream(s));
-
+  size_t *null_ptr = nullptr;
+  size_t *null_dptr = nullptr;
+  cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+  cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
+                            null_ptr, size, stream);
+  // estimate sort temp space
+  const size_t sort_output_bytes = size * sizeof(IType);
+  size_t sort_temp_bytes = 0;
+#ifndef SORT_WITH_THRUST
+  // The least-significant bit index (inclusive) needed for key comparison
+  const int begin_bit = 0;
+  // The most-significant bit index (exclusive) needed for key comparison
+  const int end_bit = sizeof(IType) * 8;
+  cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes, null_dptr, null_dptr,
+                                 size, begin_bit, end_bit, stream);
+#else
+  // sort_temp_bytes remains 0 because thrust request memory by itself
+#endif
+  // request temp storage
+  const size_t total_workspace = num_selected_bytes + sort_output_bytes +
+                                 std::max(sort_temp_bytes, unique_temp_bytes);
+  *workspace = NDArray(mshadow::Shape1((total_workspace + 3) / 4), ctx, false);
+  char* workspace_dptr = reinterpret_cast<char*>(workspace->data().dptr_);
+  // temp space layout: num_selected_ptr, sort_output_bytes, unique/sort_temp_storage
+  size_t* num_selected_ptr = reinterpret_cast<size_t*>(workspace_dptr);
+  IType* sort_output_ptr = reinterpret_cast<IType*>(workspace_dptr + num_selected_bytes);
+  void *temp_storage = static_cast<void*>(workspace_dptr +
+                                          num_selected_bytes + sort_output_bytes);
+  // execute the sort kernel
+#ifndef SORT_WITH_THRUST
+  cub::DeviceRadixSort::SortKeys(temp_storage, sort_temp_bytes, dptr, sort_output_ptr,
+                                 size, begin_bit, end_bit, stream);
+#else
+  thrust::sort(thrust::cuda::par.on(stream),
+               dptr, dptr + size, thrust::greater<IType>());
+  CUDA_CALL(cudaMemcpyAsync(sort_output_ptr, dptr, sort_output_bytes,
+                            cudaMemcpyDeviceToDevice, stream));
+#endif
+  // execute unique kernel
+  cub::DeviceSelect::Unique(temp_storage, unique_temp_bytes, sort_output_ptr, dptr,
+                            num_selected_ptr, size, stream);
+  // retrieve num selected unique values
   size_t num_selected_out = 0;
-  CUDA_CALL(cudaMemcpy(&num_selected_out, d_num_selected_out, sizeof(size_t),
-     cudaMemcpyDeviceToHost));
+  CUDA_CALL(cudaMemcpyAsync(&num_selected_out, num_selected_ptr, num_selected_bytes,
+                            cudaMemcpyDeviceToHost, stream));
+  CUDA_CALL(cudaStreamSynchronize(stream));
   return num_selected_out;
 }
 
-/*!
- * \brief sort and get unique values.
- */
 template<>
-void UniqueImpl<gpu>(const Resource& rsc, mshadow::Stream<gpu> *s,
-                     NDArray *out, nnvm::dim_t size) {
-  MSHADOW_IDX_TYPE_SWITCH(out->data().type_flag_, IType, {
-    IType *dptr = out->data().dptr<IType>();
-    size_t num_selected_out = UniqueImplGPU(rsc, s, dptr, size);
-    *out = out->Reshape(mshadow::Shape1(num_selected_out));
+void UniqueImpl<gpu>(NDArray *workspace, mshadow::Stream<gpu> *s, const NDArray &out) {
+  const size_t num_elements = out.shape().Size();
+  CHECK_EQ(out.storage_type(), kRowSparseStorage) << "row_sparse NDArray is expected";
+  MSHADOW_IDX_TYPE_SWITCH(out.dtype(), IType, {
+    IType *dptr = out.data().dptr<IType>();
+    size_t num_selected_out = UniqueImplGPU(workspace, s, dptr, num_elements, out.ctx());
+    // set the shape of data/aux_data according to the number of unique values
+    out.set_aux_shape(rowsparse::kIdx, mshadow::Shape1(num_selected_out));
   });
 }
-
 
 }  // namespace kvstore
 }  // namespace mxnet

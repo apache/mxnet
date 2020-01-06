@@ -19,9 +19,8 @@
 from __future__ import print_function
 
 import logging
-
-import mxnet as mx
 import numpy as np
+import mxnet as mx
 import model
 from solver import Solver, Monitor
 
@@ -95,18 +94,18 @@ class AutoEncoderModel(model.MXModel):
         else:
             x = mx.symbol.LinearRegressionOutput(data=x, label=data)
 
-        args = {'encoder_%d_weight'%istack: mx.nd.empty((num_hidden, num_input), self.xpu),
-                'encoder_%d_bias'%istack: mx.nd.empty((num_hidden,), self.xpu),
-                'decoder_%d_weight'%istack: mx.nd.empty((num_input, num_hidden), self.xpu),
-                'decoder_%d_bias'%istack: mx.nd.empty((num_input,), self.xpu),}
-        args_grad = {'encoder_%d_weight'%istack: mx.nd.empty((num_hidden, num_input), self.xpu),
-                     'encoder_%d_bias'%istack: mx.nd.empty((num_hidden,), self.xpu),
-                     'decoder_%d_weight'%istack: mx.nd.empty((num_input, num_hidden), self.xpu),
-                     'decoder_%d_bias'%istack: mx.nd.empty((num_input,), self.xpu),}
-        args_mult = {'encoder_%d_weight'%istack: 1.0,
-                     'encoder_%d_bias'%istack: 2.0,
-                     'decoder_%d_weight'%istack: 1.0,
-                     'decoder_%d_bias'%istack: 2.0,}
+        args = {'encoder_%d_weight' % istack: mx.nd.empty((num_hidden, num_input), self.xpu),
+                'encoder_%d_bias' % istack: mx.nd.empty((num_hidden,), self.xpu),
+                'decoder_%d_weight' % istack: mx.nd.empty((num_input, num_hidden), self.xpu),
+                'decoder_%d_bias' % istack: mx.nd.empty((num_input,), self.xpu), }
+        args_grad = {'encoder_%d_weight' % istack: mx.nd.empty((num_hidden, num_input), self.xpu),
+                     'encoder_%d_bias' % istack: mx.nd.empty((num_hidden,), self.xpu),
+                     'decoder_%d_weight' % istack: mx.nd.empty((num_input, num_hidden), self.xpu),
+                     'decoder_%d_bias' % istack: mx.nd.empty((num_input,), self.xpu), }
+        args_mult = {'encoder_%d_weight' % istack: 1.0,
+                     'encoder_%d_bias' % istack: 2.0,
+                     'decoder_%d_weight' % istack: 1.0,
+                     'decoder_%d_bias' % istack: 2.0, }
         auxs = {}
         if encoder_act == 'sigmoid' and sparseness_penalty:
             auxs['sparse_encoder_%d_moving_avg' % istack] = mx.nd.ones(num_hidden, self.xpu) * 0.5

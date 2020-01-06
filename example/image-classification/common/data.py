@@ -28,8 +28,12 @@ def add_data_args(parser):
     data.add_argument('--data-val-idx', type=str, default='', help='the index of validation data')
     data.add_argument('--rgb-mean', type=str, default='123.68,116.779,103.939',
                       help='a tuple of size 3 for the mean rgb')
+    data.add_argument('--rgb-std', type=str, default='1,1,1',
+                      help='a tuple of size 3 for the std rgb')
     data.add_argument('--pad-size', type=int, default=0,
                       help='padding the input image')
+    data.add_argument('--fill-value', type=int, default=127,
+                      help='Set the padding pixels value to fill_value')
     data.add_argument('--image-shape', type=str,
                       help='the image shape feed into the network, e.g. (3,224,224)')
     data.add_argument('--num-classes', type=int, help='the number of classes')
@@ -43,9 +47,9 @@ def add_data_args(parser):
 def add_data_aug_args(parser):
     aug = parser.add_argument_group(
         'Image augmentations', 'implemented in src/io/image_aug_default.cc')
-    aug.add_argument('--random-crop', type=int, default=1,
+    aug.add_argument('--random-crop', type=int, default=0,
                      help='if or not randomly crop the image')
-    aug.add_argument('--random-mirror', type=int, default=1,
+    aug.add_argument('--random-mirror', type=int, default=0,
                      help='if or not randomly flip horizontally')
     aug.add_argument('--max-random-h', type=int, default=0,
                      help='max change of hue, whose range is [0, 180]')
@@ -53,8 +57,13 @@ def add_data_aug_args(parser):
                      help='max change of saturation, whose range is [0, 255]')
     aug.add_argument('--max-random-l', type=int, default=0,
                      help='max change of intensity, whose range is [0, 255]')
+    aug.add_argument('--min-random-aspect-ratio', type=float, default=None,
+                     help='min value of aspect ratio, whose value is either None or a positive value.')
     aug.add_argument('--max-random-aspect-ratio', type=float, default=0,
-                     help='max change of aspect ratio, whose range is [0, 1]')
+                     help='max value of aspect ratio. If min_random_aspect_ratio is None, '
+                          'the aspect ratio range is [1-max_random_aspect_ratio, '
+                          '1+max_random_aspect_ratio], otherwise it is '
+                          '[min_random_aspect_ratio, max_random_aspect_ratio].')
     aug.add_argument('--max-random-rotate-angle', type=int, default=0,
                      help='max angle to rotate, whose range is [0, 360]')
     aug.add_argument('--max-random-shear-ratio', type=float, default=0,
@@ -62,17 +71,29 @@ def add_data_aug_args(parser):
     aug.add_argument('--max-random-scale', type=float, default=1,
                      help='max ratio to scale')
     aug.add_argument('--min-random-scale', type=float, default=1,
-                     help='min ratio to scale, should >= img_size/input_shape. otherwise use --pad-size')
+                     help='min ratio to scale, should >= img_size/input_shape. '
+                          'otherwise use --pad-size')
+    aug.add_argument('--max-random-area', type=float, default=1,
+                     help='max area to crop in random resized crop, whose range is [0, 1]')
+    aug.add_argument('--min-random-area', type=float, default=1,
+                     help='min area to crop in random resized crop, whose range is [0, 1]')
+    aug.add_argument('--min-crop-size', type=int, default=-1,
+                     help='Crop both width and height into a random size in '
+                          '[min_crop_size, max_crop_size]')
+    aug.add_argument('--max-crop-size', type=int, default=-1,
+                     help='Crop both width and height into a random size in '
+                          '[min_crop_size, max_crop_size]')
+    aug.add_argument('--brightness', type=float, default=0,
+                     help='brightness jittering, whose range is [0, 1]')
+    aug.add_argument('--contrast', type=float, default=0,
+                     help='contrast jittering, whose range is [0, 1]')
+    aug.add_argument('--saturation', type=float, default=0,
+                     help='saturation jittering, whose range is [0, 1]')
+    aug.add_argument('--pca-noise', type=float, default=0,
+                     help='pca noise, whose range is [0, 1]')
+    aug.add_argument('--random-resized-crop', type=int, default=0,
+                     help='whether to use random resized crop')
     return aug
-
-def set_data_aug_level(aug, level):
-    if level >= 1:
-        aug.set_defaults(random_crop=1, random_mirror=1)
-    if level >= 2:
-        aug.set_defaults(max_random_h=36, max_random_s=50, max_random_l=50)
-    if level >= 3:
-        aug.set_defaults(max_random_rotate_angle=10, max_random_shear_ratio=0.1, max_random_aspect_ratio=0.25)
-
 
 class SyntheticDataIter(DataIter):
     def __init__(self, num_classes, data_shape, max_iter, dtype):
@@ -120,6 +141,7 @@ def get_rec_iter(args, kv=None):
     else:
         (rank, nworker) = (0, 1)
     rgb_mean = [float(i) for i in args.rgb_mean.split(',')]
+    rgb_std = [float(i) for i in args.rgb_std.split(',')]
     train = mx.io.ImageRecordIter(
         path_imgrec         = args.data_train,
         path_imgidx         = args.data_train_idx,
@@ -127,6 +149,9 @@ def get_rec_iter(args, kv=None):
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],
         mean_b              = rgb_mean[2],
+        std_r               = rgb_std[0],
+        std_g               = rgb_std[1],
+        std_b               = rgb_std[2],
         data_name           = 'data',
         label_name          = 'softmax_label',
         data_shape          = image_shape,
@@ -134,9 +159,19 @@ def get_rec_iter(args, kv=None):
         rand_crop           = args.random_crop,
         max_random_scale    = args.max_random_scale,
         pad                 = args.pad_size,
-        fill_value          = 127,
+        fill_value          = args.fill_value,
+        random_resized_crop = args.random_resized_crop,
         min_random_scale    = args.min_random_scale,
         max_aspect_ratio    = args.max_random_aspect_ratio,
+        min_aspect_ratio    = args.min_random_aspect_ratio,
+        max_random_area     = args.max_random_area,
+        min_random_area     = args.min_random_area,
+        min_crop_size       = args.min_crop_size,
+        max_crop_size       = args.max_crop_size,
+        brightness          = args.brightness,
+        contrast            = args.contrast,
+        saturation          = args.saturation,
+        pca_noise           = args.pca_noise,
         random_h            = args.max_random_h,
         random_s            = args.max_random_s,
         random_l            = args.max_random_l,
@@ -156,6 +191,9 @@ def get_rec_iter(args, kv=None):
         mean_r              = rgb_mean[0],
         mean_g              = rgb_mean[1],
         mean_b              = rgb_mean[2],
+        std_r               = rgb_std[0],
+        std_g               = rgb_std[1],
+        std_b               = rgb_std[2],
         data_name           = 'data',
         label_name          = 'softmax_label',
         batch_size          = args.batch_size,

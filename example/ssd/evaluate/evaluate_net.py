@@ -24,10 +24,15 @@ from dataset.iterator import DetRecordIter
 from config.config import cfg
 from evaluate.eval_metric import MApMetric, VOC07MApMetric
 import logging
+import time
 from symbol.symbol_factory import get_symbol
+from symbol import symbol_builder
+from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array
+import ctypes
+from mxnet.contrib.quantization import *
 
-def evaluate_net(net, path_imgrec, num_classes, mean_pixels, data_shape,
-                 model_prefix, epoch, ctx=mx.cpu(), batch_size=1,
+def evaluate_net(net, path_imgrec, num_classes, num_batch, mean_pixels, data_shape,
+                 model_prefix, epoch, ctx=mx.cpu(), batch_size=32,
                  path_imglist="", nms_thresh=0.45, force_nms=False,
                  ovp_thresh=0.5, use_difficult=False, class_names=None,
                  voc07_metric=False):
@@ -106,6 +111,23 @@ def evaluate_net(net, path_imgrec, num_classes, mean_pixels, data_shape,
         metric = VOC07MApMetric(ovp_thresh, use_difficult, class_names)
     else:
         metric = MApMetric(ovp_thresh, use_difficult, class_names)
-    results = mod.score(eval_iter, metric, num_batch=None)
+
+    num = num_batch * batch_size
+    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=ctx) for _, shape in mod.data_shapes]
+    batch = mx.io.DataBatch(data, [])  # empty label
+
+    dry_run = 5                 # use 5 iterations to warm up
+    for i in range(dry_run):
+        mod.forward(batch, is_train=False)
+        for output in mod.get_outputs():
+            output.wait_to_read()
+
+    tic = time.time()
+    results = mod.score(eval_iter, metric, num_batch=num_batch)
+    speed = num / (time.time() - tic)
+    if logger is not None:
+        logger.info('Finished inference with %d images' % num)
+        logger.info('Finished with %f images per second', speed)
+
     for k, v in results:
         print("{}: {}".format(k, v))

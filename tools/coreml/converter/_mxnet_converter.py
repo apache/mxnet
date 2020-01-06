@@ -1,3 +1,4 @@
+from __future__ import print_function
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -37,11 +38,14 @@ _MXNET_LAYER_REGISTRY  = {
     'elemwise_add'   : _layers.convert_elementwise_add,
     'Reshape'        : _layers.convert_reshape,
     'Deconvolution'  : _layers.convert_deconvolution,
+    'LeakyReLU'      : _layers.convert_leakyrelu,
 }
 
 _MXNET_SKIP_LAYERS = [
     '_MulScalar',
     'Dropout',
+    '_minus_scalar',
+    '_mul_scalar',
 ]
 
 def _mxnet_remove_batch(input_data):
@@ -68,9 +72,9 @@ def check_error(model, path, shapes, output = 'softmax_output', verbose = True):
     error = _np.linalg.norm(e_out - mx_out)
 
     if verbose:
-        print "First few predictions from CoreML : %s" % e_out[0:10]
-        print "First few predictions from MXNet  : %s" % e_out[0:10]
-        print "L2 Error on random data %s" % error
+        print("First few predictions from CoreML : %s" % e_out[0:10])
+        print("First few predictions from MXNet  : %s" % e_out[0:10])
+        print("L2 Error on random data %s" % error)
     return error
 
 def _set_input_output_layers(builder, input_names, output_names):

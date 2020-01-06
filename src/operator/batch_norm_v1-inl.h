@@ -255,15 +255,15 @@ class BatchNormV1Prop : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
-    const TShape &dshape = in_shape->at(0);
-    if (dshape.ndim() == 0) return false;
-    in_shape->at(1) = TShape(Shape1(dshape[1]));
-    in_shape->at(2) = TShape(Shape1(dshape[1]));
+    const mxnet::TShape &dshape = in_shape->at(0);
+    if (!mxnet::ndim_is_known(dshape)) return false;
+    in_shape->at(1) = mxnet::TShape(Shape1(dshape[1]));
+    in_shape->at(2) = mxnet::TShape(Shape1(dshape[1]));
     out_shape->clear();
     out_shape->push_back(dshape);
     out_shape->push_back(Shape1(dshape[1]));
@@ -286,14 +286,14 @@ class BatchNormV1Prop : public OperatorProperty {
     // For other input types, these parameters have the same type as input
     // NOTE: This requirement is from cuDNN (v. 4 and 5)
     int dtype_param = (dtype == kFloat16) ? kFloat32 : dtype;
-    for (index_t i = 1; i < in_type->size(); ++i) {
+    for (size_t i = 1; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype_param;
       } else {
         UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, ListArguments()[i]);
       }
     }
-    for (index_t i = 0; i < aux_type->size(); ++i) {
+    for (size_t i = 0; i < aux_type->size(); ++i) {
       if ((*aux_type)[i] != -1) {
         UNIFORM_TYPE_CHECK((*aux_type)[i], dtype_param, ListArguments()[i]);
       }
@@ -331,7 +331,7 @@ class BatchNormV1Prop : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -363,7 +363,7 @@ class BatchNormV1Prop : public OperatorProperty {
       return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
       std::vector<int> *in_type) const override;
 
   inline const BatchNormV1Param& getParam() const {

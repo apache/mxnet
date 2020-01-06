@@ -28,6 +28,7 @@
 #include <mshadow/cuda/reduce.cuh>
 #include <algorithm>
 #include <vector>
+#include "./mxnet_op.h"
 
 #define ROUND_OFF 50000
 #define WARPS_PER_BLOCK 1
@@ -38,10 +39,7 @@
     cudaError_t error = condition; \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
   } while (0)
-#define CUDA_KERNEL_LOOP(i, n) \
-for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
-      i < (n); \
-      i += blockDim.x * gridDim.x)
+
 namespace mshadow {
 namespace cuda {
 // == Correlation Kernel
@@ -621,8 +619,12 @@ inline void CorrelationBackward(const Tensor<gpu, 4, Dtype> &out_grad,
 namespace mxnet {
 namespace op {
 template<>
-Operator* CreateOp<gpu>(CorrelationParam param) {
-  return new CorrelationOp<gpu>(param);
+Operator* CreateOp<gpu>(CorrelationParam param, int dtype) {
+  Operator* op = nullptr;
+  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+    op = new CorrelationOp<gpu, DType>(param);
+  });
+  return op;
 }
 }  // namespace op
 }  // namespace mxnet

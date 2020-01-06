@@ -17,6 +17,7 @@
 
 package AI::MXNet::Monitor;
 use Mouse;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 use AI::MXNet::Base;
 
@@ -30,13 +31,13 @@ use AI::MXNet::Base;
 
     Parameters
     ----------
-    interval : int
+    interval : Int
         Number of batches between printing.
-    stat_func : function
+    stat_func : CodeRef
         a function that computes statistics of tensors.
         Takes a NDArray and returns a NDArray. defaults to mean
         absolute value |x|/size(x).
-    pattern : str
+    pattern : Str
         A regular expression specifying which tensors to monitor.
         Only tensors with names that match name_pattern will be included.
         For example, '.*weight|.*output' will print all weights and outputs;
@@ -80,7 +81,7 @@ has 'stat_helper'          => (
         return sub {
             my ($name, $handle) = @_;
             return if(not $self->activated or not $name =~ $self->re_pattern);
-            my $array = AI::MXNet::NDArray->new(handle => $handle, writable => 0);
+            my $array = AI::MXNet::NDArray->_ndarray_cls($handle, 0);
             push @{ $self->queue }, [$self->step, $name, $self->stat_func->($array)];
         }
     },
@@ -94,7 +95,7 @@ has 'stat_helper'          => (
 
     Parameters
     ----------
-    exe : AI::MXNet::Executor
+    $exe : AI::MXNet::Executor
         the Executor (returned by $symbol->bind) to install to.
 =cut
 

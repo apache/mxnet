@@ -17,21 +17,70 @@
 
 # pylint: disable=unused-import
 """Register backend ops in mxnet.symbol namespace."""
+from __future__ import absolute_import
 import os as _os
 import ctypes
-import numpy as np
+import numpy as _np
 
 from . import _internal
 from ._internal import SymbolBase, _symbol_creator
 from ..attribute import AttrScope
 from ..base import mx_uint, check_call, _LIB, py_str
 from ..symbol_doc import _build_doc
-from ..base import _Null, _init_op_module
+from ..base import _Null, _init_op_module, _is_np_op, _output_is_list
 from ..name import NameManager
 # pylint: enable=unused-import
 
 
-def _generate_symbol_function_code(handle, name, func_name, signature_only=False):
+def _verify_np_symbol(op_name, func_name, sym):
+    """Verify if the sym is a numpy symbol.
+
+    Parameters
+    ----------
+    op_name : str
+        Operator full name registered in backend.
+    func_name : str
+        Operator name exposed to users. This is usually the name by stripping off
+        the prefix of the full operator names registered in backend.
+    sym : symbol to be verified
+    """
+    from .numpy._symbol import _Symbol as np_symbol
+    if not isinstance(sym, np_symbol):
+        raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                        'This is a numpy operator which can only accept '
+                        'MXNet numpy ndarrays, while received a legacy ndarray. '
+                        'Please ensure that you have activated numpy semantics by calling '
+                        '`npx.set_np()` in your code. If you still see this error with numpy '
+                        'semantics activated, please call `as_np_ndarray()` upon the legacy '
+                        'ndarray to convert it to an MXNet numpy ndarray, and then feed the '
+                        'converted array to this operator.'
+                        .format(op_name, func_name))
+
+
+def _verify_legacy_symbol(op_name, func_name, sym):
+    """Verify if the sym is a legacy symbol.
+
+    Parameters
+    ----------
+    op_name : str
+        Operator full name registered in backend.
+    func_name : str
+        Operator name exposed to users. This is usually the name by stripping off
+        the prefix of the full operator names registered in backend.
+    sym : symbol to be verified
+    """
+    from .numpy._symbol import _Symbol as np_symbol
+    if isinstance(sym, np_symbol):
+        raise TypeError('Operator `{}` registered in backend is known as `{}` in Python. '
+                        'This is a legacy operator which can only accept '
+                        'legacy ndarrays, while received an MXNet numpy ndarray. '
+                        'Please call `as_nd_ndarray()` upon the numpy ndarray to '
+                        'convert it to a legacy ndarray, and then feed the converted '
+                        'array to this operator.'
+                        .format(op_name, func_name))
+
+
+def _generate_symbol_function_code(handle, op_name, func_name, signature_only=False):
     """Generate function for symbol op by handle and function name."""
     real_name = ctypes.c_char_p()
     desc = ctypes.c_char_p()
@@ -55,7 +104,7 @@ def _generate_symbol_function_code(handle, name, func_name, signature_only=False
     arg_types = [py_str(arg_types[i]) for i in range(narg)]
     key_var_num_args = py_str(key_var_num_args.value)
     ret_type = py_str(ret_type.value) if ret_type.value is not None else ''
-    doc_str = _build_doc(name,
+    doc_str = _build_doc(op_name,
                          py_str(desc.value),
                          arg_names,
                          arg_types,
@@ -94,6 +143,9 @@ def _generate_symbol_function_code(handle, name, func_name, signature_only=False
     signature.append('**kwargs')
     signature = ndsignature + signature
 
+    is_np_op = _is_np_op(op_name)
+    output_is_list = _output_is_list(op_name)
+    verify_symbol_fn = _verify_np_symbol.__name__ if is_np_op else _verify_legacy_symbol.__name__
     code = []
     if arr_name:
         code.append("""
@@ -105,17 +157,22 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
         assert isinstance(i, SymbolBase), \\
             "Positional arguments must be Symbol instances, " \\
             "but got %s"%str(i)
-        sym_args.append(i)""".format(arr_name))
+        {}('{}', '{}', i)
+        sym_args.append(i)""".format(arr_name, verify_symbol_fn, op_name, func_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = np.dtype(kwargs['%s']).name"""%(
+        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
             dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
-    kwargs.update(AttrScope.current.get(attr))
+    if not hasattr(AttrScope._current, "value"):
+        AttrScope._current.value = AttrScope()
+    kwargs.update(AttrScope._current.value.get(attr))
     name = kwargs.pop('name', None)
-    name = NameManager.current.get(name, '%s')
+    if not hasattr(NameManager._current, "value"):
+        NameManager._current.value = NameManager()
+    name = NameManager._current.value.get(name, '%s')
     _ = kwargs.pop('out', None)
     keys = []
     vals = []
@@ -123,10 +180,11 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
     for k, v in kwargs.items():
         if isinstance(v, SymbolBase):
             sym_kwargs[k] = v
+            %s('%s', '%s', v)
         else:
             keys.append(k)
-            vals.append(v)"""%(func_name.lower()))
-            if key_var_num_args:
+            vals.append(v)"""%(func_name.lower(), verify_symbol_fn, op_name, func_name))
+            if key_var_num_args: # pylint: disable=using-constant-test
                 code.append("""
     if '%s' not in kwargs:
         keys.append('%s')
@@ -134,23 +192,26 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             key_var_num_args, key_var_num_args))
 
             code.append("""
-    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name)"""%(
-        handle.value))
+    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s, %s)"""%(
+                handle.value, str(is_np_op), str(output_is_list)))
     else:
         code.append("""
 def %s(%s):"""%(func_name, ', '.join(signature)))
         if not signature_only:
             code.append("""
-    kwargs.update(AttrScope.current.get(attr))
+    if not hasattr(AttrScope._current, "value"):
+        AttrScope._current.value = AttrScope()
+    kwargs.update(AttrScope._current.value.get(attr))
     sym_kwargs = dict()
     _keys = []
     _vals = []
     for _k, _v in kwargs.items():
         if isinstance(_v, SymbolBase):
             sym_kwargs[_k] = _v
+            {}('{}', '{}', _v)
         else:
             _keys.append(_k)
-            _vals.append(_v)""")
+            _vals.append(_v)""".format(verify_symbol_fn, op_name, func_name))
             # NDArray args
             for name in ndarg_names: # pylint: disable=redefined-argument-from-local
                 code.append("""
@@ -158,6 +219,9 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         assert isinstance({name}, SymbolBase), \\
             "Argument {name} must be Symbol instances, but got %s"%str({name})
         sym_kwargs['{name}'] = {name}""".format(name=name))
+                code.append("""
+        {}('{}', '{}', {name})
+                """.format(verify_symbol_fn, op_name, func_name, name=name))
             # kwargs
             for name in kwarg_names: # pylint: disable=redefined-argument-from-local
                 code.append("""
@@ -166,15 +230,23 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
         _vals.append(%s)"""%(name, name, name))
             # dtype
             if dtype_name is not None:
-                code.append("""
+                if is_np_op:
+                    code.append("""
+    if %s is not _Null and %s is not None:
+        _keys.append('%s')
+        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name, dtype_name))
+                else:
+                    code.append("""
     if %s is not _Null:
         _keys.append('%s')
-        _vals.append(np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
 
             code.append("""
-    name = NameManager.current.get(name, '%s')
-    return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name)"""%(
-        func_name.lower(), handle.value))
+    if not hasattr(NameManager._current, "value"):
+        NameManager._current.value = NameManager()
+    name = NameManager._current.value.get(name, '%s')
+    return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name, %s, %s)"""%(
+        func_name.lower(), handle.value, str(is_np_op), str(output_is_list)))
 
     if signature_only:
         code.append("""
@@ -200,3 +272,14 @@ def _make_symbol_function(handle, name, func_name):
     return symbol_function
 
 _init_op_module('mxnet', 'symbol', _make_symbol_function)
+
+# Update operator documentation with added float support
+# Note that we can only do this after the op module is initialized
+# Otherwise the backend operators cannot be found
+# pylint: disable=wrong-import-position
+from .contrib import adamw_update, mp_adamw_update
+from ._internal import _adamw_update, _mp_adamw_update
+adamw_update.__doc__ = _adamw_update.__doc__.replace("rescale_grad : Symbol",
+                                                     "rescale_grad : Symbol or float")
+mp_adamw_update.__doc__ = _mp_adamw_update.__doc__.replace("rescale_grad : Symbol",
+                                                           "rescale_grad : Symbol or float")

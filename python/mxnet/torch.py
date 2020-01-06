@@ -85,7 +85,7 @@ def _make_torch_function(handle):
                 'Invoke with\n{res}= mxnet.th.{name}(Parameters)\nor\n'+
                 'mxnet.th.{name}({res}, Parameters).\n\n' +
                 '{param_str}\n' +
-                'Reference: ' +
+                'References: ' +
                 'https://github.com/torch/torch7/blob/master/doc/maths.md\n').format(
                     name=func_name[4:], param_str=param_str,
                     res=res))
@@ -142,18 +142,20 @@ def _make_torch_function(handle):
         for k in kwargs:
             kwargs[k] = str(kwargs[k])
 
-        check_call(_LIB.MXFuncInvokeEx( \
-                   handle, \
-                   c_handle_array(ndargs[n_mutate_vars:]), \
-                   c_array(mx_float, []), \
-                   c_handle_array(ndargs[:n_mutate_vars]),
-                   ctypes.c_int(len(kwargs)),
-                   c_str_array(kwargs.keys()),
-                   c_str_array(kwargs.values())))
+        check_call(_LIB.MXFuncInvokeEx(
+            handle,
+            c_handle_array(ndargs[n_mutate_vars:]), # pylint: disable=invalid-slice-index
+            c_array(mx_float, []),
+            c_handle_array(ndargs[:n_mutate_vars]),   # pylint: disable=invalid-slice-index
+            ctypes.c_int(len(kwargs)),
+            c_str_array(kwargs.keys()),
+            c_str_array(kwargs.values())))
+
         if n_mutate_vars == 1:
             return ndargs[0]
         else:
-            return ndargs[:n_mutate_vars]
+            return ndargs[:n_mutate_vars] # pylint: disable=invalid-slice-index
+
     # End of function declaration
     ret_function = generic_torch_function
     ret_function.__name__ = func_name[4:]

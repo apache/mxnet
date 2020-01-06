@@ -781,14 +781,14 @@ def test_composite_embedding_with_two_embeddings():
 
 def test_get_and_pretrain_file_names():
     assert len(text.embedding.get_pretrained_file_names(
-        embedding_name='fasttext')) == 297
+        embedding_name='fasttext')) == 327
 
     assert len(text.embedding.get_pretrained_file_names(embedding_name='glove')) == 10
 
     reg = text.embedding.get_pretrained_file_names(embedding_name=None)
 
     assert len(reg['glove']) == 10
-    assert len(reg['fasttext']) == 297
+    assert len(reg['fasttext']) == 327
 
     assertRaises(KeyError, text.embedding.get_pretrained_file_names, 'unknown$$')
 

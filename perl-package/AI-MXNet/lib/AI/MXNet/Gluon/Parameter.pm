@@ -19,6 +19,7 @@ use strict;
 use warnings;
 use Hash::Ordered;
 package AI::MXNet::Gluon::Parameter;
+use AI::MXNet::NS;
 use AI::MXNet::Function::Parameters;
 
 =head1 NAME 
@@ -53,7 +54,7 @@ use AI::MXNet::Function::Parameters;
           iteration when using this option.
         - 'null' means gradient is not requested for this parameter. gradient arrays
           will not be allocated.
-    shape : array ref of int, default None
+    shape : array ref of int or int, default undef
         Shape of this parameter. By default shape is not specified. Parameter with
         unknown shape can be used for `Symbol` API, but `init` will throw an error
         when using `NDArray` API.
@@ -66,6 +67,11 @@ use AI::MXNet::Function::Parameters;
         Weight decay multiplier (L2 regularizer coefficient). Works similar to lr_mult.
     init : Initializer, default None
         Initializer of this parameter. Will use the global initializer by default.
+    stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
+        The storage type of the parameter.
+    grad_stype: {'default', 'row_sparse', 'csr'}, defaults to 'default'.
+        The storage type of the parameter's gradient.
+
 
     Attributes
     ----------
@@ -80,8 +86,9 @@ use AI::MXNet::Base;
 use overload '""' => sub {
         my $self = shift;
         "Parameter " . $self->name.
-        " (shape=(" . join(',', @{ $self->shape//[] }) .")".
-        ", dtype=" . $self->dtype.")"
+        " (shape=(" . join(', ', @{ $self->shape//[] }) .")".
+        ", dtype=" . $self->dtype.
+        ", stype=" . $self->stype.")"
     },
     fallback => 1;
 
@@ -103,19 +110,22 @@ sub BUILD
 {
     my $self = shift;
     $self->grad_req($self->_grad_req);
+    $self->_shape([$self->_shape]) if defined $self->_shape and not ref $self->_shape;
     $self->_deferred_init([]);
 }
 
 has 'name'                => (is => 'ro', isa => 'Str', required => 1);
 has '_grad_req'           => (is => 'rw', isa => 'GradReq', init_arg => 'grad_req', default => 'write');
-has 'shape'               => (is => 'rw', isa => 'Shape');
+has '_shape'              => (is => 'rw', isa => 'Maybe[Shape|Int]', init_arg => 'shape');
 has 'dtype'               => (is => 'rw', isa => 'Dtype', default => 'float32');
+has ['stype',
+     'grad_stype']        => (is => 'rw', isa => 'Stype', default => 'default');
 has [qw/lr_mult wd_mult/] => (is => 'rw', isa => 'Num', default => 1);
 has 'init'                => (is => 'rw', isa => 'Maybe[Initializer]');
 has 'allow_deferred_init' => (is => 'rw', isa => 'Bool', default => 0);
 has 'differentiable'      => (is => 'rw', isa => 'Bool', default => 1);
 has [qw/_var _data _grad
-    _deferred_init
+    _deferred_init _trainer
     _ctx_list _ctx_map/]  => (is => 'rw', init_arg => undef);
 
 method grad_req(Maybe[GradReq] $req=)
@@ -138,6 +148,64 @@ method grad_req(Maybe[GradReq] $req=)
     }
 }
 
+method shape(@args)
+{
+    return $self->_shape unless @args;
+    if(not defined $args[0])
+    {
+        $self->_shape(undef);
+        return undef;
+    }
+    if(not defined $self->_shape and defined $args[0])
+    {
+        $self->_shape(ref $args[0] ? $args[0] : [$args[0]]);
+        return $self->_shape;
+    }
+    my $new_shape = ref $args[0] ? $args[0] : [$args[0]];
+    my $shape_validated = 0;
+    if(@{ $self->_shape } == @{ $new_shape })
+    {
+        $shape_validated = 1;
+        zip(sub {
+            my ($i, $j) = @_;
+            return unless $i;
+            return if $i == $j;
+            $shape_validated = 0;
+        }, $self->_shape, $new_shape);
+    }
+    assert($shape_validated, 'Expected shape is incompatible with given shape');
+    $self->_shape($new_shape);
+    return $self->_shape;
+}
+
+method _set_trainer($trainer)
+{
+    if($self->stype ne 'default' and $self->_trainer and $trainer and Scalar::Util::refaddr($self->_trainer) ne Scalar::Util::refaddr($trainer))
+    {
+        confess(
+            "Failed to set the trainer for Parameter '${\ $self->name }' because it was already set. ".
+            "More than one trainers for a ${\ $self->stype } Parameter is not supported."
+        );
+    }
+    $self->_trainer($trainer);
+}
+
+method _get_row_sparse($arr_list, $ctx, AI::MXNet::NDArray $row_id)
+{
+    if(not $self->_trainer)
+    {
+        confess(
+            "Cannot get row_sparse data for Parameter '${\ $self->name }' when no ".
+            "Trainer is created with it."
+        );
+    }
+    my $results = $self->_check_and_get($arr_list, $ctx);
+
+    # fetch row sparse params from the trainer
+    $self->_trainer->_row_sparse_pull($self, $results, $row_id);
+    return $results;
+}
+
 method _check_and_get($arr_list, $ctx)
 {
     if(defined $arr_list)
@@ -157,31 +225,31 @@ method _check_and_get($arr_list, $ctx)
                 $ctx = AI::MXNet::Context->current_ctx;
             }
         }
-        my $idx;
-        if(ref $self->_ctx_map->[$ctx->device_type_id])
+        my $ctx_list = $self->_ctx_map->[$ctx->device_type_id&1];
+        if($ctx->device_id < @{ $ctx_list })
         {
-            $idx = $self->_ctx_map->[$ctx->device_type_id][$ctx->device_id];
-        }
-        if(defined $idx)
-        {
-            return $arr_list->[$idx];
+            my $idx = $ctx_list->[$ctx->device_id];
+            if(defined $idx)
+            {
+                return $arr_list->[$idx];
+            }
         }
         confess(
-            "Parameter ${\ $self->name } was not initialized on context $ctx. ".
+            "Parameter '${\ $self->name }' was not initialized on context $ctx. ".
             "It was only initialized on @{ $self->_ctx_list }."
         );
     }
     if(@{ $self->_deferred_init })
     {
         confess("DeferredInitializationError: ".
-            "Parameter ${\ $self->name } has not been initialized yet because initialization was ".
+            "Parameter '${\ $self->name }' has not been initialized yet because initialization was ".
             "deferred. Actual initialization happens during the first forward pass. ".
             "Please pass one batch of data through the network before accessing Parameters. ".
             "You can also avoid deferred initialization by specifying in_units, ".
             "num_features, etc., for network layers.");
     }
     confess(
-        "Parameter ${\ $self->name } has not been initialized. Note that ".
+        "Parameter '${\ $self->name }' has not been initialized. Note that ".
         "you should initialize parameters and create Trainer ".
         "with Block.collect_params() instead of Block.params ".
         "because the later does not include Parameters of ".
@@ -189,34 +257,41 @@ method _check_and_get($arr_list, $ctx)
     );
 }
 
-# (Re)initializes by loading from data.
+
+# (Re)initializes by loading from data. 
 method _load_init($data, $ctx)
 {
     if($self->shape)
     {
         for(zip($self->shape, $data->shape)) {
-            my ($i, $j) = @$_;
+            my ($self_dim, $data_dim) = @$_;
             assert(
-                ($i == 0 or $i == $j),
+                ($self_dim == 0 or $self_dim == $data_dim),
                 sprintf(
-                    "Failed loading Parameter %s from saved params: ".
-                    "shape incompatible expacted (%s) vs saved (%s)",
+                    "Failed loading Parameter '%s' from saved params: ".
+                    "shape incompatible expected (%s) vs saved (%s)",
                     $self->name, "@{$self->shape}", "@{$data->shape}"
                 )
             );
         }
+        $self->shape([map { $_->[0] ? $_->[0] : $_->[1] } zip($self->shape, $data->shape)]);
     }
     if($self->dtype)
     {
         assert(
             ($self->dtype eq $data->dtype),
             sprintf(
-                "Failed loading Parameter %s from saved params: ".
-                "dtype incompatible expacted %s vs saved %s",
+                "Failed loading Parameter '%s' from saved params: ".
+                "dtype incompatible expected %s vs saved %s",
                 $self->name, $self->dtype, $data->dtype
             )
         );
     }
+    if($self->stype ne $data->stype)
+    {
+        $data = $data->tostype($self->stype);
+    }
+
     if(blessed ($ctx) and $ctx->isa('AI::MXNet::Context'))
     {
         $ctx = [$ctx];
@@ -226,23 +301,28 @@ method _load_init($data, $ctx)
         if(@{ $self->_deferred_init })
         {
             assert(
-                ($ctx eq $self->_deferred_init->[1]),
+                (not defined $ctx or join('', @{ $ctx }) eq join('', @{ $self->_deferred_init->[1] })),
                 sprintf(
-                    "Failed to load Parameter %s on %s because it was ".
-                    "previous initialized on %s.",
+                    "Failed to load Parameter '%s' on %s because it was ".
+                    "previously initialized on %s.",
                     $self->name, $ctx, $self->list_ctx
                 )
             );
+            $ctx = $self->_deferred_init->[1];
+        }
+        elsif(not defined $ctx)
+        {
+            $ctx = [AI::MXNet::Context->cpu];
         }
         $self->_init_impl($data, $ctx);
     }
     else
     {
         assert(
-            (join('', @{ $ctx }) eq join('', @{ $self->list_ctx })),
+            (not defined $ctx or join('', @{ $ctx }) eq join('', @{ $self->list_ctx })),
             sprintf(
-                "Failed to load Parameter %s on %s because it was ".
-                "previous initialized on %s.",
+                "Failed to load Parameter '%s' on %s because it was ".
+                "previously initialized on %s.",
                 $self->name, "@$ctx", "@{$self->list_ctx}"
             )
         );
@@ -255,28 +335,34 @@ method _load_init($data, $ctx)
 method _finish_deferred_init()
 {
     return unless @{ $self->_deferred_init };
-    my ($init, $ctx, $default_init) = @{ $self->_deferred_init };
+    my ($init, $ctx, $default_init, $data) = @{ $self->_deferred_init };
     $self->_deferred_init([]);
     assert(
         (defined($self->shape) and product(@{ $self->shape }) > 0),
         sprintf(
-            "Cannot initialize Parameter %s because it has ".
+            "Cannot initialize Parameter '%s' because it has ".
             "invalid shape: %s. Please specify in_units, ".
             "in_channels, etc for `Block`s.",
             $self->name, $self->shape
         )
     );
     AI::MXNet::AutoGrad->pause(sub {
-        my $data = AI::MXNet::NDArray->zeros(
-            $self->shape, dtype => $self->dtype, ctx => AI::MXNet::Context->cpu
-        );
-        AI::MXNet::Initializer->new->(
-            AI::MXNet::InitDesc->new(
-                name => $self->name,
-                attrs => { __init__ => defined $init ? "$init" : "$default_init" }
-            ),
-            $data
-        );
+        if(not defined $data)
+        {
+            $data = AI::MXNet::NDArray->zeros(
+                $self->shape,
+                dtype => $self->dtype,
+                ctx => AI::MXNet::Context->cpu,
+                stype => $self->stype
+            );
+            AI::MXNet::Initializer->new->(
+                AI::MXNet::InitDesc->new(
+                    name => $self->name,
+                    attrs => { __init__ => defined $init ? "$init" : "$default_init" }
+                ),
+                $data
+            );
+        }
         $self->_init_impl($data, $ctx);
     });
 }
@@ -285,14 +371,10 @@ method _finish_deferred_init()
 method _init_impl($data, $ctx_list)
 {
     $self->_ctx_list([@{ $ctx_list }]);
-    $self->_ctx_map([]);
+    $self->_ctx_map([[], []]);
     enumerate(sub {
         my ($i, $ctx) = @_;
-        while(@{ $self->_ctx_map } <= $ctx->device_type_id)
-        {
-            push @{ $self->_ctx_map }, [];
-        }
-        my $dev_list = $self->_ctx_map->[$ctx->device_type_id];
+        my $dev_list = $self->_ctx_map->[$ctx->device_type_id&1];
         while(@{ $dev_list } <= $ctx->device_id)
         {
             push @{ $dev_list }, undef;
@@ -311,19 +393,39 @@ method _init_grad()
         $self->_grad(undef);
         return;
     }
-    $self->_grad([map { AI::MXNet::NDArray->zeros_like($_) } @{ $self->_data }]);
-    AI::MXNet::AutoGrad->mark_variables($self->list_data, $self->list_grad, grad_reqs => $self->grad_req);
+    $self->_grad([
+        map {
+            AI::MXNet::NDArray->zeros(
+                $_->shape, dtype => $_->dtype,
+                ctx => $_->context, stype => $self->grad_stype
+            )
+        } @{ $self->_data }
+    ]);
+    AI::MXNet::AutoGrad->mark_variables(
+        $self->_check_and_get($self->_data, []),
+        $self->_grad,
+        grad_reqs => $self->grad_req
+    );
 }
 
-# Reduce data from multiple context.
-
+# Reduce data from multiple contexts to cpu.
 method _reduce()
 {
-    my $block = $self->list_data;
-    my $data = AI::MXNet::NDArray->add_n(map { $_->copyto(AI::MXNet::Context->cpu) } @{ $block }) / @{ $block };
+    my $data;
+    my $ctx = AI::MXNet::Context->cpu;
+    if($self->stype eq 'default')
+    {
+        my $block = $self->list_data;
+        $data = AI::MXNet::NDArray->add_n(map { $_->copyto($ctx) } @{ $block }) / @{ $block };
+    }
+    else
+    {
+        my $all_row_ids = AI::MXNet::NDArray->arange(stop => $self->shape->[0], dtype=>'int64', ctx=>$ctx);
+        $data = AI::MXNet::NDArray->zeros($self->shape, stype=>'row_sparse', ctx=>$ctx);
+        $self->_trainer->_row_sparse_pull($self, $data, $all_row_ids, 1);
+    }
     return $data;
 }
-
 
 =head2 initialize
 
@@ -377,7 +479,7 @@ method initialize(
     if(defined $self->_data and not $force_reinit)
     {
         AI::MXNet::Logging->warning(
-            "Parameter %s is already initialized, ignoring. ".
+            "Parameter '%s' is already initialized, ignoring. ".
             "Set force_reinit=True to re-initialize.", $self->name
         );
         return;
@@ -403,13 +505,13 @@ method initialize(
     {
         if($self->allow_deferred_init)
         {
-            $self->_deferred_init([$init, $ctx, $default_init]);
+            $self->_deferred_init([$init, $ctx, $default_init, undef]);
             return;
         }
-        confess("Cannot initialize Parameter ${\ $self->name } because it has ".
+        confess("Cannot initialize Parameter '${\ $self->name }' because it has ".
                 "invalid shape: @{$self->shape//[]}.");
     }
-    $self->_deferred_init([$init, $ctx, $default_init]);
+    $self->_deferred_init([$init, $ctx, $default_init, undef]);
     $self->_finish_deferred_init;
 }
 
@@ -437,12 +539,12 @@ method reset_ctx(Maybe[AI::MXNet::Context|ArrayRef[AI::MXNet::Context]] :$ctx=AI
     }
     elsif(@{ $self->_deferred_init })
     {
-        my ($init, undef, $default_init) = @{ $self->_deferred_init };
-        $self->_deferred_init([$init, $ctx, $default_init]);
+        my ($init, undef, $default_init, $data) = @{ $self->_deferred_init };
+        $self->_deferred_init([$init, $ctx, $default_init, $data]);
     }
     else
     {
-        confess("Cannot reset context for Parameter ${ \ $self->name } because it ".
+        confess("Cannot reset context for Parameter '${ \ $self->name }' because it ".
                 "has not been initialized.");
     }
 }
@@ -454,20 +556,93 @@ method reset_ctx(Maybe[AI::MXNet::Context|ArrayRef[AI::MXNet::Context]] :$ctx=AI
 
 method set_data($data)
 {
-    assert(
-        (defined $self->_data),
-        "Parameter ${\ $self->name } has not been initialized"
-    );
-    for my $arr (@{ $self->list_data })
+    $self->shape($data->shape);
+    if(not defined $self->_data)
+    {
+        assert(
+            (@{ $self->_deferred_init }),
+            "Parameter '${\ $self->name }' has not been initialized"
+        );
+        $self->_deferred_init->[3] = $data;
+        return;
+    }
+
+    # if update_on_kvstore, we need to make sure the copy stored in kvstore is in sync
+    if($self->_trainer and $self->_trainer->_kv_initialized and $self->_trainer->update_on_kvstore)
+    {
+        if(!grep { Scalar::Util::refaddr($self) == Scalar::Util::refaddr($_) } @{ $self->_trainer->_params_to_init })
+        {
+            $self->_trainer->_reset_kvstore();
+        }
+    }
+    for my $arr (@{ $self->_check_and_get($self->_data, []) })
     {
         $arr .= $data;
     }
 }
 
+=head2 row_sparse_data 
+
+        Returns a copy of the 'row_sparse' parameter on the same context as row_id's.
+        The copy only retains rows whose ids occur in provided row ids.
+        The parameter must have been initialized on this context before.
+
+        Parameters
+        ----------
+        $row_id: AI::MXNet::NDArray
+            Row ids to retain for the 'row_sparse' parameter.
+
+        Returns
+        -------
+        AI::MXNet::NDArray on row_id's context
+=cut
+
+method row_sparse_data(AI::MXNet::NDArray $row_id)
+{
+    if($self->stype ne 'row_sparse')
+    {
+        confess(
+            "Cannot return a copy of Parameter ${\ $self->name } via row_sparse_data() ".
+            "because its storage type is ${\ $self->stype }. Please use data() instead."
+        );
+    }
+    return $self->_get_row_sparse($self->_data, $row_id->context, $row_id);
+}
+
+=head2 list_row_sparse_data
+
+        Returns copies of the 'row_sparse' parameter on all contexts, in the same order
+        as creation. The copy only retains rows whose ids occur in provided row ids.
+        The parameter must have been initialized before.
+
+        Parameters
+        ----------
+        $row_id: AI::MXNet::NDArray
+            Row ids to retain for the 'row_sparse' parameter.
+
+        Returns
+        -------
+        array ref of AI::MXNet::NDArrays
+=cut
+
+method list_row_sparse_data(AI::MXNet::NDArray $row_id)
+{
+    if($self->stype ne 'row_sparse')
+    {
+        confess(
+            "Cannot return copies of Parameter '${\ $self->name }' on all contexts via ".
+            "list_row_sparse_data() because its storage type is ${\ $self->stype }. Please ".
+            "use data() instead."
+        );
+    }
+    return $self->_get_row_sparse($self->_data, [], $row_id);
+}
+
 =head2 data
 
         Returns a copy of this parameter on one context. Must have been
-        initialized on this context before.
+        initialized on this context before. For sparse parameters, use
+        row_sparse_data instead.
 
         Parameters
         ----------
@@ -481,17 +656,35 @@ method set_data($data)
 
 method data(Maybe[AI::MXNet::Context] $ctx=)
 {
+    if($self->stype ne 'default')
+    {
+        $ctx //= AI::MXNet::Context->current_ctx;
+        confess(
+            "Cannot return a copy of Parameter '${\ $self->name }' on ctx $ctx via data() ".
+            "because its storage type is ${\ $self->stype }. Please use row_sparse_data() ".
+            "instead."
+        );
+    }
     return $self->_check_and_get($self->_data, $ctx);
 }
 
 =head2 list_data
 
         Returns copies of this parameter on all contexts, in the same order
-        as creation.
+        as creation. For sparse parameters, use list_row_sparse_data
+        instead.
 =cut
 
 method list_data()
 {
+    if($self->stype ne 'default')
+    {
+        confess(
+            "Cannot return a copies of Parameter '${\ $self->data }' on all contexts via list_data() ".
+            "because its storage type is ${\ $self->stype }. Please use row_sparse_data() ".
+            "instead."
+        );
+    }
     return $self->_check_and_get($self->_data, [])
 }
 
@@ -562,7 +755,7 @@ method list_ctx()
 method zero_grad()
 {
     return unless defined $self->_grad;
-    map { $_ .= 0 } @{ $self->_grad };
+    AI::MXNet::NDArray->zeros_like($_, { out => $_ }) for @{ $self->_grad };
 }
 
 =head2 var
@@ -578,13 +771,131 @@ method var()
             AI::MXNet::Symbol->var(
                 $self->name, shape => $self->shape, dtype => $self->dtype,
                 lr_mult => $self->lr_mult, wd_mult => $self->wd_mult,
-                init => $self->init
+                init => $self->init, stype => $self->stype
             )
         );
     }
     return $self->_var;
 }
 
+=head2 cast
+
+    Cast data and gradient of this Parameter to a new data type.
+
+    Parameters
+     ----------
+    $dtype : Dtype
+    The new data type.
+=cut
+
+method cast(Dtype $dtype)
+{
+    $self->dtype($dtype);
+    return unless defined $self->_data;
+    AI::MXNet::AutoGrad->pause(sub {
+        $self->_data([map { $_->astype($dtype) } @{ $self->_data }]);
+        return unless defined $self->_grad;
+        $self->_grad([map { $_->astype($dtype) } @{ $self->_grad }]);
+        AI::MXNet::AutoGrad->mark_variables($self->_data, $self->_grad, grad_reqs => $self->grad_req);
+    });
+}
+
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet::Gluon');
+
+package AI::MXNet::Gluon::Constant;
+use strict;
+use warnings;
+use Mouse;
+extends 'AI::MXNet::Gluon::Parameter';
+
+=head1 NAME 
+
+    AI::MXNet::Gluon::Constant - A constant parameter for holding immutable tensors.
+=cut
+
+=head1 DESCRIPTION
+
+    A constant parameter for holding immutable tensors.
+    Constants are ignored by autograd and Trainer, thus their values
+    will not change during training. But you can still update their values
+    manually with the set_data method.
+
+    Constants can be created with either
+
+        $const = mx->gluon->Constant('const', [[1,2],[3,4]]);
+
+    or
+
+        package Block;
+        use AI::MXNet::Gluon::Mouse;
+        extends 'AI::MXNet::Gluon::Block';
+        sub BUILD
+        {
+            $self->const($self->params->get_constant('const', [[1,2],[3,4]]));
+        }
+
+    Constructor Attributes
+    ----------
+    name : str
+        Name of the parameter.
+    value : AcceptableInput (perl array, pdl, ndarray, etc)
+        Initial value for the constant.
+=cut
+
+use Mouse;
+use AI::MXNet::Base;
+use Scalar::Util qw(refaddr);
+around BUILDARGS => \&AI::MXNet::Base::process_arguments;
+method python_constructor_arguments() { ['name', 'value'] }
+has 'value'     => (is => 'rw', isa => 'AcceptableInput');
+has '+_grad_req' => (is => 'rw', default => 'null');
+use overload '""' => sub {
+        my $self = shift;
+        "Constant " . $self->name.
+        " (shape=(" . join(', ', @{ $self->shape//[] }) .")".
+        ", dtype=" . $self->dtype.
+        ", stype=" . $self->stype.")"
+    },
+    fallback => 1;
+
+
+sub BUILD
+{
+    my $self = shift;
+    if(not (blessed $self->value and $self->value->isa('AI::MXNet::NDArray')))
+    {
+        $self->value(AI::MXNet::NDArray->array($self->value, dtype => $self->dtype));
+    }
+    $self->shape($self->value->shape);
+    my $init = "AI::MXNet::Gluon::Constant::Init_${\ $self->name }_${\ refaddr($self) }";
+    my $tmp =<<"EOP";
+    package $init;
+    use Mouse;
+    extends 'AI::MXNet::Initializer';
+    sub _init_weight
+    {
+        \$self->value->copyto(\$_[2]);
+    }
+    $init->register;
+    1;
+EOP
+    eval $tmp;
+    $self->init($init->new);
+}
+
+method grad_req($req=)
+{
+    if(defined $req and $req ne 'null')
+    {
+        AI::MXNet::Logging->warning(
+            'Constant parameter "%s" does not support '.
+            'grad_req other than "null", and new value "%s" '.
+            'is ignored.',
+            $self->name, $req
+        );
+    }
+    return 'null';
+}
 
 package AI::MXNet::Gluon::ParameterDict;
 use AI::MXNet::Base;
@@ -626,7 +937,6 @@ use overload
         my $content = join("\n", map { AI::MXNet::Base::_indent("   $_", 2) } $self->values);
         return "$name(\n$content\n)";
     },
-    '%{}'  => sub { my %tmp = shift->_params->as_list; \%tmp },
     '@{}'  => sub { my @tmp = shift->_params->as_list; \@tmp },
     fallback => 1;
 
@@ -650,6 +960,10 @@ method prefix()
     $self->_prefix;
 }
 
+method params()
+{
+    $self->_params;
+}
 
 method _get_impl($name)
 {
@@ -665,7 +979,7 @@ method _get_impl($name)
     return undef;
 }
 
-=head get
+=head2 get
 
         Retrieves a 'AI::MXNet::Gluon::Parameter' with name '$self->prefix.$name'. If not found,
         'get' will first try to retrieve it from 'shared' dict. If still not
@@ -702,12 +1016,55 @@ method get(Str $name, %kwargs)
         {
             if($param->can($k))
             {
-                assert(
-                    (not defined $v or Dumper($v) eq Dumper($param->$k)),
-                    "Cannot retrieve Parameter $name because desired attribute ".
-                    "does not match with stored for attribute $k: ".
-                    "desired ".Dumper($v)." vs stored ". Dumper($param->$k)
-                );
+                if(defined $param->$k)
+                {
+                    my $existing = $param->$k;
+                    if($k eq 'shape' and @{$v} == @{$existing})
+                    {
+                        my @inferred_shape;
+                        my $matched = 1;
+                        for(zip($v, $existing))
+                        {
+                            my ($dim1, $dim2) = @$_;
+                            if($dim1 != $dim2 and $dim1 * $dim2 != 0)
+                            {
+                                $matched = 0;
+                                 last;
+                            }
+                            elsif($dim1 == $dim2)
+                            {
+                                push @inferred_shape, $dim1;
+                            }
+                            elsif($dim1 == 0)
+                            {
+                                push @inferred_shape, $dim2;
+                            }
+                            else
+                            {
+                                push @inferred_shape, $dim1;
+                            }
+                        }
+                        if($matched)
+                        {
+                            $param->_shape(\@inferred_shape);
+                            next;
+                        }
+                    }
+                    elsif($k eq 'dtype' and ($v//'') eq ($existing//''))
+                    {
+                        next;
+                    }
+                    assert(
+                        (not defined $v or Dumper($v) eq Dumper($param->$k)),
+                        "Cannot retrieve Parameter $name because desired attribute ".
+                        "does not match with stored for attribute $k: ".
+                        "desired ".Dumper($v)." vs stored ". Dumper($param->$k)
+                    );
+                }
+                else
+                {
+                    $param->$k($v);
+                }
             }
             else
             {
@@ -723,10 +1080,10 @@ method get(Str $name, %kwargs)
     Copies all Parameters in $other to self.
 =cut
 
-method update($other)
+method update($other, Maybe[Str] $select=)
 {
     my @keys = $other->keys;
-    for my $k (@keys)
+    for my $k (grep { not defined $select or /$select/ } @keys)
     {
         if($self->_params->exists($k))
         {
@@ -743,6 +1100,50 @@ method update($other)
     }
 }
 
+=head2 get_constant
+
+        Retrieves AI::MXNet::Gluon::Constant with name $self->prefix.$name. If not found,
+        'get' will first try to retrieve it from "shared" dictionary. If still not
+        found, 'get' will create a new Constant with key-word
+        arguments and insert it to self.
+
+        Parameters
+        ----------
+        name : str
+            Name of the desired Constant. It will be prepended with this dictionary's
+            prefix.
+        value : array-like
+            Initial value of constant.
+
+        Returns
+        -------
+        Constant
+            The created or retrieved Constant.
+=cut
+
+method get_constant(Str $name, Maybe[AcceptableInput] $value=)
+{
+    $name = $self->prefix . $name;
+    my $param = $self->_get_impl($name);
+    if(not defined $param)
+    {
+        if(not defined $value)
+        {
+            confess(
+                "No constant named '$name'. Please specify value ".
+                "if you want to create a new constant."
+            );
+        }
+        $param = AI::MXNet::Gluon::Constant->new($name, $value);
+        $self->_params->set($name, $param);
+    }
+    elsif(defined $value)
+    {
+        confess("reinit of Constant $name is not allowed");
+    }
+    return $param;
+}
+
 =head2 initialize
 
         Initializes all Parameters managed by this dictionary to be used for 'NDArray'
@@ -757,8 +1158,9 @@ method update($other)
             Keeps a copy of Parameters on one or many context(s).
         :$force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        :$verbose : bool, default False
+            Whether to force re-initialization if parameter is already initialized.
 =cut
-
 
 method initialize(
     Initializer                                            :$init=AI::MXNet::Initializer->Uniform(),
@@ -873,6 +1275,7 @@ method save(Str $filename, Str $strip_prefix='')
         :$restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading.
 =cut
+
 method load(
     Str                                              $filename,
     AI::MXNet::Context|ArrayRef[AI::MXNet::Context] :$ctx=AI::MXNet::Context->current_ctx,
@@ -894,7 +1297,7 @@ method load(
     }
     my $lprefix  = length $restore_prefix;
     my %orig_load = %{ AI::MXNet::NDArray->load($filename) };
-    my %arg_dict  = map { ($restore_prefix.$_, $orig_load{$_}) } keys %orig_load;
+    my %arg_dict  = map { my $k = $_; s/^(?:arg|aux)://; ($restore_prefix.$_, $orig_load{$k}) } keys %orig_load;
     if(not $allow_missing)
     {
         for my $name ($self->keys())
@@ -919,8 +1322,10 @@ method load(
             );
             next;
         }
-        @{$self}{$name}->_load_init($arg_dict{$name}, $ctx);
+        $self->_params->get($name)->_load_init($arg_dict{$name}, $ctx);
     }
 }
+
+__PACKAGE__->AI::MXNet::NS::register('AI::MXNet::Gluon');
 
 1;

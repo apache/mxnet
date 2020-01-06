@@ -38,28 +38,28 @@ namespace mxnet {
 /*! \brief namespace to support all possible Ndarray operator */
 namespace ndarray {
 struct BinaryBase {
-  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape) {
     CHECK(lshape == rshape) << "operands shape mismatch";
-    CHECK(lshape.ndim() != 0) << "source operand have zero dimension shape";
+    CHECK(!mxnet::op::shape_is_none(lshape)) << "source operand have zero dimension shape";
     return lshape;
   }
 };
 
 // operators
-struct Plus : public BinaryBase {
-  typedef op::mshadow_op::plus mshadow_op;
+struct Plus : public BinaryBase, public mshadow::op::plus {
+  typedef mshadow::op::plus mshadow_op;
 };
 
-struct Minus : public BinaryBase {
-  typedef op::mshadow_op::minus mshadow_op;
+struct Minus : public BinaryBase, public mshadow::op::minus {
+  typedef mshadow::op::minus mshadow_op;
 };
 
-struct Mul : public BinaryBase {
-  typedef op::mshadow_op::mul mshadow_op;
+struct Mul : public BinaryBase, public mshadow::op::mul {
+  typedef mshadow::op::mul mshadow_op;
 };
 
-struct Div : public BinaryBase {
-  typedef op::mshadow_op::div mshadow_op;
+struct Div : public BinaryBase, public mshadow::op::div {
+  typedef mshadow::op::div mshadow_op;
 };
 
 struct Mod : public BinaryBase {
@@ -94,7 +94,7 @@ struct ClipMax : public BinaryBase {
 
 
 struct OneHotEncode {
-  inline static TShape GetShape(const TShape &index, const TShape &proptype) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &index, const mxnet::TShape &proptype) {
     CHECK(index.ndim() == 1 && proptype.ndim() == 2) << "OneHotEncode only support 1d index.";
     CHECK_EQ(index[0], proptype[0]) << "OneHotEncode shape inconsistent";
     return proptype;
@@ -102,7 +102,7 @@ struct OneHotEncode {
 };
 
 struct MatChooseRowElem {
-  inline static TShape GetShape(const TShape &lshape, const TShape &rshape) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape) {
     CHECK(lshape.ndim() == 2 && rshape.ndim() == 1)
         << "choose_row_element only support 2D Matrix and 1D index";
     CHECK_EQ(lshape[0], rshape[0]) << "choose_row_element index and matrix shape mismatch";
@@ -111,7 +111,9 @@ struct MatChooseRowElem {
 };
 
 struct MatFillRowElem {
-  inline static TShape GetShape(const TShape &lshape, const TShape &mshape, const TShape &rshape) {
+  inline static mxnet::TShape GetShape(const mxnet::TShape &lshape,
+                                       const mxnet::TShape &mshape,
+                                       const mxnet::TShape &rshape) {
     CHECK(lshape.ndim() == 2 && mshape.ndim() == 1 && rshape.ndim() == 1)
         << "fill_row_element only support 2D Matrix, 1D value and 1D index";
     CHECK((lshape[0] == mshape[0]) && (mshape[0] == rshape[0]))
@@ -207,6 +209,10 @@ void Eval(mshadow::Stream<xpu> *s,
 // broadcasting
 template <typename Device>
 void EvalBroadcast(TBlob const& src, TBlob* ret, int size, RunContext ctx);
+
+template <typename OP, typename xpu>
+void BinaryOpKernelImpl(mshadow::Stream<xpu> *s, const TBlob& lhs,
+                        const TBlob& rhs, TBlob *out);
 
 }  // namespace ndarray
 }  // namespace mxnet

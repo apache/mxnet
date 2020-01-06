@@ -28,18 +28,32 @@
 namespace mxnet {
 namespace op {
 template <>
-Operator *CreateOp<cpu>(SequenceLastParam param, int dtype) {
-  Operator *op = NULL;
-  MSHADOW_TYPE_SWITCH(dtype, DType,
-                           { op = new SequenceLastOp<cpu, DType>(param); })
+Operator *CreateOp<cpu>(SequenceLastParam param, int dtype, int itype) {
+  Operator *op = nullptr;
+  MSHADOW_TYPE_SWITCH(dtype, DType, {
+      MSHADOW_TYPE_SWITCH(itype, IType, {
+          op = new SequenceLastOp<cpu, DType, IType>(param);
+        });
+    });
   return op;
 }
 
 // DO_BIND_DISPATCH comes from operator_common.h
 Operator *SequenceLastProp::CreateOperatorEx(Context ctx,
-                                             std::vector<TShape> *in_shape,
+                                             mxnet::ShapeVector *in_shape,
                                              std::vector<int> *in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
+  if (in_type->size() >= 2 && (*in_type)[1] != -1) {
+    DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], (*in_type)[1]);
+  }
+
+  // sequence_length not passed in, so fall back to using int32/int64 dtype for second argument
+  // second argument is the dtype of the sequence_length NDArray
+  // use int32 or int64 as index dtype based on build flag
+  #if MXNET_USE_INT64_TENSOR_SIZE == 1
+      DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt64);
+  #else
+      DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0], mshadow::kInt32);
+  #endif
 }
 
 DMLC_REGISTER_PARAMETER(SequenceLastParam);

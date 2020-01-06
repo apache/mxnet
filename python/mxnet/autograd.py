@@ -197,6 +197,9 @@ def predict_mode():
 def mark_variables(variables, gradients, grad_reqs='write'):
     """Mark NDArrays as variables to compute gradient for autograd.
 
+    This is equivalent to the function .attach_grad() in a variable, but with this
+    call we can set the gradient to any value.
+
     Parameters
     ----------
     variables: NDArray or list of NDArray
@@ -273,8 +276,10 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     returned as new NDArrays instead of stored into `variable.grad`.
     Supports recording gradient graph for computing higher order gradients.
 
-    .. Note: Currently only a very limited set of operators support higher order
-    gradients.
+    .. note::
+
+      Currently only a very limited set of operators support higher order \
+      gradients.
 
     Parameters
     ----------
@@ -305,8 +310,7 @@ def grad(heads, variables, head_grads=None, retain_graph=None, create_graph=Fals
     >>> with mx.autograd.record():
     ...     z = mx.nd.elemwise_add(mx.nd.exp(x), x)
     >>> dx = mx.autograd.grad(z, [x], create_graph=True)
-    >>> dx.backward()
-    >>> print(dx.grad)
+    >>> print(dx)
     [
     [ 3.71828175]
     <NDArray 1 @cpu(0)>]
@@ -356,17 +360,22 @@ def get_symbol(x):
     Symbol
         The retrieved Symbol.
     """
+    assert isinstance(x, NDArray), \
+       "get_symbol: Invalid argument type, expecting %s, got %s"%(NDArray, type(x))
     hdl = SymbolHandle()
     check_call(_LIB.MXAutogradGetSymbol(x.handle, ctypes.byref(hdl)))
     return Symbol(hdl)
 
 
 class Function(object):
-    """User-defined differentiable function.
+    """Customize differentiation in autograd.
 
-    Function allows defining both forward and backward computation for
-    custom operators. During gradient computation, the used-defined
-    backward function will be used instead of the default chain-rule.
+    If you don't want to use the gradients computed by the default
+    chain-rule, you can use Function to customize differentiation for
+    computation. You define your computation in
+    the forward method and provide the customized differentiation
+    in the backward method. During gradient computation, autograd will
+    use the user-defined backward function instead of the default chain-rule.
     You can also cast to numpy array and back for some operations in
     forward and backward.
 
@@ -382,7 +391,7 @@ class Function(object):
                 # backward takes as many inputs as forward's return value,
                 # and returns as many NDArrays as forward's arguments.
                 y, = self.saved_tensors
-                return y * (1-y)
+                return dy * y * (1-y)
 
     Then, the function can be used in the following way::
 
@@ -462,8 +471,8 @@ class Function(object):
                     assert isinstance(ret, NDArray), \
                         "autograd.Function.backward must return NDArrays, not %s"%type(ret)
                     if req == 0:  # null
-                        return
-                    elif req == 1 or req == 2:  # write or inplace
+                        return True
+                    elif req in (1, 2):  # write or inplace
                         igrad[:] = ret
                     elif req == 'add':
                         igrad[:] += ret
@@ -489,14 +498,13 @@ class Function(object):
                                       POINTER(CFUNCTYPE(c_int))),
                                  cast(c_array(c_void_p, [None]*len(callbacks)),
                                       POINTER(c_void_p)))
+        Function._registry.ref_holder[key] = context
         check_call(_LIB.MXCustomFunctionRecord(
             c_int(len(inputs)),
             c_handle_array(inputs),
             c_int(len(outputs)),
             c_handle_array(outputs),
             ctypes.byref(context)))
-
-        Function._registry.ref_holder[key] = context
 
         return ret_outputs
 

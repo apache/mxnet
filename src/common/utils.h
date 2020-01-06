@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
+#include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/op_attr_types.h>
@@ -43,12 +44,28 @@
 #include <thread>
 #include <algorithm>
 #include <functional>
+#include <limits>
 
 #include "../operator/mxnet_op.h"
+#if MXNET_USE_MKLDNN == 1
+#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#endif
+
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 
 namespace mxnet {
 namespace common {
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+inline size_t current_process_id() { return ::GetCurrentProcessId(); }
+#else
+inline size_t current_process_id() { return getpid(); }
+#endif
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
  *           and end with value equal with size of indices.
@@ -114,10 +131,10 @@ void CheckFormatCSRImpl(const RunContext &rctx, const NDArray &input,
   using namespace op::mxnet_op;
   CHECK_EQ(input.storage_type(), kCSRStorage)
           << "CheckFormatCSRImpl is for CSRNDArray";
-  const TShape shape = input.shape();
-  const TShape idx_shape = input.aux_shape(csr::kIdx);
-  const TShape indptr_shape = input.aux_shape(csr::kIndPtr);
-  const TShape storage_shape = input.storage_shape();
+  const mxnet::TShape shape = input.shape();
+  const mxnet::TShape idx_shape = input.aux_shape(csr::kIdx);
+  const mxnet::TShape indptr_shape = input.aux_shape(csr::kIndPtr);
+  const mxnet::TShape storage_shape = input.storage_shape();
   if ((shape.ndim() != 2) ||
       (idx_shape.ndim() != 1 || indptr_shape.ndim() != 1 || storage_shape.ndim() != 1) ||
       (indptr_shape[0] != shape[0] + 1) ||
@@ -168,7 +185,7 @@ void CheckFormatRSPImpl(const RunContext &rctx, const NDArray &input,
   using namespace op::mxnet_op;
   CHECK_EQ(input.storage_type(), kRowSparseStorage)
           << "CheckFormatRSPImpl is for RSPNDArray";
-  const TShape idx_shape = input.aux_shape(rowsparse::kIdx);
+  const mxnet::TShape idx_shape = input.aux_shape(rowsparse::kIdx);
   if (idx_shape[0] != input.storage_shape()[0]) {
     MSHADOW_TYPE_SWITCH(err_cpu.type_flag_, DType, {
       DType* err = err_cpu.dptr<DType>();
@@ -318,6 +335,60 @@ inline bool ContainsOnlyStorage(const std::vector<NDArray>& ndarrays,
   return false;
 }
 
+/*! \brief returns true if storage type of any array in `ndarrays`
+ *         is the same as the target `stype`. false is returned for empty inputs.
+ */
+inline bool ContainsStorageType(const std::vector<NDArray>& ndarrays,
+                                const NDArrayStorageType stype) {
+  if (!ndarrays.empty()) {
+    for (const auto& nd : ndarrays) {
+      if (nd.storage_type() == stype) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/*! \brief returns true if any storage type `ndstype` in `ndstypes`
+ *         is the same as the target `stype`. false is returned for empty inputs.
+ */
+inline bool ContainsStorageType(const std::vector<int>& ndstypes,
+                                const NDArrayStorageType stype) {
+  if (!ndstypes.empty()) {
+    for (const auto& ndstype : ndstypes) {
+      if (ndstype == stype) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+inline std::string dtype_string(const int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat32:
+      return "float";
+    case mshadow::kFloat64:
+      return "double";
+    case mshadow::kFloat16:
+      return "half";
+    case mshadow::kUint8:
+      return "unsigned char";
+    case mshadow::kInt8:
+      return "char";
+    case mshadow::kInt32:
+      return "int";
+    case mshadow::kInt64:
+      return "long long";
+    case mshadow::kBool:
+      return "bool";
+    default:
+      LOG(FATAL) << "Unknown type enum " << dtype;
+  }
+  return "unknown";
+}
+
 /*! \brief get string representation of dispatch_mode */
 inline std::string dispatch_mode_string(const DispatchMode x) {
   switch (x) {
@@ -364,6 +435,15 @@ inline std::string dev_type_string(const int dev_type) {
   return "unknown";
 }
 
+inline std::string attr_value_string(const nnvm::NodeAttrs& attrs,
+                                     const std::string& attr_name,
+                                     std::string default_val = "") {
+  if (attrs.dict.find(attr_name) == attrs.dict.end()) {
+    return default_val;
+  }
+  return attrs.dict.at(attr_name);
+}
+
 /*! \brief get string representation of the operator stypes */
 inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -392,10 +472,10 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
 
 /*! \brief get string representation of the operator */
 inline std::string operator_string(const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
   std::string result = "";
   std::vector<int> in_stypes;
   std::vector<int> out_stypes;
@@ -432,10 +512,19 @@ inline void LogStorageFallback(const nnvm::NodeAttrs& attrs,
     "for execution. You're seeing this warning message because the operator above is unable "
     "to process the given ndarrays with specified storage types, context and parameter. "
     "Temporary dense ndarrays are generated in order to execute the operator. "
+    "This does not affect the correctness of the programme. "
     "You can set environment variable MXNET_STORAGE_FALLBACK_LOG_VERBOSE to "
     "0 to suppress this warning.";
   os << "\nStorage type fallback detected:\n" << op_str << warning;
   LogOnce(os.str());
+#if MXNET_USE_MKLDNN == 1
+  if (!MKLDNNEnvSet()) common::LogOnce("MXNET_MKLDNN_ENABLED flag is off. "
+                                       "You can re-enable by setting MXNET_MKLDNN_ENABLED=1");
+  if (GetMKLDNNCacheSize() != -1) common::LogOnce("MXNET_MKLDNN_CACHE_NUM is set."
+                                       "Should only be set if "
+                                       "your model has variable input shapes, "
+                                       "as cache size may grow unbounded");
+#endif
 }
 
 // heuristic to dermine number of threads per GPU
@@ -611,9 +700,233 @@ FCompType GetFCompute(const nnvm::Op* op, const std::string& name,
   } else if (ctx.dev_mask() == gpu::kDevMask) {
     return fcompute_gpu.get(op, nullptr);
   } else {
-    LOG(FATAL) << "Unknown device mask";
+    LOG(FATAL) << "Unknown device mask " << ctx.dev_mask();
     return nullptr;
   }
+}
+
+/*!
+ * \brief Return the max integer value representable in the type `T` without loss of precision.
+ */
+template <typename T>
+constexpr size_t MaxIntegerValue() {
+  return std::is_integral<T>::value ?
+    std::numeric_limits<T>::max():
+    size_t(2) << (std::numeric_limits<T>::digits - 1);
+}
+
+template <>
+constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
+  return size_t(2) << 10;
+}
+
+MSHADOW_XINLINE int ilog2ul(size_t a) {
+  int k = 1;
+  while (a >>= 1) ++k;
+  return k;
+}
+
+MSHADOW_XINLINE int ilog2ui(unsigned int a) {
+  int k = 1;
+  while (a >>= 1) ++k;
+  return k;
+}
+
+/*!
+ * \brief Return an NDArray of all zeros.
+ */
+inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
+                         const Context &ctx, const int dtype) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    NDArray ret(shape, ctx, false, dtype);
+    ret = 0;
+    return ret;
+  }
+  // NDArray with non-default storage. Storage allocation is always delayed.
+  return NDArray(stype, shape, ctx, true, dtype);
+}
+
+/*!
+ * \brief Helper to add a NDArray of zeros to a std::vector.
+ */
+inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
+                             const Context &ctx, const int dtype,
+                             std::vector<NDArray> *vec) {
+  // NDArray with default storage
+  if (stype == kDefaultStorage) {
+    vec->emplace_back(shape, ctx, false, dtype);
+    vec->back() = 0;
+  } else {
+    // NDArray with non-default storage. Storage allocation is always delayed.
+    vec->emplace_back(stype, shape, ctx, true, dtype);
+  }
+}
+
+
+/*!
+ * \brief parallelize copy by OpenMP.
+ */
+template<typename DType>
+inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
+  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
+  if (size >= copy_block_size) {
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] = src[i];
+    }
+  } else {
+    std::memcpy(dst, src, sizeof(DType) * size);
+  }
+}
+
+/*!
+ * \breif parallelize add by OpenMP
+ */
+template<typename DType>
+inline void ParallelAdd(DType* dst, const DType* src, index_t size) {
+  static index_t add_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
+  if (size >= add_block_size) {
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] += src[i];
+    }
+  } else {
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] += src[i];
+    }
+  }
+}
+
+/*!
+ * \brief If numpy compatibility is turned off (default), the shapes passed in
+ * by users follow the legacy shape definition:
+ * 1. 0 ndim means the shape is completely unknown.
+ * 2. 0 dim size means the dim size is unknown.
+ * We need to convert those shapes to use the numpy shape definition:
+ * 1. 0 ndim means it's a scalar tensor.
+ * 2. -1 ndim means the shape is unknown.
+ * 3. 0 dim size means no elements in that dimension.
+ * 4. -1 dim size means the dimension's size is unknown.
+ * so that operator's infer shape function can work in backend.
+ * \param shape to be converted.
+ * Note: It is possible that the shape to be converted is already
+ * numpy compatible. For example, when a subgraph operator's infer
+ * shape function is called from the infer shape pass of the whole
+ * graph, its input/output shapes have been converted to numpy
+ * compatible shapes.
+ */
+inline void ConvertToNumpyShape(mxnet::TShape* shape) {
+  if (shape->ndim() == 0) {  // legacy shape ndim = 0 means unknown
+    *shape = mxnet::TShape();  // unknown shape ndim = -1
+  } else {
+    for (int j = 0; j < shape->ndim(); ++j) {
+      if ((*shape)[j] == 0) {  // legacy shape dim_size = 0 means unknown
+        (*shape)[j] = -1;  // unknown dim size = -1
+      }
+    }
+  }
+}
+
+inline void ConvertToNumpyShape(mxnet::ShapeVector* shapes) {
+  for (size_t i = 0; i < shapes->size(); ++i) {
+    ConvertToNumpyShape(&(shapes->at(i)));
+  }
+}
+
+/*!
+ * \brief This is function is used to convert shapes returned by
+ * the infer shape functions/pass to the legacy shape definition.
+ */
+inline void ConvertToLegacyShape(mxnet::TShape* shape) {
+  if (!mxnet::ndim_is_known(*shape)) {
+    *shape = mxnet::TShape(0, -1);
+  } else {
+    for (int j = 0; j < shape->ndim(); ++j) {
+      if (!mxnet::dim_size_is_known(*shape, j)) {
+        (*shape)[j] = 0;
+      }
+    }
+  }
+}
+
+inline void ConvertToLegacyShape(mxnet::ShapeVector* shapes) {
+  for (size_t i = 0; i < shapes->size(); ++i) {
+    ConvertToLegacyShape(&(shapes->at(i)));
+  }
+}
+void ExecuteMonInputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+void ExecuteMonOutputCallback(
+    const nnvm::IndexedGraph &idx, const std::vector<NDArray *> &state_arrays,
+    size_t nid, const std::function<void(const char *, const char *, void *)>
+                    &monitor_callback);
+
+/*!
+ * \brief This is function can return the output names of a NodeEntry.
+ */
+static inline std::string GetOutputName(const nnvm::NodeEntry& e) {
+  nnvm::Symbol sym;
+  sym.outputs.push_back(e);
+  return sym.ListOutputNames()[0];
+}
+
+inline mxnet::TShape CanonicalizeAxes(const mxnet::TShape& src) {
+  // convert negative axes to positive values
+  const int ndim = src.ndim();
+  mxnet::TShape axes = src;
+  for (int i = 0; i < ndim; ++i) {
+    if (axes[i] < 0) {
+      axes[i] += ndim;
+    }
+    CHECK(axes[i] >= 0 && axes[i] < ndim) << "axes[" << i << "]="
+                                          << axes[i] << " exceeds the range ["
+                                          << 0 << ", " << ndim << ")";
+  }
+  return axes;
+}
+
+inline bool is_float(const int dtype) {
+  return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
+}
+
+inline int get_more_precise_type(const int type1, const int type2) {
+  if (type1 == type2) return type1;
+  if (is_float(type1) && is_float(type2)) {
+    if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
+      return mshadow::kFloat64;
+    }
+    if (type1 == mshadow::kFloat32 || type2 == mshadow::kFloat32) {
+      return mshadow::kFloat32;
+    }
+    return mshadow::kFloat16;
+  } else if (is_float(type1) || is_float(type2)) {
+    return is_float(type1) ? type1 : type2;
+  }
+  if (type1 == mshadow::kInt64 || type2 == mshadow::kInt64) {
+    return mshadow::kInt64;
+  }
+  if (type1 == mshadow::kInt32 || type2 == mshadow::kInt32) {
+    return mshadow::kInt32;
+  }
+  CHECK(!((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+          (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)))
+    << "1 is UInt8 and 1 is Int8 should not get here";
+  if (type1 == mshadow::kUint8 || type2 == mshadow::kUint8) {
+    return mshadow::kUint8;
+  }
+  return mshadow::kInt8;
+}
+
+inline int np_binary_out_infer_type(const int type1, const int type2) {
+  if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
+      (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
+    return mshadow::kInt32;
+  }
+  return get_more_precise_type(type1, type2);
 }
 
 }  // namespace common

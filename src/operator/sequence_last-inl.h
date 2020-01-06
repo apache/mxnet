@@ -65,46 +65,46 @@ struct SequenceLastParam : public dmlc::Parameter<SequenceLastParam> {
 
 template <int req>
 struct SequenceLastKernel {
-  template <typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType *in,
-                                  const DType *idx, int offset1, int offset2,
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in,
+                                  const IType *idx, index_t offset1, index_t offset2,
                                   mshadow::Shape<2> oshape) {
     const auto opos = mxnet_op::unravel(i, oshape);
-    const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    const int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    const index_t seqpos = static_cast<index_t>(idx[opos[0]]) - 1;
+    const index_t ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     KERNEL_ASSIGN(out[i], req, in[ipos]);
   }
 };
 
 struct SequenceLastGradKernel {
-  template <typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *in_grad, const DType *out_grad,
-                                  const DType *idx, int offset1, int offset2,
+  template <typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *in_grad, const DType *out_grad,
+                                  const IType *idx, index_t offset1, index_t offset2,
                                   mshadow::Shape<2> oshape) {
     const auto opos = mxnet_op::unravel(i, oshape);
-    const int seqpos = static_cast<int>(idx[opos[0]]) - 1;
-    const int ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
+    const index_t seqpos = static_cast<index_t>(idx[opos[0]]) - 1;
+    const index_t ipos = seqpos * offset1 + opos[0] * offset2 + opos[1];
     in_grad[ipos] += out_grad[i];
   }
 };
 
-template <typename xpu, typename DType>
+template <typename xpu, typename DType, typename IType>
 class SequenceLastOp : public Operator {
  public:
   explicit SequenceLastOp(SequenceLastParam p) { this->param_ = p; }
 
   void sequence_last(const mshadow::Tensor<xpu, 3, DType> &data,
                      const mshadow::Tensor<xpu, 2, DType> &out,
-                     const mshadow::Tensor<xpu, 1, DType> &indices,
+                     const mshadow::Tensor<xpu, 1, IType> &indices,
                      const OpReqType req, mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
 
     int axis = param_.axis;
-    int out_size = out.size(0) * out.size(1);
-    int max_seq_len = data.size(axis);
-    int offset1 = axis ? out.size(1) : out_size;
-    int offset2 = axis ? (max_seq_len * out.size(1)) : out.size(1);
+    index_t out_size = out.size(0) * out.size(1);
+    index_t max_seq_len = data.size(axis);
+    index_t offset1 = axis ? out.size(1) : out_size;
+    index_t offset2 = axis ? (max_seq_len * out.size(1)) : out.size(1);
 
     MXNET_ASSIGN_REQ_SWITCH(req, req_type, {
       mxnet_op::Kernel<SequenceLastKernel<req_type>, xpu>::Launch(
@@ -115,19 +115,19 @@ class SequenceLastOp : public Operator {
 
   void sequence_last_grad(const mshadow::Tensor<xpu, 3, DType> &in_grad,
                           const mshadow::Tensor<xpu, 2, DType> &out_grad,
-                          const mshadow::Tensor<xpu, 1, DType> &indices,
+                          const mshadow::Tensor<xpu, 1, IType> &indices,
                           mshadow::Stream<xpu> *const s) {
     using namespace mshadow;
     using namespace mshadow::expr;
 
     auto axis = param_.axis;
-    int batch = out_grad.size(0);
-    int rest = out_grad.size(1);
-    int out_size = batch * rest;
+    index_t batch = out_grad.size(0);
+    index_t rest = out_grad.size(1);
+    index_t out_size = batch * rest;
 
-    int max_seq_len = in_grad.size(axis);
-    int offset1 = axis ? rest : out_size;
-    int offset2 = axis ? (max_seq_len * rest) : rest;
+    index_t max_seq_len = in_grad.size(axis);
+    index_t offset1 = axis ? rest : out_size;
+    index_t offset2 = axis ? (max_seq_len * rest) : rest;
 
     mxnet_op::Kernel<SequenceLastGradKernel, xpu>::Launch(
         s, out_size, in_grad.dptr_, out_grad.dptr_, indices.dptr_, offset1,
@@ -163,11 +163,11 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> out =
         out_data[seq_last::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(batch, rest_size), s);
-    Tensor<xpu, 1, DType> indices =
+    Tensor<xpu, 1, IType> indices =
         param_.use_sequence_length
-            ? in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s)
+            ? in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s)
             : ctx.requested[seq_last::kTempSpace]
-                  .get_space_typed<xpu, 1, DType>(Shape1(batch), s);
+                  .get_space_typed<xpu, 1, IType>(Shape1(batch), s);
     if (!param_.use_sequence_length) indices = max_seq_len;
 
     sequence_last(data, out, indices, req[seq_last::kOut], s);
@@ -198,7 +198,6 @@ class SequenceLastOp : public Operator {
     auto dsize = in_data[seq_last::kData].Size();
 
     auto batch = (axis != 0) ? d0 : d1;
-    auto max_seq_len = in_data[seq_last::kData].size(axis);
     auto rest_size = dsize / (d0 * d1);
 
     Tensor<xpu, 3, DType> data_grad =
@@ -207,11 +206,11 @@ class SequenceLastOp : public Operator {
     Tensor<xpu, 2, DType> output_grad =
         out_grad[seq_last::kOut].get_with_shape<xpu, 2, DType>(
             Shape2(batch, rest_size), s);
-    Tensor<xpu, 1, DType> indices =
+    Tensor<xpu, 1, IType> indices =
         param_.use_sequence_length
-            ? in_data[seq_last::kSequenceLength].get<xpu, 1, DType>(s)
+            ? in_data[seq_last::kSequenceLength].get<xpu, 1, IType>(s)
             : ctx.requested[seq_last::kTempSpace]
-                  .get_space_typed<xpu, 1, DType>(Shape1(batch), s);
+                  .get_space_typed<xpu, 1, IType>(Shape1(batch), s);
 
     if (req[seq_last::kData] == kWriteTo) data_grad = 0.0f;
     sequence_last_grad(data_grad, output_grad, indices, s);
@@ -222,7 +221,7 @@ class SequenceLastOp : public Operator {
 };  // class SequenceLastOp
 
 template <typename xpu>
-Operator *CreateOp(SequenceLastParam param, int dtype);
+Operator *CreateOp(SequenceLastParam param, int dtype, int itype);
 
 #if DMLC_USE_CXX11
 class SequenceLastProp : public OperatorProperty {
@@ -247,15 +246,15 @@ class SequenceLastProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape, std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape, mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), param_.use_sequence_length ? 2U : 1U)
         << "Input:[data, sequence_length]";
     CHECK((param_.axis == 0) || (param_.axis == 1))
         << "Current implementation expects axis to be 0 or 1.";
 
-    const TShape &dshape = (*in_shape)[seq_last::kData];
+    const mxnet::TShape &dshape = (*in_shape)[seq_last::kData];
     CHECK_GT(dshape.ndim(), 1U)
         << "The data array must be of rank 2 or greater.";
     // seq length vector is same as batch size
@@ -264,11 +263,11 @@ class SequenceLastProp : public OperatorProperty {
       SHAPE_ASSIGN_CHECK(*in_shape, seq_last::kSequenceLength, Shape1(sbatch));
 
     // calculate output size
-    TShape shape_o(dshape.ndim() - 1);
+    mxnet::TShape shape_o(dshape.ndim() - 1, -1);
     shape_o[0] = sbatch;
     for (index_t i = 1; i < shape_o.ndim(); ++i) shape_o[i] = dshape[i + 1];
 
-    const TShape &oshape = shape_o;
+    const mxnet::TShape &oshape = shape_o;
     out_shape->clear();
     out_shape->push_back(oshape);
     return true;
@@ -279,11 +278,9 @@ class SequenceLastProp : public OperatorProperty {
     CHECK_GE(in_type->size(), param_.use_sequence_length ? 2U : 1U);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i = 0; i < in_type->size(); ++i) {
+    for (size_t i = 0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
-      } else {
-        UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
       }
     }
     out_type->clear();
@@ -300,12 +297,12 @@ class SequenceLastProp : public OperatorProperty {
   std::string TypeString() const override { return "SequenceLast"; }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -323,7 +320,7 @@ class SequenceLastProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator *CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                              std::vector<int> *in_type) const override;
 
  private:

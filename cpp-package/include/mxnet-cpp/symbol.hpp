@@ -172,6 +172,49 @@ inline std::vector<std::string> Symbol::ListAuxiliaryStates() const {
   return ret;
 }
 
+inline std::map<std::string, std::string> Symbol::ListAttributes() const {
+    mx_uint size;
+    const char** pairs;
+    CHECK_EQ(MXSymbolListAttrShallow(GetHandle(), &size, &pairs), 0);
+    std::map<std::string, std::string> attributes;
+    for (mx_uint i = 0; i < size; ++i) {
+        // pairs is 2 * size with key, value pairs according to
+        //   https://github.com/apache/incubator-mxnet/blob/master/include/mxnet/c_api.h#L1428
+        attributes[pairs[2 * i]] = pairs[2 * i + 1];
+    }
+    return attributes;
+}
+
+inline void Symbol::SetAttribute(const std::string &key, const std::string &value) {
+    CHECK_EQ(MXSymbolSetAttr(GetHandle(), key.c_str(), value.c_str()), 0);
+}
+
+inline void Symbol::SetAttributes(const std::map<std::string, std::string> &attrs) {
+    for (const auto& kv : attrs) {
+        SetAttribute(kv.first, kv.second);
+    }
+}
+
+inline mx_uint Symbol::GetNumOutputs() const {
+    mx_uint numOutputs;
+    CHECK_EQ(MXSymbolGetNumOutputs(GetHandle(), &numOutputs), 0);
+    return numOutputs;
+}
+
+inline mxnet::cpp::Symbol Symbol::GetBackendSymbol(const std::string &backendName) const {
+    SymbolHandle symbolHandle;
+    CHECK_EQ(MXGenBackendSubgraph(GetHandle(), backendName.c_str(), &symbolHandle), 0);
+    return mxnet::cpp::Symbol(symbolHandle);
+}
+
+inline std::string Symbol::GetName() const {
+  int success;
+  const char* out_name;
+  CHECK_EQ(MXSymbolGetName(GetHandle(), &out_name, &success), 0);
+  CHECK_EQ(success, 1);
+  return std::string(out_name);
+}
+
 inline void Symbol::InferShape(
     const std::map<std::string, std::vector<mx_uint> > &arg_shapes,
     std::vector<std::vector<mx_uint> > *in_shape,
@@ -180,7 +223,7 @@ inline void Symbol::InferShape(
 
   std::vector<const char *> keys;
   std::vector<mx_uint> arg_ind_ptr;
-  std::vector<mx_uint> arg_shape_data;
+  std::vector<int> arg_shape_data;
 
   for (const auto &arg : arg_shapes) {
     keys.push_back(arg.first.c_str());
@@ -192,40 +235,40 @@ inline void Symbol::InferShape(
   arg_ind_ptr.push_back(arg_shape_data.size());
 
   mx_uint in_shape_size;
-  const mx_uint *in_shape_ndim;
-  const mx_uint **in_shape_data;
+  const int *in_shape_ndim;
+  const int **in_shape_data;
   mx_uint out_shape_size;
-  const mx_uint *out_shape_ndim;
-  const mx_uint **out_shape_data;
+  const int *out_shape_ndim;
+  const int **out_shape_data;
   mx_uint aux_shape_size;
-  const mx_uint *aux_shape_ndim;
-  const mx_uint **aux_shape_data;
+  const int *aux_shape_ndim;
+  const int **aux_shape_data;
   int complete;
 
-  CHECK_EQ(MXSymbolInferShape(GetHandle(), keys.size(), keys.data(),
-                              arg_ind_ptr.data(), arg_shape_data.data(),
-                              &in_shape_size, &in_shape_ndim, &in_shape_data,
-                              &out_shape_size, &out_shape_ndim, &out_shape_data,
-                              &aux_shape_size, &aux_shape_ndim, &aux_shape_data,
-                              &complete),
+  CHECK_EQ(MXSymbolInferShapeEx(GetHandle(), keys.size(), keys.data(),
+                                arg_ind_ptr.data(), arg_shape_data.data(),
+                                &in_shape_size, &in_shape_ndim, &in_shape_data,
+                                &out_shape_size, &out_shape_ndim, &out_shape_data,
+                                &aux_shape_size, &aux_shape_ndim, &aux_shape_data,
+                                &complete),
            0);
 
   if (complete) {
     for (mx_uint i = 0; i < in_shape_size; ++i) {
       in_shape->push_back(std::vector<mx_uint>());
-      for (mx_uint j = 0; j < in_shape_ndim[i]; ++j) {
+      for (int j = 0; j < in_shape_ndim[i]; ++j) {
         (*in_shape)[i].push_back(in_shape_data[i][j]);
       }
     }
     for (mx_uint i = 0; i < aux_shape_size; ++i) {
       aux_shape->push_back(std::vector<mx_uint>());
-      for (mx_uint j = 0; j < aux_shape_ndim[i]; ++j) {
+      for (int j = 0; j < aux_shape_ndim[i]; ++j) {
         (*aux_shape)[i].push_back(aux_shape_data[i][j]);
       }
     }
     for (mx_uint i = 0; i < out_shape_size; ++i) {
       out_shape->push_back(std::vector<mx_uint>());
-      for (mx_uint j = 0; j < out_shape_ndim[i]; ++j) {
+      for (int j = 0; j < out_shape_ndim[i]; ++j) {
         (*out_shape)[i].push_back(out_shape_data[i][j]);
       }
     }
@@ -273,8 +316,8 @@ inline void Symbol::InferExecutorArrays(
     auto iter_req = grad_req_type.find(arg_name);
     if (iter_req != grad_req_type.end()) {
       grad_reqs->push_back(iter_req->second);
-    } else if (arg_name.rfind("data") == arg_name.length() - 4
-            || arg_name.rfind("label") == arg_name.length() - 5) {
+    } else if (arg_name.rfind("data") != std::string::npos
+            || arg_name.rfind("label") != std::string::npos) {
       grad_reqs->push_back(OpReqType::kNullOp);
     } else {
       grad_reqs->push_back(OpReqType::kWriteTo);

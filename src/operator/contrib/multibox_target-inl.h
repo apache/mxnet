@@ -29,7 +29,6 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <mxnet/base.h>
-#include <nnvm/tuple.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -63,7 +62,7 @@ struct MultiBoxTargetParam : public dmlc::Parameter<MultiBoxTargetParam> {
   float negative_mining_ratio;
   float negative_mining_thresh;
   int minimum_negative_samples;
-  nnvm::Tuple<float> variances;
+  mxnet::Tuple<float> variances;
   DMLC_DECLARE_PARAMETER(MultiBoxTargetParam) {
     DMLC_DECLARE_FIELD(overlap_threshold).set_default(0.5f)
     .describe("Anchor-GT overlap threshold to be regarded as a positive match.");
@@ -211,26 +210,26 @@ class MultiBoxTargetProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 3) << "Input: [anchor, label, clsPred]";
-    TShape ashape = in_shape->at(mboxtarget_enum::kAnchor);
+    mxnet::TShape ashape = in_shape->at(mboxtarget_enum::kAnchor);
     CHECK_EQ(ashape.ndim(), 3) << "Anchor should be batch shared N*4 tensor";
-    CHECK_EQ(ashape[0], 1) << "Anchors are shared across batches, first dim=1";
-    CHECK_GT(ashape[1], 0) << "Number boxes should > 0";
-    CHECK_EQ(ashape[2], 4) << "Box dimension should be 4: [xmin-ymin-xmax-ymax]";
-    TShape lshape = in_shape->at(mboxtarget_enum::kLabel);
-    CHECK_EQ(lshape.ndim(), 3) << "Label should be [batch-num_labels-(>=5)] tensor";
-    CHECK_GT(lshape[1], 0) << "Padded label should > 0";
-    CHECK_GE(lshape[2], 5) << "Label width must >=5";
-    TShape pshape = in_shape->at(mboxtarget_enum::kClsPred);
-    CHECK_EQ(pshape.ndim(), 3) << "Prediction: [nbatch-num_classes-num_anchors]";
+    CHECK_EQ(ashape[0], 1) << "Anchors are shared across batches, first dimension should be 1";
+    CHECK_GT(ashape[1], 0) << "Number boxes should be greater than 0";
+    CHECK_EQ(ashape[2], 4) << "Box dimension should be 4: [xmin, ymin, xmax, ymax]";
+    mxnet::TShape lshape = in_shape->at(mboxtarget_enum::kLabel);
+    CHECK_EQ(lshape.ndim(), 3) << "Label should be [batch, num_labels, label_width] tensor";
+    CHECK_GT(lshape[1], 0) << "Padded label should be greater than 0";
+    CHECK_GE(lshape[2], 5) << "Label width should be greater than or equal to 5";
+    mxnet::TShape pshape = in_shape->at(mboxtarget_enum::kClsPred);
+    CHECK_EQ(pshape.ndim(), 3) << "Prediction: [batch, num_classes, num_anchors]";
     CHECK_EQ(pshape[2], ashape[1]) << "Number of anchors mismatch";
-    TShape loc_shape = Shape2(lshape[0], ashape.Size());  // batch - (num_box * 4)
-    TShape lm_shape = loc_shape;
-    TShape label_shape = Shape2(lshape[0], ashape[1]);  // batch - num_box
+    mxnet::TShape loc_shape = Shape2(lshape[0], ashape.Size());  // batch - (num_box * 4)
+    mxnet::TShape lm_shape = loc_shape;
+    mxnet::TShape label_shape = Shape2(lshape[0], ashape[1]);  // batch - num_box
     out_shape->clear();
     out_shape->push_back(loc_shape);
     out_shape->push_back(lm_shape);
@@ -257,7 +256,7 @@ class MultiBoxTargetProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-       const std::vector<TShape> &in_shape) const override {
+       const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -266,7 +265,7 @@ class MultiBoxTargetProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                               std::vector<int> *in_type) const override;
 
  private:

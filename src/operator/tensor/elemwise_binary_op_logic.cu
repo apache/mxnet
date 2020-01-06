@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2016 by Contributors
- * \file elemwise_binary_scalar_op.cu
+ * \file elemwise_binary_op_logic.cu
  * \brief GPU Implementation of unary function.
  */
 #include "./elemwise_unary_op.h"
@@ -44,6 +44,15 @@ NNVM_REGISTER_OP(_lesser)
 
 NNVM_REGISTER_OP(_lesser_equal)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::le>);
+
+NNVM_REGISTER_OP(_logical_and)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::logical_and>);
+
+NNVM_REGISTER_OP(_logical_or)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::logical_or>);
+
+NNVM_REGISTER_OP(_logical_xor)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::logical_xor>);
 
 }  // namespace op
 }  // namespace mxnet

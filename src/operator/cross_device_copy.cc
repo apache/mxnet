@@ -49,14 +49,24 @@ class CrossDeviceCopyProp : public OperatorProperty {
     return std::map<std::string, std::string>();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     CHECK_EQ(in_shape->size(), 1) << "Input:[data]";
-    const TShape &dshape = in_shape->at(0);
+    const mxnet::TShape &dshape = in_shape->at(0);
     if (dshape.ndim() == 0) return false;
     out_shape->clear();
     out_shape->push_back(dshape);
+    return true;
+  }
+
+  bool InferType(std::vector<int> *in_type,
+                 std::vector<int> *out_type,
+                 std::vector<int> *aux_type) const {
+    CHECK_EQ(in_type->size(), 1) << "Input:[data]";
+    if (in_type->at(0) == -1) return false;
+    out_type->clear();
+    out_type->push_back(in_type->at(0));
     return true;
   }
 

@@ -25,7 +25,6 @@ cp make/config.mk .
 echo "USE_CUDA=1" >> config.mk
 echo "USE_CUDA_PATH=/usr/local/cuda" >> config.mk
 echo "USE_CUDNN=1" >> config.mk
-echo "USE_PROFILER=1" >> config.mk
 echo "DEV=1" >> config.mk
 echo "EXTRA_OPERATORS=example/ssd/operator" >> config.mk
 echo "USE_CPP_PACKAGE=1" >> config.mk
@@ -56,8 +55,8 @@ nosetests3 --verbose tests/python/train || exit -1
 
 echo "BUILD scala_test"
 export PATH=$PATH:/opt/apache-maven/bin
-make scalapkg || exit -1
-make scalatest || exit -1
+cd scala-package
+mvn install || exit -1
 
 # echo "BUILD julia_test"
 # export MXNET_HOME="${PWD}"

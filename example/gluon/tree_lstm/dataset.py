@@ -15,14 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
 import logging
-logging.basicConfig(level=logging.INFO)
-import numpy as np
+import os
 import random
-from tqdm import tqdm
+
+import numpy as np
 
 import mxnet as mx
+from tqdm import tqdm
+
+logging.basicConfig(level=logging.INFO)
+
 
 class Vocab(object):
     # constants for special tokens: padding, unknown, and beginning/end of sentence.
@@ -34,6 +37,7 @@ class Vocab(object):
     UNK_WORD = '<unk>'
     BOS_WORD = '<s>'
     EOS_WORD = '</s>'
+
     def __init__(self, filepaths=[], embedpath=None, include_unseen=False, lower=False):
         self.idx2tok = []
         self.tok2idx = {}
@@ -82,10 +86,10 @@ class Vocab(object):
         return idx
 
     def to_indices(self, tokens, add_bos=False, add_eos=False):
-        vec = [BOS] if add_bos else []
+        vec = [Vocab.BOS] if add_bos else []
         vec += [self.get_index(token) for token in tokens]
         if add_eos:
-            vec.append(EOS)
+            vec.append(Vocab.EOS)
         return vec
 
     def to_tokens(self, indices, stop):
@@ -111,7 +115,7 @@ class Vocab(object):
                 self.add(word)
             if word in self.tok2idx:
                 vectors[word] = [float(x) for x in tokens[1:]]
-        dim = len(vectors.values()[0])
+        dim = len(list(vectors.values())[0])
         def to_vector(tok):
             if tok in vectors and tok not in reset:
                 return vectors[tok]
@@ -150,7 +154,7 @@ class SICKDataIter(object):
 
     def reset(self):
         if self.shuffle:
-            mask = range(self.size)
+            mask = list(range(self.size))
             random.shuffle(mask)
             self.l_sentences = [self.l_sentences[i] for i in mask]
             self.r_sentences = [self.r_sentences[i] for i in mask]

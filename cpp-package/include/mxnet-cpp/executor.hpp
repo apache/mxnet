@@ -32,6 +32,7 @@
 #include "mxnet-cpp/executor.h"
 #include "mxnet-cpp/optimizer.h"
 
+
 namespace mxnet {
 namespace cpp {
 inline Executor::Executor(const Symbol &symbol, Context context,
@@ -71,8 +72,8 @@ inline Executor::Executor(const Symbol &symbol, Context context,
     dev_ids.push_back(s.second.GetDeviceId());
   }
 
-  ExecutorHandle *shared_exec_handle =
-      shared_exec == nullptr ? nullptr : &shared_exec->handle_;
+  ExecutorHandle shared_exec_handle =
+      shared_exec == nullptr ? nullptr : shared_exec->handle_;
 
   CHECK_EQ(MXExecutorBindEX(symbol.GetHandle(), context.GetDeviceType(),
                             context.GetDeviceId(), group_to_ctx.size(),

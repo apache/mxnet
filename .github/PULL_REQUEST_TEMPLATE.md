@@ -3,7 +3,8 @@
 
 ## Checklist ##
 ### Essentials ###
-- [ ] Passed code style checking (`make lint`)
+Please feel free to remove inapplicable items for your PR.
+- [ ] The PR title starts with [MXNET-$JIRA_ID], where $JIRA_ID refers to the relevant [JIRA issue](https://issues.apache.org/jira/projects/MXNET/issues) created (except PRs with tiny changes)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
 - [ ] All changes have test coverage:
 - Unit tests are added for small changes to verify correctness (e.g. adding a new operator)
@@ -13,7 +14,8 @@
 - For user-facing API changes, API doc string has been updated. 
 - For new C++ functions in header files, their functionalities and arguments are documented. 
 - For new examples, README.md is added to explain the what the example does, the source of the dataset, expected performance on test set and reference to the original paper if applicable
-- [ ] To the my best knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
+- Check the API doc at https://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/PR-$PR_ID/$BUILD_ID/index.html
+- [ ] To the best of my knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
 
 ### Changes ###
 - [ ] Feature1, tests, (and when applicable, API doc)

@@ -44,7 +44,9 @@ inline void concatenate_helper(const std::vector<mshadow::Tensor<xpu, dim, DType
     mshadow::Tensor<xpu, dim, DType> out = *output;
     size_t size = input.size();
     index_t begin = 0;
-    for (index_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
+      // If input[i] is a zero-size tensor, do nothing.
+      if (input[i].shape_.Size() == 0) continue;
       index_t end = begin + input[i].size(cdim);
       Assign(slice<cdim>(out, begin, end), req, input[i]);
       begin = end;
@@ -79,7 +81,9 @@ void split_helper(const mshadow::Tensor<xpu, dim, DType> &input,
     std::vector<mshadow::Tensor<xpu, dim, DType> > out = *output;
     size_t size = out.size();
     index_t begin = 0;
-    for (index_t i = 0; i < size; ++i) {
+    for (size_t i = 0; i < size; ++i) {
+      // If out[i] is a zero-size tensor, do nothing.
+      if (out[i].shape_.Size() == 0) continue;
       index_t end = begin + out[i].size(cdim);
       Assign(out[i], req[i], slice<cdim>(input, begin, end));
       begin = end;

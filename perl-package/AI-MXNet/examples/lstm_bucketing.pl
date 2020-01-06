@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -44,7 +44,7 @@ GetOptions(
 
 =head1 NAME
 
-    lstm_bucketing.pl - Example of training LSTM RNN on Penn Tree Bank data using high level RNN interface
+    lstm_bucketing.pl - Example of training LSTM RNN on Sherlock Holmes data using high level RNN interface
 
 =head1 SYNOPSIS
 
@@ -84,11 +84,11 @@ my $start_label   = 1;
 my $invalid_label = 0;
 
 my ($train_sentences, $vocabulary) = tokenize_text(
-    './data/ptb.train.txt', start_label => $start_label,
+    './data/sherlockholmes.train.txt', start_label => $start_label,
     invalid_label => $invalid_label
 );
 my ($validation_sentences) = tokenize_text(
-    './data/ptb.test.txt', vocab => $vocabulary,
+    './data/sherlockholmes.test.txt', vocab => $vocabulary,
     start_label => $start_label, invalid_label => $invalid_label
 );
 my $data_train  = mx->rnn->BucketSentenceIter(

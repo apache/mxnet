@@ -27,33 +27,27 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_random_uniform)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, UniformSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, UniformSampler<gpu>>);
+#define MXNET_OPERATOR_REGISTER_SAMPLE_GPU(name, ParamType)            \
+  NNVM_REGISTER_OP(name)                                               \
+  .set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, ParamType>)        \
+  .set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, ParamType>); \
 
-NNVM_REGISTER_OP(_random_normal)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, NormalSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, NormalSampler<gpu>>);
-
-NNVM_REGISTER_OP(_random_gamma)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, GammaSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, GammaSampler<gpu>>);
-
-NNVM_REGISTER_OP(_random_exponential)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, ExponentialSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, ExponentialSampler<gpu>>);
-
-NNVM_REGISTER_OP(_random_poisson)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, PoissonSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, PoissonSampler<gpu>>);
-
-NNVM_REGISTER_OP(_random_negative_binomial)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, NegativeBinomialSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, NegativeBinomialSampler<gpu>>);
-
-NNVM_REGISTER_OP(_random_generalized_negative_binomial)
-.set_attr<FCompute>("FCompute<gpu>", Sample_<gpu, GeneralizedNegativeBinomialSampler<gpu>>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SampleEx_<gpu, GeneralizedNegativeBinomialSampler<gpu>>);
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_uniform, SampleUniformParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_normal, SampleNormalParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_gamma, SampleGammaParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_exponential, SampleExponentialParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_poisson, SamplePoissonParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_negative_binomial, SampleNegBinomialParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_generalized_negative_binomial, SampleGenNegBinomialParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_randint, SampleRandIntParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_uniform_like, SampleUniformLikeParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_normal_like, SampleNormalLikeParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_gamma_like, SampleGammaLikeParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_exponential_like, SampleExponentialLikeParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_poisson_like, SamplePoissonLikeParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_negative_binomial_like, SampleNegBinomialLikeParam)
+MXNET_OPERATOR_REGISTER_SAMPLE_GPU(_random_generalized_negative_binomial_like,
+                                   SampleGenNegBinomialLikeParam)
 
 }  // namespace op
 }  // namespace mxnet

@@ -1,0 +1,9 @@
+Changes
+lib/AI/MXNet/Gluon/Contrib.pm
+lib/AI/MXNet/Gluon/Contrib/NN/BasicLayers.pm
+Makefile.PL
+MANIFEST
+META.json
+META.yml
+README
+t/AI-MXNet-Gluon-Contrib.t

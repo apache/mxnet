@@ -44,7 +44,10 @@ kv = mx.kv.create('dist_device_sync')
 def init_kv():
     # init kv dns keys
     kv.init(keys, [mx.nd.ones(shape)] * len(keys))
+    kv.init('9', mx.nd.ones(shape))
+    kv.init('10', mx.nd.ones(shape))
     kv.init('99', mx.nd.ones(big_shape))
+    kv.init('100', mx.nd.ones(big_shape))
     # worker info
     my_rank = kv.rank
     nworker = kv.num_workers
@@ -55,23 +58,30 @@ def init_kv():
 def test_sync_push_pull():
     kv, my_rank, nworker = init_kv()
     num_gpus = 2
-    def check_default_keys(kv, my_rank, nworker):
-        nrepeat = 3
+    def check_default_keys(kv, my_rank, nworker, nrepeat=3):
         # checks pull after push in loop, because behavior during
         # consecutive pushes doesn't offer any guarantees
         for i in range(nrepeat):
             scale = my_rank + 1
-            kv.push('3', [mx.nd.ones(shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)])
-            kv.push('99', [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)])
             num = (nworker + 1) * nworker * rate * num_gpus / 2 * (i + 1) + 1
-            val = mx.nd.zeros(shape)
-            kv.pull('3', out=val)
-            check_diff_to_scalar(val, num)
-            val2 = mx.nd.zeros(big_shape)
-            kv.pull('99', out=val2)
-            check_diff_to_scalar(val2, num)
 
-    check_default_keys(kv, my_rank, nworker)
+            arr = [mx.nd.ones(shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
+            val = mx.nd.zeros(shape)
+            kv.push('9', arr)
+            kv.pull('9', out=val)
+            check_diff_to_scalar(val, num)
+            kv.pushpull('10', arr, out=val)
+            check_diff_to_scalar(val, num)
+
+            big_arr = [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
+            big_val = mx.nd.zeros(big_shape)
+            kv.push('99', big_arr)
+            kv.pull('99', out=big_val)
+            check_diff_to_scalar(big_val, num)
+            kv.pushpull('100', big_arr, out=big_val)
+            check_diff_to_scalar(big_val, num)
+
+    check_default_keys(kv, my_rank, nworker, nrepeat=3)
     print('worker ' + str(my_rank) + ' is done')
 
 def test_sync_init():
@@ -90,6 +100,28 @@ def test_sync_init():
     my_rank = kv.rank
     print('worker ' + str(my_rank) + ' is initialized')
 
+def test_gluon_trainer_type():
+    def check_trainer_kv_update(update_on_kv):
+        params = mx.gluon.ParameterDict()
+        x = params.get('x', shape=(10,1), lr_mult=1.0)
+        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        try:
+            trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+                                       kvstore=kv, update_on_kvstore=update_on_kv)
+            trainer._init_kvstore()
+            assert trainer._kv_initialized
+            if update_on_kv is not None:
+                assert trainer._update_on_kvstore is update_on_kv
+        except ValueError:
+            assert update_on_kv is False
+
+    check_trainer_kv_update(False)
+    check_trainer_kv_update(True)
+    check_trainer_kv_update(None)
+    my_rank = kv.rank
+    print('worker ' + str(my_rank) + ' passed test_gluon_trainer_type')
+
 if __name__ == "__main__":
     test_sync_init()
     test_sync_push_pull()
+    test_gluon_trainer_type()

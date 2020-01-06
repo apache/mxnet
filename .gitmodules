@@ -1,21 +1,12 @@
-[submodule "mshadow"]
-	path = mshadow
-	url = https://github.com/dmlc/mshadow.git
-[submodule "dmlc-core"]
-	path = dmlc-core
+[submodule "3rdparty/dmlc-core"]
+	path = 3rdparty/dmlc-core
 	url = https://github.com/dmlc/dmlc-core.git
-[submodule "ps-lite"]
-	path = ps-lite
+[submodule "3rdparty/ps-lite"]
+	path = 3rdparty/ps-lite
 	url = https://github.com/dmlc/ps-lite
-[submodule "nnvm"]
-	path = nnvm
-	url = https://github.com/dmlc/nnvm
-[submodule "dlpack"]
-	path = dlpack
+[submodule "3rdparty/dlpack"]
+	path = 3rdparty/dlpack
 	url = https://github.com/dmlc/dlpack
-[submodule "cub"]
-	path = 3rdparty/cub
-	url = https://github.com/dmlc/cub
 [submodule "3rdparty/openmp"]
 	path = 3rdparty/openmp
 	url = https://github.com/llvm-mirror/openmp
@@ -26,3 +17,12 @@
 	path = 3rdparty/mkldnn
 	url = https://github.com/intel/mkl-dnn.git
 	branch = master
+[submodule "3rdparty/tvm"]
+	path = 3rdparty/tvm
+	url = https://github.com/apache/incubator-tvm.git
+[submodule "3rdparty/onnx-tensorrt"]
+	path = 3rdparty/onnx-tensorrt
+	url = https://github.com/onnx/onnx-tensorrt.git
+[submodule "3rdparty/nvidia_cub"]
+	path = 3rdparty/nvidia_cub
+	url = https://github.com/NVlabs/cub.git

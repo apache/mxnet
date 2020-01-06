@@ -18,44 +18,49 @@
 package AI::MXNet::AutoGrad;
 use strict;
 use warnings;
+use AI::MXNet::NS 'global';
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use Scalar::Util qw(blessed);
 use Carp qw(confess);
-
-sub import
-{
-    my ($class, $short_name) = @_;
-    if($short_name)
-    {
-        $short_name =~ s/[^\w:]//g;
-        if(length $short_name)
-        {
-            my $short_name_package =<<"EOP";
-            package $short_name;
-            use parent 'AI::MXNet::AutoGrad';
-            1;
-EOP
-            eval $short_name_package;
-        }
-    }
-}
 
 =head1 NAME
 
     AI::MXNet::AutoGrad - Autograd for NDArray.
 =cut
 
+=head1 DESCRIPTION
+
+    Auto gradients differentiation for dynamic graphs, primarily used with Gluon.
+
+=cut
+
+=head1 SYNOPSIS
+
+    use AI::MXNet qw(mx);
+    my $x = mx->nd->ones([1]);
+    $x->attach_grad;
+    my $z;
+    mx->autograd->record(sub {
+        $z = mx->nd->elemwise_add($x->exp, $x);
+    });
+    my $dx = mx->autograd->grad($z, $x, create_graph=>1);
+    ok(abs($dx->asscalar - 3.71828175) < 1e-7);
+    $dx->backward;
+    ok(abs($x->grad->asscalar - 2.71828175) < 1e-7);
+
+=cut
+
 =head2 set_is_training
 
     Set status to training/not training. When training, graph will be constructed
-    for gradient computation. Operators will also run with ctx.is_train=True. For example,
+    for gradient computation. Operators will also run with $is_train=1. For example,
     Dropout will drop inputs randomly when is_train=True while simply passing through
-    if is_train=False.
+    if $is_train=0.
 
     Parameters
     ----------
-    is_train: bool
+    $is_train: Bool
 
     Returns
     -------
@@ -75,7 +80,7 @@ method set_is_training(Bool $is_train)
 
     Parameters
     ----------
-    is_recoding: bool
+    $is_recoding: Bool
 
     Returns
     -------
@@ -163,9 +168,9 @@ method mark_variables(
         Output NDArray(s)
     :$head_grads=: Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray|Undef]]
         Gradients with respect to heads.
-    :$retain_graph=0: bool, optional
+    :$retain_graph=0: Bool, optional
         Whether to retain graph.
-    :$train_mode=1: bool, optional
+    :$train_mode=1: Bool, optional
         Whether to do backward for training or predicting.
 =cut
 method backward(
@@ -196,11 +201,11 @@ method backward(
 
     Parameters
     ----------
-    outputs: array ref of NDArray
+    outputs: ArrayRef[AI::MXNet::NDArray]
 
     Returns
     -------
-    gradients: array ref of NDArray
+    gradients: ArrayRef[AI::MXNet::NDArray]
 =cut
 
 
@@ -215,14 +220,14 @@ method compute_gradient(ArrayRef[AI::MXNet::NDArray] $outputs)
 
     Parameters
     ----------
-    func: a perl sub
+    $func: CodeRef
         The forward (loss) function.
-    argnum: an int or a array ref of int
+    $argnum: Maybe[Int|ArrayRef[Int]]
         The index of argument to calculate gradient for.
 
     Returns
     -------
-    grad_and_loss_func: a perl sub
+    grad_and_loss_func: CodeRef
         A function that would compute both the gradient of arguments and loss value.
 =cut
 
@@ -256,29 +261,29 @@ method grad_and_loss(CodeRef $func, Maybe[Int|ArrayRef[Int]] $argnum=)
     returned as new NDArrays instead of stored into `variable.grad`.
     Supports recording gradient graph for computing higher order gradients.
 
-    .. Note: Currently only a very limited set of operators support higher order
+    Note: Currently only a very limited set of operators support higher order
     gradients.
 
     Parameters
     ----------
-    $heads: NDArray or array ref of NDArray
+    $heads: AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]
         Output NDArray(s)
-    $variables: NDArray or list of NDArray
+    $variables: AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]
         Input variables to compute gradients for.
-    :$head_grads=: NDArray or list of NDArray or undef
+    :$head_grads=: Maybe[AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray|Undef]]
         Gradients with respect to heads.
-    :$retain_graph=: bool
+    :$retain_graph=: Bool
         Whether to keep computation graph to differentiate again, instead
         of clearing history and release memory. Defaults to the same value
         as create_graph.
-    :$create_graph=0: bool
-        Whether to record gradient graph for computing higher order
-    $train_mode=1: bool, optional
+    :$create_graph=0: Bool
+        Whether to record gradient graph for computing of higher order gradients.
+    $train_mode=1: Bool, optional
         Whether to do backward for training or prediction.
 
     Returns
     -------
-    NDArray or list of NDArray:
+    AI::MXNet::NDArray|ArrayRef[AI::MXNet::NDArray]:
         Gradients with respect to variables.
 
     Examples
@@ -335,7 +340,7 @@ method grad(
     my @ret;
     for(zip($grad_vars, $grad_stypes)) {
         my ($handle, $stype) = @$_;
-        push @ret, AI::MXNet::NDArray->new(handle => $handle, stype => $stype);
+        push @ret, AI::MXNet::NDArray->_ndarray_cls($handle, 1, $stype);
     }
     if(blessed $variables)
     {
@@ -349,7 +354,7 @@ method grad(
     Executes $sub within an autograd training scope context.
     Parameters
     ----------
-    CodeRef $sub: a perl sub
+    $sub: CodeRef
 =cut
 
 method train_mode(CodeRef $sub)
@@ -365,7 +370,7 @@ method train_mode(CodeRef $sub)
     Executes $sub within an autograd predicting scope context.
     Parameters
     ----------
-    CodeRef $sub: a perl sub
+    $sub: CodeRef
 =cut
 
 method predict_mode(CodeRef $sub)
@@ -382,8 +387,8 @@ method predict_mode(CodeRef $sub)
     and captures code that needs gradients to be calculated.
     Parameters
     ----------
-    CodeRef $sub: a perl sub
-    Maybe[Bool] :$train_mode=1
+    $sub: CodeRef
+    :$train_mode=1 : Maybe[Bool]
 =cut
 
 method record(CodeRef $sub, Maybe[Bool] :$train_mode=1)
@@ -409,8 +414,8 @@ method record(CodeRef $sub, Maybe[Bool] :$train_mode=1)
     and captures code that needs gradients to be calculated.
     Parameters
     ----------
-    CodeRef $sub: a perl sub
-    Maybe[Bool] :$train_mode=0
+    $sub: CodeRef
+    :$train_mode=0 : Maybe[Bool]
 =cut
 
 method pause(CodeRef $sub, Maybe[Bool] :$train_mode=0)
@@ -436,11 +441,11 @@ method pause(CodeRef $sub, Maybe[Bool] :$train_mode=0)
 
     Parameters
     ----------
-    x : NDArray
-        Array representing the head of computation graph.
+    $x : AI::MXNet::NDArray
+        AI::MXNet::NDArray representing the head of computation graph.
     Returns
     -------
-    Symbol
+    AI::MXNet::Symbol
         The retrieved Symbol.
 =cut
 

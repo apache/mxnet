@@ -17,6 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -x
+
 CURR_DIR=$(cd `dirname $0`; pwd)
 SPARK_MODULE_DIR=$(cd $CURR_DIR/../; pwd)
 SCALA_PKG_DIR=$(cd $CURR_DIR/../../; pwd)
@@ -25,9 +27,9 @@ OS=""
 
 if [ "$(uname)" == "Darwin" ]; then
 	# Do something under Mac OS X platform
-  OS='osx-x86_64-cpu'
+  OS='osx-x86_64'
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-  OS='linux-x86_64-cpu'
+  OS='linux-x86_64'
 fi
 
 LIB_DIR=${SPARK_MODULE_DIR}/target/classes/lib
@@ -35,19 +37,16 @@ SPARK_JAR=`find ${SPARK_MODULE_DIR}/target -name "*.jar" -type f -exec ls "{}" +
 SCALA_JAR=`find ${SCALA_PKG_DIR}/assembly/$OS/target -maxdepth 1 -name "*.jar" -type f -exec ls "{}" + | grep -v -E '(javadoc|sources)'`
 
 SPARK_OPTS+=" --name mxnet-spark-mnist"
-SPARK_OPTS+=" --driver-memory 1g"
-SPARK_OPTS+=" --executor-memory 1g"
-SPARK_OPTS+=" --num-executors 2"
-SPARK_OPTS+=" --executor-cores 1"
+SPARK_OPTS+=" --driver-memory 2g"
 SPARK_OPTS+=" --jars ${SCALA_JAR}"
 
 # Download training and test set
 if [ ! -f ./train.txt ]; then
-  wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/train.txt
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/Spark/train.txt
 fi
 
 if [ ! -f ./val.txt ]; then
-  wget https://s3-us-west-2.amazonaws.com/mxnet.liuyz/data/mnist/val.txt
+  wget https://s3.us-east-2.amazonaws.com/mxnet-scala/scala-example-ci/Spark/val.txt
 fi
 
 # running opts
@@ -72,8 +71,8 @@ fi
 
 HOST=`hostname`
 
-$SPARK_HOME/bin/spark-submit --master spark://$HOST:7077 \
-  --class ml.dmlc.mxnet.spark.example.ClassificationExample \
+$SPARK_HOME/bin/spark-submit --master local[*] \
+  --class org.apache.mxnet.spark.example.ClassificationExample \
   ${SPARK_OPTS} \
   ${SPARK_JAR} \
   ${RUN_OPTS}

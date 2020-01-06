@@ -1,185 +1,77 @@
-# Faster R-CNN in MXNet with distributed implementation and data parallelization
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
 
-![example detections](https://cloud.githubusercontent.com/assets/13162287/22101032/92085dc0-de6c-11e6-9228-67e72606ddbc.png)
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
 
-## Why?
-There exist good implementations of Faster R-CNN yet they lack support for recent 
-ConvNet architectures. The aim of reproducing it from scratch is to fully utilize 
-MXNet engines and parallelization for object detection.
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 
-| Indicator | py-faster-rcnn (caffe resp.) | mx-rcnn (this reproduction) |
-| :-------- | :--------------------------- | :-------------------------- |
-| Speed [1] | 2.5 img/s training, 5 img/s testing | 3.8 img/s in training, 12.5 img/s testing |
-| Performance [2] | mAP 73.2               | mAP 75.97                   |
-| Efficiency [3]  | 11G for Fast R-CNN     | 4.6G for Fast R-CNN         |
-| Parallelization  [4] | None              | 3.8 img/s to 6 img/s for 2 GPUs |
-| Extensibility [5] | Old framework and base networks | ResNet           |
+# Faster R-CNN in MXNet
 
-[1] On Ubuntu 14.04.5 with device Titan X, cuDNN enabled.
-    The experiment is VGG-16 end-to-end training.  
-[2] VGG network. Trained end-to-end on VOC07trainval+12trainval, tested on VOC07 test.  
-[3] VGG network. Fast R-CNN is the most memory expensive process.  
-[4] VGG network (parallelization limited by bandwidth).
-    ResNet-101 speeds up from 2 img/s to 3.5 img/s.  
-[5] py-faster-rcnn does not support ResNet or recent caffe version.
+Please redirect any issue or question of using this symbolic example of Faster R-CNN to https://github.com/ijkguo/mx-rcnn.
+For a gluon imperative version, checkout https://github.com/dmlc/gluon-cv.
 
-## Why Not?
-* If you value stability and reproducibility over performance and efficiency, please refer to official implementations.
-  There is no promise in all cases nor all experiments.
-* If you value simplicity. Technical details are *very complicated* in MXNet.
-  This is by design to attain maximum possible performance instead of patching fixes after fixes.
-  Performance and parallelization are more than a change of parameter.
-* If you want to do CPU training, be advised that it has not been verified properly yet. You can change the `ctx` variable in `train_end2end.py` or `train_alternate.py` scripts to `mx.cpu` and run these scripts directly to test it.
-* If you are on Windows some people reported it was possible with some modifications. But they have disappeared.
+### Set up environment
+* Require latest MXNet. Set environment variable by `export MXNET_CUDNN_AUTOTUNE_DEFAULT=0`.
+* Install Python package `mxnet` (cpu inference only) or `mxnet-cu90` (gpu training), `cython` then `opencv-python matplotlib pycocotools tqdm`.
 
-## Experiments
-| Method | Network | Training Data | Testing Data | Reference | Result |
-| :----- | :------ | :------------ | :----------- | :-------: | :----: |
-| Fast R-CNN | VGG16 | VOC07 | VOC07test | 66.9 | 66.50 |
-| Faster R-CNN alternate | VGG16 | VOC07 | VOC07test | 69.9 | 69.62 |
-| Faster R-CNN end-to-end | VGG16 | VOC07 | VOC07test | 69.9 | 70.23 |
-| Faster R-CNN end-to-end | VGG16 | VOC07+12 | VOC07test | 73.2 | 75.97 |
-| Faster R-CNN end-to-end | ResNet-101 | VOC07+12 | VOC07test | 76.4 | 79.35 |
-| Faster R-CNN end-to-end | VGG16 | COCO train | COCO val | 21.2 | 22.8 |
-| Faster R-CNN end-to-end | ResNet-101 | COCO train | COCO val | 27.2 | 26.1 |
+### Out-of-box inference models
+Download any of the following models to the current directory and run `python3 demo.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --image $YOUR_IMAGE$` to get single image inference.
+For example `python3 demo.py --dataset voc --network vgg16 --params vgg16_voc0712.params --image myimage.jpg`, add `--gpu 0` to use GPU, not set to use CPU. 
+Different network has different configuration. Different dataset has different object class names. You must pass them explicitly as command line arguments.
 
-The above experiments were conducted at [mx-rcnn](https://github.com/precedenceguo/mx-rcnn/tree/6a1ab0eec5035a10a1efb5fc8c9d6c54e101b4d0)
-using [a MXNet fork, based on MXNet 0.9.1 nnvm pre-release](https://github.com/precedenceguo/mxnet/tree/simple).
+| Network | Dataset | Imageset | Reference | Result | Link  |
+| :------ | :------------ | :----------- | :-------: | :----: | :---: |
+| vgg16 | voc | 07/07 | 69.9 | 70.23 | [Dropbox](https://www.dropbox.com/s/gfxnf1qzzc0lzw2/vgg_voc07-0010.params?dl=0) |
+| vgg16 | voc | 07++12/07 | 73.2 | 75.97 | [Dropbox](https://www.dropbox.com/s/rvktx65s48cuyb9/vgg_voc0712-0010.params?dl=0) |
+| resnet101 | voc | 07++12/07 | 76.4 | 79.35 | [Dropbox](https://www.dropbox.com/s/ge2wl0tn47xezdf/resnet_voc0712-0010.params?dl=0) |
+| vgg16 | coco | train2017/val2017 | 21.2 | 22.8 | [Dropbox](https://www.dropbox.com/s/e0ivvrc4pku3vj7/vgg_coco-0010.params?dl=0) |
+| resnet101 | coco | train2017/val2017 | 27.2 | 26.1 | [Dropbox](https://www.dropbox.com/s/bfuy2uo1q1nwqjr/resnet_coco-0010.params?dl=0) |
 
-## Quickstart
-* Prepare: `bash script/additional_deps.sh`
-* Download training data: `bash script/get_voc.sh`
-* Download pretrained model: `bash script/get_pretrained_model.sh`
-* Training and testing: `bash script/vgg_voc07.sh 0,1` (this means to use gpu 0 and 1)
+### Download data and label
+Make a directory `data` and follow `py-faster-rcnn` for data preparation instructions.
+* [Pascal VOC](http://host.robots.ox.ac.uk/pascal/VOC/) should be in `data/VOCdevkit` containing `VOC2007`, `VOC2012` and `annotations`.
+* [MSCOCO](http://mscoco.org/dataset/) should be in `data/coco` containing `train2017`, `val2017` and `annotations/instances_train2017.json`, `annotations/instances_val2017.json`.
 
-## Prerequisites
-* Pip, Python-dev, Unzip
-* Some python packages are required: Cython, Scikit-image, Easydict, Matplot, OpenCV, Future
-* On debian, you can usually run `sudo apt install python-pip python-dev unzip`
-* And the python packages can be installed by running `sudo pip install cython scikit-image easydict matplotlib opencv-python future`. Note that you may have to remove sudo depending on how your mxnet package is installed.
-* MXNet version v0.9.5 or higher with Python interface installed. Open `python` type `import mxnet` to confirm.
+### Download pretrained ImageNet models
+* [VGG16](http://www.robots.ox.ac.uk/~vgg/research/very_deep/) should be at [/vgg/vgg16-0000.params](http://data.mxnet.io/mxnet/models/imagenet/vgg/vgg16-0000.params) from MXNet model zoo.
+* [ResNet](https://github.com/tornadomeet/ResNet) should be at [/resnet/101-layers/resnet-101-0000.params](http://data.mxnet.io/mxnet/models/imagenet/resnet/101-layers/resnet-101-0000.params) from MXNet model zoo.
 
-## Getting started
-* Suppose `HOME` represents where this file is located. All commands, unless stated otherwise, should be started from `HOME`.
-* Ensure that `bash script/additional_deps.sh` installs all prerequisites listed above. If you're not using this script, ensure above prerequisities are present on your system and then run `make` from `HOME`. This builds the cython extensions and installs python bindings for them.
+### Training and evaluation
+Use `python3 train.py --dataset $Dataset$ --network $Network$ --pretrained $IMAGENET_MODEL_FILE$ --gpus $GPUS$` to train,
+for example, `python3 train.py --dataset voc --network vgg16 --pretrained model/vgg16-0000.params --gpus 0,1`.
+use `python3 train.py --dataset voc --imageset 2007_trainval+2012_trainval --network vgg16 --pretrained model/vgg16-0000.params --gpus 0,1` to train on both of voc2007 and voc2012.
+Use `python3 test.py --dataset $Dataset$ --network $Network$ --params $MODEL_FILE$ --gpu $GPU$` to evaluate,
+for example, `python3 test.py --dataset voc --network vgg16 --params model/vgg16-0010.params --gpu 0`.
 
-Command line arguments have the same meaning as in mxnet/example/image-classification.
-* `prefix` refers to the first part of a saved model file name and `epoch` refers to a number in this file name.
-  In `model/vgg-0000.params`, `prefix` is `"model/vgg"` and `epoch` is `0`.
-* `begin_epoch` means the start of your training process, which will apply to all saved checkpoints.
-* Remember to turn off cudnn auto tune. `export MXNET_CUDNN_AUTOTUNE_DEFAULT=0`.
+### History
+* May 25, 2016: We released Fast R-CNN implementation.
+* July 6, 2016: We released Faster R-CNN implementation.
+* July 23, 2016: We updated to MXNet module solver.
+* Oct 10, 2016: tornadomeet released approximate end-to-end training.
+* Oct 30, 2016: We updated to MXNet module inference.
+* Jan 19, 2017: We accelerated our pipeline and supported ResNet training.
+* Jun 22, 2018: We simplified code. 
 
-## Demo (Pascal VOC)
-* An example of trained model (trained on VOC07 trainval) can be accessed from  
-  [Baidu Yun](http://pan.baidu.com/s/1boRhGvH) (ixiw) or 
-  [Dropbox](https://www.dropbox.com/s/jrr83q0ai2ckltq/final-0000.params.tar.gz?dl=0).
-  If you put the extracted model `final-0000.params` in `HOME` then use `--prefix final --epoch 0` to access it. 
-* Try out detection result by running `python demo.py --prefix final --epoch 0 --image myimage.jpg --gpu 0 --vis`.
-  Drop the `--vis` if you do not have a display or want to save as a new file.
-
-## Training Faster R-CNN
-The following tutorial is based on VOC data, VGG network. Supply `--network resnet` and 
-`--dataset coco` to use other networks and datasets.
-Refer to `script/vgg_voc07.sh` and other experiments for examples.
-
-### Prepare Training Data
-See `bash script/get_voc.sh` and `bash script/get_coco.sh` will do the following for you.
-* Make a folder `data` in `HOME`. `data` folder will be used to place the training data folder `VOCdevkit` and `coco`.
-* Download and extract [Pascal VOC data](http://host.robots.ox.ac.uk/pascal/VOC/), place the `VOCdevkit` folder in `HOME/data`.
-* Download and extract [coco dataset](http://mscoco.org/dataset/), place all images to `coco/images` and annotation jsons to `data/annotations`.
-
-(Skip this if not interested) All dataset have three attributes, `image_set`, `root_path` and `dataset_path`.  
-* `image_set` could be `2007_trainval` or something like `2007trainval+2012trainval`.  
-* `root_path` is usually `data`, where `cache`, `selective_search_data`, `rpn_data` will be stored.  
-* `dataset_path` could be something like `data/VOCdevkit`, where images, annotations and results can be put so that many copies of datasets can be linked to the same actual place.    
-
-### Prepare Pretrained Models
-See if `bash script/get_pretrained_model.sh` will do this for you. If not,
-* Make a folder `model` in `HOME`. `model` folder will be used to place model checkpoints along the training process. 
-  It is recommended to set `model` as a symbolic link to somewhere else in hard disk.
-* Download VGG16 pretrained model `vgg16-0000.params` from [MXNet model gallery](https://github.com/dmlc/mxnet-model-gallery/blob/master/imagenet-1k-vgg.md) to `model` folder.
-* Download ResNet pretrained model `resnet-101-0000.params` from [ResNet](https://github.com/tornadomeet/ResNet) to `model` folder.
-
-### Alternate Training
-See if `bash script/vgg_alter_voc07.sh 0` (use gpu 0) will do the following for you.
-* Start training by running `python train_alternate.py`. This will train the VGG network on the VOC07 trainval.
-  More control of training process can be found in the argparse help.
-* Start testing by running `python test.py --prefix model/final --epoch 0` after completing the training process.
-  This will test the VGG network on the VOC07 test with the model in `HOME/model/final-0000.params`.
-  Adding a `--vis` will turn on visualization and `-h` will show help as in the training process.
-
-### End-to-end Training (approximate process)
-See if `bash script/vgg_voc07.sh 0` (use gpu 0) will do the following for you.
-* Start training by running `python train_end2end.py`. This will train the VGG network on VOC07 trainval.
-* Start testing by running `python test.py`. This will test the VGG network on the VOC07 test.
-
-## Training Fast R-CNN (legacy from the initial version)
-See if `bash script/get_selective.sh` and `bash script/vgg_fast_rcnn.sh 0` (use gpu 0) will do the following for you.
-* To reproduce Fast R-CNN, `scipy` is used to load selective search proposals.
-* Download [precomputed selective search data](https://github.com/rbgirshick/fast-rcnn/tree/master/data) and place them to `data` folder.
-  `script/get_selective_search.sh` will do this.
-* Start training by running `python -m rcnn.tools.train_rcnn --proposal selective_search` to use the selective search proposal.
-* Start testing by running `python -m rcnn.tools.test_rcnn --proposal selective_search`.
-* `script/vgg_fast_rcnn.sh` will train Fast R-CNN on VOC07 and test on VOC07test.
-
-## What is Faster R-CNN, anyway?
-Region Proposal Network solves object detection as a regression problem 
-from the objectness perspective. Bounding boxes are predicted by applying 
-learned bounding box deltas to base boxes, namely anchor boxes across 
-different positions in feature maps. Training process directly learns a 
-mapping from raw image intensities to bounding box transformation targets.
-
-Fast R-CNN treats general object detection as a classification problem and
-bounding box prediction as a regression problem. Classifying cropped region
-feature maps and predicting bounding box displacements together yields
-detection results. Cropping feature maps instead of image input accelerates
-computation utilizing shared convolution maps. Bounding box displacements
-are simultaneously learned in the training process.
-
-Faster R-CNN utilize an alternate optimization training process between RPN 
-and Fast R-CNN. Fast R-CNN weights are used to initiate RPN for training.
-The approximate joint training scheme does not backpropagate rcnn training
-error to rpn training.
-
-## Structure
-This repository provides Faster R-CNN as a package named `rcnn`.
-  * `rcnn.core`: core routines in Faster R-CNN training and testing.
-  * `rcnn.cython`: cython speedup from py-faster-rcnn.
-  * `rcnn.dataset`: dataset library. Base class is `rcnn.dataset.imdb.IMDB`.
-  * `rcnn.io`: prepare training data.
-  * `rcnn.processing`: data and label processing library.
-  * `rcnn.pycocotools`: python api from coco dataset.
-  * `rcnn.symbol`: symbol and operator.
-  * `rcnn.tools`: training and testing wrapper.
-  * `rcnn.utils`: utilities in training and testing, usually overloads mxnet functions.
-
-## Disclaimer
+### Disclaimer
 This repository used code from [MXNet](https://github.com/dmlc/mxnet),
 [Fast R-CNN](https://github.com/rbgirshick/fast-rcnn),
 [Faster R-CNN](https://github.com/rbgirshick/py-faster-rcnn),
 [caffe](https://github.com/BVLC/caffe),
 [tornadomeet/mx-rcnn](https://github.com/tornadomeet/mx-rcnn),
 [MS COCO API](https://github.com/pdollar/coco).  
-Training data are from
-[Pascal VOC](http://host.robots.ox.ac.uk/pascal/VOC/),
-[ImageNet](http://image-net.org/),
-[COCO](http://mscoco.org/).  
-Model comes from
-[VGG16](http://www.robots.ox.ac.uk/~vgg/research/very_deep/),
-[ResNet](https://github.com/tornadomeet/ResNet).  
 Thanks to tornadomeet for end-to-end experiments and MXNet contributers for helpful discussions.
 
-History of this implementation is:
-* Fast R-CNN (v1)
-* Faster R-CNN (v2)
-* Faster R-CNN with module training (v3)
-* Faster R-CNN with end-to-end training (v3.5, tornadomeet/mx-rcnn)
-* Faster R-CNN with end-to-end training and module testing (v4)
-* Faster R-CNN with accelerated training and resnet (v5)  
-
-mxnet/example/rcnn was v1, v2, v3.5 and now v5.
-
-## References
+### References
 1. Tianqi Chen, Mu Li, Yutian Li, Min Lin, Naiyan Wang, Minjie Wang, Tianjun Xiao, Bing Xu, Chiyuan Zhang, and Zheng Zhang. MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneous Distributed Systems. In Neural Information Processing Systems, Workshop on Machine Learning Systems, 2015
 2. Ross Girshick. "Fast R-CNN." In Proceedings of the IEEE International Conference on Computer Vision, 2015.
 3. Shaoqing Ren, Kaiming He, Ross Girshick, and Jian Sun. "Faster R-CNN: Towards real-time object detection with region proposal networks." In IEEE Transactions on Pattern Analysis and Machine Intelligence, 2016.

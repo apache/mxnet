@@ -32,11 +32,28 @@ has [qw/_param_names _fixed_param_names
 ] => (is => 'rw', init_arg => undef);
 
 package AI::MXNet::Module;
+use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use List::Util qw(max);
 use Data::Dumper ();
 use Mouse;
+
+func _create_sparse_kvstore(Maybe[Str|AI::MXNet::KVStore] $kvstore)
+{
+    # always update on kvstore
+    my $update_on_kvstore = 1;
+    my $kv;
+    if(blessed $kvstore)
+    {
+        $kv = $kvstore;
+    }
+    else
+    {
+        $kv = AI::MXNet::KVStore->create($kvstore);
+    }
+    return ($kv, $update_on_kvstore);
+}
 
 func _create_kvstore(
     Maybe[Str|AI::MXNet::KVStore] $kvstore,
@@ -252,28 +269,28 @@ method BucketingModule(@args) { return AI::MXNet::Module::Bucketing->new(@args) 
 
         Parameters
         ----------
-        prefix : str
+        $prefix : Str
             path prefix of saved model files. You should have
             "prefix-symbol.json", "prefix-xxxx.params", and
             optionally "prefix-xxxx.states", where xxxx is the
             epoch number.
-        epoch : int
+        $epoch : Int
             epoch to load.
-        load_optimizer_states : bool
+        $load_optimizer_states=0 : Bool
             whether to load optimizer states. Checkpoint needs
             to have been made with save_optimizer_states=True.
-        data_names : array ref of str
+        :$data_names : array ref of str
             Default is ['data'] for a typical model used in image classification.
-        label_names : array ref of str
+        :$label_names : array ref of str
             Default is ['softmax_label'] for a typical model used in image
             classification.
-        logger : Logger
+        :$logger : Logger
             Default is AI::MXNet::Logging.
-        context : Context or list of Context
+        :$context : Context or list of Context
             Default is cpu(0).
-        work_load_list : array ref of number
+        :$work_load_list : array ref of number
             Default is undef, indicating an uniform workload.
-        fixed_param_names: array ref of str
+        :$fixed_param_names: array ref of str
             Default is undef, indicating no network parameters are fixed.
 =cut
 
@@ -303,11 +320,11 @@ method load(
 
     Parameters
     ----------
-    prefix : str
+    $prefix : Str
         The file prefix to checkpoint to
-    epoch : int
+    $epoch : Int
         The current epoch number
-    save_optimizer_states : bool
+    $save_optimizer_states=0 : Bool
         Whether to save optimizer states for later training
 =cut
 
@@ -332,16 +349,16 @@ method save_checkpoint(Str $prefix, Int $epoch, Bool $save_optimizer_states=0)
 
     Parameters
     ----------
-    prefix : str
+    $prefix : Str
         Prefix of model name.
-    epoch : int
+    $epoch : Int
         The epoch number of the model.
-    symbol : AI::MXNet::Symbol
+    $symbol : AI::MXNet::Symbol
         The input symbol
-    arg_params : hash ref of str to AI::MXNet::NDArray
-        Model parameter, hash ref of name to AI::MXNet::NDArray of net's weights.
-    aux_params : hash ref of str to NDArray
-        Model parameter, hash ref of name to AI::MXNet::NDArray of net's auxiliary states.
+    $arg_params : HashRef[AI::MXNet::NDArray]
+        Model's parameters, hash ref of name to AI::MXNet::NDArray of net's weights.
+    $aux_params : HashRef[AI::MXNet::NDArray]
+        Model's parameters, hash ref of name to AI::MXNet::NDArray of net's auxiliary states.
     Notes
     -----
     - prefix-symbol.json will be saved for symbol.
@@ -627,7 +644,7 @@ method bind(
     {
         assert(not defined $self->_p->_arg_params and not $self->_p->_aux_params);
         my @param_arrays = (
-            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype) }
+            map { AI::MXNet::NDArray->zeros($_->[0]->shape, dtype => $_->[0]->dtype, stype => $_->[0]->stype) }
             @{ $self->_p->_exec_group->_p->param_arrays }
         );
         my %arg_params;
@@ -960,5 +977,11 @@ method _kvstore()
 {
     $self->_p->_kvstore;
 }
+
+method _arg_params()
+{
+    $self->_p->_arg_params;
+}
+
 
 1;

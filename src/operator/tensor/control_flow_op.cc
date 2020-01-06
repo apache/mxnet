@@ -61,7 +61,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"condition", "x", "y"};
   })
-.set_attr<nnvm::FInferShape>("FInferShape", WhereOpShape)
+.set_attr<mxnet::FInferShape>("FInferShape", WhereOpShape)
 .set_attr<nnvm::FInferType>("FInferType", WhereOpType)
 .set_attr<FInferStorageType>("FInferStorageType", WhereOpForwardStorageType)
 .set_attr<FCompute>("FCompute<cpu>", WhereOpForward<cpu>)
@@ -75,7 +75,7 @@ Examples::
     // make zero grad node for grad[condition]
     auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
                       {n->inputs[0]}, nullptr, &n);
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
+    ret.emplace_back(p);
 
     // make grad nodes for grad[x] and grad[y]
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -89,9 +89,8 @@ Examples::
     }
     p->control_deps.emplace_back(n);
     p->inputs = std::move(heads);
-    ret.emplace_back(nnvm::NodeEntry{p, 0, 0});
-    ret.emplace_back(nnvm::NodeEntry{p, 1, 0});
-
+    ret.emplace_back(p, 0, 0);
+    ret.emplace_back(p, 1, 0);
     return ret;
   })
 .add_argument("condition", "NDArray-or-Symbol", "condition array")

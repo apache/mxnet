@@ -93,8 +93,8 @@ def main():
     model_prefix = "FCN8s_VGG16"
     epoch = 19
 
-    # By default, MXNet will run on the CPU. Uncomment the line below to execute on the GPU
-    # ctx = mx.gpu()
+    # By default, MXNet will run on the CPU. Change to ctx = mx.gpu() to run on GPU.
+    ctx = mx.cpu()
 
     fcnxs, fcnxs_args, fcnxs_auxs = mx.model.load_checkpoint(model_prefix, epoch)
     fcnxs_args["data"] = mx.nd.array(get_data(args.input), ctx)

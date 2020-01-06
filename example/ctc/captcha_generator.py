@@ -15,22 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 """ Helper classes for multiprocess captcha image generation
-
 This module also provides script for saving captcha images to file using CLI.
 """
 
 from __future__ import print_function
 import random
 
+import numpy as np
 from captcha.image import ImageCaptcha
 import cv2
 from multiproc_data import MPData
-import numpy as np
 
 
 class CaptchaGen(object):
-    """
-    Generates a captcha image
+    """Generates a captcha image
     """
     def __init__(self, h, w, font_paths):
         """
@@ -48,8 +46,7 @@ class CaptchaGen(object):
         self.w = w
 
     def image(self, captcha_str):
-        """
-        Generate a greyscale captcha image representing number string
+        """Generate a greyscale captcha image representing number string
 
         Parameters
         ----------
@@ -71,8 +68,7 @@ class CaptchaGen(object):
 
 
 class DigitCaptcha(object):
-    """
-    Provides shape() and get() interface for digit-captcha image generation
+    """Provides shape() and get() interface for digit-captcha image generation
     """
     def __init__(self, font_paths, h, w, num_digit_min, num_digit_max):
         """
@@ -95,8 +91,7 @@ class DigitCaptcha(object):
 
     @property
     def shape(self):
-        """
-        Returns shape of the image data generated
+        """Returns shape of the image data generated
 
         Returns
         -------
@@ -105,8 +100,7 @@ class DigitCaptcha(object):
         return self.captcha.h, self.captcha.w
 
     def get(self):
-        """
-        Get an image from the queue
+        """Get an image from the queue
 
         Returns
         -------
@@ -117,9 +111,8 @@ class DigitCaptcha(object):
 
     @staticmethod
     def get_rand(num_digit_min, num_digit_max):
-        """
-        Generates a character string of digits. Number of digits are
-         between self.num_digit_min and self.num_digit_max
+        """Generates a character string of digits. Number of digits are
+        between self.num_digit_min and self.num_digit_max
         Returns
         -------
         str
@@ -131,8 +124,7 @@ class DigitCaptcha(object):
         return buf
 
     def _gen_sample(self):
-        """
-        Generate a random captcha image sample
+        """Generate a random captcha image sample
         Returns
         -------
         (numpy.ndarray, str)
@@ -143,13 +135,10 @@ class DigitCaptcha(object):
 
 
 class MPDigitCaptcha(DigitCaptcha):
-    """
-    Handles multi-process captcha image generation
+    """Handles multi-process captcha image generation
     """
     def __init__(self, font_paths, h, w, num_digit_min, num_digit_max, num_processes, max_queue_size):
-        """
-
-        Parameters
+        """Parameters
         ----------
         font_paths: list of str
             List of path to ttf font files
@@ -170,14 +159,11 @@ class MPDigitCaptcha(DigitCaptcha):
         self.mp_data = MPData(num_processes, max_queue_size, self._gen_sample)
 
     def start(self):
-        """
-        Starts the processes
-        """
+        """Starts the processes"""
         self.mp_data.start()
 
     def get(self):
-        """
-        Get an image from the queue
+        """Get an image from the queue
 
         Returns
         -------
@@ -187,9 +173,7 @@ class MPDigitCaptcha(DigitCaptcha):
         return self.mp_data.get()
 
     def reset(self):
-        """
-        Resets the generator by stopping all processes
-        """
+        """Resets the generator by stopping all processes"""
         self.mp_data.reset()
 
 
@@ -197,6 +181,7 @@ if __name__ == '__main__':
     import argparse
 
     def main():
+        """Program entry point"""
         parser = argparse.ArgumentParser()
         parser.add_argument("font_path", help="Path to ttf font file")
         parser.add_argument("output", help="Output filename including extension (e.g. 'sample.jpg')")

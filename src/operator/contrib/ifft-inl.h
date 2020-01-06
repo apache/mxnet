@@ -88,8 +88,8 @@ class IFFTOp : public Operator {
     }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const TShape& ishape = in_data[ifft::kData].shape_;
-    const TShape& oshape = out_data[ifft::kOut].shape_;
+    const mxnet::TShape& ishape = in_data[ifft::kData].shape_;
+    const mxnet::TShape& oshape = out_data[ifft::kOut].shape_;
     Tensor<xpu, 2, DType> data = in_data[ifft::kData].get_with_shape<xpu, 2, DType>(
           Shape2(n_iffts, dim_*2), s);
     Tensor<xpu, 2, DType> out = out_data[ifft::kOut].get_with_shape<xpu, 2, DType>(
@@ -150,8 +150,8 @@ class IFFTOp : public Operator {
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    const TShape& ishape = in_grad[ifft::kData].shape_;
-    const TShape& oshape = out_grad[ifft::kOut].shape_;
+    const mxnet::TShape& ishape = in_grad[ifft::kData].shape_;
+    const mxnet::TShape& oshape = out_grad[ifft::kOut].shape_;
     Tensor<xpu, 2, DType> gdata = in_grad[ifft::kData].get_with_shape<xpu, 2, DType>(
           Shape2(n_iffts, dim_*2), s);
     Tensor<xpu, 2, DType> grad = out_grad[ifft::kOut].get_with_shape<xpu, 2, DType>(
@@ -224,14 +224,14 @@ class IFFTProp : public OperatorProperty {
     return param_.__DICT__();
   }
 
-  bool InferShape(std::vector<TShape> *in_shape,
-                  std::vector<TShape> *out_shape,
-                  std::vector<TShape> *aux_shape) const override {
+  bool InferShape(mxnet::ShapeVector *in_shape,
+                  mxnet::ShapeVector *out_shape,
+                  mxnet::ShapeVector *aux_shape) const override {
     using namespace mshadow;
     CHECK_EQ(in_shape->size(), 1) <<"Input:[data]";
-    const TShape &dshape = (*in_shape)[ifft::kData];
+    const mxnet::TShape &dshape = (*in_shape)[ifft::kData];
     // require data to be known
-    if (dshape.ndim() == 0) return false;
+    if (mxnet::op::shape_is_none(dshape)) return false;
 
     out_shape->clear();
     if (dshape.ndim() == 4) {
@@ -250,7 +250,7 @@ class IFFTProp : public OperatorProperty {
     CHECK_GE(in_type->size(), 1);
     int dtype = (*in_type)[0];
     CHECK_NE(dtype, -1) << "First input must have specified type";
-    for (index_t i=0; i < in_type->size(); ++i) {
+    for (size_t i=0; i < in_type->size(); ++i) {
       if ((*in_type)[i] == -1) {
         (*in_type)[i] = dtype;
       } else {
@@ -280,12 +280,12 @@ class IFFTProp : public OperatorProperty {
   }
 
   std::vector<ResourceRequest> ForwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
   std::vector<ResourceRequest> BackwardResource(
-      const std::vector<TShape> &in_shape) const override {
+      const mxnet::ShapeVector &in_shape) const override {
     return {ResourceRequest::kTempSpace};
   }
 
@@ -302,7 +302,7 @@ class IFFTProp : public OperatorProperty {
     return NULL;
   }
 
-  Operator* CreateOperatorEx(Context ctx, std::vector<TShape> *in_shape,
+  Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
                               std::vector<int> *in_type) const override;
 
  private:

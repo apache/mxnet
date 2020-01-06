@@ -48,7 +48,7 @@ def block35(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', 
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
 
-    net += scale * tower_out
+    net = net + scale * tower_out
     if with_act:
         act = mx.symbol.Activation(
             data=net, act_type=act_type, attr=mirror_attr)
@@ -65,7 +65,7 @@ def block17(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', 
     tower_mixed = mx.symbol.Concat(*[tower_conv, tower_conv1_2])
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
-    net += scale * tower_out
+    net = net + scale * tower_out
     if with_act:
         act = mx.symbol.Activation(
             data=net, act_type=act_type, attr=mirror_attr)
@@ -82,7 +82,7 @@ def block8(net, input_num_channels, scale=1.0, with_act=True, act_type='relu', m
     tower_mixed = mx.symbol.Concat(*[tower_conv, tower_conv1_2])
     tower_out = ConvFactory(
         tower_mixed, input_num_channels, (1, 1), with_act=False)
-    net += scale * tower_out
+    net = net + scale * tower_out
     if with_act:
         act = mx.symbol.Activation(
             data=net, act_type=act_type, attr=mirror_attr)

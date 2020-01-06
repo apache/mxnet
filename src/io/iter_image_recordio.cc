@@ -226,7 +226,7 @@ ParseNext(std::vector<InstVector<DType>> *out_vec) {
       mshadow::Tensor<cpu, 1> label = out.label().Back();
       if (label_map_ != nullptr) {
         mshadow::Copy(label, label_map_->Find(rec.image_index()));
-      } else if (rec.label != NULL) {
+      } else if (rec.label != nullptr) {
         CHECK_EQ(param_.label_width, rec.num_label)
           << "rec file provide " << rec.num_label << "-dimensional label "
              "but label_width is set to " << param_.label_width;
@@ -338,6 +338,11 @@ class ImageRecordIter : public IIterator<DataInst> {
 MXNET_REGISTER_IO_ITER(ImageRecordIter_v1)
 .describe(R"code(Iterating on image RecordIO files
 
+.. note::
+
+  ``ImageRecordIter_v1`` is deprecated. Use ``ImageRecordIter`` instead.
+
+
 Read images batches from RecordIO files with a rich of data augmentation
 options.
 
@@ -361,6 +366,10 @@ files.
 // OLD VERSION - DEPRECATED
 MXNET_REGISTER_IO_ITER(ImageRecordUInt8Iter_v1)
 .describe(R"code(Iterating on image RecordIO files
+
+.. note::
+
+  ``ImageRecordUInt8Iter_v1`` is deprecated. Use ``ImageRecordUInt8Iter`` instead.
 
 This iterator is identical to ``ImageRecordIter`` except for using ``uint8`` as
 the data type instead of ``float``.

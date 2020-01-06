@@ -131,18 +131,21 @@ class NDArray {
   /*!
   * \brief construct a new dynamic NDArray
   * \param shape the shape of array
-  * \param constext context of NDArray
+  * \param context context of NDArray
   * \param delay_alloc whether delay the allocation
+  * \param dtype data type of NDArray
   */
   NDArray(const std::vector<mx_uint> &shape, const Context &context,
-          bool delay_alloc = true);
+          bool delay_alloc = true, int dtype = 0);
   /*!
   * \brief construct a new dynamic NDArray
   * \param shape the shape of array
   * \param constext context of NDArray
   * \param delay_alloc whether delay the allocation
+  * \param dtype data type of NDArray
   */
-  NDArray(const Shape &shape, const Context &context, bool delay_alloc = true);
+  NDArray(const Shape &shape, const Context &context,
+          bool delay_alloc = true, int dtype = 0);
   NDArray(const mx_float *data, size_t size);
   /*!
   * \brief construct a new dynamic NDArray
@@ -291,15 +294,15 @@ class NDArray {
   */
   void SyncCopyToCPU(std::vector<mx_float> *data, size_t size = 0);
   /*!
-  * \brief Copy the content of current array to other.
-  * \param other the new context of this NDArray
-  * \return the new copy
+  * \brief copy the content of current array to a target array.
+  * \param other the target NDArray
+  * \return the target NDarray
   */
   NDArray CopyTo(NDArray * other) const;
   /*!
-  * \brief return a new copy this NDArray
-  * \param other the target NDArray
-  * \return the copy target NDarray
+  * \brief return a new copy to this NDArray
+  * \param Context the new context of this NDArray
+  * \return the new copy
   */
   NDArray Copy(const Context &) const;
   /*!
@@ -317,6 +320,12 @@ class NDArray {
    * \return offset of three dimensions array
    */
   size_t Offset(size_t c, size_t h, size_t w) const;
+  /*!
+  * \brief return value of the element at (index)
+  * \param index  position
+  * \return value of one dimensions array
+  */
+  mx_float At(size_t index) const;
   /*!
   * \brief return value of the element at (h, w)
   * \param h height position
@@ -397,6 +406,32 @@ class NDArray {
   * \return a map from names to NDArrays.
   */
   static std::vector<NDArray> LoadToList(const std::string &file_name);
+  /*!
+  * \brief Load NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \param array_list a list of NDArrays returned, do not fill the list if
+  * nullptr is given.
+  * \param array_map a map from names to NDArrays returned, do not fill the map
+  * if nullptr is given or no names is stored in binary file.
+  */
+  static void LoadFromBuffer(const void *buffer, size_t size,
+                   std::vector<NDArray> *array_list = nullptr,
+                   std::map<std::string, NDArray> *array_map = nullptr);
+  /*!
+  * \brief Load map of NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \return a list of NDArrays.
+  */
+  static std::map<std::string, NDArray> LoadFromBufferToMap(const void *buffer, size_t size);
+  /*!
+  * \brief Load list of NDArrays from buffer.
+  * \param buffer Pointer to buffer. (ie contents of param file)
+  * \param size Size of buffer
+  * \return a map from names to NDArrays.
+  */
+  static std::vector<NDArray> LoadFromBufferToList(const void *buffer, size_t size);
   /*!
   * \brief save a map of string->NDArray to binary file.
   * \param file_name name of the binary file.

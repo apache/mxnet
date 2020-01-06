@@ -18,25 +18,29 @@
 use strict;
 use warnings;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(almost_equal same);
-use Test::More tests => 17;
+use AI::MXNet::TestUtils qw(almost_equal same rand_ndarray randint zip);
+use Test::More tests => 280;
+use PDL;
+use File::Temp qw(tempdir);
+use IO::File;
 
 sub test_ndarray_reshape
 {
-    my $tensor = mx->nd->array([[[1, 2], [3, 4]],
-                                [[5, 6], [7, 8]]]);
-    my $true_res = mx->nd->arange(stop => 8) + 1;
-    is_deeply($tensor->reshape([-1])->aspdl->unpdl, $true_res->aspdl->unpdl);
-    $true_res  = mx->nd->array([[1, 2, 3, 4],
-                                [5, 6, 7, 8]]);
-    is_deeply($tensor->reshape([2, -1])->aspdl->unpdl, $true_res->aspdl->unpdl);
-    $true_res  = mx->nd->array([[1, 2],
-                                [3, 4],
-                                [5, 6],
-                                [7, 8]]);
-    is_deeply($tensor->reshape([-1, 2])->aspdl->unpdl, $true_res->aspdl->unpdl);
+    my $tensor = (mx->nd->arange(stop => 30) + 1)->reshape([2, 3, 5]);
+    my $true_res = mx->nd->arange(stop => 30) + 1;
+    ok(same($tensor->reshape([-1])->aspdl, $true_res->aspdl));
+    ok(same($tensor->reshape([2, -1])->aspdl, $true_res->reshape([2, 15])->aspdl));
+    ok(same($tensor->reshape([0, -1])->aspdl, $true_res->reshape([2, 15])->aspdl));
+    ok(same($tensor->reshape([-1, 2])->aspdl, $true_res->reshape([15, 2])->aspdl));
+    ok(same($tensor->reshape([6, 5])->aspdl, $true_res->reshape([6, 5])->aspdl));
+    ok(same($tensor->reshape([30])->aspdl, $true_res->aspdl));
+    ok(same($tensor->reshape([-1, 6])->aspdl, $true_res->reshape([5, 6])->aspdl));
+    ok(same($tensor->reshape([-2])->aspdl, $true_res->reshape([2, 3, 5])->aspdl));
+    ok(same($tensor->reshape([-3, -1])->aspdl, $true_res->reshape([6, 5])->aspdl));
+    ok(same($tensor->reshape([-1, 15])->reshape([0, -4, 3, -1])->aspdl, $true_res->reshape([2, 3, 5])->aspdl));
+    ok(same($tensor->reshape([-1, 0])->aspdl, $true_res->reshape([10, 3])->aspdl));
+    ok(same($tensor->reshape([-1, 0], reverse=>1)->aspdl, $true_res->reshape([6, 5])->aspdl));
 }
-
 
 sub test_moveaxis
 {
@@ -139,8 +143,133 @@ sub test_ndarray_slice
     ok(($a->slice([mx->nd->array([1, 1, 0]), mx->nd->array([0, 1, 0])])->aspdl == mx->nd->array([2, 3, 0])->aspdl)->all);
 }
 
+sub test_linalg_gemm2
+{
+    # Single matrix multiply
+    my $A = mx->nd->array([[1.0, 1.0], [1.0, 1.0]]);
+    my $B = mx->nd->array([[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]]);
+    ok(almost_equal(
+        mx->nd->linalg->gemm2($A, $B, transpose_b=>1, alpha=>2.0)->aspdl,
+        pdl([[4.0, 4.0, 4.0], [4.0, 4.0, 4.0]])
+    ));
+
+    # Batch matrix multiply
+    $A = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    $B = mx->nd->array([[[1.0, 1.0]], [[0.1, 0.1]]]);
+    ok(almost_equal(
+        mx->nd->linalg->gemm2($A, $B, transpose_b=>1, alpha=>2.0)->aspdl,
+        pdl([[[4.0]], [[0.04]]])
+    ));
+}
+
+sub test_image_to_tensor
+{
+    ok(
+        same(
+            mx->nd->image->to_tensor(mx->nd->zeros([28, 28, 3]))->aspdl,
+            zeros(28, 28, 3)
+        )
+    );
+}
+
+sub test_buffer_load
+{
+    my $nrepeat = 10;
+    my $tmpdir = tempdir(CLEANUP => 1);
+    for my $repeat (1..$nrepeat)
+    {
+        # test load_buffer as list
+        my @data;
+        for(1..10)
+        {
+            push @data, rand_ndarray([randint(1, 5)], 'default');
+        }
+        my $fname = "$tmpdir/list_$repeat.param";
+        mx->nd->save($fname, \@data);
+        my $buf_data = join('',IO::File->new($fname)->getlines);
+        my $data2 = mx->nd->load_frombuffer($buf_data);
+        ok(@data == @$data2);
+        zip(sub {
+            my ($x, $y) = @_;
+            ok(same($x->aspdl, $y->aspdl));
+        }, \@data, $data2);
+        # test load_buffer as hash
+        my $i = 0;
+        my %hash = map { 'ndarray xx '.$i++ => $_ } @data;
+        $fname = "$tmpdir/hash_$repeat.param";
+        mx->nd->save($fname, \%hash);
+        $buf_data = join('',IO::File->new($fname)->getlines);
+        my $hash2 = mx->nd->load_frombuffer($buf_data);
+        ok(keys %hash == keys %$hash2);
+        while(my ($k, $v) = each %hash)
+        {
+            ok(same($v->aspdl, $hash2->{$k}->aspdl));
+        }
+    }
+}
+
+sub test_histogram
+{
+    my $z = mx->nd->array([0..99]);
+    my $b = mx->nd->array([10, 20, 30, 60]);
+    my ($hist, $bins) = @{ mx->nd->histogram($z, bins => $b) };
+    ok(same($hist->aspdl, pdl([10, 10, 31])));
+    ok(same($bins->aspdl, pdl([10, 20, 30, 60])));
+}
+
+sub test_overload
+{
+    # much of this depends on PDL being sane as well.
+    my $px = PDL->new([ 2, -5, 11, 17 ]) / 2;
+    my $nx = mx->nd->array($px, dtype => 'float64');
+    my $py = PDL->new([ -3, 7, 13, 19 ]) / 4;
+    my $ny = mx->nd->array($py, dtype => 'float64');
+
+    ok(same(($nx + $ny)->aspdl(), $px + $py), 'overloaded add');
+    ok(same(($nx - $ny)->aspdl(), $px - $py), 'overloaded sub');
+    ok(same(($nx * $ny)->aspdl(), $px * $py), 'overloaded mul');
+    ok(same(($nx / $ny)->aspdl(), $px / $py), 'overloaded div');
+    ok(same(($nx % $ny)->aspdl(), $px % $py), 'overloaded mod');
+    ok(same(($nx ** $ny)->aspdl(), $px ** $py), 'overloaded pow');
+    ok(same(($nx->copy() += $ny)->aspdl(), $px + $py), 'inplace add');
+    ok(same(($nx->copy() -= $ny)->aspdl(), $px - $py), 'inplace sub');
+    ok(same(($nx->copy() *= $ny)->aspdl(), $px * $py), 'inplace mul');
+    ok(same(($nx->copy() /= $ny)->aspdl(), $px / $py), 'inplace div');
+    ok(same(($nx->copy() %= $ny)->aspdl(), $px % $py), 'inplace mod');
+    ok(same(($nx->copy() **= $ny)->aspdl(), $px ** $py), 'inplace pow');
+    ok(same(cos($nx)->aspdl(), cos($px)), 'overloaded cos');
+    ok(same(sin($nx)->aspdl(), sin($px)), 'overloaded sin');
+    ok(same(exp($nx)->aspdl(), exp($px)), 'overloaded exp');
+    ok(same(abs($nx)->aspdl(), abs($px)), 'overloaded abs');
+    ok(same(log($nx)->aspdl(), log($px)), 'overloaded log');
+    ok(same(sqrt($nx)->aspdl(), sqrt($px)), 'overloaded sqrt');
+    ok(same(atan2($nx, 1.0)->aspdl(), atan2($px, 1.0)), 'overloaded atan2');
+}
+
+sub test_array_overload
+{
+    # array conversions are largely calls to mx->nd->split(), but have
+    # special cases around dimensions of length 0 and 1.
+    is_deeply([ @{ mx->nd->array(zeros(7, 0)) } ], []);
+    is_deeply(mx->nd->zeros([3, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([2, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([1, 7])->[0]->shape, [ 7 ]);
+    is_deeply(mx->nd->zeros([3, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([2, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([1, 7, 11])->[0]->shape, [7, 11]);
+    is_deeply(mx->nd->zeros([3, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+    is_deeply(mx->nd->zeros([2, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+    is_deeply(mx->nd->zeros([1, 7, 11, 13])->[0]->shape, [7, 11, 13]);
+}
+
 test_ndarray_slice();
 test_ndarray_reshape();
 test_moveaxis();
 test_output();
 test_cached();
+test_linalg_gemm2();
+test_image_to_tensor();
+test_buffer_load();
+test_histogram();
+test_overload();
+test_array_overload();

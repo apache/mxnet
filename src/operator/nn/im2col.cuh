@@ -282,10 +282,10 @@ __global__ void im2col_nd_gpu_kernel(const int n, const DType* data_im,
  */
 template <typename DType>
 inline void im2col(mshadow::Stream<gpu>* s,
-                   const DType* data_im, const TShape& im_shape,
-                   const TShape& col_shape, const TShape& kernel_shape,
-                   const TShape& pad, const TShape& stride,
-                   const TShape& dilation, DType* data_col) {
+                   const DType* data_im, const mxnet::TShape& im_shape,
+                   const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+                   const mxnet::TShape& pad, const mxnet::TShape& stride,
+                   const mxnet::TShape& dilation, DType* data_col) {
   // num_axes should be smaller than block size
   index_t num_spatial_axes = kernel_shape.ndim();
   CHECK_LT(num_spatial_axes, mshadow::cuda::kBaseThreadNum);
@@ -468,10 +468,10 @@ __global__ void col2im_nd_gpu_kernel(const int n, const DType* data_col,
  */
 template <typename DType>
 inline void col2im(mshadow::Stream<gpu>* s,
-                   const DType* data_col, const TShape& im_shape,
-                   const TShape& col_shape, const TShape& kernel_shape,
-                   const TShape& pad, const TShape& stride,
-                   const TShape& dilation, DType* data_im, OpReqType req) {
+                   const DType* data_col, const mxnet::TShape& im_shape,
+                   const mxnet::TShape& col_shape, const mxnet::TShape& kernel_shape,
+                   const mxnet::TShape& pad, const mxnet::TShape& stride,
+                   const mxnet::TShape& dilation, DType* data_im, OpReqType req) {
   index_t num_spatial_axes = kernel_shape.ndim();
   index_t im_size = im_shape.ProdShape(1, im_shape.ndim());
   // num_axes should be smaller than block size

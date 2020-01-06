@@ -32,15 +32,16 @@
 #include <mshadow/base.h>
 #include <nnvm/op.h>
 #include <nnvm/op_attr_types.h>
-#include <nnvm/tuple.h>
 
 #include <fstream>
 #include <cstring>
 
 #include "../operator/elemwise_op_common.h"
+#include "../operator/image/resize-inl.h"
 
 #if MXNET_USE_OPENCV
   #include <opencv2/opencv.hpp>
+  #include "./opencv_compatibility.h"
 #endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
@@ -143,11 +144,8 @@ void ImdecodeImpl(int flag, bool to_rgb, void* data, size_t size,
   cv::Mat dst;
   if (out->is_none()) {
     cv::Mat res = cv::imdecode(buf, flag);
-    if (res.empty()) {
-      LOG(INFO) << "Decoding failed. Invalid image file.";
-      *out = NDArray();
-      return;
-    }
+    CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
+
     *out = NDArray(mshadow::Shape3(res.rows, res.cols, flag == 0 ? 1 : 3),
                    Context::CPU(), false, mshadow::kUint8);
     dst = cv::Mat(out->shape()[0], out->shape()[1], flag == 0 ? CV_8U : CV_8UC3,
@@ -189,7 +187,9 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
 
   uint8_t* str_img = inputs[0].data().dptr<uint8_t>();
   size_t len = inputs[0].shape().Size();
-  TShape oshape(3);
+  CHECK(len > 0) << "Input cannot be an empty buffer";
+
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(str_img, len, &oshape[1], &oshape[0])) {
   } else if (get_png_size(str_img, len, &oshape[1], &oshape[0])) {
@@ -206,7 +206,7 @@ void Imdecode(const nnvm::NodeAttrs& attrs,
       ImdecodeImpl(param.flag, param.to_rgb, str_img, len,
                    const_cast<NDArray*>(&ndout));
     }, ndout.ctx(), {ndin.var()}, {ndout.var()},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imdecode"));
+    FnProperty::kNormal, 0, "Imdecode");
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV
@@ -229,7 +229,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
   CHECK(file.good()) << "Failed reading image file: '" << param.filename << "' "
             << strerror(errno);
 
-  TShape oshape(3);
+  mxnet::TShape oshape(3, 1);
   oshape[2] = param.flag == 0 ? 1 : 3;
   if (get_jpeg_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
   } else if (get_png_size(buff.get(), fsize, &oshape[1], &oshape[0])) {
@@ -245,7 +245,7 @@ void Imread(const nnvm::NodeAttrs& attrs,
       ImdecodeImpl(param.flag, param.to_rgb, buff.get(), fsize,
                    const_cast<NDArray*>(&ndout));
     }, ndout.ctx(), {}, {ndout.var()},
-    FnProperty::kNormal, 0, PROFILER_MESSAGE("Imread"));
+    FnProperty::kNormal, 0, "Imread");
 #else
   LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
 #endif  // MXNET_USE_OPENCV
@@ -271,8 +271,8 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
 DMLC_REGISTER_PARAMETER(ResizeParam);
 
 inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *ishape,
-                        std::vector<TShape> *oshape) {
+                        mxnet::ShapeVector *ishape,
+                        mxnet::ShapeVector *oshape) {
   const auto& param = nnvm::get<ResizeParam>(attrs.parsed);
   if (ishape->size() != 1 || (*ishape)[0].ndim() != 3) return false;
 
@@ -286,19 +286,8 @@ inline void Imresize(const nnvm::NodeAttrs& attrs,
                      const std::vector<TBlob> &inputs,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &outputs) {
-#if MXNET_USE_OPENCV
-  CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "imresize doesn't support fp16";
-  const int DTYPE[] = {CV_32F, CV_64F, -1, CV_8U, CV_32S};
-  int cv_type = CV_MAKETYPE(DTYPE[inputs[0].type_flag_], inputs[0].shape_[2]);
   const auto& param = nnvm::get<ResizeParam>(attrs.parsed);
-  cv::Mat buf(inputs[0].shape_[0], inputs[0].shape_[1], cv_type, inputs[0].dptr_);
-  cv::Mat dst(outputs[0].shape_[0], outputs[0].shape_[1], cv_type, outputs[0].dptr_);
-  cv::resize(buf, dst, cv::Size(param.w, param.h), 0, 0, param.interp);
-  CHECK(!dst.empty());
-  CHECK_EQ(static_cast<void*>(dst.ptr()), outputs[0].dptr_);
-#else
-  LOG(FATAL) << "Build with USE_OPENCV=1 for image io.";
-#endif  // MXNET_USE_OPENCV
+  op::image::ResizeImpl(inputs, outputs, param.h, param.w, param.interp);
 }
 
 
@@ -306,7 +295,7 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
   int top, bot, left, right;
   int type;
   double value;
-  nnvm::Tuple<double> values;
+  mxnet::Tuple<double> values;
   DMLC_DECLARE_PARAMETER(MakeBorderParam) {
     DMLC_DECLARE_FIELD(top)
     .describe("Top margin.");
@@ -330,8 +319,8 @@ struct MakeBorderParam : public dmlc::Parameter<MakeBorderParam> {
 DMLC_REGISTER_PARAMETER(MakeBorderParam);
 
 inline bool MakeBorderShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape> *ishape,
-                        std::vector<TShape> *oshape) {
+                        mxnet::ShapeVector *ishape,
+                        mxnet::ShapeVector *oshape) {
   const auto& param = nnvm::get<MakeBorderParam>(attrs.parsed);
   if (ishape->size() != 1 || (*ishape)[0].ndim() != 3) return false;
 
@@ -368,6 +357,7 @@ inline void copyMakeBorder(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_cvimdecode)
+.add_alias("_npi_cvimdecode")
 .describe("Decode image with OpenCV. \n"
           "Note: return image in RGB by default, "
           "instead of OpenCV's default BGR.")
@@ -379,6 +369,7 @@ NNVM_REGISTER_OP(_cvimdecode)
 .add_arguments(ImdecodeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimread)
+.add_alias("_npi_cvimread")
 .describe("Read and decode image with OpenCV. \n"
           "Note: return image in RGB by default, "
           "instead of OpenCV's default BGR.")
@@ -389,11 +380,12 @@ NNVM_REGISTER_OP(_cvimread)
 .add_arguments(ImreadParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_cvimresize)
+.add_alias("_npi_cvimresize")
 .describe("Resize image with OpenCV. \n")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<ResizeParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", ResizeShape)
+.set_attr<mxnet::FInferShape>("FInferShape", ResizeShape)
 .set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", Imresize)
 .add_argument("src", "NDArray", "source image")
@@ -404,7 +396,7 @@ NNVM_REGISTER_OP(_cvcopyMakeBorder)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(op::ParamParser<MakeBorderParam>)
-.set_attr<nnvm::FInferShape>("FInferShape", MakeBorderShape)
+.set_attr<mxnet::FInferShape>("FInferShape", MakeBorderShape)
 .set_attr<nnvm::FInferType>("FInferType", op::ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", copyMakeBorder)
 .add_argument("src", "NDArray", "source image")

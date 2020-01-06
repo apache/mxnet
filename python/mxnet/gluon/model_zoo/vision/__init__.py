@@ -28,6 +28,7 @@ This module contains definitions for the following model architectures:
 -  `SqueezeNet`_
 -  `VGG`_
 -  `MobileNet`_
+-  `MobileNetV2`_
 
 You can construct a model with random weights by calling its constructor:
 
@@ -65,10 +66,11 @@ The transformation should preferrably happen at preprocessing. You can use
 .. _DenseNet: https://arxiv.org/abs/1608.06993
 .. _Inception V3: http://arxiv.org/abs/1512.00567
 .. _ResNet V1: https://arxiv.org/abs/1512.03385
-.. _ResNet V2: https://arxiv.org/abs/1512.03385
+.. _ResNet V2: https://arxiv.org/abs/1603.05027
 .. _SqueezeNet: https://arxiv.org/abs/1602.07360
 .. _VGG: https://arxiv.org/abs/1409.1556
 .. _MobileNet: https://arxiv.org/abs/1704.04861
+.. _MobileNetV2: https://arxiv.org/abs/1801.04381
 """
 
 from .alexnet import *
@@ -85,6 +87,7 @@ from .vgg import *
 
 from .mobilenet import *
 
+
 def get_model(name, **kwargs):
     """Returns a pre-defined model by name
 
@@ -98,12 +101,12 @@ def get_model(name, **kwargs):
         Number of classes for the output layer.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
 
     Returns
     -------
-    HybridBlock
+    gluon.HybridBlock
         The model.
     """
     models = {'resnet18_v1': resnet18_v1,
@@ -135,11 +138,15 @@ def get_model(name, **kwargs):
               'mobilenet1.0': mobilenet1_0,
               'mobilenet0.75': mobilenet0_75,
               'mobilenet0.5': mobilenet0_5,
-              'mobilenet0.25': mobilenet0_25
+              'mobilenet0.25': mobilenet0_25,
+              'mobilenetv2_1.0': mobilenet_v2_1_0,
+              'mobilenetv2_0.75': mobilenet_v2_0_75,
+              'mobilenetv2_0.5': mobilenet_v2_0_5,
+              'mobilenetv2_0.25': mobilenet_v2_0_25
              }
     name = name.lower()
     if name not in models:
         raise ValueError(
-            'Model %s is not supported. Available options are\n\t%s'%(
+            'Model %s is not supported. Available options are\n\t%s' % (
                 name, '\n\t'.join(sorted(models.keys()))))
     return models[name](**kwargs)

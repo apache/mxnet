@@ -35,7 +35,7 @@ def save_rnn_checkpoint(cells, prefix, epoch, symbol, arg_params, aux_params):
 
     Parameters
     ----------
-    cells : RNNCell or list of RNNCells
+    cells : mxnet.rnn.RNNCell or list of RNNCells
         The RNN cells used by this symbol.
     prefix : str
         Prefix of model name.
@@ -65,7 +65,7 @@ def load_rnn_checkpoint(cells, prefix, epoch):
 
     Parameters
     ----------
-    cells : RNNCell or list of RNNCells
+    cells : mxnet.rnn.RNNCell or list of RNNCells
         The RNN cells used by this symbol.
     prefix : str
         Prefix of model name.
@@ -100,7 +100,7 @@ def do_rnn_checkpoint(cells, prefix, period=1):
 
     Parameters
     ----------
-    cells : RNNCell or list of RNNCells
+    cells : mxnet.rnn.RNNCell or list of RNNCells
         The RNN cells used by this symbol.
     prefix : str
         The file prefix to checkpoint to

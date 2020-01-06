@@ -69,7 +69,8 @@ def get_register_func(base_class, nickname):
         assert issubclass(klass, base_class), \
             "Can only register subclass of %s"%base_class.__name__
         if name is None:
-            name = klass.__name__.lower()
+            name = klass.__name__
+        name = name.lower()
         if name in registry:
             warnings.warn(
                 "\033[91mNew %s %s.%s registered with name %s is"

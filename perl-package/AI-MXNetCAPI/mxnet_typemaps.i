@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 %typemap(in) (const char** in), (char** in)
 {
     AV *tempav;
@@ -27,7 +46,7 @@
     Safefree($1);
 }
 
-%typemap(in) (const char **keys, const char **vals), (char **keys, char **vals)
+%typemap(in) (const char **keys, const char **vals), (char **keys, char **vals), (const char* const* keys, const char* const* vals)
 {
     HV *temphv;
     char *key;
@@ -96,7 +115,7 @@
     }
 }
 
-%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp)
+%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp), (uint64_t *out) (uint64_t temp)
 {
     temp = 0;
     $1 = &temp;
@@ -112,10 +131,48 @@
     }
 }
 
+%typemap(argout) (uint64_t *out)
+{
+    if(!result)
+    {
+        $result = newSVnv((double)(*$1));
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+
+%typemap(in,numinputs=0) (const int **out_stypes) (int* temp)
+{
+    temp = NULL;
+    $1 = &temp;
+}
+
+%typemap(argout) (const int **out_stypes)
+{
+    if(av_len((AV*)SvRV(ST(3))) == -1 && !result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        svs = (SV **)safemalloc(*arg4*sizeof(SV *));
+        for (i = 0; i < *arg4 ; i++) {
+            svs[i] = newSViv((*$1)[i]);
+            sv_2mortal(svs[i]);
+        }
+        myav = av_make(*arg4, svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
 %typemap(in,numinputs=0) (nn_uint *out_size, const char ***out_array) (nn_uint temp_size, char** temp),
                          (mx_uint *out_size, const char ***out_array) (mx_uint temp_size, char** temp)
 {
     $1 = &temp_size;
+    *$1 = 0;
     $2 = &temp;
 }
 
@@ -131,7 +188,7 @@
         for (i = 0; i < *$1 ; i++) {
             svs[i] = newSVpv((*$2)[i],0);
             sv_2mortal(svs[i]);
-        };
+        }
         myav = av_make(*$1,svs);
         Safefree(svs);
         $result = newRV_noinc((SV*)myav);
@@ -143,6 +200,7 @@
 %typemap(in,numinputs=0) (mx_uint *out_size, const char ***out_array2) (mx_uint temp_size, char** temp)
 {
     $1 = &temp_size;
+    *$1 = 0;
     $2 = &temp;
 }
 
@@ -157,7 +215,7 @@
         for (i = 0; i < *$1*2 ; i++) {
             svs[i] = newSVpv((*$2)[i],0);
             sv_2mortal(svs[i]);
-        };
+        }
         myav = av_make(*$1*2,svs);
         Safefree(svs);
         $result = newRV_noinc((SV*)myav);
@@ -255,6 +313,37 @@
     Safefree($1);
 }
 
+%typemap(in) (dim_t *in)
+{
+    AV *tempav;
+    int i;
+    SV  **tv;
+    int av_len; 
+    if (!SvROK($input))
+        croak("Argument $argnum is not a reference.");
+        if (SvTYPE(SvRV($input)) != SVt_PVAV)
+        croak("Argument $argnum is not an array.");
+        tempav = (AV*)SvRV($input);
+    av_len = av_len(tempav) + 1;
+    if(av_len)
+    {
+        $1 = (dim_t *)safemalloc(av_len*sizeof(dim_t));
+        for (i = 0; i < av_len; i++) {
+            tv = av_fetch(tempav, i, 0);
+            $1[i] = (dim_t)SvIV(*tv);
+        }
+    }
+    else
+    {
+       $1 = NULL;
+    }
+
+}
+
+%typemap(freearg) (dim_t *in) {
+    Safefree($1);
+}
+
 %typemap(in) (NDArrayHandle* in), (SymbolHandle* in)
 {
     AV *tempav;
@@ -284,7 +373,7 @@
        $1 = NULL;
     }
 }
-%typemap(freearg) (NDArrayHandle* in), (SymbolHandle* in)  {
+%typemap(freearg) (NDArrayHandle* in), (SymbolHandle* in) {
     Safefree($1);
 }
 
@@ -404,6 +493,7 @@
 %typemap(in,numinputs=0) (char const **out_array, size_t *out_size) (char * temp, size_t temp_size)
 {
     $2 = &temp_size;
+    *$2 = 0;
     $1 = &temp;
 }
 
@@ -420,6 +510,7 @@
 %typemap(in,numinputs=0) (size_t *out_size, char const **out_array) (size_t temp_size, char *temp)
 {
     $1 = &temp_size;
+    *$1 = 0;
     $2 = &temp;
 }
 
@@ -433,13 +524,13 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *out_dim, const mx_uint **out_pdata) (mx_uint temp_dim, mx_uint *temp_pdata)
+%typemap(in,numinputs=0) (int *out_dim, const int **out_pdata) (int temp_dim, int *temp_pdata)
 {
     $1 = &temp_dim;
     $2 = &temp_pdata;
 }
 
-%typemap(argout) (mx_uint *out_dim, const mx_uint **out_pdata)
+%typemap(argout) (int *out_dim, const int **out_pdata)
 {
     if(!result)
     {
@@ -463,6 +554,7 @@
 {
     $1 = &temp1;
     $2 = &temp2;
+    *$2 = 0;
 }
 
 %typemap(argout) (uint64_t **out_index, uint64_t *out_size)
@@ -491,6 +583,7 @@
                          (mx_uint *out_size, NDArrayHandle** out_array) (mx_uint temp_size, NDArrayHandle* temp)
 {
     $1 = &temp_size;
+    *$1 = 0;
     $2 = &temp;
 }
 
@@ -571,6 +664,36 @@
     }
 }
 
+%typemap(in,numinputs=0) (mx_uint* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array)
+                         (mx_uint t, NDArrayHandle* t1, NDArrayHandle* t2)
+{
+    $1 = &t;
+    *$1 = 0;
+    $2 = &t1;
+    $3 = &t2;
+}
+
+%typemap(argout) (mx_uint* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array)
+{
+    if(!result)
+    {
+        AV *container, *in_args, *arg_grads;
+        int i;
+        container = newAV();
+        in_args = newAV();
+        arg_grads = newAV();
+        for (i = 0; i < *$1 ; i++) {
+            av_push(in_args, SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$2)[i]), SWIGTYPE_p_MXNDArray, 0)));
+            av_push(arg_grads, SvREFCNT_inc(SWIG_NewPointerObj(SWIG_as_voidptr((*$3)[i]), SWIGTYPE_p_MXNDArray, 0)));
+        }
+        av_push(container, newRV_noinc((SV*)in_args));
+        av_push(container, newRV_noinc((SV*)arg_grads));
+        $result = newRV_noinc((SV*)container);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
 %typemap(in,numinputs=0) (NDArrayHandle **out_grad) (NDArrayHandle* temp)
 {
     int vars = SvIV(ST(3));
@@ -583,6 +706,7 @@
         $1 = NULL;
     }
 }
+
 
 %typemap(argout) (NDArrayHandle** out_grad)
 {
@@ -711,6 +835,7 @@
     $1 = &name_temp;
     $2 = &desc_temp;
     $3 = &num_args_temp;
+    *$3 = 0;
     $4 = &names_temp;
     $5 = &types_temp;
     $6 = &descs_temp;
@@ -770,7 +895,8 @@
 {
     $1 = &name_temp; 
     $2 = &desc_temp;
-    $3 = &num_args_temp; 
+    $3 = &num_args_temp;
+    *$3 = 0;
     $4 = &names_temp;
     $5 = &types_temp;
     $6 = &descs_temp;
@@ -816,7 +942,8 @@
 
 %typemap(in,numinputs=0) (mx_uint *out) (mx_uint temp), (size_t *out) (size_t temp)
 {
-    $1 = &temp; 
+    $1 = &temp;
+    *$1 = 0;
 }
 
 %typemap(argout) (mx_uint *out), (size_t *out)
@@ -829,12 +956,12 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *in_shape_size, const mx_uint **in_shape_ndim, const mx_uint ***in_shape_data) 
-                         (mx_uint temp1, mx_uint *temp2, mx_uint **temp3),
-                         (mx_uint *out_shape_size, const mx_uint **out_shape_ndim, const mx_uint ***out_shape_data) 
-                         (mx_uint temp1, mx_uint *temp2, mx_uint **temp3),
-                         (mx_uint *aux_shape_size, const mx_uint **aux_shape_ndim, const mx_uint ***aux_shape_data) 
-                         (mx_uint temp1, mx_uint *temp2, mx_uint **temp3)
+%typemap(in,numinputs=0) (mx_uint *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data) 
+                         (mx_uint temp1, int *temp2, int **temp3),
+                         (mx_uint *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data) 
+                         (mx_uint temp1, int *temp2, int **temp3),
+                         (mx_uint *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data) 
+                         (mx_uint temp1, int *temp2, int **temp3)
 {
     $1 = &temp1;
     $2 = &temp2;
@@ -842,9 +969,9 @@
     *$1 = 0;
 }
 
-%typemap(argout) (mx_uint *in_shape_size, const mx_uint **in_shape_ndim, const mx_uint ***in_shape_data),
-                 (mx_uint *out_shape_size, const mx_uint **out_shape_ndim, const mx_uint ***out_shape_data),
-                 (mx_uint *aux_shape_size, const mx_uint **aux_shape_ndim, const mx_uint ***aux_shape_data)
+%typemap(argout) (mx_uint *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data),
+                 (mx_uint *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data),
+                 (mx_uint *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data)
 {
     if(!result && *arg15)
     {
@@ -933,14 +1060,6 @@
         sv_2mortal($result);
         argvi++;
     }
-}
-
-%typemap(in,numinputs=0) (const mx_uint num_provided_arg_stypes, const char** provided_arg_stype_names,
-                          const int* provided_arg_stypes)
-{
-    $1 = 0;
-    $2 = NULL;
-    $3 = NULL;
 }
 
 %typemap(in,numinputs=0) (mx_uint* num_aux_states,
@@ -1090,6 +1209,11 @@
     $1 = KVStore_callback;
 }
 
+%typemap(in,numinputs=0) (MXKVStoreStrUpdater* updater)
+{
+    $1 = KVStoreStr_callback;
+}
+
 %typemap(in,numinputs=0) (MXKVStoreServerController* controller)
 {
     $1 = KVStoreServer_callback;
@@ -1102,5 +1226,5 @@
 
 %typemap(in) (void* callback_handle)
 {
-    $1 = (void*)$input;
+    $1 = (void*)newSVsv($input);
 }

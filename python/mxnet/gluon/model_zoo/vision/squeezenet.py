@@ -26,6 +26,7 @@ from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
 from ...contrib.nn import HybridConcurrent
+from .... import base
 
 # Helpers
 def _make_fire(squeeze_channels, expand1x1_channels, expand3x3_channels):
@@ -110,7 +111,7 @@ class SqueezeNet(HybridBlock):
 
 # Constructor
 def get_squeezenet(version, pretrained=False, ctx=cpu(),
-                   root=os.path.join('~', '.mxnet', 'models'), **kwargs):
+                   root=os.path.join(base.data_dir(), 'models'), **kwargs):
     r"""SqueezeNet model from the `"SqueezeNet: AlexNet-level accuracy with 50x fewer parameters
     and <0.5MB model size" <https://arxiv.org/abs/1602.07360>`_ paper.
     SqueezeNet 1.1 model from the `official SqueezeNet repo
@@ -126,13 +127,13 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(),
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
     net = SqueezeNet(version, **kwargs)
     if pretrained:
         from ..model_store import get_model_file
-        net.load_params(get_model_file('squeezenet%s'%version, root=root), ctx=ctx)
+        net.load_parameters(get_model_file('squeezenet%s'%version, root=root), ctx=ctx)
     return net
 
 def squeezenet1_0(**kwargs):
@@ -145,7 +146,7 @@ def squeezenet1_0(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_squeezenet('1.0', **kwargs)
@@ -162,7 +163,7 @@ def squeezenet1_1(**kwargs):
         Whether to load the pretrained weights for model.
     ctx : Context, default CPU
         The context in which to load the pretrained weights.
-    root : str, default '~/.mxnet/models'
+    root : str, default '$MXNET_HOME/models'
         Location for keeping the model parameters.
     """
     return get_squeezenet('1.1', **kwargs)

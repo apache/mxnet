@@ -60,7 +60,7 @@ inline float RandFloat() {
 }
 
 // Get an NDArray with provided indices, prepared for a RowSparse NDArray.
-inline NDArray RspIdxND(const TShape shape, const Context ctx,
+inline NDArray RspIdxND(const mxnet::TShape shape, const Context ctx,
                         const std::vector<TEST_ITYPE> &values) {
   NDArray nd(shape, ctx, false, ROW_SPARSE_IDX_TYPE);
   size_t num_val = values.size();
@@ -74,7 +74,7 @@ inline NDArray RspIdxND(const TShape shape, const Context ctx,
 }
 
 // Get a dense NDArray with provided values.
-inline NDArray DnsND(const TShape shape, const Context ctx, std::vector<TEST_DTYPE> vs) {
+inline NDArray DnsND(const mxnet::TShape shape, const Context ctx, std::vector<TEST_DTYPE> vs) {
   NDArray nd(shape, ctx, false);
   size_t num_val = shape.Size();
   // generate random values
@@ -109,8 +109,10 @@ static void inline CopyBlob(mshadow::Stream<xpu> *s,
 }
 
 // Get a RowSparse NDArray with provided indices and values
-inline NDArray RspND(const TShape shape, const Context ctx, const std::vector<TEST_ITYPE> idx,
-              std::vector<TEST_DTYPE> vals) {
+inline NDArray RspND(const mxnet::TShape shape,
+                     const Context ctx,
+                     const std::vector<TEST_ITYPE> idx,
+                     std::vector<TEST_DTYPE> vals) {
   CHECK(shape.ndim() <= 2) << "High dimensional row sparse not implemented yet";
   index_t num_rows = idx.size();
   index_t num_cols = vals.size() / idx.size();
@@ -122,7 +124,7 @@ inline NDArray RspND(const TShape shape, const Context ctx, const std::vector<TE
   NDArray data = DnsND(mshadow::Shape2(num_rows, num_cols), ctx, vals);
   print(&std::cout, "data", data);
   // create result nd
-  std::vector<TShape> aux_shapes = {mshadow::Shape1(num_rows)};
+  mxnet::ShapeVector aux_shapes = {mshadow::Shape1(num_rows)};
   NDArray nd(kRowSparseStorage, shape, ctx, false, mshadow::default_type_flag,
              {}, aux_shapes);
 
@@ -213,7 +215,7 @@ class Array {
  public:
   Array() = default;
 
-  explicit Array(const TShape &shape)
+  explicit Array(const mxnet::TShape &shape)
     : shape_(shape) {}
 
   explicit Array(const NDArray &arr)
@@ -223,7 +225,7 @@ class Array {
 
   void clear() {
     items_.clear();
-    shape_ = TShape(0);
+    shape_ = mxnet::TShape(0);
   }
 
   static inline bool IsNear(const DType v1, const DType v2) { return fabs(v2 - v1) <= EPSILON; }
@@ -288,7 +290,7 @@ class Array {
       case kUndefinedStorage:
       default:
         LOG(ERROR) << "Unsupported storage type: " << storageType;
-        return NDArray(TShape(0), ctx);
+        return NDArray(mxnet::TShape(0), ctx);
     }
   }
 
@@ -337,7 +339,7 @@ class Array {
   }
 
  private:
-  TShape shape_;
+  mxnet::TShape shape_;
   TItems items_;
 };
 
