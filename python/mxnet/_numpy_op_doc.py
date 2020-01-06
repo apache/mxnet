@@ -20,73 +20,103 @@
 """Doc placeholder for numpy ops with prefix _np."""
 
 
-def _np_ones_like(a):
+def _np_all(a, axis=None, keepdims=False, out=None):
     """
-    Return an array of ones with the same shape and type as a given array.
+    Test whether all array elements along a given axis evaluate to True.
 
     Parameters
     ----------
-    a : ndarray
-        The shape and data-type of `a` define these same attributes of
-        the returned array.
+    a : array_like
+        Input array or object that can be converted to an array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a logical AND reduction is performed.
+        The default (axis = None) is to perform a logical AND over
+        all the dimensions of the input array.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in
+        the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+    out : ndarray, optional
+        Alternate output array in which to place the result. It must have
+        the same shape as the expected output and its type is preserved
 
     Returns
-    -------
-    out : ndarray
-        Array of ones with the same shape and type as `a`.
-
-    Examples
     --------
-    >>> x = np.arange(6)
-    >>> x = x.reshape((2, 3))
-    >>> x
-    array([[0., 1., 2.],
-           [3., 4., 5.]])
-    >>> np.ones_like(x)
-    array([[1., 1., 1.],
-           [1., 1., 1.]])
+    all : ndarray, bool 
+        A new boolean or array is returned unless out is specified,
+        in which case a reference to out is returned.
 
-    >>> y = np.arange(3, dtype=float)
-    >>> y
-    array([0., 1., 2.], dtype=float64)
-    >>>
-    >>> np.ones_like(y)
-    array([1., 1., 1.], dtype=float64)
+    Examples:
+    ---------
+    >>> np.all([[True,False],[True,True]])
+    False
+
+    >>> np.all([[True,False],[True,True]], axis=0)
+    array([ True, False])
+
+    >>> np.all([-1, 4, 5])
+    True
+
+    >>> np.all([1.0, np.nan])
+    True
+
+    >>> o=np.array(False)
+    >>> z=np.all([-1, 4, 5], out=o)
+    >>> id(z), id(o), z
+    (28293632, 28293632, array(True)) # may vary  
     """
     pass
 
-
-def _np_zeros_like(a):
+def _np_any(a, axis=None, keepdims=False, out=None):
     """
-    Return an array of zeros with the same shape and type as a given array.
+    Test whether any array element along a given axis evaluates to True.
+    Returns single boolean unless axis is not None 
 
     Parameters
     ----------
-    a : ndarray
-        The shape and data-type of `a` define these same attributes of
-        the returned array.
+    a : array_like
+        Input array or object that can be converted to an array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a logical AND reduction is performed.
+        The default (axis = None) is to perform a logical AND over
+        all the dimensions of the input array.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in
+        the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+    out : ndarray, optional
+        Alternate output array in which to place the result. It must have
+        the same shape as the expected output and its type is preserved
 
     Returns
-    -------
-    out : ndarray
-        Array of zeros with the same shape and type as `a`.
-
-    Examples
     --------
-    >>> x = np.arange(6)
-    >>> x = x.reshape((2, 3))
-    >>> x
-    array([[0., 1., 2.],
-           [3., 4., 5.]])
-    >>> np.zeros_like(x)
-    array([[0., 0., 0.],
-           [0., 0., 0.]])
-    >>> y = np.arange(3, dtype=float)
-    >>> y
-    array([0., 1., 2.], dtype=float64)
-    >>>
-    >>> np.zeros_like(y)
-    array([0., 0., 0.], dtype=float64)
+    any : bool or ndarray
+        A new boolean or ndarray is returned unless out is specified,
+        in which case a reference to out is returned.
+
+    Examples:
+    ---------
+    >>> np.any([[True, False], [True, True]])
+    True
+
+    >>> np.any([[True, False], [False, False]], axis=0)
+    array([ True, False])
+
+    >>> np.any([-1, 0, 5])
+    True
+
+    >>> np.any(np.nan)
+    True
+
+    >>> o=np.array(False)
+    >>> z=np.any([-1, 4, 5], out=o)
+    >>> z, o
+    (array(True), array(True))
+    >>> # Check now that z is a reference to o
+    >>> z is o
+    True
+    >>> id(z), id(o) # identity of z and o              # doctest: +SKIP
+    (191614240, 191614240)
     """
     pass
 
@@ -479,6 +509,113 @@ def _np_copy(a, out=None):
     pass
 
 
+def _np_atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_1d(1.0)
+    array([1.])
+    >>> x = np.arange(9.0).reshape(3,3)
+    >>> np.atleast_1d(x)
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.atleast_1d(np.array(1), np.array([3, 4]))
+    [array([1.]), array([3., 4.])]
+    """
+    pass
+
+
+def _np_atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_2d(3.0)
+    array([[3.]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_2d(x)
+    array([[0., 1., 2.]])
+    >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
+    [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
+    """
+    pass
+
+def _np_atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+
+    Examples
+    --------
+    >>> np.atleast_3d(3.0)
+    array([[[3.]]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_3d(x).shape
+    (1, 3, 1)
+    >>> x = np.arange(12.0).reshape(4,3)
+    >>> np.atleast_3d(x).shape
+    (4, 3, 1)
+    >>> for arr in np.atleast_3d(np.array([1, 2]), np.array([[1, 2]]), np.array([[[1, 2]]])):
+    ...     print(arr, arr.shape)
+    ...
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1. 2.]]] (1, 1, 2)
+    """
+    pass
+
+
 def _np_reshape(a, newshape, order='C', out=None):
     """
     Gives a new shape to an array without changing its data.
@@ -701,7 +838,7 @@ def _np_squeeze(a, axis=None, out=None):
     pass
 
 
-def _np_max(a, axis=None, out=None, keepdims=False):
+def _np_max(a, axis=None, keepdims=False, out=None):
     """
     Return the maximum of an array or maximum along an axis.
     
@@ -765,7 +902,14 @@ def _np_max(a, axis=None, out=None, keepdims=False):
     pass
 
 
-def _np_min(a, axis=None, out=None, keepdims=False):
+def _np_amax(a, axis=None, keepdims=False, out=None):
+    """
+    Refer to _np_max
+    """
+    pass
+
+
+def _np_min(a, axis=None, keepdims=False, out=None):
     """
     Return the minimum of an array or minimum along an axis.
     
@@ -1120,6 +1264,58 @@ def _np_diag(array, k=0):
     array([[0, 0, 0],
            [0, 4, 0],
            [0, 0, 8]])
+    """
+    pass
+
+
+def _np_diagonal(a, offset=0, axis1=0, axis2=1):
+    """
+    If a is 2-D, returns the diagonal of a with the given offset, i.e., the collection of elements of
+    the form a[i, i+offset]. If a has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-array whose diagonal is returned. The shape of the
+    resulting array can be determined by removing axis1 and axis2 and appending an index to the
+    right equal to the size of the resulting diagonals.
+
+    Parameters
+    ----------
+    a : Symbol
+        Input data from which diagonal are taken.
+    offset: int, Optional
+        Offset of the diagonal from the main diagonal
+    axis1: int, Optional
+        Axis to be used as the first axis of the 2-D sub-arrays
+    axis2: int, Optional
+        Axis to be used as the second axis of the 2-D sub-arrays
+
+    Returns
+    -------
+    out : Symbol
+        Output result
+
+    Raises
+    -------
+    ValueError:  If the dimension of a is less than 2.
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape(2,2)
+    >>> a
+    array([[0, 1],
+        [2, 3]])
+    >>> np.diagonal(a)
+    array([0, 3])
+    >>> np.diagonal(a, 1)
+    array([1])
+
+    >>> a = np.arange(8).reshape(2,2,2)
+    >>>a
+    array([[[0, 1],
+            [2, 3]],
+            [[4, 5],
+            [6, 7]]])
+    >>> np.diagonal(a, 0, 0, 1)
+    array([[0, 6],
+            [1, 7]])
     """
     pass
 

@@ -18,7 +18,7 @@
 #
 # Dockerfile to build MXNet for Android ARM64/ARMv8
 
-FROM mxnetcipinned/dockcross-base:11262018
+FROM dockcross/base
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
 RUN apt-get update && apt-get install -y \

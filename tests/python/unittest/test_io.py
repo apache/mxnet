@@ -199,6 +199,13 @@ def _test_shuffle(data, labels=None):
         i += 1
 
 
+def _test_corner_case():
+    data = np.arange(10)
+    data_iter = mx.io.NDArrayIter(data=data, batch_size=205, shuffle=False, last_batch_handle='pad')
+    expect = np.concatenate((np.tile(data, 20), np.arange(5)))
+    assert np.array_equal(data_iter.next().data[0].asnumpy(), expect)
+
+
 def test_NDArrayIter():
     dtype_list = ['NDArray', 'ndarray']
     tested_data_type = [False, True]
@@ -220,6 +227,7 @@ def test_NDArrayIter():
             _test_shuffle({'data1': data, 'data2': data})
             _test_shuffle(data, [])
             _test_shuffle(data)
+    _test_corner_case()
 
 
 def test_NDArrayIter_h5py():
