@@ -375,13 +375,13 @@ source root directory to build the MXNet Perl package:
 
 **Build the MXNet core shared library**
 
-**Step 1** Install R, cran-devtools and doxygen2
+**Step 1** Install R, cran-devtools and roxygen2
 
 If you are on Ubuntu 19.04 or higher:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y r-base-core r-cran-devtools r-cran-doxygen2
+sudo apt-get install -y r-base-core r-cran-devtools r-cran-roxygen2
 ```
 
 Otherwise
