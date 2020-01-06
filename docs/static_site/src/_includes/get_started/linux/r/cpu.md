@@ -5,5 +5,5 @@ After you have setup R v3.4.4+ and MXNet, you can build and install the MXNet R 
 
 {% highlight bash %}
 $ cd incubator-mxnet
-$ make rpkg
+$ make -f R-package/Makefile rpkg
 {% endhighlight %}

@@ -10,7 +10,7 @@ MXNet as follows:
 
 {% highlight bash %}
 $ cd incubator-mxnet
-$ make rpkg
+$ make -f R-package/Makefile rpkg
 {% endhighlight %}
 
 {% include /get_started/gpu_snippet.md %}
