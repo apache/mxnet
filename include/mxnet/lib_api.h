@@ -210,12 +210,13 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
+  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID) {}
 
+  /*! \brief populate internal tensor fields */
   void setTensor(void *dptr, MXDType type, const int64_t* dims,
                  int ndims, size_t vID) {
     data_ptr = dptr; dtype = type; verID = vID;
@@ -290,7 +291,7 @@ MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
   }
 
   /*! \brief helper function to compare two MXTensors */
-  inline bool operator==(const MXTensor &oth) {
+  inline bool isSame(const MXTensor &oth) const {
     return data_ptr == oth.data_ptr &&
       dtype == oth.dtype &&
       verID == oth.verID &&
