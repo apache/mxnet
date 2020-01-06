@@ -7166,6 +7166,35 @@ def test_scatter_gather_nd():
             idx = mx.nd.array([[0, 0, 0, 0]], dtype='int32')
             assert (mx.nd._internal._backward_gather_nd(data, idx, shape=(1,)).asscalar() == data.asnumpy().sum())
 
+@with_seed()
+def test_gather_nd_check_bound():
+    # check if indices is out of bound
+    data = mx.nd.array([[0, 1, 2], [3, 4, 5]])
+    indices1 = mx.nd.array([[0, 1, 0], [0, 1, 3]])
+    indices2 = mx.nd.array([[0, 1, 0], [0, 1, -5]])
+    try:
+        mx.nd.gather_nd(data, indices1)
+        mx.nd.waitall()
+    except IndexError:
+            # skip errors since the test is supposed to raise error
+            # IndexError: index 3 is out of bounds for axis 1 with size 3
+            pass
+
+    try:
+        mx.nd.gather_nd(data, indices2)
+        mx.nd.waitall()
+    except IndexError:
+            # skip errors since the test is supposed to raise error
+            # IndexError: index -5 is out of bounds for axis 1 with size 3
+            pass
+
+    # check if the negative indices are wrapped correctly
+    indices1 = mx.nd.array([[0, 1, -1], [0, 1, -2]])
+    indices2 = mx.nd.array([[0, 1, 1], [0, 1, 1]])
+    data1 = mx.nd.gather_nd(data, indices1)
+    data2 = mx.nd.gather_nd(data, indices2)
+    assert_almost_equal(data1, data2, rtol=1e-5, atol=1e-5)
+
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
         backward_numpy_call, shape, input_low, input_high, rtol, atol,
