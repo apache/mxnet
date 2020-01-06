@@ -833,6 +833,30 @@ def _add_workload_ones_like(array_pool):
     OpArgMngr.add_workload('ones_like', array_pool['4x1'])
 
 
+def _add_workload_atleast_nd():
+    a_0 = np.array(1)
+    b_0 = np.array(2)
+    a_1 = np.array([1, 2])
+    b_1 = np.array([2, 3])
+    a_2 = np.array([[1, 2], [1, 2]])
+    b_2 = np.array([[2, 3], [2, 3]])
+    a_3 = [a_2, a_2]
+    b_3 = [b_2, b_2]
+
+    OpArgMngr.add_workload('atleast_1d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_1d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_1d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_1d', a_3, b_3)
+    OpArgMngr.add_workload('atleast_2d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_2d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_2d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_2d', a_3, b_3)
+    OpArgMngr.add_workload('atleast_3d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_3d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_3d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_3d', a_3, b_3)
+
+
 def _add_workload_prod(array_pool):
     OpArgMngr.add_workload('prod', array_pool['4x1'])
 
@@ -1626,6 +1650,7 @@ def _prepare_workloads():
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
+    _add_workload_atleast_nd()
     _add_workload_prod(array_pool)
     _add_workload_repeat(array_pool)
     _add_workload_reshape()

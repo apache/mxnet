@@ -211,6 +211,30 @@ Let's zoom in to check the time taken by operators
 
 The above picture visualizes the sequence in which the operators were executed and the time taken by each operator.
 
+### Profiling MKLDNN Operators
+Reagrding MKLDNN operators, the library has already provided the internal profiling tool. Firstly, you need set `MKLDNN_VERBOSE=1` to enable internal profiler.
+
+`$ MKLDNN_VERBOSE=1 python my_script.py > mkldnn_verbose.log`
+
+Now, the detailed profiling insights of each mkldnn prmitive are saved into `mkldnn_verbose.log` (like below).
+
+```
+dnnl_verbose,info,DNNL v1.1.2 (commit cb2cc7ac17ff4e2ef50805c7048d33256d82be4d)
+dnnl_verbose,info,Detected ISA is Intel AVX-512 with Intel DL Boost
+dnnl_verbose,exec,cpu,convolution,jit:avx512_common,forward_inference,src_f32::blocked:aBcd16b:f0 wei_f32::blocked:ABcd16b16a:f0 bia_undef::undef::f0 dst_f32::blocked:aBcd16b:f0,,alg:convolution_direct,mb32_ic32oc32_ih256oh256kh3sh1dh0ph1_iw256ow256kw3sw1dw0pw1,20.7539
+```
+
+For example, if you want to calculate the total executing time of `convolution` primitive, you can just run:
+
+`$ cat mkldnn_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+
+Moreover, you can set `MKLDNN_VERBOSE=2` to collect both creating and executing time of each primitive.
+
+`$ cat mkldnn_verbose.log | grep "create,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+
+`$ cat mkldnn_verbose.log | grep "exec,cpu,convolution" | awk 'BEGIN{FS=","} {SUM+=$11} END {print SUM}'`
+
+
 ### Profiling Custom Operators
 Should the existing NDArray operators fail to meet all your model's needs, MXNet supports [Custom Operators](/api/python/docs/tutorials/extend/customop.html) that you can define in Python. In `forward()` and `backward()` of a custom operator, there are two kinds of code: "pure Python" code (NumPy operators included) and "sub-operators" (NDArray operators called within `forward()` and `backward()`). With that said, MXNet can profile the execution time of both kinds without additional setup. Specifically, the MXNet profiler will break a single custom operator call into a pure Python event and several sub-operator events if there are any. Furthermore, all of those events will have a prefix in their names, which is, conveniently, the name of the custom operator you called.
 

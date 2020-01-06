@@ -968,7 +968,7 @@ void SliceOpForward(const nnvm::NodeAttrs& attrs,
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(data.shape_, param.begin, param.end, param.step, &begin, &end, &step);
-    MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         size_t num_threads = out.shape_.FlatTo2D()[0];
         if (std::is_same<xpu, gpu>::value) {
@@ -2252,7 +2252,7 @@ void StackOpForward(const nnvm::NodeAttrs& attrs,
   int axis = CheckAxis(param.axis, outputs[0].ndim());
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DType, {
     std::vector<Tensor<xpu, 3, DType> > data(inputs.size());
     Tensor<xpu, 3, DType> out;
     size_t leading = 1, trailing = 1;
@@ -2286,7 +2286,7 @@ void StackOpBackward(const nnvm::NodeAttrs& attrs,
   int axis = CheckAxis(param.axis, inputs[0].ndim());
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     std::vector<Tensor<xpu, 3, DType> > grad_in(outputs.size());
     Tensor<xpu, 3, DType> grad;
     size_t leading = 1, trailing = 1;
