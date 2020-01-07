@@ -46,18 +46,18 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  explicit CustomContainOpSelector(std::unordered_set<std::string> supportedNodes) :
-    supportedNodes_(supportedNodes) {}
+  explicit CustomContainOpSelector(std::unordered_set<std::string> supported_nodes) :
+    supported_nodes_(supported_nodes) {}
   virtual bool Select(const nnvm::Node &n) {
-    return supportedNodes_.count(n.attrs.name) > 0;
+    return supported_nodes_.count(n.attrs.name) > 0;
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return supportedNodes_.count(new_node.attrs.name) > 0;
+    return supported_nodes_.count(new_node.attrs.name) > 0;
   }
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return supportedNodes_.count(new_node.attrs.name) > 0;
+    return supported_nodes_.count(new_node.attrs.name) > 0;
   }
-  std::unordered_set<std::string> supportedNodes_;
+  std::unordered_set<std::string> supported_nodes_;
 };
 
 /*
@@ -69,25 +69,25 @@ class CustomContainOpSelector: public SubgraphSelector {
 class  CustomSubgraphProperty: public SubgraphProperty {
  public:
   CustomSubgraphProperty() :
-    subgraphProp("error"),
-    callSupportedOps_(nullptr),
-    supportedOps_(nullptr),
-    callAcceptSubgraph_(nullptr),
-    acceptSubgraph_(nullptr),
+    subgraph_prop("error"),
+    call_supported_ops_(nullptr),
+    supported_ops_(nullptr),
+    call_accept_subgraph_(nullptr),
+    accept_subgraph_(nullptr),
     subgraph_op_name("error") {}
-  CustomSubgraphProperty(std::string subgraphProp_name,
-                         partCallSupportedOps_t callSupportedOps,
-                         supportedOps_t supportedOps,
-                         partCallAcceptSubgraph_t callAcceptSubgraph,
-                         acceptSubgraph_t acceptSubgraph,
-                         opCallFree_t callFree,
+  CustomSubgraphProperty(std::string subgraph_prop_name,
+                         partCallSupportedOps_t call_supported_ops,
+                         supportedOps_t supported_ops,
+                         partCallAcceptSubgraph_t call_accept_subgraph,
+                         acceptSubgraph_t accept_subgraph,
+                         opCallFree_t call_free,
                          std::string op_name) :
-    subgraphProp(subgraphProp_name),
-      callSupportedOps_(callSupportedOps),
-      supportedOps_(supportedOps),
-      callAcceptSubgraph_(callAcceptSubgraph),
-      acceptSubgraph_(acceptSubgraph),
-      callFree_(callFree),
+      subgraph_prop(subgraph_prop_name),
+      call_supported_ops_(call_supported_ops),
+      supported_ops_(supported_ops),
+      call_accept_subgraph_(call_accept_subgraph),
+      accept_subgraph_(accept_subgraph),
+      call_free_(call_free),
       subgraph_op_name(op_name) {}
 
   // create custom subgraph property
@@ -97,8 +97,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
 
   void PrePartition(const nnvm::Graph& g,
     const std::vector<std::pair<std::string, std::string>>& options_map) {
-    // clear supportedNodes to remove state from previous calls
-    supportedNodes.clear();
+    // clear supported_nodes to remove state from previous calls
+    supported_nodes.clear();
 
     // remove all graph attrs, some cannot be saved to json
     nnvm::Graph graph = std::move(g);
@@ -128,15 +128,15 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
     }
 
-    CHECK(supportedOps_ != nullptr)
-      << "supportedOps_ is null for " << subgraphProp << std::endl;
-    CHECK(callSupportedOps_ != nullptr)
-      << "callSupportedOps_ is null for " << subgraphProp << std::endl;
+    CHECK(supported_ops_ != nullptr)
+      << "supported_ops_ is null for " << subgraph_prop << std::endl;
+    CHECK(call_supported_ops_ != nullptr)
+      << "call_supported_ops_ is null for " << subgraph_prop << std::endl;
 
     std::string subgraph_json = nnvm::pass::SaveJSON(graph);
-    std::vector<int> supportedNodeIDs(indexed_graph.num_nodes(), 0);
+    std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), 0);
     const char* json = subgraph_json.c_str();
-    int *ids = supportedNodeIDs.data();
+    int *ids = supported_node_IDs.data();
 
     // clear options from previous call
     opt_keys_.clear();
@@ -148,15 +148,15 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       opt_vals_.push_back(options_map_.back().second.c_str());
     }
 
-    CHECK(callSupportedOps_(supportedOps_, json, supportedNodeIDs.size(), ids,
+    CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,
                             opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
-      << "Error calling supportedOps for '" << subgraphProp << "'";
+      << "Error calling supported_ops for '" << subgraph_prop << "'";
 
     const auto& idx = g.indexed_graph();
     // loop and add node names for each supported node ID
-    for (unsigned i = 0; i < supportedNodeIDs.size(); i++) {
-      if (supportedNodeIDs[i]) {
-        supportedNodes.insert(idx[i].source->attrs.name);
+    for (unsigned i = 0; i < supported_node_IDs.size(); i++) {
+      if (supported_node_IDs[i]) {
+        supported_nodes.insert(idx[i].source->attrs.name);
       }
     }
   }
@@ -167,7 +167,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     int num_attr = 0;
     char** attr_keys = nullptr;
     char** attr_vals = nullptr;
-    if (acceptSubgraph_) {
+    if (accept_subgraph_) {
       nnvm::Graph g;
       g.outputs = sym.outputs;
       const auto& idx = g.indexed_graph();
@@ -188,11 +188,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
 
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
-      CHECK(callAcceptSubgraph_(acceptSubgraph_, subgraph_json.c_str(),
+      CHECK(call_accept_subgraph_(accept_subgraph_, subgraph_json.c_str(),
                                 subgraph_id, &accept, opt_keys_.data(),
                                 opt_vals_.data(), opt_keys_.size(),
                                 &attr_keys, &attr_vals, &num_attr))
-        << "Error calling acceptSubgraph for '" << subgraphProp << "'";
+        << "Error calling accept_subgraph for '" << subgraph_prop << "'";
     }
     if (accept) {
       nnvm::NodePtr n = nnvm::Node::Create();
@@ -202,12 +202,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       // set user specified attributes
       for (int i=0; i < num_attr; i++) {
         n->attrs.dict[attr_keys[i]] = attr_vals[i];
-        callFree_(attr_vals[i]);
-        callFree_(attr_keys[i]);
+        call_free_(attr_vals[i]);
+        call_free_(attr_keys[i]);
       }
       // free memory used by custom op to allocate attributes
-      callFree_(attr_vals);
-      callFree_(attr_keys);
+      call_free_(attr_vals);
+      call_free_(attr_keys);
       return n;
     } else {
       return NULL;
@@ -215,16 +215,16 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   }
   // override CreateSubgraphSelector
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<CustomContainOpSelector>(supportedNodes);
+    return std::make_shared<CustomContainOpSelector>(supported_nodes);
   }
 
-  std::string subgraphProp;
-  partCallSupportedOps_t callSupportedOps_;
-  supportedOps_t supportedOps_;
-  partCallAcceptSubgraph_t callAcceptSubgraph_;
-  acceptSubgraph_t acceptSubgraph_;
-  opCallFree_t callFree_;
-  std::unordered_set<std::string> supportedNodes;
+  std::string subgraph_prop;
+  partCallSupportedOps_t call_supported_ops_;
+  supportedOps_t supported_ops_;
+  partCallAcceptSubgraph_t call_accept_subgraph_;
+  acceptSubgraph_t accept_subgraph_;
+  opCallFree_t call_free_;
+  std::unordered_set<std::string> supported_nodes;
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
