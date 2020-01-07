@@ -99,14 +99,11 @@ def get_cuda_arch(arch):
     if len(arch) == 0:
         return None
 
-    # the arch string is of format '-gencode;arch=compute_XX,code=sm_XX'
-    # this format is computed by CMake CUDA_SELECT_NVCC_ARCH_FLAGS
-    if arch.startswith('-gencode;'):
-        return arch.split(';')
-
-    # the arch string contains '-arch=sm_xx'
+    # an example of arch string,
+    # -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
+    # -gencode;arch=compute_75,code=[sm_75,compute_75] --fatbin-options -compress-all
     archs = []
-    flags = arch.split()
+    flags = arch.replace("-gencode;", "-gencode ").split()
     for flag in flags:
         if flag.startswith('-gencode') or flag.startswith('arch='):
             archs.append(flag)
