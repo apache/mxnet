@@ -1210,9 +1210,6 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
     // skip to copy to itself
     return;
   }
-  CHECK(from.dtype() == to.dtype())
-      << "operands dtype mismatch "
-      << "from.dtype = " << from.dtype() << " to.dtype=" << to.dtype();
   CHECK(from.shape() == to.shape())
       << "operands shape mismatch "
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
