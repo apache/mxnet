@@ -18,7 +18,6 @@
 """Util functions with broadcast."""
 
 from ..ndarray.ndarray import _get_broadcast_shape
-from . import _op as _mx_np_op
 from ..ndarray import numpy as _mx_nd_np
 
 
