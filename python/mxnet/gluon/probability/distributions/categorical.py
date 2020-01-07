@@ -56,16 +56,10 @@ class Categorical(Distribution):
         """
         return self._logit if self._logit is not None else prob2logit(self._prob, False, self.F)
 
-    @property
-    def mean(self):
-        pass
-
-    @property
-    def variance(self):
-        pass
-
     def log_prob(self, value):
-        pass
+        logit = self.logit
+        return (logit * value).sum(-1)
 
     def sample(self, size):
-        pass
+        F = self.F
+        return F.np.random.multinomial(1, self.prob, size)
