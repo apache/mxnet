@@ -1274,36 +1274,22 @@ class LAMB(Optimizer):
                   'rescale_grad': self.rescale_grad}
 
         if self.aggregate_num <= 1 or not isinstance(index, (tuple, list)):
-            if not isinstance(index, (tuple, list)):
-              assert(isinstance(weight, NDArray))
-              assert(isinstance(grad, NDArray))
-              self._update_count(index)
-              lr = self._get_lr(index)
-              wd = self._get_wd(index)
-              t = self._index_update_count[index]
-              weight_ptr = weight
-              grad_ptr = grad
-              if multi_precision:
-                mean, var = state[1]
-                weight32 = state[0]
-              else:
-                mean, var = state
-            else:
+            if isinstance(index, (tuple, list)):
               assert(len(index)==self.aggregate_num)
-              assert(isinstance(weight[0], NDArray))
-              assert(isinstance(grad[0], NDArray))
-              self._update_count(index[0])
-              lr = self._get_lr(index[0])
-              wd = self._get_wd(index[0])
-              t = self._index_update_count[index[0]]
-              weight_ptr = weight[0]
-              grad_ptr = grad[0]
-              if multi_precision:
-                mean, var = state[0][1]
-                weight32 = state[0][0]
-              else:
-                mean, var = state[0]
-
+              index, weight, grad, state = index[0], weight[0], grad[0], state[0]
+            assert(isinstance(weight, NDArray))
+            assert(isinstance(grad, NDArray))
+            self._update_count(index)
+            lr = self._get_lr(index)
+            wd = self._get_wd(index)
+            t = self._index_update_count[index]
+            weight_ptr = weight
+            grad_ptr = grad
+            if multi_precision:
+              mean, var = state[1]
+              weight32 = state[0]
+            else:
+              mean, var = state
             kwargs['t'] = t
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
@@ -1320,7 +1306,6 @@ class LAMB(Optimizer):
                 mp_lamb_update_phase2(weight_ptr, g, r_1, r_2, weight32, lr=lr, out=weight_ptr, **kwargs)
             else:
                 g = lamb_update_phase1(weight_ptr, grad_ptr, mean, var, wd=wd, **kwargs)
-
                 kwargs = {}
                 if self.lower_bound:
                     kwargs['lower_bound'] = self.lower_bound
