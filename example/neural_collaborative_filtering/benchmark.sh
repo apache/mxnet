@@ -102,13 +102,17 @@ for((i=0;i<$INS;i++));
 do
   ((a=$i*$CORES))
   ((b=$a+$CORES-1))
-  memid=$((b/CORES_PER_NUMA))
+  memid=$((b/CORES_PER_NUMA % NUM_NUMA_NODE))
   LOG=NCF_$i.log
-  echo "  $i instance use $a-$b cores with $LOG"
+  echo "  Instance $i use $a-$b cores with $LOG"
   KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0 \
   OMP_NUM_THREADS=$CORES \
   numactl --physcpubind=$a-$b --membind=$memid python ncf.py --batch-size=$BS --dataset=$DATASET --epoch=$EPOCH --benchmark --prefix=$PREFIX 2>&1 | tee $LOG &
 done
 wait
 
-grep speed NCF_*.log | awk '{ sum += $(NF-1) }; END { print "Total Performance is " sum " samples/sec"}'
+sps=`grep speed NCF_*.log | awk '{ sum += $(NF-1) }; END { print sum }'`
+latency=$(awk "BEGIN {printf \"%.2f\", 1000*${BS}*${INS}/${sps}}")
+echo "overall throughput (samples/sec): $sps"
+echo "latency per batch per instance (ms): $latency"
+echo "benchmark finish:)"
