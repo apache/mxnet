@@ -268,6 +268,8 @@ To reduce the communication cost, we can consider:
 - Exploring different `--kv-store` options.
 - Increasing the batch size to improve the computation to communication ratio.
 
+Finally, MXNet is integrated with other distributed training frameworks, including [horovod](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training-horovod) and [BytePS](https://github.com/bytedance/byteps#use-byteps-in-your-code).
+
 ## Input Data
 
 To make sure you're handling input data in a reasonable way consider the following:
@@ -284,7 +286,7 @@ For example, the safe batch size for CIFAR 10 is approximately 200, while for Im
 
 ## Profiler
 
-As of v0.9.1 (with the NNVM merge), _MXNet_ has a built-in profiler
+_MXNet_ has a built-in profiler
 that gives detailed information about execution time at the symbol level.
 This feature complements general profiling tools like _nvprof_ and _gprof_
 by summarizing at the operator level, instead of a function, kernel, or instruction level.
