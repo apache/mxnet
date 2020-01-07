@@ -3184,9 +3184,10 @@ def test_reqs_switching_training_inference():
 
 @with_seed()
 def test_export_symbolblock_change_dtype():
+    ctx = mx.cpu()
     tmp = tempfile.mkdtemp()
     tmpfile = os.path.join(tmp, 'test_symbolblock')
-    alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu(),
+    alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=ctx,
                                              prefix='model_')
     inputs = mx.sym.var('data')
     out = alexnet(inputs)
@@ -3195,14 +3196,14 @@ def test_export_symbolblock_change_dtype():
     internals['model_dense1_relu_fwd_output']]
     # Create SymbolBlock that shares parameters with alexnet
     feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
-    x = mx.nd.random.normal(shape=(16, 3, 224, 224))
+    x = mx.nd.random.normal(shape=(16, 3, 224, 224), ctx=ctx)
     out = feat_model(x)
     # Save the model
     feat_model.export(tmpfile, 0)
     # Import the symbolic model for inference
     sym, _, _ = mx.model.load_checkpoint(tmpfile, 0)
     # Change the type of data to float16
-    e = sym.simple_bind(ctx=mx.cpu(), data=(1,3,224,224), type_dict={'data': 'float16'})
+    e = sym.simple_bind(ctx=ctx, data=(1,3,224,224), type_dict={'data': 'float16'})
 
 if __name__ == '__main__':
     import nose
