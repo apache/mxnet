@@ -741,7 +741,7 @@ int MXLoadLib(const char *path) {
                      << "' custom partitioner, no strategies defined";
     std::string name_str(name);
     LOG(INFO) << "\tPartitioner[" << i << "] " << name;
-    // MXNET_REGISTER_SUBGRAPH_BACKEND(customBackend);
+
     mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_BACKEND__(name);
 
     for (int j = 0; j < count; j++) {
