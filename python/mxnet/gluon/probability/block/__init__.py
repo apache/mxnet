@@ -18,3 +18,7 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Stochastic block."""
+
+from .BayesianDense import *
+
+from StochasticBlock import *

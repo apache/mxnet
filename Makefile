@@ -94,6 +94,8 @@ WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
+# disable stack trace in exception by default.
+CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -619,7 +621,7 @@ lib/libtvm_runtime.so:
 	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
-TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so --config $(ROOTDIR)/lib/tvmop.conf
+TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib --config $(ROOTDIR)/lib/tvmop.conf
 ifneq ($(CUDA_ARCH),)
 	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
 endif

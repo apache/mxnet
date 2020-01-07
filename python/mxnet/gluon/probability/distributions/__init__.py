@@ -25,3 +25,10 @@ from .exp_family import *
 
 from .normal import *
 
+from .bernoulli import *
+
+from .categorical import *
+
+from .divergence import *
+
+from .utils import *

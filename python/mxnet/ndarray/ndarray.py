@@ -110,6 +110,8 @@ _GRAD_REQ_MAP = {
 _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
+_NDARRAY_EMPTY_TUPLE_INDEXING = 2
+_NDARRAY_BOOLEAN_INDEXING = 3
 
 # Caching whether MXNet was built with INT64 support or not
 _INT64_TENSOR_SIZE_ENABLED = None
@@ -2951,7 +2953,6 @@ def indexing_key_expand_implicit_axes(key, shape):
     """
     if not isinstance(key, tuple):
         key = (key,)
-
     # We need to loop explicitly since tuple functions like `index()` or
     # `count()` use `==` internally, which doesn't play well with fancy
     # indexing.
@@ -2968,7 +2969,12 @@ def indexing_key_expand_implicit_axes(key, shape):
         else:
             if idx is None:
                 num_none += 1
-            nonell_key.append(idx)
+            if isinstance(idx, NDArrayBase) and idx.ndim == 0 and idx.dtype != np.bool_:
+                # This handles ndarray of zero dim. e.g array(1)
+                # while advoid converting zero dim boolean array
+                nonell_key.append(idx.item())
+            else:
+                nonell_key.append(idx)
 
     nonell_key = tuple(nonell_key)
 
@@ -3040,23 +3046,32 @@ def _is_advanced_index(idx):
 def get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
     assert isinstance(key, tuple)
+    num_bools = 0
+    basic_indexing = True
 
     for idx in key:
         if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+            if isinstance(idx, tuple) and len(idx) == 0:
+                return _NDARRAY_EMPTY_TUPLE_INDEXING
             if getattr(idx, 'dtype', None) == np.bool_:
-                raise TypeError('ndarray indexing does not support boolean ndarray'
-                                ' in a tuple of indices. Only single boolean ndarray'
-                                ' as an index is supported.')
-            return _NDARRAY_ADVANCED_INDEXING
+                num_bools += 1
+            basic_indexing = False
         elif sys.version_info[0] > 2 and isinstance(idx, range):
-            return _NDARRAY_ADVANCED_INDEXING
+            basic_indexing = False
         elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
             raise ValueError(
                 'NDArray does not support slicing with key {} of type {}.'
                 ''.format(idx, type(idx))
             )
-
-    return _NDARRAY_BASIC_INDEXING
+    if basic_indexing and num_bools == 0:
+        return _NDARRAY_BASIC_INDEXING
+    elif not basic_indexing and num_bools == 0:
+        return _NDARRAY_ADVANCED_INDEXING
+    elif num_bools == 1:
+        return _NDARRAY_BOOLEAN_INDEXING
+    else:
+        raise TypeError('ndarray indexing does not more than one boolean ndarray'
+                        ' in a tuple of complex indices.')
 
 
 def _get_index_range(start, stop, length, step=1):

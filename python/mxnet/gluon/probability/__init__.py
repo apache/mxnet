@@ -19,4 +19,8 @@
 # pylint: disable=wildcard-import
 """Probability module"""
 
+from .block import *
+
 from .distributions import *
+
+from transformation import *

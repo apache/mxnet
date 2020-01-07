@@ -19,21 +19,6 @@
 # pylint: disable=wildcard-import
 """Base distribution class"""
 __all__ = ['Distribution']
-import mxnet as mx
-from mxnet import np, npx
-
-
-def _getF(*params):
-    r"""
-    Get running mode from parameters,
-    return mx.ndarray if inputs are python scalar.
-    """
-    for param in params:
-        if isinstance(param, np.ndarray):
-            return mx.ndarray
-        elif isinstance(param, mx.symbol.numpy._Symbol):
-            return mx.symbol.numpy._Symbol
-    return mx.ndarray
 
 
 class Distribution(object):
@@ -50,6 +35,7 @@ class Distribution(object):
     has_grad = False
 
     def __init__(self, F=None):
+        self._kl_dict = {}
         self.F = F
 
     def log_prob(self, x):
@@ -64,7 +50,7 @@ class Distribution(object):
         """
         raise NotImplementedError
 
-    def sample(self, shape):
+    def sample(self, size=None):
         r"""
         Generates a `shape` shaped sample.
         """
@@ -73,6 +59,27 @@ class Distribution(object):
     def sample_n(self, n):
         r"""
         Generate samples of (n + parameter_shape) from the distribution.
+        """
+        raise NotImplementedError
+
+    def broadcast_to(self, batch_shape):
+        """
+        Returns a new distribution instance with parameters expanded
+        to `batch_shape`. This method calls `numpy.broadcast_to` on
+        the parameters.
+
+        Parameters
+        ----------
+        batch_shape : Tuple
+            The batch shape of the desired distribution.
+
+        """
+        raise NotImplementedError
+
+    def enumerate_support(self):
+        r"""
+        Returns a tensor that contains all values supported
+        by a discrete distribution.
         """
         raise NotImplementedError
 

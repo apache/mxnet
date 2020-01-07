@@ -29,8 +29,9 @@ The following tutorials will help you learn export MXNet models.
 
    .. card::
       :title: Export ONNX Models
+      :link: export/onnx.html
 
-      COMING SOON
+      Export your MXNet model to the Open Neural Exchange Format
 
    .. card::
       :title: Export with GluonCV

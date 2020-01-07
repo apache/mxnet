@@ -26,8 +26,85 @@ function test_num_gpus()
   @test num_gpus() >= 0
 end
 
+function test_context_macro()
+  @info "Context::@context"
+
+  @context mx.CPU 42 begin
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.CPU
+    @test ctx.device_id   == 42
+
+    @context mx.GPU 24 begin
+      ctx = mx.current_context()
+      @test ctx.device_type == mx.GPU
+      @test ctx.device_id   == 24
+    end
+
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.CPU
+    @test ctx.device_id   == 42
+  end
+
+  function f()
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.GPU
+    @test ctx.device_id   == 123
+  end
+
+  @context mx.GPU 123 begin
+    f()
+  end
+
+  @context mx.GPU begin
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.GPU
+    @test ctx.device_id   == 0
+  end
+
+  @context mx.CPU begin
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.CPU
+    @test ctx.device_id   == 0
+  end
+
+  @info "Context::@gpu"
+  @gpu 123 f()
+  @gpu begin
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.GPU
+    @test ctx.device_id   == 0
+  end
+  let n = 321
+    @gpu n begin
+      ctx = mx.current_context()
+      @test ctx.device_type == mx.GPU
+      @test ctx.device_id   == 321
+    end
+  end
+
+  @info "Context::@cpu"
+  @cpu 123 begin
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.CPU
+    @test ctx.device_id   == 123
+  end
+  @cpu begin
+    ctx = mx.current_context()
+    @test ctx.device_type == mx.CPU
+    @test ctx.device_id   == 0
+  end
+  let n = 321
+    @cpu n begin
+      ctx = mx.current_context()
+      @test ctx.device_type == mx.CPU
+      @test ctx.device_id   == 321
+    end
+  end
+end
+
 @testset "Context Test" begin
   test_num_gpus()
+  test_context_macro()
 end
 
 

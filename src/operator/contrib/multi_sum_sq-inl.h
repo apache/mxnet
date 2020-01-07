@@ -21,7 +21,7 @@
  *  Copyright (c) 2019 by Contributors
  * \file multi_l2_norm-inl.h
  * \brief vectorized L2 norm over multiple arrays operators
- * \author Clement Fuji Tsang, Andrei Ivanov
+ * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez
  */
 
 
@@ -31,6 +31,10 @@
 #include <mxnet/operator.h>
 #include <vector>
 #include "../operator_common.h"
+
+namespace multi_sum_sq {
+enum MultiSumSqUpdateResource {kTempSpace};
+}  // namespace multi_sum_sq
 
 namespace mxnet {
 namespace op {
@@ -80,7 +84,7 @@ inline bool MultiSumSqType(const NodeAttrs& attrs,
 
 template<typename xpu>
 void MultiSumSqRun(const std::vector<TBlob> &inputs, int nInputs,
-                   float *out_ptr, mshadow::Stream<xpu> *s);
+                   float *out_ptr, const OpContext &ctx);
 
 template<typename xpu>
 void MultiSumSq(const nnvm::NodeAttrs& attrs,
@@ -91,7 +95,7 @@ void MultiSumSq(const nnvm::NodeAttrs& attrs,
   auto s = ctx.get_stream<xpu>();
   const auto& p = dmlc::get<MultiSumSqParam>(attrs.parsed);
   float* out_ptr = outputs[0].FlatTo2D<xpu, float>(s).dptr_;
-  MultiSumSqRun<xpu>(inputs, p.num_arrays, out_ptr, s);
+  MultiSumSqRun<xpu>(inputs, p.num_arrays, out_ptr, ctx);
 }
 
 }  // namespace op

@@ -36,18 +36,19 @@ try:
 except ImportError:
     from builtins import slice as py_slice
 
-__all__ = ['zeros', 'ones', 'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
+__all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'empty_like', 'bitwise_not', 'invert', 'delete',
+           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
-           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'histogram', 'eye',
-           'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'column_stack', 'dstack', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax',
-           'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman',
-           'flip', 'around', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril',
-           'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater', 'less',
-           'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'shares_memory',
-           'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where']
+           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'eye', 'linspace',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
+           'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
+           'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
+           'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round', 'hypot', 'bitwise_xor', 'bitwise_or',
+           'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'true_divide', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -490,7 +491,7 @@ class _Symbol(Symbol):
         The arguments are the same as for :py:func:`argsort`, with
         this array as data.
         """
-        raise argsort(self, axis=axis, kind=kind, order=order)
+        return argsort(self, axis=axis, kind=kind, order=order)
 
     def argmax_channel(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`argmax_channel`.
@@ -664,13 +665,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute norm')
 
-    def round(self, *args, **kwargs):
+    def round(self, decimals=0, out=None, **kwargs): # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`round`.
 
         The arguments are the same as for :py:func:`round`, with
         this array as data.
         """
-        raise NotImplementedError
+        return round(self, decimals=decimals, out=out, **kwargs)
 
     def rint(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rint`.
@@ -1040,6 +1041,98 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
 
 
 @set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def invert(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+    >>> x = np.invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def bitwise_not(x, out=None, **kwargs):
+    r"""
+    Compute bit-wise inversion, or bit-wise NOT, element-wise.
+    Computes the bit-wise NOT of the underlying binary representation of
+    the integers in the input arrays. This ufunc implements the C/Python
+    operator ``~``.
+    Parameters
+    ----------
+    x : array_like
+        Only integer and boolean types are handled.
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    out : ndarray or scalar
+        Result.
+        This is a scalar if `x` is a scalar.
+    See Also
+    --------
+    bitwise_and, bitwise_or, bitwise_xor
+    logical_not
+    binary_repr :
+        Return the binary representation of the input number as a string.
+    Examples
+    --------
+    We've seen that 13 is represented by ``00001101``.
+    The invert or bit-wise NOT of 13 is then:
+    >>> x = np.invert(np.array(13, dtype=np.uint8))
+    >>> x
+    242
+    >>> np.binary_repr(x, width=8)
+    '11110010'
+    Notes
+    -----
+    `bitwise_not` is an alias for `invert`:
+    >>> np.bitwise_not is np.invert
+    True
+    """
+    return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
 def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
     """
     Return a new array of given shape and type, filled with `fill_value`.
@@ -1092,6 +1185,135 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         ctx = current_context()
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return a full array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol
+          Array `fill_value` with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full : Return a new array of given shape filled with value.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=fill_value, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def zeros_like(a, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return an array of zeros with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol
+        Array of zeros with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    zeros : Return a new array of given shape filled with zeros.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=0, ctx=ctx, dtype=dtype, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def ones_like(a, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
+    """
+    Return an array of ones with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The shape and data-type of `a` define these same attributes of
+        the returned array.
+    fill_value : scalar
+        Fill value.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+        Temporarily do not support boolean type.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    ctx: to specify the device, e.g. the i-th GPU.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol
+          Array of ones with the same shape and type as `a`.
+
+    See Also
+    --------
+    empty_like : Return an empty array with shape and type of input.
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    zeros : Return a new array of given shape filled with zeros.
+    """
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=1, ctx=ctx, dtype=dtype, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -1495,6 +1717,67 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     if ctx is None:
         ctx = current_context()
     return _npi.eye(N, M, k, ctx, dtype)
+
+
+@set_module('mxnet.symbol.numpy')
+def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
+    """
+    Return a new array with the same shape and type as a given array.
+
+    Parameters
+    ----------
+    prototype : _Symbol
+        The shape and data-type of `prototype` define these same attributes
+        of the returned array.
+    dtype : data-type, optional
+        Overrides the data type of the result.
+    order : {'C'}, optional
+        Whether to store multidimensional data in C- or Fortran-contiguous
+        (row- or column-wise) order in memory. Currently only supports C order.
+    subok : bool, optional.
+        If True, then the newly created array will use the sub-class
+        type of 'a', otherwise it will be a base-class array. Defaults
+        to False.
+        (Only support False at this moment)
+    shape : int or sequence of ints, optional.
+        Overrides the shape of the result. If order='K' and the number of
+        dimensions is unchanged, will try to keep order, otherwise,
+        order='C' is implied.
+        (This parameter is not supported at this moment)
+
+    Returns
+    -------
+    out : _Symbol
+        Array of uninitialized (arbitrary) data with the same
+        shape and type as `prototype`.
+
+    See Also
+    --------
+    ones_like : Return an array of ones with shape and type of input.
+    zeros_like : Return an array of zeros with shape and type of input.
+    full_like : Return a new array with shape of input filled with value.
+    empty : Return a new uninitialized array.
+
+    Notes
+    -----
+    This function does *not* initialize the returned array; to do that use
+    `zeros_like` or `ones_like` instead.  It may be marginally faster than
+    the functions that do set the array values.
+    """
+    dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
+                  _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
+                  _np.float64:'float64', _np.bool_:'bool'}
+    if order != 'C':
+        raise NotImplementedError("Only support C order at this moment")
+    if subok:
+        raise NotImplementedError("Creating array by using sub-class is not supported at this moment")
+    if shape is not None:
+        raise NotImplementedError("Parameter 'shape' is not supported at this moment")
+    try:
+        dtype = dtype if isinstance(dtype, str) else dtype_list[dtype]
+    except:
+        raise NotImplementedError("Do not support this dtype at this moment")
+    return _npi.empty_like_fallback(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -2939,6 +3222,45 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
 
 
+@set_module('mxnet.symbol.numpy')
+def delete(arr, obj, axis=None):
+    """
+    Return a new array with sub-arrays along an axis deleted. For a one
+    dimensional array, this returns those entries not returned by
+    `arr[obj]`.
+
+    Parameters
+    ----------
+    arr : _Symbol
+      Input array.
+    obj : slice, scaler or _Symbol of ints
+      Indicate indices of sub-arrays to remove along the specified axis.
+    axis : scaler, optional
+      The axis along which to delete the subarray defined by `obj`.
+      If `axis` is None, `obj` is applied to the flattened array.
+
+    Returns
+    -------
+    out : _Symbol
+        A copy of `arr` with the elements specified by `obj` removed. Note
+        that `delete` does not occur in-place. If `axis` is None, `out` is
+        a flattened array.
+    """
+    if not isinstance(arr, Symbol):
+        raise TypeError("'arr' can not support type {}".format(str(type(arr))))
+    if isinstance(obj, slice):
+        start = obj.start
+        stop = obj.stop
+        step = 1 if obj.step is None else obj.step
+        return _npi.delete(arr, start=start, stop=stop, step=step, axis=axis)
+    elif isinstance(obj, integer_types):
+        return _npi.delete(arr, int_ind=obj, axis=axis)
+    elif isinstance(obj, Symbol):
+        return _npi.delete(arr, obj, axis=axis)
+    else:
+        raise TypeError("'obj' can not support type {}".format(str(type(obj))))
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def split(ary, indices_or_sections, axis=0):
@@ -2982,6 +3304,54 @@ def split(ary, indices_or_sections, axis=0):
     else:
         raise ValueError('indices_or_sections must either int or tuple / list / set of ints')
     ret = _npi.split(ary, indices, axis, False, sections)
+    return ret
+# pylint: enable=redefined-outer-name
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def array_split(ary, indices_or_sections, axis=0):
+    """Split an array into multiple sub-arrays.
+
+    If `indices_or_sections` is an integer, N, the array will be divided
+    into N equal arrays along `axis`.  If such a split is not possible,
+    an array of length l that should be split into n sections, it returns
+    l % n sub-arrays of size l//n + 1 and the rest of size l//n.
+
+    If `indices_or_sections` is a 1-D array of sorted integers, the entries
+        indicate where along `axis` the array is split.  For example,
+        ``[2, 3]`` would, for ``axis=0``, result in
+          - ary[:2]
+          - ary[2:3]
+          - ary[3:]
+    If an index exceeds the dimension of the array along `axis`,
+    an empty sub-array is returned correspondingly.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D Python tuple, list or set.
+        Param used to determine the number and size of the subarray.
+    axis : int, optional
+        The axis along which to split, default is 0.
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple / list / set of ints')
+    ret = _npi.split(ary, indices, axis, False, sections)
+    if not isinstance(ret, list):
+        return [ret]
     return ret
 # pylint: enable=redefined-outer-name
 
@@ -3507,6 +3877,96 @@ def argmin(a, axis=None, out=None):
 
     """
     return _npi.argmin(a, axis=axis, keepdims=False, out=out)
+
+
+def average(a, axis=None, weights=None, returned=False, out=None):
+    """
+    Compute the weighted average along the specified axis.
+
+    Parameters
+    --------
+    a : _Symbol
+        Array containing data to be averaged.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which to average a.
+        The default, axis=None, will average over
+        all of the elements of the input array.
+        If axis is negative it counts from the last to the first axis.
+        New in version 1.7.0.
+        If axis is a tuple of ints, averaging is
+        performed on all of the axes specified in the tuple
+        instead of a single axis or all the axes as before.
+    weights : _Symbol, optional
+        An array of weights associated with the values in a, must be the same dtype with a.
+        Each value in a contributes to the average according to its associated weight.
+        The weights array can either be 1-D (in which case its length must be
+        the size of a along the given axis) or of the same shape as a.
+        If weights=None, then all data in a are assumed to have a weight equal to one.
+        The 1-D calculation is: avg = sum(a * weights) / sum(weights)
+        The only constraint on weights is that sum(weights) must not be 0.
+    returned : bool, optional
+        Default is False.
+        If True, the tuple (average, sum_of_weights) is returned,
+        otherwise only the average is returned.
+        If weights=None, sum_of_weights is equivalent to
+        the number of elements over which the average is taken.
+    out : _Symbol, optional
+        If provided, the calculation is done into this array.
+
+    Returns
+    --------
+    retval, [sum_of_weights] : _Symbol
+        Return the average along the specified axis.
+        When returned is True, return a tuple with the average as the first element
+        and the sum of the weights as the second element. sum_of_weights is of the same type as retval.
+        If a is integral, the result dtype will be float32, otherwise it will be the same as dtype of a.
+
+    Raises
+    --------
+        MXNetError
+        - When all weights along axis sum to zero.
+        - When the length of 1D weights is not the same as the shape of a along axis.
+        - When given 1D weights, the axis is not specified or is not int.
+        - When the shape of weights and a differ, but weights are not 1D.
+
+    See also
+    --------
+        mean
+
+    Notes
+    --------
+    This function differs from the original `numpy.average`
+    <https://numpy.org/devdocs/reference/generated/numpy.average.html>`_ in
+    the following way(s):
+
+    - Does not guarantee the same behavior with numpy when given float16 dtype and overflow happens
+    - Does not support complex dtype
+    - The dtypes of a and weights must be the same
+    - Integral a results in float32 returned dtype, not float64
+
+    Examples
+    --------
+    >>> data = np.arange(1, 5)
+    >>> data
+    array([1., 2., 3., 4.])
+    >>> np.average(data)
+    array(2.5)
+    >>> np.average(np.arange(1, 11), weights=np.arange(10, 0, -1))
+    array(4.)
+    >>> data = np.arange(6).reshape((3,2))
+    >>> data
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+    >>> weights = np.array([0.25, 0.75])
+    array([0.25, 0.75])
+    >>> np.average(data, axis=1, weights=weights)
+    array([0.75, 2.75, 4.75])
+    """
+    if weights is None:
+        return _npi.average(a, axis=axis, weights=None, returned=returned, weighted=False, out=out)
+    else:
+        return _npi.average(a, axis=axis, weights=weights, returned=returned, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -4122,6 +4582,54 @@ def flip(m, axis=None, out=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def flipud(m):
+    r"""
+    flipud(*args, **kwargs)
+
+    Flip array in the up/down direction.
+
+    Flip the entries in each column in the up/down direction.
+    Rows are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array.
+
+    Returns
+    -------
+    out : array_like
+        A view of `m` with the rows reversed.  Since a view is
+        returned, this operation is :math:`\mathcal O(1)`.
+    """
+    return flip(m, 0)
+
+
+@set_module('mxnet.symbol.numpy')
+def fliplr(m):
+    r"""
+    fliplr(*args, **kwargs)
+
+    Flip array in the left/right direction.
+
+    Flip the entries in each row in the left/right direction.
+    Columns are preserved, but appear in a different order than before.
+
+    Parameters
+    ----------
+    m : array_like
+        Input array, must be at least 2-D.
+
+    Returns
+    -------
+    f : ndarray
+        A view of `m` with the columns reversed.  Since a view
+        is returned, this operation is :math:`\mathcal O(1)`.
+    """
+    return flip(m, 1)
+
+
+@set_module('mxnet.symbol.numpy')
 def around(x, decimals=0, out=None, **kwargs):
     r"""
     around(x, decimals=0, out=None)
@@ -4155,6 +4663,24 @@ def around(x, decimals=0, out=None, **kwargs):
 
         - Cannot cast type automatically. Dtype of `out` must be same as the expected one.
         - Cannot support complex-valued number.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def round(x, decimals=0, out=None, **kwargs):
+    r"""
+    round_(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
     """
     if isinstance(x, numeric_types):
         return _np.around(x, decimals, **kwargs)
@@ -5198,6 +5724,40 @@ def load_json(json_str):
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateFromJSON(c_str(json_str), ctypes.byref(handle)))
     return _Symbol(handle)
+
+
+@set_module('mxnet.symbol.numpy')
+def bincount(x, weights=None, minlength=0):
+    """
+    Count number of occurrences of each value in array of non-negative ints.
+
+    Parameters
+    ----------
+    x : _Symbol
+        input data
+    weights: _Symbol
+        input weigths same shape as x. (Optional)
+    minlength: int
+        A minimum number of bins for the output. (Optional)
+
+    Returns
+    --------
+    out : _Symbol
+        the result of binning the input data. The length of out is equal to amax(x)+1.
+
+    Raises:
+    --------
+    Value Error
+        If the input is not 1-dimensional, or contains elements with negative values,
+        or if minlength is negative
+    TypeError
+        If the type of the input is float or complex.
+    """
+    if minlength < 0:
+        raise ValueError("Minlength value should greater than 0")
+    if weights is None:
+        return _npi.bincount(x, minlength=minlength, has_weights=False)
+    return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
 
 
 _set_np_symbol_class(_Symbol)
