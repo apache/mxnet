@@ -19,7 +19,7 @@
 # pylint: disable=wildcard-import
 """Distribution utilities"""
 __all__ = ['getF', 'prob2logit', 'logit2prob']
-from .... import ndarray, symbol, numpy
+from .... import nd, sym, np
 
 
 def getF(*params):
@@ -33,11 +33,11 @@ def getF(*params):
     """
     # TODO: Raise exception when params types are not consistent, i.e. mixed ndarray and symbols.
     for param in params:
-        if isinstance(param, numpy.ndarray):
-            return ndarray
-        elif isinstance(param, symbol.numpy._Symbol):
-            return symbol.numpy._Symbol
-    return ndarray
+        if isinstance(param, np.ndarray):
+            return nd
+        elif isinstance(param, sym.numpy._Symbol):
+            return sym.numpy._Symbol
+    return nd
 
 
 def _clip_prob(prob, F):
