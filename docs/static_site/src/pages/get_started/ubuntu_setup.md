@@ -82,7 +82,7 @@ On Ubuntu versions 16.04 or later, you need the following dependencies:
 ```bash
     sudo apt-get update
     sudo apt-get install -y build-essential git ninja-build ccache python3-pip libopenblas-dev libopencv-dev
-    pip install --user --upgrade cmake  # Instead of using pip, you could also manually install cmake from https://cmake.org
+    pip3 install --user --upgrade "cmake>=3.13.2"  # Instead of using pip, you could also manually install cmake from https://cmake.org
 ```
 
 Instead of `libopenblas-dev` you may also choose a different math library.
@@ -109,7 +109,7 @@ For a CPU-only build with OpenBLAS math library run:
 ```bash
     rm -rf build
     mkdir -p build && cd build
-    cmake -GNinja \
+    ~/.local/bin/cmake -GNinja \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -129,7 +129,7 @@ respectively. Then run:
 ```bash
     rm -rf build
     mkdir -p build && cd build
-    cmake -GNinja \
+    ~/.local/bin/cmake -GNinja \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -146,7 +146,7 @@ For a GPU-enabled build make sure you have installed the
 ```bash
     rm -rf build
     mkdir -p build && cd build
-    cmake -GNinja \
+    ~/.local/bin/cmake -GNinja \
         -DUSE_CUDA=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -188,7 +188,7 @@ To install the MXNet Python binding navigate to the root of the MXNet folder the
 
 ```bash
 $ cd python
-$ pip install -e .
+$ pip install --user -e .
 ```
 
 Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
@@ -198,8 +198,7 @@ Note that the `-e` flag is optional. It is equivalent to `--editable` and means 
 You may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
 
 ```bash
-sudo pip install graphviz==0.8.4 \
-                 jupyter
+pip install --user graphviz==0.8.4 jupyter
 ```
 <hr>
 
