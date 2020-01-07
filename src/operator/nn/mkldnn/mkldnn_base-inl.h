@@ -132,9 +132,12 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
-static inline bool SupportMKLDNNRNN(const NDArray &input) {
-  int ndim = input.shape().ndim();
-  return (input.dtype() == mshadow::kFloat32) && (ndim == 3);
+static inline bool SupportMKLDNNRnn(const NDArray &input) {
+  if (input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 3
+      && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+    return true;
+  }
+  return false;
 }
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
