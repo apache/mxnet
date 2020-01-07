@@ -32,17 +32,6 @@ COPY install/ubuntu_python.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 
-COPY install/ubuntu_scala.sh /work/
-COPY install/sbt.gpg /work/
-RUN /work/ubuntu_scala.sh
-
-COPY install/ubuntu_r.sh /work/
-COPY install/r.gpg /work/
-RUN /work/ubuntu_r.sh
-
-COPY install/ubuntu_perl.sh /work/
-RUN /work/ubuntu_perl.sh
-
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 
@@ -52,25 +41,15 @@ RUN /work/ubuntu_tvm.sh
 COPY install/ubuntu_llvm.sh /work/
 RUN /work/ubuntu_llvm.sh
 
-COPY install/ubuntu_caffe.sh /work/
-RUN /work/ubuntu_caffe.sh
-
-COPY install/ubuntu_onnx.sh /work/
-RUN /work/ubuntu_onnx.sh
-
-COPY install/ubuntu_docs.sh /work/
-COPY install/requirements /work/
-RUN /work/ubuntu_docs.sh
-
-COPY install/ubuntu_tutorials.sh /work/
-RUN /work/ubuntu_tutorials.sh
-
 COPY install/ubuntu_nightly_tests.sh /work/
 RUN /work/ubuntu_nightly_tests.sh
 
 ENV CUDNN_VERSION=7.6.0.64
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
+
+COPY install/ubuntu_install_mxnet.sh /work/
+RUN /work/ubuntu_install_mxnet.sh
 
 ARG USER_ID=0
 ARG GROUP_ID=0

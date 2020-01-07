@@ -1495,7 +1495,7 @@ nightly_test_installation() {
     source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
 }
 
-# Runs Imagenet inference
+# Runs Imagenet inference using C++ API
 nightly_test_imagenet_inference() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
@@ -1515,9 +1515,8 @@ nightly_test_image_classification() {
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
     set -ex
-    export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python tests/nightly/test_kvstore.py
+    python3 tests/nightly/test_kvstore.py
 }
 
 #Test Large Tensor Size
@@ -1657,9 +1656,8 @@ nightly_estimator() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd /work/mxnet/tests/nightly/estimator
-    export PYTHONPATH=/work/mxnet/python/
-    nosetests test_estimator_cnn.py
-    nosetests test_sentiment_rnn.py
+    nosetests-3.4 test_estimator_cnn.py
+    nosetests-3.4 test_sentiment_rnn.py
 }
 
 # For testing PRs

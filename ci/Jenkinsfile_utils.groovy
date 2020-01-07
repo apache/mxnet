@@ -159,13 +159,14 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 }
 
 
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "") {
-  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "", retries = '3') {
+  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries %RETRIES% --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
   command = command.replaceAll('%ENV_VARS%', env_vars.length() > 0 ? "-e ${env_vars}" : '')
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
   command = command.replaceAll('%SHARED_MEM%', shared_mem)
+  command = command.replaceAll('%RETRIES%', retries)
 
   sh command
 }

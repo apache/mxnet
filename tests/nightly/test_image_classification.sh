@@ -52,7 +52,7 @@ test_lenet() {
             learning_rate=0.01
         fi
         desired_accuracy=0.98
-        python $example_dir/train_mnist.py --lr $learning_rate \
+        python3 $example_dir/train_mnist.py --lr $learning_rate \
             --network lenet --optimizer $optimizer --gpus $gpus \
             --num-epochs 10 2>&1 | tee log
        if [ $? -ne 0 ]; then
