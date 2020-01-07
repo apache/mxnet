@@ -25,8 +25,6 @@
 
 #include "mxnet/base.h"
 #include "crop-inl.h"
-#include "../operator_common.h"
-#include "../elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {

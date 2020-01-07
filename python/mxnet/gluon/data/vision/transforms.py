@@ -293,7 +293,7 @@ class RandomResizedCrop(Block):
 
 
     Inputs:
-        - **data**: input tensor with (Hi x Wi x C) shape.
+        - **data**: input tensor with (H x W x C) shape.
 
     Outputs:
         - **out**: output tensor with (H x W x C) shape.
@@ -368,7 +368,7 @@ class CropResize(HybridBlock):
             out = F.image.resize(out, self._size, False, self._interpolation)
         return out
 
-class CenterCrop(Block):
+class CenterCrop(HybridBlock):
     """Crops the image `src` to the given `size` by trimming on all four
     sides and preserving the center of the image. Upsamples if `src` is
     smaller than `size`.
@@ -397,12 +397,13 @@ class CenterCrop(Block):
     """
     def __init__(self, size, interpolation=1):
         super(CenterCrop, self).__init__()
-        if isinstance(size, numeric_types):
-            size = (size, size)
-        self._args = (size, interpolation)
+        self._size = size
+        self._interpolation = interpolation
 
-    def forward(self, x):
-        return image.center_crop(x, *self._args)[0]
+    def hybrid_forward(self, F, x):
+        out = F.image.center_crop(x, self._size)
+        out = F.image.resize(out, self._size, False, self._interpolation)
+        return out
 
 
 class Resize(HybridBlock):

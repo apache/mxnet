@@ -32,7 +32,6 @@
 
 #include "mxnet/base.h"
 #include "dmlc/optional.h"
-#include "image_utils.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../../common/static_array.h"
@@ -87,9 +86,11 @@ inline bool CropShape(const nnvm::NodeAttrs& attrs,
   CHECK(param.y + param.height <= ishape[ishape.ndim() - 3])
     << " y + height should not be greater than input height";
   if (ishape.ndim() == 3) {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({param.height, param.width, ishape[C]}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+      TShape({param.height, param.width, ishape[ishape.ndim() - 1]}));
   } else {
-    SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape({ishape[N], param.height, param.width, ishape[kC]}));
+    SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+      TShape({ishape[0], param.height, param.width, ishape[ishape.ndim() - 1]}));
   }
   return true;
 }

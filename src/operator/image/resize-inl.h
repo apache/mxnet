@@ -29,6 +29,7 @@
 
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "../tensor/elemwise_binary_broadcast_op.h"
 #include "image_utils.h"
 
 #if MXNET_USE_OPENCV
@@ -71,10 +72,11 @@ struct ResizeParam : public dmlc::Parameter<ResizeParam> {
         "Note that the GPU version only support bilinear interpolation(1)");
   }
 };
+
 // handle the keep ratio param
-inline SizeParam GetHeightAndWidth(int data_h,
-                                    int data_w,
-                                    const ResizeParam& param) {
+inline ImageSize GetHeightAndWidth(int data_h,
+                                   int data_w,
+                                   const ResizeParam& param) {
   CHECK((param.size.ndim() == 1) || (param.size.ndim() == 2))
       << "Input size dimension must be 1 or 2, but got "
       << param.size.ndim();
@@ -106,19 +108,19 @@ inline SizeParam GetHeightAndWidth(int data_h,
     resized_h = param.size[1];
     resized_w = param.size[0];
   }
-  return SizeParam(resized_h, resized_w);
+  return {resized_h, resized_w};
 }
 
 inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector *in_attrs,
-                             mxnet::ShapeVector *out_attrs) {
+                        mxnet::ShapeVector *in_attrs,
+                        mxnet::ShapeVector *out_attrs) {
   // input attrs should only be (h, w, c) or (n, h, w, c)
   CHECK((in_attrs->at(0).ndim() == 3U) || (in_attrs->at(0).ndim() == 4U))
     << "Input image dimension should be 3 or 4 but got "
     << in_attrs->at(0).ndim();
   const auto& ishape = (*in_attrs)[0];
   const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
-  SizeParam size;
+  ImageSize size;
   if (ishape.ndim() == 3) {
     size = GetHeightAndWidth(ishape[H], ishape[W], param);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape({size.height, size.width, ishape[C]}));
@@ -130,13 +132,13 @@ inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-inline void ResizeImpl(const std::vector<TBlob> &inputs,
-                      const std::vector<TBlob> &outputs,
-                      const int height,
-                      const int width,
-                      const int interp,
-                      const int input_index = 0,
-                      const int output_index = 0) {
+inline void ResizeOpenCVImpl(const std::vector<TBlob> &inputs,
+                             const std::vector<TBlob> &outputs,
+                             const int height,
+                             const int width,
+                             const int interp,
+                             const int input_index = 0,
+                             const int output_index = 0) {
 #if MXNET_USE_OPENCV
   CHECK_NE(inputs[0].type_flag_, mshadow::kFloat16) << "opencv image mat doesn't support fp16";
   CHECK((inputs[0].type_flag_ != mshadow::kInt32) || (inputs[0].type_flag_ != mshadow::kInt64))
@@ -168,14 +170,11 @@ inline void ResizeImpl(const std::vector<TBlob> &inputs,
 }
 
 template <typename xpu>
-inline void Resize(const nnvm::NodeAttrs &attrs,
-                   const OpContext &ctx,
-                   const std::vector<TBlob> &inputs,
-                   const std::vector<OpReqType> &req,
-                   const std::vector<TBlob> &outputs) {
-  CHECK_EQ(outputs.size(), 1U);
-  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
-  SizeParam size;
+inline void ResizeImpl(const ResizeParam &param,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<TBlob> &outputs) {
+  ImageSize size;
   if (std::is_same<xpu, gpu>::value) {
 #if MXNET_USE_CUDA
     CHECK(param.interp == 1) << "interp should be 1 for using Resize on GPU.";
@@ -194,18 +193,34 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
 #endif  // MXNET_USE_CUDA
   } else if (inputs[0].ndim() == 3) {
     size = GetHeightAndWidth(inputs[0].shape_[H], inputs[0].shape_[W], param);
-    ResizeImpl(inputs, outputs, size.height, size.width, param.interp);
+    ResizeOpenCVImpl(inputs, outputs, size.height, size.width, param.interp);
   } else {
     size = GetHeightAndWidth(inputs[0].shape_[kH], inputs[0].shape_[kW], param);
     const auto batch_size = inputs[0].shape_[N];
     const auto input_step = inputs[0].shape_[kH] * inputs[0].shape_[kW] * inputs[0].shape_[kC];
     const auto output_step = size.height * size.width * inputs[0].shape_[kC];
-    #pragma omp parallel for
+#pragma omp parallel for
     for (auto i = 0; i < batch_size; ++i) {
-      ResizeImpl(inputs, outputs, size.height, size.width,
-        param.interp, i * input_step, i * output_step);
+      ResizeOpenCVImpl(inputs, outputs, size.height, size.width,
+                       param.interp, i * input_step, i * output_step);
     }
   }
+}
+
+template <typename xpu>
+inline void ResizeOpForward(const nnvm::NodeAttrs &attrs,
+                            const OpContext &ctx,
+                            const std::vector<TBlob> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<TBlob> &outputs) {
+  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+  const TBlob& data = inputs[0];
+  const ImageSize size(param.size);
+  if (data.size(data.ndim() - 3) == size.height && data.size(data.ndim() - 2) == size.width) {
+    UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  ResizeImpl<xpu>(param, ctx, inputs, outputs);
 }
 
 }  // namespace image
