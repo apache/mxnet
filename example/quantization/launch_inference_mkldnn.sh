@@ -95,9 +95,9 @@ for((i=0;i<$INS;i++));
 do
   ((a=$i*$CORES))
   ((b=$a+$CORES-1))
-  memid=$((b/CORES_PER_NUMA))
+  memid=$((b/CORES_PER_NUMA % NUM_NUMA_NODE))
   LOG=BENCHMARK_$i.log
-  echo "  $i instance use $a-$b cores and $memid mem with $LOG"
+  echo "  Instance $i use $a-$b cores and mem $memid with $LOG"
   KMP_AFFINITY=granularity=fine,noduplicates,compact,1,0 \
   OMP_NUM_THREADS=$CORES \
   nohup numactl --physcpubind=$a-$b --membind=$memid python imagenet_inference.py --symbol-file=$SYMBOL --batch-size=$BS --num-inference-batches=$ITERATIONS --ctx=cpu --benchmark=True > $LOG 2>&1 &
