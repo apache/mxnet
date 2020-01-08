@@ -1533,6 +1533,15 @@ def test_np_broadcast_to():
         def hybrid_forward(self, F, x):
             return F.np.broadcast_to(x, self._dst_shape)
 
+    class TestScalarBroadcastTo(HybridBlock):
+        def __init__(self, scalar, dst_shape):
+            super(TestScalarBroadcastTo, self).__init__()
+            self._scalar = scalar
+            self._dst_shape = dst_shape
+
+        def hybrid_forward(self, F, x):
+            return F.np.broadcast_to(self._scalar, self._dst_shape)
+
     shapes = [
         ((), (1, 2, 4, 5)),
         ((1,), (4, 5, 6)),
@@ -1557,6 +1566,17 @@ def test_np_broadcast_to():
             ret.backward()
             expected_grad = collapse_sum_like(_np.ones_like(expected_ret), src_shape)
             assert_almost_equal(a_mx.grad.asnumpy(), expected_grad, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+    # Test scalar case
+    scalar = 1.0
+    for _, dst_shape in shapes:
+        for hybridize in [True, False]:
+            test_scalar_broadcast_to = TestScalarBroadcastTo(scalar, dst_shape)
+            expected_ret = _np.broadcast_to(scalar, dst_shape)
+            with mx.autograd.record():
+                # `np.empty(())` serves as a dummpy input
+                ret = test_scalar_broadcast_to(np.empty(()))
+            assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @with_seed()

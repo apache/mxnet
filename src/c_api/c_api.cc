@@ -407,6 +407,7 @@ int MXLoadLib(const char *path) {
       std::vector<const int64_t *> in_shapes, out_shapes;
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
+      std::vector<size_t> in_verIDs, out_verIDs;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -414,6 +415,7 @@ int MXLoadLib(const char *path) {
         in_shapes.push_back(inputs[i].shape().data());
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
+        in_verIDs.push_back(inputs[i].version());
       }
 
       // convert output tensors to constituent parts
@@ -422,6 +424,7 @@ int MXLoadLib(const char *path) {
         out_shapes.push_back(outputs[i].shape().data());
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
+        out_verIDs.push_back(outputs[i].version());
       }
 
       // get memory resource
@@ -450,9 +453,10 @@ int MXLoadLib(const char *path) {
       // call fcompute function
       CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       in_shapes.data(), in_dims.data(), in_data.data(),
-                      in_types.data(), in_data.size(),
+                      in_types.data(), in_verIDs.data(), in_data.size(),
                       out_shapes.data(), out_dims.data(), out_data.data(),
-                      out_types.data(), out_data.size(), cpu_malloc, &cpu_alloc))
+                      out_types.data(), out_verIDs.data(), out_data.size(),
+                      cpu_malloc, &cpu_alloc))
       << "Error calling FCompute for custom operator '" << name_str << "'";
 
       // return type void
@@ -582,6 +586,7 @@ int MXLoadLib(const char *path) {
       std::vector<const int64_t *> in_shapes, out_shapes;
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
+      std::vector<size_t> in_verIDs, out_verIDs;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -589,6 +594,7 @@ int MXLoadLib(const char *path) {
         in_shapes.push_back(inputs[i].shape().data());
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
+        in_verIDs.push_back(inputs[i].version());
       }
 
       // convert output tensors to constituent parts
@@ -597,6 +603,7 @@ int MXLoadLib(const char *path) {
         out_shapes.push_back(outputs[i].shape().data());
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
+        out_verIDs.push_back(outputs[i].version());
       }
 
       // get memory resource
@@ -630,9 +637,9 @@ int MXLoadLib(const char *path) {
 
       // call fcompute function
       CHECK(callFStatefulComp(is_forward, state_op_inst, in_shapes.data(), in_dims.data(),
-                              in_data.data(), in_types.data(), in_data.size(),
-                              out_shapes.data(), out_dims.data(), out_data.data(),
-                              out_types.data(), out_data.size(), cpu_malloc, &cpu_alloc))
+                              in_data.data(), in_types.data(), in_verIDs.data(), in_data.size(),
+                              out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                              out_verIDs.data(), out_data.size(), cpu_malloc, &cpu_alloc))
       << "Error calling FStatefulCompute for custom operator '" << name_str << "'";
     };
 
