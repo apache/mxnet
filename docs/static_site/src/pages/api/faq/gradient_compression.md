@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Gradient Compression
+category: Speed
+faq_c: Speed
+question: How do I use gradient compression with distributed training?
+permalink: /api/faq/gradient_compression
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Gradient Compression
-category: Speed
-faq_c: Speed
-question: How do I use gradient compression with distributed training?
-permalink: /api/faq/gradient_compression
----
 
 # Gradient Compression
 
@@ -110,7 +110,7 @@ A reference `gluon` implementation with a gradient compression option can be fou
 mod = mx.mod.Module(..., compression_params={'type’:'2bit', 'threshold':0.5})
 ```
 
-A `module` example is provided with [this guide for setting up MXNet with distributed training](https://mxnet.incubator.apache.org/versions/master/faq/multi_devices.html#distributed-training-with-multiple-machines). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py).
+A `module` example is provided with [this guide for setting up MXNet with distributed training](/api/faq/distributed_training). It comes with the option of turning on gradient compression as an argument to the [train_mnist.py script](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py).
 
 ### Configuration Details
 

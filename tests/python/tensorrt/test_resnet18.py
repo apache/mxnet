@@ -48,7 +48,7 @@ def test_tensorrt_resnet18_feature_vect():
     executor.copy_params_from(arg_params, aux_params)
     y = executor.forward(is_train=False, data=input_data)
     trt_sym = sym.get_backend_symbol('TensorRT')
-    mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, aux_params)
+    arg_params, aux_params = mx.contrib.tensorrt.init_tensorrt_params(trt_sym, arg_params, aux_params)
     original_precision_value = mx.contrib.tensorrt.get_use_fp16()
     try:
         mx.contrib.tensorrt.set_use_fp16(True)

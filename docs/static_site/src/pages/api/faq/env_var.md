@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Environment Variables
+category: faq
+faq_c: Deployment Environments
+question: What are MXNet environment variables?
+permalink: /api/faq/env_var
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Environment Variables
-category: faq
-faq_c: Deployment Environments
-question: What are MXNet environment variables?
-permalink: /api/faq/env_var
----
 
 Environment Variables
 =====================
@@ -61,7 +61,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The number of threads given to prioritized CPU jobs.
 * MXNET_CPU_NNPACK_NTHREADS
   - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK](http://mxnet.io/faq/nnpack.html) to know more about it.
+  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK]({{'/api/faq/nnpack'|relative_url}}) to know more about it.
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
   - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
@@ -73,7 +73,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 
 * MXNET_EXEC_ENABLE_INPLACE
   - Values: true or false ```(default=true)```
-  - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization](http://mxnet.io/architecture/note_memory.html#in-place-operations) to know more about it.
+    - Whether to enable in-place optimization in symbolic execution. Checkout [in-place optimization]({{'/api/architecture/note_memory#in-place-operations'|relative_url}}) to know more about it.
 * NNVM_EXEC_MATCH_RANGE
   - Values: Int ```(default=16)```
   - The approximate matching scale in the symbolic execution memory allocator.
@@ -83,7 +83,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=1)```
   - The maximum number of temporary workspaces to allocate to each device. This controls space replicas and in turn reduces the memory usage.
   - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
-  - MXNet internally uses graph coloring algorithm to [optimize memory consumption](http://mxnet.io/architecture/note_memory.html).
+    - MXNet internally uses graph coloring algorithm to [optimize memory consumption]({{'/api/architecture/note_memory'|relative_url}}).
   - This parameter is also used to get number of matching colors in graph and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
@@ -129,10 +129,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: Int ```(default=15)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference). Setting this to a larger number may reduce the degree of parallelism for multi-GPU training.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD
-  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN>)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the forward pass.
 * MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD
-  - Values: Int ```(default=<value of MXNET_EXEC_BULK_MAX_NODE_TRAIN>)```
+  - Values: Int ```(default=<value of MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN>)```
   - The maximum number of nodes in the subgraph executed in bulk during training (not inference) in the backward pass.
 
 ## Control the Data Communication
@@ -200,12 +200,12 @@ The following environments can be used to profile the application without changi
 
 * MXNET_PROFILER_AUTOSTART
   - Values: 0(false) or 1(true) ```(default=0)```
-	- Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
+  - Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
 
 * MXNET_PROFILER_MODE
   - Values: 0(false) or 1(true) ```(default=0)```
-	- If set to '0', profiler records the events of the symbolic operators.
-	- If set to '1', profiler records the events of all operators.
+  - If set to '0', profiler records the events of the symbolic operators.
+  - If set to '1', profiler records the events of all operators.
 
 ## Interface between Python and the C API
 
@@ -222,6 +222,12 @@ The following environments can be used to profile the application without changi
 
 If cython modules are used, `mx.nd._internal.NDArrayBase` must be `mxnet._cy3.ndarray.NDArrayBase` for python 3 or `mxnet._cy2.ndarray.NDArrayBase` for python 2.
 If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
+
+## Logging
+
+* DMLC_LOG_STACK_TRACE_DEPTH
+  - Values: Int ```(default=0)```
+  - The depth of stack trace information to log when exception happens.
 
 ## Other Environment Variables
 
@@ -241,14 +247,14 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_CUDA_ALLOW_TENSOR_CORE
   - 0(false) or 1(true) ```(default=1)```
-	- If set to '0', disallows Tensor Core use in CUDA ops.
-	- If set to '1', allows Tensor Core use in CUDA ops.
+  - If set to '0', disallows Tensor Core use in CUDA ops.
+  - If set to '1', allows Tensor Core use in CUDA ops.
   - This variable can only be set once in a session.
 
 * MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION
   - 0(false) or 1(true) ```(default=0)```
-	- If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
-	- If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
+  - If set to '0', disallows implicit type conversions to Float16 to use Tensor Cores
+  - If set to '1', allows CUDA ops like RNN and Convolution to use TensorCores even with Float32 input data by using implicit type casting to Float16. Only has an effect if `MXNET_CUDA_ALLOW_TENSOR_CORE` is `1`.
 
 * MXNET_CUDA_LIB_CHECKING
   - 0(false) or 1(true) ```(default=1)```
@@ -283,11 +289,11 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   If no such algorithm exists given other constraints, MXNet will error out. This variable affects the choice
   of CUDNN convolution algorithms. Please see [CUDNN developer guide](https://docs.nvidia.com/deeplearning/sdk/cudnn-developer-guide/index.html) for more details.
 
-* MXNET_CPU_PARALLEL_COPY_SIZE
+* MXNET_CPU_PARALLEL_SIZE
   - Values: Int ```(default=200000)```
-  - The minimum size to call parallel copy by OpenMP in CPU2CPU mode.
-  - When the array size is bigger than or equal to  this threshold, NDArray::Copy(from, to) is implemented by OpenMP with the Recommended OMP Thread Count.
-  - When the array size is less than this threshold, NDArray::Copy(from , to)) is implemented by memcpy in single thread.
+  - The minimum size to call parallel operations by OpenMP for CPU context.
+  - When the array size is bigger than or equal to this threshold, the operation implemented by OpenMP is executed with the Recommended OMP Thread Count.
+  - When the array size is less than this threshold, the operation is implemented naively in single thread.
 
 * MXNET_OPTIMIZER_AGGREGATION_SIZE
   - Values: Int ```(default=4)```
@@ -317,7 +323,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 * MXNET_SUBGRAPH_BACKEND
   - Values: String ```(default="MKLDNN")``` if MKLDNN is avaliable, otherwise ```(default="")```
   - This variable controls the subgraph partitioning in MXNet.
-  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](../tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
+  - This variable is used to perform MKL-DNN FP32 operator fusion and quantization. Please refer to the [MKL-DNN operator list](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for how this variable is used and the list of fusion passes.
   - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
@@ -327,6 +333,25 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
     For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
     with float32.
   - Model accuracies do not necessarily improve with this environment variable turned on.
+
+* MXNET_USE_FUSION
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If this variable is set, MXNet will try fusing some of the operations (pointwise operations only for now).
+  - It works in Symbolic execution as well as in Gluon models hybridized with ```static_alloc=True``` option.
+  - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```) and running on GPU.
+
+* MXNET_FUSION_VERBOSE
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - Only applies to MXNet that has been compiled with CUDA and when ```MXNET_USE_FUSION``` option is enabled.
+  - If this variable is set, MXNet will print the code for fused operators that it generated.
+
+* MXNET_ELIMINATE_COMMON_EXPR
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - If this variable is set, MXNet will simplify the computation graph, eliminating duplicated operations on the same inputs.
+
+* MXNET_USE_MKLDNN_RNN
+  - Values: 0(false) or 1(true) ```(default=1)```
+  - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 
 Settings for Minimum Memory Usage
 ---------------------------------

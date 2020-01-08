@@ -72,39 +72,6 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
 };
 
 
-inline bool NumpyGammaOpType(const nnvm::NodeAttrs &attrs,
-                                   std::vector<int> *in_attrs,
-                                   std::vector<int> *out_attrs) {
-  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed);
-  int otype = param.dtype;
-  if (otype != -1) {
-    (*out_attrs)[0] = otype;
-  } else {
-    (*out_attrs)[0] = mshadow::kFloat32;
-  }
-  return true;
-}
-
-// template <typename FType>
-// void _copy(FType *dst, FType *src) {
-// #if USE_CUDA == 1
-//   CUDA_CALL(cudaMemcpy(dst, src, sizeof(FType, cudaMemcpyDeviceToHost)))
-// #else
-//   *dst = *src;
-// #endif
-// }
-
-// #if USE_CUDA == 1
-// template <typename FType>
-// void _copy(context::xpu device, FType *dst, FType *src);
-// #endif
-
-template <typename xpu>
-void _copy(float *dst, float*src);
-
-template <typename xpu>
-void _copy(double *dst, double*src);
-
 namespace mxnet_op {
 
 template <typename IType, typename FType>
@@ -114,7 +81,6 @@ MSHADOW_XINLINE void GammaTransform(IType a, IType b,
   FType d = a < 1 ? a + 2.0 / 3.0 : a - 1.0 / 3.0;
   FType k = sqrt(9.0 * d);
   FType c = 1.0 / k;
-  // printf("c1 %f\n", uniforms[M - 1]);
   for (size_t i = 0; i < M - 1; i++) {
     FType u = uniforms[i];
     FType n = normals[i];
@@ -134,7 +100,6 @@ MSHADOW_XINLINE void GammaTransform(IType a, IType b,
       }
     }
   }
-  // printf("c2 %f\n", uniforms[M - 1]);
 }
 
 
@@ -144,9 +109,6 @@ MSHADOW_XINLINE FType GammaReduce(IType a, FType* uniforms) {
   for (size_t i = 0; i < M - 1; i++) {
     FType sample = uniforms[i];
     if (sample > 0) {
-      // printf("a %f\n", a);
-      // printf("b %f\n",sample);
-      // printf("c %f\n", u2);
       return a < 1 ? sample * powf(u2, FType(1.0 / a)) : sample;
     }
   }
@@ -340,8 +302,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
           s, outputs[0].Size(), outputs[0].dptr<OType>(),
           failure_indicator_device);
-      _copy<xpu>(&failure_indicator, failure_indicator_device);
-      // cout<<failure_indicator<<endl;
+      _copy<xpu>(s, &failure_indicator, failure_indicator_device);
       while (1) {
         if (failure_indicator >= 0) {
           break;
@@ -356,7 +317,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
               s, outputs[0].Size(), outputs[0].dptr<OType>(),
               failure_indicator_device);
-          _copy<xpu>(&failure_indicator, failure_indicator_device);
+          _copy<xpu>(s, &failure_indicator, failure_indicator_device);
         }
       }
     });
@@ -388,7 +349,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
           s, outputs[0].Size(), outputs[0].dptr<OType>(),
           failure_indicator_device);
-        _copy<xpu>(&failure_indicator, failure_indicator_device);
+        _copy<xpu>(s, &failure_indicator, failure_indicator_device);
         while (1) {
         if (failure_indicator >= 0) {
           break;
@@ -404,7 +365,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
               s, outputs[0].Size(), outputs[0].dptr<OType>(),
               failure_indicator_device);
-          _copy<xpu>(&failure_indicator, failure_indicator_device);
+          _copy<xpu>(s, &failure_indicator, failure_indicator_device);
         }
       }
         });
@@ -430,7 +391,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
         Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
           s, outputs[0].Size(), outputs[0].dptr<OType>(),
           failure_indicator_device);
-        _copy<xpu>(&failure_indicator, failure_indicator_device);
+        _copy<xpu>(s, &failure_indicator, failure_indicator_device);
         while (1) {
         if (failure_indicator >= 0) {
           break;
@@ -446,7 +407,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
               s, outputs[0].Size(), outputs[0].dptr<OType>(),
               failure_indicator_device);
-          _copy<xpu>(&failure_indicator, failure_indicator_device);
+          _copy<xpu>(s, &failure_indicator, failure_indicator_device);
           }
         }
         });

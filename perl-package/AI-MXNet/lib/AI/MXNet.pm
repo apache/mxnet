@@ -220,7 +220,7 @@ AI::MXNet - Perl interface to MXNet machine learning library
     so most, if not all of Python’s documentation and examples should just work in Perl after making few changes
     in order to make the code a bit more Perlish. In nutshell just add $ sigils and replace . = \n with -> => ;
     and in 99% of cases that’s all that is needed there.
-    In addition please refer to very detailed L<MXNet Python API Documentation|http://mxnet.io/api/python/index.html>.
+    In addition please refer to very detailed L<MXNet Python API Documentation|https://mxnet.apache.org/api/python/docs/tutorials/index.html>.
 
     AI::MXNet supports new imperative PyTorch like Gluon MXNet interface.
     Please get acquainted with this new interface at L<Dive into Deep Learning|https://www.d2l.ai/>.
@@ -239,7 +239,7 @@ AI::MXNet - Perl interface to MXNet machine learning library
 
 =head1 SEE ALSO
 
-    L<http://mxnet.io/>
+    L<https://mxnet.io/>
     L<https://github.com/dmlc/mxnet/tree/master/perl-package>
     L<Function::Parameters|https://metacpan.org/pod/Function::Parameters>, L<Mouse|https://metacpan.org/pod/Mouse>
 

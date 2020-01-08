@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: NDArray
+permalink: /api/scala/docs/tutorials/ndarray
+is_tutorial: true
+tag: scala
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: NDArray
-permalink: /api/scala/docs/tutorials/ndarray
-is_tutorial: true
-tag: scala
----
 
 # NDArray API
 
@@ -31,7 +31,7 @@ Topics:
 
 * [Create NDArray](#create-ndarray)
 * [NDArray Operations](#ndarray-operations)
-* [NDArray API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.NDArray)
+* [NDArray API Reference]({{'/api/scala/docs/api/#org.apache.mxnet.NDArray'|relative_url}})
 
 ## Create NDArray
 
@@ -178,4 +178,4 @@ val z = x + cpu_y
 ```
 
 ## Next Steps
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

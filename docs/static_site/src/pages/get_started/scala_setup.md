@@ -1,3 +1,10 @@
+---
+layout: page
+title: Scala Setup
+action: Get Started
+action_url: /get_started
+permalink: /get_started/scala_setup
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,20 +21,13 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page
-title: Scala Setup
-action: Get Started
-action_url: /get_started
-permalink: /get_started/scala_setup
----
 
 
 # Setup the MXNet Package for Scala
 
 The following instructions are provided for macOS and Ubuntu. Windows is not yet available.
 
-**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](../tutorials/scala/mxnet_scala_on_intellij.md) instead of these instructions.
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead of these instructions.
 **Note:** Currently, we only support scala 2.11
 
 <hr>
@@ -152,14 +152,14 @@ If you receive a "NumberFormatException" when running the interpreter, run `expo
 
 ## Documentation
 
-Scaladocs are generated as part of the docs build pipeline. You can find them published in the [Scala API](../api/scala/index.md) section of the website or by going to the [scaladocs output](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package) directly.
+Scaladocs are generated as part of the docs build pipeline. You can find them published in the [Scala API]({{'/api/scala'|relative_url}}) section of the website or by going to the [scaladocs output]({{'/api/scala/docs/api/#org.apache.mxnet.package'|relative_url}}) directly.
 
-To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/build_version_doc#developer-instructions).
+To build the docs yourself, follow the [developer build docs instructions](https://github.com/apache/incubator-mxnet/tree/master/docs/README.md).
 
 <hr>
 
 ## Resources
 
-* [Scala API](../api/scala/)
-* [scaladocs](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.package)
-* [MXNet-Scala Tutorials](../tutorials/scala/)
+* [Scala API]({{'/api/scala'|relative_url}})
+* [scaladocs]({{'/api/scala/docs/api/#org.apache.mxnet.package'|relative_url}})
+* [MXNet-Scala Tutorials]({{'/api/scala/docs/tutorials'|relative_url}})

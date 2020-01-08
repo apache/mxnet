@@ -21,14 +21,13 @@ import numpy as np
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
-from ...base import numeric_types
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice"]
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle", 'gamma']
 
 
-def randint(low, high=None, size=None, dtype=None, **kwargs):
-    """Return random integers from `low` (inclusive) to `high` (exclusive).
+def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
+    r"""Return random integers from `low` (inclusive) to `high` (exclusive).
 
     Return random integers from the "discrete uniform" distribution of
     the specified dtype in the "half-open" interval [`low`, `high`). If
@@ -76,14 +75,12 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
     array([[4, 0, 2, 1],
         [3, 2, 2, 0]])
     """
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
     if dtype is None:
         dtype = 'int'
     if ctx is None:
         ctx = current_context()
     if size is None:
-        size = 1
+        size = ()
     if high is None:
         high = low
         low = 0
@@ -91,7 +88,7 @@ def randint(low, high=None, size=None, dtype=None, **kwargs):
 
 
 def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
-    """Draw samples from a uniform distribution.
+    r"""Draw samples from a uniform distribution.
 
     Samples are uniformly distributed over the half-open interval
     ``[low, high)`` (includes low, but excludes high).  In other words,
@@ -115,6 +112,8 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -127,8 +126,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         dtype = 'float32'
     if ctx is None:
         ctx = current_context()
-    if out is not None:
-        size = out.shape
     if size == ():
         size = None
     if input_type == (True, True):
@@ -145,8 +142,8 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
                             ctx=ctx, dtype=dtype, out=out)
 
 
-def normal(loc=0.0, scale=1.0, size=None, **kwargs):
-    """Draw random samples from a normal (Gaussian) distribution.
+def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a normal (Gaussian) distribution.
 
     Samples are distributed according to a normal distribution parametrized
     by *loc* (mean) and *scale* (standard deviation).
@@ -173,28 +170,31 @@ def normal(loc=0.0, scale=1.0, size=None, **kwargs):
     -------
     out : ndarray
         Drawn samples from the parameterized normal distribution.
-
-    Notes
-    -----
-    This function currently does not support ``loc`` and ``scale`` as ndarrays.
     """
-    dtype = kwargs.pop('dtype', None)
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
     if dtype is None:
         dtype = 'float32'
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
-    if size is None and out is None:
-        size = ()
-    if (not isinstance(loc, numeric_types)) or (not isinstance(scale, numeric_types)):
-        raise NotImplementedError('np.random.normal only supports loc and scale of '
-                                  'numeric types for now')
-    return _npi.random_normal(loc, scale, shape=size, dtype=dtype, ctx=ctx, out=out, **kwargs)
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.normal(loc, scale, loc=None, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.normal(scale, loc=loc, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.normal(loc, loc=None, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.normal(loc=loc, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
 
 
 def multinomial(n, pvals, size=None):
-    """multinomial(n, pvals, size=None)
+    r"""multinomial(n, pvals, size=None)
 
     Draw samples from a multinomial distribution.
 
@@ -245,8 +245,8 @@ def multinomial(n, pvals, size=None):
         return _npi.multinomial(n=n, pvals=pvals, size=size)
 
 
-def choice(a, size=None, replace=True, p=None, **kwargs):
-    """Generates a random sample from a given 1-D array
+def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
+    r"""Generates a random sample from a given 1-D array
 
     Parameters
     -----------
@@ -298,10 +298,8 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
     array([2, 3, 0])
     """
     from ...numpy import ndarray as np_ndarray
-    ctx = kwargs.pop('ctx', None)
     if ctx is None:
         ctx = current_context()
-    out = kwargs.pop('out', None)
     if size == ():
         size = None
     if isinstance(a, np_ndarray):
@@ -321,7 +319,7 @@ def choice(a, size=None, replace=True, p=None, **kwargs):
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
 
 
-def gamma(shape, scale, size=None, **kwargs):
+def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """Draw samples from a Gamma distribution.
 
     Samples are drawn from a Gamma distribution with specified parameters,
@@ -354,9 +352,6 @@ def gamma(shape, scale, size=None, **kwargs):
     """
     from ...numpy import ndarray as np_ndarray
     input_type = (isinstance(shape, np_ndarray), isinstance(scale, np_ndarray))
-    ctx = kwargs.pop('ctx', None)
-    out = kwargs.pop('out', None)
-    dtype = kwargs.pop('dtype', None)
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
@@ -379,3 +374,66 @@ def gamma(shape, scale, size=None, **kwargs):
                           ctx=ctx, dtype=dtype, out=out)
 
     raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
+
+
+def rand(*size, **kwargs):
+    r"""Random values in a given shape.
+
+    Create an array of the given shape and populate it with random
+    samples from a uniform distribution over [0, 1).
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    out : ndarray
+       Random values.
+    Examples
+    --------
+    >>> np.random.rand(3,2)
+    array([[ 0.14022471,  0.96360618],  #random
+           [ 0.37601032,  0.25528411],  #random
+           [ 0.49313049,  0.94909878]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return uniform(0, 1, size=output_shape, **kwargs)
+
+
+def shuffle(x):
+    """
+    Modify a sequence in-place by shuffling its contents.
+
+    This function only shuffles the array along the first axis of a
+    multi-dimensional array. The order of sub-arrays is changed but
+    their contents remain the same.
+
+    Parameters
+    ----------
+    x: ndarray
+        The array or list to be shuffled.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> arr = np.arange(10)
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([5., 1., 0., 6., 7., 3., 9., 8., 4., 2.])  # random
+
+    Multi-dimensional arrays are only shuffled along the first axis:
+
+    >>> arr = np.arange(9).reshape((3, 3))
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([[6., 7., 8.], # random
+           [3., 4., 5.],
+           [0., 1., 2.]])
+    """
+    _npi.shuffle(x, out=x)

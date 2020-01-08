@@ -42,5 +42,5 @@ def run_imageiter(path_rec, n, batch_size=32):
 if __name__ == '__main__':
     mx.profiler.set_config(profile_all=True, filename='profile_imageiter.json')
     mx.profiler.set_state('run')
-    run_imageiter('test.rec', 20)  # See http://mxnet.io/tutorials/python/image_io.html for how to create .rec files.
+    run_imageiter('test.rec', 20)  # See https://mxnet.io/tutorials/python/image_io.html for how to create .rec files.
     mx.profiler.set_state('stop')

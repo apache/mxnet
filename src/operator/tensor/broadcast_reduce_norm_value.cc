@@ -40,7 +40,7 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
   const NDArrayStorageType istype = inputs[0].storage_type();
-  const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
+  const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape(0, -1);
   if ((istype == kRowSparseStorage || istype == kCSRStorage) && axis.ndim() == 0 &&
        param.ord == 2) {
     // l2 norm on the entire array
@@ -98,6 +98,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input")

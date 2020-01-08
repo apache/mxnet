@@ -46,20 +46,19 @@ Shared APIs
 
    .. card::
       :title: Symbol API
-      :link: symbol/index.html
+      :link: ../../api/symbol/
 
-      How to use MXNet's Symbol API.
+      MXNet Symbol API has been depricated. API documentation is still available for reference.
 
    .. card::
       :title: Autograd API
-      :link: autograd/autograd.html
+      :link: autograd/index.html
 
       How to use Automatic Differentiation with the Autograd API.
 
    .. card::
       :title: Learning Rate
-      :link: https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/learning_rate_schedules.html
-
+      :link: gluon/training/learning_rates/learning_rate_schedules.html
       How to use the Learning Rate Scheduler.
 
    .. card::
@@ -70,7 +69,7 @@ Shared APIs
 
    .. card::
       :title: Data APIs
-      :link: data/index.html
+      :link: gluon/data/index.html
 
       How to use MXNet's data APIs.
 
@@ -86,55 +85,14 @@ Shared APIs
 
       How to use Open Neural Network Exchange (ONNX) with MXNet.
 
-   ..
-      .. card::
-         :title: Optimizer
-         :link: optimizer.html
-
-         How to use optimizer.
-   ..
-
-Old APIs
---------
-Currently supported, but not recommended APIs.
-
-.. container:: cards
-
    .. card::
-      :title: Module
-      :link: module/index.html
+      :title: Optimizer
+      :link: optimizer/index.html
 
-      MXNet's symbolic interface for Python.
-
+      How to use the optimizers.
 
 .. toctree::
    :hidden:
+   :glob:
 
-   gluon/index
-   ndarray/index
-   symbol/index
-   autograd/autograd
-   onnx/index
-
-..
-   Basic
-   -----
-
-   .. toctree::
-      :maxdepth: 1
-
-      mxboard
-      gpus
-
-   Advanced
-   --------
-
-
-   .. toctree::
-      :maxdepth: 1
-
-      symbol
-      record-io
-      sparse
-      control-flow
-      distributed-training
+   */index*

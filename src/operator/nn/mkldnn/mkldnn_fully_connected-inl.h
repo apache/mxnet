@@ -43,6 +43,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool with_eltwise;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<bool> channel_wise_quantize;
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
@@ -50,7 +51,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     DMLC_DECLARE_FIELD(enable_float_output).set_default(false)
     .describe("Whether to enable float32 output");
     DMLC_DECLARE_FIELD(with_eltwise).set_default(false)
-    .describe("Whether there's a post elemwise after FullyConnected operator");
+    .describe("Whether there's a post with_eltwise after FullyConnected operator");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -61,6 +62,9 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
               "quantized fullyconnected op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(channel_wise_quantize)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether support channel-wise-quantize for weight.");
   }
 };
 
@@ -68,8 +72,7 @@ struct MKLDNNFCFullParam {
   FullyConnectedParam default_param;
   MKLDNNFCParam mkldnn_param;
   MKLDNNPostEltwiseParam eltwise_param;
-  std::vector<float> output_scales = {0.0};
-  std::vector<float> requantize_scales = {0.0};
+  std::vector<float> output_scales = {0.0f};
 };
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(
@@ -85,10 +88,9 @@ class MKLDNNFullyConnectedForward {
                               const NDArray &data, const NDArray &weight,
                               const NDArray *bias,
                               const mkldnn::memory::desc &out_md)
-      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {}
-
-  void SetNewMem(const mkldnn::memory &data, const mkldnn::memory &weight,
-                 const mkldnn::memory *bias, const mkldnn::memory &output);
+      : fwd_pd(GetFCFwdImpl(full_param, is_train, data, weight, bias, out_md)) {
+          fwd_ = std::make_shared<mkldnn::inner_product_forward>(fwd_pd);
+      }
 
   const mkldnn::inner_product_forward &GetFwd() const {
     return *fwd_;
@@ -96,10 +98,6 @@ class MKLDNNFullyConnectedForward {
 
  private:
   std::shared_ptr<mkldnn::inner_product_forward> fwd_;
-  std::shared_ptr<mkldnn::memory> data_;
-  std::shared_ptr<mkldnn::memory> weight_;
-  std::shared_ptr<mkldnn::memory> bias_;
-  std::shared_ptr<mkldnn::memory> out_;
 };
 
 typedef ParamOpSign<FullyConnectedParam> MKLDNNFullyconSignature;

@@ -162,6 +162,23 @@ def test_multi_worker():
         for i, batch in enumerate(loader):
             assert (batch.asnumpy() == i).all()
 
+
+@with_seed()
+def test_multi_worker_shape():
+    for thread_pool in [True, False]:
+        batch_size = 1024
+        shape = (batch_size+1, 11, 12)
+
+        data = ArrayDataset(np.ones(shape))
+        loader = gluon.data.DataLoader(
+            data, batch_size=batch_size, num_workers=5, last_batch='keep', thread_pool=thread_pool)
+        for batch in loader:
+            if shape[0] > batch_size:
+                assert batch.shape == (batch_size, shape[1], shape[2])
+                shape = (shape[0] - batch_size, shape[1], shape[2])
+            else:
+                assert batch.shape == shape
+
 class _Dummy(Dataset):
     """Dummy dataset for randomized shape arrays."""
     def __init__(self, random_shape):
@@ -249,7 +266,10 @@ def test_multi_worker_forked_data_loader():
 @with_seed()
 def test_multi_worker_dataloader_release_pool():
     # will trigger too many open file if pool is not released properly
-    for _ in range(100):
+    if os.name == 'nt':
+        print('Skip for windows since spawn on windows is too expensive.')
+        return
+    for _ in range(10):
         A = np.random.rand(999, 2000)
         D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)
         the_iter = iter(D)
@@ -295,6 +315,24 @@ def test_dataset_filter():
     # the filtered data is already transformed
     for idx, sample in enumerate(a_xform_filtered):
         assert sample % 10 == 0
+
+def test_dataset_shard():
+    length = 9
+    a = mx.gluon.data.SimpleDataset([i for i in range(length)])
+    shard_0 = a.shard(4, 0)
+    shard_1 = a.shard(4, 1)
+    shard_2 = a.shard(4, 2)
+    shard_3 = a.shard(4, 3)
+    assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
+    assert len(shard_0) == 3
+    assert len(shard_1) == 2
+    assert len(shard_2) == 2
+    assert len(shard_3) == 2
+    total = 0
+    for shard in [shard_0, shard_1, shard_2, shard_3]:
+        for idx, sample in enumerate(shard):
+            total += sample
+    assert total == sum(a)
 
 def test_dataset_take():
     length = 100

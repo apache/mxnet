@@ -106,8 +106,8 @@ class GPUPooledStorageManager final : public StorageManager {
   }
 
   size_t RoundAllocSize(size_t size) {
-    // Round up small allocs to the page_size_ to consolidate the pool lookups
-    size = std::max(size, page_size_);
+    // Round up small allocs to multiple of page_size_ to consolidate the pool lookups
+    size = RoundToMultiple(size, page_size_);
     // To ensure proper freeing under some driver variants, make sure
     // large allocs entirely occupy their slabs, which cannot then be
     // locked by smaller permanent allocations sharing the slab.
@@ -153,8 +153,16 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
-    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
-      LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+    if (e != cudaSuccess) {
+      if (e == cudaErrorMemoryAllocation) {
+        ReleaseAll();
+        e = cudaMalloc(&ret, size);
+        if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+          LOG(FATAL) << "cudaMalloc retry failed: " << cudaGetErrorString(e);
+        }
+      } else if (e != cudaErrorCudartUnloading) {
+        LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+      }
     }
     used_memory_ += size;
     handle->dptr = ret;
@@ -328,8 +336,16 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
 
     void* ret = nullptr;
     cudaError_t e = cudaMalloc(&ret, size);
-    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
-      LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+    if (e != cudaSuccess) {
+      if (e == cudaErrorMemoryAllocation) {
+        ReleaseAll();
+        e = cudaMalloc(&ret, size);
+        if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+          LOG(FATAL) << "cudaMalloc retry failed: " << cudaGetErrorString(e);
+        }
+      } else if (e != cudaErrorCudartUnloading) {
+        LOG(FATAL) << "cudaMalloc failed: " << cudaGetErrorString(e);
+      }
     }
     used_memory_ += size;
     handle->dptr = ret;

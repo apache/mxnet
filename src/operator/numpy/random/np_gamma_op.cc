@@ -30,14 +30,17 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyGammaParam);
 
-template <>
-void _copy<cpu>(float *dst, float *src) {
-  *dst = *src;
-}
-
-template <>
-void _copy<cpu>(double *dst, double *src) {
-  *dst = *src;
+inline bool NumpyGammaOpType(const nnvm::NodeAttrs &attrs,
+                                   std::vector<int> *in_attrs,
+                                   std::vector<int> *out_attrs) {
+  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed);
+  int otype = param.dtype;
+  if (otype != -1) {
+    (*out_attrs)[0] = otype;
+  } else {
+    (*out_attrs)[0] = mshadow::kFloat32;
+  }
+  return true;
 }
 
 NNVM_REGISTER_OP(_npi_gamma)

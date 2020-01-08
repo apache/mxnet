@@ -103,6 +103,7 @@ NNVM_REGISTER_OP(_arange)
 .add_arguments(RangeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_contrib_arange_like)
+.add_alias("_npx_arange_like")
 .describe(R"code(Return an array with evenly spaced values. If axis is not given, the output will 
 have the same shape as the input array. Otherwise, the output will be a 1-D array with size of 
 the specified axis in input shape.

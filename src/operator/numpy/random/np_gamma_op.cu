@@ -29,16 +29,6 @@
 namespace mxnet {
 namespace op {
 
-template <>
-void _copy<gpu>(float *dst, float *src) {
-  CUDA_CALL(cudaMemcpy(dst, src, sizeof(float), cudaMemcpyDeviceToHost));
-}
-
-template <>
-void _copy<gpu>(double *dst, double *src) {
-  CUDA_CALL(cudaMemcpy(dst, src, sizeof(double), cudaMemcpyDeviceToHost));
-}
-
 NNVM_REGISTER_OP(_npi_gamma)
 .set_attr<FCompute>("FCompute<gpu>", NumpyGammaForward<gpu, double>);
 

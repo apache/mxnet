@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Float16
+category: faq
+faq_c: Speed
+question: How do I use mixed precision (float16) with MXNet or Gluon? 
+permalink: /api/faq/float16
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Float16
-category: faq
-faq_c: Speed
-question: How do I use mixed precision (float16) with MXNet or Gluon?
-permalink: /api/faq/floa16
----
 
 # Mixed precision training using float16
 
@@ -39,7 +39,7 @@ The float16 data type is a 16 bit floating point representation according to the
 - CUDA 9 or higher
 - cuDNN v7 or higher
 
-This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to [logistic regression tutorial](https://mxnet.incubator.apache.org/versions/master/tutorials/gluon/logistic_regression_explained.html) to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.
+This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to [logistic regression tutorial](/api/python/docs/tutorials/getting-started/logistic_regression_explained.html) to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.
 
 ## Using the Gluon API
 
@@ -47,19 +47,19 @@ This tutorial also assumes understanding of how to train a network with float32 
 
 With Gluon API, you need to take care of three things to convert a model to support computation with float16.
 
-1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.cast) method of the `Block` representing the network.
+1. Cast Gluon `Block`'s parameters and expected input type to float16 by calling the [cast](/api/python/docs/api/gluon/block.html?cast#mxnet.gluon.Block.cast) method of the `Block` representing the network.
 
 ```python
 net.cast('float16')
 ```
 
-2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype](https://mxnet.incubator.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.NDArray.astype) method of NDArrays.
+2. Ensure the data input to the network is of float16 type. If your `DataLoader` or `Iterator` produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the [astype](/api/python/docs/api/ndarray/ndarray.html?astype#mxnet.ndarray.NDArray.astype) method of NDArrays.
 
 ```python
 data = data.astype('float16', copy=False)
 ```
 
-If you are using images and DataLoader, you can also use a [Cast transform](https://mxnet.incubator.apache.org/api/python/gluon/data.html#mxnet.gluon.data.vision.transforms.Cast).
+If you are using images and DataLoader, you can also use a [Cast transform](/api/python/docs/api/gluon/data/vision/transforms/index.html#mxnet.gluon.data.vision.transforms.Cast).
 
 3. It is preferable to use **multi_precision mode of optimizer** when training in float16. This mode of optimizer maintains a master copy of the weights in float32 even when the training (i.e. forward and backward pass) is in float16. This helps increase precision of the weight updates and can lead to faster convergence in some scenarios.
 
@@ -67,7 +67,7 @@ If you are using images and DataLoader, you can also use a [Cast transform](http
 optimizer = mx.optimizer.create('sgd', multi_precision=True, lr=0.01)
 ```
 
-You can play around with mixed precision using the image classification [example](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py). We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here's the starter command to run this example.
+You can play around with mixed precision using the image classification [example](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_imagenet.py). We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here's the starter command to run this example.
 
 ```bash
 python image_classification.py --model resnet50_v1 --dataset caltech101 --gpus 0 --num-worker 30 --dtype float16
@@ -98,7 +98,7 @@ net.features = pretrained_net.features
 net.cast('float16')
 ```
 
-You can check the parameters of the model by calling [summary](https://mxnet.incubator.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.summary) with some fake data. Notice the provided `dtype=np.float16` in the line below. As it was mentioned earlier, we have to provide data as float16 as well.
+You can check the parameters of the model by calling [summary](/api/python/docs/api/gluon/block.html?block%20summary#mxnet.gluon.Block.summary) with some fake data. Notice the provided `dtype=np.float16` in the line below. As it was mentioned earlier, we have to provide data as float16 as well.
 
 ```python
 net.summary(mx.nd.uniform(shape=(1, 3, 224, 224), dtype=np.float16))
@@ -133,7 +133,7 @@ if dtype == 'float16':
 output = mx.sym.SoftmaxOutput(data=net_out, name='softmax')
 ```
 
-If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/incubator-mxnet/tree/master/example/image-classificatiIfon/train_imagenet.py)
+If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/incubator-mxnet/blob/master/docs/static_site/src/pages/api/faq/float16.md)
 
 If you don't have ImageNet dataset at your disposal, you can still run the script above using synthetic float16 data by providing the following command:
 

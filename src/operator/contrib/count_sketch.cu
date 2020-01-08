@@ -33,10 +33,6 @@
 #define WARPS_PER_BLOCK 1
 #define THREADS_PER_BLOCK 512
 
-#define CUDA_KERNEL_LOOP(i, n) \
-  for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
-       i < (n); \
-       i += blockDim.x * gridDim.x)
 namespace mshadow {
 namespace cuda {
 // wrappers to deal with atomic add

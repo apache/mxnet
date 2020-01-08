@@ -112,7 +112,7 @@ class ToTensor(HybridBlock):
         - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x C x H x W) shape and float32 type.
 
     Examples
     --------
@@ -257,9 +257,7 @@ class CropResize(HybridBlock):
         interpolation. See OpenCV's resize function for available choices.
         https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#resize
         Note that the Resize on gpu use contrib.bilinearResize2D operator
-        which only support bilinear interpolation(1). The result would be slightly
-        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
-        use algorithm which aligns corner.
+        which only support bilinear interpolation(1).
 
 
     Inputs:
@@ -348,9 +346,7 @@ class Resize(HybridBlock):
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
         Note that the Resize on gpu use contrib.bilinearResize2D operator
-        which only support bilinear interpolation(1). The result would be slightly
-        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
-        use algorithm which aligns corner.
+        which only support bilinear interpolation(1).
 
 
     Inputs:

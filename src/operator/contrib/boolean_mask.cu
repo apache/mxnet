@@ -46,6 +46,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(data.shape()[axis], idx.shape()[0]);
   CHECK_EQ(idx.shape().ndim(), 1U);
   Stream<gpu>* s = ctx.get_stream<gpu>();
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
   // count the number of 1s in `idx`, so that we could know the output dimension
   size_t idx_size = idx.shape()[0];
   int32_t valid_num = 0;
@@ -58,7 +59,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
                                 prefix_sum,
                                 prefix_sum,
                                 idx_size,
-                                Stream<gpu>::GetStream(s));
+                                stream);
   size_t buffer_size = idx_size * sizeof(int32_t);
   temp_storage_bytes += buffer_size;
   // Allocate memory on GPU and allocate pointer
@@ -66,7 +67,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
       s, idx.shape()[0], prefix_sum, idx.data().dptr<IType>());
   });
@@ -76,9 +77,11 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
                                 prefix_sum,
                                 prefix_sum,
                                 idx_size,
-                                Stream<gpu>::GetStream(s));
-  CUDA_CALL(cudaMemcpy(&valid_num, &prefix_sum[idx_size - 1], sizeof(int32_t),
-                       cudaMemcpyDeviceToHost));
+                                stream);
+  CUDA_CALL(cudaMemcpyAsync(&valid_num, &prefix_sum[idx_size - 1], sizeof(int32_t),
+                            cudaMemcpyDeviceToHost, stream));
+  CUDA_CALL(cudaStreamSynchronize(stream));
+
   // Set the output shape forcefully
   mxnet::TShape data_shape = data.shape();
   data_shape[axis] = valid_num;
@@ -86,7 +89,7 @@ inline void BooleanMaskForward<gpu>(const nnvm::NodeAttrs& attrs,
   size_t input_size = data.shape().Size();
   size_t col_size = input_size / idx.shape()[0];
   // Do the copy
-  MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(out.dtype(), DType, {
     if (valid_num > 0) {
       mxnet_op::Kernel<BooleanMaskForwardKernel, gpu>::Launch(
         s, input_size, out.data().dptr<DType>(), data.data().dptr<DType>(), prefix_sum, col_size);
@@ -110,6 +113,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
   const NDArray& idx = inputs[2];
   const NDArray& igrad_data = outputs[0];
   Stream<gpu>* s = ctx.get_stream<gpu>();
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
   // Count the number of 1s in `idx`, so that we could know the output dimension
   size_t idx_size = idx.shape()[0];
   int32_t* prefix_sum = nullptr;
@@ -121,7 +125,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
                                 prefix_sum,
                                 prefix_sum,
                                 idx_size,
-                                Stream<gpu>::GetStream(s));
+                                stream);
   size_t buffer_size = idx_size * sizeof(int32_t);
   temp_storage_bytes += buffer_size;
   // Allocate memory on GPU and allocate pointer
@@ -129,7 +133,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_storage_bytes), s);
   prefix_sum = reinterpret_cast<int32_t*>(workspace.dptr_);
   d_temp_storage = workspace.dptr_ + buffer_size;
-  MSHADOW_TYPE_SWITCH(idx.dtype(), IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(idx.dtype(), IType, {
     mxnet_op::Kernel<mshadow_op::identity_with_cast, gpu>::Launch(
       s, idx.shape()[0], prefix_sum, idx.data().dptr<IType>());
   });
@@ -139,7 +143,7 @@ inline void BooleanMaskBackward<gpu>(const nnvm::NodeAttrs& attrs,
                                 prefix_sum,
                                 prefix_sum,
                                 idx_size,
-                                Stream<gpu>::GetStream(s));
+                                stream);
   size_t input_size = igrad_data.shape().Size();
   size_t col_size = input_size / idx_size;
   // Backward pass
@@ -157,6 +161,7 @@ NNVM_REGISTER_OP(_contrib_boolean_mask)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FComputeEx>("FComputeEx<gpu>", BooleanMaskForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_contrib_boolean_mask)

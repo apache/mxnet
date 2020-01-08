@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  MXNet System Architecture
+category: architecture
+permalink: /api/architecture/overview
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  MXNet System Architecture
-category: architecture
-permalink: /api/architecture/overview
----
 
 # MXNet System Architecture
 
@@ -57,7 +57,7 @@ execute a bunch of functions following their dependencies.
 Execution of any two functions with dependencies should be serialized.
 To boost performance, functions with no dependencies *can* be executed in parallel.
 For a general discussion of this topic,
-see our [notes on the dependency engine](note_engine.md).
+see our [notes on the dependency engine](note_engine).
 
 ### Interface
 
@@ -871,4 +871,4 @@ The gradient, which can be found in `src/operator/smooth_l1_unary-inl.h`, is sim
 
 ### Beyond Two Operands
 The new unified API is designed to fulfill the fundamentals of an operation. For operators with more than two inputs,
-more than one output, or that need more features, see the original [Operator API](http://mxnet.io/architecture/overview.html#operators-in-mxnet).
+more than one output, or that need more features, see the original [Operator API](overview#operators-in-mxnet).

@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: NNPACK for Multi-Core CPU Support in MXNet
+category: faq
+faq_c: Speed
+question: Can I use nnpack to improve the CPU performance of MXNet?
+permalink: /api/faq/nnpack
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: NNPACK for Multi-Core CPU Support in MXNet
-category: faq
-faq_c: Speed
-question: Can I use nnpack to improve the CPU performance of MXNet?
-permalink: /api/faq/nnpack
----
 
 ### NNPACK for Multi-Core CPU Support in MXNet
 [NNPACK](https://github.com/Maratyszcza/NNPACK) is an acceleration package
@@ -93,7 +93,7 @@ $ cd ~
 * Set lib path of NNPACK as the environment variable, e.g. `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$YOUR_NNPACK_INSTALL_PATH/lib`
 * Add the include file of NNPACK and its third-party to  `ADD_CFLAGS` in config.mk, e.g. `ADD_CFLAGS = -I$(YOUR_NNPACK_INSTALL_PATH)/include/ -I$(YOUR_NNPACK_INSTALL_PATH)/third-party/pthreadpool/include/`
 * Set `USE_NNPACK = 1` in config.mk.
-* Build MXNet from source following the [install guide](http://mxnet.io/install/index.html).
+* Build MXNet from source following the [install guide]({{'/get_started'|relative_url}}).
 
 ### NNPACK Performance
 

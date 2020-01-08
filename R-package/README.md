@@ -24,7 +24,7 @@ options(repos = cran)
 install.packages("mxnet")
 ```
 
-To use the GPU version or to use it on Linux, please follow [Installation Guide](http://mxnet.io/install/index.html)
+To use the GPU version or to use it on Linux, please follow [Installation Guide](https://mxnet.io/install/index.html)
 
 License
 -------

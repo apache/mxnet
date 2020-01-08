@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  Memory Consumption
+category: architecture
+permalink: /api/architecture/note_memory
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Memory Consumption
-category: architecture
-permalink: /api/architecture/note_memory
----
 
 # Optimizing Memory Consumption in Deep Learning
 
@@ -347,5 +347,4 @@ So here are two takeaways:
 
 ## Next Steps
 
-* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
+* [Efficient Data Loading Module for Deep Learning](note_data_loading)

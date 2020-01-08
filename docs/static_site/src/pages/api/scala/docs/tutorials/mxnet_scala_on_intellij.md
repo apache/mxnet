@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Scala on IntelliJ
+is_tutorial: true
+tag: scala
+permalink: /api/scala/docs/tutorials/mxnet_scala_on_intellij
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Scala on IntelliJ
-is_tutorial: true
-tag: scala
-permalink: /api/scala/docs/tutorials/mxnet_scala_on_intellij
----
 
 # Run MXNet Scala Examples Using the IntelliJ IDE (macOS)
 
@@ -29,7 +29,7 @@ This tutorial guides you through setting up a Scala project in the IntelliJ IDE 
 ## Prerequisites:
 To use this tutorial you need the following software:
 
-- [Java 8 JDK](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+- [Java 8 JDK](https:///www.oracle.com/technetwork/java/javase/downloads/index.html)
 - [Maven](https://maven.apache.org/install.html)
 - [Scala](https://www.scala-lang.org/download/) - comes with IntelliJ, so you don't need to install it separately
 - [OpenCV](https://opencv.org/)
@@ -197,7 +197,7 @@ The project's `pom.xml` will be open for editing.
   <licenses>
     <license>
       <name>Apache2</name>
-      <url>http://mxnet.apache.org</url>
+      <url>https://mxnet.apache.org</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
@@ -404,7 +404,7 @@ This can be resolved be installing OpenCV.
 
 ### Using MXNet from source
 
-If you chose to "Build from Source" when following the [install instructions](https://mxnet.incubator.apache.org/install/index.html) (or the detailed [build from source instructions](https://mxnet.incubator.apache.org/install/build_from_source.html#installing-mxnet-language-bindings)), you can use your custom build instead of the build from maven.  Use your build by editing the `pom.xml` file and replacing the `org.apache.mxnet` dependency with the following:
+If you chose to "Build from Source" when following the [install instructions]({{'/get_started'|relative_url}}) (or the detailed [build from source instructions]({{'/get_started/build_from_source.html#installing-mxnet-language-bindings'|relative_url}})), you can use your custom build instead of the build from maven.  Use your build by editing the `pom.xml` file and replacing the `org.apache.mxnet` dependency with the following:
 
 ```
       <groupId>org.apache.mxnet</groupId>
@@ -450,7 +450,6 @@ The build generates a new jar file in the `target` folder called `scalaInference
 ## Next Steps
 For more information about MXNet Scala resources, see the following:
 
-* [Scala API](http://mxnet.io/api/scala/)
-* [Scala Inference API](https://mxnet.incubator.apache.org/api/scala/infer.html)
+* [Scala API]({{'/api/scala'|relative_url}})
 * [Scala Examples](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
-* [MXNet Tutorials Index](http://mxnet.io/tutorials/index.html)
+* [MXNet Tutorials Index]({{'/api'|relative_url}})

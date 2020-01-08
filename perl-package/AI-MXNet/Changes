@@ -86,7 +86,7 @@ Revision history for Perl extension AI::MXNet
            pod reworked to be readable via metacpan.
 
 0.95  Sun Mar 26 17:42:02 PDT 2017
-        - docs, bugfixes, tests in order to be visible on http://mxnet.io
+        - docs, bugfixes, tests in order to be visible on https://mxnet.io
 
 0.03  Tue Feb 14 07:28:11 PST 2017
         - sync up with current state of the Python inteface.

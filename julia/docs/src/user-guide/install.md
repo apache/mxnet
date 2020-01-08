@@ -79,7 +79,7 @@ unresolved dependencies in an non-standard environment; Or when one want
 to work with a separate, maybe customized libmxnet.
 
 To build libmxnet, please refer to [the installation guide of
-libmxnet](https://mxnet.incubator.apache.org/install/index.html). After
+libmxnet](https://mxnet.apache.org/install/index.html). After
 successfully installing libmxnet, set the `MXNET_HOME` *environment
 variable* to the location of libmxnet. In other words, the compiled
 `libmxnet.so` should be found in `$MXNET_HOME/lib`.

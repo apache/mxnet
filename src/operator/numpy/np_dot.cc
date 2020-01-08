@@ -129,8 +129,9 @@ NNVM_REGISTER_OP(_np_dot)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDotForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_dot"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
@@ -142,7 +143,7 @@ NNVM_REGISTER_OP(_backward_np_dot)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+    return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyDotBackward<cpu>);
 

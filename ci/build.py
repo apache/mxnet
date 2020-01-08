@@ -27,63 +27,17 @@ __version__ = '0.3'
 
 import argparse
 import glob
-import logging
-import os
+import pprint
 import re
 import shutil
+import signal
 import subprocess
-import sys
-import tempfile
 from itertools import chain
 from subprocess import check_call, check_output
 from typing import *
+
+from safe_docker_run import SafeDockerClient
 from util import *
-import docker
-import docker.models
-import docker.errors
-import signal
-import atexit
-import pprint
-
-
-class Cleanup:
-    """A class to cleanup containers"""
-    def __init__(self):
-        self.containers = set()
-        self.docker_stop_timeout = 3
-
-    def add_container(self, container: docker.models.containers.Container):
-        assert isinstance(container, docker.models.containers.Container)
-        self.containers.add(container)
-
-    def remove_container(self, container: docker.models.containers.Container):
-        assert isinstance(container, docker.models.containers.Container)
-        self.containers.remove(container)
-
-    def _cleanup_containers(self):
-        if self.containers:
-            logging.warning("Cleaning up containers")
-        else:
-            return
-        # noinspection PyBroadException
-        try:
-            stop_timeout = int(os.environ.get("DOCKER_STOP_TIMEOUT", self.docker_stop_timeout))
-        except Exception:
-            stop_timeout = 3
-        for container in self.containers:
-            try:
-                container.stop(timeout=stop_timeout)
-                logging.info("☠: stopped container %s", trim_container_id(container.id))
-                container.remove()
-                logging.info("🚽: removed container %s", trim_container_id(container.id))
-            except Exception as e:
-                logging.exception(e)
-        self.containers.clear()
-        logging.info("Cleaning up containers finished.")
-
-    def __call__(self):
-        """Perform cleanup"""
-        self._cleanup_containers()
 
 
 def get_dockerfiles_path():
@@ -205,18 +159,13 @@ def default_ccache_dir() -> str:
     return os.path.join(os.path.expanduser("~"), ".ccache")
 
 
-def trim_container_id(cid):
-    """:return: trimmed container id"""
-    return cid[:12]
-
-
-def container_run(platform: str,
+def container_run(docker_client: SafeDockerClient,
+                  platform: str,
                   nvidia_runtime: bool,
                   docker_registry: str,
                   shared_memory_size: str,
                   local_ccache_dir: str,
                   command: List[str],
-                  cleanup: Cleanup,
                   environment: Dict[str, str],
                   dry_run: bool = False) -> int:
     """Run command in a container"""
@@ -232,13 +181,6 @@ def container_run(platform: str,
         'CCACHE_LOGFILE': '/tmp/ccache.log',  # a container-scoped log, useful for ccache
                                               # verification.
     })
-    # These variables are passed to the container to the process tree killer can find runaway
-    # process inside the container
-    # https://wiki.jenkins.io/display/JENKINS/ProcessTreeKiller
-    # https://github.com/jenkinsci/jenkins/blob/578d6bacb33a5e99f149de504c80275796f0b231/core/src/main/java/hudson/model/Run.java#L2393
-    #
-    jenkins_env_vars = ['BUILD_NUMBER', 'BUILD_ID', 'BUILD_TAG']
-    environment.update({k: os.environ[k] for k in jenkins_env_vars if k in os.environ})
     environment.update({k: os.environ[k] for k in ['CCACHE_MAXSIZE'] if k in os.environ})
 
     tag = get_docker_tag(platform=platform, registry=docker_registry)
@@ -248,7 +190,7 @@ def container_run(platform: str,
     os.makedirs(local_build_folder, exist_ok=True)
     os.makedirs(local_ccache_dir, exist_ok=True)
     logging.info("Using ccache directory: %s", local_ccache_dir)
-    docker_client = docker.from_env()
+
     # Equivalent command
     docker_cmd_list = [
         get_docker_binary(nvidia_runtime),
@@ -276,8 +218,7 @@ def container_run(platform: str,
     docker_cmd = ' \\\n\t'.join(docker_cmd_list)
     logging.info("Running %s in container %s", command, tag)
     logging.info("Executing the equivalent of:\n%s\n", docker_cmd)
-    # return code of the command inside docker
-    ret = 0
+
     if not dry_run:
         #############################
         #
@@ -288,10 +229,10 @@ def container_run(platform: str,
             # noinspection PyShadowingNames
             # runc is default (docker info | grep -i runtime)
             runtime = 'nvidia'
-        container = docker_client.containers.run(
+
+        return docker_client.run(
             tag,
             runtime=runtime,
-            detach=True,
             command=command,
             shm_size=shared_memory_size,
             user='{}:{}'.format(os.getuid(), os.getgid()),
@@ -305,61 +246,7 @@ def container_run(platform: str,
                     {'bind': '/work/ccache', 'mode': 'rw'},
             },
             environment=environment)
-        try:
-            logging.info("Started container: %s", trim_container_id(container.id))
-            # Race condition:
-            # If the previous call is interrupted then it's possible that the container is not cleaned up
-            # We avoid by masking the signals temporarily
-            cleanup.add_container(container)
-            signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGINT, signal.SIGTERM})
-            #
-            #############################
-
-            stream = container.logs(stream=True, stdout=True, stderr=True)
-            sys.stdout.flush()
-            for chunk in stream:
-                sys.stdout.buffer.write(chunk)
-                sys.stdout.buffer.flush()
-            sys.stdout.flush()
-            stream.close()
-            try:
-                logging.info("Waiting for status of container %s for %d s.",
-                            trim_container_id(container.id),
-                            container_wait_s)
-                wait_result = container.wait(timeout=container_wait_s)
-                logging.info("Container exit status: %s", wait_result)
-                ret = wait_result.get('StatusCode', 200)
-                if ret != 0:
-                    logging.error("Container exited with an error 😞")
-                    logging.info("Executed command for reproduction:\n\n%s\n", " ".join(sys.argv))
-                else:
-                    logging.info("Container exited with success 👍")
-            except Exception as e:
-                logging.exception(e)
-                ret = 150
-
-            # Stop
-            try:
-                logging.info("Stopping container: %s", trim_container_id(container.id))
-                container.stop()
-            except Exception as e:
-                logging.exception(e)
-                ret = 151
-
-            # Remove
-            try:
-                logging.info("Removing container: %s", trim_container_id(container.id))
-                container.remove()
-            except Exception as e:
-                logging.exception(e)
-                ret = 152
-            cleanup.remove_container(container)
-            containers = docker_client.containers.list()
-            if containers:
-                logging.info("Other running containers: %s", [trim_container_id(x.id) for x in containers])
-        except docker.errors.NotFound as e:
-            logging.info("Container was stopped before cleanup started: %s", e)
-    return ret
+    return 0
 
 
 def list_platforms() -> str:
@@ -387,17 +274,6 @@ def log_environment():
     pp = pprint.PrettyPrinter(indent=4)
     logging.debug("Build environment: %s", pp.pformat(dict(os.environ)))
 
-
-def script_name() -> str:
-    """:returns: script name with leading paths removed"""
-    return os.path.split(sys.argv[0])[1]
-
-def config_logging():
-    import time
-    logging.getLogger().setLevel(logging.INFO)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-    logging.basicConfig(format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
-    logging.Formatter.converter = time.gmtime
 
 def main() -> int:
     config_logging()
@@ -471,20 +347,7 @@ def main() -> int:
 
     command = list(chain(*args.command))
     docker_binary = get_docker_binary(args.nvidiadocker)
-
-    # Cleanup on signals and exit
-    cleanup = Cleanup()
-
-    def signal_handler(signum, _):
-        signal.pthread_sigmask(signal.SIG_BLOCK, {signum})
-        logging.warning("Signal %d received, cleaning up...", signum)
-        cleanup()
-        logging.warning("done. Exiting with error.")
-        sys.exit(1)
-
-    atexit.register(cleanup)
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+    docker_client = SafeDockerClient()
 
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
                         for e in args.environment])
@@ -498,7 +361,7 @@ def main() -> int:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
-                     num_retries=args.docker_build_retries, no_cache=args.no_cache)
+                         num_retries=args.docker_build_retries, no_cache=args.no_cache)
         else:
             logging.info("Skipping docker build step.")
 
@@ -510,23 +373,23 @@ def main() -> int:
         ret = 0
         if command:
             ret = container_run(
-                platform=platform, nvidia_runtime=args.nvidiadocker,
+                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, cleanup=cleanup, environment=environment)
+                local_ccache_dir=args.ccache_dir, environment=environment)
         elif args.print_docker_run:
             command = []
             ret = container_run(
-                platform=platform, nvidia_runtime=args.nvidiadocker,
+                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, dry_run=True, cleanup=cleanup, environment=environment)
+                local_ccache_dir=args.ccache_dir, dry_run=True, environment=environment)
         else:
             # With no commands, execute a build function for the target platform
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", "build_{}".format(platform)]
             logging.info("No command specified, trying default build: %s", ' '.join(command))
             ret = container_run(
-                platform=platform, nvidia_runtime=args.nvidiadocker,
+                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, cleanup=cleanup, environment=environment)
+                local_ccache_dir=args.ccache_dir, environment=environment)
 
         if ret != 0:
             logging.critical("Execution of %s failed with status: %d", command, ret)
@@ -553,9 +416,9 @@ def main() -> int:
                 continue
             command = ["/work/mxnet/ci/docker/runtime_functions.sh", build_platform]
             container_run(
-                platform=platform, nvidia_runtime=args.nvidiadocker,
+                docker_client=docker_client, platform=platform, nvidia_runtime=args.nvidiadocker,
                 shared_memory_size=args.shared_memory_size, command=command, docker_registry=args.docker_registry,
-                local_ccache_dir=args.ccache_dir, cleanup=cleanup, environment=environment)
+                local_ccache_dir=args.ccache_dir, environment=environment)
             shutil.move(buildir(), plat_buildir)
             logging.info("Built files left in: %s", plat_buildir)
 

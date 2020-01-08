@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Use data from S3 for training
+category: faq
+faq_c: Deployment Environments
+question: How to use data from S3 for training?
+permalink: /api/faq/s3_integration
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Use data from S3 for training
-category: faq
-faq_c: Deployment Environments
-question: How to use data from S3 for training?
-permalink: /api/faq/s3_integration
----
 
 
 # Use data from S3 for training
@@ -41,7 +41,7 @@ Following are detailed instructions on how to use data from S3 for training.
 
 ## Step 1: Build MXNet with S3 integration enabled
 
-Follow instructions [here](http://mxnet.io/install/index.html) to install MXNet from source with the following additional steps to enable S3 integration.
+Follow instructions [here]({{'/get_started'|relative_url}}) to install MXNet from source with the following additional steps to enable S3 integration.
 
 1. Install `libcurl4-openssl-dev` and `libssl-dev` before building MXNet. These packages are required to read/write from AWS S3.
 2. Append `USE_S3=1` to `config.mk` before building MXNet.

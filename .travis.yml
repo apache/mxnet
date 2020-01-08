@@ -31,9 +31,12 @@ install:
 # recommended.
 # https://docs.travis-ci.com/user/reference/overview/
 script:
+# Temporarily disable travis build due to travis constantly time out, tracked in
+# https://github:com/apache/incubator-mxnet/issues/16535:
   - export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+  - export MXNET_SUBGRAPH_VERBOSE=0
   - mv make/osx.mk config.mk
-  - make -j 2
+#  - make -j 2
 
   # Temporarily disabled due to https://github.com/apache/incubator-mxnet/issues/13136
   # We ignore several tests to avoid possible timeouts on large PRs.

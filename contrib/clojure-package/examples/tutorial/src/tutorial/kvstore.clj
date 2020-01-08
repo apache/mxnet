@@ -17,7 +17,7 @@
 
 (ns tutorial.kvstore
   "A REPL tutorial of the MXNet Clojure API for KVStore, based on
-  https://mxnet.incubator.apache.org/api/clojure/kvstore.html"
+  https://mxnet.apache.org/api/clojure/kvstore.html"
   (:require [org.apache.clojure-mxnet.kvstore :as kvstore]
             [org.apache.clojure-mxnet.ndarray :as ndarray]
             [org.apache.clojure-mxnet.context :as context]))

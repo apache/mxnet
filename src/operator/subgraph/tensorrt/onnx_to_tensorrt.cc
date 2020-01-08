@@ -79,7 +79,7 @@ std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
   auto trt_logger = std::unique_ptr<TRT_Logger>(new TRT_Logger(verbosity));
   auto trt_builder = nvinfer1::createInferBuilder(*trt_logger);
   auto trt_network = trt_builder->createNetwork();
-  auto trt_parser  = InferObject(nvonnxparser::createParser(trt_network, *trt_logger));
+  auto trt_parser  = InferObject(nvonnxparser::createParser(*trt_network, *trt_logger));
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
   // of populating parsed_model

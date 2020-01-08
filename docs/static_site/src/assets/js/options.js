@@ -2,7 +2,7 @@
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file 
+ * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -17,7 +17,9 @@
  * under the License.
  */
 
-/* Installation page display functions for install selector */
+/* Installation page display functions for install selector.
+   This utility allows direct links to specific install instructions.
+*/
 
 $(document).ready(function () {
     function label(lbl) {
@@ -27,13 +29,13 @@ $(document).ready(function () {
     }
 
     function urlSearchParams(searchString) {
-        let urlDict = new Map();
+        let searchDict = new Map();
         let searchParams = searchString.substring(1).split("&");
         searchParams.forEach(function (element) {
             kvPair = element.split("=");
-            urlDict.set(kvPair[0], kvPair[1]);
+            searchDict.set(kvPair[0], kvPair[1]);
         });
-        return urlDict;
+        return searchDict;
     }
 
     function is_a_match(elem, text) {
@@ -43,11 +45,10 @@ $(document).ready(function () {
         }
     }
 
-    function setSelects() {
-        let urlParams = urlSearchParams(window.location.search);
+    function setSelects(urlParams) {
         if (urlParams.get('version'))
             versionSelect = urlParams.get('version');
-        $('.current-version').html( versionSelect + ' <span class="caret"></span></button>' );
+        $('.current-version').html( versionSelect + ' <span class="caret"></span>' );
         if (urlParams.get('platform'))
             platformSelect = label(urlParams.get('platform'));
         if (urlParams.get('language'))
@@ -66,8 +67,9 @@ $(document).ready(function () {
         $('button.opt').each(function(){is_a_match($(this), environSelect)});
 
         showContent();
-        if (window.location.href.indexOf("/get_started/") >= 0) {
-            history.pushState(null, null, '?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&environ=' + environSelect + '&processor=' + processorSelect);
+        let queryString = '?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&environ=' + environSelect + '&processor=' + processorSelect
+        if (window.location.href.indexOf("/get_started") >= 0) {
+            history.pushState(null, null, queryString);
         }
     }
 
@@ -80,8 +82,7 @@ $(document).ready(function () {
         });
     }
 
-    showContent();
-    setSelects();
+    setSelects(urlSearchParams(window.location.search));
 
     function setContent() {
         var el = $(this);
@@ -90,27 +91,17 @@ $(document).ready(function () {
         el.addClass('active');
         if ($(this).hasClass("versions")) {
             $('.current-version').html($(this).text());
-            if (window.location.search.indexOf("version") < 0) {
-                if (window.location.search.length > 0) {
-                    var url = 'index.html' + window.location.search.concat('&version=' + $(this).text());
-                } else {
-                    var url = 'index.html?version=' + $(this).text();
-                }
-                history.pushState(null, null, url);
-            } else {
-                history.pushState(null, null, 'index.html' + window.location.search.replace(urlParams.get('version'), $(this).text()));
-            }
+            urlParams.set("version", $(this).text());
         } else if ($(this).hasClass("platforms")) {
-            history.pushState(null, null, 'index.html' + window.location.search.replace('='+urlParams.get('platform'), '='+label($(this).text())));
+            urlParams.set("platform", label($(this).text()));
         } else if ($(this).hasClass("languages")) {
-            history.pushState(null, null, 'index.html' + window.location.search.replace('='+urlParams.get('language'), '='+label($(this).text())));
+            urlParams.set("language", label($(this).text()));
         } else if ($(this).hasClass("processors")) {
-            history.pushState(null, null, 'index.html' + window.location.search.replace('='+urlParams.get('processor'), '='+label($(this).text())));
+            urlParams.set("processor", label($(this).text()));
         } else if ($(this).hasClass("environs")) {
-            history.pushState(null, null, 'index.html' + window.location.search.replace('='+urlParams.get('environ'), '='+label($(this).text())));
+            urlParams.set("environ", label($(this).text()));
         }
-
-        showContent();
+        setSelects(urlParams);
     }
 
     $('.opt-group').on('click', '.opt', setContent);

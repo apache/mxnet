@@ -34,10 +34,11 @@ title: Apache MXNet
 email: dev@mxnet.apache.org
 description: >- # this means to ignore newlines until "baseurl:"
   A flexible and efficient library for deep learning.
-url: https://mxnet.incubator.apache.org
+url: https://mxnet.apache.org
 twitter_username: apachemxnet
 github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
+google_analytics: UA-96378503-1
 
 # Build settings
 markdown: redcarpet

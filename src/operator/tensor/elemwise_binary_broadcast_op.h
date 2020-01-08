@@ -151,9 +151,10 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   *new_oshape = mxnet::TShape(odim, 1);
   int bl = oshape.ndim() - lshape.ndim();
   int br = oshape.ndim() - rshape.ndim();
-  int j = 0, lprod = 1, rprod = 1, oprod = 1;
+  int j = 0;
+  index_t lprod = 1, rprod = 1, oprod = 1;
   for (int i = 0; i < oshape.ndim(); ++i) {
-    int l = 1, r = 1, o = oshape[i];
+    index_t l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
     if (i >= br) r = rshape[i-br];
     if ((lprod != rprod || l != r) &&
@@ -186,12 +187,13 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
 }
 
 namespace mxnet_op {
-template<int ndim, typename DType, typename OP>
+template<int ndim, typename OP>
 struct binary_broadcast_kernel {
   /*! \brief Map function for binary_broadcast_kernel */
+  template<typename IType, typename DType>
   MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
-                                  const Shape <ndim> &oshape, DType *lhs, DType *rhs,
+                                  const Shape <ndim> &oshape, IType *lhs, IType *rhs,
                                   DType *out) {
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
@@ -207,9 +209,10 @@ struct binary_broadcast_kernel {
   }
 
   /*! \brief Map function for binary_broadcast_kernel */
+  template<typename IType, typename DType>
   MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
-                                  const Shape <ndim> &oshape, DType lhs, DType *rhs,
+                                  const Shape <ndim> &oshape, IType lhs, IType *rhs,
                                   DType *out) {
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
@@ -223,6 +226,49 @@ struct binary_broadcast_kernel {
       KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs, rhs[ridx]));
     }
   }
+
+#ifndef _WIN32
+  /*! \brief Map function for binary_broadcast_kernel */
+  template<typename IType, typename DType,
+           typename std::enable_if<!std::is_same<IType, DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
+                                  const Shape <ndim> &lstride, const Shape <ndim> &rstride,
+                                  const Shape <ndim> &oshape, IType *lhs, DType *rhs,
+                                  DType *out) {
+    Shape <ndim> coord = unravel(base, oshape);
+    auto lidx = static_cast<index_t>(dot(coord, lstride));
+    auto ridx = static_cast<index_t>(dot(coord, rstride));
+    KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
+    // starts from 1 to avoid extra inc at end of loop
+    for (index_t i = 1; i < length; ++i) {
+      inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
+      // When tuning, don't actually run the op, since it's not going to be tuned against
+      // the actual op we'll eventually be using
+      KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
+    }
+  }
+
+  /*! \brief Map function for binary_broadcast_kernel */
+  template<typename IType, typename DType,
+           typename std::enable_if<!std::is_same<IType, DType>::value &&
+                                   !std::is_pointer<IType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
+                                  const Shape <ndim> &lstride, const Shape <ndim> &rstride,
+                                  const Shape <ndim> &oshape, IType lhs, DType *rhs,
+                                  DType *out) {
+    Shape <ndim> coord = unravel(base, oshape);
+    auto lidx = static_cast<index_t>(dot(coord, lstride));
+    auto ridx = static_cast<index_t>(dot(coord, rstride));
+    KERNEL_ASSIGN(out[base], req, OP::Map(lhs, rhs[ridx]));
+    // starts from 1 to avoid extra inc at end of loop
+    for (index_t i = 1; i < length; ++i) {
+      inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
+      // When tuning, don't actually run the op, since it's not going to be tuned against
+      // the actual op we'll eventually be using
+      KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs, rhs[ridx]));
+    }
+  }
+#endif
 };
 
 template<int req, typename OP, bool col_vec>
@@ -287,6 +333,37 @@ struct csr_dns_map_kernel {
 }  // namespace mxnet_op
 
 template<typename xpu, typename OP>
+void BinaryBroadcastIntCompute(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0U) return;
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
+  int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
+                                         &new_lshape, &new_rshape, &new_oshape);
+  if (!ndim) {
+    ElemwiseBinaryOp::ComputeInt<xpu, OP>(attrs, ctx, inputs, req, outputs);
+  } else {
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (outputs[0].type_flag_ == mshadow::kBool) {
+      LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
+    }
+    MXNET_INT_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+        mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+        mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+        mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::
+        template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+        inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    });
+  }
+}
+
+template<typename xpu, typename OP>
 void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
                             const std::vector<TBlob>& inputs,
@@ -299,19 +376,78 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   if (!ndim) {
     ElemwiseBinaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
   } else {
-    if (req[0] != kNullOp) {
-      mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (outputs[0].type_flag_ == mshadow::kBool) {
+      LOG(FATAL) << "Operator " << attrs.op->name << " does not support boolean type";
+    }
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+        mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+        mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+        mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::
+        template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+        inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    });
+  }
+}
+
+template<typename xpu, typename OP>
+void BinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0U) return;
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
+  int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
+                                         &new_lshape, &new_rshape, &new_oshape);
+  if (!ndim) {
+    ElemwiseBinaryOp::ComputeWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
+  } else {
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+        mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
+        mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
+        mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::
+        template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
+        inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
+      });
+    });
+  }
+}
+
+template<typename xpu, typename OP>
+void BinaryBroadcastComputeLogic(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
+  if (outputs[0].shape_.Size() == 0U) return;
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
+  int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
+                                         &new_lshape, &new_rshape, &new_oshape);
+  if (!ndim) {
+    ElemwiseBinaryOp::ComputeLogic<xpu, OP>(attrs, ctx, inputs, req, outputs);
+  } else {
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
           mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
           mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
           mshadow::Shape<NDim> rstride = mxnet_op::calc_stride(new_rshape.get<NDim>());
-          mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, DType, OP>, xpu>::
+          mxnet_op::Kernel<mxnet_op::binary_broadcast_kernel<NDim, OP>, xpu>::
           template LaunchEx(s, new_oshape.Size(), req[0], lstride, rstride, oshape,
-          inputs[0].dptr<DType>(), inputs[1].dptr<DType>(), outputs[0].dptr<DType>());
+                            inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                            outputs[0].dptr<bool>());
         });
-      });
-    }
+    });
   }
 }
 
@@ -413,11 +549,11 @@ void BinaryBroadcastCsrDnsDnsImpl(const OpContext& ctx,
       Shape<NDim> lstride = calc_stride(new_csrshape.get<NDim>());
       Shape<NDim> rstride = calc_stride(new_dnsshape.get<NDim>());
       if (reverse && std::is_same<OP, mshadow_op::minus>::value) {
-        Kernel<binary_broadcast_kernel<NDim, DType, mshadow_op::plus>, xpu>::
+        Kernel<binary_broadcast_kernel<NDim, mshadow_op::plus>, xpu>::
         template LaunchEx(s, new_oshape.Size(), req, lstride, rstride, oshape,
         DType(0), dns_data.dptr<DType>(), out_data.dptr<DType>());
       } else {
-        Kernel<binary_broadcast_kernel<NDim, DType, OP>, xpu>::
+        Kernel<binary_broadcast_kernel<NDim, OP>, xpu>::
         template LaunchEx(s, new_oshape.Size(), req, lstride, rstride, oshape,
         DType(0), dns_data.dptr<DType>(), out_data.dptr<DType>());
       }
@@ -564,6 +700,32 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                const std::vector<TBlob>& outputs);
 
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
+void BinaryBroadcastBackwardUseInImplWithWorkspace(const OpContext& ctx,
+                                                   const std::vector<TBlob>& inputs,
+                                                   const std::vector<OpReqType>& req,
+                                                   const std::vector<TBlob>& outputs,
+                                                   const mshadow::Tensor<xpu, 1, char>& workspace,
+                                                   const mxnet::TShape& new_lshape,
+                                                   const mxnet::TShape& new_rshape,
+                                                   const mxnet::TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob lgrad = outputs[0].reshape(new_lshape);
+  const TBlob rgrad = outputs[1].reshape(new_rshape);
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  const TBlob lhs = inputs[1].reshape(new_lshape);
+  const TBlob rhs = inputs[2].reshape(new_rshape);
+  if (ograd.Size() != 0) {
+    Reduce<red::sum, ndim, DType, op::mshadow_op::mul, LOP>(s, lgrad, req[0], workspace,
+      ograd, lhs, rhs);
+    Reduce<red::sum, ndim, DType, op::mshadow_op::mul, ROP>(s, rgrad, req[1], workspace,
+      ograd, lhs, rhs);
+  }
+}
+
+template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
                                              const std::vector<TBlob>& inputs,
                                              const std::vector<OpReqType>& req,
@@ -627,7 +789,7 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs) {                                      \
       return std::vector<std::string>{"lhs", "rhs"};                  \
     })                                                                \
-  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)   \
+  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)  \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)       \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                   \
     [](const NodeAttrs& attrs){                                       \

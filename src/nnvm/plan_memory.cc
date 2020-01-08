@@ -38,7 +38,7 @@ namespace pass {
 namespace {
   using namespace nnvm::top;
 // Return bytes of data flag.
-static int GetDTypeSize(int type_flag) {
+static int MXGetDTypeSize(int type_flag) {
   switch (type_flag) {
     case kUint8:
     case kInt8:
@@ -62,7 +62,7 @@ static int GetDTypeSize(int type_flag) {
 }
 
 // simple graph based allocator.
-class GraphAllocator {
+class MXGraphAllocator {
  public:
   // storage id equals integer.
   using StorageID = int;
@@ -131,7 +131,7 @@ class GraphAllocator {
   }
 
   // constructor
-  explicit GraphAllocator(const IndexedGraph* idx, const size_t match_range) : idx_(idx) {
+  explicit MXGraphAllocator(const IndexedGraph* idx, const size_t match_range) : idx_(idx) {
     this->Init(match_range, dmlc::GetEnv("NNVM_EXEC_NUM_TEMP", 1));
   }
 
@@ -146,7 +146,7 @@ class GraphAllocator {
         if ((*idx_)[nid].source->is_variable()) continue;
         importance[nid] = 1;
       }
-      num_match_color_ = pass::ColorNodeGroup(
+      num_match_color_ = pass::MXColorNodeGroup(
           *idx_, importance, num_match_color_, &node_color_);
     }
   }
@@ -190,12 +190,12 @@ class GraphAllocator {
 /*
  * Internal method to perform the memory allocation for a graph
  * */
-size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
+size_t MXAllocMemory(const Graph& ret, const IndexedGraph& idx,
                    const std::pair<uint32_t, uint32_t>& node_range,
                    StorageVector* storage_ptr,
                    std::vector<int>* storage_inplace_index_ptr,
                    const std::vector<uint32_t>& entry_ref_count,
-                   GraphAllocator* allocator) {
+                   MXGraphAllocator* allocator) {
   static auto& finplace_option = Op::GetAttr<FInplaceOption>("FInplaceOption");
   static auto& finplace_identity = Op::GetAttr<FInplaceIdentity>("FInplaceIdentity");
   static auto& fignore_inputs = Op::GetAttr<FIgnoreInputs>("FIgnoreInputs");
@@ -213,7 +213,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
     device_vec = &(ret.GetAttr<DeviceVector>("device"));
   }
   size_t num_not_allocated = 0;
-  std::vector<GraphAllocator::StorageID> storage_ref_count(idx.num_node_entries(), 0);
+  std::vector<MXGraphAllocator::StorageID> storage_ref_count(idx.num_node_entries(), 0);
 
   for (uint32_t nid = node_range.first; nid < node_range.second; ++nid) {
     const auto& inode = idx[nid];
@@ -247,13 +247,13 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
                              shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
                              dtype_vec[eid_out] == dtype_vec[eid_in];
         if (taken[kv.first] == false &&
-            sid_out == GraphAllocator::kBadStorageID &&
+            sid_out == MXGraphAllocator::kBadStorageID &&
             sid_in >= 0 &&
             ((storage_ref_count[sid_in] == 1 && !ignore_all_inputs) || real_identity) &&
             entry_ref_count[eid_out] > 0 &&
             shape_vec[eid_out].Size() == shape_vec[eid_in].Size() &&
              (dtype_vec[eid_out] == dtype_vec[eid_in] ||
-             GetDTypeSize(dtype_vec[eid_out]) == GetDTypeSize(dtype_vec[eid_in]))) {
+             MXGetDTypeSize(dtype_vec[eid_out]) == MXGetDTypeSize(dtype_vec[eid_in]))) {
           // inplace optimization
           taken[kv.first] = true;
           storage[eid_out] = sid_in;
@@ -272,7 +272,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
     for (uint32_t index = 0; index < inode.source->num_outputs(); ++index) {
       uint32_t eid = idx.entry_id(nid, index);
       // only request memory for kBadStorageID
-      if (storage[eid] == GraphAllocator::kBadStorageID) {
+      if (storage[eid] == MXGraphAllocator::kBadStorageID) {
         auto &eshape = shape_vec[eid];
         size_t esize = ndim_is_known(shape_vec[eid]) ? eshape.Size() : 0;
         eids.insert(std::make_pair(esize, eid));
@@ -317,7 +317,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
         // use -2 to indicate that the node was never touched.
         storage_inplace_index[eid] = -2;
       }
-      if (storage[eid] == GraphAllocator::kBadStorageID) {
+      if (storage[eid] == MXGraphAllocator::kBadStorageID) {
         ++num_not_allocated;
       }
     }
@@ -327,7 +327,7 @@ size_t AllocMemory(const Graph& ret, const IndexedGraph& idx,
 
 
 // function to plan memory
-Graph PlanMemory(Graph ret) {
+Graph MXPlanMemory(Graph ret) {
   // setup ref counter
   const IndexedGraph& idx = ret.indexed_graph();
   static auto& fignore_inputs = Op::GetAttr<FIgnoreInputs>("FIgnoreInputs");
@@ -380,11 +380,11 @@ Graph PlanMemory(Graph ret) {
     std::vector<int> storage_inplace_index(idx.num_node_entries(), -1);
 
     // the allocator
-    GraphAllocator allocator(&idx, match_range);
+    MXGraphAllocator allocator(&idx, match_range);
 
     // number of entries that are not statically allocated.
     size_t storage_num_not_allocated =
-      AllocMemory(ret, idx, node_range, &storage_vec, &storage_inplace_index,
+      MXAllocMemory(ret, idx, node_range, &storage_vec, &storage_inplace_index,
                   ref_count, &allocator);
     size_t storage_allocated_bytes = allocator.TotalAllocBytes();
 
@@ -406,7 +406,7 @@ Graph PlanMemory(Graph ret) {
 
 NNVM_REGISTER_PASS(MXPlanMemory)
 .describe("Plan the memory allocation of each node entries.")
-.set_body(PlanMemory)
+.set_body(MXPlanMemory)
 .set_change_graph(false)
 .depend_graph_attr("dtype")
 .depend_graph_attr("shape")

@@ -528,14 +528,61 @@ class OpSignature {
 
 #if MXNET_USE_MKLDNN == 1
   void AddSign(const mkldnn::memory &mem) {
-    auto desc = mem.get_primitive_desc().desc();
-    hash = hash * 2 + desc.data.format;
-    eles.push_back(desc.data.format);
+    auto desc = mem.get_desc();
+    hash = hash * 2 + desc.data.format_kind;
+    eles.push_back(desc.data.format_kind);
     hash = hash * 2 + desc.data.data_type;
     eles.push_back(desc.data.data_type);
     for (int i = 0; i < desc.data.ndims; i++) {
       hash = hash * 2 + desc.data.dims[i];
       eles.push_back(desc.data.dims[i]);
+    }
+    switch (desc.data.format_kind) {
+      case mkldnn_blocked:
+        hash = hash * 2 + desc.data.ndims;
+        eles.push_back(desc.data.ndims);
+        for (int i = 0; i < desc.data.ndims; i++) {
+          hash = hash * 2 + desc.data.format_desc.blocking.strides[i];
+          eles.push_back(desc.data.format_desc.blocking.strides[i]);
+        }
+        hash = hash * 2 + desc.data.format_desc.blocking.inner_nblks;
+        eles.push_back(desc.data.format_desc.blocking.inner_nblks);
+        for (int i = 0; i < desc.data.format_desc.blocking.inner_nblks; i++) {
+          hash = hash * 2 + desc.data.format_desc.blocking.inner_blks[i];
+          hash = hash * 2 + desc.data.format_desc.blocking.inner_idxs[i];
+          eles.push_back(desc.data.format_desc.blocking.inner_blks[i]);
+          eles.push_back(desc.data.format_desc.blocking.inner_idxs[i]);
+        }
+        break;
+      case mkldnn_format_kind_wino:
+        hash = hash * 2 + desc.data.format_desc.wino_desc.wino_format;
+        eles.push_back(desc.data.format_desc.wino_desc.wino_format);
+        break;
+      case mkldnn_format_kind_rnn_packed:
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.format;
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.format);
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.n_parts;
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.n_parts);
+        for (int i = 0; i < desc.data.format_desc.rnn_packed_desc.n_parts; ++i) {
+          hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.parts[i];
+          hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.part_pack_size[i];
+          hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.pack_part[i];
+          eles.push_back(desc.data.format_desc.rnn_packed_desc.parts[i]);
+          eles.push_back(desc.data.format_desc.rnn_packed_desc.part_pack_size[i]);
+          eles.push_back(desc.data.format_desc.rnn_packed_desc.pack_part[i]);
+        }
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.n;
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.ldb;
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.offset_compensation;
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.size;
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.n);
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.ldb);
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.offset_compensation);
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.size);
+        break;
+      default:
+      // nothing need to add
+        break;
     }
   }
 #endif
@@ -575,6 +622,11 @@ class OpSignature {
 
   void AddSign(int val) {
     hash = hash * 2 + val;
+    eles.push_back(val);
+  }
+
+  void AddSign(float val) {
+    hash = dmlc::HashCombine(hash, val);
     eles.push_back(val);
   }
 

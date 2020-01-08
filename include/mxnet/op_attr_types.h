@@ -31,6 +31,7 @@
 
 #include <vector>
 #include <functional>
+#include <string>
 
 #include "./base.h"
 #include "./ndarray.h"
@@ -218,6 +219,17 @@ using FCreateOpState = std::function<OpStatePtr (const NodeAttrs& attrs,
                                                  Context ctx,
                                                  const mxnet::ShapeVector& in_shape,
                                                  const std::vector<int>& in_type)>;
+
+/*!
+ * \brief Whether the operator always produces the same
+ *        output given the same input.
+ *        This enables certain optimizations
+ *        like common expression elimination.
+ *
+ * \note Register under "THasDeterministicOutput"
+ */
+using THasDeterministicOutput = bool;
+
 /*!
  * \brief Execution mode of this operator.
  */
@@ -333,7 +345,8 @@ using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
  * which can handle fp32 inputs directly.
  */
 using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
-                                                size_t index)>;
+                                                const size_t index,
+                                                const std::string quantize_granularity)>;
 
 /*!
  * \brief Register a function to determine if the input of a quantized operator

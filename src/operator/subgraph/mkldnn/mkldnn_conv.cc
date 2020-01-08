@@ -29,6 +29,7 @@
 #include "mkldnn_conv-inl.h"
 #include "../../nn/mkldnn/mkldnn_act-inl.h"
 #include "../../tensor/matrix_op-inl.h"
+#include "mkldnn_common.h"
 
 namespace mxnet {
 namespace op {
@@ -81,93 +82,6 @@ static inline size_t GetInSumIndex(const MKLDNNConvFusionParam &param) {
          (param.full_conv_param.mkldnn_param.with_bn ? 4 : 0);
 }
 
-template <typename DType>
-static std::vector<float> GetWeightScales(const NDArray &weight, bool weight_channelwise_scale) {
-  std::vector<float> weight_scales;
-  const DType *weight_ptr = weight.data().dptr<DType>();
-  size_t channel = weight.shape()[0];
-
-  // TODO(Zhennan): Handle the case weight is not in dims 4.
-  size_t offset = weight.shape()[1] * weight.shape()[2] * weight.shape()[3];
-  std::vector<DType> weight_c_min(channel, MaxValue<DType>());
-  std::vector<DType> weight_c_max(channel, MinValue<DType>());
-  for (int c = 0; c < static_cast<int>(channel); ++c) {
-    const DType *p1 = weight_ptr + c * offset;
-    for (size_t k = 0; k < offset; ++k) {
-      if (weight_c_min[c] > p1[k])
-        weight_c_min[c] = p1[k];
-      if (weight_c_max[c] < p1[k])
-        weight_c_max[c] = p1[k];
-    }
-  }
-
-  if (weight_channelwise_scale) {
-    weight_scales.resize(channel);
-    for (int c = 0; c < static_cast<int>(channel); ++c) {
-      DType weight_range = MaxAbs(weight_c_min[c], weight_c_max[c]);
-      weight_scales[c] = kInt8Range / weight_range;
-    }
-  } else {
-    DType total_min = weight_c_min[0];
-    DType total_max = weight_c_max[0];
-    for (size_t c = 0; c < channel; ++c) {
-      if (total_min > weight_c_min[c]) total_min = weight_c_min[c];
-      if (total_max < weight_c_max[c]) total_max = weight_c_max[c];
-    }
-    weight_scales.resize(3);
-    DType weight_range = MaxAbs(total_min, total_max);
-    weight_scales[0] = kInt8Range / weight_range;
-    weight_scales[1] = total_min;
-    weight_scales[2] = total_max;
-  }
-  return weight_scales;
-}
-
-static void ConvertWeightBias2MKLDNN(const MKLDNNConvFullParam &param,
-                                     mkldnn::convolution_forward::primitive_desc fwd_pd,
-                                     NDArray *weight, NDArray *bias, bool has_bias,
-                                     float data_scale, const std::vector<float> &weight_scales) {
-  MKLDNNStream *stream = MKLDNNStream::Get();
-  const auto new_weight = NDArray(fwd_pd.weights_primitive_desc());
-  const auto conv_weights_memory = new_weight.GetMKLDNNData();
-  primitive_attr weight_attr;
-  if (weight_scales.size()) {
-    const int weight_mask = (weight_scales.size()) == 1 ? 0 : 1;
-    weight_attr.set_int_output_round_mode(round_mode::round_nearest);
-    weight_attr.set_output_scales(weight_mask, weight_scales);
-  }
-  auto default_weights_memory = GetWeights(*weight, param.conv_param.num_group);
-  if (default_weights_memory == nullptr) default_weights_memory = weight->GetMKLDNNData();
-  const auto weight_reorder_pd =
-      mkldnn::reorder::primitive_desc(default_weights_memory->get_primitive_desc(),
-                                      conv_weights_memory->get_primitive_desc(), weight_attr);
-  stream->RegisterPrim(
-      mkldnn::reorder(weight_reorder_pd, *default_weights_memory, *conv_weights_memory));
-
-  NDArray new_bias;
-  if (has_bias && data_scale) {
-    std::vector<float> bias_scales(weight_scales.size());
-    for (size_t c = 0; c < weight_scales.size(); ++c) {
-      bias_scales[c] = weight_scales[c] * data_scale;
-    }
-    new_bias = NDArray(fwd_pd.bias_primitive_desc());
-    const auto conv_bias_memory = new_bias.GetMKLDNNData();
-    const int bias_mask = (bias_scales.size()) == 1 ? 0 : 1;
-    primitive_attr bias_attr;
-    bias_attr.set_int_output_round_mode(round_mode::round_nearest);
-    bias_attr.set_output_scales(bias_mask, bias_scales);
-    auto bias_weights_memory = bias->GetMKLDNNData();
-    auto bias_reorder_pd =
-        mkldnn::reorder::primitive_desc(bias_weights_memory->get_primitive_desc(),
-                                        conv_bias_memory->get_primitive_desc(), bias_attr);
-    stream->RegisterPrim(
-        mkldnn::reorder(bias_reorder_pd, *bias_weights_memory, *conv_bias_memory));
-  }
-  stream->Submit();
-  *weight = new_weight;
-  if (has_bias && data_scale) *bias = new_bias;
-}
-
 class SgMKLDNNConvOperator {
  public:
   explicit SgMKLDNNConvOperator(const nnvm::NodeAttrs &attrs)
@@ -186,6 +100,7 @@ class SgMKLDNNConvOperator {
   nnvm::Symbol subgraph_sym_;
   MKLDNNConvFusionParam param_;
   std::shared_ptr<MKLDNNConvForward> fwd_;
+  mkldnn_args_map_t args_;
   NDArray cached_weight_;
   NDArray cached_bias_;
   float cached_data_min_;
@@ -253,22 +168,24 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       auto in_mkl_mem = inputs[in_sum].GetMKLDNNData();
       auto out_mkl_mem = outputs[kOut].GetMKLDNNData();
       if (outputs[kOut].dtype() == mshadow::kInt32) {
-        auto mem_desc = in_mkl_mem->get_primitive_desc().desc();
-        auto this_dtype = get_mkldnn_type(mshadow::kInt32);
-        mkldnn::memory::desc omd(
-            mkldnn::memory::dims(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims),
-            this_dtype, static_cast<mkldnn::memory::format>(mem_desc.data.format));
-        mkldnn::memory::primitive_desc opd(omd, CpuEngine::Get()->get_engine());
-        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(opd, out_mkl_mem->get_data_handle()));
+        const auto& mem_desc = in_mkl_mem->get_desc();
+        const auto this_dtype = get_mkldnn_type(mshadow::kInt32);
+        auto omd = mem_desc;
+        omd.data.data_type = static_cast<mkldnn_data_type_t>(this_dtype);
+        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(omd, CpuEngine::Get()->get_engine(),
+                                                  out_mkl_mem->get_data_handle()));
         MKLDNNStream::Get()->RegisterMem(tmp_mem);
-        MKLDNNStream::Get()->RegisterPrim(mkldnn::reorder(*in_mkl_mem, *tmp_mem));
+        MKLDNNStream::Get()->RegisterPrimArgs(
+            mkldnn::reorder(*in_mkl_mem, *tmp_mem),
+            {{MKLDNN_ARG_FROM, *in_mkl_mem}, {MKLDNN_ARG_TO, *tmp_mem}});
         output = NDArray(tmp_mem);
       } else {
-      mkldnn_mem_ptr tmp_mem(
-          new mkldnn::memory(in_mkl_mem->get_primitive_desc(), out_mkl_mem->get_data_handle()));
-      MKLDNNStream::Get()->RegisterMem(tmp_mem);
-      mxnet::MKLDNNCopy(*in_mkl_mem, tmp_mem.get());
-      output = NDArray(tmp_mem);
+        mkldnn_mem_ptr tmp_mem(new mkldnn::memory(in_mkl_mem->get_desc(),
+                                                  CpuEngine::Get()->get_engine(),
+                                                  out_mkl_mem->get_data_handle()));
+        MKLDNNStream::Get()->RegisterMem(tmp_mem);
+        MKLDNNMemoryCopy(*in_mkl_mem, tmp_mem.get());
+        output = NDArray(tmp_mem);
       }
     }
   }
@@ -331,27 +248,21 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         post_requantize_ = true;
         weight_channelwise_scale = true;
       }
-      auto data_range = (data.dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-      data_scale_ = data_range / MaxAbs(cached_data_min_, cached_data_max_);
+      data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
       MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
-        weight_scales_ =
-            GetWeightScales<DType>(cached_weight_, weight_channelwise_scale);
+        weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
+                                                data_scale_, weight_channelwise_scale);
       });
       // Collect scale.
       size_t channel = cached_weight_.shape()[0];
       float sum_in_scale = 1.0;
-      float out_range;
-      float quantized_out_range;
       float output_scale;
       if (mkldnn_param.with_sum) {
-        auto quantized_sum_range =
-            (inputs[in_sum].dtype() == mshadow::kInt8) ? kInt8Range : kUint8Range;
-        sum_in_scale = quantized_sum_range / MaxAbs(cached_sum_min_, cached_sum_max_);
+        sum_in_scale = GetQuantizeScale(inputs[in_sum].dtype(), cached_sum_min_, cached_sum_max_);
       }
       if (post_requantize_) {
-        quantized_out_range = IsOutputUInt8(param_) ? kUint8Range : kInt8Range;
-        out_range = MaxAbs(cached_output_min_, cached_output_max_);
-        output_scale = quantized_out_range / out_range;
+        output_scale = GetQuantizeScale(IsOutputUInt8(param_) ? mshadow::kUint8 : mshadow::kInt8,
+                                        cached_output_min_, cached_output_max_);
         full_conv_param.requantize_scales.resize(weight_channelwise_scale ? channel : 1);
         for (size_t c = 0; c < full_conv_param.requantize_scales.size(); c++) {
           full_conv_param.requantize_scales[c] = output_scale / data_scale_ / weight_scales_[c];
@@ -391,38 +302,42 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     fwd_.reset(new MKLDNNConvForward(
         full_conv_param, ctx.is_train, data, cached_weight_,
         has_bias ? &cached_bias_ : nullptr, output));
-    ConvertWeightBias2MKLDNN(full_conv_param, fwd_->fwd_pd, &cached_weight_, &cached_bias_,
-                             has_bias, data_scale_, weight_scales_);
-    fwd_->SetNewMem(*data.GetMKLDNNData(), *cached_weight_.GetMKLDNNData(),
-                    has_bias ? cached_bias_.GetMKLDNNData() : nullptr,
-                    *output.GetMKLDNNData());
+    mkldnn::memory::desc bias_md;
+    if (has_bias) bias_md = fwd_->GetPd().bias_desc();
+    ConvertWeightBias2MKLDNN(&cached_weight_, &cached_bias_, has_bias,
+                             fwd_->GetPd().weights_desc(),
+                             has_bias ? & bias_md : nullptr,
+                             full_conv_param.conv_param.num_group,
+                             data_scale_, weight_scales_);
+    args_[MKLDNN_ARG_SRC] = *data.GetMKLDNNData();
+    args_[MKLDNN_ARG_WEIGHTS] = *cached_weight_.GetMKLDNNData();
+    if (has_bias) args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
+    args_[MKLDNN_ARG_DST] = *output.GetMKLDNNData();
     initialized_ = true;
   }
 
   if (mkldnn_param.with_sum) {
-    const auto output_mem = output.GetMKLDNNData();
-    const auto out_mem_desc = output_mem->get_primitive_desc().desc();
-    const auto dst_format = fwd_->fwd_pd.dst_primitive_desc().desc().data.format;
-    if (out_mem_desc.data.format != dst_format) {
-      auto tmp_out_mem = output.GetMKLDNNDataReorder(fwd_->fwd_pd.dst_primitive_desc());
-      mkldnn::memory::desc data_md(
-          mkldnn::memory::dims(out_mem_desc.data.dims,
-                               out_mem_desc.data.dims + out_mem_desc.data.ndims),
-          static_cast<mkldnn::memory::data_type>(out_mem_desc.data.data_type),
-          static_cast<memory::format>(dst_format));
-      mkldnn::memory::primitive_desc pd(data_md, CpuEngine::Get()->get_engine());
-      mkldnn_mem_ptr new_out_mem(new mkldnn::memory(pd, output_mem->get_data_handle()));
+    const auto& output_mem = output.GetMKLDNNData();
+    const auto& out_mem_desc = output_mem->get_desc();
+    const auto& dst_mem_desc = fwd_->GetPd().dst_desc();
+    if (out_mem_desc != dst_mem_desc) {
+      auto tmp_out_mem = output.GetMKLDNNDataReorder(fwd_->GetPd().dst_desc());
+      auto data_md = dst_mem_desc;
+      data_md.data.data_type = static_cast<mkldnn_data_type_t>(out_mem_desc.data.data_type);
+      mkldnn_mem_ptr new_out_mem(new mkldnn::memory(data_md, CpuEngine::Get()->get_engine(),
+                                                    output_mem->get_data_handle()));
       MKLDNNStream::Get()->RegisterMem(new_out_mem);
-      mxnet::MKLDNNCopy(*tmp_out_mem, new_out_mem.get());
+      MKLDNNMemoryCopy(*tmp_out_mem, new_out_mem.get());
       output = NDArray(new_out_mem);
     }
   }
 
   if (mkldnn_param.quantized) {
-    auto data_mem = data.GetMKLDNNDataReorder(fwd_->fwd_pd.src_primitive_desc());
-    mkldnn::memory *mem = output.CreateMKLDNNData(fwd_->fwd_pd.dst_primitive_desc());
-    fwd_->SetNewMem(*data_mem, *mem);
-    MKLDNNStream::Get()->RegisterPrim(fwd_->GetFwd());
+    auto data_mem = data.GetMKLDNNDataReorder(fwd_->GetPd().src_desc());
+    mkldnn::memory *mem = output.CreateMKLDNNData(fwd_->GetPd().dst_desc());
+    args_[MKLDNN_ARG_SRC] = *data_mem;
+    args_[MKLDNN_ARG_DST] = *mem;
+    MKLDNNStream::Get()->RegisterPrimArgs(fwd_->GetFwd(), args_);
     MKLDNNStream::Get()->Submit();
   } else {
     std::vector<NDArray> new_inputs;
@@ -441,9 +356,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
   }
   if (mkldnn_param.with_sum) {
     auto out = const_cast<NDArray &>(outputs[kOut]);
-    auto format = static_cast<mkldnn::memory::format>(
-        fwd_->fwd_pd.dst_primitive_desc().desc().data.format);
-    out.UpdateMKLDNNMemDesc(format);
+    out.UpdateMKLDNNMemDesc(fwd_->GetPd().dst_desc());
   }
 }
 
@@ -511,7 +424,7 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
     } else if (node_name == "Convolution") {
       param_.full_conv_param.conv_param =
           nnvm::get<ConvolutionParam>(node->attrs.parsed);
-    } else if (node_name == "Activation" || node_name == "clip") {
+    } else if (node_name == "Activation" || node_name == "LeakyReLU" || node_name == "clip") {
       auto &post_act_param =
           (param_.full_conv_param.mkldnn_param.with_act && !with_act)
               ? param_.full_conv_param.act_param
@@ -519,6 +432,10 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
       with_act = true;
       if (node_name == "Activation") {
         const auto act_param = nnvm::get<ActivationParam>(node->attrs.parsed);
+        post_act_param.alg = GetMKLDNNActAlgo(act_param);
+      } else if (node_name == "LeakyReLU") {
+        const auto act_param = nnvm::get<LeakyReLUParam>(node->attrs.parsed);
+        post_act_param.alpha = act_param.slope;
         post_act_param.alg = GetMKLDNNActAlgo(act_param);
       } else {
         const auto clip_param = nnvm::get<ClipParam>(node->attrs.parsed);
@@ -745,7 +662,8 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs, size_t index) {
+bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs &attrs, const size_t index,
+                                    const std::string quantize_granularity) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   std::unordered_set<size_t> avoid_indice;
   size_t idx = 0;
@@ -794,7 +712,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 })
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidQuantizeInput);
+.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidConvQuantizeInput);
 
 }  // namespace op
 }  // namespace mxnet

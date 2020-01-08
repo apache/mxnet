@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Create New Operators
+category: faq
+faq_c: Extend and Contribute to MXNet
+question: How do I create new operators in MXNet with Python?
+permalink: /api/faq/new_op
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Create New Operators
-category: faq
-faq_c: Extend and Contribute to MXNet
-question: How do I create new operators in MXNet with Python?
-permalink: /api/faq/new_op
----
 
 # How to Create New Operators (Layers)
 
@@ -396,5 +396,5 @@ NNVM_REGISTER_OP(_backward_abs)
 ### Legacy Operators
 
 For the legacy (pre 0.9) way of defining operators with C++, please see:
-- [Developer Guide - Operators](http://mxnet.io/architecture/overview.html#operators-in-mxnet)
-- [Developer Guide - SimpleOp](http://mxnet.io/architecture/overview.html#simpleop-the-unified-operator-api)
+- [Developer Guide - Operators]({{'/api/architecture/overview.html#operators-in-mxnet'|relative_url}})
+- [Developer Guide - SimpleOp]({{'/api/architecture/overview.html#simpleop-the-unified-operator-api'|relative_url}})
