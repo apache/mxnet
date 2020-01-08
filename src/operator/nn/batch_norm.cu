@@ -381,10 +381,10 @@ struct CUDATensors {
 };
 
 template<typename DType, typename AType, typename LType>
-static __global__ void FrozenBatchNormalizationBackwardKernel(
+static __global__ void FrozenBatchNormalizationBackwardKernelCLast(
   const DType* input,
   const DType* gradOutput,
-  DType* gradInput,
+  DType* gradInput/*,
   AType* gradWeight,
   AType* gradBias,
   const AType* weight,
@@ -398,58 +398,8 @@ static __global__ void FrozenBatchNormalizationBackwardKernel(
   const int loads_per_block,
   const index_t outer_dim,
   const index_t inner_dim,
-  const index_t NHW) {
-
-  constexpr int nvec = sizeof(LType) >= sizeof(DType) ? sizeof(LType) / sizeof(DType) : 1;
-  const int num_channels_per_thread = inner_dim < nvec ? nvec / inner_dim : 1;
-  const int num_NHW_per_thread = nvec / num_channels_per_thread;
-
-  const int channels_per_block = loads_per_block * num_channels_per_thread;
-  const index_t start_channel = (blockIdx.x / splitk) * channels_per_block + (threadIdx.x % loads_per_block) * num_channels_per_thread;
-
-  typedef union {
-    LType aligned;
-    DType separate[nvec];  // NOLINT(*)
-    __device__ inline scratch() {}
-    __device__ inline ~scratch() {}
-  } scratch;
-
-  scratch temp_input, temp_grad;
-
-  AType mean[nvec];
-  AType grad_sum[nvec];
-  AType dotP[nvec];
-
-#pragma unroll
-  for (int v = 0; v < nvec; ++v) {
-    mean[v] = runningMean[start_channel + v % num_channels_per_thread];
-  }
-
-  const LType* aligned_input = reinterpret_cast<LType*>(input);
-  const LType* aligned_gradOutput = reinterpret_cast<LType*>(gradOutput);
-
-  for (int i = threadIdx.x / loads_per_block; i < NHW / splitk; i += blockDim.x / loads_per_block) {
-    const index_t idx = (i / inner_dim) * (num_channels * inner_dim) +
-                        inner_dim * start_channel +
-                        (i % inner_dim);
-    const index_t aligned_idx = idx / nvec;
-    temp_input.aligned = aligned_input[aligned_idx];
-    temp_grad.aligned = aligned_gradOutput[aligned_idx];
-#pragma unroll
-    for (int v = 0; v < nvec; ++v) {
-      const AType g = static_cast<AType>(temp_grad.separate[v]);
-      const AType inp = static_cast<AType>(temp_input[v]);
-      grad_sum[v] += g;
-      dotP[v] += (inp - mean[v]) * g;
-    }
-  }
-
-
-
-
-
-
-
+  const index_t NHW*/) {
+#if 0
   int plane = blockIdx.x;
   int N = gradOutput.OuterSize() * gradOutput.InnerSize();
 
@@ -495,6 +445,75 @@ static __global__ void FrozenBatchNormalizationBackwardKernel(
   if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
     tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
   }
+#endif
+}
+
+template<typename DType, typename AType, typename LType>
+static __global__ void FrozenBatchNormalizationBackwardKernel(
+  const DType* input,
+  const DType* gradOutput,
+  DType* gradInput/*,
+  AType* gradWeight,
+  AType* gradBias,
+  const AType* weight,
+  const AType* runningMean,
+  const AType* runningVar,
+  const uint32_t flags,
+  const AccReal momentum,
+  const AccReal eps,
+  const int splitk,
+  const index_t num_channels,
+  const int loads_per_block,
+  const index_t outer_dim,
+  const index_t inner_dim,
+  const index_t NHW*/) {
+#if 0
+  int plane = blockIdx.x;
+  int N = gradOutput.OuterSize() * gradOutput.InnerSize();
+
+  AccReal mean, invstd;
+  mean = ScalarConvert<DType, AccReal>::to(tensors.runningMean[plane]);
+  invstd = variance_to_invstd(tensors.runningVar[plane], eps);
+
+  const AccReal weightVal = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0) ?
+                      ScalarConvert<DType, AccReal>::to(tensors.weight[plane]) : AccReal(1);
+  const AccReal norm = AccReal(1) / N;
+
+  // Compute two values across (batch, x/y/z) in one pass:
+  // 1. Sum(gradOutput)
+  // 2. DotProduct(input - mean, gradOutput)
+  GradOp<DType, AccReal, DeviceTensor> g(mean, input, gradOutput);
+  Float2< DType, AccReal > res = reduce < Float2 < DType, AccReal >,
+    GradOp< DType, AccReal, DeviceTensor >, DeviceTensor > (g, gradOutput, plane);
+  const AccReal gradOutputSum = res.v1;
+  const AccReal dotP = res.v2;
+
+  const AccReal gradMean = gradOutputSum * norm;
+  const AccReal projScale = dotP * norm * invstd * invstd;
+  const AccReal gradScale = invstd * weightVal;
+
+  if (gradInput.Size() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
+    for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+      for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+        const DType gradOut = gradOutput.get_ref(batch, plane, x);
+        gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
+          gradOut * gradScale);
+      }
+    }
+  }
+
+  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
+    if ((flags & FIX_GAMMA_FLAG) == 0) {
+      tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+    } else {
+      tensors.gradWeight[plane] = DType(0);
+    }
+  }
+
+  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
+    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+  }
+#endif
 }
 
 template<typename DType, typename AccReal, typename DeviceTensor1, typename DeviceTensor>
@@ -770,6 +789,7 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input, gradOutput, gradInput, tensors, flags, momentum, eps);
   } else {
+    if (param.axis == -1 || param.axis == in_data[batchnorm::kData].shape_.ndim() - 1) {
 #ifdef NDEBUG
     constexpr bool SMALLER_THREADS = false;
 #else
@@ -777,10 +797,21 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
 #endif
     dim3 blocks(gradOutput.ChannelCount());
     dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
-    FrozenBatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1,
-                                           batchnorm::BNTensor3<DType>>
+    FrozenBatchNormalizationBackwardKernelCLast<DType, AccReal, double>
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
-      input, gradOutput, gradInput, tensors, flags, momentum, eps);
+      input.dptr_, gradOutput.dptr_, gradInput.dptr_);
+    } else {
+#ifdef NDEBUG
+    constexpr bool SMALLER_THREADS = false;
+#else
+    constexpr bool SMALLER_THREADS = true;
+#endif
+    dim3 blocks(gradOutput.ChannelCount());
+    dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
+    FrozenBatchNormalizationBackwardKernel<DType, AccReal, double>
+      <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
+      input.dptr_, gradOutput.dptr_, gradInput.dptr_);
+    }
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormalizationBackward);
 }
