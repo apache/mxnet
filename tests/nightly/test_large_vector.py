@@ -1049,10 +1049,10 @@ def test_gather():
     idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
     # Calls gather_nd internally
     tmp = arr[idx]
-    assert np.sum(tmp == 1) == 10
+    assert np.sum(tmp.asnumpy() == 1) == 10
     # Calls gather_nd internally
     arr[idx] += 1
-    assert np.sum(arr[idx] == 2) == 10
+    assert np.sum(arr[idx].asnumpy() == 2) == 10
 
 
 def test_infer_shape():

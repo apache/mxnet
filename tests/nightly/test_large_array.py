@@ -1672,10 +1672,10 @@ def test_gather():
     idx = mx.nd.random.randint(0, LARGE_X, SMALL_X)
     # Calls gather_nd internally
     tmp = arr[idx]
-    assert np.sum(tmp[0] == 1) == SMALL_Y
+    assert np.sum(tmp[0].asnumpy() == 1) == SMALL_Y
     # Calls gather_nd internally
     arr[idx] += 1
-    assert np.sum(arr[idx[0]] == 2) == SMALL_Y
+    assert np.sum(arr[idx[0]].asnumpy() == 2) == SMALL_Y
 
 
 if __name__ == '__main__':
