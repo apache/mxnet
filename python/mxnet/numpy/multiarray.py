@@ -47,7 +47,7 @@ from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
-           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
+           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
@@ -1998,7 +1998,7 @@ class ndarray(NDArray):
         return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, shape):  # pylint: disable=redefined-outer-name
-        return _mx_np_op.broadcast_to(self, shape)
+        return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
@@ -2281,6 +2281,34 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=rede
            [1., 1.]])
     """
     return _mx_nd_np.ones(shape, dtype, order, ctx)
+
+
+@set_module('mxnet.numpy')
+def broadcast_to(array, shape):  # pylint: disable=redefined-outer-name
+    """
+    Broadcast an array to a new shape.
+
+    Parameters
+    ----------
+    array : ndarray or scalar
+        The array to broadcast.
+    shape : tuple
+        The shape of the desired array.
+
+    Returns
+    -------
+    broadcast : array
+        A readonly view on the original array with the given shape. It is
+        typically not contiguous. Furthermore, more than one element of a
+        broadcasted array may refer to a single memory location.
+
+    Raises
+    ------
+    MXNetError
+        If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+    """
+    return _mx_nd_np.broadcast_to(array, shape)
 
 
 # pylint: disable=too-many-arguments, redefined-outer-name

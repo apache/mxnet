@@ -37,7 +37,7 @@ except ImportError:
     from builtins import slice as py_slice
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full_like', 'empty_like', 'bitwise_not', 'invert', 'delete',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
+           'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
@@ -1130,6 +1130,36 @@ def bitwise_not(x, out=None, **kwargs):
     True
     """
     return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def broadcast_to(array, shape):
+    """
+    Broadcast an array to a new shape.
+
+    Parameters
+    ----------
+    array : _Symbol or scalar
+        The array to broadcast.
+    shape : tuple
+        The shape of the desired array.
+
+    Returns
+    -------
+    broadcast : array
+        A readonly view on the original array with the given shape. It is
+        typically not contiguous. Furthermore, more than one element of a
+        broadcasted array may refer to a single memory location.
+
+    Raises
+    ------
+    MXNetError
+        If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+    """
+    if _np.isscalar(array):
+        return full(shape, array)
+    return _npi.broadcast_to(array, shape)
 
 
 @set_module('mxnet.symbol.numpy')

@@ -481,7 +481,7 @@ bool NumpyBroadcastToShape(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-NNVM_REGISTER_OP(_np_broadcast_to)
+NNVM_REGISTER_OP(_npi_broadcast_to)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
