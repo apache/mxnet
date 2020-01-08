@@ -21,4 +21,4 @@
 
 from .BayesianDense import *
 
-from StochasticBlock import *
+from .StochasticBlock import *
