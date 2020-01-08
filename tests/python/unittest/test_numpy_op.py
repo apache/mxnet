@@ -4574,6 +4574,55 @@ def test_np_vstack():
 
 @with_seed()
 @use_np
+def test_np_full():
+    class TestFull(HybridBlock):
+        def __init__(self, shape, dtype=None):
+            super(TestFull, self).__init__()
+            self._shape = shape
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, a):
+            return F.np.full(self._shape, a, dtype=self._dtype)
+
+    configs = [
+        ((3, 4), 2.0),
+        ((0, 3), 2.0),
+        ((3, 4), np.array(2.0)),
+        ((0, 3), np.array(2.0)),
+        ((2, 3), np.array([1, 2, 3], dtype=np.float32)),
+        ((2, 3), np.array([1, 2, 3], dtype=np.int64)),
+        ((0, 3), np.array([1, 2, 3], dtype=np.float32)),
+        ((0, 3), np.array([1, 2, 3], dtype=np.int64)),
+    ]
+
+    rtol, atol = 1e-3, 1e-5
+    dtypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    for shape, fill_value in configs:
+        for hybridize in [True, False]:
+            for dtype in dtypes:
+                if isinstance(fill_value, np.ndarray):
+                    test_full = TestFull(shape, dtype=dtype)
+                    if hybridize:
+                        test_full.hybridize()
+                    mx_out = test_full(fill_value)
+                    expected_np = _np.full(shape, fill_value.asnumpy(), dtype=dtype)
+                    assert mx_out.shape == expected_np.shape
+                    assert mx_out.dtype == expected_np.dtype
+                    assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+                # Test imperative once again
+                mx_out = np.full(shape, fill_value, dtype=dtype)
+                if isinstance(fill_value, np.ndarray):
+                    expected_np = _np.full(shape, fill_value.asnumpy(), dtype=dtype)
+                else:
+                    expected_np = _np.full(shape, fill_value, dtype=dtype)
+                assert mx_out.shape == expected_np.shape
+                assert mx_out.dtype == expected_np.dtype
+                assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_full_like():
     class TestFullLike(HybridBlock):
         def __init__(self, fill_value, dtype, ctx):
