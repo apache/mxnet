@@ -1,7 +1,26 @@
-from mxnet import np, npx
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# coding: utf-8
+# pylint: disable=wildcard-import
+"""Normal distribution"""
+__all__ = ['Normal']
 from .exp_family import ExponentialFamily
 from .utils import getF
-import math
 
 
 class Normal(ExponentialFamily):
@@ -22,32 +41,11 @@ class Normal(ExponentialFamily):
     has_grad = True
 
     def __init__(self, loc=0.0, scale=1.0, F=None):
-        _F = F if F is not None else getF([loc, scale])
-        super(Normal, self).__init__(F=_F)
-        self.loc = loc
-        self.scale = scale
-
-    @property
-    def mean(self):
-        """Return the mean of the normal distribution
-
-        Returns
-        -------
-        Tensor
-            A parameter tensor.
-        """
-        return self.loc
-
-    @property
-    def variance(self):
-        """Return the variance of the normal distribution.
-
-        Returns
-        -------
-        Tensor
-            Square of `self._scale`
-        """
-        return self.scale ** 2
+        self.F = F if F is not None else getF([loc, scale])
+        super(Normal, self).__init__(F=F)
+        self._loc = loc
+        self._scale = scale
+        self.F = F
 
     def log_prob(self, value):
         """Compute the log likehood of `value`.
@@ -63,10 +61,12 @@ class Normal(ExponentialFamily):
             Log likehood of the input.
         """
         F = self.F
-        var = (self.scale ** 2)
-        log_scale = F.np.log(self.scale)
-        return (-((value - self.loc) ** 2) / (2 * var) -
-                log_scale - F.np.log(F.np.sqrt(2 * math.pi)))
+        var = self._scale ** 2
+        log_scale = F.np.log(self._scale)
+        log_prob = -((value - self._loc) ** 2) / (2 * var)
+        log_prob = log_prob - log_scale
+        log_prob = log_prob + F.np.log(F.np.sqrt(2 * F.np.pi))
+        return log_prob
 
     def sample(self, size=None):
         r"""Generate samples of `size` from the normal distribution
