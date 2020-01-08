@@ -27,6 +27,8 @@
 #include <cuda_runtime_api.h>
 #include <algorithm>
 #include "batch_norm-inl.h"
+#include "../../common/cuda_utils.h"
+
 
 #define WRITE_DATA_FLAG       1
 #define WRITE_GAMMA_FLAG      2
@@ -448,72 +450,90 @@ static __global__ void FrozenBatchNormalizationBackwardKernelCLast(
 #endif
 }
 
-template<typename DType, typename AType, typename LType>
-static __global__ void FrozenBatchNormalizationBackwardKernel(
+template<int NTHREADS, typename DType, typename AType, typename LType>
+__global__ void FrozenBatchNormalizationBackwardKernel(
   const DType* input,
   const DType* gradOutput,
-  DType* gradInput/*,
+  DType* gradInput,
   AType* gradWeight,
   AType* gradBias,
   const AType* weight,
   const AType* runningMean,
   const AType* runningVar,
-  const uint32_t flags,
-  const AccReal momentum,
-  const AccReal eps,
-  const int splitk,
+  const index_t outer,
+  const index_t inner,
   const index_t num_channels,
-  const int loads_per_block,
-  const index_t outer_dim,
-  const index_t inner_dim,
-  const index_t NHW*/) {
-#if 0
-  int plane = blockIdx.x;
-  int N = gradOutput.OuterSize() * gradOutput.InnerSize();
+  const index_t NHW_div_nvec,
+  const AType eps,
+  const uint32_t flags) {
+  const index_t my_channel = blockIdx.x;
+  const AType invstd = variance_to_invstd(runningVar[my_channel], eps);
+  const AType mean = runningMean[my_channel];
+  const AType gamma = weight != nullptr ? weight[my_channel] : 1;
+  constexpr int nvec = sizeof(LType) > sizeof(DType) ? sizeof(LType) / sizeof(DType)
+                                                     : 1;
+  union scratch {
+    LType aligned;
+    DType separate[nvec];  // NOLINT(*)
 
-  AccReal mean, invstd;
-  mean = ScalarConvert<DType, AccReal>::to(tensors.runningMean[plane]);
-  invstd = variance_to_invstd(tensors.runningVar[plane], eps);
+    __device__ inline scratch() {}
+    __device__ inline ~scratch() {}
+  };
 
-  const AccReal weightVal = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0) ?
-                      ScalarConvert<DType, AccReal>::to(tensors.weight[plane]) : AccReal(1);
-  const AccReal norm = AccReal(1) / N;
+  scratch scratch_input, scratch_grad;
 
-  // Compute two values across (batch, x/y/z) in one pass:
-  // 1. Sum(gradOutput)
-  // 2. DotProduct(input - mean, gradOutput)
-  GradOp<DType, AccReal, DeviceTensor> g(mean, input, gradOutput);
-  Float2< DType, AccReal > res = reduce < Float2 < DType, AccReal >,
-    GradOp< DType, AccReal, DeviceTensor >, DeviceTensor > (g, gradOutput, plane);
-  const AccReal gradOutputSum = res.v1;
-  const AccReal dotP = res.v2;
+  const LType* input_aligned = reinterpret_cast<const LType*>(input);
+  const LType* gradOutput_aligned = reinterpret_cast<const LType*>(gradOutput);
+  LType* gradInput_aligned = reinterpret_cast<LType*>(gradInput);
 
-  const AccReal gradMean = gradOutputSum * norm;
-  const AccReal projScale = dotP * norm * invstd * invstd;
-  const AccReal gradScale = invstd * weightVal;
+  const index_t inner_div_nvec = inner / nvec;
 
-  if (gradInput.Size() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
-    for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
-      for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
-        const DType gradOut = gradOutput.get_ref(batch, plane, x);
-        gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
-          gradOut * gradScale);
+  AType sum_gamma = 0;
+  AType sum_beta = 0;
+
+
+  for (index_t i = threadIdx.x; i < NHW_div_nvec; i += blockDim.x) {
+    const index_t inner_idx = i % inner_div_nvec;
+    const index_t outer_idx = i / inner_div_nvec;
+    const index_t idx = inner_idx +
+                        (my_channel + outer_idx * num_channels) * inner_div_nvec;
+    scratch_grad.aligned = gradOutput_aligned[idx];
+    scratch_input.aligned = input_aligned[idx];
+#pragma unroll
+    for (int j = 0; j < nvec; ++j) {
+      sum_beta += static_cast<AType>(scratch_grad.separate[j]);
+      sum_gamma += static_cast<AType>(scratch_grad.separate[j]) *
+                   (static_cast<AType>(scratch_input.separate[j]) - mean);
+
+    }
+
+    if (flags & WRITE_DATA_FLAG) {
+      // Gradient to input
+#pragma unroll
+      for (int j = 0; j < nvec; ++j) {
+        scratch_grad.separate[j] *= invstd * gamma;
+      }
+      gradInput_aligned[idx] = scratch_grad.aligned;
+    }
+  }
+
+  sum_gamma = common::cuda::reduce<NTHREADS, false>(sum_gamma,
+                                                    [](AType a, AType b) { return a + b; });
+  sum_beta = common::cuda::reduce<NTHREADS, false>(sum_beta,
+                                                   [](AType a, AType b) { return a + b; });
+
+  if (threadIdx.x == 0) {
+    if (flags & WRITE_GAMMA_FLAG) {
+      if ((flags & FIX_GAMMA_FLAG) == 0) {
+        gradWeight[my_channel] = sum_gamma * invstd;
+      } else {
+        gradWeight[my_channel] = 0;
       }
     }
-  }
-
-  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
-    if ((flags & FIX_GAMMA_FLAG) == 0) {
-      tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
-    } else {
-      tensors.gradWeight[plane] = DType(0);
+    if (flags & WRITE_BETA_FLAG) {
+      gradBias[my_channel] = sum_beta;
     }
   }
-
-  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
-  }
-#endif
 }
 
 template<typename DType, typename AccReal, typename DeviceTensor1, typename DeviceTensor>
@@ -789,7 +809,23 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input, gradOutput, gradInput, tensors, flags, momentum, eps);
   } else {
+    std::cout <<"Frozen" <<std::endl;
+    uint32_t flags_copy = flags;
+    if (gradInput.Size() <= 0) {
+      flags_copy = (flags_copy & ~WRITE_DATA_FLAG);
+    }
+    if (tensors.gradWeight.numElements() <= 0) {
+      flags_copy = (flags_copy & ~WRITE_GAMMA_FLAG);
+    }
+    if (tensors.gradBias.numElements() <= 0) {
+      flags_copy = (flags_copy & ~WRITE_BETA_FLAG);
+    }
+    AccReal* gamma = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0)
+                     ? tensors.weight.dptr_
+                     : nullptr;
+
     if (param.axis == -1 || param.axis == in_data[batchnorm::kData].shape_.ndim() - 1) {
+      std::cout << "NHWC " << std::endl;
 #ifdef NDEBUG
     constexpr bool SMALLER_THREADS = false;
 #else
@@ -801,16 +837,22 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input.dptr_, gradOutput.dptr_, gradInput.dptr_);
     } else {
-#ifdef NDEBUG
-    constexpr bool SMALLER_THREADS = false;
-#else
-    constexpr bool SMALLER_THREADS = true;
-#endif
+      std::cout << "NCHW " << std::endl;
     dim3 blocks(gradOutput.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
-    FrozenBatchNormalizationBackwardKernel<DType, AccReal, double>
-      <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
-      input.dptr_, gradOutput.dptr_, gradInput.dptr_);
+    int ltype = mxnet::common::cuda::get_load_type(gradOutput.InnerSize() * sizeof(DType));
+    MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
+      constexpr int nvec = sizeof(LType) > sizeof(DType) ? sizeof(LType) / sizeof(DType) : 1;
+      const index_t NHW_div_nvec = gradOutput.OuterSize() * gradOutput.InnerSize() / nvec;
+      constexpr int threads = 512;
+      FrozenBatchNormalizationBackwardKernel<threads, DType, AccReal, LType>
+        <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
+        input.dptr_, gradOutput.dptr_, gradInput.dptr_,
+        tensors.gradWeight.dptr_, tensors.gradBias.dptr_,
+        gamma, tensors.runningMean.dptr_,
+        tensors.runningVar.dptr_,
+        gradOutput.OuterSize(), gradOutput.InnerSize(),
+        gradOutput.ChannelCount(), NHW_div_nvec, eps, flags_copy);
+      });
     }
   }
   MSHADOW_CUDA_POST_KERNEL_CHECK(BatchNormalizationBackward);
