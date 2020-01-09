@@ -219,7 +219,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=KNOWN_VCVARS['VS 2019'],
+        default=KNOWN_VCVARS['VS 2017'],
         type=str)
 
     parser.add_argument("--arch",
@@ -242,7 +242,7 @@ def main():
         if 'OpenBLAS_HOME' not in os.environ:
             os.environ["OpenBLAS_HOME"] = "C:\\Program Files\\OpenBLAS-v0.2.19"
         if 'OpenCV_DIR' not in os.environ:
-            os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
+            os.environ["OpenCV_DIR"] = "C:\\Program Files\\opencv\\build"
         if 'CUDA_PATH' not in os.environ:
             os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
         if 'MKL_ROOT' not in os.environ:
