@@ -17,35 +17,37 @@
 # under the License.
 
 # pylint: disable=too-many-lines
-"""Contrib optimizers."""
-from ..ndarray import (clip, contrib, mean, sqrt, square, zeros)
+"""Signum optimizer."""
+from __future__ import absolute_import
+from ..ndarray import (zeros, clip, sign)
+from ..ndarray import (signsgd_update, signum_update)
 from .optimizer import Optimizer, register
 
-__all__ = ['GroupAdaGrad']
+__all__ = ['Signum']
 
 
 @register
-class GroupAdaGrad(Optimizer):
-    """Adagrad optimizer with row-wise learning rates.
+class Signum(Optimizer):
+    r"""The Signum optimizer that takes the sign of gradient or momentum.
 
-    This class implements the AdaGrad optimizer described in *Adaptive
-    Subgradient Methods for Online Learning and Stochastic Optimization*, and
-    available at http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf but
-    uses only a single learning rate for every row of the parameter array.
+    The optimizer updates the weight by::
 
-    This optimizer updates each weight by::
+        rescaled_grad = rescale_grad * clip(grad, clip_gradient) + wd * weight
+        state = momentum * state + (1-momentum)*rescaled_grad
+        weight = (1 - lr * wd_lh) * weight - lr * sign(state)
 
-        grad = clip(grad * rescale_grad, clip_gradient)
-        history += mean(square(grad), axis=1, keepdims=True)
-        weight -= lr * grad / (sqrt(history) + epsilon)
+    References
+    ----------
+    Jeremy Bernstein, Yu-Xiang Wang, Kamyar Azizzadenesheli & Anima Anandkumar. (2018).
+    signSGD: Compressed Optimisation for Non-Convex Problems. In ICML'18.
 
-    Weights are updated lazily if the gradient is sparse.
+    See: https://arxiv.org/abs/1802.04434
 
     For details of the update algorithm see
-    :class:`~mxnet.ndarray.contrib.group_adagrad_update`.
+    :class:`~mxnet.ndarray.signsgd_update` and :class:`~mxnet.ndarray.signum_update`.
 
-    This optimizer accepts the following parameters in addition to those
-    accepted by :class:`.Optimizer`. Weight decay is not supported.
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
 
     Parameters
     ----------
@@ -54,25 +56,28 @@ class GroupAdaGrad(Optimizer):
         learning rate from ``lr_scheduler``. If not None, it will overwrite
         the learning rate in ``lr_scheduler``. If None and ``lr_scheduler``
         is also None, then it will be set to 0.01 by default.
-    epsilon : float, default 1e-6
-        Small value to avoid division by 0.
+    momentum : float, optional
+       The momentum value.
+    wd_lh : float, optional
+       The amount of decoupled weight decay regularization, see details in the original paper at:\
+       https://arxiv.org/abs/1711.05101
     use_fused_step : bool, default True
         Whether or not to use fused kernels for optimizer.
-        When use_fused_step=False or grad is not sparse, step is called,
+        When use_fused_step=False, step is called,
         otherwise, fused_step is called.
     """
-
-    def __init__(self, learning_rate=0.01, epsilon=1e-6, use_fused_step=True, **kwargs):
-        super(GroupAdaGrad, self).__init__(learning_rate=learning_rate,
-                                           use_fused_step=use_fused_step,
-                                           **kwargs)
-        self.epsilon = epsilon
+    def __init__(self, learning_rate=0.01, momentum=0.9, wd_lh=0.0, use_fused_step=True, **kwargs):
+        super(Signum, self).__init__(learning_rate=learning_rate,
+                                     use_fused_step=use_fused_step,
+                                     **kwargs)
+        self.momentum = momentum
+        self.wd_lh = wd_lh
 
     def create_state(self, index, weight):
-        assert len(weight.shape) == 2
-        history = zeros(
-            (weight.shape[0], 1), weight.context, stype=weight.stype)
-        return history
+        momentum = None
+        if self.momentum != 0.0:
+            momentum = zeros(weight.shape, weight.context, dtype=weight.dtype, stype=weight.stype)
+        return momentum
 
     def step(self, indices, weights, grads, states):
         """Perform an optimization step using gradients and states.
@@ -95,20 +100,26 @@ class GroupAdaGrad(Optimizer):
             lr = self._get_lr(index)
             wd = self._get_wd(index)
             t = self._index_update_count[index]
-            assert wd == 0, 'Weight decay is not supported for GroupAdaGrad'
 
-            # preprocess grad
-            grad = grad * self.rescale_grad
-            if self.clip_gradient is not None:
-                grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+            if state is not None:
+                # preprocess grad
+                grad *= self.rescale_grad
+                if self.clip_gradient is not None:
+                    grad = clip(grad, - self.clip_gradient, self.clip_gradient)
+                grad += wd * weight
 
-            # update history
-            history = state
-            history[:] += mean(square(grad), axis=1, keepdims=True)
+                # update mom
+                mom = state
+                mom[:] *= self.momentum
+                mom[:] -= (1 - self.momentum) * grad
+                weight[:] *= 1 - lr * self.wd_lh
 
-            # update weight
-            d = grad / (sqrt(history) + self.epsilon)
-            weight[:] -= lr * d
+                # update weight
+                weight[:] += lr * sign(mom)
+            else:
+                # update weight
+                weight[:] *= 1 - lr * (wd + self.wd_lh)
+                weight[:] -= lr * sign(grad)
 
     def fused_step(self, indices, weights, grads, states):
         """Perform a fused optimization step using gradients and states.
@@ -128,29 +139,24 @@ class GroupAdaGrad(Optimizer):
             List of state returned by `create_state()`.
         """
         for index, weight, grad, state in zip(indices, weights, grads, states):
-            is_sparse = grad.stype == 'row_sparse'
+            self._update_count(index)
+            lr = self._get_lr(index)
+            wd = self._get_wd(index)
+            t = self._index_update_count[index]
 
-            if is_sparse:
-                self._update_count(index)
-                lr = self._get_lr(index)
-                wd = self._get_wd(index)
-                t = self._index_update_count[index]
-                assert wd == 0, 'Weight decay is not supported for GroupAdaGrad'
+            kwargs = {'rescale_grad': self.rescale_grad}
+            if self.momentum > 0:
+                kwargs['momentum'] = self.momentum
+            if self.clip_gradient:
+                kwargs['clip_gradient'] = self.clip_gradient
+            if self.wd_lh:
+                kwargs['wd_lh'] = self.wd_lh
 
-                kwargs = {'epsilon': self.epsilon, 'rescale_grad': self.rescale_grad}
-                if self.clip_gradient:
-                    kwargs['clip_gradient'] = self.clip_gradient
-
-                history = state
-
-                # When grad is sparse, update weight with fused kernel
-                contrib.group_adagrad_update(
-                    weight,
-                    grad,
-                    history,
-                    out=weight,
-                    lr=lr,
-                    **kwargs)
+            # update weight with fused kernel
+            if state is not None:
+                signum_update(weight, grad, state, out=weight,
+                              lr=lr, wd=wd, **kwargs)
             else:
-                # When the grad is not sparse, the func step is called to update weight and state
-                self.step([index], [weight], [grad], [state])
+                signsgd_update(weight, grad, out=weight,
+                               lr=lr, wd=wd, **kwargs)
+

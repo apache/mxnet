@@ -17,35 +17,35 @@
 # under the License.
 
 # pylint: disable=too-many-lines
-"""Contrib optimizers."""
-from ..ndarray import (clip, contrib, mean, sqrt, square, zeros)
+"""AdaGrad optimizer"""
+from __future__ import absolute_import
+from ..ndarray import (zeros, clip, sqrt, square)
+from ..ndarray import sparse
 from .optimizer import Optimizer, register
 
-__all__ = ['GroupAdaGrad']
+__all__ = ['AdaGrad']
 
 
 @register
-class GroupAdaGrad(Optimizer):
-    """Adagrad optimizer with row-wise learning rates.
+class AdaGrad(Optimizer):
+    """AdaGrad optimizer.
 
-    This class implements the AdaGrad optimizer described in *Adaptive
-    Subgradient Methods for Online Learning and Stochastic Optimization*, and
-    available at http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf but
-    uses only a single learning rate for every row of the parameter array.
+    This class implements the AdaGrad optimizer described in *Adaptive Subgradient
+    Methods for Online Learning and Stochastic Optimization*, and available at
+    http://www.jmlr.org/papers/volume12/duchi11a/duchi11a.pdf.
 
     This optimizer updates each weight by::
 
-        grad = clip(grad * rescale_grad, clip_gradient)
-        history += mean(square(grad), axis=1, keepdims=True)
-        weight -= lr * grad / (sqrt(history) + epsilon)
+        grad = clip(grad * rescale_grad, clip_gradient) + wd * weight
+        history += square(grad)
+        weight -= learning_rate * grad / (sqrt(history) + epsilon)
 
-    Weights are updated lazily if the gradient is sparse.
+    This optimizer accepts the following parameters in addition to those accepted
+    by :class:`.Optimizer`.
 
-    For details of the update algorithm see
-    :class:`~mxnet.ndarray.contrib.group_adagrad_update`.
-
-    This optimizer accepts the following parameters in addition to those
-    accepted by :class:`.Optimizer`. Weight decay is not supported.
+    See Also
+    ----------
+    :meth:`mxnet.ndarray.sparse.adagrad_update`.
 
     Parameters
     ----------
@@ -60,54 +60,51 @@ class GroupAdaGrad(Optimizer):
         Whether or not to use fused kernels for optimizer.
         When use_fused_step=False or grad is not sparse, step is called,
         otherwise, fused_step is called.
-    """
 
+    """
     def __init__(self, learning_rate=0.01, epsilon=1e-6, use_fused_step=True, **kwargs):
-        super(GroupAdaGrad, self).__init__(learning_rate=learning_rate,
-                                           use_fused_step=use_fused_step,
-                                           **kwargs)
+        super(AdaGrad, self).__init__(learning_rate=learning_rate,
+                                      use_fused_step=use_fused_step,
+                                      **kwargs)
         self.epsilon = epsilon
 
     def create_state(self, index, weight):
-        assert len(weight.shape) == 2
-        history = zeros(
-            (weight.shape[0], 1), weight.context, stype=weight.stype)
-        return history
+        return zeros(weight.shape, weight.context, stype=weight.stype)  # history
 
     def step(self, indices, weights, grads, states):
         """Perform an optimization step using gradients and states.
 
-         Parameters
-         ----------
-         indices : list of int
-             List of unique indices of the parameters into the individual learning rates
-             and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
-             and `set_wd_mult()`, respectively.
-         weights : list of NDArray
-             List of parameters to be updated.
-         grads : list of NDArray
-             List of gradients of the objective with respect to this parameter.
-         states : List of any obj
-             List of state returned by `create_state()`.
-         """
+        Parameters
+        ----------
+        indices : list of int
+            List of unique indices of the parameters into the individual learning rates
+            and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
+            and `set_wd_mult()`, respectively.
+        weights : list of NDArray
+            List of parameters to be updated.
+        grads : list of NDArray
+            List of gradients of the objective with respect to this parameter.
+        states : List of any obj
+            List of state returned by `create_state()`.
+        """
         for index, weight, grad, state in zip(indices, weights, grads, states):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
             t = self._index_update_count[index]
-            assert wd == 0, 'Weight decay is not supported for GroupAdaGrad'
 
             # preprocess grad
-            grad = grad * self.rescale_grad
+            grad *= self.rescale_grad
             if self.clip_gradient is not None:
-                grad = clip(grad, -self.clip_gradient, self.clip_gradient)
+                grad = clip(grad, - self.clip_gradient, self.clip_gradient)
+            grad += wd * weight
 
             # update history
             history = state
-            history[:] += mean(square(grad), axis=1, keepdims=True)
+            history[:] += square(grad)
+            d = grad / (sqrt(history) + self.epsilon)
 
             # update weight
-            d = grad / (sqrt(history) + self.epsilon)
             weight[:] -= lr * d
 
     def fused_step(self, indices, weights, grads, states):
@@ -135,8 +132,6 @@ class GroupAdaGrad(Optimizer):
                 lr = self._get_lr(index)
                 wd = self._get_wd(index)
                 t = self._index_update_count[index]
-                assert wd == 0, 'Weight decay is not supported for GroupAdaGrad'
-
                 kwargs = {'epsilon': self.epsilon, 'rescale_grad': self.rescale_grad}
                 if self.clip_gradient:
                     kwargs['clip_gradient'] = self.clip_gradient
@@ -144,13 +139,7 @@ class GroupAdaGrad(Optimizer):
                 history = state
 
                 # When grad is sparse, update weight with fused kernel
-                contrib.group_adagrad_update(
-                    weight,
-                    grad,
-                    history,
-                    out=weight,
-                    lr=lr,
-                    **kwargs)
+                sparse.adagrad_update(weight, grad, history, out=weight, lr=lr, wd=wd, **kwargs)
             else:
                 # When the grad is not sparse, the func step is called to update weight and state
                 self.step([index], [weight], [grad], [state])
