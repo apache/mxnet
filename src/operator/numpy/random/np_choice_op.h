@@ -118,15 +118,17 @@ struct random_indices {
 
 // Weighted sample without replacement.
 // Use perturbed Gumbel variates as keys.
+template <typename IType>
 struct generate_keys {
-  MSHADOW_XINLINE static void Map(index_t i, float *uniforms, float *weights) {
+  MSHADOW_XINLINE static void Map(index_t i, float *uniforms, IType *weights) {
     uniforms[i] = -logf(-logf(uniforms[i])) + logf(weights[i]);
   }
 };
 
 // Weighted sample with replacement.
+template <typename IType>
 struct categorical_sampling {
-  MSHADOW_XINLINE static void Map(index_t i, float *weights, size_t length,
+  MSHADOW_XINLINE static void Map(index_t i, IType *weights, size_t length,
                                   float *uniforms, int64_t *outs) {
     outs[i] = 0;
     float acc = 0.0;
@@ -179,15 +181,19 @@ void NumpyChoiceForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     prnd->SampleUniform(&random_numbers, 0, 1);
     workspace_ptr += ((random_tensor_size * sizeof(float) / 7 + 1) * 8);
     if (replace) {
-      Kernel<categorical_sampling, xpu>::Launch(
-          s, output_size, inputs[weight_index].dptr<float>(), input_size,
-          random_numbers.dptr_, outputs[0].dptr<int64_t>());
+      MSHADOW_REAL_TYPE_SWITCH(inputs[weight_index].type_flag_, IType, {
+        Kernel<categorical_sampling<IType>, xpu>::Launch(
+            s, output_size, inputs[weight_index].dptr<IType>(), input_size,
+            random_numbers.dptr_, outputs[0].dptr<int64_t>());
+      });
     } else {
       Tensor<xpu, 1, int64_t> indices = Tensor<xpu, 1, int64_t>(
           reinterpret_cast<int64_t *>(workspace_ptr), Shape1(indices_size), s);
       indices = expr::range((int64_t)0, input_size);
-      Kernel<generate_keys, xpu>::Launch(s, input_size, random_numbers.dptr_,
-                                         inputs[weight_index].dptr<float>());
+      MSHADOW_REAL_TYPE_SWITCH(inputs[weight_index].type_flag_, IType, {
+        Kernel<generate_keys<IType>, xpu>::Launch(s, input_size, random_numbers.dptr_,
+                                           inputs[weight_index].dptr<IType>());
+      });
       _sort<xpu>(random_numbers.dptr_, indices.dptr_, input_size);
       Copy(outputs[0].FlatTo1D<xpu, int64_t>(s), indices.Slice(0, output_size), s);
     }

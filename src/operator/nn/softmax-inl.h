@@ -613,6 +613,13 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
     .set_default(dmlc::optional<bool>(false))
     .describe("Whether to use the length input as a mask over the data input.");
   }
+
+  bool operator==(const SoftmaxParam& other) const {
+    return this->axis == other.axis &&
+           this->temperature == other.temperature &&
+           this->dtype == other.dtype &&
+           this->use_length == other.use_length;
+  }
 };
 
 static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
@@ -778,7 +785,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for softmax with float16 inputs. "
-                    "See https://mxnet.incubator.apache.org/versions/master/faq/env_var.html "
+                    "See https://mxnet.apache.org/api/faq/env_var "
                     "for more details.");
   }
 
@@ -790,7 +797,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
           << "Mask needs to be provided when using softmax with use_length=True.";
         type = inputs[1].type_flag_;
       }
-      MXNET_INT_TYPE_SWITCH(type, IType, {
+      MXNET_INT32_INT64_TYPE_SWITCH(type, IType, {
           IType* mask_ptr = nullptr;
           if (param.use_length.value()) {
             mask_ptr = inputs[1].dptr<IType>();
@@ -834,7 +841,7 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   if (softmax_use_length(attrs)) {
-    MXNET_INT_TYPE_SWITCH(inputs[2].type_flag_, IType, {
+    MXNET_INT32_INT64_TYPE_SWITCH(inputs[2].type_flag_, IType, {
       if (req[1] != kNullOp) {
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
           ctx.get_stream<xpu>(), outputs[1].Size(), outputs[1].dptr<IType>());
@@ -856,7 +863,7 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, OType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        MXNET_INT_TYPE_SWITCH(itype, IType, {
+        MXNET_INT32_INT64_TYPE_SWITCH(itype, IType, {
           IType * length_ptr = nullptr;
           if (softmax_use_length(attrs)) {
             length_ptr = inputs[2].dptr<IType>();
@@ -898,5 +905,19 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::SoftmaxParam> {
+  size_t operator()(const mxnet::op::SoftmaxParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.axis);
+    ret = dmlc::HashCombine(ret, val.temperature);
+    ret = dmlc::HashCombine(ret, val.dtype);
+    ret = dmlc::HashCombine(ret, val.use_length);
+    return ret;
+  }
+};
+}  // namespace std
 
 #endif  // MXNET_OPERATOR_NN_SOFTMAX_INL_H_

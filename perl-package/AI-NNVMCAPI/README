@@ -14,7 +14,7 @@ To install this module type the following:
 
 DEPENDENCIES
 
-This module requires mxnet http://mxnet.io
+This module requires mxnet https://mxnet.io
 It's used by AI::MXNet.
 
 COPYRIGHT AND LICENCE

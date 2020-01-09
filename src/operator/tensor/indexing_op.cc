@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 template<bool clip = true>
-struct TakeCPU {
+struct TakeZeroAxisCPU {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
   // M is the number of columns of in_data and out_data
@@ -88,8 +88,9 @@ void EmbeddingOpForwardDnsImpl<cpu>(mshadow::Stream<cpu>* s,
       Tensor<cpu, 2, DType> wmat = weight.get<cpu, 2, DType>(s);
       Tensor<cpu, 2, DType> out = output.get_with_shape<cpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<TakeCPU<true>, cpu>::Launch(s, oshape.Size() / wmat.shape_[1], out.dptr_, wmat.dptr_,
-                                         idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+      Kernel<TakeZeroAxisCPU<true>, cpu>::Launch(s, oshape.Size() / wmat.shape_[1], out.dptr_,
+                                                 wmat.dptr_, idx.dptr_,
+                                                 wmat.shape_[1], wmat.shape_[0]);
     });
   });
 }
@@ -288,6 +289,10 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
   const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
+  if (idxshape.Size() == 0) {
+    return;
+  }
+
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
@@ -304,17 +309,17 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
       }
       if (actual_axis == 0) {
         if (param.mode == take_::kClip) {
-          Kernel<TakeCPU<true>, cpu>::Launch(s, idxshape.Size(),
-                                             outputs[take_::kOut].dptr<DType>(),
-                                             inputs[take_::kArr].dptr<DType>(),
-                                             inputs[take_::kIdx].dptr<IType>(),
-                                             oshape.Size()/idxshape.Size(), arrshape[0]);
+          Kernel<TakeZeroAxisCPU<true>, cpu>::Launch(s, idxshape.Size(),
+                                                     outputs[take_::kOut].dptr<DType>(),
+                                                     inputs[take_::kArr].dptr<DType>(),
+                                                     inputs[take_::kIdx].dptr<IType>(),
+                                                     oshape.Size()/idxshape.Size(), arrshape[0]);
         } else {
-          Kernel<TakeCPU<false>, cpu>::Launch(s, idxshape.Size(),
-                                              outputs[take_::kOut].dptr<DType>(),
-                                              inputs[take_::kArr].dptr<DType>(),
-                                              inputs[take_::kIdx].dptr<IType>(),
-                                              oshape.Size()/idxshape.Size(), arrshape[0]);
+          Kernel<TakeZeroAxisCPU<false>, cpu>::Launch(s, idxshape.Size(),
+                                                      outputs[take_::kOut].dptr<DType>(),
+                                                      inputs[take_::kArr].dptr<DType>(),
+                                                      inputs[take_::kIdx].dptr<IType>(),
+                                                      oshape.Size()/idxshape.Size(), arrshape[0]);
         }
       } else {
         mshadow::Shape<10> in_strides;
@@ -328,21 +333,25 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
           out_strides[i] = stride;
         }
         if (param.mode == take_::kClip) {
-          Kernel<Take<true>, cpu>::Launch(s, oshape.Size(),
-                                          outputs[take_::kOut].dptr<DType>(),
-                                          inputs[take_::kArr].dptr<DType>(),
-                                          inputs[take_::kIdx].dptr<IType>(),
-                                          in_strides, out_strides, arrshape.ndim(),
-                                          oshape.ndim(), idxshape.ndim(),
-                                          arrshape[actual_axis], actual_axis);
+          Kernel<TakeNonzeroAxis<true>, cpu>::Launch(s, oshape.Size(),
+                                                     outputs[take_::kOut].dptr<DType>(),
+                                                     inputs[take_::kArr].dptr<DType>(),
+                                                     inputs[take_::kIdx].dptr<IType>(),
+                                                     out_strides[actual_axis-1],
+                                                     in_strides[actual_axis-1],
+                                                     in_strides[actual_axis], arrshape.ndim(),
+                                                     oshape.ndim(), idxshape.ndim(),
+                                                     arrshape[actual_axis], actual_axis);
         } else {
-          Kernel<Take<false>, cpu>::Launch(s, oshape.Size(),
-                                           outputs[take_::kOut].dptr<DType>(),
-                                           inputs[take_::kArr].dptr<DType>(),
-                                           inputs[take_::kIdx].dptr<IType>(),
-                                           in_strides, out_strides, arrshape.ndim(),
-                                           oshape.ndim(), idxshape.ndim(),
-                                           arrshape[actual_axis], actual_axis);
+          Kernel<TakeNonzeroAxis<false>, cpu>::Launch(s, oshape.Size(),
+                                                      outputs[take_::kOut].dptr<DType>(),
+                                                      inputs[take_::kArr].dptr<DType>(),
+                                                      inputs[take_::kIdx].dptr<IType>(),
+                                                      out_strides[actual_axis-1],
+                                                      in_strides[actual_axis-1],
+                                                      in_strides[actual_axis], arrshape.ndim(),
+                                                      oshape.ndim(), idxshape.ndim(),
+                                                      arrshape[actual_axis], actual_axis);
         }
       }
     });
@@ -542,6 +551,7 @@ The storage type of weight can be either row_sparse or default.
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -615,6 +625,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", EmbeddingOpShape<SparseEmbeddingParam>)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<SparseEmbeddingParam>)
 .set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
@@ -719,6 +730,7 @@ The storage type of ``take`` output depends upon the input storage type:
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TakeOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",

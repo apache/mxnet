@@ -170,5 +170,6 @@ $(function() {
         header.append(hint);
     });
 
-    $('.mdl-layout__container').css('visibility', 'visible');
+    $('.mdl-layout').css('visibility', 'visible');
+
 });

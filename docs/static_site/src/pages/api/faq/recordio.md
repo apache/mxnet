@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Create a Dataset Using RecordIO
+category: faq
+faq_c: Speed
+question: How can I create a .rec dataset ?
+permalink: /api/faq/recordio
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Create a Dataset Using RecordIO
-category: faq
-faq_c: Speed
-question: How can I create a .rec dataset ?
-permalink: /api/faq/recordio
----
 
 
 ## Create a Dataset Using RecordIO
@@ -38,7 +38,6 @@ We provide two tools for creating a RecordIO dataset.
 * [im2rec.py](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py) - implements the tool using the Python API.
 
 Both provide the same output: a RecordIO dataset.
-You may want to also review the [example using real-world data with im2rec.py.](https://mxnet.incubator.apache.org/tutorials/basic/data.html#loading-data-using-image-iterators)
 
 ### Prerequisites
 

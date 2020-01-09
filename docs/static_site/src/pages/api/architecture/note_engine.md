@@ -1,3 +1,9 @@
+---
+layout: page_category
+title:  Dependency Engine
+category: architecture
+permalink: /api/architecture/note_engine
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,12 +20,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Dependency Engine
-category: architecture
-permalink: /api/architecture/note_engine
----
 
 # Dependency Engine for Deep Learning
 
@@ -379,13 +379,11 @@ Allowing mutation mitigates these issues.
 
 
 ## Source Code of the Generic Dependency Engine
-[MXNet](https://github.com/dmlc/mxnet) provides an implementation
+[MXNet](https://github.com/apache/incubator-mxnet) provides an implementation
 of the generic dependency engine described in this page.
-You can find more details in [this topic](http://mxnet.io/architecture/note_engine.html).
 We welcome your contributions.
 
 ## Next Steps
 
-* [Squeeze the Memory Consumption of Deep Learning](http://mxnet.io/architecture/note_memory.html)
-* [Efficient Data Loading Module for Deep Learning](http://mxnet.io/architecture/note_data_loading.html)
-* [Survey of RNN Interface](http://mxnet.io/architecture/rnn_interface.html)
+* [Squeeze the Memory Consumption of Deep Learning](note_memory)
+* [Efficient Data Loading Module for Deep Learning](note_data_loading)

@@ -1,3 +1,11 @@
+---
+layout: page_category
+title: Visualize Neural Networks
+category: faq
+faq_c: Model
+question: How do I visualize neural networks as computation graphs?
+permalink: /api/faq/visualize_graph
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title: Visualize Neural Networks
-category: faq
-faq_c: Model
-question: How do I visualize neural networks as computation graphs?
-permalink: /api/faq/visualize_graph
----
 # How to visualize Neural Networks as computation graph
 
 Here, we'll demonstrate how to use ```mx.viz.plot_network```
@@ -34,13 +34,13 @@ from which the result can be read.
 
 ## Prerequisites
 You need the [Jupyter Notebook](http://jupyter.readthedocs.io/en/latest/)
-and [Graphviz](http://www.graphviz.org/) libraries to visualize the network.
-Please make sure you have followed [installation instructions](http://mxnet.io/install/index.html)
+and [Graphviz](https://www.graphviz.org/) libraries to visualize the network.
+Please make sure you have followed [installation instructions]({{'get_started'|relative_url}})
 in setting up above dependencies along with setting up MXNet.
 
 ## Visualize the sample Neural Network
 
-```mx.viz.plot_network``` takes [Symbol](http://mxnet.io/api/python/symbol/symbol.html), with your Network definition, and optional node_attrs, parameters for the shape of the node in the graph,  as input and generates a computation graph.
+```mx.viz.plot_network``` takes [Symbol]({{'/api/python/docs/api/symbol/index'|relative}}), with your Network definition, and optional node_attrs, parameters for the shape of the node in the graph,  as input and generates a computation graph.
 
 We will now try to visualize a sample Neural Network for linear matrix factorization:
 - Start Jupyter notebook server

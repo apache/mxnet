@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Symbolic API with Pictures
+is_tutorial: true
+tag: clojure
+permalink: /api/clojure/docs/tutorials/symbol_in_pictures
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,19 +21,12 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Symbolic API with Pictures
-is_tutorial: true
-tag: clojure
-permalink: /api/clojure/docs/tutorials/symbol_in_pictures
----
 
 # Symbolic Configuration and Execution in Pictures
 
 This topic explains symbolic construction and execution in pictures.
 
-We recommend that you read the [Symbolic API](symbol.md) as another useful reference.
+We recommend that you read the [Symbolic API](symbol) as another useful reference.
 
 ## Compose Symbols
 
@@ -98,4 +98,4 @@ Auxiliary states are just like arguments, except that you can't take the gradien
 
 ## Next Steps
 
-See [Symbolic API](symbol.md) and [Python Documentation](index.md).
+See [Symbolic API](symbol) and [Python Documentation]({{'/api/python'|relative_url}}).

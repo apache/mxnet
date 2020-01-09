@@ -732,11 +732,9 @@ def check_sparse_mathematical_core(name, stype,
 
         assert arr_grad.stype == expected_grad_result_type
 
-        arr_grad = arr_grad.asnumpy()
-
         if verbose is True:
             print(name)
-            print("arr_grad", arr_grad)
+            print("arr_grad", arr_grad.asnumpy())
             print("input_grad", input_grad)
 
         assert_almost_equal(arr_grad, input_grad, equal_nan=True)

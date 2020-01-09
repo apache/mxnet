@@ -41,8 +41,8 @@ use AI::MXNet::LinAlg::NDArray;
     mx->linalg-><sym|nd>->syrk  Multiplication of matrix with its transpose.
     mx->linalg-><sym|nd>->gelqf LQ factorization for general matrix.
     mx->linalg-><sym|nd>->syevd Eigendecomposition for symmetric matrix.
-    L<NDArray Python Docs|http://mxnet.incubator.apache.org/api/python/ndarray/linalg.html>
-    L<Symbol Python Docs|http://mxnet.incubator.apache.org/api/python/symbol/linalg.html>
+    L<NDArray Python Docs|https://mxnet.apache.org/api/python/ndarray/linalg.html>
+    L<Symbol Python Docs|https://mxnet.apache.org/api/python/symbol/linalg.html>
 
     Examples:
 

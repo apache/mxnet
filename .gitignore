@@ -164,4 +164,5 @@ coverage.xml
 cmake_options.yml
 
 # header file generated at compile time
-include/mkldnn/mkldnn_version.h
+include/mkldnn/dnnl_version.h
+include/mkldnn/dnnl_config.h

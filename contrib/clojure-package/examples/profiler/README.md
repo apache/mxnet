@@ -17,7 +17,16 @@
 
 # profiler
 
-An example of using the profiler. 
+An example of using the profiler.
+
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+## Usage
 
 To run use `lein run`
 A file will be generated in the directory afterwards `profile-matmul-20iter.json`

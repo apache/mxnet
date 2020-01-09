@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Convert from Caffe to MXNet
+category: faq
+faq_c: Deployment Environments
+question: How to convert a Caffe model to MXNet?
+permalink: /api/faq/caffe
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Convert from Caffe to MXNet
-category: faq
-faq_c: Deployment Environments
-question: How to convert a Caffe model to MXNet?
-permalink: /api/faq/caffe
----
 # How to | Convert from Caffe to MXNet
 
 Key topics covered include the following:
@@ -104,7 +104,7 @@ are the steps of how to rebuild Caffe:
    cd caffe && wget https://github.com/BVLC/caffe/pull/4527.patch && git apply 4527.patch
    ```
 3. Build and install Caffe by following the
-   [official guide](http://caffe.berkeleyvision.org/installation.html).
+   [official guide](https://caffe.berkeleyvision.org/installation.html).
 
 Next we need to compile MXNet with Caffe supports
 

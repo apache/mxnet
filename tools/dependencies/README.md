@@ -190,7 +190,7 @@ cd incubator-mxnet
 # http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/
 
 # Build PyPi package
-tools/staticbuild/build.sh cu100mkl pip
+tools/staticbuild/build.sh cu100mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
@@ -227,7 +227,7 @@ Please run performance test aginast the MXNet you build before raising the PR.
 #### Checklist
 - [ ] Python/setup.py
 - [ ] tools/pip/setup.py
-- [ ] ci/docker/install/docs_requirements
+- [ ] ci/docker/install/requirements
 - [ ] ci/docker/install/ubuntu_publish.sh
 - [ ] ci/docker/install/ubuntu_python.sh
 - [ ] ci/qemu/mxnet_requirements.txt
@@ -279,7 +279,7 @@ sudo apt-get install -y git \
 2. Build PyPi package
 ```
 # Update the dependency under tools/dependencies, then
-tools/staticbuild/build.sh mkl pip
+tools/staticbuild/build.sh mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 
@@ -328,7 +328,7 @@ sudo apt-get install -y git \
 2. Build PyPi package
 ```
 # Update the dependency under tools/dependencies, then
-tools/staticbuild/build.sh mkl pip
+tools/staticbuild/build.sh mkl
 
 # Wait for 10 - 30 mins, you will find libmxnet.so under the incubator-mxnet/lib
 

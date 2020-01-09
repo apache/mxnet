@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Distributed Training in MXNet
+category: faq
+faq_c: Deployment Environments
+question: How to do distributed training using MXNet on AWS?
+permalink: /api/faq/distributed_training
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Distributed Training in MXNet
-category: faq
-faq_c: Deployment Environments
-question: How to do distributed training using MXNet on AWS?
-permalink: /api/faq/distributed_training
----
 
 # Distributed Training in MXNet
 MXNet supports distributed training enabling us to leverage multiple machines for faster training.
@@ -37,7 +37,7 @@ In this document, we describe how to train a model with devices distributed acro
 
 When models are so large that they don't fit into device memory, then a second way called *model parallelism* is useful.
 Here, different devices are assigned the task of learning different parts of the model.
-Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](https://mxnet.incubator.apache.org/versions/master/faq/model_parallel_lstm.html) for more on this.
+Currently, MXNet supports Model parallelism in a single machine only. Refer [Training with multiple GPUs using model parallelism](model_parallel_lstm) for more on this.
 
 ## How Does Distributed Training Work?
 The following concepts are key to understanding distributed training in MXNet:
@@ -69,7 +69,7 @@ The distributed mode of KVStore is enabled by calling `mxnet.kvstore.create` fun
 with a string argument which contains the word `dist` as follows:
 > kv = mxnet.kvstore.create('dist_sync')
 
-Refer [KVStore API](https://mxnet.incubator.apache.org/versions/master/api/python/kvstore/kvstore.html) for more information about KVStore.
+Refer [KVStore API]({{'/api/python/docs/api/kvstore/index.html#mxnet.kvstore.KVStore'|relative_url}}) for more information about KVStore.
 
 ### Distribution of Keys
 Each server doesn't necessarily store all the keys or parameter arrays.
@@ -91,7 +91,7 @@ In the case of distributed training though, we would need to divide the dataset 
 
 Typically, this split of data for each worker happens through the data iterator,
 on passing the number of parts and the index of parts to iterate over.
-Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.MNISTIter) and [mxnet.io.ImageRecordIter](https://mxnet.incubator.apache.org/versions/master/api/python/io/io.html#mxnet.io.ImageRecordIter).
+Some iterators in MXNet that support this feature are [mxnet.io.MNISTIterator](/api/python/docs/api/mxnet/io/index.html?MNISTIter#mxnet.io.MNISTIter) and [mxnet.io.ImageRecordIter](api/python/docs/api/mxnet/io/index.html?imagerecorditer#mxnet.io.ImageRecordIter).
 If you are using a different iterator, you can look at how the above iterators implement this.
 We can use the kvstore object to get the number of workers (`kv.num_workers`) and rank of the current worker (`kv.rank`).
 These can be passed as arguments to the iterator.
@@ -101,7 +101,7 @@ to see an example usage.
 ### Updating weights
 KVStore server supports two modes, one which aggregates the gradients and updates the weights using those gradients, and second where the server only aggregates gradients. In the latter case, when a worker process pulls from kvstore, it gets the aggregated gradients. The worker then uses these gradients and applies the weights locally.
 
-When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](https://mxnet.incubator.apache.org/versions/master/api/python/gluon/gluon.html#mxnet.gluon.Trainer) object like this:
+When using Gluon there is an option to choose between these modes by passing `update_on_kvstore` variable when you create the [Trainer](/api/python/docs/api/gluon/trainer.html) object like this:
 
 ```
 trainer = gluon.Trainer(net.collect_params(), optimizer='sgd',
@@ -142,7 +142,7 @@ This is faster than `dist_sync` because it reduces expensive communication betwe
 ### Gradient Compression
 When communication is expensive, and the ratio of computation time to communication time is low, communication can become a bottleneck.
 In such cases, gradient compression can be used to reduce the cost of communication, thereby speeding up training.
-Refer [Gradient compression](https://mxnet.incubator.apache.org/versions/master/faq/gradient_compression.html) for more details.
+Refer [Gradient compression]({{'/api/faq/gradient_compression'|relative_url}}) for more details.
 
 Note: For small models when the cost of computation is much lower than cost of communication,
 distributed training might actually be slower than training on a single machine because of the overhead of communication and synchronization.
@@ -179,7 +179,7 @@ The options in the following command are the recommended options when mounting a
 sudo mkdir efs && sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 NETWORK_FILE_SYSTEM_IP:/ efs
 ```
 
-Tip: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training](https://mxnet.incubator.apache.org/versions/master/faq/s3_integration.html) for more information.
+Tip: You might find it helpful to store large datasets on S3 for easy access from all machines in the cluster. Refer [Using data from S3 for training]({{'/api/faq/s3_integration'|relative_url}}) for more information.
 
 ### Using Launch.py
 MXNet provides a script [tools/launch.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py) to make it easy to launch distributed training on a cluster with `ssh`, `mpi`, `sge` or `yarn`.
@@ -190,7 +190,7 @@ git clone --recursive https://github.com/apache/incubator-mxnet
 ```
 
 #### Example
-Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/example/gluon/image_classification.py).
+Let us consider training a VGG11 model on the CIFAR10 dataset using [example/gluon/image_classification.py](https://github.com/apache/incubator-mxnet/blob/master/tools/launch.py).
 ```
 cd example/gluon/
 ```

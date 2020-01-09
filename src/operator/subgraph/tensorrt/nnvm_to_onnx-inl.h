@@ -84,7 +84,13 @@ void ConvDeconvConvertHelper(NodeProto *node_proto,
                              ConvDeconvType type);
 
 // Forward declarations
-void ConvertConvolution(NodeProto *node_proto,
+void ConvertIdentity(NodeProto* node_proto,
+                     const NodeAttrs &attrs,
+                     const nnvm::IndexedGraph& ig,
+                     const array_view<IndexedGraph::NodeEntry> &inputs);
+
+void ConvertConvolution(
+                        NodeProto *node_proto,
                         const NodeAttrs &attrs,
                         const nnvm::IndexedGraph &ig,
                         const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -139,12 +145,12 @@ void ConvertElementwiseAdd(NodeProto *node_proto,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseSub(NodeProto *node_proto,
+void ConvertElementwiseMul(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertElementwiseMul(NodeProto *node_proto,
+void ConvertElementwiseSub(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
                     const array_view<IndexedGraph::NodeEntry> &inputs);
@@ -168,6 +174,7 @@ std::string ConvertNnvmGraphToOnnx(const nnvm::Graph &g,
     std::unordered_map<std::string, NDArray>* params_map);
 
 static const std::unordered_map<std::string, ConverterFunction> converter_map = {
+  {"_copy", ConvertIdentity},
   {"Activation", ConvertActivation},
   {"BatchNorm", ConvertBatchNorm},
   {"clip", ConvertClip},
@@ -176,8 +183,8 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"Concat", ConvertConcatenate},
   {"Dropout", ConvertDropout},
   {"elemwise_add", ConvertElementwiseAdd},
-  {"elemwise_sub", ConvertElementwiseSub},
   {"elemwise_mul", ConvertElementwiseMul},
+  {"elemwise_sub", ConvertElementwiseSub},
   {"Flatten", ConvertFlatten},
   {"FullyConnected", ConvertFullyConnected},
   {"Pad", ConvertPad},

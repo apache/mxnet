@@ -34,9 +34,9 @@ The model is trained on the [Pascal VOC 2012 dataset](http://host.robots.ox.ac.u
 
 ## Prerequisites
 
-1. [Build MXNet](http://mxnet.incubator.apache.org/install/scala_setup.html)
-2. [Build MXNet Scala/Java Package](http://mxnet.incubator.apache.org/install/scala_setup.html)
-3. [IntelliJ IDE (or alternative IDE) project setup](http://mxnet.incubator.apache.org/tutorials/java/mxnet_java_on_intellij.html) with the MXNet Scala/Java Package
+1. [Build MXNet](https://mxnet.apache.org/get_started/ubuntu_setup)
+2. [Build MXNet Scala/Java Package](https://mxnet.apache.org/get_started/scala_setup)
+3. [IntelliJ IDE (or alternative IDE) project setup](https://mxnet.apache.org/tutorials/java/mxnet_java_on_intellij.html) with the MXNet Scala/Java Package
 4. wget
 
 

@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Model API *Deprecated*
+permalink: /api/scala/docs/tutorials/model
+is_tutorial: true
+tag: scala
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,27 +21,20 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Model API *Deprecated*
-permalink: /api/scala/docs/tutorials/model
-is_tutorial: true
-tag: scala
----
 
 # MXNet Scala Model API
 
 The model API provides a simplified way to train neural networks using common best practices.
-It's a thin wrapper built on top of the [ndarray](ndarray.md) and [symbolic](symbol.md)
+It's a thin wrapper built on top of the [ndarray](ndarray) and [symbolic](symbol)
 modules that make neural network training easy.
 
 Topics:
 
-* [Train a Model](#train-a-model)
+* [Train the Model](#train-the-model)
 * [Save the Model](#save-the-model)
 * [Periodic Checkpoint](#periodic-checkpointing)
 * [Multiple Devices](#use-multiple-devices)
-* [Model API Reference](#http://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.Model)
+* [Model API Reference]({{'/api/scala/docs/api/#org.apache.mxnet.Model'|relative_url}})
 
 ## Train the Model
 
@@ -72,7 +72,7 @@ You can also use the `scikit-learn-style` construct and `fit` function to create
 
   model.fit(trainData = train)
 ```
-For more information, see [API Reference](http://mxnet.incubator.apache.org/api/scala/docs/index.html).
+For more information, see [API Reference]({{'/api/scala/docs/api/#package'|relative_url}}).
 
 ## Save the Model
 
@@ -136,7 +136,7 @@ Set ```ctx``` to the list of devices that you want to train on. You can create a
 Training occurs in parallel on the GPUs that you specify.
 
 ## Next Steps
-* See [Symbolic API](symbol.md) for operations on NDArrays that assemble neural networks from layers.
-* See [IO Data Loading API](io.md) for parsing and loading data.
-* See [NDArray API](ndarray.md) for vector/matrix/tensor operations.
-* See [KVStore API](kvstore.md) for multi-GPU and multi-host distributed training.
+* See [Symbolic API](symbol) for operations on NDArrays that assemble neural networks from layers.
+* See [IO Data Loading API](io) for parsing and loading data.
+* See [NDArray API](ndarray) for vector/matrix/tensor operations.
+* See [KVStore API](kvstore) for multi-GPU and multi-host distributed training.

@@ -23,7 +23,7 @@ This is an project created to run the test suite on a fully packaged mxnet jar. 
 
 To setup the packageTest, you must first build your tests. To build the tests, follow these steps from the mxnet main directory:
 
-1. Build MXNet and the scala package from source following the directions [here](https://mxnet.incubator.apache.org/install/scala_setup.html#source)
+1. Build MXNet and the scala package from source following the directions [here](https://mxnet.apache.org/get_started/scala_setup#source)
 2. Build the tests by running `mvn test-compile`.
 3. Follow setup instructions below for your testing goal
 

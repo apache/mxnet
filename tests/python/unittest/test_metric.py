@@ -17,6 +17,8 @@
 
 import mxnet as mx
 import numpy as np
+import scipy
+from scipy.stats import pearsonr
 import json
 import math
 from common import with_seed
@@ -263,13 +265,40 @@ def test_perplexity():
     assert perplexity == perplexity_expected
 
 def test_pearsonr():
-    pred = mx.nd.array([[0.7, 0.3], [0.1, 0.9], [1., 0]])
-    label = mx.nd.array([[0, 1], [1, 0], [1, 0]])
-    pearsonr_expected = np.corrcoef(pred.asnumpy().ravel(), label.asnumpy().ravel())[0, 1]
-    metric = mx.metric.create('pearsonr')
-    metric.update([label], [pred])
-    _, pearsonr = metric.get()
-    assert pearsonr == pearsonr_expected
+    pred1 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
+    label1 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
+    pearsonr_expected_np = np.corrcoef(pred1.asnumpy().ravel(), label1.asnumpy().ravel())[0, 1]
+    pearsonr_expected_scipy, _ = pearsonr(pred1.asnumpy().ravel(), label1.asnumpy().ravel())
+    macro_pr = mx.metric.create('pearsonr', average='macro')
+    micro_pr = mx.metric.create('pearsonr', average='micro')
+
+    assert np.isnan(macro_pr.get()[1])
+    assert np.isnan(micro_pr.get()[1])
+
+    macro_pr.update([label1], [pred1])
+    micro_pr.update([label1], [pred1])
+
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_scipy)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_scipy)
+
+    pred2 = mx.nd.array([[1, 2], [3, 2], [4, 6]])
+    label2 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
+    # Note that pred12 = pred1 + pred2; label12 = label1 + label2
+    pred12 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6],[1, 2], [3, 2], [4, 6]])
+    label12 = mx.nd.array([[1, 0], [0, 1], [0, 1], [1, 0], [0, 1], [0, 1]])
+
+    pearsonr_expected_np = np.corrcoef(pred12.asnumpy().ravel(), label12.asnumpy().ravel())[0, 1]
+    pearsonr_expected_scipy, _ = pearsonr(pred12.asnumpy().ravel(), label12.asnumpy().ravel())
+
+    macro_pr.reset()
+    micro_pr.update([label2], [pred2])
+    macro_pr.update([label12], [pred12])
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(macro_pr.get()[1], pearsonr_expected_scipy)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_np)
+    np.testing.assert_almost_equal(micro_pr.get()[1], pearsonr_expected_scipy)
 
 def cm_batch(cm):
     # generate a batch yielding a given confusion matrix

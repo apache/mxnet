@@ -28,6 +28,7 @@
 #include <mshadow/cuda/reduce.cuh>
 #include <algorithm>
 #include <vector>
+#include "./mxnet_op.h"
 
 #define ROUND_OFF 50000
 #define WARPS_PER_BLOCK 1
@@ -38,10 +39,7 @@
     cudaError_t error = condition; \
     CHECK_EQ(error, cudaSuccess) << " " << cudaGetErrorString(error); \
   } while (0)
-#define CUDA_KERNEL_LOOP(i, n) \
-for (int i = blockIdx.x * blockDim.x + threadIdx.x; \
-      i < (n); \
-      i += blockDim.x * gridDim.x)
+
 namespace mshadow {
 namespace cuda {
 // == Correlation Kernel

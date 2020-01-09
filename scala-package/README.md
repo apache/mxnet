@@ -133,7 +133,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 Build From Source
 -----------------
 
-The [Installation Guide](http://mxnet.incubator.apache.org/install/index.html) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
+The [Installation Guide](https://mxnet.apache.org/get_started) contains instructions to install mxnet or build it from source. The Scala/Java package is built from source using Maven. The maven build assumes you already have a ``lib/libmxnet.so`` file.
 If you have built MXNet from source and are looking to set up Scala\Java from that point, you may simply run the following from the MXNet source root, the build will detect your platform (OSX/Linux) and libmxnet.so flavor (CPU/GPU):
 
 ```bash
@@ -210,30 +210,30 @@ Caused by: java.lang.ClassNotFoundException: org.apache.mxnet.NDArray
 ```
 Please make sure your $CLASSPATH contains `mxnet-full_scala_version-INTERNAL.jar`.
 
-- To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.incubator.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
+- To set up the Scala Project using IntelliJ IDE on macOS follow the instructions [here](https://mxnet.apache.org/tutorials/scala/mxnet_scala_on_intellij.html).
 - Several examples on using the Scala APIs are provided in the [Scala Examples Folder](https://github.com/apache/incubator-mxnet/tree/master/scala-package/examples/)
 
 Scala Training APIs
 -------
 - Module API :
-[The Module API](https://mxnet.incubator.apache.org/api/scala/module.html) provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Modules provide high-level APIs for training, predicting, and evaluating.
+[The Module API](https://mxnet.apache.org/api/scala/module.html) provides an intermediate and high-level interface for performing computation with neural networks in MXNet. Modules provide high-level APIs for training, predicting, and evaluating.
 
 - KVStore API : 
-To run training over multiple GPUs and multiple hosts, one can use the [KVStore API](https://mxnet.incubator.apache.org/api/scala/kvstore.html).
+To run training over multiple GPUs and multiple hosts, one can use the [KVStore API](https://mxnet.apache.org/api/scala/kvstore.html).
 
 - IO/Data Loading : 
-MXNet Scala provides APIs for preparing data to feed as an input to models. Check out [Data Loading API](https://mxnet.incubator.apache.org/api/scala/io.html) for more info.
+MXNet Scala provides APIs for preparing data to feed as an input to models. Check out [Data Loading API](https://mxnet.apache.org/api/scala/io.html) for more info.
  
-Other available Scala APIs for training can be found [here](https://mxnet.incubator.apache.org/api/scala/index.html).  
+Other available Scala APIs for training can be found [here](https://mxnet.apache.org/api/scala/index.html).  
  
 
 Scala Inference APIs
 -------
-The [Scala Inference APIs](https://mxnet.incubator.apache.org/api/scala/infer.html) provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.incubator.apache.org/api/scala/docs/index.html#org.apache.mxnet.infer.package).  
+The [Scala Inference APIs](https://mxnet.apache.org/api/scala/infer.html) provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.apache.org/api/scala/docs/index.html#org.apache.mxnet.infer.package).  
 
 Java Inference APIs
 -------
-The [Java Inference APIs](http://mxnet.incubator.apache.org/api/java/index.html) also provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/javaapi) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.incubator.apache.org/api/java/docs/index.html#org.apache.mxnet.infer.package).
+The [Java Inference APIs](https://mxnet.apache.org/api/java/index.html) also provide an easy, out of the box solution to load a pre-trained MXNet model and run inference on it. The Inference APIs are present in the [Infer Package](https://github.com/apache/incubator-mxnet/tree/master/scala-package/infer/src/main/scala/org/apache/mxnet/infer/javaapi) under the MXNet Scala Package repository, while the documentation for the Infer API is available [here](https://mxnet.apache.org/api/java/docs/index.html#org.apache.mxnet.infer.package).
 More APIs will be added to the Java Inference APIs soon.
 
 JVM Memory Management

@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: NDArray
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/ndarray
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: NDArray
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/ndarray
----
 
 
 # NDArray: Vectorized Tensor Computations on CPUs and GPUs
@@ -223,9 +223,9 @@ The actual computations are finished, allowing us to copy the results someplace 
 the results.
 
 ## Next Steps
-* [Symbol](http://mxnet.io/tutorials/r/symbol.html)
-* [Write and use callback functions](http://mxnet.io/tutorials/r/CallbackFunction.html)
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with Pre-trained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Symbol](/api/r/docs/tutorials/symbol)
+* [Write and use callback functions](/api/r/docs/tutorials/callback_function)
+* [Neural Networks with MXNet in Five Minutes](/api/r/docs/tutorials/five_minutes_neural_network)
+* [Classify Real-World Images with Pre-trained Model](/api/r/docs/tutorials/classify_real_image_with_pretrained_model)
+* [Handwritten Digits Classification Competition](/api/r/docs/tutorials/mnist_competition)
+* [Character Language Model using RNN](/api/r/docs/tutorials/char_rnn_model)

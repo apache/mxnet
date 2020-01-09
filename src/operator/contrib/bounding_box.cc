@@ -32,6 +32,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(BoxNMSParam);
 DMLC_REGISTER_PARAMETER(BoxOverlapParam);
 DMLC_REGISTER_PARAMETER(BipartiteMatchingParam);
+DMLC_REGISTER_PARAMETER(BoxDecodeParam);
+
 
 NNVM_REGISTER_OP(_contrib_box_nms)
 .add_alias("_contrib_box_non_maximum_suppression")
@@ -101,6 +103,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", BoxNMSForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_contrib_box_nms"})
 .add_argument("data", "NDArray-or-Symbol", "The input")
@@ -185,6 +188,7 @@ NNVM_REGISTER_OP(_contrib_bipartite_matching)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", MatchingShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
 .set_attr<FCompute>("FCompute<cpu>", BipartiteMatchingForward<cpu>)
@@ -200,6 +204,48 @@ NNVM_REGISTER_OP(_backward_contrib_bipartite_matching)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", BipartiteMatchingBackward<cpu>)
 .add_arguments(BipartiteMatchingParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_contrib_box_encode)
+.describe(R"doc(Encode bounding boxes training target with normalized center offsets.
+    Input bounding boxes are using corner type: `x_{min}, y_{min}, x_{max}, y_{max}`.) array
+)doc" ADD_FILELINE)
+.set_num_inputs(6)
+.set_num_outputs(2)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"samples", "matches", "anchors", "refs", "means", "stds"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", BoxEncodeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<6, 2>)
+.set_attr<FCompute>("FCompute<cpu>", BoxEncodeForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("samples", "NDArray-or-Symbol", "(B, N) value +1 (positive), -1 (negative), "
+              "0 (ignore)")
+.add_argument("matches", "NDArray-or-Symbol", "(B, N) value range [0, M)")
+.add_argument("anchors", "NDArray-or-Symbol", "(B, N, 4) encoded in corner")
+.add_argument("refs", "NDArray-or-Symbol", "(B, M, 4) encoded in corner")
+.add_argument("means", "NDArray-or-Symbol", "(4,) Mean value to be subtracted from encoded values")
+.add_argument("stds", "NDArray-or-Symbol", "(4,) Std value to be divided from encoded values");
+
+NNVM_REGISTER_OP(_contrib_box_decode)
+.describe(R"doc(Decode bounding boxes training target with normalized center offsets.
+    Input bounding boxes are using corner type: `x_{min}, y_{min}, x_{max}, y_{max}`
+    or center type: `x, y, width, height.) array
+)doc" ADD_FILELINE)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<BoxDecodeParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data", "anchors"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", BoxDecodeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
+.set_attr<FCompute>("FCompute<cpu>", BoxDecodeForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("data", "NDArray-or-Symbol", "(B, N, 4) predicted bbox offset")
+.add_argument("anchors", "NDArray-or-Symbol", "(1, N, 4) encoded in corner or center")
+.add_arguments(BoxDecodeParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

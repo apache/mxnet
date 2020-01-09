@@ -123,6 +123,7 @@ void HistogramForwardImpl<cpu>(const OpContext& ctx,
 DMLC_REGISTER_PARAMETER(HistogramParam);
 
 NNVM_REGISTER_OP(_histogram)
+.add_alias("_npi_histogram")
 .describe(R"code(This operators implements the histogram function.
 
 Example::
@@ -151,6 +152,7 @@ Example::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", HistogramOpShape)
 .set_attr<nnvm::FInferType>("FInferType", HistogramOpType)
 .set_attr<FCompute>("FCompute<cpu>", HistogramOpForward<cpu>)

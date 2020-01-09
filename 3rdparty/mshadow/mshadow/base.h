@@ -311,6 +311,7 @@ enum TypeFlag {
   kInt32 = 4,
   kInt8  = 5,
   kInt64 = 6,
+  kBool = 7,
 };
 
 template<typename DType>
@@ -409,6 +410,11 @@ struct DataType<int32_t> {
 template<>
 struct DataType<int64_t> {
   static const int kFlag = kInt64;
+  static const int kLanes = 1;
+};
+template<>
+struct DataType<bool> {
+  static const int kFlag = kBool;
   static const int kLanes = 1;
 };
 
@@ -600,6 +606,64 @@ struct divto {
   typedef op::div OPType;
 };
 }  // namespace sv
+
+#ifndef __CUDA_ARCH__
+using std::isnan;
+using std::isinf;
+#endif
+
+/*! \brief
+ *  determines if the given floating point
+ *  number is not a number */
+namespace isnan_typed {
+  template<typename DType>
+  MSHADOW_XINLINE bool IsNan(volatile DType val) {
+    return false;
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile float val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile double val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile long double val) {
+    return isnan(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsNan(volatile mshadow::half::half_t val) {
+    return (val.half_ & (~MSHADOW_HALF_SIGN_BIT)) > MSHADOW_HALF_EXPONENT_BITS;
+  }
+}  // namespace isnan_typed
+
+/*! \brief
+ *  determines if the given floating point
+ *  number is a positive or negative infinity */
+namespace isinf_typed {
+  template<typename DType>
+  MSHADOW_XINLINE bool IsInf(volatile DType val) {
+    return false;
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile float val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile double val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile long double val) {
+    return isinf(val);
+  }
+  template<>
+  MSHADOW_XINLINE bool IsInf(volatile mshadow::half::half_t val) {
+    return (val.half_ & (~MSHADOW_HALF_SIGN_BIT)) == MSHADOW_HALF_EXPONENT_BITS;
+  }
+}  // namespace isinf_typed
+
 /*! \brief namespace for potential reducer operations */
 namespace red {
 namespace limits {
@@ -644,6 +708,36 @@ template<>
 MSHADOW_XINLINE int64_t MinValue<int64_t>(void) {
   return LLONG_MIN;
 }
+/*! \brief minimum value of bool */
+template<>
+MSHADOW_XINLINE bool MinValue<bool>(void) {
+  return false;
+}
+
+/*!
+ * \brief negative infinity of certain types
+ * \tparam DType data type
+ */
+template<typename DType>
+MSHADOW_XINLINE DType NegInfValue(void) {
+  return MinValue<DType>();
+}
+/*! \brief negative infinity value of float */
+template<>
+MSHADOW_XINLINE float NegInfValue<float>(void) {
+  return -HUGE_VALF;
+}
+/*! \brief negative infinity value of double */
+template<>
+MSHADOW_XINLINE double NegInfValue<double>(void) {
+  return -HUGE_VAL;
+}
+/*! \brief negative infinity value of float16 */
+template<>
+MSHADOW_XINLINE half::half_t NegInfValue<half::half_t>(void) {
+  return half::half_t::Binary(
+      MSHADOW_HALF_SIGN_BIT | MSHADOW_HALF_EXPONENT_BITS);
+}
 
 /*!
  * \brief maximum value of certain types
@@ -686,6 +780,36 @@ template<>
 MSHADOW_XINLINE int64_t MaxValue<int64_t>(void) {
   return LLONG_MAX;
 }
+/*! \brief maximum value of bool */
+template<>
+MSHADOW_XINLINE bool MaxValue<bool>(void) {
+  return true;
+}
+
+/*!
+ * \brief positive infinity of certain types
+ * \tparam DType data type
+ */
+template<typename DType>
+MSHADOW_XINLINE DType PosInfValue(void) {
+  return MaxValue<DType>();
+}
+/*! \brief positive infinity value of float */
+template<>
+MSHADOW_XINLINE float PosInfValue<float>(void) {
+  return HUGE_VALF;
+}
+/*! \brief positive infinity value of double */
+template<>
+MSHADOW_XINLINE double PosInfValue<double>(void) {
+  return HUGE_VAL;
+}
+/*! \brief positive infinity value of float16 */
+template<>
+MSHADOW_XINLINE half::half_t PosInfValue<half::half_t>(void) {
+  return half::half_t::Binary(MSHADOW_HALF_EXPONENT_BITS);
+}
+
 }  // namespace limits
 
 /*! \brief sum reducer */
@@ -700,7 +824,11 @@ struct sum {
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
     DType y = src - residual;
     DType t = dst + y;
-    residual = (t - dst) - y;
+    if (isinf_typed::IsInf(t)) {
+      residual = 0;
+    } else {
+      residual = (t - dst) - y;
+    }
     dst = t;
   }
   /*! \brief combine the results of two reducers */
@@ -712,10 +840,15 @@ struct sum {
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
     DType t1 = dst_val + src_val;
-    DType e = t1 - dst_val;
-    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
-    dst_val = t1 + t2;
-    dst_residual = t2 - (dst_val - t1);
+    if (isinf_typed::IsInf(t1)) {
+      dst_val = t1;
+      dst_residual = 0;
+    } else {
+      DType e = t1 - dst_val;
+      DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+      dst_val = t1 + t2;
+      dst_residual = t2 - (dst_val - t1);
+    }
   }
   /*! \brief finalize reduction */
   template<typename DType>
@@ -752,12 +885,9 @@ struct maximum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
-    using namespace std;
-#ifdef __CUDACC__
-    dst = ::max(dst, src);
-#else
-    dst = max(dst, src);
-#endif  // __CUDACC__
+    if (!isnan_typed::IsNan(dst)) {
+      if (!(dst >= src)) dst = src;
+    }
   }
   /*! \brief do reduction into dst */
   template<typename DType>
@@ -793,7 +923,7 @@ struct maximum {
    */
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
-    initv = limits::MinValue<DType>();
+    initv = limits::NegInfValue<DType>();
   }
   /*!
    *\brief set the initial value during reduction
@@ -808,12 +938,9 @@ struct minimum {
   /*! \brief do reduction into dst */
   template<typename DType>
   MSHADOW_XINLINE static void Reduce(volatile DType& dst,  volatile DType src) { // NOLINT(*)
-    using namespace std;
-#ifdef __CUDACC__
-    dst = ::min(dst, src);
-#else
-    dst = min(dst, src);
-#endif  // __CUDACC__
+    if (!isnan_typed::IsNan(dst)) {
+      if (!(dst <= src)) dst = src;
+    }
   }
   /*! \brief do reduction into dst */
   template<typename DType>
@@ -849,7 +976,7 @@ struct minimum {
    */
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
-    initv = limits::MaxValue<DType>();
+    initv = limits::PosInfValue<DType>();
   }
   /*!
    *\brief set the initial value during reduction
@@ -1099,10 +1226,64 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
 
+#define MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, ...)       \
+  switch (type) {                                             \
+  case mshadow::kFloat32:                                     \
+    {                                                         \
+      typedef float DType;                                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat64:                                     \
+    {                                                         \
+      typedef double DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kFloat16:                                     \
+    {                                                         \
+      typedef mshadow::half::half_t DType;                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kUint8:                                       \
+    {                                                         \
+      typedef uint8_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt8:                                        \
+    {                                                         \
+      typedef int8_t DType;                                   \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt32:                                       \
+    {                                                         \
+      typedef int32_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kInt64:                                       \
+    {                                                         \
+      typedef int64_t DType;                                  \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBool:                                        \
+    {                                                         \
+      typedef bool DType;                                     \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  default:                                                    \
+    LOG(FATAL) << "Unknown type enum " << type;               \
+  }
+
 /*! \brief get data type size from type enum */
 inline size_t mshadow_sizeof(int type) {
   int size = 0;
-  MSHADOW_TYPE_SWITCH(type, DType, size = sizeof(DType););
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, size = sizeof(DType););
   return size;
 }
 

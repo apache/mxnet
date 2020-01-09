@@ -710,12 +710,12 @@ static constexpr size_t CYCLE_COUNT = 3;
 
 template<typename OperatorProp1, typename OperatorProp2, typename OperatorExecutor>
 static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor> testForwardAndBackward(
-  const bool isGPU1,
-  const bool isGPU2,
-  const mxnet::TShape &inputShape,
-  const test::op::kwargs_t& kwargs,
-  const size_t count = 1,
-  const size_t cycleCount = CYCLE_COUNT) {
+    const bool isGPU1,
+    const bool isGPU2,
+    const mxnet::TShape &inputShape,
+    const test::op::kwargs_t& kwargs,
+    const size_t count = 1,
+    const size_t cycleCount = CYCLE_COUNT) {
   test::op::OpInfo<OperatorProp1, OperatorExecutor> info_1 =
     TestBatchNormOperatorForward<OperatorProp1, OperatorExecutor>(isGPU1, inputShape,
                                                                   kwargs, count);
@@ -1014,14 +1014,14 @@ TEST(BATCH_NORM, TestTiming_2D) {
   }
 MSHADOW_REAL_TYPE_SWITCH_EX(
   mshadow::kFloat32, DType, AccReal, {
-#if MXNET_USE_MKLDNN
+#if MXNET_USE_MKLDNN == 1
   // MKL
   timingTest<BatchNormCoreOpProp, BNOperatorExecutor<DType, AccReal>>(
     "MKL BatchNormProp<cpu> 2D",
     false, false,
     blank_kwargs_nocudnn,
     2, THISCOUNT);
-#endif
+#endif  // MXNET_USE_MKLDNN == 1
   // CPU
   test::ScopeSet<volatile bool> disableMKL(&mxnet::op::batchnorm::disable_mkl, true);
   timingTest<BatchNormCoreOpProp, BNOperatorExecutor<DType, AccReal>>(

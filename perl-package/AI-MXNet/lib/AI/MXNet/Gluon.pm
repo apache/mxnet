@@ -128,7 +128,7 @@ sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo'
     });
 
     $net->hybridize();
-    See more at L<Python docs|http://mxnet.incubator.apache.org/api/python/gluon/gluon.html>
+    See more at L<Python docs|https://mxnet.apache.org/api/python/docs/tutorials/packages/gluon/index.html>
 =cut
 
 1;

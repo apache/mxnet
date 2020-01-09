@@ -1234,6 +1234,128 @@ LINALG_GPU_SYEVD_WORKSPACE_QUERY(DnDsyevd, double)
 
 #endif  // __CUDACC__
 
+//////////////////////////////// GESVD ////////////////////////////////////////////
+
+// CPU/GPU-versions of LAPACK function "gesvd"
+
+template<typename xpu, typename DType> inline
+void check_gesvd(const Tensor<xpu, 2, DType>& UT,
+                 const Tensor<xpu, 1, DType>& L,
+                 const Tensor<xpu, 2, DType>& V) {
+  // Any checking that helps user debug potential problems.
+  CHECK_LE(V.size(0), V.size(1))
+    << "The second to last dimension of A must be less or equal to the "
+    << "last dimension";
+  CHECK_EQ(UT.size(0), UT.size(1))
+    << "UT must be square matrix";
+  CHECK_EQ(V.size(0), L.size(0))
+    << "V, L have incompatible sizes";
+  CHECK_EQ(V.size(0), UT.size(0))
+    << "V, UT must have compatible sizes";
+}
+
+#define LINALG_CPU_GESVD(fname, DType) \
+template<> inline \
+void linalg_gesvd<cpu, DType>(const Tensor<cpu, 2, DType>& UT, \
+                              const Tensor<cpu, 1, DType>& L, \
+                              const Tensor<cpu, 2, DType>& V, \
+                              const Tensor<cpu, 1, DType>& work, \
+                              Stream<cpu> *s) { \
+  check_gesvd(UT, L, V); \
+  int lwork(work.size(0)); \
+  int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, V.size(0), V.size(1), \
+                               UT.dptr_, UT.stride_, L.dptr_, V.dptr_, V.stride_, \
+                               work.dptr_, lwork)); \
+  CHECK_EQ(ret, 0) << #fname << " failed in lapack on cpu."; \
+}
+
+LINALG_CPU_GESVD(sgesvd, float)
+LINALG_CPU_GESVD(dgesvd, double)
+
+#define LINALG_CPU_GESVD_WORKSPACE_QUERY(func, DType) \
+template<> inline \
+int linalg_gesvd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& UT, \
+                                             const Tensor<cpu, 1, DType>& L, \
+                                             const Tensor<cpu, 2, DType>& V, \
+                                             Stream<cpu> *s) { \
+  DType work(0.0); \
+  MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, V.size(0), V.size(1), \
+                      UT.dptr_, UT.stride_, L.dptr_, V.dptr_, V.stride_, \
+                      &work, -1); \
+  return static_cast<int>(work); \
+}
+LINALG_CPU_GESVD_WORKSPACE_QUERY(sgesvd, float)
+LINALG_CPU_GESVD_WORKSPACE_QUERY(dgesvd, double)
+
+#ifdef __CUDACC__
+
+// GESVD only available with cuda8 or higher.
+#if CUDA_VERSION >= 8000
+
+#define LINALG_GPU_GESVD(fname, DType) \
+template<> inline \
+void linalg_gesvd<gpu, DType>(const Tensor<gpu, 2, DType>& UT, \
+                              const Tensor<gpu, 1, DType>& L, \
+                              const Tensor<gpu, 2, DType>& V, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using mshadow::gpu; \
+  check_gesvd(UT, L, V); \
+  Storage::Handle info = Storage::Get()->Alloc(sizeof(int), Context::GPU()); \
+  CUSOLVER_CALL(cusolver##fname(Stream<gpu>::GetSolverHandle(s), \
+                'O', 'S', V.size(1), V.size(0), V.dptr_, V.stride_, L.dptr_, V.dptr_, V.stride_, \
+                UT.dptr_, UT.stride_, work.dptr_, work.size(0), \
+                V.dptr_, static_cast<int *>(info.dptr))); \
+  Storage::Get()->Free(info); \
+}
+
+#define LINALG_GPU_GESVD_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_gesvd_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& UT, \
+                                             const Tensor<gpu, 1, DType>& L, \
+                                             const Tensor<gpu, 2, DType>& V, \
+                                             Stream<gpu> *s) { \
+  using namespace mxnet; \
+  using mshadow::gpu; \
+  int lwork(0); \
+  CUSOLVER_CALL(cusolver##fname##_bufferSize(Stream<gpu>::GetSolverHandle(s), \
+                                             V.size(1), V.size(0), &lwork)); \
+  return lwork; \
+}
+
+#else
+
+#define LINALG_GPU_GESVD(fname, DType) \
+template<> inline \
+void linalg_gesvd<gpu, DType>(const Tensor<gpu, 2, DType>& UT, \
+                              const Tensor<gpu, 1, DType>& L, \
+                              const Tensor<gpu, 2, DType>& V, \
+                              const Tensor<gpu, 1, DType>& work, \
+                              Stream<gpu> *s) { \
+  LOG(FATAL) << "gesvd requires CUDA version >= 8.0!"; \
+}
+
+#define LINALG_GPU_GESVD_WORKSPACE_QUERY(fname, DType) \
+template<> inline \
+int linalg_gesvd_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& UT, \
+                                             const Tensor<gpu, 1, DType>& L, \
+                                             const Tensor<gpu, 2, DType>& V, \
+                                             Stream<gpu> *s) { \
+  LOG(FATAL) << "gesvd requires CUDA version >= 8.0!"; \
+  return 0; \
+}
+
+#endif  // CUDA_VERSION >= 8000
+
+LINALG_GPU_GESVD(DnSgesvd, float)
+LINALG_GPU_GESVD(DnDgesvd, double)
+
+LINALG_GPU_GESVD_WORKSPACE_QUERY(DnSgesvd, float)
+LINALG_GPU_GESVD_WORKSPACE_QUERY(DnDgesvd, double)
+
+#endif  // __CUDACC__
+
 //////////////////////////////// GETRF ////////////////////////////////////////////
 
 // CPU/GPU-versions of LAPACK function "getrf"
@@ -1476,7 +1598,8 @@ void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
     get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s); \
   const Tensor<xpu, 2, int> pivot(reinterpret_cast<int *>(workspace.dptr_), \
                                   Shape2(A.size(0), A.size(1))); \
-  const Tensor<xpu, 3, DType> LU(reinterpret_cast<DType *>(pivot.dptr_ + pivot.MSize()), \
+  int offset = pivot.MSize() & 1 ? pivot.MSize() + 1 : pivot.MSize(); \
+  const Tensor<xpu, 3, DType> LU(reinterpret_cast<DType *>(pivot.dptr_ + offset), \
                                  A.shape_); \
   Copy(LU, B, s); \
   linalg_batch_getrf(LU, pivot, true, s); \

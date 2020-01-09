@@ -1,3 +1,10 @@
+---
+layout: page_api
+title: Custom Loss Function
+is_tutorial: true
+tag: r
+permalink: /api/r/docs/tutorials/custom_loss_function
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,13 +21,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_api
-title: Custom Loss Function
-is_tutorial: true
-tag: r
-permalink: /api/r/docs/tutorials/custom_loss_function
----
 
 
 Customized loss function
@@ -225,7 +225,7 @@ sum(abs(test.y - pred6[1,])) / length(test.y)
 
 
 ## Next Steps
-* [Neural Networks with MXNet in Five Minutes](http://mxnet.io/tutorials/r/fiveMinutesNeuralNetwork.html)
-* [Classify Real-World Images with a PreTrained Model](http://mxnet.io/tutorials/r/classifyRealImageWithPretrainedModel.html)
-* [Handwritten Digits Classification Competition](http://mxnet.io/tutorials/r/mnistCompetition.html)
-* [Character Language Model Using RNN](http://mxnet.io/tutorials/r/charRnnModel.html)
+* [Neural Networks with MXNet in Five Minutes](/api/r/docs/tutorials/five_minutes_neural_network)
+* [Classify Real-World Images with a PreTrained Model](/api/r/docs/tutorials/classify_real_image_with_pretrained_model)
+* [Handwritten Digits Classification Competition](/api/r/docs/tutorials/mnist_competition)
+* [Character Language Model Using RNN](/api/r/docs/tutorials/char_rnn_model)

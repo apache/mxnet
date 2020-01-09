@@ -25,11 +25,11 @@ namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
-thread_local bool Imperative::is_np_shape_ = false;
+thread_local bool Imperative::is_np_shape_thread_local_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
-MX_THREAD_LOCAL bool Imperative::is_np_shape_ = false;
+MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
 #endif
 
 Imperative* Imperative::Get() {
@@ -305,7 +305,9 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries;
   ograd_entries.reserve(ograds.size());
   for (size_t i = 0; i < outputs.size(); ++i) {
-    ograd_entries.emplace_back(NodeEntry{Node::Create(), 0, 0});
+    nnvm::NodePtr np = Node::Create();
+    np->attrs.name = "_head_grad_" + std::to_string(i);
+    ograd_entries.emplace_back(NodeEntry{np, 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
     info.ctx = outputs[i]->ctx();
     if (ograds[i] != nullptr) {

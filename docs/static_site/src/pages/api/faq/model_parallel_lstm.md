@@ -1,3 +1,11 @@
+---
+layout: page_category
+title:  Model Parallel
+category: faq
+faq_c: Model
+question: How can I train using multiple GPUs with model parallelism?
+permalink: /api/faq/model_parallel_lstm
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -14,14 +22,6 @@
 <!--- KIND, either express or implied.  See the License for the -->
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
----
-layout: page_category
-title:  Model Parallel
-category: faq
-faq_c: Model
-question: How can I train using multiple GPUs with model parallelism?
-permalink: /api/faq/model_parallel_lstm
----
 
 
 # Training with Multiple GPUs Using Model Parallelism
@@ -37,7 +37,7 @@ One key strength of _MXNet_ is its ability to leverage
 powerful heterogeneous hardware environments to achieve significant speedups.
 
 There are two primary ways that we can spread a workload across multiple devices.
-In a previous document, [we addressed data parallelism](./multi_devices.md),
+In a previous document, [we addressed data parallelism](/api/faq/distributed_training),
 an approach in which samples within a batch are divided among the available devices.
 With data parallelism, each device stores a complete copy of the model.
 Here, we explore _model parallelism_, a different approach.
@@ -50,7 +50,7 @@ LSTMS are powerful sequence models, that have proven especially useful
 for [natural language translation](https://arxiv.org/pdf/1409.0473.pdf), [speech recognition](https://arxiv.org/abs/1512.02595),
 and working with [time series data](https://arxiv.org/abs/1511.03677).
 For a general high-level introduction to LSTMs,
-see the excellent [tutorial](http://colah.github.io/posts/2015-08-Understanding-LSTMs/) by Christopher Olah.
+see the excellent [tutorial](https://colah.github.io/posts/2015-08-Understanding-LSTMs/) by Christopher Olah.
 
 
 ## Model Parallelism: Using Multiple GPUs As a Pipeline

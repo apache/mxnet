@@ -29,6 +29,13 @@ from ..base import NDArrayHandle, CachedOpHandle
 from ..base import check_call
 
 
+def _monitor_callback_wrapper(callback):
+    """A wrapper for the user-defined handle."""
+    def callback_handle(name, opr_name, array, _):
+        """ ctypes function """
+        callback(name, opr_name, array)
+    return callback_handle
+
 class NDArrayBase(object):
     """Base data structure for ndarray"""
     __slots__ = ["handle", "writable"]
@@ -70,7 +77,7 @@ def _set_np_ndarray_class(cls):
     _np_ndarray_cls = cls
 
 
-def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op):
+def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op, output_is_list):
     """ctypes implementation of imperative invoke wrapper"""
     if out is not None:
         original_output = out
@@ -102,7 +109,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op):
     create_ndarray_fn = _np_ndarray_cls if is_np_op else _ndarray_cls
     if original_output is not None:
         return original_output
-    if num_output.value == 1:
+    if num_output.value == 1 and not output_is_list:
         return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
                                  stype=out_stypes[0])
     else:
@@ -112,10 +119,11 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op):
 
 class CachedOp(object):
     """Cached operator handle."""
-    __slots__ = ["handle", "is_np_sym"]
+    __slots__ = ["handle", "is_np_sym", "_monitor_callback"]
 
     def __init__(self, sym, flags=()):
         self.handle = CachedOpHandle()
+        self._monitor_callback = None
 
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
@@ -170,3 +178,21 @@ class CachedOp(object):
         else:
             return [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
                                       stype=out_stypes[i]) for i in range(num_output.value)]
+
+    def _register_op_hook(self, callback, monitor_all=False):
+        """Install callback for monitor.
+
+        Parameters
+        ----------
+        callback : function
+            Takes a string for node_name, string for op_name and a NDArrayHandle.
+        monitor_all : bool, default False
+            If true, monitor both input _imperative_invoked output, otherwise monitor output only.
+        """
+        cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
+        if callback:
+            self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
+        check_call(_LIB.MXCachedOpRegisterOpHook(
+            self.handle,
+            self._monitor_callback,
+            ctypes.c_int(monitor_all)))

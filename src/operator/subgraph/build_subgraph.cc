@@ -24,7 +24,6 @@
  */
 #include <nnvm/graph.h>
 #include <nnvm/pass.h>
-#include <mxnet/op_attr_types.h>
 #include <unordered_set>
 #include <stack>
 #include <queue>
@@ -105,6 +104,28 @@ void ResetNodeLabels(const nnvm::Graph& g,
   subgraph_nodes->clear();
 }
 
+/*
+ * \brief Prepare NodeAttr for node. NodeAttr will be used in SubgraphSelectorV2.
+ */
+static const std::shared_ptr<NodeAttr> PrepareNodeAttr(const nnvm::Graph& g,
+                                                       const BiDirectedNode& node) {
+  const auto& indexed_graph = g.indexed_graph();
+  if (g.HasAttr("dtype") && g.HasAttr("shape") && g.HasAttr("dispatch_mode")) {
+    const auto& vdtype = g.GetAttr<nnvm::DTypeVector>("dtype");
+    const auto& vshape = g.GetAttr<mxnet::ShapeVector>("shape");
+    const auto& dispatch_modes = g.GetAttr<mxnet::DispatchModeVector>("dispatch_mode");
+    auto ret = std::make_shared<NodeAttr>();
+    ret->dispatch_mode = dispatch_modes[indexed_graph.node_id(node.node)];
+    for (const auto& e : node.node->inputs) {
+      ret->ishape.emplace_back(vshape[indexed_graph.entry_id(e)]);
+      ret->itype.emplace_back(vdtype[indexed_graph.entry_id(e)]);
+    }
+    return ret;
+  } else {
+    return nullptr;
+  }
+}
+
 /*!
  * \brief This function traverses the nodes in a computation graph from a starting
  * node following the input edges and output edges, and marks all nodes that
@@ -153,7 +174,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
       CHECK_LT(nid, simple_nodes.size());
       const bool select_input =
           (snode->label == -1) && (!excluded_nodes || !excluded_nodes->count(snode)) &&
-          subgraph_selector->SelectInput(*cur_node, *snode);
+          subgraph_selector->SelectInput(*cur_node, *snode, PrepareNodeAttr(g, *snode));
       if (select_input) {
         // e.node is a subgraph node
         snode->label = label;
@@ -170,7 +191,7 @@ bool LabelSubgraph(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph_selector
       CHECK_LT(nid, simple_nodes.size());
       const bool select_output =
           (snode->label == -1) && (!excluded_nodes || !excluded_nodes->count(snode)) &&
-          subgraph_selector->SelectOutput(*cur_node, *snode);
+          subgraph_selector->SelectOutput(*cur_node, *snode, PrepareNodeAttr(g, *snode));
       if (select_output) {
         // it->first is a subgraph node
         snode->label = label;
@@ -297,8 +318,8 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
       for (auto node : excluded_nodes) {
         excluded_node_names += node->node->attrs.name + ", ";
       }
-      static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
-      if (verbose) {
+      static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
+      if (verbose > 1) {
         LOG(INFO) << "Found a cycle when BFS from node " << simple_nodes[snid]->node->attrs.name
                   << ". Excluding nodes " << excluded_node_names << "and retrying";
       }
@@ -325,14 +346,16 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
                          std::vector<SubgraphSelectorV2Ptr>* subgraph_selectors,
                          const BiDirectedNode* node, const size_t snid, size_t* subgraph_id) {
   const auto& indexed_graph = g->indexed_graph();
+
   auto node_cmp = [&] (const BiDirectedNode* node1, const BiDirectedNode* node2) {
     return indexed_graph.node_id(node1->node) < indexed_graph.node_id(node2->node);
   };
-  if (simple_nodes[snid]->label == -1 && subgraph_selector->Select(*node)) {
+  if ((simple_nodes[snid]->label == -1) &&
+      subgraph_selector->Select(*node, PrepareNodeAttr(*g, *node))) {
     // pre-select nodes that can be grouped in a subgraph
     std::vector<BiDirectedNode*> preselected_nodes;
     PreSelectSubgraphNodes(*g, subgraph_selector, *subgraph_id, snid, simple_nodes,
-                           &preselected_nodes);
+                            &preselected_nodes);
 
     // filter out unqualified pre-selected nodes
     std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
@@ -536,7 +559,25 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       ++(it->second);
     }
     nnvm::NodePtr n = nnvm::CreateVariableNode(var_name + std::to_string(name_count_map[var_name]));
+    // set attribute for subgraph input to indicate if it is from an arg/param to model
+    if (e->node->is_variable())
+      n->attrs.dict["isArg"] = "True";
+    else
+      n->attrs.dict["isArg"] = "False";
     *e = nnvm::NodeEntry{n, 0, 0};
+  }
+}
+
+/*!
+ * \brief This function reattaches the original input nodes that were cut
+ * by CutGraphInputs. This function is used when subgraphs are rejected, it
+ * reattaches the subgraph back to the main graph where it was cut earlier.
+ */
+void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
+                         std::vector<nnvm::NodeEntry> *orig_entries) {
+  for (size_t i = 0; i < input_entries.size(); ++i) {
+    nnvm::NodeEntry *e = input_entries[i];
+    *e = orig_entries->at(i);
   }
 }
 
@@ -597,6 +638,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
         sn->outputs[n.get()].push_back(i);
       }
     }
+  } else {
+    ReattachGraphInputs(input_entries, &orig_input_entries);
   }
 #if DEBUG_SUBGRAPH
   if (n)
@@ -683,9 +726,9 @@ void TopSortEntries(const nnvm::Graph& g,
 }
 
 nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
-    static bool verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", false);
+    static int verbose = dmlc::GetEnv("MXNET_SUBGRAPH_VERBOSE", 1);
   if (!g.HasAttr("subgraph_property")) {  // treat the whole graph as a subgraph
-    if (verbose) {
+    if (verbose > 1) {
       LOG(INFO) << "The graph has no attribute of subgraph_property attached. "
                    "The original graph is returned.";
     }
@@ -694,7 +737,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   using namespace sg;
 
   const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  if (verbose) {
+  if (verbose > 1) {
     const std::string& prop_name = subg_prop->HasAttr("property_name")
                                        ? subg_prop->GetAttr<std::string>("property_name")
                                        : "partition graph";
