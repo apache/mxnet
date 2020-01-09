@@ -4482,6 +4482,85 @@ def test_np_linalg_tensorsolve():
 
 @with_seed()
 @use_np
+def test_np_linalg_pinv():
+    class TestPinv(HybridBlock):
+        def __init__(self, hermitian):
+            super(TestPinv, self).__init__()
+            self._hermitian = hermitian
+
+        def hybrid_forward(self, F, a, rcond=1e-15):
+            return F.np.linalg.pinv(a, rcond, hermitian=self._hermitian)
+
+    def check_pinv(x, a_np, rcond_np, hermitian, use_rcond):
+        try:
+            if use_rcond:
+                x_expected = _np.linalg.pinv(a_np, rcond_np, hermitian=hermitian)
+            else:
+                x_expected = _np.linalg.pinv(a_np, hermitian=hermitian)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            if use_rcond:
+                print("rcond_np", rcond_np)
+                print("b rcond_np:", rcond_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+
+    shapes = [
+        ((1, 1), ()),
+        ((5, 5), ()),
+        ((5, 6), ()),
+        ((6, 5), ()),
+        ((2, 3, 3), (1,)),
+        ((2, 3, 3), (2,)),
+        ((2, 3, 4), (2,)),
+        ((2, 4, 3), (1,)),
+        ((4, 5, 6), ()),
+        ((4, 5, 6), (1,)),
+        ((4, 6, 5), (4,)),
+        ((2, 2, 4, 3), (1,)),
+        ((2, 2, 4, 3), (2,)),
+        ((2, 2, 4, 3), (1, 1)),
+        ((2, 2, 4, 3), (1, 2)),
+        ((2, 2, 4, 3), (2, 1)),
+        ((2, 2, 4, 3), (2, 2)),
+        ((2, 2, 3, 4), (1,)),
+        ((2, 2, 3, 4), (2,)),
+        ((2, 2, 3, 4), (1, 1)),
+        ((2, 2, 3, 4), (1, 2)),
+        ((2, 2, 3, 4), (2, 1)),
+        ((2, 2, 3, 4), (2, 2)),
+    ]
+    dtypes = ['float32', 'float64']
+    for dtype in dtypes:
+        for a_shape, rcond_shape in shapes:
+            for use_rcond, hybridize in itertools.product([True, False], [True, False]):
+                rtol = 1e-2 if dtype == 'float32' else 1e-3
+                atol = 1e-4 if dtype == 'float32' else 1e-5
+                hermitian = False
+                test_pinv = TestPinv(hermitian)
+                if hybridize:
+                    test_pinv.hybridize()
+
+                a_np = _np.random.uniform(-10.0, 10.0, a_shape)
+                a_np = _np.array(a_np, dtype=dtype)
+                rcond_np = _np.random.uniform(0., 0.1, rcond_shape)
+                rcond_np = _np.array(rcond_np, dtype=dtype)
+                a = np.array(a_np, dtype=dtype)
+                rcond = np.array(rcond_np, dtype=dtype)
+                if use_rcond:
+                    mx_out = test_pinv(a, rcond)
+                else:
+                    mx_out = test_pinv(a)
+
+                # check tensorsolve validity
+                check_pinv(mx_out, a.asnumpy(), rcond.asnumpy(), hermitian, use_rcond)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
         def __init__(self):
