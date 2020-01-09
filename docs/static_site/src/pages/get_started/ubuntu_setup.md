@@ -375,25 +375,30 @@ source root directory to build the MXNet Perl package:
 
 **Build the MXNet core shared library**
 
-**Step 1** Install R, cran-devtools and roxygen2
+**Step 1** Install R, cran-devtools and dependencies
 
-If you are on Ubuntu 19.04 or higher:
+To install R and the devtools, run
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y r-base-core r-cran-devtools r-cran-roxygen2
+sudo apt-get install -y r-base-core r-cran-devtools libcairo2-dev libxml2-dev
 ```
 
-Otherwise
+`libxml2-dev` is required for the `roxygen2` dependency and `libcairo2-dev` is
+required for the suggested `imager` dependency.
+
+To generate documentation, it is also required to install `roxygen2`.
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y r-base-core r-cran-devtools
 R
 > install.packages("roxygen2")
 > Would you like to use a personal library instead?  (y/n) y
 > Would you like to create a personal library ... to install packages into?  (y/n) y
 ```
+
+Note: To successfully complete the next step, you need a personal R library. If
+you were able to run `install.packages("roxygen2")` above, you either had
+already, or you have successfully created a personal library just now.
 
 **Step 2** Make and install the MXNet-R bindings.
 
