@@ -28,6 +28,7 @@
 
 #include <vector>
 #include "../../common/utils.h"
+#include "../tensor/init_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 
 namespace mxnet {

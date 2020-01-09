@@ -36,6 +36,7 @@
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
+#include "../../tensor/init_op.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "./dist_common.h"
 
@@ -93,7 +94,7 @@ inline bool NumpyNormalOpType(const nnvm::NodeAttrs &attrs,
   } else {
     (*out_attrs)[0] = mxnet::common::GetDefaultDtype();
   }
-  (*out_attrs)[1] = mshadow::kFloat32;
+  (*out_attrs)[1] = GetDefaultDtype();
   return true;
 }
 

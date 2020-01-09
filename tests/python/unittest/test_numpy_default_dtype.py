@@ -23,7 +23,6 @@ from mxnet import numpy as np
 from mxnet.test_utils import use_np, use_np_default_dtype
 from common import with_seed
 
-
 class DtypeOpArgMngr(object):
     """Operator argument manager for storing operator workloads."""
     _args = {}

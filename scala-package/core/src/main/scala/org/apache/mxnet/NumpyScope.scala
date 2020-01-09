@@ -37,6 +37,18 @@ object NumpyScope {
     if (curr.value != 0) true else false
   }
 
+  def setNumpyDefaultDtype(isNpComp: Boolean): Boolean = {
+    val prev = new RefInt()
+    checkCall(_LIB.mxSetIsNumpyDefaultDtype(if (isNpComp) 1 else 0, prev))
+    if (prev.value != 0) true else false
+  }
+
+  def isNumpyDefaultDtype: Boolean = {
+    val curr = new RefInt
+    checkCall(_LIB.mxIsNumpyDefaultDtype(curr))
+    if (curr.value != 0) true else false
+  }
+
   def enableNumpyShape: NumpyScope = {
     new NumpyScope(true)
   }

@@ -970,7 +970,6 @@ def np_default_dtype(active=True):
             # Default Dtype is 'float32' in the legacy default dtype definition.
             arr = mx.nd.array([1, 2, 3])
             assert arr.dtype == float32
-
     """
     return _NumpyDefaultDtypeScope(active)
 

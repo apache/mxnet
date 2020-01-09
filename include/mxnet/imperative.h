@@ -313,6 +313,7 @@ class Imperative {
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static thread_local bool is_np_shape_thread_local_;
+  static thread_local bool is_np_default_dtype_thread_local_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
@@ -320,6 +321,7 @@ class Imperative {
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
+  static MX_THREAD_LOCAL bool is_np_default_dtype_thread_local_;
 #endif
   bool is_np_shape_global_{false};
   bool is_np_default_dtype_global_{false};

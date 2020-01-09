@@ -124,7 +124,7 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
     else:
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = _np.float64 if is_np_default_dtype() else _np.float32
     return _api_internal.zeros(shape, dtype, ctx)
 
 
