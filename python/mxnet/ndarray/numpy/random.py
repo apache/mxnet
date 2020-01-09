@@ -76,7 +76,7 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
 
     >>> np.random.randint(5, size=(2, 4))
     array([[4, 0, 2, 1],
-        [3, 2, 2, 0]])
+           [3, 2, 2, 0]])
     """
     if dtype is None:
         dtype = 'int'

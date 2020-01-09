@@ -46,6 +46,7 @@ namespace mxnet {
    *   turn off numpy shape flag globally.
    * */
   enum NumpyShape{Off, ThreadLocalOn, GlobalOn};
+  typedef NumpyShape NumpyDefaultDtype;
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
@@ -189,9 +190,11 @@ class Imperative {
    * */
   int is_np_shape() const {
     if (is_np_shape_global_) {
-      return 2;
+      return NumpyShape::GlobalOn;
     }
-    return is_np_shape_thread_local_ ? 1 : 0;
+    return is_np_shape_thread_local_ ?
+           NumpyShape::ThreadLocalOn :
+           NumpyShape::Off;
   }
   /*! \brief specify numpy compatibility off, thread local on or global on. */
   bool set_is_np_shape(int is_np_shape) {
@@ -208,6 +211,36 @@ class Imperative {
       case Off:
         is_np_shape_global_ = false;
         is_np_shape_thread_local_ = false;
+        break;
+    }
+    return old;
+  }
+  /*! \brief return current numpy default dtype compatibility status,
+   *  GlobalOn(2), ThreadLocalOn(1), Off(0).
+   * */
+  int is_np_default_dtype() const {
+    if (is_np_default_dtype_global_) {
+      return NumpyDefaultDtype::GlobalOn;
+    }
+    return is_np_default_dtype_thread_local_ ?
+           NumpyDefaultDtype::ThreadLocalOn :
+           NumpyDefaultDtype::Off;
+  }
+  /*! \brief specify numpy default dtype off, thread local on or global on. */
+  bool set_is_np_default_dtype(int is_np_default_dtype) {
+    NumpyDefaultDtype flag = static_cast<NumpyDefaultDtype>(is_np_default_dtype);
+    bool old = this->is_np_default_dtype();
+    switch (flag) {
+      case GlobalOn:
+        is_np_default_dtype_global_ = true;
+        is_np_default_dtype_thread_local_ = true;
+        break;
+      case ThreadLocalOn:
+        is_np_default_dtype_thread_local_ = true;
+        break;
+      case Off:
+        is_np_default_dtype_global_ = false;
+        is_np_default_dtype_thread_local_ = false;
         break;
     }
     return old;
@@ -292,6 +325,7 @@ class Imperative {
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static thread_local bool is_np_shape_thread_local_;
+  static thread_local bool is_np_default_dtype_thread_local_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
@@ -299,8 +333,10 @@ class Imperative {
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
+  static MX_THREAD_LOCAL bool is_np_default_dtype_thread_local_;
 #endif
   bool is_np_shape_global_{false};
+  bool is_np_default_dtype_global_{false};
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */

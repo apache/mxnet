@@ -46,6 +46,19 @@
 namespace mxnet {
 namespace op {
 
+inline int GetDefaultDtype() {
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+inline int GetDefaultDtype(int dtype) {
+  if (dtype != -1) return dtype;
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
 struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   mxnet::TShape shape;
   std::string ctx;
@@ -58,7 +71,9 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
   }
@@ -157,14 +172,10 @@ struct EyeParam : public dmlc::Parameter<EyeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int8", mshadow::kInt8)
-    .add_enum("int32", mshadow::kInt32)
-    .add_enum("int64", mshadow::kInt64)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
+    MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
 };
@@ -223,7 +234,9 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
@@ -288,8 +301,10 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
       .set_default("")
       .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
                   "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-      MXNET_ADD_ALL_TYPES_WITH_BOOL
+    DMLC_DECLARE_FIELD(dtype)
+      .set_default(-1)
+      .add_enum("None", -1)
+      MXNET_ADD_ALL_TYPES
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
@@ -328,7 +343,9 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
@@ -382,7 +399,7 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), num_in);
   CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, GetDefaultDtype(param.dtype));
   return true;
 }
 

@@ -1306,6 +1306,21 @@ MXNET_DLL int MXIsNumpyShape(int* curr);
  */
 MXNET_DLL int MXSetIsNumpyShape(int is_np_shape, int* prev);
 /*!
+ * \brief get numpy default data type
+ * \param curr returns the current status
+ * \return 0 when default dtype is flaot32,
+ *         1 when default dtype is flaot64.
+ */
+MXNET_DLL int MXIsNumpyDefaultDtype(int* curr);
+/*!
+ * \brief set numpy default data type
+ * \param dtype_flag 0 when default dtype is flaot32,
+ *                   1 when default dtype is flaot64.
+ * \param prev returns the previous status before this set
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSetIsNumpyDefaultDtype(int dtype_flag, int* prev);
+/*!
  * \brief mark NDArrays as variables to compute gradient for autograd
  * \param num_var number of variable NDArrays
  * \param var_handles variable NDArrays

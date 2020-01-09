@@ -57,6 +57,20 @@ inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_shapes->at(0));
 }
 
+inline bool NumpyIndicesType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
+  const IndicesOpParam& param = nnvm::get<IndicesOpParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype == -1 ?
+                                   (Imperative::Get()->is_np_default_dtype() ?
+                                    mshadow::kInt64 :
+                                    mshadow::kInt32) :
+                                   param.dtype);
+  return true;
+}
+
 inline bool LogspaceShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector *in_attrs,
                           mxnet::ShapeVector *out_attrs) {
@@ -214,7 +228,7 @@ NNVM_REGISTER_OP(_npi_indices)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<IndicesOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyIndicesShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<IndicesOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", NumpyIndicesType)
 .set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
 .add_arguments(IndicesOpParam::__FIELDS__());
 

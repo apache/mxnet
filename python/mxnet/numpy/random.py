@@ -102,7 +102,8 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         ``low`` and ``high`` are both scalars. Otherwise,
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples. Default is 'float32' or 'float64', which
+        denends on your current default dtype.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -154,7 +155,8 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         a single value is returned if loc and scale are both scalars. Otherwise,
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples. Default is 'float32' or 'float64', which depends
+        on your current default dtype.
     ctx : Context, optional
         Device context of output, default is current context.
     out : ``ndarray``, optional

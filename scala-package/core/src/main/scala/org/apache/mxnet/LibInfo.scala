@@ -375,4 +375,6 @@ private[mxnet] class LibInfo {
   // Numpy
   @native def mxIsNumpyShape(compatible: RefInt): Int
   @native def mxSetIsNumpyShape(isNpComp: Int, prev: RefInt): Int
+  @native def mxIsNumpyDefaultDtype(compatible: RefInt): Int
+  @native def mxSetIsDefaultDtype(isNpComp: Int, prev: RefInt): Int
 }
