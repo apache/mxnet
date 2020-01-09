@@ -1224,7 +1224,6 @@ unittest_ubuntu_cpu_R() {
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
-        USE_BLAS=openblas \
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
@@ -1240,7 +1239,6 @@ unittest_ubuntu_minimal_R() {
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
-        USE_BLAS=openblas \
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
@@ -1270,7 +1268,6 @@ unittest_ubuntu_gpu_R() {
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
-        USE_BLAS=openblas \
         R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
     make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
