@@ -30,10 +30,10 @@ namespace op {
 
 DMLC_REGISTER_PARAMETER(NumpyGammaParam);
 
-inline bool NumpyGammaOpType(const nnvm::NodeAttrs &attrs,
-                                   std::vector<int> *in_attrs,
-                                   std::vector<int> *out_attrs) {
-  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed);
+inline bool NumpyGammaOpType(const nnvm::NodeAttrs& attrs,
+                             std::vector<int>* in_attrs,
+                             std::vector<int>* out_attrs) {
+  const NumpyGammaParam& param = nnvm::get<NumpyGammaParam>(attrs.parsed);
   int otype = param.dtype;
   if (otype != -1) {
     (*out_attrs)[0] = otype;

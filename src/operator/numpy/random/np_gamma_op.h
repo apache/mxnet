@@ -53,21 +53,21 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
     DMLC_DECLARE_FIELD(shape);
     DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
-        .set_default(dmlc::optional<mxnet::Tuple<int>>())
-        .describe("Output shape. If the given shape is, "
-                  "e.g., (m, n, k), then m * n * k samples are drawn. "
-                  "Default is None, in which case a single value is returned.");
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .describe("Output shape. If the given shape is, "
+                "e.g., (m, n, k), then m * n * k samples are drawn. "
+                "Default is None, in which case a single value is returned.");
     DMLC_DECLARE_FIELD(ctx)
-    .set_default("xpu")
-    .describe("Context of output, in format [xpu|xpu|xpu_pinned](n)."
-              " Only used for imperative calls.");
+      .set_default("cpu")
+      .describe("Context of output, in format [xpu|xpu|xpu_pinned](n)."
+                " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .set_default(mshadow::kFloat32)
-    .describe("DType of the output in case this can't be inferred. "
-              "Defaults to float32 if not defined (dtype=None).");
+      .add_enum("float32", mshadow::kFloat32)
+      .add_enum("float64", mshadow::kFloat64)
+      .add_enum("float16", mshadow::kFloat16)
+      .set_default(mshadow::kFloat32)
+      .describe("DType of the output in case this can't be inferred. "
+                "Defaults to float32 if not defined (dtype=None).");
   }
 };
 
@@ -77,7 +77,6 @@ namespace mxnet_op {
 template <typename IType, typename FType>
 MSHADOW_XINLINE void GammaTransform(IType a, IType b,
                                     FType* uniforms, FType* normals) {
-  // start
   FType d = a < 1 ? a + 2.0 / 3.0 : a - 1.0 / 3.0;
   FType k = sqrt(9.0 * d);
   FType c = 1.0 / k;
@@ -126,47 +125,32 @@ struct CheckSuccessKernel {
 
 template <int ndim, typename IType, typename OType, typename FType>
 struct gamma_kernel {
-  MSHADOW_XINLINE static void Map(index_t i,
-                                  const Shape <ndim> &lstride, const Shape <ndim> &hstride,
-                                  const Shape <ndim> &oshape,
-                                  IType *shape, IType *scale,
-                                  FType *uniforms, FType *normals,
-                                  OType *out) {
-  Shape<ndim> coord = unravel(i, oshape);
-  auto lidx = static_cast<index_t>(dot(coord, lstride));
-  auto hidx = static_cast<index_t>(dot(coord, hstride));
-  IType shape_value = shape[lidx];
-  IType scale_value = scale[hidx];
-  // map phase
-  GammaTransform<IType, FType>(shape_value, scale_value,
-                                uniforms + i * M, normals + i * M);
-  // reduce phase
-  OType sample = (OType)GammaReduce<IType, FType>(shape_value, uniforms + i * M);
-  out[i] = sample;
-  }
-};
-
-template <int ndim, typename IType, typename OType, typename FType>
-struct gamma_kernel_r {
-  MSHADOW_XINLINE static void Map(index_t i,
-                                  const Shape <ndim> &lstride, const Shape <ndim> &hstride,
-                                  const Shape <ndim> &oshape,
-                                  IType *shape, IType *scale,
-                                  FType *uniforms, FType *normals,
-                                  OType *out, FType* flag) {
-  flag[0] = 1;
-  Shape<ndim> coord = unravel(i, oshape);
-  auto lidx = static_cast<index_t>(dot(coord, lstride));
-  auto hidx = static_cast<index_t>(dot(coord, hstride));
-  IType shape_value = shape[lidx];
-  IType scale_value = scale[hidx];
-  if (out[i] < 0) {
-    // map phase
-    GammaTransform<IType, FType>(shape_value, scale_value,
-                                  uniforms + i * M, normals + i * M);
-    // reduce phase
-    OType sample = (OType)GammaReduce<IType, FType>(shape_value, uniforms + i * M);
-    out[i] = sample;
+  MSHADOW_XINLINE static void Map(index_t i, const Shape<ndim> &lstride,
+                                  const Shape<ndim> &hstride,
+                                  const Shape<ndim> &oshape, IType *shape,
+                                  IType *scale, FType *uniforms, FType *normals,
+                                  OType *out, FType *flag = nullptr) {
+    // We know the sampling procedure is in its first stage, if `flag` is
+    // nullptr, i.e. there is no need for reseting the indicator
+    // variable(flag[0] = 1) nor checking whether a specific element is sampled
+    // successfully (out[i] < 0).
+    bool in_first_stage = (flag == nullptr);
+    if (!in_first_stage) {
+      flag[0] = 1;
+    }
+    Shape<ndim> coord = unravel(i, oshape);
+    auto lidx = static_cast<index_t>(dot(coord, lstride));
+    auto hidx = static_cast<index_t>(dot(coord, hstride));
+    IType shape_value = shape[lidx];
+    IType scale_value = scale[hidx];
+    if (in_first_stage || out[i] < 0) {
+      // map phase
+      GammaTransform<IType, FType>(shape_value, scale_value, uniforms + i * M,
+                                   normals + i * M);
+      // reduce phase
+      OType sample =
+          (OType)GammaReduce<IType, FType>(shape_value, uniforms + i * M);
+      out[i] = sample;
     }
   }
 };
@@ -174,58 +158,37 @@ struct gamma_kernel_r {
 template <int ndim, typename IType, typename OType, typename FType>
 struct gamma_one_scalar_kernel {
   MSHADOW_XINLINE static void Map(index_t i, int scalar_pos,
-                                  const Shape <ndim> &stride,
-                                  const Shape <ndim> &oshape,
-                                  IType *array, float scalar,
-                                  FType *uniforms, FType *normals,
-                                  OType *out) {
-  Shape<ndim> coord = unravel(i, oshape);
-  auto idx = static_cast<index_t>(dot(coord, stride));
-  IType shape_value;
-  IType scale_value;
-  if (scalar_pos == 0) {
-    shape_value = scalar;
-    scale_value = array[idx];
-  } else {
-    shape_value = array[idx];
-    scale_value = scalar;
-  }
-  // map phase
-  GammaTransform<IType, FType>(shape_value, scale_value,
-                                uniforms + i * M, normals + i * M);
-  // reduce phase
-  OType sample = (OType)GammaReduce<IType, FType>(shape_value, uniforms + i * M);
-  out[i] = sample;
-  }
-};
-
-template <int ndim, typename IType, typename OType, typename FType>
-struct gamma_one_scalar_kernel_r {
-  MSHADOW_XINLINE static void Map(index_t i, int scalar_pos,
-                                  const Shape <ndim> &stride,
-                                  const Shape <ndim> &oshape,
-                                  IType *array, float scalar,
-                                  FType *uniforms, FType *normals,
-                                  OType *out, FType *flag) {
-  flag[0] = 1;
-  Shape<ndim> coord = unravel(i, oshape);
-  auto idx = static_cast<index_t>(dot(coord, stride));
-  IType shape_value;
-  IType scale_value;
-  if (scalar_pos == 0) {
-    shape_value = scalar;
-    scale_value = array[idx];
-  } else {
-    shape_value = array[idx];
-    scale_value = scalar;
-  }
-  if (out[i] < 0) {
-    // map phase
-    GammaTransform<IType, FType>(shape_value, scale_value,
-                                  uniforms + i * M, normals + i * M);
-    // reduce phase
-    OType sample = (OType)GammaReduce<IType, FType>(shape_value, uniforms + i * M);
-    out[i] = sample;
+                                  const Shape<ndim> &stride,
+                                  const Shape<ndim> &oshape, IType *array,
+                                  float scalar, FType *uniforms, FType *normals,
+                                  OType *out, FType *flag = nullptr) {
+    // We know the sampling procedure is in its first stage, if `flag` is
+    // nullptr, i.e. there is no need for reseting the indicator
+    // variable(flag[0] = 1) nor checking whether a specific element is sampled
+    // successfully (out[i] < 0).
+    bool in_first_stage = (flag == nullptr);
+    if (!in_first_stage) {
+      flag[0] = 1;
+    }
+    Shape<ndim> coord = unravel(i, oshape);
+    auto idx = static_cast<index_t>(dot(coord, stride));
+    IType shape_value;
+    IType scale_value;
+    if (scalar_pos == 0) {
+      shape_value = scalar;
+      scale_value = array[idx];
+    } else {
+      shape_value = array[idx];
+      scale_value = scalar;
+    }
+    if (in_first_stage || out[i] < 0) {
+      // map phase
+      GammaTransform<IType, FType>(shape_value, scale_value, uniforms + i * M,
+                                   normals + i * M);
+      // reduce phase
+      OType sample =
+          (OType)GammaReduce<IType, FType>(shape_value, uniforms + i * M);
+      out[i] = sample;
     }
   }
 };
@@ -234,46 +197,34 @@ template <typename OType, typename FType>
 struct gamma_two_scalar_kernel {
   MSHADOW_XINLINE static void Map(index_t i, float shape_value,
                                   float scale_value, FType *uniforms_origin,
-                                  FType *normals_origin, OType *out) {
-    // map phase
-    FType *uniforms = uniforms_origin + i * M;
-    FType *normals = normals_origin + i * M;
-    GammaTransform<float, FType>(shape_value, scale_value, uniforms,
-                                  normals);
-    // reduce phase
-    OType sample =
-        (OType)GammaReduce<float, FType>(shape_value, uniforms);
-    out[i] = sample;
+                                  FType *normals_origin, OType *out,
+                                  FType *flag = nullptr) {
+    // We know the sampling procedure is in its first stage, if `flag` is
+    // nullptr, i.e. there is no need for reseting the indicator
+    // variable(flag[0] = 1) nor checking whether a specific element is sampled
+    // successfully (out[i] < 0).
+    bool in_first_stage = (flag == nullptr);
+    if (!in_first_stage) {
+      flag[0] = 1;
     }
-};
-
-template <typename OType, typename FType>
-struct gamma_two_scalar_kernel_r {
-  MSHADOW_XINLINE static void Map(index_t i, float shape_value,
-                                  float scale_value,
-                                  FType *uniforms_origin,
-                                  FType *normals_origin, OType *out, FType* flag) {
-    flag[0] = 1;
-    // map phase
     FType *uniforms = uniforms_origin + i * M;
     FType *normals = normals_origin + i * M;
-    if (out[i] < 0) {
-      GammaTransform<float, FType>(shape_value, scale_value, uniforms,
-                                  normals);
-    // reduce phase
-      OType sample =
-        (OType)GammaReduce<float, FType>(shape_value, uniforms);
+    if (in_first_stage || out[i] < 0) {
+      // map phase
+      GammaTransform<float, FType>(shape_value, scale_value, uniforms, normals);
+      // reduce phase
+      OType sample = (OType)GammaReduce<float, FType>(shape_value, uniforms);
       out[i] = sample;
-      }
     }
+  }
 };
 }  // namespace mxnet_op
 
 template <typename xpu, typename FType>
 void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
-                         const std::vector<TBlob> &inputs,
-                         const std::vector<OpReqType> &req,
-                         const std::vector<TBlob> &outputs) {
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed);
@@ -295,31 +246,24 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   FType *failure_indicator_device = failure_indic_workspace.dptr_;
   // [scalar scalar] case
   if (inputs.size() == 0U) {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      Kernel<gamma_two_scalar_kernel<OType, FType>, xpu>::Launch(
-          s, outputs[0].Size(), param.shape.value(), param.scale.value(),
-          uniform_tensor.dptr_, normal_tensor.dptr_, outputs[0].dptr<OType>());
-      Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<OType>(),
-          failure_indicator_device);
-      _copy<xpu>(s, &failure_indicator, failure_indicator_device);
-      while (1) {
-        if (failure_indicator >= 0) {
-          break;
-        } else {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      bool in_resample_stage = false;
+      do {
+        if (in_resample_stage) {
           prnd->SampleUniform(&uniform_tensor, 0, 1);
           prnd->SampleGaussian(&normal_tensor, 0, 1);
-          Kernel<gamma_two_scalar_kernel_r<OType, FType>, xpu>::Launch(
-              s, outputs[0].Size(), param.shape.value(), param.scale.value(),
-              uniform_tensor.dptr_, normal_tensor.dptr_,
-              outputs[0].dptr<OType>(), failure_indicator_device);
-          failure_indicator = 1.0;
-          Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-              s, outputs[0].Size(), outputs[0].dptr<OType>(),
-              failure_indicator_device);
-          _copy<xpu>(s, &failure_indicator, failure_indicator_device);
         }
-      }
+        Kernel<gamma_two_scalar_kernel<OType, FType>, xpu>::Launch(
+            s, outputs[0].Size(), param.shape.value(), param.scale.value(),
+            uniform_tensor.dptr_, normal_tensor.dptr_, outputs[0].dptr<OType>(),
+            in_resample_stage ? failure_indicator_device : nullptr);
+        failure_indicator = 1.0;
+        Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
+            s, outputs[0].Size(), outputs[0].dptr<OType>(),
+            failure_indicator_device);
+        _copy<xpu>(s, &failure_indicator, failure_indicator_device);
+        in_resample_stage = true;
+      } while (failure_indicator < 0);
     });
   } else if (inputs.size() == 1U) {
     // [scalar tensor], [tensor scalar] case
@@ -327,7 +271,6 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                          &new_lshape, &new_lshape, &new_oshape);
     int scalar_pos;
     float scalar_value;
-    // int type_flag = param.t;
     if (param.shape.has_value()) {
       scalar_pos = 0;
       scalar_value = param.shape.value();
@@ -335,39 +278,31 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       scalar_pos = 1;
       scalar_value = param.scale.value();
     }
-    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-        mshadow::Shape<NDim> stride =
-            mxnet_op::calc_stride(new_lshape.get<NDim>());
-        mxnet_op::Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>, xpu>::Launch(
-            s, outputs[0].Size(), scalar_pos, stride, oshape,
-            inputs[0].dptr<IType>(), scalar_value,
-            uniform_tensor.dptr_, normal_tensor.dptr_,
-            outputs[0].dptr<OType>());
-        Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<OType>(),
-          failure_indicator_device);
-        _copy<xpu>(s, &failure_indicator, failure_indicator_device);
-        while (1) {
-        if (failure_indicator >= 0) {
-          break;
-        } else {
-          prnd->SampleUniform(&uniform_tensor, 0, 1);
-          prnd->SampleGaussian(&normal_tensor, 0, 1);
-          mxnet_op::Kernel<gamma_one_scalar_kernel_r<NDim, IType, OType, FType>, xpu>::Launch(
-            s, outputs[0].Size(), scalar_pos, stride, oshape,
-            inputs[0].dptr<IType>(), scalar_value,
-            uniform_tensor.dptr_, normal_tensor.dptr_,
-            outputs[0].dptr<OType>(), failure_indicator_device);
-          failure_indicator = 1.0;
-          Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-              s, outputs[0].Size(), outputs[0].dptr<OType>(),
-              failure_indicator_device);
-          _copy<xpu>(s, &failure_indicator, failure_indicator_device);
-        }
-      }
+          mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
+          mshadow::Shape<NDim> stride =
+              mxnet_op::calc_stride(new_lshape.get<NDim>());
+          bool in_resample_stage = false;
+          do {
+            if (in_resample_stage) {
+              prnd->SampleUniform(&uniform_tensor, 0, 1);
+              prnd->SampleGaussian(&normal_tensor, 0, 1);
+            }
+            mxnet_op::Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>,xpu>::Launch(
+                             s, outputs[0].Size(), scalar_pos, stride, oshape,
+                             inputs[0].dptr<IType>(), scalar_value,
+                             uniform_tensor.dptr_, normal_tensor.dptr_,
+                             outputs[0].dptr<OType>(),
+                             in_resample_stage ? failure_indicator_device : nullptr);
+            failure_indicator = 1.0;
+            Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
+                s, outputs[0].Size(), outputs[0].dptr<OType>(),
+                failure_indicator_device);
+            _copy<xpu>(s, &failure_indicator, failure_indicator_device);
+            in_resample_stage = true;
+          } while (failure_indicator < 0);
         });
       });
     });
@@ -375,41 +310,34 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     // [tensor tensor] case
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);
-    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
-      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+    MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
         mshadow::Shape<NDim> lstride =
             mxnet_op::calc_stride(new_lshape.get<NDim>());
         mshadow::Shape<NDim> hstride =
             mxnet_op::calc_stride(new_hshape.get<NDim>());
-        mxnet_op::Kernel<gamma_kernel<NDim, IType, OType, FType>, xpu>::Launch(
-            s, outputs[0].Size(), lstride, hstride, oshape,
-            inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
-            uniform_tensor.dptr_, normal_tensor.dptr_,
-            outputs[0].dptr<OType>());
-        Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-          s, outputs[0].Size(), outputs[0].dptr<OType>(),
-          failure_indicator_device);
-        _copy<xpu>(s, &failure_indicator, failure_indicator_device);
-        while (1) {
-        if (failure_indicator >= 0) {
-          break;
-        } else {
+        bool in_resample_stage = false;
+        do {
+          if (in_resample_stage) {
+            prnd->SampleUniform(&uniform_tensor, 0, 1);
+            prnd->SampleGaussian(&normal_tensor, 0, 1);
+          }
           prnd->SampleUniform(&uniform_tensor, 0, 1);
           prnd->SampleGaussian(&normal_tensor, 0, 1);
-          mxnet_op::Kernel<gamma_kernel_r<NDim, IType, OType, FType>, xpu>::Launch(
+          mxnet_op::Kernel<gamma_kernel<NDim, IType, OType, FType>, xpu>::Launch(
             s, outputs[0].Size(), lstride, hstride, oshape,
             inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
             uniform_tensor.dptr_, normal_tensor.dptr_,
-            outputs[0].dptr<OType>(), failure_indicator_device);
+            outputs[0].dptr<OType>(), in_resample_stage ? failure_indicator_device : nullptr);
           failure_indicator = 1.0;
           Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
               s, outputs[0].Size(), outputs[0].dptr<OType>(),
               failure_indicator_device);
           _copy<xpu>(s, &failure_indicator, failure_indicator_device);
-          }
-        }
+          in_resample_stage = true;
+          } while (failure_indicator < 0);
         });
       });
     });
