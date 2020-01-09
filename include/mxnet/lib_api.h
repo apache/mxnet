@@ -30,8 +30,10 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <iostream>
 #include <utility>
@@ -554,7 +556,7 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int> >&,
                                       std::vector<std::vector<unsigned int> >&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
-                                      std::vector<int>&);
+                                        std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
                                       CustomStatefulOp**);
 
@@ -614,6 +616,52 @@ class CustomOp {
   bool isSGop;
 };
 
+/*! \brief Custom Subgraph Create function template */
+typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
+                                        std::unordered_map<std::string, std::string>&);
+typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
+                                          std::unordered_map<std::string, std::string>&,
+                                          std::unordered_map<std::string, std::string>&);
+
+/*!
+ * \brief An abstract class for subgraph property
+ */
+class CustomPartitioner {
+ public:
+  CustomPartitioner() : name("ERROR") {}
+  explicit CustomPartitioner(const char* backend_name) :
+    name(backend_name) {}
+  CustomPartitioner& addStrategy(const char* prop_name,
+                                 supportedOps_t fn,
+                                 const char* sg_name) {
+    strategies.push_back(prop_name);
+    supportedOps.push_back(fn);
+    op_names.push_back(sg_name);
+    return *this;
+  }
+  CustomPartitioner& setAcceptSubgraph(const char* prop_name, acceptSubgraph_t fn) {
+    accept_map[std::string(prop_name)] = fn;
+    return *this;
+  }
+  acceptSubgraph_t getAcceptSubgraph(int stg_id) {
+    std::string prop(strategies[stg_id]);
+    if (accept_map.find(prop) != accept_map.end())
+      return accept_map[prop];
+    else
+      return nullptr;
+  }
+
+  /*! \brief partitioner  name */
+  const char* name;
+  std::map<std::string, acceptSubgraph_t> accept_map;
+  /*! \brief strategy names */
+  std::vector<const char*> strategies;
+  /*! \brief supported ops function */
+  std::vector<supportedOps_t> supportedOps;
+  /*! \brief subgraph operator name */
+  std::vector<const char*> op_names;
+};
+
 /*!
  * \brief Registry class to registers things (ops, properties)
  *        Singleton class
@@ -670,9 +718,16 @@ class Registry {
 #define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
 #define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
 
+#define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
+#define MX_REGISTER_PROP_DEF_(Name) CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
+
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
+
+#define REGISTER_PARTITIONER(Name) \
+  MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
+    Registry<CustomPartitioner>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -688,7 +743,7 @@ typedef int (*opRegSize_t)(void);
 typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*, mutateInputs_t*,
-                          createOpState_t*, bool*);
+                          createOpState_t*, int*);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void*);
@@ -721,9 +776,29 @@ typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const 
                                      void**);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
-typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, size_t*,
+typedef int (*opCallFStatefulComp_t)(int, void*, const int64_t**, int*, void**, int*, size_t*,
                                      int, const int64_t**, int*, void**, int*, size_t*,
                                      int, xpu_malloc_t, void*);
+
+#define MXLIB_PARTREGSIZE_STR "_partRegSize"
+typedef int (*partRegSize_t)(void);
+
+#define MXLIB_PARTREGGETCOUNT_STR "_partRegGetCount"
+typedef int (*partRegGetCount_t)(int, const char**);
+
+#define MXLIB_PARTREGGET_STR "_partRegGet"
+typedef void (*partRegGet_t)(int, int, const char**, supportedOps_t*,
+                            acceptSubgraph_t*, const char**);
+
+#define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
+typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, int, int *,
+                                      const char* const*, const char* const*, int);
+#define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
+typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph,
+                                        const char *json, int subgraph_id,
+                                        int *accept, const char* const*,
+                                        const char* const*, int,
+                                        char***, char***, int*);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int);
@@ -761,7 +836,7 @@ extern "C" {
   _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate,
-            createOpState_t* create_op, bool *isSGop) {
+            createOpState_t* create_op, int *isSGop) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *fcomp = op.forward;
@@ -980,7 +1055,7 @@ extern "C" {
 #else
   int
 #endif
-  _opCallFStatefulCompute(bool is_forward, void* state_op,
+  _opCallFStatefulCompute(int is_forward, void* state_op,
                           const int64_t** inshapes, int* indims,
                           void** indata, int* intypes, size_t* inIDs, int num_in,
                           const int64_t** outshapes, int* outdims,
@@ -1004,6 +1079,106 @@ extern "C" {
       return op_ptr->Forward(inputs, outputs, res);
     }
     return op_ptr->Backward(inputs, outputs, res);
+  }
+
+  /*! \brief returns number of partitioners registered in this library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partRegSize() {
+    return Registry<CustomPartitioner>::get()->size();
+  }
+
+  /* returns number of strategies registered for partitioner 
+   * at specified index */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partRegGetCount(int idx, const char** name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
+    *name = part.name;
+    return part.strategies.size();
+  }
+
+  /*! \brief returns partitioner registration at specified index */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) void __cdecl
+#else
+  void
+#endif
+  _partRegGet(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
+              acceptSubgraph_t* acceptSubgraph, const char** op_name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(part_idx);
+    *strategy = part.strategies[stg_idx];
+    *supportedOps = part.supportedOps[stg_idx];
+    *op_name = part.op_names[stg_idx];
+    *acceptSubgraph = part.getAcceptSubgraph(stg_idx);
+  }
+
+  /*! \brief returns status of calling parse attributes function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
+                        int num_ids, int *ids, const char* const* opt_keys,
+                        const char* const* opt_vals, int num_opts) {
+    std::string subgraph_json(json);
+    // create map of attributes from list
+    std::unordered_map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++) {
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+    }
+    return supportedOps(subgraph_json, num_ids, ids, opts);
+  }
+
+    /*! \brief returns status of calling parse attributes function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
+                          int subgraph_id, int *accept, const char* const* opt_keys,
+                          const char* const* opt_vals, int num_opts,
+                          char*** attr_keys, char*** attr_vals, int *num_attrs) {
+    std::string subgraph_json(json);
+    bool accept_bool = false;
+    // create map of attributes from list
+    std::unordered_map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++) {
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+    }
+
+    // attributes to set on subgraph node
+    std::unordered_map<std::string, std::string> attrs;
+
+    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
+    *accept = accept_bool;
+
+    if (attrs.size() > 0) {
+      *num_attrs = attrs.size();
+      // allocate space for attributes
+      *attr_keys = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+      *attr_vals = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+
+      // copy attributes
+      int i = 0;
+      for (auto kv : attrs) {
+        (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
+        (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));
+        snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
+        snprintf((*attr_vals)[i], kv.second.size()+1, "%s", kv.second.c_str());
+        i++;
+      }
+    }
+
+    return retval;
   }
 
   /*!
