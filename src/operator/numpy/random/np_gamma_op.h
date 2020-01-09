@@ -254,13 +254,13 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           prnd->SampleGaussian(&normal_tensor, 0, 1);
         }
         Kernel<gamma_two_scalar_kernel<OType, FType>, xpu>::Launch(
-            s, outputs[0].Size(), param.shape.value(), param.scale.value(),
-            uniform_tensor.dptr_, normal_tensor.dptr_, outputs[0].dptr<OType>(),
-            in_resample_stage ? failure_indicator_device : nullptr);
+          s, outputs[0].Size(), param.shape.value(), param.scale.value(),
+          uniform_tensor.dptr_, normal_tensor.dptr_, outputs[0].dptr<OType>(),
+          in_resample_stage ? failure_indicator_device : nullptr);
         failure_indicator = 1.0;
         Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-            s, outputs[0].Size(), outputs[0].dptr<OType>(),
-            failure_indicator_device);
+          s, outputs[0].Size(), outputs[0].dptr<OType>(),
+          failure_indicator_device);
         _copy<xpu>(s, &failure_indicator, failure_indicator_device);
         in_resample_stage = true;
       } while (failure_indicator < 0);
@@ -282,24 +282,23 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
           mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-          mshadow::Shape<NDim> stride =
-              mxnet_op::calc_stride(new_lshape.get<NDim>());
+          mshadow::Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());
           bool in_resample_stage = false;
           do {
             if (in_resample_stage) {
               prnd->SampleUniform(&uniform_tensor, 0, 1);
               prnd->SampleGaussian(&normal_tensor, 0, 1);
             }
-            mxnet_op::Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>, xpu>::Launch(
-                             s, outputs[0].Size(), scalar_pos, stride, oshape,
-                             inputs[0].dptr<IType>(), scalar_value,
-                             uniform_tensor.dptr_, normal_tensor.dptr_,
-                             outputs[0].dptr<OType>(),
-                             in_resample_stage ? failure_indicator_device : nullptr);
+            Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>, xpu>::Launch(
+              s, outputs[0].Size(), scalar_pos, stride, oshape,
+              inputs[0].dptr<IType>(), scalar_value,
+              uniform_tensor.dptr_, normal_tensor.dptr_,
+              outputs[0].dptr<OType>(),
+              in_resample_stage ? failure_indicator_device : nullptr);
             failure_indicator = 1.0;
             Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-                s, outputs[0].Size(), outputs[0].dptr<OType>(),
-                failure_indicator_device);
+              s, outputs[0].Size(), outputs[0].dptr<OType>(),
+              failure_indicator_device);
             _copy<xpu>(s, &failure_indicator, failure_indicator_device);
             in_resample_stage = true;
           } while (failure_indicator < 0);
@@ -314,10 +313,8 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
-        mshadow::Shape<NDim> lstride =
-            mxnet_op::calc_stride(new_lshape.get<NDim>());
-        mshadow::Shape<NDim> hstride =
-            mxnet_op::calc_stride(new_hshape.get<NDim>());
+        mshadow::Shape<NDim> lstride = calc_stride(new_lshape.get<NDim>());
+        mshadow::Shape<NDim> hstride = calc_stride(new_hshape.get<NDim>());
         bool in_resample_stage = false;
         do {
           if (in_resample_stage) {
@@ -326,15 +323,15 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
           }
           prnd->SampleUniform(&uniform_tensor, 0, 1);
           prnd->SampleGaussian(&normal_tensor, 0, 1);
-          mxnet_op::Kernel<gamma_kernel<NDim, IType, OType, FType>, xpu>::Launch(
+          Kernel<gamma_kernel<NDim, IType, OType, FType>, xpu>::Launch(
             s, outputs[0].Size(), lstride, hstride, oshape,
             inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
             uniform_tensor.dptr_, normal_tensor.dptr_,
             outputs[0].dptr<OType>(), in_resample_stage ? failure_indicator_device : nullptr);
           failure_indicator = 1.0;
           Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
-              s, outputs[0].Size(), outputs[0].dptr<OType>(),
-              failure_indicator_device);
+            s, outputs[0].Size(), outputs[0].dptr<OType>(),
+            failure_indicator_device);
           _copy<xpu>(s, &failure_indicator, failure_indicator_device);
           in_resample_stage = true;
           } while (failure_indicator < 0);
