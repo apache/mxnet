@@ -10,6 +10,7 @@ MXNet as follows:
 
 {% highlight bash %}
 $ cd incubator-mxnet
+$ mkdir build; cd build; cmake ..; make -j $(nproc); cd ..
 $ make -f R-package/Makefile rpkg
 {% endhighlight %}
 
