@@ -408,6 +408,7 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_verIDs, out_verIDs;
+      std::vector<int> in_ctx, out_ctx;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -416,6 +417,7 @@ int MXLoadLib(const char *path) {
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
         in_verIDs.push_back(inputs[i].version());
+        in_ctx.push_back(inputs[i].ctx().dev_mask());
       }
 
       // convert output tensors to constituent parts
@@ -425,6 +427,7 @@ int MXLoadLib(const char *path) {
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
         out_verIDs.push_back(outputs[i].version());
+        out_ctx.push_back(outputs[i].ctx().dev_mask());
       }
 
       // get memory resource
@@ -450,13 +453,21 @@ int MXLoadLib(const char *path) {
         return ptr;
       };
 
+      void* gpu_stream;
+      if (inputs[i].ctx().dev_mask() == Context::kGPU) {
+        mshadow::Stream<mxnet::gpu> *s = ctx.get_stream<mxnet::gpu>();
+        gpu_stream = static_cast<void*>(mshadow::Stream<gpu>::GetStream(s));
+      } else {
+        gpu_stream = nullptr;
+      }
+
       // call fcompute function
       CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       in_shapes.data(), in_dims.data(), in_data.data(),
-                      in_types.data(), in_verIDs.data(), in_data.size(),
+                      in_types.data(), in_verIDs.data(), in_ctx.data(), in_data.size(),
                       out_shapes.data(), out_dims.data(), out_data.data(),
-                      out_types.data(), out_verIDs.data(), out_data.size(),
-                      cpu_malloc, &cpu_alloc))
+                      out_types.data(), out_verIDs.data(), out_ctx.data(), out_data.size(),
+                      cpu_malloc, &cpu_alloc, gpu_stream))
       << "Error calling FCompute for custom operator '" << name_str << "'";
 
       // return type void
@@ -704,6 +715,7 @@ int MXLoadLib(const char *path) {
                                         fstateful_forward, plevel);
     } else {
       regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
+      regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
     }
     // optionally add fgradient if user specified a function
     if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {

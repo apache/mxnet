@@ -208,20 +208,25 @@ enum MXReturnValue {
   MX_SUCCESS = 1,
 };
 
+enum MXContext {
+  MX_CPU = 1,
+  MX_GPU = 2,
+};
+
 /*!
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
+  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), ctx(MX_CPU) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
-           size_t vID)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID) {}
+           size_t vID, MXContext mx_ctx)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
 
   /*! \brief populate internal tensor fields */
   void setTensor(void *dptr, MXDType type, const int64_t* dims,
-                 int ndims, size_t vID) {
-    data_ptr = dptr; dtype = type; verID = vID;
+                 int ndims, size_t vID, MXContext mx_ctx) {
+    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx;
     shape.clear();
     for (int j = 0; j < ndims; j++) {
       shape.push_back(dims[j]);
@@ -310,6 +315,8 @@ struct MXTensor {
   // type can only be MXDType enum types
   MXDType dtype;
 
+  MXContext ctx;
+
   // version number updated if the tensor has changed since the last use by custom op
   size_t verID;
 
@@ -327,17 +334,26 @@ typedef void* (*xpu_malloc_t)(void*, int);
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
  */
 class OpResource {
- public:
-  OpResource(xpu_malloc_t cm, void* ca) : cpu_malloc(cm), cpu_alloc(ca) {}
+  public:
+    OpResource(xpu_malloc_t cm, void* ca, void* st)
+     : cpu_malloc(cm), cpu_alloc(ca), gpu_stream(st){}
 
-  /*! \brief allocate memory controlled by MXNet */
-  void* alloc(int size) {
-    return cpu_malloc(cpu_alloc, size);
-  }
+    /*! \brief allocate memory controlled by MXNet */
+    void* alloc(int size) {
+      return cpu_malloc(cpu_alloc, size);
+    }
 
- private:
-  xpu_malloc_t cpu_malloc;
-  void* cpu_alloc;
+    void* get_gpu_stream() {
+      return gpu_stream;
+    }
+
+  private:
+     /*! \brief wrapper to allocation lambda function */
+    xpu_malloc_t cpu_malloc;
+     /*! \brief lambda function to return allocated memory handle */
+    void* cpu_alloc;
+
+    void* gpu_stream;
 };
 
 /*!
@@ -763,9 +779,9 @@ typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* co
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                             const int64_t**, int*, void**, int*, size_t*, int,
-                             const int64_t**, int*, void**, int*, size_t*, int,
-                             xpu_malloc_t, void*);
+                             const int64_t**, int*, void**, int*, size_t*, int*, int,
+                             const int64_t**, int*, void**, int*, size_t*, int*, int,
+                             xpu_malloc_t, void*, void*);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
@@ -969,10 +985,10 @@ extern "C" {
   _opCallFCompute(fcomp_t fcomp, const char* const* keys,
                   const char* const* vals, int num,
                   const int64_t** inshapes, int* indims,
-                  void** indata, int* intypes, size_t* inIDs, int num_in,
+                  void** indata, int* intypes, size_t* inIDs, int* inctx, int num_in,
                   const int64_t** outshapes, int* outdims,
-                  void** outdata, int* outtypes, size_t* outIDs, int num_out,
-                  xpu_malloc_t cpu_malloc, void* cpu_alloc) {
+                  void** outdata, int* outtypes, size_t* outIDs, int* outctx, int num_out,
+                  xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -982,17 +998,18 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i], inIDs[i]);
+      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                          inIDs[i], (MXContext)inctx[i]);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i]);
+                           outIDs[i], (MXContext)outctx[i]);
     }
 
-    OpResource res(cpu_malloc, cpu_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, stream);
 
     return fcomp(attrs, inputs, outputs, res);
   }
@@ -1064,16 +1081,17 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i], inIDs[i]);
+      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                          inIDs[i], MX_CPU);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i]);
+                           outIDs[i], MX_CPU);
     }
-    OpResource res(cpu_malloc, cpu_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, nullptr);
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
       return op_ptr->Forward(inputs, outputs, res);

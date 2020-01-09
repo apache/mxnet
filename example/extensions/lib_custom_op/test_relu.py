@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,16 +17,29 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: relu_lib
+# coding: utf-8
+# pylint: disable=arguments-differ
 
-gemm_lib:
-	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
+# This test checks dynamic loading of custom library into MXNet
+# and checks end to end compute of a simple 2D gemm custom op
 
-subgraph_lib:
-	g++ -shared -fPIC -std=c++11 subgraph_lib.cc -o libsubgraph_lib.so -I ../../../include/mxnet
+import mxnet as mx
+import os
+import time
 
-relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
+#load library
+if (os.name=='posix'):
+    path = os.path.abspath('librelu_lib.so')
+    mx.library.load(path)
 
-clean:
-	rm -rf libsubgraph_lib.so libgemm_lib.so librelu_lib.so
+a = mx.nd.uniform(shape=(1000,1000,1000), ctx=mx.cpu())
+b = mx.nd.uniform(shape=(1000,1000,1000), ctx=mx.gpu())
+
+print("--------start ndarray compute---------")
+t1 = time.time()
+r1 = mx.nd.my_relu(a)
+t2 = time.time()
+r2 = mx.nd.my_relu(b)
+t3 = time.time()
+print(t2 - t1)
+print(t3 - t2)
