@@ -290,7 +290,7 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
               prnd->SampleUniform(&uniform_tensor, 0, 1);
               prnd->SampleGaussian(&normal_tensor, 0, 1);
             }
-            mxnet_op::Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>,xpu>::Launch(
+            mxnet_op::Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>, xpu>::Launch(
                              s, outputs[0].Size(), scalar_pos, stride, oshape,
                              inputs[0].dptr<IType>(), scalar_value,
                              uniform_tensor.dptr_, normal_tensor.dptr_,
