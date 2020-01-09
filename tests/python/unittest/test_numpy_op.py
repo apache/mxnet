@@ -1296,7 +1296,6 @@ def test_npi_boolean_assign():
 
     for hybridize in [False]:
         for config in configs:
-            print(config)
             dshape, mshape, start_axis = config
             test_data = np.random.uniform(size=dshape)
             mx_mask = np.around(np.random.uniform(size=mshape))
@@ -4381,7 +4380,6 @@ def test_np_linalg_det():
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
         if grad_req != 'null':
-            print(shape, grad_req)
             mx_out.backward()
 
         # Test imperative once again
@@ -4692,16 +4690,15 @@ def test_np_trace():
 @use_np
 def test_np_windows():
     class TestWindows(HybridBlock):
-        def __init__(self, func, M, dtype):
+        def __init__(self, func, M):
             super(TestWindows, self).__init__()
             self._func = func
             self._M = M
-            self._dtype = dtype
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             op = getattr(F.np, self._func)
             assert op is not None
-            return x + op(M=self._M, dtype=self._dtype)
+            return x + op(M=self._M)
 
     configs = [-10, -3, -1, 0, 1, 6, 10, 20]
     dtypes = ['float32', 'float64']
@@ -4712,14 +4709,14 @@ def test_np_windows():
                 x = np.zeros(shape=(), dtype=dtype)
                 for hybridize in [False, True]:
                     np_func = getattr(_np, func)
-                    mx_func = TestWindows(func, M=config, dtype=dtype)
+                    mx_func = TestWindows(func, M=config)
                     np_out = np_func(M=config).astype(dtype)
                     if hybridize:
                         mx_func.hybridize()
                     mx_out = mx_func(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
                     # test imperative
-                    mx_out = getattr(np, func)(M=config, dtype=dtype)
+                    mx_out = getattr(np, func)(M=config)
                     np_out = np_func(M=config).astype(dtype)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 

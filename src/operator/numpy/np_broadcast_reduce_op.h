@@ -29,6 +29,7 @@
 #include <vector>
 #include <string>
 #include "../nn/moments-inl.h"
+#include "../tensor/init_op.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 

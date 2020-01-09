@@ -19,6 +19,7 @@
 
 from __future__ import absolute_import
 from ...context import current_context
+from ...util import is_np_default_dtype
 from . import _internal as _npi
 
 __all__ = ['randint', 'uniform', 'normal', 'rand', 'shuffle']
@@ -145,8 +146,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(low, np_symbol), isinstance(high, np_symbol))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if out is not None:
@@ -196,8 +195,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if size == ():

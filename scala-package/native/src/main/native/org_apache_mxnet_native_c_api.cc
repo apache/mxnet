@@ -2790,3 +2790,19 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyShape
   SetIntField(env, prevRef, prev);
   return ret;
 }
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyDefaultDtype
+  (JNIEnv *env, jobject obj, jobject compatibleRef) {
+  int DefaultDtype;
+  int ret = MXIsNumpyDefaultDtype(&DefaultDtype);
+  SetIntField(env, compatibleRef, DefaultDtype);
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyDefaultDtype
+  (JNIEnv *env, jobject obj, jint DefDtype, jobject prevRef) {
+  int prev;
+  int ret = MXSetIsNumpyDefaultDtype(DefDtype, &prev);
+  SetIntField(env, prevRef, prev);
+  return ret;
+}

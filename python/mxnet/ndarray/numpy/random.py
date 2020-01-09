@@ -18,9 +18,11 @@
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 from __future__ import absolute_import
 import numpy as np
+from ...util import is_np_default_dtype
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
+
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle"]
@@ -73,7 +75,7 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
 
     >>> np.random.randint(5, size=(2, 4))
     array([[4, 0, 2, 1],
-        [3, 2, 2, 0]])
+           [3, 2, 2, 0]])
     """
     if dtype is None:
         dtype = 'int'
@@ -122,8 +124,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ...numpy import ndarray as np_ndarray
     input_type = (isinstance(low, np_ndarray), isinstance(high, np_ndarray))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -173,8 +173,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ...numpy import ndarray as np_ndarray
     input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if size == ():

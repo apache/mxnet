@@ -37,6 +37,7 @@ _np_ufunc_default_kwargs = {
 
 _set_np_shape_logged = False
 _set_np_array_logged = False
+_set_np_default_dtype_logged = False
 
 
 def makedirs(d):
@@ -840,3 +841,60 @@ def get_cuda_compute_capability(ctx):
         raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
                            .format(ret, error_str.value.decode()))
     return cc_major.value * 10 + cc_minor.value
+
+
+class _NumpyDefaultDtypeScope(object):
+    def __init__(self, is_np_default_dtype):  #pylint: disable=redefined-outer-name
+        self._enter_is_np_default_dtype = is_np_default_dtype
+        self._prev_is_np_default_dtype = None
+
+    def __enter__(self):
+        if self._enter_is_np_default_dtype is not None:
+            self._prev_is_np_default_dtype = set_np_default_dtype(self._enter_is_np_default_dtype)
+
+    def __exit__(self, ptype, value, trace):
+        if self._enter_is_np_default_dtype is not None and self._prev_is_np_default_dtype != self._enter_is_np_default_dtype:
+            set_np_default_dtype(self._prev_is_np_default_dtype)
+
+def np_default_dtype(active=True):
+    return _NumpyDefaultDtypeScope(active)
+
+def use_np_default_dtype(func):
+    if inspect.isclass(func):
+        for name, method in inspect.getmembers(
+                func,
+                predicate=
+                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
+            if isinstance(method, property):
+                setattr(func, name, property(use_np_default_dtype(method.__get__),
+                                             method.__set__,
+                                             method.__delattr__,
+                                             method.__doc__))
+            else:
+                setattr(func, name, use_np_default_dtype(method))
+        return func
+    elif callable(func):
+        @wraps_safely(func)
+        def _with_np_default_dtype(*args, **kwargs):
+            with np_default_dtype(active=True):
+                return func(*args, **kwargs)
+        return _with_np_default_dtype
+    else:
+        raise TypeError('use_np_default_dtype can only decorate classes and callable objects, '
+                        'while received a {}'.format(str(type(func))))
+
+def is_np_default_dtype():
+    curr = ctypes.c_bool()
+    check_call(_LIB.MXIsNumpyDefaultDtype(ctypes.byref(curr)))
+    return curr.value
+
+def set_np_default_dtype(is_np_default_dtype=True):
+    global _set_np_default_dtype_logged
+    if is_np_default_dtype:
+        if not _set_np_default_dtype_logged:
+            import logging
+            logging.info('NumPy array default dtype has been changed from flaot32 to float64 in your code.')
+            _set_np_default_dtype_logged = True
+    prev = ctypes.c_int()
+    check_call(_LIB.MXSetIsNumpyDefaultDtype(ctypes.c_int(is_np_default_dtype), ctypes.byref(prev)))
+    return bool(prev.value)
