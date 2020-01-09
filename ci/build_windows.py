@@ -39,7 +39,8 @@ from util import *
 
 KNOWN_VCVARS = {
     'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat',
-    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat'
+    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat',
+    'VS 2019': r'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat'
 }
 
 
@@ -145,35 +146,23 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
-    url = 'https://github.com/Kitware/CMake/releases/download/v3.16.1/cmake-3.16.1-win64-x64.zip'
-    with tempfile.TemporaryDirectory() as tmpdir:
-        cmake_file_path = download_file(url, tmpdir)
-        with zipfile.ZipFile(cmake_file_path, 'r') as zip_ref:
-            # Create $tmpdir\cmake-3.16.1-win64-x64\bin\cmake.exe
-            zip_ref.extractall(tmpdir)
+    with remember_cwd():
+        os.chdir(path)
+        cmd = "\"{}\" && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
+                                                                        CMAKE_FLAGS[args.flavour],
+                                                                        mxnet_root)
+        logging.info("Generating project with CMake:\n{}".format(cmd))
+        check_call(cmd, shell=True)
 
-        with remember_cwd():
-            os.chdir(path)
-            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
-                args.vcvars,
-                os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
-                CMAKE_FLAGS[args.flavour], mxnet_root)
-            logging.info("Generating project with CMake:\n{}".format(cmd))
-            check_call(cmd, shell=True)
+        cmd = "\"{}\" && jom".format(args.vcvars)
+        logging.info("Building with jom:\n{}".format(cmd))
 
-            cmd = "\"{}\" && jom".format(args.vcvars)
-            logging.info("Building with jom:\n{}".format(cmd))
+        t0 = int(time.time())
+        check_call(cmd, shell=True)
 
-            t0 = int(time.time())
-            check_call(cmd, shell=True)
-
-            logging.info(
-                "Build flavour: {} complete in directory: \"{}\"".format(
-                    args.flavour, os.path.abspath(path)))
-            logging.info("Build took {}".format(
-                datetime.timedelta(seconds=int(time.time() - t0))))
+        logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+        logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
     windows_package(args)
-
 
 def windows_package(args):
     pkgfile = 'windows_package.7z'
@@ -230,7 +219,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=KNOWN_VCVARS['VS 2015'],
+        default=KNOWN_VCVARS['VS 2019'],
         type=str)
 
     parser.add_argument("--arch",
