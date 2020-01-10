@@ -2069,7 +2069,7 @@ cd_s3_publish() {
     if [ -z "${variant}" ]; then
         variant="cpu"
     fi
-    aws s3 cp ${filepath} s3://apache-mxnet/dist/${variant}/${filename} --grants "read=uri=http://acs.amazonaws.com/groups/global/AllUsers,full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822"
+    aws s3 cp ${filepath} s3://apache-mxnet/dist/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
 build_static_scala_mkl() {
