@@ -38,6 +38,7 @@ import logging
 from subprocess import check_output, check_call
 import re
 import sys
+import urllib.request
 
 import ssl
 
@@ -327,13 +328,14 @@ def add_paths():
 
 
 def has_gpu():
-    # FIXME: this is too simplistic and not reliable as of now.
-    hwinfo = check_output(['powershell','gwmi', 'win32_pnpEntity'])
-    m_g3 = re.search('3D Video', hwinfo.decode()) # G3
-    m_p3 = re.search('NVIDIA Tesla', hwinfo.decode()) # P3
-    if m_g3 or m_p3:
-        return True
-    return False
+    gpu_family = {'p2', 'p3', 'g4dn', 'p3dn', 'g3', 'g2', 'g3s'}
+    def instance_family():
+        return urllib.request.urlopen('http://instance-data/latest/meta-data/instance-type').read().decode().split('.')[0]
+    try:
+        return instance_family() in gpu_family
+    except:
+        return False
+
 
 
 def script_name() -> str:
@@ -352,7 +354,7 @@ def main():
                         default=False,
 			action='store_true')
     args = parser.parse_args()
-    if args.gpu:
+    if args.gpu or has_gpu():
         logging.info("GPU detected")
         install_nvdriver()
         install_cuda()
