@@ -87,7 +87,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     aux_shapes = [(0,) for aux_t in aux_types] if aux_shapes is None else aux_shapes
     aux_shape_lens = [len(aux_shape) for aux_shape in aux_shapes]
     aux_shapes = py_sum(aux_shapes, ())
-    num_aux = ctypes.c_int(len(aux_types))
+    num_aux = ctypes.c_uint(len(aux_types))
     if _int64_enabled():
         check_call(_LIB.MXNDArrayCreateSparseEx64(
             ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
@@ -105,7 +105,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
     else:
         check_call(_LIB.MXNDArrayCreateSparseEx(
             ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
-            c_array_buf(ctypes.c_int, native_array('i', shape)),
+            c_array_buf(ctypes.c_uint, native_array('I', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
@@ -114,7 +114,7 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
             num_aux,
             c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
             c_array_buf(ctypes.c_int, native_array('i', aux_shape_lens)),
-            c_array_buf(ctypes.c_int, native_array('i', aux_shapes)),
+            c_array_buf(ctypes.c_uint, native_array('I', aux_shapes)),
             ctypes.byref(hdl)))
     return hdl
 
