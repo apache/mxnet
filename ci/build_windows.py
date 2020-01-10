@@ -154,8 +154,8 @@ def windows_build(args):
         logging.info("Generating project with CMake:\n{}".format(cmd))
         check_call(cmd, shell=True)
 
-        cmd = "\"{}\" && jom".format(args.vcvars)
-        logging.info("Building with jom:\n{}".format(cmd))
+        cmd = "\"{}\" && ninja".format(args.vcvars)
+        logging.info("Building:\n{}".format(cmd))
 
         t0 = int(time.time())
         check_call(cmd, shell=True)
