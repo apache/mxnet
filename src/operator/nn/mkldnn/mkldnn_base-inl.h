@@ -125,12 +125,19 @@ static inline bool SupportStorageMKLDNN(int stype) {
 
 static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
+  if (ndim == 0 || shape.Size() == 0) {
+    // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
+    return false;
+  }
   return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
-static inline bool SupportMKLDNNRNN(const NDArray &input) {
-  int ndim = input.shape().ndim();
-  return (input.dtype() == mshadow::kFloat32) && (ndim == 3);
+static inline bool SupportMKLDNNRnn(const NDArray &input) {
+  if (input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 3
+      && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+    return true;
+  }
+  return false;
 }
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
@@ -442,7 +449,7 @@ enum OutDataOp {
 };
 
 typedef std::pair<OutDataOp, mkldnn::memory *> mkldnn_output_t;
-void MKLDNNCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
+void MKLDNNMemoryCopy(const mkldnn::memory &mem, const mkldnn::memory* this_mem);
 
 /*
  * Here we want to get MKLDNN memory whose desc is exactly the same as
@@ -683,6 +690,19 @@ void MKLDNNRun(mxnet::FComputeEx fn,
                const std::vector<mxnet::NDArray> &inputs_,
                const std::vector<mxnet::OpReqType> &req,
                const std::vector<mxnet::NDArray> &outputs_);
+
+using FComputeExUnary = std::function<void (const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const NDArray& input,
+                                       const OpReqType& req,
+                                       const NDArray& output)>;
+
+void MKLDNNRun(FComputeExUnary fn,
+               const nnvm::NodeAttrs &attrs,
+               const mxnet::OpContext &ctx,
+               const mxnet::NDArray &inputs_,
+               const mxnet::OpReqType &req,
+               const mxnet::NDArray &outputs_);
 
 }  // namespace mxnet
 #endif

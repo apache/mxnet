@@ -18,6 +18,7 @@
 """Fallback-to-NumPy operator implementation."""
 
 from __future__ import absolute_import
+from distutils.version import StrictVersion
 import functools
 import ast
 import numpy as np
@@ -47,6 +48,49 @@ def register(op_name, imperative=True, symbolic=True):
         return prop_cls
 
     return _register_helper
+
+
+@use_np  # enforce np shape and array semantics for all the methods in this class
+class EmptyLike(operator.CustomOp):
+    """Fallback to NumPy empty_like operator."""
+    def __init__(self, dtype, order, subok, shape):
+        super(EmptyLike, self).__init__()
+        self._dtype = dtype
+        self._order = order
+        self._subok = subok
+        self._shape = shape
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        np_version = np.version.version
+        if StrictVersion(np_version) >= StrictVersion('1.6.0'):
+            out = np.empty_like(in_data[0].asnumpy(), dtype=self._dtype, order=self._order,
+                                subok=self._subok)
+        else:
+            out = np.empty_like(in_data[0].asnumpy())
+        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out.dtype, ctx=out_data[0].ctx))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        raise NotImplementedError('Operator empty_like does not support gradient computation')
+
+
+@register('empty_like_fallback')
+class EmptyLikeProp(operator.CustomOpProp):
+    """Fallback empty_like operator properties."""
+    def __init__(self, dtype, order, subok, shape):
+        super(EmptyLikeProp, self).__init__(need_top_grad=True)
+        self._dtype = None if dtype == 'None' else dtype
+        self._order = order
+        self._subok = ast.literal_eval(subok)
+        self._shape = ast.literal_eval(shape)
+
+    def list_arguments(self):
+        return ['prototype']
+
+    def infer_shape(self, in_shape):
+        return (in_shape[0],), (in_shape[0],), ()
+
+    def create_operator(self, ctx, in_shapes, in_dtypes):
+        return EmptyLike(self._dtype, self._order, self._subok, self._shape)
 
 
 @use_np  # enforce np shape and array semantics for all the methods in this class
@@ -80,3 +124,37 @@ class ResizeProp(operator.CustomOpProp):
 
     def create_operator(self, ctx, in_shapes, in_dtypes):
         return Resize(self._new_shape)
+
+
+@use_np
+class Unravel_index(operator.CustomOp):
+    """Fallback to NumPy Unravel_index operator."""
+    def __init__(self, shape):
+        super(Unravel_index, self).__init__()
+        self._shape = shape
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        out = np.unravel_index(in_data[0].asnumpy(), self._shape)
+        self.assign(out_data[0], req[0], _mx_np.array(out, dtype=out[0].dtype, ctx=out_data[0].ctx))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        raise NotImplementedError('Operator Unravel_index does not support gradient computation')
+
+
+@register('unravel_index_fallback')
+class Unravel_indexProp(operator.CustomOpProp):
+    """Fallback unravel_index operator properties."""
+    def __init__(self, shape):
+        super(Unravel_indexProp, self).__init__(need_top_grad=True)
+        self._shape = ast.literal_eval(shape)
+
+    def list_arguments(self):
+        return ['indices']
+
+    def infer_shape(self, in_shape):
+        dim_list = (1,) if np.isscalar(self._shape) else (len(self._shape),)
+        out_shape = dim_list + tuple(in_shape[0])
+        return (in_shape[0],), (out_shape,), ()
+
+    def create_operator(self, ctx, in_shapes, in_dtypes):
+        return Unravel_index(self._shape)

@@ -413,7 +413,7 @@ def test_gen_atomic_symbol_multiple_outputs():
     p = mx.sym.Variable('param')
     h0 = mx.sym.Variable('h0')
     h1 = mx.sym.Variable('h1')
-    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2, 
+    s = mx.sym.RNN(data, p, h0, h1, state_size=10, num_layers=2,
                    bidirectional=True, state_outputs=True, mode='lstm')
     atomic_sym = s._gen_atomic_symbol()
 
@@ -542,6 +542,21 @@ def test_load_save_symbol():
                     assert out_shapes[0] == (batch_size, num_hdidden)  # output
                     assert len(aux_shapes) == 0
 
+def test_infershape_happens_for_all_ops_in_graph():
+    v = mx.sym.Variable('V')
+    s = mx.sym.transpose(v)
+    x = mx.sym.Variable('x')
+    s2 = x + v
+    s3 = s + s2
+    with discard_stderr():
+        try:
+            # This should throw an exception as you cannot add arrays
+            # with shapes [2,3] and [3,2]
+            e = s3.simple_bind(ctx=mx.cpu(), x=(2,3), grad_req='null')
+        except:
+            return
+
+    assert False
 
 if __name__ == '__main__':
     import nose

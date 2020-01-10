@@ -208,13 +208,11 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
   if (inputs[0].IsMKLDNNData()) {
-    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else if (in_stype == kDefaultStorage && out_stype == kDefaultStorage) {
-    // This happens if inputs are supposed to be in MKLDNN format
-    // but MKLDNN doesn't support the data type or the shape. We're
-    // forced to convert it to the default format.
-    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    if (req[0] != kNullOp && req[0] != kWriteInplace)
+      FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif  // MXNET_USE_MKLDNN == 1
@@ -565,6 +563,7 @@ void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(shape_array)
+.add_alias("_npx_shape_array")
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
 Example::
@@ -877,6 +876,7 @@ The storage type of ``fix`` output depends upon the input storage type:
 
 // erf
 MXNET_OPERATOR_REGISTER_UNARY(erf)
+.add_alias("_npx_erf")
 .describe(R"code(Returns element-wise gauss error function of the input.
 
 Example::
@@ -898,6 +898,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_erf)
 
 // erfinv
 MXNET_OPERATOR_REGISTER_UNARY(erfinv)
+.add_alias("_npx_erfinv")
 .describe(R"code(Returns element-wise inverse gauss error function of the input.
 
 Example::
@@ -929,6 +930,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gamma,
 
 // gammaln
 MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(gammaln, cpu, mshadow_op::gammaln)
+.add_alias("_npx_gammaln")
 MXNET_ADD_SPARSE_OP_ALIAS(gammaln)
 .describe(R"code(Returns element-wise log of the absolute value of the gamma function \
 of the input.

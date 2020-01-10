@@ -16,7 +16,7 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable= arguments-differ, too-many-lines
+# pylint: disable= arguments-differ, too-many-lines, reimported
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
@@ -25,9 +25,10 @@ import copy
 import warnings
 import re
 from collections import OrderedDict, defaultdict
+import numpy as np
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer
+from .. import symbol, ndarray, initializer, np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -117,7 +118,7 @@ def _gather_type_ctx_info(args):
         Context of the first appeared NDArray (for backward-compatibility)
     """
     if isinstance(args, NDArray):
-        return False, True, {args.context}, args.context
+        return False, True, {args.ctx}, args.ctx
     elif isinstance(args, Symbol):
         return True, False, set(), None
     elif isinstance(args, (list, tuple)):
@@ -979,7 +980,10 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
-        assert self._cached_op, "cached op is not None"
+        assert self._cached_op, "Gluon failed to build the cache. " \
+                                "This should never happen. " \
+                                "Please submit an issue on Github" \
+                                " https://github.com/apache/incubator-mxnet."
         if self._callback:
             self._cached_op._register_op_hook(self._callback, self._monitor_all)
             if len(self._flags) >= 2 and (self._flags[1] or self._flags[0]):
@@ -1141,7 +1145,7 @@ class HybridBlock(Block):
                 if len(ctx_set) > 1:
                     raise ValueError('Find multiple contexts in the input, '
                                      'After hybridized, the HybridBlock only supports one input '
-                                     'context. You can print the ele.context in the '
+                                     'context. You can print the ele.ctx in the '
                                      'input arguments to inspect their contexts. '
                                      'Find all contexts = {}'.format(ctx_set))
                 with ctx:
@@ -1253,7 +1257,10 @@ class SymbolBlock(HybridBlock):
         ...     'net1-symbol.json', ['data'], 'net1-0001.params')
         >>> out2 = net2(x)
         """
-        sym = symbol.load(symbol_file)
+        if is_np_array():
+            sym = np_symbol.load(symbol_file)
+        else:
+            sym = symbol.load(symbol_file)
         if isinstance(input_names, str):
             input_names = [input_names]
         if param_file is None:
@@ -1261,7 +1268,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i, dtype=mx_real_t) for i in input_names]
         else:
             # Do not specify type, rely on saved params type instead
-            inputs = [symbol.var(i) for i in input_names]
+            inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
             ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
@@ -1287,8 +1294,6 @@ class SymbolBlock(HybridBlock):
 
         syms, self._in_format = _flatten(inputs, "input")
         out, self._out_format = _flatten(outputs, "output")
-        out = symbol.Group(out, _check_same_symbol_type(out))
-
         input_names = set()
         for i in syms:
             assert len(i.get_internals().list_outputs()) == 1, \
@@ -1297,11 +1302,16 @@ class SymbolBlock(HybridBlock):
 
         # check if any symbol is row_sparse
         row_sparse_storage = ndarray.ndarray._STORAGE_TYPE_STR_TO_ID['row_sparse']
+
         for i in out:
             for j in i.get_internals():
                 assert(j.attr("__storage_type__") != str(row_sparse_storage)), \
                     "SymbolBlock doesn't support Parameter '%s' because its storage " \
                     "type is 'row_sparse'." % j.name
+        if len(out) > 1:
+            out = symbol.Group(out, _check_same_symbol_type(out))
+        else:
+            out = out[0]
 
         # Infer type of parameters. Without this, every parameter will be created with
         # default type i.e., fp32
@@ -1324,7 +1334,7 @@ class SymbolBlock(HybridBlock):
 
     def forward(self, x, *args):
         if isinstance(x, NDArray):
-            with x.context:
+            with x.ctx:
                 return self._call_cached_op(x, *args)
 
         assert isinstance(x, Symbol), \
@@ -1344,6 +1354,28 @@ class SymbolBlock(HybridBlock):
     def cast(self, dtype):
         self._clear_cached_op()
         super(SymbolBlock, self).cast(dtype)
+        if np.dtype(dtype).name == 'float16':
+            # correct BatchNorm types back to float32 due to its special requirement
+            out = self._cached_graph[1]
+            params_list = out.get_internals().list_inputs()
+            for node in params_list:
+                if node.endswith('running_var'):
+                    prefix = node[:-11]
+                    sibs = [prefix + t for t in ('running_mean', 'gamma', 'beta')]
+                    is_bn = all(p in params_list for p in sibs)
+                    if is_bn:
+                        self.params.get(node).cast('float32')
+                        for sib in sibs:
+                            self.params.get(sib).cast('float32')
+                if node.endswith('moving_var'):
+                    # another convention used
+                    prefix = node[:-10]
+                    sibs = [prefix + t for t in ('moving_mean', 'gamma', 'beta')]
+                    is_bn = all(p in params_list for p in sibs)
+                    if is_bn:
+                        self.params.get(node).cast('float32')
+                        for sib in sibs:
+                            self.params.get(sib).cast('float32')
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError

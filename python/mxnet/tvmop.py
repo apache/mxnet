@@ -21,6 +21,7 @@ from .runtime import Features
 
 if Features().is_enabled("TVM_OP"):
     import json
+    import logging
 
     from ._ctypes.space import _set_tvm_op_config
     from .base import check_call, _LIB, c_str
@@ -31,7 +32,12 @@ if Features().is_enabled("TVM_OP"):
     check_call(_LIB.MXLoadTVMOp(c_str(_LIB_TVM_OP[0])))
 
     # op sch config
-    _CONF_TVM_OP = find_conf_path("tvmop")
-    with open(_CONF_TVM_OP[0], "r") as f:
-        ret = ConfigSpaces.from_json_dict(json.load(f))
-    _set_tvm_op_config(ret)
+    try:
+        _CONF_TVM_OP = find_conf_path("tvmop")
+    except RuntimeError as e:
+        logging.warning("TVM config file missing, falling back to default schedule", exc_info=True)
+    else:
+        logging.info("TVM op config has been loaded")
+        with open(_CONF_TVM_OP[0], "r") as f:
+            ret = ConfigSpaces.from_json_dict(json.load(f))
+        _set_tvm_op_config(ret)

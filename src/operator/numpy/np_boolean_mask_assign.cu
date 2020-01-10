@@ -23,6 +23,7 @@
  */
 
 #include <cub/cub.cuh>
+#include "../../common/utils.h"
 #include "../contrib/boolean_mask-inl.h"
 
 namespace mxnet {
@@ -70,13 +71,17 @@ struct BooleanAssignGPUKernel {
                              const size_t idx_size,
                              const size_t leading,
                              const size_t middle,
+                             const size_t valid_num,
                              const size_t trailing,
                              const DType val) {
     // binary search for the turning point
-    size_t m = i / trailing % middle;
+    size_t m = i / trailing % valid_num;
+    size_t l = i / trailing / valid_num;
     size_t mid = bin_search(idx, idx_size, m);
     // final answer is in mid
-    data[i + (mid - m) * trailing] = val;
+    // i = l * valid_num * trailing + m * trailing + t
+    // dst = l * middle * trailing + mid * trailing + t
+    data[i + (l * (middle - valid_num) + (mid - m)) * trailing] = val;
   }
 
   template<typename DType>
@@ -86,13 +91,20 @@ struct BooleanAssignGPUKernel {
                              const size_t idx_size,
                              const size_t leading,
                              const size_t middle,
+                             const size_t valid_num,
                              const size_t trailing,
                              DType* tensor) {
     // binary search for the turning point
-    size_t m = i / trailing % middle;
+    size_t m = i / trailing % valid_num;
+    size_t l = i / trailing / valid_num;
     size_t mid = bin_search(idx, idx_size, m);
+    size_t dst = i + (l * (middle - valid_num) + (mid - m)) * trailing;
     // final answer is in mid
-    data[i + (mid - m) * trailing] = (scalar) ? tensor[0] : tensor[m];
+    if (scalar) {
+      data[dst] = tensor[0];
+    } else {
+      data[dst] = tensor[i];
+    }
   }
 };
 
@@ -166,13 +178,17 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
   Stream<gpu>* s = ctx.get_stream<gpu>();
 
   const TBlob& data = inputs[0];
+  const TShape& dshape = data.shape_;
   const TBlob& mask = inputs[1];
+  const TShape& mshape = mask.shape_;
+  const int start_axis = std::stoi(common::attr_value_string(attrs, "start_axis", "0"));
+
   // Get valid_num
   size_t mask_size = mask.shape_.Size();
   size_t valid_num = 0;
   size_t* prefix_sum = nullptr;
   if (mask_size != 0) {
-    MSHADOW_TYPE_SWITCH(mask.type_flag_, MType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(mask.type_flag_, MType, {
       prefix_sum = GetValidNumGPU<MType>(ctx, mask.dptr<MType>(), mask_size);
     });
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
@@ -180,14 +196,16 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
                               cudaMemcpyDeviceToHost, stream));
     CUDA_CALL(cudaStreamSynchronize(stream));
   }
+
   // If there's no True in mask, return directly
   if (valid_num == 0) return;
 
   if (inputs.size() == 3U) {
+    const TShape& vshape = inputs[2].shape_;
     if (inputs[2].shape_.Size() != 1) {
       // tensor case, check tensor size with the valid_num
-      CHECK_EQ(static_cast<size_t>(valid_num), inputs[2].shape_.Size())
-        << "boolean array indexing assignment cannot assign " << inputs[2].shape_.Size()
+      CHECK_EQ(static_cast<size_t>(valid_num), vshape[start_axis])
+        << "boolean array indexing assignment cannot assign " << vshape
         << " input values to the " << valid_num << " output values where the mask is true"
         << std::endl;
     }
@@ -197,27 +215,36 @@ void NumpyBooleanAssignForwardGPU(const nnvm::NodeAttrs& attrs,
   size_t middle = mask_size;
   size_t trailing = 1U;
 
+  for (int i = 0; i < dshape.ndim(); ++i) {
+    if (i < start_axis) {
+      leading *= dshape[i];
+    }
+    if (i >= start_axis + mshape.ndim()) {
+      trailing *= dshape[i];
+    }
+  }
+
   if (inputs.size() == 3U) {
     if (inputs[2].shape_.Size() == 1) {
       MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
         Kernel<BooleanAssignGPUKernel<true>, gpu>::Launch(
           s, leading * valid_num * trailing, data.dptr<DType>(), prefix_sum, mask_size + 1,
-          leading, middle, trailing, inputs[2].dptr<DType>());
+          leading, middle, valid_num, trailing, inputs[2].dptr<DType>());
       });
     } else {
       MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
         Kernel<BooleanAssignGPUKernel<false>, gpu>::Launch(
           s, leading * valid_num * trailing, data.dptr<DType>(), prefix_sum, mask_size + 1,
-          leading, middle, trailing, inputs[2].dptr<DType>());
+          leading, middle, valid_num, trailing, inputs[2].dptr<DType>());
       });
     }
   } else {
-    CHECK(attrs.dict.find("value") != attrs.dict.end())
-      << "value is not provided";
+    CHECK(attrs.dict.find("value") != attrs.dict.end()) << "value is not provided";
+    double value = std::stod(attrs.dict.at("value"));
     MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
       Kernel<BooleanAssignGPUKernel<true>, gpu>::Launch(
         s, leading * valid_num * trailing, data.dptr<DType>(), prefix_sum, mask_size + 1,
-        leading, middle, trailing, static_cast<DType>(std::stod(attrs.dict.at("value"))));
+        leading, middle, valid_num, trailing, static_cast<DType>(value));
     });
   }
 }

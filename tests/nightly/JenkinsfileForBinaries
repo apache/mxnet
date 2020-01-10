@@ -18,9 +18,9 @@
 //
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
-mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_lib_cpp_example_mkl = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, build/cpp-package/example/imagenet_inference'
+mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
+mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
+mx_lib_cpp_example_mkl = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, build/cpp-package/example/imagenet_inference'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -103,39 +103,7 @@ core_logic: {
             utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
         }
       }
-    },*/
-    'StraightDope: Python2 Single-GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/straight_dope-single_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_single_gpu_tests', true)
-        }
-      }
-    },
-    'StraightDope: Python2 Multi-GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/straight_dope-multi_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_multi_gpu_tests', true)
-        }
-      }
-    },
-    'StraightDope: Python3 Single-GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/straight_dope-single_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_single_gpu_tests', true)
-        }
-      }
-    },
-    'StraightDope: Python3 Multi-GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/straight_dope-multi_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
-        }
-      }
-    },
+    }*/,
     'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {

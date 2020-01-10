@@ -196,7 +196,9 @@ class KVStoreLocal : public KVStore {
                         const std::vector<NDArray>& values) {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
-          << "duplicate init of key " << keys[i];
+          << "duplicate init of key " << keys[i]
+          << ". Please double check if you called kv.init or kv.broadcast with this key "
+          << "multiple times";
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }

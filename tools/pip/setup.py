@@ -126,7 +126,11 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU100'):
+    if variant.startswith('CU102'):
+        libraries.append('CUDA-10.2')
+    elif variant.startswith('CU101'):
+        libraries.append('CUDA-10.1')
+    elif variant.startswith('CU100'):
         libraries.append('CUDA-10.0')
     elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
@@ -147,7 +151,7 @@ package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
 if variant.endswith('MKL'):
     if platform.system() == 'Darwin':
-    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
+        shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))

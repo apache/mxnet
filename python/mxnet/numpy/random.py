@@ -20,7 +20,8 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial"]
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
+           "gamma"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -321,3 +322,114 @@ def rand(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
+
+
+def shuffle(x):
+    """
+    Modify a sequence in-place by shuffling its contents.
+
+    This function only shuffles the array along the first axis of a
+    multi-dimensional array. The order of sub-arrays is changed but
+    their contents remain the same.
+
+    Parameters
+    ----------
+    x: ndarray
+        The array or list to be shuffled.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> arr = np.arange(10)
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([5., 1., 0., 6., 7., 3., 9., 8., 4., 2.])  # random
+
+    Multi-dimensional arrays are only shuffled along the first axis:
+
+    >>> arr = np.arange(9).reshape((3, 3))
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([[6., 7., 8.], # random
+           [3., 4., 5.],
+           [0., 1., 2.]])
+    """
+    _mx_nd_np.random.shuffle(x)
+
+
+def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    """Draw samples from a Gamma distribution.
+
+    Samples are drawn from a Gamma distribution with specified parameters,
+    `shape` (sometimes designated "k") and `scale` (sometimes designated
+    "theta"), where both parameters are > 0.
+
+    Parameters
+    ----------
+    shape : float or array_like of floats
+        The shape of the gamma distribution. Should be greater than zero.
+    scale : float or array_like of floats, optional
+        The scale of the gamma distribution. Should be greater than zero.
+        Default is equal to 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``shape`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized gamma distribution.
+
+    The Gamma distribution is often used to model the times to failure of
+    electronic components, and arises naturally in processes for which the
+    waiting times between Poisson distributed events are relevant.
+    """
+    return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
+
+
+def randn(*size, **kwargs):
+    r"""Return a sample (or samples) from the "standard normal" distribution.
+    If positive, int_like or int-convertible arguments are provided,
+    `randn` generates an array of shape ``(d0, d1, ..., dn)``, filled
+    with random floats sampled from a univariate "normal" (Gaussian)
+    distribution of mean 0 and variance 1 (if any of the :math:`d_i` are
+    floats, they are first converted to integers by truncation). A single
+    float randomly sampled from the distribution is returned if no
+    argument is provided.
+    This is a convenience function.  If you want an interface that takes a
+    tuple as the first argument, use `numpy.random.standard_normal` instead.
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    Z : ndarray
+        A ``(d0, d1, ..., dn)``-shaped array of floating-point samples from
+        the standard normal distribution, or a single such float if
+        no parameters were supplied.
+    Notes
+    -----
+    For random samples from :math:`N(\mu, \sigma^2)`, use:
+    ``sigma * np.random.randn(...) + mu``
+    Examples
+    --------
+    >>> np.random.randn()
+    2.1923875335537315 #random
+    Two-by-four array of samples from N(3, 6.25):
+    >>> 2.5 * np.random.randn(2, 4) + 3
+    array([[-4.49401501,  4.00950034, -1.81814867,  7.29718677],  #random
+        [ 0.39924804,  4.68456316,  4.99394529,  4.84057254]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return _mx_nd_np.random.normal(0, 1, size=output_shape, **kwargs)

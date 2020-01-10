@@ -90,8 +90,10 @@ MSHADOW_XINLINE index_t ravel(const Shape<ndim>& coord, const Shape<ndim>& shape
 }
 
 template<int ndim>
-MSHADOW_XINLINE int diff(const Shape<ndim>& small, const Shape<ndim>& big, Shape<ndim>* dims,
-  Shape<ndim>* stride) {
+MSHADOW_XINLINE int diff(const Shape<ndim>& small,
+                         const Shape<ndim>& big,
+                         Shape<ndim>* dims,
+                         Shape<ndim>* stride) {
   int mdim = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
@@ -251,6 +253,18 @@ void Reduce(Stream<cpu>* s, const TBlob& small, const OpReqType req,
       });
     });
   }
+}
+
+template <typename Reducer, int ndim, typename DType, typename OP>
+void ReduceBool(Stream<cpu>* s, const TBlob& small, const OpReqType req,
+                const Tensor<cpu, 1, char>& workspace, const TBlob& big) {
+  if (req == kNullOp) return;
+  Shape<ndim> rshape, rstride;
+  diff(small.shape_.get<ndim>(), big.shape_.get<ndim>(), &rshape, &rstride);
+  size_t N = small.shape_.Size(), M = rshape.Size();
+  seq_reduce_compute<Reducer, ndim, bool, DType, bool, OP>(
+    N, M, req == kAddTo, big.dptr<DType>(), small.dptr<bool>(),
+    big.shape_.get<ndim>(), small.shape_.get<ndim>(), rshape, rstride);
 }
 
 template <typename Reducer, int ndim, typename DType, typename OP>

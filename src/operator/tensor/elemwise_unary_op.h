@@ -253,6 +253,23 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
+  static void ComputeInt(const nnvm::NodeAttrs& attrs,
+                      const OpContext& ctx,
+                      const std::vector<TBlob>& inputs,
+                      const std::vector<OpReqType>& req,
+                      const std::vector<TBlob>& outputs) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    MXNET_INT_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        if (inputs[0].Size() != 0) {
+          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+            s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+        }
+      });
+    });
+  }
+
+  template<typename xpu, typename OP>
   static void ComputeLogic(const nnvm::NodeAttrs& attrs,
                            const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
@@ -454,8 +471,8 @@ void CastCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, DstDType> out = outputs[0].FlatTo1D<xpu, DstDType>(s);
     MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, SrcDType, {
       Tensor<xpu, 1, SrcDType> data = inputs[0].FlatTo1D<xpu, SrcDType>(s);
-      if (outputs[0].type_flag_ != inputs[0].type_flag_ ||
-          req[0] != kWriteInplace) {
+      if ((outputs[0].type_flag_ != inputs[0].type_flag_ ||
+          req[0] != kWriteInplace) && outputs[0].Size() != 0) {
         Assign(out, req[0], tcast<DstDType>(data));
       }
     });

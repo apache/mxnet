@@ -479,7 +479,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
       }
       // add for mkldnn OP + no mkldnn OP
       const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
-      if (!is_mkldnn.get(attrs.op, false)) {
+      if (!is_mkldnn.get(attrs.op, false) && exec_type != ExecType::kCrossDeviceCopy) {
         std::vector<NDArray> inputs_fallback;
         CreateDefaultInputs(inputs, &inputs_fallback);
         fn(attrs, opctx, inputs_fallback, req, outputs);
@@ -543,7 +543,7 @@ inline void PushOperator(const OpStatePtr& state,
       }
       // add for mkldnn OP + no mkldnn OP
       const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
-      if (!is_mkldnn.get(attrs.op, false)) {
+      if (!is_mkldnn.get(attrs.op, false) && exec_type != ExecType::kCrossDeviceCopy) {
         std::vector<NDArray> inputs_fallback;
         CreateDefaultInputs(inputs, &inputs_fallback);
         fcompute_ex(state, opctx, inputs_fallback, req, outputs);
@@ -830,7 +830,7 @@ inline std::vector<Context> PlaceDevice(const nnvm::IndexedGraph& idx) {
 }
 
 
-inline MemoryPlanVector PlanMemory(
+inline MemoryPlanVector MXPlanMemory(
     nnvm::Graph* p_g,
     nnvm::StorageVector&& storage,
     const std::vector<uint32_t>& ref_count,

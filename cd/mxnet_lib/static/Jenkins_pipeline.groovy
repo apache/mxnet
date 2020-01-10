@@ -23,6 +23,8 @@
 // To avoid confusion, please note:
 // ci_utils is loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
+// NOTE: the following variables are referenced in the mxnet_lib_pipeline jenkins file imported bellow
+
 // libmxnet location
 libmxnet = 'lib/libmxnet.so'
 
@@ -31,7 +33,7 @@ licenses = 'licenses/*'
 
 // libmxnet dependencies
 mx_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0'
-mx_mkldnn_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0, 3rdparty/mkldnn/build/install/include/mkldnn_version.h'
+mx_mkldnn_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0, 3rdparty/mkldnn/build/install/include/dnnl_version.h, 3rdparty/mkldnn/build/install/include/dnnl_config.h'
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies

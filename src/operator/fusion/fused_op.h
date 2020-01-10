@@ -20,7 +20,6 @@
 #ifndef MXNET_OPERATOR_FUSION_FUSED_OP_H_
 #define MXNET_OPERATOR_FUSION_FUSED_OP_H_
 
-
 #include <mxnet/operator.h>
 #include <nnvm/graph.h>
 #include <vector>
@@ -29,8 +28,7 @@
 #include <mutex>
 #include <tuple>
 
-#if MXNET_USE_CUDA
-
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 namespace mxnet {
 
@@ -52,8 +50,9 @@ struct FusedOpConfig : public dmlc::Parameter<FusedOpConfig> {
 };
 
 struct FusedOpEntry {
-  FusedOpEntry() : dtype(-1) {}
+  FusedOpEntry() : dtype(-1), ndim(-1) {}
   int dtype;
+  int ndim;
 };
 
 class FusedOp {
@@ -202,5 +201,6 @@ using FusedOpHelperParamPtr = std::shared_ptr<FusedOpHelperParam>;
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+
 #endif  // MXNET_OPERATOR_FUSION_FUSED_OP_H_
