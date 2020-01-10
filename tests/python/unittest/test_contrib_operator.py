@@ -460,8 +460,7 @@ def test_dynamic_reshape():
             'shape': mx.nd.array(shape_arg)
             }
         args_grad = {
-            'data': mx.nd.empty(src_shape),
-            'shape': mx.nd.empty(dst_shape)
+            'data': mx.nd.empty(src_shape)
         }
         exe = net.bind(default_context(), args, args_grad)
         exe.forward(is_train=True)
