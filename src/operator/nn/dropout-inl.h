@@ -418,11 +418,11 @@ class DropoutOp {
       const TBlob &out = out_data[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
       CHECK_EQ(mask.type_flag_, kUint8);
-      CHECK_EQ((out.Size() + 7) / 8, mask.Size());
 
       if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
         if (this->axes_.ndim() == 0) {
+          CHECK_EQ((out.Size() + 7) / 8, mask.Size());
 #if MXNET_USE_MKL_DROPOUT
           if (MKLAvailable()) {
             MKLForward(ctx, in_data, out_data);
@@ -451,6 +451,7 @@ class DropoutOp {
           for (int i = 0; i < this->axes_.ndim(); ++i) {
             temp_shape[this->axes_[i]] = 1;
           }
+          CHECK_EQ((temp_shape.Size() + 7) / 8, mask.Size());
           Tensor<xpu, 1, DType> temp =
               ctx.requested[1].get_space_typed<xpu, 1, DType>(Shape1(temp_shape.Size()), s);
           RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
