@@ -247,7 +247,7 @@ def install_opencv():
         local_file = download(DEPS['opencv'])
         with zipfile.ZipFile(local_file, 'r') as zip:
             zip.extractall(tmpdir)
-        copy(f'{tmpdir}\opencv\build', 'c:\Program Files\opencv')
+        copy(f'{tmpdir}\\opencv\\build', r'c:\Program Files\opencv')
 
     run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name OpenCV_DIR -Value 'C:\\Program Files\\opencv'")
     logging.info("OpenCV install complete")
