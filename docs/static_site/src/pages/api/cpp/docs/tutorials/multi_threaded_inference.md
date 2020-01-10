@@ -127,106 +127,20 @@ The multi threaded inference example (`multi_threaded_inference.cc`) involves th
 
 ### Step 1: Parse arguments and load input image into ndarray
 
-```c++
-int main(int argc, char *argv[]) {
-  if (argc < 5) {
-    std::cout << "Please provide a model name, num_threads, is_gpu, test_image" << std::endl
-              << "Usage: ./multi_threaded_inference [model_name] [num_threads] [is_gpu] apple.jpg"
-              << std::endl
-              << "Example: ./.multi_threaded_inference imagenet1k-inception-bn 1 0 apple.jpg"
-              << std::endl
-              << "NOTE: Thread number ordering will be based on the ordering of file inputs" << std::endl
-              << "NOTE: Epoch is assumed to be 0" << std::endl;
-    return EXIT_FAILURE;
-  }
-  std::string model_name = std::string(argv[1]);
-  int num_threads = std::atoi(argv[2]);
-  bool is_gpu = std::atoi(argv[3]);
-  ...
-  ...
-  mxnet::cpp::Shape input_shape = mxnet::cpp::Shape(1, 3, 224, 224);
-  for (size_t i = 0; i < files.size(); i++) {
-    files[i].resize(image_size);
-    GetImageFile(test_files[i], files[i].data(), channels,
-                 cv::Size(width, height));
-    input_arrs.emplace_back(mxnet::cpp::NDArray(files[i].data(), input_shape, mxnet::cpp::Context::cpu(0)));
-  }
-```
+[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L299-L341](multi_threaded_inference.cc#L299-L341)
 
 The above code parses arguments, loads the image file into a ndarray with a specific shape. There are a few things that are set by default and not configurable. For example, `static_alloc` and `static_shape` are by default set to true.
 
 
 ### Step 2: Prepare input data and load parameters, copying data to a specific context
-```c++
-void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::NDArray>& input_arrs,
-                   std::vector<mxnet::NDArray*> *output_mx_arr,
-                   int num_inf_per_thread = 1, bool random_sleep = false,
-                   int num_threads = 1, bool static_alloc = false,
-                   bool static_shape = false,
-                   bool is_gpu = false) {                                                                                       
-  ...
-  ...
-  ...
-  // Prepare input data and parameters
-  std::vector<mxnet::cpp::NDArray> data_arr(num_threads);
-  std::vector<mxnet::cpp::NDArray> softmax_arr;
-  std::vector<mxnet::cpp::NDArray> params;
-  mxnet::cpp::Shape data_shape = mxnet::cpp::Shape(1, 3, 224, 224);
-  mxnet::cpp::Shape softmax_shape = mxnet::cpp::Shape(1);
-  int num_inputs = out.ListInputs().size();
 
-  for (size_t i = 0; i < data_arr.size(); ++i) {
-    data_arr[i] = input_arrs[i].Copy(ctx);
-  }
-  prepare_input_data(softmax_shape, ctx, num_threads, &softmax_arr);
-  std::map<std::string, mxnet::cpp::NDArray> parameters;
-  mxnet::cpp::NDArray::Load(param_file, 0, &parameters);
-
-  for (std::string name : out.ListInputs()) {
-    if (name == "arg:data") {
-      continue;
-    }
-    if (parameters.find("arg:" + name) != parameters.end()) {
-      params.push_back(parameters["arg:" + name].Copy(ctx));
-    } else if (parameters.find("aux:" + name) != parameters.end()) {
-      params.push_back(parameters["aux:" + name].Copy(ctx));
-    }
-  }
-```
+[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L147-L205](multi_threaded_inference.cc#L147-L205)
 
 The above code loads params and copies input data and params to specific context.
 
 ### Step 3: Preparing arguments to pass to the CachedOp and calling C API to create cached op
 
-```c++
-  CachedOpHandle hdl = CachedOpHandle();
-
-  std::vector<std::string> flag_keys{"data_indices", "param_indices",
-                                     "static_alloc", "static_shape"};
-  std::string param_indices = "[";
-  for (size_t i = 1; i < num_inputs; ++i) {
-    param_indices += std::to_string(i);
-    param_indices += std::string(", ");
-  }
-  param_indices += "]";
-  std::vector<std::string> flag_vals{"[0]", param_indices, static_alloc_str,
-                                     static_shape_str};
-  std::vector<const char*> flag_key_cstrs, flag_val_cstrs;
-  flag_key_cstrs.reserve(flag_keys.size());
-  for (size_t i = 0; i < flag_keys.size(); ++i) {
-    flag_key_cstrs.emplace_back(flag_keys[i].c_str());
-  }
-  for (size_t i = 0; i < flag_vals.size(); ++i) {
-    flag_val_cstrs.emplace_back(flag_vals[i].c_str());
-  }
-
-  int ret1 = MXCreateCachedOpEX(out.GetHandle(), flag_keys.size(),
-                                flag_key_cstrs.data(), flag_val_cstrs.data(),
-                                &hdl, true);
-  if (ret1 < 0) {
-    LOG(FATAL) << MXGetLastError();
-  }
-```
+[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L207-L233](multi_threaded_inference.cc#L207-233)
 
 The above code prepares `flag_key_cstrs` and `flag_val_cstrs` to be passed the Cached op.
 The C API call is made with `MXCreateCachedOpEX`. This will lead to creation of thread safe cached
@@ -236,24 +150,7 @@ true. When this is set to false, it will invoke CachedOp instead of CachedOpThre
 
 ### Step 4: Prepare lambda function which will run in spawned threads
 
-```c++
-  auto func = [&](int num) {
-    unsigned next = num;
-    if (random_sleep) {
-      int sleep_time = rand_r(&next) % 5;
-      std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
-    }
-    int num_output = 0;
-    const int *stypes;
-    int ret = MXInvokeCachedOpEx(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                                 &num_output, &(cached_op_handles[num]), &stypes);
-    if (ret < 0) {
-      LOG(FATAL) << MXGetLastError();
-    }
-    mxnet::cpp::NDArray::WaitAll();
-    (*output_mx_arr)[num] = static_cast<mxnet::NDArray *>(*cached_op_handles[num]);
-  };
-```
+[https://github.com/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L248-L262](multi_threaded_inference.cc#L248-262)
 
 The above creates the lambda function taking the thread number as the argument.
 If `random_sleep` is set it will sleep for a random number (secs) generated between 0 to 5 seconds.
@@ -262,36 +159,14 @@ When this is set to false, it will invoke CachedOp instead of CachedOpThreadSafe
 
 ### Step 5: Spawn multiple threads and wait for all threads to complete
 
-```c++
-  std::vector<std::thread> worker_threads(num_threads);
-  int count = 0;
-  for (auto &&i : worker_threads) {
-    i = std::thread(func, count);
-    count++;
-  }
-
-  for (auto &&i : worker_threads) {
-    i.join();
-  }
-
-  mxnet::cpp::NDArray::WaitAll();
-```
+[https://github.com/anirudh2290/apache/incubator-mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L264-L276](multi_threaded_inference.cc#L264-L276)
 
 Spawns multiple threads, joins and waits to wait for all ops to complete.
 The other alternative is to wait in the thread on the output ndarray and remove the WaitAll after join.
 
 ### Step 6: Post process data to obtain inference results and cleanup
 
-```c++
-  ...
-  ...
-  for (size_t i = 0; i < num_threads; ++i) {
-    PrintOutputResult(static_cast<float *>((*output_mx_arr)[i]->data().dptr_),
-                      (*output_mx_arr)[i]->shape().Size(), synset);
-  }
-  int ret2 = MXFreeCachedOpEX(hdl, true);
-  ...
-```
+[https://github.com/apache/incubator-/mxnet/example/multi_threaded_inference/multi_threaded_inference.cc#L286-L293](multi_threaded_inference.cc#L286-293)
 
 The above code outputs results for different threads and cleans up the thread safe cached op.
 

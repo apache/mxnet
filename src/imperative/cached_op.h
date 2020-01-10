@@ -45,14 +45,10 @@ std::string AddPrefix(const std::string& prefix,
                       const std::string& s) {
   return prefix + "_" + s;
 }
-void CreateFullGraph(const nnvm::Symbol& sym,
-                     nnvm::Graph* fwd_graph,
-                     nnvm::Graph* grad_graph,
-                     nnvm::Graph* full_graph,
-                     std::vector<nnvm::NodeEntry>* ograd_entries,
-                     std::unordered_map<uint32_t, uint32_t>* fwd_input_to_grad_output) {
+
+/* \brief create a forward graph from they Symbol */
+void CreateForwardGraph(const nnvm::Symbol &sym, nnvm::Graph *fwd_graph) {
   using namespace nnvm;
-  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   static const auto _copy_op = Op::Get("_copy");
   {
     NodeEntryMap<size_t> dedup_out;
@@ -73,6 +69,18 @@ void CreateFullGraph(const nnvm::Symbol& sym,
       }
     }
   }
+}
+
+/* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
+void CreateFullGraph(const nnvm::Symbol& sym,
+                     nnvm::Graph* fwd_graph,
+                     nnvm::Graph* grad_graph,
+                     nnvm::Graph* full_graph,
+                     std::vector<nnvm::NodeEntry>* ograd_entries,
+                     std::unordered_map<uint32_t, uint32_t>* fwd_input_to_grad_output) {
+  using namespace nnvm;
+  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
+  CreateForwardGraph(sym, fwd_graph);
 
   bool do_elim_common_expr = dmlc::GetEnv("MXNET_ELIMINATE_COMMON_EXPR", true);
   if (do_elim_common_expr)
@@ -113,7 +121,8 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   }
 }
 
-void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
+/* \brief Set Ref counts for node entries for forward graph */
+void SetForwardRefCounts(nnvm::Graph *fwd_graph) {
   const auto& idx = fwd_graph->indexed_graph();
   CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 
@@ -126,6 +135,12 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
 
   fwd_graph->attrs[AddPrefix(FORWARD, REF_COUNT)] =
       std::make_shared<dmlc::any>(std::move(ref_count));
+}
+
+/* \brief Set Ref counts for node entries for forward graph and full graph */
+void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
+  const auto& idx = fwd_graph->indexed_graph();
+  SetForwardRefCounts(fwd_graph);
 
   size_t num_forward_nodes = idx.num_nodes();
   size_t num_forward_entries = idx.num_node_entries();

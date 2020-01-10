@@ -66,7 +66,6 @@ CachedOpThreadSafe::CachedOpThreadSafe(const nnvm::Symbol& sym,
   using namespace imperative;
   static const std::vector<const Op *> zero_ops{Op::Get("zeros_like"),
                                                 Op::Get("_zeros")};
-  static const auto _copy_op = Op::Get("_copy");
   config_.Init(flags);
 
   if (config_.static_shape) {
@@ -74,42 +73,8 @@ CachedOpThreadSafe::CachedOpThreadSafe(const nnvm::Symbol& sym,
   }
 
   // construct forward graph
-  {
-    NodeEntryMap<size_t> dedup_out;
-    for (const NodeEntry &nodeEntry : sym.outputs) {
-      if (dedup_out.find(nodeEntry) != dedup_out.end()) {
-        NodePtr copy_node = Node::Create();
-        copy_node->attrs.op = _copy_op;
-        copy_node->attrs.name = nodeEntry.node->attrs.name + "_copy" +
-                                std::to_string(dedup_out[nodeEntry]++);
-        copy_node->inputs.emplace_back(nodeEntry);
-        if (_copy_op->attr_parser != nullptr) {
-          _copy_op->attr_parser(&(copy_node->attrs));
-        }
-        fwd_graph_.outputs.emplace_back(std::move(copy_node));
-      } else {
-        dedup_out.emplace(nodeEntry, 0);
-        fwd_graph_.outputs.push_back(nodeEntry);
-      }
-    }
-
-    const auto &idx = fwd_graph_.indexed_graph();
-    CHECK_GE(idx.input_nodes().size(), 1)
-        << "CachedOp requires at least 1 input";
-
-    std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
-    for (const auto &i : idx.input_nodes())
-      ++ref_count[idx.entry_id(i, 0)];
-    for (const auto &i : idx.outputs())
-      ++ref_count[idx.entry_id(i)];
-    for (size_t i = 0; i < idx.num_nodes(); ++i) {
-      for (const auto &j : idx[i].inputs)
-        ++ref_count[idx.entry_id(j)];
-    }
-
-    fwd_graph_.attrs["forward_ref_count"] =
-        std::make_shared<dmlc::any>(std::move(ref_count));
-  }
+  CreateForwardGraph(sym.Copy(), &fwd_graph_);
+  SetForwardRefCounts(&fwd_graph_);
 
   // Set param indices
   {
@@ -128,6 +93,10 @@ CachedOpThreadSafe::CachedOpThreadSafe(const nnvm::Symbol& sym,
   }
 }
 
+/*
+ * \brief Thread safe version of DynamicForward, with thread local buffer
+ * used to store intermediate nodes in the graph
+ */
 OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
                                               const std::vector<NDArray*>& inputs,
                                               const std::vector<NDArray*>& outputs) {

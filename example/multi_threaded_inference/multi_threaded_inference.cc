@@ -193,7 +193,7 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
   std::map<std::string, mxnet::cpp::NDArray> parameters;
   mxnet::cpp::NDArray::Load(param_file, 0, &parameters);
 
-  for (std::string name : out.ListInputs()) {
+  for (const std::string& name : out.ListInputs()) {
     if (name == "arg:data") {
       continue;
     }

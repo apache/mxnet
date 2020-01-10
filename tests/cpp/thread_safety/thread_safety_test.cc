@@ -661,7 +661,7 @@ TEST(ThreadSafety, CachedOpFullModel) {
     run_inference(model, 4, true, 20, true, true);
     run_inference(model, 8, true, 20, true, true);
     // the below line may hang
-    //run_inference_unsupported(model, 32, false, 20);
+    // run_inference_unsupported(model, 32, false, 20);
   }
 }
 #endif
