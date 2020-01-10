@@ -148,7 +148,7 @@ def windows_build(args):
 
     with remember_cwd():
         os.chdir(path)
-        cmd = "\"{}\" && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
+        cmd = "\"{}\" && cmake -G Ninja {} {}".format(args.vcvars,
                                                                         CMAKE_FLAGS[args.flavour],
                                                                         mxnet_root)
         logging.info("Generating project with CMake:\n{}".format(cmd))
@@ -241,8 +241,8 @@ def main():
         logging.info("Detected Windows platform")
         if 'OpenBLAS_HOME' not in os.environ:
             os.environ["OpenBLAS_HOME"] = "C:\\Program Files\\OpenBLAS-v0.2.19"
-        if 'OpenCV_DIR' not in os.environ:
-            os.environ["OpenCV_DIR"] = "C:\\Program Files\\opencv\\build"
+        #if 'OpenCV_DIR' not in os.environ:
+        #    os.environ["OpenCV_DIR"] = "C:\\Program Files\\opencv\\build"
         if 'CUDA_PATH' not in os.environ:
             os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
         if 'MKL_ROOT' not in os.environ:
