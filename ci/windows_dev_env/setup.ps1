@@ -1,3 +1,4 @@
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -32,20 +33,25 @@ function Check-Call {
 Set-ExecutionPolicy Bypass -Scope Process -Force
 Invoke-WebRequest -Uri https://chocolatey.org/install.ps1 -OutFile install.ps1
 ./install.ps1
-Check-Call { C:\ProgramData\chocolatey\choco install python2 -y }
-Check-Call { C:\ProgramData\chocolatey\choco install python --version=3.7.0 --force -y }
+Check-Call { C:\ProgramData\chocolatey\choco install python2 -y --no-progress }
+Check-Call { C:\ProgramData\chocolatey\choco install python --version=3.7.0 --force -y --no-progress }
 Check-Call { C:\Python37\python -m pip install --upgrade pip  }
 Check-Call { C:\Python37\python -m pip install -r requirements.txt  }
 Check-Call { C:\Python27\python -m pip install --upgrade pip  }
 Check-Call { C:\Python27\python -m pip install -r requirements.txt  }
+
+Check-Call { C:\ProgramData\chocolatey\choco install git -y }
+Check-Call { C:\ProgramData\chocolatey\choco install 7zip -y }
+Check-Call { C:\ProgramData\chocolatey\choco install cmake -y }
+Check-Call { setx PATH "$($env:path);c:\Program Files\CMake\bin" }
+Check-Call { C:\ProgramData\chocolatey\choco install ninja -y }
+
 # Deps
-Check-Call { C:\Python37\python  windows_deps_headless_installer.py }
+Check-Call { C:\Python37\python  windows_deps_headless_installer.py --gpu }
 
 # Other software
-Check-Call { C:\ProgramData\chocolatey\choco install jom -y }
-Check-Call { C:\ProgramData\chocolatey\choco install 7zip -y }
-Check-Call { C:\ProgramData\chocolatey\choco install mingw -y }
-Check-Call { C:\ProgramData\chocolatey\choco install javaruntime -y }
-Check-Call { C:\ProgramData\chocolatey\choco install git -y }
+#Check-Call { C:\ProgramData\chocolatey\choco install jom -y }
+#Check-Call { C:\ProgramData\chocolatey\choco install mingw -y }
+#Check-Call { C:\ProgramData\chocolatey\choco install javaruntime -y }
 
 Write-Output "End"
