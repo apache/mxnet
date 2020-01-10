@@ -35,7 +35,7 @@ import zipfile
 from time import sleep
 from urllib.error import HTTPError
 import logging
-from subprocess import check_output
+from subprocess import check_output, check_call
 import re
 import sys
 
@@ -48,10 +48,10 @@ log = logging.getLogger(__name__)
 
 DEPS = {
         'openblas': 'https://windows-post-install.s3-us-west-2.amazonaws.com/OpenBLAS-windows-v0_2_19.zip',
-        'opencv': 'https://windows-post-install.s3-us-west-2.amazonaws.com/OpenCV-windows-v3_4_1-vc14.zip',
+        'opencv': 'https://windows-post-install.s3-us-west-2.amazonaws.com/opencv-windows-4.1.2-vc14_vc15.zip',
         'cudnn': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cudnn-9.2-windows10-x64-v7.4.2.24.zip',
         'nvdriver': 'https://windows-post-install.s3-us-west-2.amazonaws.com/nvidia_display_drivers_398.75_server2016.zip',
-        'cmake': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cmake-3.15.5-win64-x64.msi'
+        'cmake': 'https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2-win64-x64.msi'
 }
 
 DEFAULT_SUBPROCESS_TIMEOUT=3600
@@ -118,7 +118,7 @@ def download(url, dest=None, progress=True) -> str:
                     self.pbar.finish()
     if dest and os.path.isdir(dest):
         local_file = os.path.split(urlparse(url).path)[1]
-        local_path = os.path.join(dest, local_file)
+        local_path = os.path.normpath(os.path.join(dest, local_file))
     else:
         local_path = dest
     with urlopen(url) as c:
@@ -219,8 +219,8 @@ def install_vs():
 
 def install_cmake():
     logging.info("Installing CMAKE")
-    cmake_file_path = download(DEPS['cmake'])
-    run_command("msiexec /i {} /quiet /norestart ADD_CMAKE_TO_PATH=System".format(cmake_file_path))
+    cmake_file_path = download(DEPS['cmake'], '.')
+    check_call(['msiexec ', '/n', '/passive', '/i', cmake_file_path])
     logging.info("CMAKE install complete")
 
 
@@ -242,10 +242,13 @@ def install_mkl():
 
 def install_opencv():
     logging.info("Installing OpenCV")
-    local_file = download(DEPS['opencv'])
-    with zipfile.ZipFile(local_file, 'r') as zip:
-        zip.extractall("C:\\Program Files")
-    run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name OpenCV_DIR -Value 'C:\\Program Files\\OpenCV-windows-v3_4_1-vc14'")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        local_file = download(DEPS['opencv'])
+        with zipfile.ZipFile(local_file, 'r') as zip:
+            zip.extractall(tmpdir)
+        copy(f'{tmpdir}\opencv\build', 'c:\Program Files\opencv')
+
+    run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name OpenCV_DIR -Value 'C:\\Program Files\\opencv'")
     logging.info("OpenCV install complete")
 
 
@@ -357,7 +360,7 @@ def main():
     else:
         logging.info("GPU environment skipped")
     install_vs()
-    install_cmake()
+    #install_cmake()
     install_openblas()
     install_mkl()
     install_opencv()
