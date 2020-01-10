@@ -290,7 +290,7 @@ struct CopyCsrDataToDns {
                                   const DType* csr_data,
                                   const nnvm::dim_t num_cols) {
     const nnvm::dim_t offset = i * num_cols;
-    for (index_t j = static_cast<index_t>(indptr[i]); j < static_cast<index_t>(indptr[i+1]); ++j) {
+    for (IType j = indptr[i]; j < indptr[i+1]; ++j) {
       dns_data[offset+col_idx[j]] = csr_data[j];
     }
   }
