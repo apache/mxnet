@@ -7195,6 +7195,7 @@ def test_gather_nd_check_bound():
     data2 = mx.nd.gather_nd(data, indices2)
     assert_almost_equal(data1, data2, rtol=1e-5, atol=1e-5)
 
+
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
         backward_numpy_call, shape, input_low, input_high, rtol, atol,
@@ -7850,7 +7851,7 @@ def test_bilinear_resize_op():
 
         x = np.array(data, dtype=np.float32).reshape(img_shape)
         x_nd = mx.nd.array(x)
-        
+
         y0 = np.array(expected_data[0]).reshape((1, 1, target_height, target_width))
         y0_nd = mx.nd.contrib.BilinearResize2D(x_nd, height=target_height, width=target_width, mode='size', align_corners=False)
         assert_almost_equal(y0, y0_nd.asnumpy(), atol=1e-3)
@@ -9615,7 +9616,7 @@ def check_multihead_attention_encdec(dtype):
     q_proj = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
                                    num_hidden=qkv_units, no_bias=False)
     att_score = mx.sym.contrib.interleaved_matmul_encdec_qk(
-            q_proj, kv_proj, heads=num_heads) 
+            q_proj, kv_proj, heads=num_heads)
     att_score = att_score + sonde
     weighted_value = mx.sym.contrib.interleaved_matmul_encdec_valatt(
             kv_proj, att_score, heads=num_heads)
