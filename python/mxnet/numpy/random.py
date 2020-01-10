@@ -20,7 +20,8 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn"]
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
+           "gamma"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -357,6 +358,40 @@ def shuffle(x):
            [0., 1., 2.]])
     """
     _mx_nd_np.random.shuffle(x)
+
+
+def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    """Draw samples from a Gamma distribution.
+
+    Samples are drawn from a Gamma distribution with specified parameters,
+    `shape` (sometimes designated "k") and `scale` (sometimes designated
+    "theta"), where both parameters are > 0.
+
+    Parameters
+    ----------
+    shape : float or array_like of floats
+        The shape of the gamma distribution. Should be greater than zero.
+    scale : float or array_like of floats, optional
+        The scale of the gamma distribution. Should be greater than zero.
+        Default is equal to 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``shape`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized gamma distribution.
+
+    The Gamma distribution is often used to model the times to failure of
+    electronic components, and arises naturally in processes for which the
+    waiting times between Poisson distributed events are relevant.
+    """
+    return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
 
 
 def randn(*size, **kwargs):
