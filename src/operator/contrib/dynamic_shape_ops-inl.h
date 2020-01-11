@@ -55,9 +55,9 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   const_cast<NDArray &>(out).Init(shapevalue);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
-  MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
+  MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
-          s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(),
+          s, inputs[0].data().Size(), out.data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
           });
 }
