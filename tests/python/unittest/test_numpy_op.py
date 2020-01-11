@@ -3144,6 +3144,47 @@ def test_npx_random_bernoulli():
 
 @with_seed()
 @use_np
+def test_npx_constraint_check():
+    msg = "condition violated"
+    class TestConstraintViolatedCheck(HybridBlock):
+        def __init__(self):
+            super(TestConstraintViolatedCheck, self).__init__()
+        
+        def hybrid_forward(self, F, boolean_tensor):
+            return F.npx.constraint_check(boolean_tensor, msg)
+
+    class TestConstraintNotViolatedCheck(HybridBlock):
+        def __init__(self):
+            super(TestConstraintNotViolatedCheck, self).__init__()
+        
+        def hybrid_forward(self, F, input, boolean_tensor):
+            return input * F.npx.constraint_check(boolean_tensor, msg)
+
+    def raiseFunc(block):
+        def executor(boolean_tensor):
+            out = block(boolean_tensor).asnumpy()
+        return executor
+
+    shapes = [(1,), (2, 3), 6, (7, 8)]
+    
+    expect_success_output = np.array(True)
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        test_constraint = TestConstraintViolatedCheck()
+        if hybridize:
+            test_constraint.hybridize()
+        assertRaises(ValueError, raiseFunc(test_constraint), (np.ones(shape) < 0))
+
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        test_constraint = TestConstraintNotViolatedCheck()
+        if hybridize:
+            test_constraint.hybridize()
+        input_tensor = np.random.normal(size=shape)
+        out = test_constraint(input_tensor, (np.ones(shape) > 0))
+        assert (input_tensor.asnumpy() == out.asnumpy()).all()
+
+
+@with_seed()
+@use_np
 def test_npx_special_unary_func():
     def check_unary_func(func, ref_grad, shape, low, high):
         class TestUnary(HybridBlock):
