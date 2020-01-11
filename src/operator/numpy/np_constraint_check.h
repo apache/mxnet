@@ -62,7 +62,7 @@ void ConstraintCheckForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
   std::string msg = param.msg;
   bool red_output = true;
   GetReduceOutput(ctx.get_stream<xpu>(), outputs[0], &red_output);
-  CHECK_EQ(red_output, true) << msg;
+  CHECK_EQ(red_output, true) << "ValueError: " << msg;
 }
 
 }  // namespace op

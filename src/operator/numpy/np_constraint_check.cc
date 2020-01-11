@@ -40,8 +40,6 @@ inline bool ConstraintCheckShape(const nnvm::NodeAttrs& attrs,
   if (!shape_is_known(in_attrs->at(0))) {
     return false;
   }
-  // Only 1-D support is supported.
-  // CHECK_EQ(in_attrs->at(0).ndim(), 1U) << "Only 1-D input is supported.";
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
   return true;
 }
