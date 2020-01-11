@@ -45,6 +45,9 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   size_t idx_size = idx.shape()[0];
   mxnet::TShape shapevalue = mxnet::TShape(idx_size, 0);
   std::vector<int> shapev(idx_size, 0);
+
+  // Copy the target shape that is provided in inputs[1]
+  // to the vector shapev
   MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
     DType* idx_dptr = idx.data().dptr<DType>();
     for (size_t i = 0; i < idx_size; i++) {
