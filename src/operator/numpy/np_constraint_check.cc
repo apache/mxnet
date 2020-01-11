@@ -57,8 +57,25 @@ inline bool ConstraintCheckType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(ConstraintCheckParam);
 
 NNVM_REGISTER_OP(_npx_constraint_check)
-.describe(R"code(Check if all the elements in a 1-D boolean array is true.
-If not, exception will be raised with given error message.
+.describe(R"code(This operator will check if all the elements in a boolean tensor is true.
+If not, ValueError exception will be raised in the backend with given error message.
+In order to evaluate this operator, one should multiply the origin tensor by the return value
+of this operator to force this operator become part of the computation graph, otherwise the check
+would not be working under symoblic mode.
+
+Example:
+
+loc = np.zeros((2,2))
+scale = np.array(#some_value)
+constraint = (scale > 0)
+np.random.normal(loc, scale * npx.constraint_check(constraint, 'Scale should be larger than zero'))
+
+If elements in the scale tensor are all bigger than zero, npx.constraint_check would return
+`np.array(True)`, which will not change the value of `scale` when multiplied by.
+If some of the elements in the scale tensor violate the constraint, i.e. there exists `False` in
+the boolean tensor `constraint`, a `ValueError` exception with given message
+'Scale should be larger than zero' would be raised.
+
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<ConstraintCheckParam>)
 .set_num_inputs(1)

@@ -3172,14 +3172,14 @@ def test_npx_constraint_check():
         test_constraint = TestConstraintViolatedCheck()
         if hybridize:
             test_constraint.hybridize()
-        assertRaises(ValueError, raiseFunc(test_constraint), (np.ones(shape) < 0))
+        assertRaises(ValueError, raiseFunc(test_constraint), np.zeros(shape, dtype='bool'))
 
     for shape, hybridize in itertools.product(shapes, [True, False]):
         test_constraint = TestConstraintNotViolatedCheck()
         if hybridize:
             test_constraint.hybridize()
         input_tensor = np.random.normal(size=shape)
-        out = test_constraint(input_tensor, (np.ones(shape) > 0))
+        out = test_constraint(input_tensor, np.ones(shape, dtype='bool'))
         assert (input_tensor.asnumpy() == out.asnumpy()).all()
 
 
