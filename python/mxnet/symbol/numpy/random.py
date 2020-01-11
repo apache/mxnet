@@ -21,7 +21,8 @@ from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
 
-__all__ = ['randint', 'uniform', 'normal', 'rand', 'shuffle', 'gamma']
+
+__all__ = ['randint', 'uniform', 'normal', 'rand', 'shuffle', 'gamma', 'exponential']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -345,6 +346,36 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
                           ctx=ctx, dtype=dtype, out=out)
 
     raise ValueError("Distribution parameters must be either _Symbol or numbers")
+
+
+def exponential(scale=1.0, size=None):
+    r"""Draw samples from an exponential distribution.
+    
+    Parameters
+    ----------
+    scale : float or array_like of floats
+        The scale parameter, :math:`\beta = 1/\lambda`. Must be
+        non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized exponential distribution.
+    """
+    from ..numpy import _Symbol as np_symbol
+    tensor_type_name = np_symbol
+    if size == ():
+        size = None
+    is_tensor = isinstance(scale, tensor_type_name)
+    if is_tensor:
+        return _npi.exponential(scale, scale=None, size=size)
+    else:
+        return _npi.exponential(scale=scale, size=size)
 
 
 def shuffle(x):

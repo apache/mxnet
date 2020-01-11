@@ -3433,6 +3433,32 @@ def test_np_random():
 
 @with_seed()
 @use_np
+def test_np_exponential():
+    class TestRandomExp(HybridBlock):
+        def __init__(self, shape):
+            super(TestRandomExp, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, scale):
+            return F.np.random.exponential(scale, self._shape)
+
+    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    for hybridize in [False, True]:
+        for shape in shapes:
+            test_exponential = TestRandomExp(shape)
+            if hybridize:
+                test_exponential.hybridize()
+            np_out = _np.random.exponential(size = shape)
+            mx_out = test_exponential(np.array([1]))
+    
+    for shape in shapes:
+        mx_out = np.random.exponential(np.array([1]), shape)
+        np_out = _np.random.exponential(np.array([1]).asnumpy(), shape)
+        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
+
+@with_seed()
+@use_np
 def test_np_randn():
     # Test shapes.
     shapes = [

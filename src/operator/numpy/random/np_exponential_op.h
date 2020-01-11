@@ -63,6 +63,31 @@ struct scalar_exponential_kernel {
   }
 };
 
+namespace mxnet_op{
+template <typename IType>
+struct check_legal_scale_kernel {
+  MSHADOW_XINLINE static void Map(index_t i, IType *scalar, float* flag) {
+    if (scalar[i] < 0.0) {
+      flag[0] = -1.0;
+    }
+  }
+};
+
+
+template <int ndim, typename IType, typename OType>
+struct exponential_kernel {
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  const Shape<ndim> &stride,
+                                  const Shape<ndim> &oshape,
+                                  IType *scales, float* threshold, OType *out) {
+    Shape<ndim> coord = unravel(i, oshape);
+    auto idx = static_cast<index_t>(dot(coord, stride));
+    out[i] =  -scales[idx] * log(threshold[i]);
+  }
+};
+
+}  // namespace mxnet_op
+
 template <typename xpu>
 void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
                          const OpContext &ctx,
@@ -72,19 +97,47 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyExponentialParam &param = nnvm::get<NumpyExponentialParam>(attrs.parsed);
-  CHECK_GE(param.scale.value(), 0.0) << "ValueError: expect scale >= 0";
   Stream<xpu> *s = ctx.get_stream<xpu>();
   index_t output_len = outputs[0].Size();
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
   Tensor<xpu, 1, float> workspace =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len), s);
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
+  Tensor<xpu, 1, float> uniform_tensor = workspace.Slice(0, output_len);
+  Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
+  float indicator_host = 1.0;
+  float *indicator_device_ptr = indicator_device.dptr_;
+  Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
   prnd->SampleUniform(&workspace, 0.0, 1.0);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    Kernel<scalar_exponential_kernel<DType>, xpu>::Launch(
-                                        s, outputs[0].Size(), param.scale.value(),
-                                        workspace.dptr_, outputs[0].dptr<DType>());
-  });
-  
+  if (param.scale.has_value()) {
+    CHECK_GE(param.scale.value(), 0.0) << "ValueError: expect scale >= 0";
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      Kernel<scalar_exponential_kernel<DType>, xpu>::Launch(
+                                          s, outputs[0].Size(), param.scale.value(),
+                                          uniform_tensor.dptr_, outputs[0].dptr<DType>());
+    });
+  } else {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+        Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
+            s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
+      });
+      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
+      CHECK_GE(indicator_host, 0.0)
+          << "ValueError: expect scale >= 0";
+    mxnet::TShape new_lshape, new_oshape;
+    int ndim = FillShape(inputs[0].shape_, inputs[0].shape_, outputs[0].shape_,
+                         &new_lshape, &new_lshape, &new_oshape);
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
+        BROADCAST_NDIM_SWITCH(ndim, NDim, {
+          Shape<NDim> oshape = new_oshape.get<NDim>();
+          Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());
+          Kernel<exponential_kernel<NDim, IType, OType>, xpu>::Launch(
+              s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
+              uniform_tensor.dptr_, outputs[0].dptr<OType>());
+        });
+      });
+    });
+  }
 }
 
 }  // namespace op

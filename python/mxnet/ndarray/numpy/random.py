@@ -23,7 +23,7 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle", 'gamma']
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle", 'gamma', 'exponential']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -317,6 +317,34 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
             return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
         else:
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
+
+
+def exponential(scale, size):
+    r"""Draw samples from an exponential distribution.
+    Parameters
+    ----------
+    scale : float or array_like of floats
+        The scale parameter, :math:`\beta = 1/\lambda`. Must be
+        non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized exponential distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    tensor_type_name = np_ndarray
+    if size == ():
+        size = None
+    is_tensor = isinstance(scale, tensor_type_name)
+    if is_tensor:
+        return _npi.exponential(scale, scale=None, size=size)
+    else:
+        return _npi.exponential(scale=scale, size=size)
 
 
 def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
