@@ -25,6 +25,7 @@
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nnvm/node_op_util.h"
 
 namespace mxnet {
 namespace op {
@@ -205,31 +206,23 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_softsign)
       // y = f(x) = softsign(x)
       // f'(x) = dy/dx = 1/(1 + |x|)^2
       // f''(x) = (-2/|x|) * softsign(x) * f'(x) = -2*x/(|x|*(1 + |x|)^3)
-      const std::unordered_map<std::string, std::string> neg_two = {{"scalar", "-2.0"}};
+      auto dydx = n->inputs[0];
       auto x = n->inputs[1];
       auto dldy_mul_dydx = nnvm::NodeEntry{n};
-      auto dydx = MakeNode("elemwise_div", n->attrs.name + "_dydx",
-                           {nnvm::NodeEntry{n}, n->inputs[0]}, nullptr, &n);
-      auto abs_x = MakeNode("abs", n->attrs.name + "_abs_x",
-                            {nnvm::NodeEntry{x}}, nullptr, &n);
-      auto r_abs_x = MakeNode("reciprocal", n->attrs.name + "_r_abs_x",
-                              {nnvm::NodeEntry{abs_x}}, nullptr, &n);
-      auto neg_two_r_abs_x = MakeNode("_mul_scalar", n->attrs.name + "_neg_two_r_abs_x",
-                                      {nnvm::NodeEntry{r_abs_x}}, &neg_two, &n);
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto dldy = op.div(dldy_mul_dydx, dydx);
+      auto abs_x = op.abs(x);
+      auto r_abs_x = op.reciprocal(abs_x);
+      auto neg_two_r_abs_x = op.mul(-2.0, r_abs_x);
       auto softsign_x = MakeNode("softsign", n->attrs.name + "_softsign_x",
                               {nnvm::NodeEntry{x}}, nullptr, &n);
-      auto softsign_mul_dydx = MakeNode("elemwise_mul", n->attrs.name + "_softsign_mul_dydx",
-                           {nnvm::NodeEntry{softsign_x}, dldy_mul_dydx}, nullptr, &n);
-      auto grad_grad_mid = MakeNode("elemwise_mul", n->attrs.name + "_grad_grad_mid",
-                                    {nnvm::NodeEntry{softsign_mul_dydx},
-                                     nnvm::NodeEntry{neg_two_r_abs_x}},
-                                    nullptr, &n);
+      auto softsign_mul_dydx = op.mul(nnvm::NodeEntry{softsign_x}, dldy_mul_dydx);
+      auto grad_grad_x = op.mul(softsign_mul_dydx, neg_two_r_abs_x);
 
       std::vector<nnvm::NodeEntry> ret;
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad",
-                                {ograds[0], nnvm::NodeEntry{dydx}}, nullptr, &n));
-      ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_in",
-                                {ograds[0], nnvm::NodeEntry{grad_grad_mid}}, nullptr, &n));
+      ret.emplace_back(op.mul(ograds[0], dldy));
+      ret.emplace_back(op.mul(ograds[0], grad_grad_x));
       return ret;
   });
 
