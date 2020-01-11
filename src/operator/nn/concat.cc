@@ -149,9 +149,10 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
     if (dtype == -1) {
       dtype = i;
     } else {
-      CHECK(i == dtype ||
-          i == -1) <<
-          "Non-uniform data type in Concat";
+      CHECK( i == dtype || i == -1) 
+          << "Non-uniform data type in Concat: " 
+          << "expected data type " << mxnet::op::type_string(dtype) 
+          << ", got data type " << mxnet::op::type_string(i);
     }
   }
 
