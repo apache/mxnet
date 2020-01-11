@@ -408,7 +408,8 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_verIDs, out_verIDs;
-      std::vector<int> in_ctx, out_ctx;
+      std::vector<int> in_dev_type, out_dev_type;
+      std::vector<int> in_dev_id, out_dev_id;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -417,7 +418,8 @@ int MXLoadLib(const char *path) {
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
         in_verIDs.push_back(inputs[i].version());
-        in_ctx.push_back(inputs[i].ctx().dev_mask());
+        in_dev_type.push_back(inputs[i].ctx().dev_mask());
+        in_dev_id.push_back(inputs[i].ctx().real_dev_id());
       }
 
       // convert output tensors to constituent parts
@@ -427,7 +429,8 @@ int MXLoadLib(const char *path) {
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
         out_verIDs.push_back(outputs[i].version());
-        out_ctx.push_back(outputs[i].ctx().dev_mask());
+        out_dev_type.push_back(outputs[i].ctx().dev_mask());
+        out_dev_id.push_back(outputs[i].ctx().real_dev_id());
       }
 
       // get memory resource
@@ -453,20 +456,19 @@ int MXLoadLib(const char *path) {
         return ptr;
       };
 
-      void* gpu_stream;
+      // pass the gpu stream associated with the context to custom library
+      void* gpu_stream = nullptr;
       if (inputs[i].ctx().dev_mask() == Context::kGPU) {
         mshadow::Stream<mxnet::gpu> *s = ctx.get_stream<mxnet::gpu>();
         gpu_stream = static_cast<void*>(mshadow::Stream<gpu>::GetStream(s));
-      } else {
-        gpu_stream = nullptr;
       }
 
       // call fcompute function
       CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                      in_shapes.data(), in_dims.data(), in_data.data(),
-                      in_types.data(), in_verIDs.data(), in_ctx.data(), in_data.size(),
-                      out_shapes.data(), out_dims.data(), out_data.data(),
-                      out_types.data(), out_verIDs.data(), out_ctx.data(), out_data.size(),
+                      in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                      in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
+                      out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                      out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                       cpu_malloc, &cpu_alloc, gpu_stream))
       << "Error calling FCompute for custom operator '" << name_str << "'";
 
@@ -598,6 +600,8 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_verIDs, out_verIDs;
+      std::vector<int> in_dev_type, out_dev_type;
+      std::vector<int> in_dev_id, out_dev_id;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -606,6 +610,8 @@ int MXLoadLib(const char *path) {
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
         in_verIDs.push_back(inputs[i].version());
+        in_dev_type.push_back(inputs[i].ctx().dev_mask());
+        in_dev_id.push_back(inputs[i].ctx().real_dev_id());
       }
 
       // convert output tensors to constituent parts
@@ -615,6 +621,8 @@ int MXLoadLib(const char *path) {
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
         out_verIDs.push_back(outputs[i].version());
+        out_dev_type.push_back(outputs[i].ctx().dev_mask());
+        out_dev_id.push_back(outputs[i].ctx().real_dev_id());
       }
 
       // get memory resource
@@ -646,11 +654,20 @@ int MXLoadLib(const char *path) {
       CHECK(state_op_inst != nullptr)
       << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
 
+      // pass the gpu stream associated with the context to custom library
+      void* gpu_stream = nullptr;
+      if (inputs[i].ctx().dev_mask() == Context::kGPU) {
+        mshadow::Stream<mxnet::gpu> *s = ctx.get_stream<mxnet::gpu>();
+        gpu_stream = static_cast<void*>(mshadow::Stream<gpu>::GetStream(s));
+      }
+
       // call fcompute function
-      CHECK(callFStatefulComp(is_forward, state_op_inst, in_shapes.data(), in_dims.data(),
-                              in_data.data(), in_types.data(), in_verIDs.data(), in_data.size(),
+      CHECK(callFStatefulComp(is_forward, state_op_inst,
+                              in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                              in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
                               out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                              out_verIDs.data(), out_data.size(), cpu_malloc, &cpu_alloc))
+                              out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
+                              cpu_malloc, &cpu_alloc, gpu_stream))
       << "Error calling FStatefulCompute for custom operator '" << name_str << "'";
     };
 
@@ -713,6 +730,8 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
       regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
                                         fstateful_forward, plevel);
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
+                                        fstateful_forward, plevel);
     } else {
       regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
       regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
@@ -732,8 +751,11 @@ int MXLoadLib(const char *path) {
         gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
                                             fstateful_backward, plevel);
+        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
+                                            fstateful_backward, plevel);
       } else {
         gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, plevel);
+        gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_lambda, plevel);
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");

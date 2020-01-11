@@ -203,29 +203,34 @@ enum MXDType {
   kUNSET = 100,
 };
 
+enum MXDevType {
+  MX_CPU = 1,
+  MX_GPU = 2,
+};
+
+typedef struct {
+  MXDevType dev_type;
+  int dev_id;
+} MXContext;
+
 enum MXReturnValue {
   MX_FAIL = 0,
   MX_SUCCESS = 1,
-};
-
-enum MXContext {
-  MX_CPU = 1,
-  MX_GPU = 2,
 };
 
 /*!
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), ctx(MX_CPU) {}
+  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), ctx({MX_CPU,0}) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
 
   /*! \brief populate internal tensor fields */
-  void setTensor(void *dptr, MXDType type, const int64_t* dims,
-                 int ndims, size_t vID, MXContext mx_ctx) {
+  void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
+                 size_t vID, MXContext mx_ctx) {
     data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx;
     shape.clear();
     for (int j = 0; j < ndims; j++) {
@@ -237,8 +242,8 @@ struct MXTensor {
   /*! \brief populate DLTensor fields */
   void setDLTensor() {
     dltensor.data = data_ptr;
-    dltensor.ctx.device_type = kDLCPU;
-    dltensor.ctx.device_id = 0;
+    dltensor.ctx.device_type = static_cast<DLDeviceType>(ctx.dev_type);
+    dltensor.ctx.device_id = ctx.dev_id;
     dltensor.ndim = shape.size();
     dltensor.shape = const_cast<int64_t*>(shape.data());
     dltensor.strides = NULL;
@@ -300,9 +305,9 @@ struct MXTensor {
   /*! \brief helper function to compare two MXTensors */
   inline bool isSame(const MXTensor &oth) const {
     return data_ptr == oth.data_ptr &&
-      dtype == oth.dtype &&
-      verID == oth.verID &&
-      shape == oth.shape;
+           dtype == oth.dtype &&
+           verID == oth.verID &&
+           shape == oth.shape;
   }
 
   // data is flatten 1D repr of tensor, elements are in continuous memory
@@ -315,6 +320,7 @@ struct MXTensor {
   // type can only be MXDType enum types
   MXDType dtype;
 
+  // context of MXTensor representing which device the tensor data locates
   MXContext ctx;
 
   // version number updated if the tensor has changed since the last use by custom op
@@ -343,6 +349,7 @@ class OpResource {
       return cpu_malloc(cpu_alloc, size);
     }
 
+    /*! \brief return the gpu stream object */
     void* get_gpu_stream() {
       return gpu_stream;
     }
@@ -352,7 +359,7 @@ class OpResource {
     xpu_malloc_t cpu_malloc;
      /*! \brief lambda function to return allocated memory handle */
     void* cpu_alloc;
-
+     /*! \brief stream object passed from MXNet */
     void* gpu_stream;
 };
 
@@ -779,8 +786,8 @@ typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* co
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                             const int64_t**, int*, void**, int*, size_t*, int*, int,
-                             const int64_t**, int*, void**, int*, size_t*, int*, int,
+                             const int64_t**, int*, void**, int*, size_t*, int*, int*, int,
+                             const int64_t**, int*, void**, int*, size_t*, int*, int*, int,
                              xpu_malloc_t, void*, void*);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
@@ -792,9 +799,12 @@ typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const 
                                      void**);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
-typedef int (*opCallFStatefulComp_t)(int, void*, const int64_t**, int*, void**, int*, size_t*,
-                                     int, const int64_t**, int*, void**, int*, size_t*,
-                                     int, xpu_malloc_t, void*);
+typedef int (*opCallFStatefulComp_t)(int, void*,
+                                     const int64_t**, int*, void**, int*,
+                                     size_t*, int*, int*, int,
+                                     const int64_t**, int*, void**, int*,
+                                     size_t*, int*, int*, int,
+                                     xpu_malloc_t, void*, void*);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
@@ -982,12 +992,11 @@ extern "C" {
 #else
   int
 #endif
-  _opCallFCompute(fcomp_t fcomp, const char* const* keys,
-                  const char* const* vals, int num,
-                  const int64_t** inshapes, int* indims,
-                  void** indata, int* intypes, size_t* inIDs, int* inctx, int num_in,
-                  const int64_t** outshapes, int* outdims,
-                  void** outdata, int* outtypes, size_t* outIDs, int* outctx, int num_out,
+  _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
+                  const int64_t** inshapes, int* indims, void** indata, int* intypes,
+                  size_t* inIDs, int* indev_type, int* indev_id, int num_in,
+                  const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
+                  size_t* outIDs, int* outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
@@ -998,15 +1007,17 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
+      MXContext inctx = {(MXDevType)indev_type[i], indev_id[i]};
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], (MXContext)inctx[i]);
+                          inIDs[i], inctx);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
+      MXContext outctx = {(MXDevType)outdev_type[i], outdev_id[i]};
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], (MXContext)outctx[i]);
+                           outIDs[i], outctx);
     }
 
     OpResource res(cpu_malloc, cpu_alloc, stream);
@@ -1073,25 +1084,29 @@ extern "C" {
   int
 #endif
   _opCallFStatefulCompute(int is_forward, void* state_op,
-                          const int64_t** inshapes, int* indims,
-                          void** indata, int* intypes, size_t* inIDs, int num_in,
-                          const int64_t** outshapes, int* outdims,
-                          void** outdata, int* outtypes, size_t* outIDs, int num_out,
-                          xpu_malloc_t cpu_malloc, void* cpu_alloc) {
+                          const int64_t** inshapes, int* indims, void** indata, int* intypes,
+                          size_t* inIDs, int* indev_type, int* indev_id, int num_in,
+                          const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
+                          size_t* outIDs, int* outdev_type, int* outdev_id, int num_out,
+                          xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
+      MXContext inctx = {(MXDevType)indev_type[i], indev_id[i]};
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], MX_CPU);
+                          inIDs[i], inctx);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
+      MXContext outctx = {(MXDevType)outdev_type[i], outdev_id[i]};
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], MX_CPU);
+                           outIDs[i], outctx);
     }
-    OpResource res(cpu_malloc, cpu_alloc, nullptr);
+
+    OpResource res(cpu_malloc, cpu_alloc, stream);
+
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
       return op_ptr->Forward(inputs, outputs, res);

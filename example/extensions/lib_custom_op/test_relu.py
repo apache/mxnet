@@ -32,14 +32,35 @@ if (os.name=='posix'):
     path = os.path.abspath('librelu_lib.so')
     mx.library.load(path)
 
-a = mx.nd.uniform(shape=(1000,1000,1000), ctx=mx.cpu())
-b = mx.nd.uniform(shape=(1000,1000,1000), ctx=mx.gpu())
+a = mx.nd.array([[-2,-1],[1,2]], ctx=mx.cpu())
+b = mx.nd.array([[-2,-1],[1,2]], ctx=mx.gpu())
 
 print("--------start ndarray compute---------")
+print(mx.nd.my_relu(a))
+print(mx.nd.my_relu(b))
+
+print("--------start symbolic compute--------")
+c = mx.sym.Variable('c')
+d = mx.sym.my_relu(c)
+in_grad = [mx.nd.empty((2,2), ctx=mx.gpu())]
+exe = d.bind(ctx=mx.gpu(), args={'c':b}, args_grad=in_grad)
+out = exe.forward()
+print(out)
+
+print("--------start backward compute--------")
+out_grad = mx.nd.ones((2,2), ctx=mx.gpu())
+exe.backward([out_grad])
+print(in_grad)
+
+print("--------start stress test---------")
+a = mx.nd.uniform(shape=(1000,1000,100), ctx=mx.cpu())
+b = mx.nd.uniform(shape=(1000,1000,100), ctx=mx.gpu())
 t1 = time.time()
 r1 = mx.nd.my_relu(a)
 t2 = time.time()
 r2 = mx.nd.my_relu(b)
 t3 = time.time()
+print("CPU running time:")
 print(t2 - t1)
+print("GPU running time:")
 print(t3 - t2)
