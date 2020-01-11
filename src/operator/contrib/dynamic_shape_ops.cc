@@ -75,6 +75,14 @@ bool DynamicReshapeBackwardStorageType(const nnvm::NodeAttrs& attrs,
 NNVM_REGISTER_OP(_contrib_dynamic_reshape)
 .describe(R"code(
 Experimental CPU-only support for reshape operator with dynamic shape.
+
+Accepts 2 inputs - data and shape.
+The output data has the
+Example::
+   data = mx.nd.array(np.random.normal(0,1,(2,3,5,5)))
+   shape = mx.nd.array((0,-1))
+   out = mx.sym.contrib.dynamic_reshape(data = data, shape = shape)
+   // out will be of shape (2,75)
 )code" ADD_FILELINE)
 .set_num_inputs(2)
 .set_num_outputs(1)
