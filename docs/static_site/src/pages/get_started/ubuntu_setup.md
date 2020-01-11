@@ -81,8 +81,7 @@ On Ubuntu versions 16.04 or later, you need the following dependencies:
 **Step 1:** Install prerequisite packages.
 ```bash
     sudo apt-get update
-    sudo apt-get install -y build-essential git ninja-build ccache python3-pip libopenblas-dev libopencv-dev
-    pip3 install --user --upgrade "cmake>=3.13.2"  # Instead of using pip, you could also manually install cmake from https://cmake.org
+    sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
 ```
 
 Instead of `libopenblas-dev` you may also choose a different math library.
@@ -92,6 +91,14 @@ Selection](build_from_source#math-library-selection) section.
 `libopencv-dev` is an optional dependency. You can delete it from above `apt-get
 install` line and build MXNet without OpenCV support by passing
 `-DUSE_OPENCV=OFF` to the `cmake` command below.
+
+Note: CMake 3.13 or higher is required. If you are running an older version of
+CMake, you will see an error message like `CMake 3.13 or higher is required. You
+are running version 3.10.2` during Step 3. In that case please update CMake on
+your system. You can download and install latest CMake from https://cmake.org or
+via `pip3` with `pip3 install --user --upgrade "cmake>=3.13.2"`. If `pip3` is
+not available on your system, you can install it via `sudo apt-get install -y
+python3-pip`.
 
 **Step 2:** Download MXNet sources
 
@@ -109,7 +116,7 @@ For a CPU-only build with OpenBLAS math library run:
 ```bash
     rm -rf build
     mkdir -p build && cd build
-    ~/.local/bin/cmake -GNinja \
+    cmake -GNinja \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -129,7 +136,7 @@ respectively. Then run:
 ```bash
     rm -rf build
     mkdir -p build && cd build
-    ~/.local/bin/cmake -GNinja \
+    cmake -GNinja \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
@@ -146,7 +153,7 @@ For a GPU-enabled build make sure you have installed the
 ```bash
     rm -rf build
     mkdir -p build && cd build
-    ~/.local/bin/cmake -GNinja \
+    cmake -GNinja \
         -DUSE_CUDA=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
