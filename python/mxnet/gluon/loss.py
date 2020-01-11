@@ -23,7 +23,7 @@ __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SigmoidBinaryCrossEntropyLoss', 'SigmoidBCELoss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',
            'KLDivLoss', 'CTCLoss', 'HuberLoss', 'HingeLoss',
-           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss', 'CosineEmbeddingLoss']
+           'SquaredHingeLoss', 'LogisticLoss', 'TripletLoss', 'PoissonNLLLoss', 'CosineEmbeddingLoss', 'SDMLLoss']
 
 import numpy as np
 from .. import ndarray
@@ -932,7 +932,7 @@ class CosineEmbeddingLoss(Loss):
         return (x_dot_y / F.broadcast_maximum(x_norm * y_norm, eps_arr))
 
 
-class BatchwiseSDMLoss(Loss):
+class SDMLLoss(Loss):
     r"""Calculates Batchwise Smoothed Deep Metric Learning (SDML) Loss given two input tensors and a smoothing weight
     SDM Loss learns similarity between paired samples by using unpaired samples in the minibatch as potential negative examples.
 
@@ -966,10 +966,10 @@ class BatchwiseSDMLoss(Loss):
         - **loss**: loss tensor with shape (batch_size,).
     """
 
-    def __init__(self, smoothing_factor=0.3, weight=1., batch_axis=0,  **kwargs):
-        super(BatchWiseKLLoss, self).__init__(weight, batch_axis,  **kwargs)
+    def __init__(self, smoothing_parameter=0.3, weight=1., batch_axis=0,  **kwargs):
+        super(SDMLLoss, self).__init__(weight, batch_axis,  **kwargs)
         self.kl_loss = KLDivLoss(from_logits=True)
-        self.smoothing_factor = smoothing_factor # Smoothing probability mass
+        self.smoothing_parameter = smoothing_parameter # Smoothing probability mass
 
     def _compute_distances(self, F, x1, x2):
         """

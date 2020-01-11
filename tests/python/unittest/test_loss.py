@@ -349,6 +349,33 @@ def test_triplet_loss():
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
 @with_seed()
+def test_sdml_loss():
+    col_1 = mx.nd.array([[0.1, 0.2, 0.3, 0.4],
+                         [0.2, 0.1, 0.3, 0.4],
+                         [0.3, 0.2, 0.1, 0.4],
+                         [0.4, 0.3, 0.2, 0.1]])
+
+    col_2_pos = mx.nd.array([[0.1, 0.2, 0.3, 0.4],
+                             [0.2, 0.1, 0.3, 0.4],
+                             [0.3, 0.2, 0.1, 0.4],
+                             [0.4, 0.3, 0.2, 0.1]])
+
+    col_2_neg = mx.nd.array([[0.4, 0.3, 0.2, 0.1],
+                             [0.1, 0.2, 0.3, 0.4],
+                             [0.2, 0.1, 0.3, 0.4],
+                             [0.3, 0.2, 0.1, 0.4]])
+
+    Loss = gluon.loss.SDMLLoss(0.1)
+    loss_pos = Loss(col_1, col_2_pos)
+    loss_neg = Loss(col_1, col_2_neg)        
+    precomputed_pos = mx.nd.array([0.88932925, 0.8974053,  0.8959585,  0.84610945])
+    precomputed_neg = mx.nd.array([1.0626626,  0.91473866, 0.94795847, 0.9501095 ])
+    assert_almost_equal(loss_pos, precomputed_pos)
+    assert_almost_equal(loss_neg, precomputed_neg)
+
+
+    
+@with_seed()
 def test_cosine_loss():
     #Generating samples
     input1 = mx.nd.random.randn(3, 2)
