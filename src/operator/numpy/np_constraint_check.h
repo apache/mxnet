@@ -47,9 +47,9 @@ struct ConstraintCheckParam : public dmlc::Parameter<ConstraintCheckParam> {
 
 template <typename xpu>
 void ConstraintCheckForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   CHECK_EQ(inputs.size(), 1U);

@@ -33,8 +33,8 @@ void GetReduceOutput<cpu>(mshadow::Stream<cpu> *s, const TBlob &output_blob, boo
 }
 
 inline bool ConstraintCheckShape(const nnvm::NodeAttrs& attrs,
-                        std::vector<TShape>* in_attrs,
-                        std::vector<TShape>* out_attrs) {
+                                 std::vector<TShape>* in_attrs,
+                                 std::vector<TShape>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   if (!shape_is_known(in_attrs->at(0))) {
@@ -45,8 +45,8 @@ inline bool ConstraintCheckShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool ConstraintCheckType(const nnvm::NodeAttrs& attrs,
-                       std::vector<int>* in_attrs,
-                       std::vector<int>* out_attrs) {
+                                std::vector<int>* in_attrs,
+                                std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK(in_attrs->at(0) == mshadow::kBool);
