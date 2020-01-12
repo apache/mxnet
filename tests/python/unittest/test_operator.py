@@ -5419,7 +5419,8 @@ def test_softmax_with_length():
         atol = 1e-4 if dtype == np.float16 else 1e-5
         check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
         check_symbolic_backward(mx_sym, location, [np.ones(shape, dtype=dtype)],
-                                [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)], rtol=1e-2, atol=1e-3, dtype="asnumpy")
+                                [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)],
+                                rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3, dtype="asnumpy")
 
 
 @with_seed()
