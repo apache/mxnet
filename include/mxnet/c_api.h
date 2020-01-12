@@ -723,7 +723,7 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                                       const char*** out_names);
 
 /*!
- * \brief Perform a synchronize copy from a continugous CPU memory region.
+ * \brief Perform a synchronize copy from a contiguous CPU memory region.
  *
  *  This function will call WaitToWrite before the copy is performed.
  *  This is useful to copy data from existing memory region that are
@@ -737,7 +737,7 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
                                        const void *data,
                                        size_t size);
 /*!
- * \brief Perform a synchronize copyto a continugous CPU memory region.
+ * \brief Perform a synchronize copyto a contiguous CPU memory region.
  *
  *  This function will call WaitToRead before the copy is performed.
  *  This is useful to copy data from existing memory region that are
