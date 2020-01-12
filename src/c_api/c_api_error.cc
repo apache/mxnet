@@ -89,7 +89,7 @@ std::string NormalizeError(std::string err_msg) {
     if (!getline(is, file_name, ':')) {
       return false;
     } else {
-      if (is.peek() == '\\') {
+      if (is.peek() == '\\' || is.peek() == '/') {
         // windows path
         if (!getline(is, line, ':')) return false;
         file_name = file_name + ':' + line;
@@ -191,6 +191,11 @@ std::string NormalizeError(std::string err_msg) {
   return err_msg;
 }
 #endif
+
+int MXAPIHandleException(const std::exception &e) {
+  MXAPISetLastError(NormalizeError(e.what()).c_str());
+  return -1;
+}
 
 const char *MXGetLastError() {
   return NNGetLastError();
