@@ -79,6 +79,7 @@ It is recommended that you review the general [build from source](build_from_sou
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
 **Step 1:** Install prerequisite packages.
+
 ```bash
     sudo apt-get update
     sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
@@ -242,27 +243,32 @@ tar xvf julia-10.tar.gz
 ```
 
 Test Julia.
+
 ```bash
 cd julia-1.0.3/bin
 julia -e 'using InteractiveUtils; versioninfo()'
 ```
 
 If you're still getting the old version, remove it.
+
 ```bash
 sudo apt remove julia
 ```
 
 Update your PATH to have Julia's new location. Add this to your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile`.
+
 ```bash
 export PATH=~/julia/julia-1.0.3/bin:$PATH
 ```
 
 Validate your PATH.
+
 ```bash
 echo $PATH
 ```
 
 Validate Julia works and is the expected version.
+
 ```bash
 julia -e 'using InteractiveUtils; versioninfo()'
 ```
@@ -272,22 +278,26 @@ julia -e 'using InteractiveUtils; versioninfo()'
 **For each of the following environment variables, add the commands to your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile` to make them persist.**
 
 Create a `julia-depot` folder and environment variable.
+
 ```bash
 mkdir julia-depot
 export JULIA_DEPOT_PATH=$HOME/julia/julia-depot
 ```
 
 To use the Julia binding with an existing `libmxnet` installation, set the `MXNET_HOME` environment variable to the MXNet source root. For example:
+
 ```bash
 export MXNET_HOME=$HOME/incubator-mxnet
 ```
 
 Now set the `LD_LIBRARY_PATH` environment variable to where `libmxnet.so` is found. If you can't find it, you might have skipped the building MXNet step. Go back and [build MXNet](#build-the-shared-library) first. For example:
+
 ```bash
 export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
 ```
 
 Verify the location of `libjemalloc.so` and set the `LD_PRELOAD` environment variable.
+
 ```bash
 export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so:$LD_PRELOAD
 ```
