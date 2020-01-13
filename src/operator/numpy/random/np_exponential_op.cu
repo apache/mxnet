@@ -23,13 +23,13 @@
  * \brief Operator for numpy sampling from exponential distributions
  */
 
- #include "./np_exponential_op.h"
+#include "./np_exponential_op.h"
 
- namespace mxnet {
- namespace op {
- 
- NNVM_REGISTER_OP(_npi_exponential)
- .set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
- 
- }  // namespace op
- }  // namespace mxnet
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(_npi_exponential)
+.set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet

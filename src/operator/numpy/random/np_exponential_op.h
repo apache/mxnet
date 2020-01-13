@@ -63,7 +63,8 @@ struct scalar_exponential_kernel {
   }
 };
 
-namespace mxnet_op{
+namespace mxnet_op {
+
 template <typename IType>
 struct check_legal_scale_kernel {
   MSHADOW_XINLINE static void Map(index_t i, IType *scalar, float* flag) {
@@ -143,4 +144,4 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_BERNOULLI_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_EXPONENTIAL_OP_H_

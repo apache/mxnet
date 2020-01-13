@@ -327,7 +327,7 @@ def rand(*size, **kwargs):
 
 def exponential(scale=1.0, size=None):
     r"""Draw samples from an exponential distribution.
-    
+
     Parameters
     ----------
     scale : float or array_like of floats
