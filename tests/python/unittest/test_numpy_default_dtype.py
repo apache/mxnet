@@ -56,6 +56,7 @@ _NUMPY_DTYPE_DEFAULT_FUNC_LIST = [
     'hanning',
     'hamming',
     'blackman',
+    'gamma',
     'random.uniform',
     'random.normal',
     'true_divide'
@@ -119,6 +120,10 @@ def _add_dtype_workload_hamming():
     DtypeOpArgMngr.add_workload('hamming', 3)
 
 
+def _add_dtype_workload_gamma():
+    DtypeOpArgMngr.add_workload('gamma', 3)
+
+
 def _add_dtype_workload_blackman():
     DtypeOpArgMngr.add_workload('blackman', 3)
 
@@ -151,6 +156,7 @@ def _prepare_workloads():
     _add_dtype_workload_hanning()
     _add_dtype_workload_hamming()
     _add_dtype_workload_blackman()
+    _add_dtype_workload_gamma()
     _add_dtype_workload_random_uniform()
     _add_dtype_workload_random_normal()
     _add_dtype_workload_true_divide()

@@ -498,8 +498,6 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(shape, np_symbol), isinstance(scale, np_symbol))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if out is not None:
