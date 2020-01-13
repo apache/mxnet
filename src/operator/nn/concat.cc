@@ -145,13 +145,13 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
   int dtype = -1;
 
   // checks uniformity of input
-  for (size_t i =0; i<in_type->size(); ++i) {
+  for (size_t i =0; i < in_type->size(); ++i) {
     if (dtype == -1) {
       dtype = in_type->at(i);
     } else {
-      CHECK( in_type->at(i) == dtype || in_type->at(i) == -1) 
+      CHECK(in_type->at(i) == dtype || in_type->at(i) == -1)
           << "Non-uniform data type in "  << attrs.op->name
-          << ", expected data type " << mxnet::op::type_string(dtype) 
+          << ", expected data type " << mxnet::op::type_string(dtype)
           << ", got data type " << mxnet::op::type_string(in_type->at(i))
           << " for input " << i;
     }
