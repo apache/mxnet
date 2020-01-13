@@ -29,8 +29,8 @@ namespace mxnet {
 namespace op {
 
 inline bool DynamicReshapeType(const nnvm::NodeAttrs& attrs,
-                        std::vector<int> *in_attrs,
-                        std::vector<int> *out_attrs) {
+                               std::vector<index_t> *in_attrs,
+                               std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
@@ -39,36 +39,36 @@ inline bool DynamicReshapeType(const nnvm::NodeAttrs& attrs,
 }
 
 bool DynamicReshapeStorageType(const nnvm::NodeAttrs& attrs,
-                        const int dev_mask,
-                        DispatchMode* dispatch_mode,
-                        std::vector<int> *in_attrs,
-                        std::vector<int> *out_attrs) {
+                               const int dev_mask,
+                               DispatchMode* dispatch_mode,
+                               std::vector<int> *in_attrs,
+                               std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2);
   CHECK_EQ(out_attrs->size(), 1);
-  for (int &attr : *in_attrs) {
-    CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, kDefaultStorage);
   }
-  for (int &attr : *out_attrs) {
-    attr = kDefaultStorage;
+  for (size_t i = 0; i < out_attrs->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, kDefaultStorage);
   }
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
 
 bool DynamicReshapeBackwardStorageType(const nnvm::NodeAttrs& attrs,
-                        const int dev_mask,
-                        DispatchMode* dispatch_mode,
-                        std::vector<int> *in_attrs,
-                        std::vector<int> *out_attrs) {
+                                       const int dev_mask,
+                                       DispatchMode* dispatch_mode,
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1);
   CHECK_EQ(out_attrs->size(), 2);
-  for (int &attr : *in_attrs) {
-    CHECK_EQ(attr, kDefaultStorage) << "Only default storage is supported";
+  for (size_t i = 0; i < in_attrs->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, i, kDefaultStorage);
   }
-  for (int &attr : *out_attrs) {
-    attr = kDefaultStorage;
+  for (size_t i = 0; i < out_attrs->size(); ++i) {
+    STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, i, kDefaultStorage);
   }
-  *dispatch_mode = DispatchMode::kFComputeEx;
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
   return true;
 }
 

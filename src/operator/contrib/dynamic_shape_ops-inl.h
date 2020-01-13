@@ -43,8 +43,8 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   const NDArray &out = outputs[0];
   const NDArray &idx = inputs[1];
   size_t idx_size = idx.shape()[0];
-  mxnet::TShape shapevalue = mxnet::TShape(idx_size, 0);
-  std::vector<int> shapev(idx_size, 0);
+  mxnet::TShape shape_value = mxnet::TShape(idx_size, 0);
+  std::vector<index_t> shapev(idx_size, 0);
 
   // Copy the target shape that is provided in inputs[1]
   // to the vector shapev
@@ -54,15 +54,15 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
       shapev[i] = idx_dptr[i];
     }
   });
-  shapevalue = InferReshapeShape(mxnet::Tuple<int>(shapev), inputs[0].shape(), false);
-  const_cast<NDArray &>(out).Init(shapevalue);
+  shape_value = InferReshapeShape(mxnet::Tuple<index_t>(shapev), inputs[0].shape(), false);
+  const_cast<NDArray &>(out).Init(shape_value);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
           s, inputs[0].data().Size(), out.data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
-          });
+  });
 }
 
 template<typename xpu>
@@ -79,7 +79,7 @@ inline void DynamicReshapeBackward(const nnvm::NodeAttrs& attrs,
       mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
           s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
-          });
+  });
 }
 
 }  // namespace op

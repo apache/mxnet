@@ -22,7 +22,6 @@ import mxnet as mx
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
-from common import with_seed
 from mxnet.test_utils import *
 from common import with_seed, assert_raises_cudnn_not_satisfied
 import unittest
