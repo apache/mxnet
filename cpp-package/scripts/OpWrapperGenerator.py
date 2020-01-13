@@ -388,7 +388,7 @@ if __name__ == "__main__":
     try:
         # generate file header
         patternStr = ("/*!\n"
-                      "*  Copyright (c) 2019 by Contributors\n"
+                      "*  Copyright (c) 2020 by Contributors\n"
                       "* \\file op.h\n"
                       "* \\brief definition of all the operators\n"
                       "* \\author Chuntao Hong, Xin Li\n"
