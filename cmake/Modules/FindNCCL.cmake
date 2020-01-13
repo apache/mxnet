@@ -43,6 +43,18 @@ find_path(NCCL_INCLUDE_DIRS
   $ENV{NCCL_DIR}/include
   )
 
+# if CUDA_TOOLKIT_ROOT_DIR is not specified, try symlink
+if (NOT CUDA_TOOLKIT_ROOT_DIR)
+  if (UNIX)
+    set (search_paths "/usr/local/cuda")
+  endif()
+
+  find_path(NCCL_INCLUDE_DIRS
+  NAMES nccl.h
+  PATHS ${search_paths}
+  )
+endif()
+
 find_library(NCCL_LIBRARIES
   NAMES nccl
   HINTS
