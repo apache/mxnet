@@ -43,8 +43,8 @@ find_path(NCCL_INCLUDE_DIRS
   $ENV{NCCL_DIR}/include
   )
 
-# if CUDA_TOOLKIT_ROOT_DIR is not specified, try symlink
-if (NOT CUDA_TOOLKIT_ROOT_DIR)
+# if CUDAToolkit_FOUND is not found, try default location 
+if (NOT CUDAToolkit_FOUND)
   if (UNIX)
     set (search_paths "/usr/local/cuda")
 
