@@ -47,12 +47,13 @@ find_path(NCCL_INCLUDE_DIRS
 if (NOT CUDA_TOOLKIT_ROOT_DIR)
   if (UNIX)
     set (search_paths "/usr/local/cuda")
-  endif()
 
-  find_path(NCCL_INCLUDE_DIRS
-  NAMES nccl.h
-  PATHS ${search_paths}
-  )
+    find_path(NCCL_INCLUDE_DIRS
+    NAMES nccl.h
+    PATHS ${search_paths}
+    PATH_SUFFIXES include
+    )
+  endif()
 endif()
 
 find_library(NCCL_LIBRARIES
