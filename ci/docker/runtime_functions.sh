@@ -1522,7 +1522,9 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    nosetests-3.4 tests/nightly/test_large_array.py
+    nosetests-3.4 tests/nightly/test_large_array.py:test_tensor
+    nosetests-3.4 tests/nightly/test_large_array.py:test_nn
+    nosetests-3.4 tests/nightly/test_large_array.py:test_basic
 }
 
 #Tests Amalgamation Build with 5 different sets of flags
