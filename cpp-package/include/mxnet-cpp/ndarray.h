@@ -251,7 +251,7 @@ class NDArray {
   NDArray &operator%=(const NDArray &src);
   NDArray ArgmaxChannel();
   /*!
-  * \brief Do a synchronize copy from a continugous CPU memory region.
+  * \brief Do a synchronize copy from a contiguous CPU memory region.
   *
   *  This function will call WaitToWrite before the copy is performed.
   *  This is useful to copy data from existing memory region that are
@@ -262,7 +262,7 @@ class NDArray {
   */
   void SyncCopyFromCPU(const mx_float *data, size_t size);
   /*!
-  * \brief Do a synchronize copy from a continugous CPU memory region.
+  * \brief Do a synchronize copy from a contiguous CPU memory region.
   *
   *  This function will call WaitToWrite before the copy is performed.
   *  This is useful to copy data from existing memory region that are
@@ -272,7 +272,7 @@ class NDArray {
   */
   void SyncCopyFromCPU(const std::vector<mx_float> &data);
   /*!
-  * \brief Do a synchronize copy to a continugous CPU memory region.
+  * \brief Do a synchronize copy to a contiguous CPU memory region.
   *
   *  This function will call WaitToRead before the copy is performed.
   *  This is useful to copy data from existing memory region that are
@@ -283,7 +283,7 @@ class NDArray {
   */
   void SyncCopyToCPU(mx_float *data, size_t size = 0);
   /*!
-  * \brief Do a synchronize copy to a continugous CPU memory region.
+  * \brief Do a synchronize copy to a contiguous CPU memory region.
   *
   *  This function will call WaitToRead before the copy is performed.
   *  This is useful to copy data from existing memory region that are

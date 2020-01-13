@@ -1533,6 +1533,15 @@ def test_np_broadcast_to():
         def hybrid_forward(self, F, x):
             return F.np.broadcast_to(x, self._dst_shape)
 
+    class TestScalarBroadcastTo(HybridBlock):
+        def __init__(self, scalar, dst_shape):
+            super(TestScalarBroadcastTo, self).__init__()
+            self._scalar = scalar
+            self._dst_shape = dst_shape
+
+        def hybrid_forward(self, F, x):
+            return F.np.broadcast_to(self._scalar, self._dst_shape)
+
     shapes = [
         ((), (1, 2, 4, 5)),
         ((1,), (4, 5, 6)),
@@ -1557,6 +1566,17 @@ def test_np_broadcast_to():
             ret.backward()
             expected_grad = collapse_sum_like(_np.ones_like(expected_ret), src_shape)
             assert_almost_equal(a_mx.grad.asnumpy(), expected_grad, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+    # Test scalar case
+    scalar = 1.0
+    for _, dst_shape in shapes:
+        for hybridize in [True, False]:
+            test_scalar_broadcast_to = TestScalarBroadcastTo(scalar, dst_shape)
+            expected_ret = _np.broadcast_to(scalar, dst_shape)
+            with mx.autograd.record():
+                # `np.empty(())` serves as a dummpy input
+                ret = test_scalar_broadcast_to(np.empty(()))
+            assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @with_seed()
@@ -3259,34 +3279,44 @@ def test_npx_sample_n():
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
-    op_names = ['uniform', 'normal']
+    op_names = ['uniform', 'normal', 'gamma']
     for shape in shapes:
         for dtype in dtypes:
             for op_name in op_names:
                 op = getattr(np.random, op_name, None)
                 assert op is not None
-                out = op(size=shape, dtype=dtype)
+                if op_name == 'gamma':
+                    out = op(1, size=shape, dtype=dtype)
+                else:
+                    out = op(size=shape, dtype=dtype)
                 expected_shape = shape
                 if not isinstance(shape, tuple):
                     expected_shape = () if shape is None else (shape,)
                 assert out.shape == expected_shape
 
     class TestRandom(HybridBlock):
-        def __init__(self, shape, op_name):
+        def __init__(self, shape, op_name, param=None):
             super(TestRandom, self).__init__()
             self._shape = shape
             self._op_name = op_name
+            # In case parameters are not optional
+            self._param = param
 
         def hybrid_forward(self, F, x):
             op = getattr(F.np.random, self._op_name, None)
             assert op is not None
-            return x + op(size=shape)
+            if self._param is not None:
+                return x + op(self._param, size=self._shape)
+            return x + op(size=self._shape)
 
     x = np.ones(())
     for op_name in op_names:
         for shape in shapes:
             for hybridize in [False, True]:
-                net = TestRandom(shape, op_name)
+                if op_name == "gamma":
+                    net = TestRandom(shape, op_name, 1)
+                else:
+                    net = TestRandom(shape, op_name)
                 if hybridize:
                     net.hybridize()
                 out = net(x)

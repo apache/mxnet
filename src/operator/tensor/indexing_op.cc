@@ -435,6 +435,65 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
   });
 }
 
+/*
+ * \brief check if any of the indices is out of bound
+ * \param s the stream
+ * \param idx_ptr the indices on the stream
+ * \param N the number of indices in an axis
+ * \param M the number of axises to exmaine
+ * \param mshape the array that stores shape for each dimension
+ * \param is_valid_dim_ptr the temparary workspace that contains out-of-bound indices
+ */
+template<typename DType>
+void GatherNDCheckBoundCPU(mshadow::Stream<cpu> *s, const DType* idx_ptr, index_t N,
+                        index_t M, const mshadow::Shape<10> mshape, DType* is_valid_dim_ptr) {
+  using namespace mxnet_op;
+  Kernel<set_zero, cpu>::Launch(s, M, is_valid_dim_ptr);
+  Kernel<is_valid_check_gather_nd, cpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
+  for (int m = 0; m < M; m++) {
+    if (is_valid_dim_ptr[m] > mshape[m] - 1 || is_valid_dim_ptr[m] < - mshape[m]) {
+      LOG(FATAL)<< "IndexError: index " << is_valid_dim_ptr[m] << " is out of bounds for axis "
+        << m << " with size " << mshape[m];
+    }
+  }
+}
+
+void GatherNDForwardCPU(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  const mxnet::TShape& dshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = dshape.ProdShape(M, dshape.ndim());
+  mshadow::Shape<10> strides;
+  mshadow::Shape<10> mshape;
+  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+    strides[i] = stride;
+    mshape[i] = dshape[i];
+  }
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      // check whether indices are out of bound
+      IType* idx_ptr = inputs[1].dptr<IType>();
+      Tensor<cpu, 1, IType> workspace =
+        ctx.requested[0].get_space_typed<cpu, 1, IType>(Shape1(M), s);
+      IType* is_valid_dim_ptr = reinterpret_cast<IType*>(workspace.dptr_);
+      GatherNDCheckBoundCPU(s, idx_ptr, N, M, mshape, is_valid_dim_ptr);
+      Kernel<gather_nd, cpu>::Launch(
+        s, N, req[0], N, M, K, strides, mshape, outputs[0].dptr<DType>(),
+        inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
+    });
+  });
+}
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
@@ -872,7 +931,11 @@ Examples::
   })
 .set_attr<mxnet::FInferShape>("FInferShape", GatherNDShape)
 .set_attr<nnvm::FInferType>("FInferType", GatherNDType)
-.set_attr<FCompute>("FCompute<cpu>", GatherNDForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", GatherNDForwardCPU)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();

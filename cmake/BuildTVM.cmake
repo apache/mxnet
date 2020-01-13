@@ -139,3 +139,6 @@ set(USE_RELAY_DEBUG OFF)
 
 # Use OPENMP thread pool to be compatible with MXNet
 set(USE_OPENMP ON)
+
+# Disable USE_MKLDNN for TVM
+set(USE_MKLDNN OFF)
