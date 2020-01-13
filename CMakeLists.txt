@@ -87,6 +87,10 @@ message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERA
 project(mxnet C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
+  if (NOT MSVC AND (NOT DEFINED CMAKE_CUDA_COMPILER OR "${CMAKE_CUDA_COMPILER}" STREQUAL "CMAKE_CUDA_COMPILER-NOTFOUND"))
+    set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
+    message(WARNING "CMAKE_CUDA_COMPILER guessed: ${CMAKE_CUDA_COMPILER}")
+  endif()
   enable_language(CUDA)
   set(CMAKE_CUDA_STANDARD 11)
   include(CheckCXXCompilerFlag)
@@ -591,7 +595,6 @@ if(USE_CUDA)
   endforeach()
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
-
 
   find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand
     OPTIONAL_COMPONENTS nvToolsExt nvrtc)
