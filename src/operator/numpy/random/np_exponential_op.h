@@ -128,7 +128,7 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
     int ndim = FillShape(inputs[0].shape_, inputs[0].shape_, outputs[0].shape_,
                          &new_lshape, &new_lshape, &new_oshape);
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
-      MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
           Shape<NDim> oshape = new_oshape.get<NDim>();
           Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());
