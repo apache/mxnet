@@ -139,6 +139,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'vdot',
     'vstack',
     'column_stack',
+    'hstack',
+    'dstack',
     'zeros_like',
     'linalg.norm',
     'linalg.cholesky',
