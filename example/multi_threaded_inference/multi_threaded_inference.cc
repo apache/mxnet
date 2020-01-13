@@ -35,7 +35,7 @@
 #include <mxnet/c_predict_api.h>
 #include "mxnet-cpp/MxNetCpp.h"
 
-const mx_float DEFAULT_MEAN = 117.0;
+const float DEFAULT_MEAN = 117.0;
 
 
 // Code to load image, PrintOutput results, helper functions for the same obtained from:
@@ -93,7 +93,7 @@ void PrintOutputResult(const float* data, size_t size, const std::vector<std::st
 
 
 // Read Image data into a float array
-void GetImageFile(const std::string &image_file, mx_float *image_data,
+void GetImageFile(const std::string &image_file, float *image_data,
                   int channels, cv::Size resize_size) {
   // Read all kinds of file into a BGR color 3 channels image
   cv::Mat im_ori = cv::imread(image_file, cv::IMREAD_COLOR);
@@ -108,9 +108,9 @@ void GetImageFile(const std::string &image_file, mx_float *image_data,
 
   int size = im.rows * im.cols * channels;
 
-  mx_float* ptr_image_r = image_data;
-  mx_float* ptr_image_g = image_data + size / 3;
-  mx_float* ptr_image_b = image_data + size / 3 * 2;
+  float* ptr_image_r = image_data;
+  float* ptr_image_g = image_data + size / 3;
+  float* ptr_image_b = image_data + size / 3 * 2;
 
   float mean_b, mean_g, mean_r;
   mean_b = mean_g = mean_r = DEFAULT_MEAN;
@@ -119,11 +119,11 @@ void GetImageFile(const std::string &image_file, mx_float *image_data,
     auto data = im.ptr<uchar>(i);
     for (int j = 0; j < im.cols; j++) {
       if (channels > 1) {
-        *ptr_image_b++ = static_cast<mx_float>(*data++) - mean_b;
-        *ptr_image_g++ = static_cast<mx_float>(*data++) - mean_g;
+        *ptr_image_b++ = static_cast<float>(*data++) - mean_b;
+        *ptr_image_g++ = static_cast<float>(*data++) - mean_g;
       }
     }
-    *ptr_image_r++ = static_cast<mx_float>(*data++) - mean_r;
+    *ptr_image_r++ = static_cast<float>(*data++) - mean_r;
   }
 }
 
@@ -313,7 +313,7 @@ int main(int argc, char *argv[]) {
   CHECK(num_threads == argc - 4) << "Number of files provided, should be same as num_threads";
   std::vector<std::string> test_files;
   for (size_t i = 0; i < argc - 4; ++i) {
-  test_files.emplace_back(argv[4 + i]);
+    test_files.emplace_back(argv[4 + i]);
   }
   int epoch = 0;
   bool static_alloc = true;
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]) {
 
   // Read Image Data
   // load into an input arr
-  std::vector<std::vector<mx_float>> files(num_threads);
+  std::vector<std::vector<float>> files(num_threads);
   std::vector<mxnet::cpp::NDArray> input_arrs;
   mxnet::cpp::Shape input_shape = mxnet::cpp::Shape(1, 3, 224, 224);
   for (size_t i = 0; i < files.size(); i++) {

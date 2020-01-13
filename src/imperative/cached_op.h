@@ -50,23 +50,21 @@ std::string AddPrefix(const std::string& prefix,
 void CreateForwardGraph(const nnvm::Symbol &sym, nnvm::Graph *fwd_graph) {
   using namespace nnvm;
   static const auto _copy_op = Op::Get("_copy");
-  {
-    NodeEntryMap<size_t> dedup_out;
-    for (const NodeEntry& nodeEntry : sym.outputs) {
-      if (dedup_out.find(nodeEntry) != dedup_out.end()) {
-        NodePtr copy_node = Node::Create();
-        copy_node->attrs.op = _copy_op;
-        copy_node->attrs.name =
-            nodeEntry.node->attrs.name + "_copy" + std::to_string(dedup_out[nodeEntry]++);
-        copy_node->inputs.emplace_back(nodeEntry);
-        if (_copy_op->attr_parser != nullptr) {
-          _copy_op->attr_parser(&(copy_node->attrs));
-        }
-        fwd_graph->outputs.emplace_back(std::move(copy_node));
-      } else {
-        dedup_out.emplace(nodeEntry, 0);
-        fwd_graph->outputs.push_back(nodeEntry);
+  NodeEntryMap<size_t> dedup_out;
+  for (const NodeEntry &nodeEntry : sym.outputs) {
+    if (dedup_out.find(nodeEntry) != dedup_out.end()) {
+      NodePtr copy_node = Node::Create();
+      copy_node->attrs.op = _copy_op;
+      copy_node->attrs.name = nodeEntry.node->attrs.name + "_copy" +
+                              std::to_string(dedup_out[nodeEntry]++);
+      copy_node->inputs.emplace_back(nodeEntry);
+      if (_copy_op->attr_parser != nullptr) {
+        _copy_op->attr_parser(&(copy_node->attrs));
       }
+      fwd_graph->outputs.emplace_back(std::move(copy_node));
+    } else {
+      dedup_out.emplace(nodeEntry, 0);
+      fwd_graph->outputs.push_back(nodeEntry);
     }
   }
 }
@@ -210,8 +208,6 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
                                                      full_graph->outputs.end());
   SetRefCounts(fwd_graph, *full_graph);
 }
-
-
 
 }  // namespace
 
