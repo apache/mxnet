@@ -117,6 +117,10 @@ def _add_dtype_workload_hamming():
     DtypeOpArgMngr.add_workload('hamming', 3)
 
 
+def _add_dtype_workload_gamma():
+    DtypeOpArgMngr.add_workload('gamma', 3)
+
+
 def _add_dtype_workload_blackman():
     DtypeOpArgMngr.add_workload('blackman', 3)
 
