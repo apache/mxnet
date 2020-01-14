@@ -22,6 +22,7 @@ from ..ndarray import numpy as _mx_nd_np
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
+           "logistic", "gumbel",
            "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
            "weibull", "pareto", "power"]
 
@@ -259,6 +260,180 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     >>> s = np.random.lognormal(mu, sigma, 1000)
     """
     return _mx_nd_np.random.lognormal(mean, sigma, size, dtype, ctx, out)
+
+
+def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a logistic distribution.
+
+    Samples are drawn from a logistic distribution with specified
+    parameters, loc (location or mean, also median), and scale (>0).
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        Parameter of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        Parameter of the distribution. Must be non-negative.
+        Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized logistic distribution.
+
+    Notes
+    -----
+    The probability density for the Logistic distribution is
+
+    .. math:: P(x) = P(x) = \frac{e^{-(x-\mu)/s}}{s(1+e^{-(x-\mu)/s})^2},
+
+    where :math:`\mu` = location and :math:`s` = scale.
+
+    The Logistic distribution is used in Extreme Value problems where it
+    can act as a mixture of Gumbel distributions, in Epidemiology, and by
+    the World Chess Federation (FIDE) where it is used in the Elo ranking
+    system, assuming the performance of each player is a logistically
+    distributed random variable.
+
+    References
+    ----------
+    .. [1] Reiss, R.-D. and Thomas M. (2001), "Statistical Analysis of
+        Extreme Values, from Insurance, Finance, Hydrology and Other
+        Fields," Birkhauser Verlag, Basel, pp 132-133.
+    .. [2] Weisstein, Eric W. "Logistic Distribution." From
+        MathWorld--A Wolfram Web Resource.
+        http://mathworld.wolfram.com/LogisticDistribution.html
+    .. [3] Wikipedia, "Logistic-distribution",
+        https://en.wikipedia.org/wiki/Logistic_distribution
+
+    Examples
+    --------
+    Draw samples from the distribution:
+
+    >>> loc, scale = 10, 1
+    >>> s = np.random.logistic(loc, scale, 10000)
+    >>> import matplotlib.pyplot as plt
+    >>> count, bins, ignored = plt.hist(s, bins=50)
+
+    #   plot against distribution
+
+    >>> def logist(x, loc, scale):
+    ...     return np.exp((loc-x)/scale)/(scale*(1+np.exp((loc-x)/scale))**2)
+    >>> lgst_val = logist(bins, loc, scale)
+    >>> plt.plot(bins, lgst_val * count.max() / lgst_val.max())
+    >>> plt.show()
+    """
+    return _mx_nd_np.random.logistic(loc, scale, size, ctx, out)
+
+
+def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Gumbel distribution.
+
+    Draw samples from a Gumbel distribution with specified location and
+    scale.  For more information on the Gumbel distribution, see
+    Notes and References below.
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        The location of the mode of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        The scale parameter of the distribution. Default is 1. Must be non-
+        negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Gumbel distribution.
+
+    Notes
+    -----
+    The Gumbel (or Smallest Extreme Value (SEV) or the Smallest Extreme
+    Value Type I) distribution is one of a class of Generalized Extreme
+    Value (GEV) distributions used in modeling extreme value problems.
+    The Gumbel is a special case of the Extreme Value Type I distribution
+    for maximums from distributions with "exponential-like" tails.
+
+    The probability density for the Gumbel distribution is
+
+    .. math:: p(x) = \frac{e^{-(x - \mu)/ \beta}}{\beta} e^{ -e^{-(x - \mu)/
+            \beta}},
+
+    where :math:`\mu` is the mode, a location parameter, and
+    :math:`\beta` is the scale parameter.
+
+    The Gumbel (named for German mathematician Emil Julius Gumbel) was used
+    very early in the hydrology literature, for modeling the occurrence of
+    flood events. It is also used for modeling maximum wind speed and
+    rainfall rates.  It is a "fat-tailed" distribution - the probability of
+    an event in the tail of the distribution is larger than if one used a
+    Gaussian, hence the surprisingly frequent occurrence of 100-year
+    floods. Floods were initially modeled as a Gaussian process, which
+    underestimated the frequency of extreme events.
+
+    It is one of a class of extreme value distributions, the Generalized
+    Extreme Value (GEV) distributions, which also includes the Weibull and
+    Frechet.
+
+    The function has a mean of :math:`\mu + 0.57721\beta` and a variance
+    of :math:`\frac{\pi^2}{6}\beta^2`.
+
+    References
+    ----------
+    .. [1] Gumbel, E. J., "Statistics of Extremes,"
+        New York: Columbia University Press, 1958.
+    .. [2] Reiss, R.-D. and Thomas, M., "Statistical Analysis of Extreme
+        Values from Insurance, Finance, Hydrology and Other Fields,"
+        Basel: Birkhauser Verlag, 2001.
+
+    Examples
+    --------
+    Draw samples from the distribution:
+
+    >>> mu, beta = 0, 0.1 # location and scale
+    >>> s = np.random.gumbel(mu, beta, 1000)
+
+    Display the histogram of the samples, along with
+    the probability density function:
+
+    >>> import matplotlib.pyplot as plt
+    >>> count, bins, ignored = plt.hist(s, 30, density=True)
+    >>> plt.plot(bins, (1/beta)*np.exp(-(bins - mu)/beta)
+    ...          * np.exp( -np.exp( -(bins - mu) /beta) ),
+    ...          linewidth=2, color='r')
+    >>> plt.show()
+
+    Show how an extreme value distribution can arise from a Gaussian process
+    and compare to a Gaussian:
+
+    >>> means = []
+    >>> maxima = []
+    >>> for i in range(0,1000) :
+    ...    a = np.random.normal(mu, beta, 1000)
+    ...    means.append(a.mean())
+    ...    maxima.append(a.max())
+    >>> count, bins, ignored = plt.hist(maxima, 30, density=True)
+    >>> beta = np.std(maxima) * np.sqrt(6) / np.pi
+    >>> mu = np.mean(maxima) - 0.57721*beta
+    >>> plt.plot(bins, (1/beta)*np.exp(-(bins - mu)/beta)
+    ...          * np.exp(-np.exp(-(bins - mu)/beta)),
+    ...          linewidth=2, color='r')
+    >>> plt.plot(bins, 1/(beta * np.sqrt(2 * np.pi))
+    ...          * np.exp(-(bins - mu)**2 / (2 * beta**2)),
+    ...          linewidth=2, color='g')
+    >>> plt.show()
+    """
+    return _mx_nd_np.random.gumbel(loc, scale, size, ctx, out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):

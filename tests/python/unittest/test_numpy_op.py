@@ -3399,16 +3399,17 @@ def test_npx_special_unary_func():
 
 @with_seed()
 @use_np
-def test_np_normal_grad():
-    class TestNormalGrad(HybridBlock):
-        def __init__(self, shape):
-            super(TestNormalGrad, self).__init__()
+def test_np_random_grad():
+    class TestRandomGrad(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestRandomGrad, self).__init__()
             self._shape = shape
-
+            self._name = op_name
         def hybrid_forward(self, F, loc, scale):
-            return F.np.random.normal(loc, scale, self._shape)
+            op = getattr(F.np.random, self._name, None)
+            assert op is not None
+            return op(loc=loc, scale=scale, size=self._shape)
 
-    dtypes = ['float16', 'float32', 'float64']
     param_shape = [
         [(3, 2), (3, 2)],
         [(3, 2, 2), (3, 2, 2)],
@@ -3419,18 +3420,19 @@ def test_np_normal_grad():
         (4, 3, 2, 2),
         (3, 4, 5)
     ]
-    for hybridize in [False, True]:
-        for dtype in dtypes:
+    op_names = ["normal", "logistic", "gumbel"]
+    for op_name in op_names:
+        for hybridize in [False, True]:
             for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
-                test_normal_grad = TestNormalGrad(out_shape)
+                test_random_grad = TestRandomGrad(out_shape, op_name)
                 if hybridize:
-                    test_normal_grad.hybridize()
+                    test_random_grad.hybridize()
                 loc = np.zeros(shape1)
                 loc.attach_grad()
                 scale = np.ones(shape2)
                 scale.attach_grad()
                 with mx.autograd.record():
-                    samples = test_normal_grad(loc, scale)
+                    samples = test_random_grad(loc, scale)
                 samples.backward()
                 assert loc.grad.shape == shape1
                 assert scale.grad.shape == shape2
