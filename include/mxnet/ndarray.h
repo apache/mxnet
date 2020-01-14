@@ -774,7 +774,7 @@ class NDArray {
    * This creates a new NDArray using f32 with the reordered data.
    * It doesn't affect the data of the original NDArray.
    */
-  NDArray Reorder2DefaultFp32() const;
+  NDArray Reorder2DefaultFloatFormat() const;
 
   void InvalidateMKLDNNData();
 

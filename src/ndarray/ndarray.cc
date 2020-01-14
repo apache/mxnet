@@ -611,7 +611,7 @@ void NDArray::Reorder2DefaultAsync() const {
 }
 
 // now just support bf16->fp32
-NDArray NDArray::Reorder2DefaultFp32() const {
+NDArray NDArray::Reorder2DefaultFloatFormat() const {
   CHECK(storage_type() == kDefaultStorage && IsView() == false);
   if (dtype() !=  mshadow::kBfloat16) {
     return Reorder2Default();

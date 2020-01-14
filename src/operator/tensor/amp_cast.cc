@@ -30,6 +30,90 @@ namespace op {
 DMLC_REGISTER_PARAMETER(AMPCastParam);
 DMLC_REGISTER_PARAMETER(AMPMultiCastParam);
 
+#if MXNET_USE_MKLDNN == 1
+static void AMPCastExCPU(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<NDArray>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kWriteInplace) {
+    return;
+  }
+  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+  auto data = inputs[0];
+  if (data.IsView() && data.IsMKLDNNData())
+    data = data.Reorder2Default();
+  const auto i_mem = data.GetMKLDNNData();
+  const size_t i_ndim = data.shape().ndim();
+  mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+  for (size_t i = 0; i < i_ndim; i++) {
+    i_dims[i] = static_cast<int>(data.shape()[i]);
+  }
+  const auto o_desc =
+      mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[0].dtype()),
+                           static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
+  const auto out_mem = CreateMKLDNNMem(outputs[0], o_desc, req[0]);
+  mkldnn_args_map_t reorder_args;
+  reorder_args[MKLDNN_ARG_SRC] = *i_mem;
+  reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
+  MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
+  MKLDNNStream::Get()->Submit();
+}
+
+inline static bool AMPCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                      DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                      std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1);
+  CHECK_EQ(out_attrs->size(), 1);
+  auto ret = MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+  return ret;
+}
+
+static void AMPMultiCastExCPU(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
+                              const std::vector<NDArray>& inputs, const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+  const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
+  CHECK_EQ(inputs.size(), param.num_outputs);
+  CHECK_EQ(outputs.size(), param.num_outputs);
+  mkldnn::engine cpu_engine = mxnet::CpuEngine::Get()->get_engine();
+  for (int i = 0; i < param.num_outputs; ++i) {
+    if (req[i] == kWriteInplace) {
+      continue;
+    }
+    auto data = inputs[i];
+    if (data.IsView() && data.IsMKLDNNData())
+      data = data.Reorder2Default();
+    const auto i_mem = data.GetMKLDNNData();
+    const size_t i_ndim = data.shape().ndim();
+    mkldnn::memory::dims i_dims = mkldnn::memory::dims(i_ndim);
+    for (size_t j = 0; j < i_ndim; j++) {
+      i_dims[j] = static_cast<int>(data.shape()[j]);
+    }
+    const auto o_desc =
+        mkldnn::memory::desc(i_dims, get_mkldnn_type(outputs[i].dtype()),
+                             static_cast<mkldnn::memory::format_tag>(GetDefaultFormat(i_ndim)));
+    const auto out_mem = CreateMKLDNNMem(outputs[i], o_desc, req[i]);
+    mkldnn_args_map_t reorder_args;
+    reorder_args[MKLDNN_ARG_SRC] = *i_mem;
+    reorder_args[MKLDNN_ARG_DST] = *out_mem.second;
+    MKLDNNStream::Get()->RegisterPrimArgs(mkldnn::reorder(*i_mem, *out_mem.second), reorder_args);
+  }
+  MKLDNNStream::Get()->Submit();
+}
+
+inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
+                                           DispatchMode* dispatch_mode, std::vector<int>* in_attrs,
+                                           std::vector<int>* out_attrs) {
+  const AMPMultiCastParam& param = nnvm::get<AMPMultiCastParam>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), param.num_outputs);
+  CHECK_EQ(out_attrs->size(), param.num_outputs);
+  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs, out_attrs);
+}
+
+#endif  // MXNET_USE_MKLDNN == 1
+
 NNVM_REGISTER_OP(amp_cast)
 .describe(R"code(Cast function between low precision float/FP32 used by AMP.
 

@@ -389,7 +389,7 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
       if (inputs[i].dtype() != mshadow::kBfloat16) {
         in_bufs.push_back(inputs[i].Reorder2Default());
       } else {
-        in_bufs.push_back(inputs[i].Reorder2DefaultFp32());
+        in_bufs.push_back(inputs[i].Reorder2DefaultFloatFormat());
       }
       in_blobs[i] = in_bufs.back().data();
     }
@@ -403,7 +403,7 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
     NDArray output = outputs[i];
     // for bf16, fisrt change it to f32
     if (outputs[i].dtype() == mshadow::kBfloat16) {
-      NDArray temp = outputs[i].Reorder2DefaultFp32();
+      NDArray temp = outputs[i].Reorder2DefaultFloatFormat();
       temp_bf16_src.emplace_back(temp);
       temp_bf16_dst.emplace_back(outputs[i]);
       output = temp;
