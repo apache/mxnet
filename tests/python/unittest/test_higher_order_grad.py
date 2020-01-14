@@ -463,14 +463,6 @@ def test_cbrt():
 
 
 @with_seed()
-<<<<<<< HEAD
-def test_softsign():
-    def softsign(x):
-        return nd.softsign(x)
-
-    def grad_grad_op(x):
-        return -2 * x / (nd.abs(x) * (1 + nd.abs(x))**3)
-=======
 def test_rsqrt():
     def rsqrt(x):
         return nd.rsqrt(x)
@@ -480,23 +472,10 @@ def test_rsqrt():
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
->>>>>>> 0efc0ca4286aeb98c0b2245e0fe70b296434c75e
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-<<<<<<< HEAD
-        check_second_order_unary(array, softsign, grad_grad_op)
-
-
-@with_seed()
-def test_hard_sigmoid():
-    def hard_sigmoid(x):
-        return nd.hard_sigmoid(x)
-
-    def grad_grad_op(x):
-        return nd.zeros_like(x)
-=======
         array = sigma * array + mu
         # Only positive numbers
         assert((array > 0).all())
@@ -513,19 +492,42 @@ def test_rcbrt():
 
     sigma = random.randint(25, 100)
     mu = random.randint(500, 1000)
->>>>>>> 0efc0ca4286aeb98c0b2245e0fe70b296434c75e
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-<<<<<<< HEAD
-        check_second_order_unary(array, hard_sigmoid, grad_grad_op)
-=======
         array = sigma * array + mu
         # Only positive numbers
         assert((array > 0).all())
         check_second_order_unary(array, rcbrt, grad_grad_op)
->>>>>>> 0efc0ca4286aeb98c0b2245e0fe70b296434c75e
+
+
+@with_seed()
+def test_softsign():
+    def softsign(x):
+        return nd.softsign(x)
+
+    def grad_grad_op(x):
+        return -2 * x / (nd.abs(x) * (1 + nd.abs(x))**3)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, softsign, grad_grad_op)
+
+
+@with_seed()
+def test_hard_sigmoid():
+    def hard_sigmoid(x):
+        return nd.hard_sigmoid(x)
+
+    def grad_grad_op(x):
+        return nd.zeros_like(x)
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        array = random_arrays(shape)
+        check_second_order_unary(array, hard_sigmoid, grad_grad_op)
 
 
 def check_second_order_unary(x, op, grad_grad_op, rtol=None, atol=None):
