@@ -461,7 +461,6 @@ endif
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
-SRC := $(filter-out $(wildcard src/operator/*/*/*.cc src/operator/*/*.cc src/operator/*.cc), $(SRC))
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
