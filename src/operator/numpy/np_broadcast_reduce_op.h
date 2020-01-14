@@ -86,6 +86,21 @@ struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTy
   }
 };
 
+struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolParam> {
+  dmlc::optional<mxnet::Tuple<int>> axis;
+  bool keepdims;
+  DMLC_DECLARE_PARAMETER(NumpyReduceAxesBoolParam) {
+    DMLC_DECLARE_FIELD(axis)
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .describe("Axis or axes along which a sum is performed. The default, axis=None, will sum "
+                "all of the elements of the input array. If axis is negative it counts from the "
+                "last to the first axis.");
+    DMLC_DECLARE_FIELD(keepdims).set_default(false)
+      .describe("If this is set to `True`, the reduced axes are left "
+                "in the result as dimension with size one.");
+  }
+};
+
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
                                        const dmlc::optional<mxnet::Tuple<int>>& axis,
                                        bool keepdims) {
@@ -168,6 +183,20 @@ inline bool NumpyReduceAxesShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0,
+                     NumpyReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims));
+  return shape_is_known(out_attrs->at(0));
+}
+
+inline bool NumpyReduceAxesBoolShape(const nnvm::NodeAttrs& attrs,
+                                     std::vector<TShape> *in_attrs,
+                                     std::vector<TShape> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  if (!shape_is_known(in_attrs->at(0))) {
+    return false;
+  }
+  const NumpyReduceAxesBoolParam& param = nnvm::get<NumpyReduceAxesBoolParam>(attrs.parsed);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0,
                      NumpyReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims));
   return shape_is_known(out_attrs->at(0));
@@ -298,6 +327,30 @@ void NumpyReduceAxesNoDTypeCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
 }
 
+template<typename xpu, typename reducer, typename OP = op::mshadow_op::NonZero>
+void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  const NumpyReduceAxesBoolParam& param = nnvm::get<NumpyReduceAxesBoolParam>(attrs.parsed);
+  mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
+    using namespace mxnet_op;
+    Kernel<set_false, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    return;
+  }
+  if (param.axis.has_value() && param.axis.value().ndim() == 0) {
+    UnaryOp::IdentityCompute<xpu>(attrs, ctx, inputs, req, outputs);
+  }
+  TShape small;
+  if (param.keepdims) {
+    small = outputs[0].shape_;
+  } else {
+    small = NumpyReduceAxesShapeImpl(inputs[0].shape_, param.axis, true);
+  }
+  ReduceAxesComputeBoolImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
+}
 
 template<typename xpu, bool normalize = false>
 inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,

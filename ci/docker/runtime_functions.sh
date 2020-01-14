@@ -25,7 +25,7 @@ set -ex
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
 NOSE_TIMER_ARGUMENTS="--with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error"
 CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH_BIN="52,70"
+CI_CMAKE_CUDA_ARCH="5.2 7.0"
 
 clean_repo() {
     set -ex
@@ -753,8 +753,7 @@ build_ubuntu_gpu_tensorrt() {
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
-          -DCUDA_ARCH_NAME=Manual                 \
-          -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+          -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
           -G Ninja                                \
           /work/mxnet
 
@@ -872,8 +871,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -G Ninja                                \
         /work/mxnet
 
@@ -898,8 +896,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
@@ -925,8 +922,7 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
         -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
@@ -972,8 +968,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
@@ -2063,6 +2058,18 @@ cd_pypi_publish() {
     set -ex
     pip3 install --user twine
     ./cd/python/pypi/pypi_publish.py `readlink -f wheel_build/dist/*.whl`
+}
+
+cd_s3_publish() {
+    set -ex
+    pip3 install --user awscli
+    filepath=$(readlink -f wheel_build/dist/*.whl)
+    filename=$(basename $filepath)
+    variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)
+    if [ -z "${variant}" ]; then
+        variant="cpu"
+    fi
+    aws s3 cp ${filepath} s3://apache-mxnet/dist/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
 build_static_scala_mkl() {

@@ -723,7 +723,7 @@ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
                                       const char*** out_names);
 
 /*!
- * \brief Perform a synchronize copy from a continugous CPU memory region.
+ * \brief Perform a synchronize copy from a contiguous CPU memory region.
  *
  *  This function will call WaitToWrite before the copy is performed.
  *  This is useful to copy data from existing memory region that are
@@ -737,7 +737,7 @@ MXNET_DLL int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
                                        const void *data,
                                        size_t size);
 /*!
- * \brief Perform a synchronize copyto a continugous CPU memory region.
+ * \brief Perform a synchronize copyto a contiguous CPU memory region.
  *
  *  This function will call WaitToRead before the copy is performed.
  *  This is useful to copy data from existing memory region that are
@@ -1932,6 +1932,7 @@ MXNET_DLL int MXSymbolInferTypePartial(SymbolHandle sym,
  * \param quantized_dtype the quantized destination type for input data
  * \param calib_quantize **Deprecated**. quantize op will always be calibrated if could
  * \param quantize_mode quantize mode to be used in quantize pass
+ * \param quantize_granularity quantize granularity, tensor-wise or channel-wise
  * \param out_num_calib_names return the number of nodes to be calibrated
  * \param out_calib_names return the node names to be calibrated
  */
@@ -1944,8 +1945,8 @@ MXNET_DLL int MXQuantizeSymbol(SymbolHandle sym_handle,
                                const char **excluded_op_names,
                                const uint32_t num_offline, const char **offline_params,
                                const char *quantized_dtype, const bool calib_quantize,
-                               const char *quantize_mode, uint32_t* out_num_calib_names,
-                               const char ***out_calib_names);
+                               const char *quantize_mode, const char *quantize_granularity,
+                               uint32_t* out_num_calib_names, const char ***out_calib_names);
 
 /*!
  * \brief Convert a symbol into a mixed precision symbol with cast operators for target dtype casting

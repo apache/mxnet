@@ -38,7 +38,7 @@ def parse_args():
     parser = ArgumentParser()
     parser.add_argument('--dataset', nargs='?', default='ml-20m', choices=['ml-1m', 'ml-20m'],
                         help='The dataset name, temporary support ml-1m and ml-20m.')
-    parser.add_argument('path', type=str, default = './data/',
+    parser.add_argument('--path', type=str, default = './data/',
                         help='Path to reviews CSV file from MovieLens')
     parser.add_argument('-n', '--negatives', type=int, default=999,
                         help='Number of negative samples for each positive'
