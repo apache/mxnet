@@ -334,6 +334,7 @@ def has_gpu():
     try:
         return instance_family() in gpu_family
     except:
+        logging.warning("Looks like we are not running in AWS, couldn't detect a GPU instance, please use --gpu argument directly to install GPU related utilities.")
         return False
 
 
