@@ -25,8 +25,8 @@ WORKDIR /work/deps
 COPY install/ubuntu_publish.sh /work/
 RUN /work/ubuntu_publish.sh
 
-COPY install/ubuntu_ar.sh /work/
-RUN /work/ubuntu_ar.sh
+COPY install/ubuntu_binutils.sh /work/
+RUN /work/ubuntu_binutils.sh
 
 ARG USER_ID=0
 ARG GROUP_ID=0
