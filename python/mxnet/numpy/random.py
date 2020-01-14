@@ -433,3 +433,32 @@ def randn(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.normal(0, 1, size=output_shape, **kwargs)
+
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a Laplace distribution.
+
+    Samples are distributed according to a Laplace distribution parametrized
+    by *loc* (mean) and *scale* (the exponential decay).
+
+
+    Parameters
+    ----------
+    loc : float, The position of the distribution peak.
+
+    scale : float, the exponential decay.
+
+    size : int or tuple of ints, optional. Output shape. If the given shape is, e.g., (m, n, k), then m * n * k samples are drawn. Default is None, in which case a single value is returned.
+
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized Laplace distribution.
+    """
+    return _mx_nd_np.random.laplace(loc, scale, size, dtype, ctx, out)

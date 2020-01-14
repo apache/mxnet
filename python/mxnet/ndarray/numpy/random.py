@@ -23,7 +23,7 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle", 'gamma']
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle", 'gamma', 'laplace']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -437,3 +437,52 @@ def shuffle(x):
            [0., 1., 2.]])
     """
     _npi.shuffle(x, out=x)
+
+
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a Laplace distribution.
+
+    Samples are distributed according to a Laplace distribution parametrized
+    by *loc* (mean) and *scale* (the exponential decay).
+
+
+    Parameters
+    ----------
+    loc : float, The position of the distribution peak.
+
+    scale : float, the exponential decay.
+
+    size : int or tuple of ints, optional. Output shape. If the given shape is, e.g., (m, n, k), then m * n * k samples are drawn. Default is None, in which case a single value is returned.
+
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized Laplace distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.laplace(loc, scale, loc=None, scale=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.laplace(scale, loc=loc, scale=None, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.laplace(loc, loc=None, scale=scale, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.laplace(loc=loc, scale=scale, size=size,
+                            ctx=ctx, dtype=dtype, out=out)
