@@ -294,11 +294,12 @@ def broadcast_to(array, shape):
 def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
     """
     Return a new array of given shape and type, filled with `fill_value`.
+
     Parameters
     ----------
     shape : int or sequence of ints
         Shape of the new array, e.g., ``(2, 3)`` or ``2``.
-    fill_value : scalar
+    fill_value : scalar or ndarray
         Fill value.
     dtype : data-type, optional
         The desired data-type for the array. The default, `None`, means
@@ -311,10 +312,14 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
+
     Returns
     -------
     out : ndarray
         Array of `fill_value` with the given shape, dtype, and order.
+        If `fill_value` is an ndarray, out will have the same context as `fill_value`
+        regardless of the provided `ctx`.
+
     Notes
     -----
     This function differs from the original `numpy.full
@@ -323,11 +328,13 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     - Have an additional `ctx` argument to specify the device
     - Have an additional `out` argument
     - Currently does not support `order` selection
+
     See Also
     --------
     empty : Return a new uninitialized array.
     ones : Return a new array setting values to one.
     zeros : Return a new array setting values to zero.
+
     Examples
     --------
     >>> np.full((2, 2), 10)
@@ -336,11 +343,18 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
     array([[2, 2],
            [2, 2]], dtype=int32)
+
     """
     if order != 'C':
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
+    if isinstance(fill_value, NDArray):
+        if dtype is None:
+            ret = broadcast_to(fill_value, shape)
+        else:
+            ret = broadcast_to(fill_value, shape).astype(dtype)
+        return ret
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
