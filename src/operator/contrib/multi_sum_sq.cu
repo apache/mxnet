@@ -129,7 +129,8 @@ __global__ void GlobalReductionKernel(MultiSumSqKernelParam<DType> param,
     output[blockIdx.x] = final;
 }
 
-size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs, int& param_max_chunks_per_tensor){
+size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs,
+                                    int* param_max_chunks_per_tensor) {
   // find max num of chunks in tensors
   int max_chunks_per_tensor = -1;
   for (size_t t = 0; t < inputs.size(); t++) {
@@ -137,8 +138,8 @@ size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs, int& param
     if (chunks_this_tensor > max_chunks_per_tensor)
       max_chunks_per_tensor = chunks_this_tensor;
   }
-  if(param_max_chunks_per_tensor != null_val)
-    param_max_chunks_per_tensor = max_chunks_per_tensor;
+  if (param_max_chunks_per_tensor != NULL)
+    *param_max_chunks_per_tensor = max_chunks_per_tensor;
   return inputs.size() * max_chunks_per_tensor * sizeof(float);
 }
 
@@ -152,7 +153,7 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int n_inputs,
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MultiSumSqKernelParam<DType> param;
-    size_t workspace_size = GetRequiredStorageMultiSumSq(inputs, param.max_chunks_per_tensor);
+    size_t workspace_size = GetRequiredStorageMultiSumSq(inputs, &param.max_chunks_per_tensor);
     Tensor<gpu, 1, char> workspace =
       ctx.requested[multi_sum_sq::kTempSpace].get_space_typed<gpu, 1, char>(
         Shape1(workspace_size), s);

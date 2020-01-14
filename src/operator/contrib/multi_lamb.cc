@@ -64,9 +64,11 @@ struct MultiLAMBKernelStep1 {
           MPDType var_hat = var / (static_cast<MPDType>(1.0f) -
                                   power::Map(static_cast<MPDType>(beta2),
                                   static_cast<MPDType>(kernel_params.step_count[index])));
-          g = mean_hat / (sqrt(var_hat) + static_cast<MPDType>(epsilon)) + kernel_params.wds[index] * w;
+          g = mean_hat / (sqrt(var_hat) + static_cast<MPDType>(epsilon)) +
+                         kernel_params.wds[index] * w;
         } else {
-          g = mean / (sqrt(var) + static_cast<MPDType>(epsilon)) + kernel_params.wds[index] * w;
+          g = mean / (sqrt(var) + static_cast<MPDType>(epsilon)) +
+                      kernel_params.wds[index] * w;
         }
         temp_g[kernel_params.tensor2temp_g[index]+i] = g;
       }
@@ -153,7 +155,9 @@ void CallKernel2(Stream<cpu>* s,
 
 DMLC_REGISTER_PARAMETER(MultiLAMBParam);
 
-std::vector<std::string> LAMBParamToVector(uint32_t num_tensors, const char *p_names[], size_t n_params) {
+std::vector<std::string> LAMBParamToVector(uint32_t num_tensors,
+                                           const char *p_names[],
+                                           size_t n_params) {
   std::vector<std::string> ret;
   for (uint32_t i = 0; i < num_tensors; ++i) {
     const auto idx = std::to_string(i);
@@ -182,7 +186,8 @@ NNVM_REGISTER_OP(_multi_lamb_update)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const char *param_names[] = {"weight_", "grad_", "mean_", "var_"};
-    return LAMBParamToVector(NumTensors(attrs), param_names, sizeof(param_names)/sizeof(param_names[0]));
+    return LAMBParamToVector(NumTensors(attrs), param_names,
+                             sizeof(param_names)/sizeof(param_names[0]));
   })
 // mutable: mean, var
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
@@ -219,7 +224,8 @@ NNVM_REGISTER_OP(_multi_mp_lamb_update)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const char *param_names[] = {"weight_", "grad_", "mean_", "var_", "weight32_"};
-    return LAMBParamToVector(NumTensors(attrs), param_names, sizeof(param_names)/sizeof(param_names[0]));
+    return LAMBParamToVector(NumTensors(attrs), param_names,
+                             sizeof(param_names)/sizeof(param_names[0]));
   })
 // mutable: mean, var, weights32
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
