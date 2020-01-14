@@ -1698,6 +1698,54 @@ def test_take_with_type():
                                         'take_a': 'write'},
                               arg_params=arg_params)
 
+@with_seed()
+def test_beamsearch_set_finished():
+    batch_beam = 64
+    vocab_size = 128
+    eos_index = 3
+    for ctx in [mx.cpu(0), mx.gpu(0)]:
+        for data_type in ['float16', 'float32']:
+            for mask_value in [-1e15, np.inf]:
+                dist = mx.sym.Variable('dist')
+                s = mx.sym.Variable('s')
+                fin = mx.sym.Variable('fin')
+                om = mx.sym.Variable('om')
+                pad = mx.sym.Variable('pad')
+                eos = mx.sym.Variable('eos')
+
+                dist_nd = mx.nd.random.uniform(shape=(batch_beam, vocab_size), dtype=data_type,
+                                               ctx=ctx)
+                s_nd = mx.nd.random.uniform(shape=(batch_beam, 1), dtype=data_type, ctx=ctx)
+                fin_nd = (mx.nd.random.uniform(shape=batch_beam, ctx=ctx) < 0.25).astype('int32')
+                om_nd = (mx.nd.random.uniform(shape=batch_beam, ctx=ctx) < 0.25).astype('int32')
+                pad_dist = mx.nd.full((batch_beam, vocab_size - 1), val=mask_value, dtype=data_type,
+                                      ctx=ctx)
+                eos_dist = mx.nd.full((batch_beam, vocab_size), val=mask_value, dtype=data_type,
+                                       ctx=ctx)
+                eos_dist[:, eos_index] = 0
+
+                out = mx.sym.contrib.beamsearch_set_finished(data=dist, scores=s, finished=fin,
+                                                             over_max=om, eos_idx=eos_index,
+                                                             mask_val=mask_value)
+
+                bm = mx.sym.logical_not(om)
+                cat = mx.sym.concat(s, pad)
+                temp = mx.sym.where(fin, cat, dist)
+                check = mx.sym.broadcast_logical_or(bm, fin)
+                orig = mx.sym.where(check, temp, mx.sym.broadcast_add(eos, temp))
+
+                exe = out.bind(ctx=ctx, args={'dist': dist_nd, 's': s_nd, 'fin': fin_nd,
+                                              'om': om_nd})
+                exe.forward(is_train=False)
+                result = exe.outputs[0].asnumpy()
+
+                exe_orig = orig.bind(ctx=ctx, args={'dist': dist_nd, 's': s_nd, 'fin': fin_nd,
+                                                    'om': om_nd, 'pad': pad_dist, 'eos': eos_dist})
+                exe_orig.forward(is_train=False)
+                result_orig = exe_orig.outputs[0].asnumpy()
+
+                assert_almost_equal(result, result_orig)
+
 
 def check_rnn_consistency(cell1, cell2):
     dshape = (32, 5, 200)
