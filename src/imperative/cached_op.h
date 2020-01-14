@@ -100,7 +100,6 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
     exec::AggregateGradient, nullptr, nullptr,
     zero_ops, "_copy");
-
 }
 
 /* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
