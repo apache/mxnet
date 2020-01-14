@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
-           "gamma"]
+           "gamma", "laplace"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -439,7 +439,6 @@ def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
     Samples are distributed according to a Laplace distribution parametrized
     by *loc* (mean) and *scale* (the exponential decay).
-
 
     Parameters
     ----------
