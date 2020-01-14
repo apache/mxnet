@@ -199,3 +199,11 @@ $ mpirun -np 8 \
     -mca pml ob1 -mca btl ^openib \
     python train.py
 ```
+
+## Tuning Horovod Performance
+
+1. To analyse horovod performance, [horovod timeline](https://github.com/horovod/horovod/blob/master/docs/timeline.rst) is a handy tool to trace and visualize the time spent on horovod operations. 
+
+2. A few tuning knobs affect horovod runtime performance (explained [here](https://github.com/horovod/horovod/blob/master/docs/tensor-fusion.rst)). Apart from `HOROVOD_FUSION_THRESHOLD`, sometimes we find increasing `HOROVOD_CYCLE_TIME` (up to 100 ms), changing [`NCCL_ALGO`](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/env.html#nccl-algo), and [`NCCL_MIN_NCHANNELS`](https://docs.nvidia.com/deeplearning/sdk/nccl-developer-guide/docs/env.html#nccl-min-nchannels) improves performance.
+
+3. If you are running horovod on AWS, you can potentially leverage [EFA](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/efa.html) if your instance supports 100 Gb/s networking. To use EFA, you can refer to the [official documentation](https://docs.aws.amazon.com/eu_us/AWSEC2/latest/UserGuide/efa-start-nccl-dlami.html) for the setup instructions, and the environment variables (`-x FI_PROVIDER`, `-x FI_EFA_TX_MIN_CREDITS`) to set. Besides, you need to make sure EFA library is included in the shared library path (`-x LD_LIBRARY_PATH`).

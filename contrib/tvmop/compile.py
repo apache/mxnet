@@ -99,24 +99,16 @@ def get_cuda_arch(arch):
     if len(arch) == 0:
         return None
 
-    # the arch string is of format '-gencode;arch=compute_XX,code=sm_XX'
-    # this format is computed by CMake CUDA_SELECT_NVCC_ARCH_FLAGS
-    if arch.startswith('-gencode;'):
-        return arch.split(';')
-
-    # the arch string contains '-arch=sm_xx'
-    flags = arch.split()
+    # an example of arch string,
+    # -gencode arch=compute_30,code=sm_30 -gencode arch=compute_35,code=sm_35
+    # -gencode;arch=compute_75,code=[sm_75,compute_75] --fatbin-options -compress-all
+    archs = []
+    flags = arch.replace("-gencode;", "-gencode ").split()
     for flag in flags:
-        if flag.startswith('-arch='):
-            return flag[len('-arch='):]
+        if flag.startswith('-gencode') or flag.startswith('arch='):
+            archs.append(flag)
 
-    # find the highest compute capability
-    comp_caps = re.findall(r'\d+', arch)
-    if len(comp_caps) == 0:
-        return None
-
-    comp_caps = [int(c) for c in comp_caps]
-    return 'sm_' + str(max(comp_caps))
+    return archs
 
 
 if __name__ == "__main__":

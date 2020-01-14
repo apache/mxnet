@@ -84,7 +84,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
     })
   } else {
     CHECK(from.CheckContiguous() && to->CheckContiguous())
-      << "copy across only support continugous memory";
+      << "copy across only support contiguous memory";
     CHECK_EQ(to->type_flag_, from.type_flag_)
       << "Source and target must have the same data type when copying across devices.";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();

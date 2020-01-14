@@ -54,6 +54,8 @@
 #include "../operator/subgraph/common.h"
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tvmop/op_module.h"
+#include "../operator/subgraph/partitioner/custom_subgraph_property.h"
+#include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
 #include "nnvm/pass_functions.h"
 
@@ -142,6 +144,13 @@ int MXLoadLib(const char *path) {
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
 
+  partCallSupportedOps_t callSupportedOps =
+    get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
+
+
+  partCallAcceptSubgraph_t callAcceptSubgraph =
+    get_func<partCallAcceptSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLACCEPTSUBGRAPH_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
@@ -164,15 +173,18 @@ int MXLoadLib(const char *path) {
     mutateInputs_t mutate_fp = nullptr;
     createOpState_t create_opstate_fp = nullptr;
     bool isSubgraphOp = false;
+    int _isSubgraphOp = 0;
 
     // get custom operator implemenation from the dynamic library
     opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
-             &mutate_fp, &create_opstate_fp, &isSubgraphOp);
+             &mutate_fp, &create_opstate_fp, &_isSubgraphOp);
+    // set bool, dont pass bool across ABI boundary
+    isSubgraphOp = _isSubgraphOp;
 
-    CHECK(parse_fp != nullptr) << "Error loading '" << name
-                               << "' custom op, ParseAttrs function was not set.";
     if (!isSubgraphOp) {
       // validate custom operator functions from the dynamic library
+      CHECK(parse_fp != nullptr) << "Error loading '" << name
+                                 << "' custom op, ParseAttrs function was not set.";
       CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
       CHECK(type_fp  != nullptr) << "Error loading '" << name
@@ -395,6 +407,7 @@ int MXLoadLib(const char *path) {
       std::vector<const int64_t *> in_shapes, out_shapes;
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
+      std::vector<size_t> in_verIDs, out_verIDs;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -402,6 +415,7 @@ int MXLoadLib(const char *path) {
         in_shapes.push_back(inputs[i].shape().data());
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
+        in_verIDs.push_back(inputs[i].version());
       }
 
       // convert output tensors to constituent parts
@@ -410,6 +424,7 @@ int MXLoadLib(const char *path) {
         out_shapes.push_back(outputs[i].shape().data());
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
+        out_verIDs.push_back(outputs[i].version());
       }
 
       // get memory resource
@@ -438,9 +453,10 @@ int MXLoadLib(const char *path) {
       // call fcompute function
       CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                       in_shapes.data(), in_dims.data(), in_data.data(),
-                      in_types.data(), in_data.size(),
+                      in_types.data(), in_verIDs.data(), in_data.size(),
                       out_shapes.data(), out_dims.data(), out_data.data(),
-                      out_types.data(), out_data.size(), cpu_malloc, &cpu_alloc))
+                      out_types.data(), out_verIDs.data(), out_data.size(),
+                      cpu_malloc, &cpu_alloc))
       << "Error calling FCompute for custom operator '" << name_str << "'";
 
       // return type void
@@ -570,6 +586,7 @@ int MXLoadLib(const char *path) {
       std::vector<const int64_t *> in_shapes, out_shapes;
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
+      std::vector<size_t> in_verIDs, out_verIDs;
 
       // convert input tensors to constituent parts
       for (size_t i = 0; i < inputs.size(); i++) {
@@ -577,6 +594,7 @@ int MXLoadLib(const char *path) {
         in_shapes.push_back(inputs[i].shape().data());
         in_dims.push_back(inputs[i].shape().ndim());
         in_types.push_back(inputs[i].dtype());
+        in_verIDs.push_back(inputs[i].version());
       }
 
       // convert output tensors to constituent parts
@@ -585,6 +603,7 @@ int MXLoadLib(const char *path) {
         out_shapes.push_back(outputs[i].shape().data());
         out_dims.push_back(outputs[i].shape().ndim());
         out_types.push_back(outputs[i].dtype());
+        out_verIDs.push_back(outputs[i].version());
       }
 
       // get memory resource
@@ -618,9 +637,9 @@ int MXLoadLib(const char *path) {
 
       // call fcompute function
       CHECK(callFStatefulComp(is_forward, state_op_inst, in_shapes.data(), in_dims.data(),
-                              in_data.data(), in_types.data(), in_data.size(),
-                              out_shapes.data(), out_dims.data(), out_data.data(),
-                              out_types.data(), out_data.size(), cpu_malloc, &cpu_alloc))
+                              in_data.data(), in_types.data(), in_verIDs.data(), in_data.size(),
+                              out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                              out_verIDs.data(), out_data.size(), cpu_malloc, &cpu_alloc))
       << "Error calling FStatefulCompute for custom operator '" << name_str << "'";
     };
 
@@ -643,9 +662,6 @@ int MXLoadLib(const char *path) {
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-    regOp.set_attr_parser(attr_parser);
-    regOp.set_num_inputs(num_inputs);
-    regOp.set_num_outputs(num_outputs);
     int plevel = 10;
     if (regOpPtr != nullptr) {
       // overwrite registration of existing op with custom op
@@ -655,6 +671,9 @@ int MXLoadLib(const char *path) {
       plevel++;
     }
     if (!isSubgraphOp) {
+      regOp.set_attr_parser(attr_parser);
+      regOp.set_num_inputs(num_inputs);
+      regOp.set_num_outputs(num_outputs);
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
@@ -664,6 +683,8 @@ int MXLoadLib(const char *path) {
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
     } else {
       using namespace mxnet::op;
+      regOp.set_num_inputs(DefaultSubgraphOpNumInputs);
+      regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
       regOp.set_attr<nnvm::FInferType>("FInferType",
                                        DefaultSubgraphOpType, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape",
@@ -704,6 +725,57 @@ int MXLoadLib(const char *path) {
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
+  }
+
+  // get number of partitioners registered in the library
+  partRegSize_t partRegSize = get_func<partRegSize_t>(lib,
+                                                      const_cast<char*>(MXLIB_PARTREGSIZE_STR));
+  int numParts = partRegSize();
+  LOG(INFO) << "Found " << numParts << " partitioners in library";
+
+  /*
+   * Get all custom partitioners implementation from custom library
+   * loop and register each partitioner in the library to NNVM
+   */
+  partRegGetCount_t partRegGetCount = get_func<partRegGetCount_t>(lib,
+                                                  const_cast<char*>(MXLIB_PARTREGGETCOUNT_STR));
+  partRegGet_t partRegGet = get_func<partRegGet_t>(lib, const_cast<char*>(MXLIB_PARTREGGET_STR));
+  for (int i = 0; i < numParts; i++) {
+    const char* name;
+    // get custom partitioner strategy count from the dynamic library
+    int count = partRegGetCount(i, &name);
+    CHECK(count > 0) << "Error loading '" << name
+                     << "' custom partitioner, no strategies defined";
+    std::string name_str(name);
+    LOG(INFO) << "\tPartitioner[" << i << "] " << name;
+
+    mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_BACKEND__(name);
+
+    for (int j = 0; j < count; j++) {
+      const char* strategy;
+      // function pointers holding implementation from custom library
+      supportedOps_t supportedOps_fp = nullptr;
+      acceptSubgraph_t acceptSubgraph_fp = nullptr;
+      // name of subgraph op
+      const char* op_name = nullptr;
+
+    // get custom partitioner strategy from the dynamic library
+      partRegGet(i, j, &strategy, &supportedOps_fp, &acceptSubgraph_fp, &op_name);
+      // validate custom partitioner functions from the dynamic library
+      CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
+                                        << "' custom partitioner strategy '" << strategy
+                                        << "', supportedOps function was not set.";
+      std::string strategy_str(strategy);
+      std::string op_name_str(op_name);
+      LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
+                << " subgraphOp: '" << op_name_str << "'";
+
+      // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
+      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
+                            std::make_shared<mxnet::op::CustomSubgraphProperty>(
+                           strategy_str, callSupportedOps, supportedOps_fp,
+                           callAcceptSubgraph, acceptSubgraph_fp, callFree, op_name_str));
+    }
   }
   API_END();
 }

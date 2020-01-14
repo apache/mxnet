@@ -268,6 +268,8 @@ To reduce the communication cost, we can consider:
 - Exploring different `--kv-store` options.
 - Increasing the batch size to improve the computation to communication ratio.
 
+Finally, MXNet is integrated with other distributed training frameworks, including [horovod](https://github.com/apache/incubator-mxnet/tree/master/example/distributed_training-horovod) and [BytePS](https://github.com/bytedance/byteps#use-byteps-in-your-code).
+
 ## Input Data
 
 To make sure you're handling input data in a reasonable way consider the following:
@@ -284,29 +286,30 @@ For example, the safe batch size for CIFAR 10 is approximately 200, while for Im
 
 ## Profiler
 
-As of v0.9.1 (with the NNVM merge), _MXNet_ has a built-in profiler
-that gives detailed information about execution time at the symbol level.
+_MXNet_ has a built-in profiler
+that gives detailed information about execution time at the operator level.
 This feature complements general profiling tools like _nvprof_ and _gprof_
 by summarizing at the operator level, instead of a function, kernel, or instruction level.
 
 The profiler can be turned on with an [environment variable]({{'/api/faq/env_var#control-the-profiler' | relative_url}})
-for an entire program run, or programmatically for just part of a run.
+for an entire program run, or programmatically for just part of a run. Note that by default the profiler hides the details of each individual operator, and you can reveal the details by setting environment variables `MXNET_EXEC_BULK_EXEC_INFERENCE`, `MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN` and `MXNET_EXEC_BULK_EXEC_TRAIN` to 0.
 See [example/profiler](https://github.com/dmlc/mxnet/tree/master/example/profiler)
-for complete examples of how to use the profiler in code, but briefly, the Python code looks like:
+for complete examples of how to use the profiler in code, or [this tutorial](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/profiler.html) on how to profile MXNet performance.
+
+Briefly, the Python code looks like:
 
 ```python
-    mx.profiler.set_config(profile_all=True, filename='profile_output.json')
+    # wait for previous operations to complete
+    mx.nd.waitall() 
+    mx.profiler.set_config(profile_all=True, aggregate_stats=True, filename='profile_output.json')
     mx.profiler.set_state('run')
 
     # Code to be profiled goes here...
 
+    # wait for previous operations to complete
+    mx.nd.waitall() 
     mx.profiler.set_state('stop')
 ```
-
-The `mode` parameter can be set to
-
-* `symbolic` to only include symbolic operations
-* `all` to include all operations
 
 After the program finishes, navigate to your browser's tracing (Example - chrome://tracing in a Chrome browser) and load the `profile_output.json` file output by the profiler to inspect the results.
 

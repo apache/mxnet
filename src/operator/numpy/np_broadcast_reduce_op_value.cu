@@ -68,7 +68,7 @@ NNVM_REGISTER_OP(_npi_std)
 NNVM_REGISTER_OP(_npi_var)
 .set_attr<FCompute>("FCompute<gpu>", NumpyMomentsForward<gpu, false>);
 
-NNVM_REGISTER_OP(_np_broadcast_to)
+NNVM_REGISTER_OP(_npi_broadcast_to)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBroadcastToForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_np_broadcast_to)
