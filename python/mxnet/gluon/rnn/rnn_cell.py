@@ -519,7 +519,7 @@ class LSTMCell(HybridRecurrentCell):
     def __repr__(self):
         s = '{name}({mapping})'
         shape = self.i2h_weight.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // 4)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
@@ -632,7 +632,7 @@ class GRUCell(HybridRecurrentCell):
     def __repr__(self):
         s = '{name}({mapping})'
         shape = self.i2h_weight.shape
-        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0])
+        mapping = '{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0] // 3)
         return s.format(name=self.__class__.__name__,
                         mapping=mapping,
                         **self.__dict__)
