@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_uniform_op.cc
+ * \file np_laplace_op.cc
  * \brief Operator for numpy sampling from Laplace distributions
  */
 #include "./np_laplace_op.h"
