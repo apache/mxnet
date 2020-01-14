@@ -218,6 +218,9 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
 /* \brief Check if param indices and data indices are set, if not then set data indices */
 void SetInputIndices(const nnvm::Graph& fwd_graph,
                      const mxnet::Tuple<uint32_t>& param_indices,
+                     mxnet::Tuple<uint32_t>* data_indices) __attribute__((unused));
+void SetInputIndices(const nnvm::Graph& fwd_graph,
+                     const mxnet::Tuple<uint32_t>& param_indices,
                      mxnet::Tuple<uint32_t>* data_indices) {
   const auto& indexed_graph = fwd_graph.indexed_graph();
   if (data_indices->ndim() || param_indices.ndim()) {
