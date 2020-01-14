@@ -42,17 +42,17 @@ namespace mxnet {
 namespace op {
 
 struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
-    dmlc::optional<float> scale;
-    dmlc::optional<mxnet::Tuple<int>> size;
-    DMLC_DECLARE_PARAMETER(NumpyExponentialParam) {
-        DMLC_DECLARE_FIELD(scale)
-        .set_default(dmlc::optional<float> (1.0));
-        DMLC_DECLARE_FIELD(size)
-        .set_default(dmlc::optional<mxnet::Tuple<int>>())
-        .describe("Output shape. If the given shape is, "
-            "e.g., (m, n, k), then m * n * k samples are drawn. "
-            "Default is None, in which case a single value is returned.");
-    }
+  dmlc::optional<float> scale;
+  dmlc::optional<mxnet::Tuple<int>> size;
+  DMLC_DECLARE_PARAMETER(NumpyExponentialParam) {
+      DMLC_DECLARE_FIELD(scale)
+      .set_default(dmlc::optional<float>(1.0));
+      DMLC_DECLARE_FIELD(size)
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .describe("Output shape. If the given shape is, "
+          "e.g., (m, n, k), then m * n * k samples are drawn. "
+          "Default is None, in which case a single value is returned.");
+  }
 };
 
 template <typename DType>
@@ -91,10 +91,10 @@ struct exponential_kernel {
 
 template <typename xpu>
 void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
-                         const OpContext &ctx,
-                         const std::vector<TBlob> &inputs,
-                         const std::vector<OpReqType> &req,
-                         const std::vector<TBlob> &outputs) {
+                             const OpContext &ctx,
+                             const std::vector<TBlob> &inputs,
+                             const std::vector<OpReqType> &req,
+                             const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyExponentialParam &param = nnvm::get<NumpyExponentialParam>(attrs.parsed);
@@ -113,17 +113,16 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
     CHECK_GE(param.scale.value(), 0.0) << "ValueError: expect scale >= 0";
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       Kernel<scalar_exponential_kernel<DType>, xpu>::Launch(
-                                          s, outputs[0].Size(), param.scale.value(),
-                                          uniform_tensor.dptr_, outputs[0].dptr<DType>());
+        s, outputs[0].Size(), param.scale.value(),
+        uniform_tensor.dptr_, outputs[0].dptr<DType>());
     });
   } else {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
-        Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
-            s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
+      Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
+      s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
       });
-      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
-      CHECK_GE(indicator_host, 0.0)
-          << "ValueError: expect scale >= 0";
+    _copy<xpu>(s, &indicator_host, indicator_device_ptr);
+    CHECK_GE(indicator_host, 0.0) << "ValueError: expect scale >= 0";
     mxnet::TShape new_lshape, new_oshape;
     int ndim = FillShape(inputs[0].shape_, inputs[0].shape_, outputs[0].shape_,
                          &new_lshape, &new_lshape, &new_oshape);

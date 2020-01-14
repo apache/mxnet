@@ -3456,6 +3456,10 @@ def test_np_exponential():
         np_out = _np.random.exponential(np.array([1]).asnumpy(), shape)
         assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
 
+    def _test_exponential_exception(scale):
+        output = np.random.exponential(scale=scale).asnumpy()
+    assertRaises(ValueError, _test_exponential_exception, -1)
+
 
 @with_seed()
 @use_np
