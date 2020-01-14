@@ -104,7 +104,7 @@ struct DataIteratorReg
  *
  * \code
  * // example of registering a mnist iterator
- * REGISTER_IO_ITE(MNISTIter)
+ * REGISTER_IO_ITER(MNISTIter)
  * .describe("Mnist data iterator")
  * .set_body([]() {
  *     return new PrefetcherIter(new MNISTIter());
@@ -113,5 +113,71 @@ struct DataIteratorReg
  */
 #define MXNET_REGISTER_IO_ITER(name)                                    \
   DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name)
+
+/*!
+ * \brief A random accessable dataset which provides GetLen() and GetItem().
+ * Unlike DataIter, it's a static lookup storage which is friendly to random access.
+ * The dataset itself should NOT contain data processing, which should be applied during
+ * data augmentation or transformation processes.
+ */
+class Dataset {
+  public:
+    /*!
+    *  \brief Initialize the Operator by setting the parameters
+    *  This function need to be called before all other functions.
+    *  \param kwargs the keyword arguments parameters
+    */
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+    /*! 
+    *  \brief Get the size of the dataset
+    */
+    virtual uint64_t GetLen(void) const = 0;
+    /*! 
+    *  \brief Get the output size. 
+    *  For example, if the GetItem should return two array, the output size is 2.
+    */
+    virtual int GetOutputSize(void) const = 0;
+    /*! 
+    *  \brief Get the ndarray data given index in dataset and output tuple
+    *  \param idx the integer index for required data
+    *  \param n the n-th item
+    */
+    virtual NDArray GetItem(uint64_t idx, int n) = 0;
+    // virtual destructor
+    virtual ~Dataset(void) {}
+    /*!
+    * \brief factory function
+    * \param name Name of the dataset
+    * \return The created dataset.
+    */
+    static Dataset* Create(const std::string& name);
+};  // class Dataset
+
+/*! \brief typedef the factory function of dataset */
+typedef std::function<Dataset *()> DatasetFactory;
+/*!
+ * \brief Registry entry for Dataset factory functions.
+ */
+struct DatasetReg
+    : public dmlc::FunctionRegEntryBase<DatasetReg,
+                                        DatasetFactory> {
+};
+//--------------------------------------------------------------
+// The following part are API Registration of Datasets
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register Datasets
+ *
+ * \code
+ * // example of registering an image sequence dataset
+ * REGISTER_IO_ITE(ImageSequenceDataset)
+ * .describe("image sequence dataset")
+ * .set_body([]() {
+ *     return new ImageSequenceDataset();
+ *   });
+ * \endcode
+ */
+#define MXNET_REGISTER_IO_DATASET(name)                                    \
+  DMLC_REGISTRY_REGISTER(::mxnet::DatasetReg, DatasetReg, name)
 }  // namespace mxnet
 #endif  // MXNET_IO_H_

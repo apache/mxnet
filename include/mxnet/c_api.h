@@ -81,6 +81,10 @@ typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
+/*! \brief handle a dataset creator */
+typedef void *DatasetCreator;
+/*! \brief handle to a Dataset */
+typedef void *DatasetHandle;
 /*! \brief handle to KVStore */
 typedef void *KVStoreHandle;
 /*! \brief handle to RecordIO */
@@ -2647,6 +2651,80 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
+/*!
+ * \brief List all the available dataset entries
+ * \param out_size the size of returned datasets
+ * \param out_array the output dataset entries
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListDatasets(uint32_t *out_size,
+                             DatasetCreator **out_array);
+/*!
+ * \brief Init an dataset, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the dataset creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting dataset
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetCreateDataset(DatasetCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     DatasetHandle *out);
+/*!
+ * \brief Get the detailed information about dataset.
+ * \param creator the DatasetCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetDatasetInfo(DatasetCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the dataset 
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetFree(DatasetHandle handle);
+/*!
+ * \brief Get dataset overal length(size)
+ * \param handle the handle to dataset
+ * \param out return value of GetLen
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
+                              uint64_t *out);
+/*!
+ * \brief Get dataset output size
+ * \param handle the handle to dataset
+ * \param out return value of GetOutSize
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
+                                  int *out);                              
+/*!
+ * \brief Get Output NDArray given specified indices
+ * \param handle the handle to dataset
+ * \param index the index of items in dataset
+ * \param n the index of ndarray in output items
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
+                               uint64_t index,
+                               int n,
+                               NDArrayHandle *arr);
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

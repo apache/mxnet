@@ -1747,6 +1747,82 @@ int MXDataIterGetPadNum(DataIterHandle handle, int *pad) {
   API_END();
 }
 
+MXNET_DLL int MXListDatasets(uint32_t *out_size,
+                             DatasetCreator **out_array) {
+  API_BEGIN();
+  auto &vec = dmlc::Registry<DatasetReg>::List();
+  *out_size = static_cast<uint32_t>(vec.size());
+  *out_array = (DatasetCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();                            
+}
+
+MXNET_DLL int MXDatasetCreateDataset(DatasetCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     DatasetHandle *out) {
+  Dataset *dataset = nullptr;
+  API_BEGIN();
+  DatasetReg *e = static_cast<DatasetReg *>(handle);
+  dataset = e->body();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (uint32_t i = 0; i < num_param; ++i) {
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+  }
+  dataset->Init(kwargs);
+  *out = dataset;
+  API_END_HANDLE_ERROR(delete dataset);                       
+}
+
+MXNET_DLL int MXDatasetGetDatasetInfo(DatasetCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions) {
+  DatasetReg *e = static_cast<DatasetReg *>(creator);
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 NULL);                         
+}
+
+MXNET_DLL int MXDatasetFree(DatasetHandle handle) {
+  API_BEGIN();
+  delete static_cast<Dataset *>(handle);
+  API_END();                            
+}
+
+MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
+                              uint64_t *out) {
+  API_BEGIN();
+  uint64_t len = static_cast<Dataset *>(handle)->GetLen();
+  *out = len;
+  API_END();                            
+}
+
+MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
+                                  int *out) {
+  API_BEGIN();
+  int size = static_cast<Dataset *>(handle)->GetOutputSize();
+  *out = size;
+  API_END();                            
+}
+
+MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
+                               uint64_t index,
+                               int n,
+                               NDArrayHandle *arr) {
+  API_BEGIN();
+  NDArray* pndarray = new NDArray();
+  *pndarray = static_cast<Dataset *>(handle)->GetItem(index, n);
+  *arr = pndarray;
+  API_END();                            
+}                               
+//--------------------------------------------
+// Part 6: basic KVStore interface
+//--------------------------------------------
+
 int MXKVStoreCreate(const char *type,
                     KVStoreHandle *out) {
   API_BEGIN();
