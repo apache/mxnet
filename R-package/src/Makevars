@@ -1,3 +1,4 @@
 CXX_STD = CXX11
-PKG_CPPFLAGS = -I../inst/include
-PKG_LIBS =  $(LAPACK_LIBS) $(BLAS_LIBS)
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) `pkg-config --libs opencv`
+PKG_CFLAGS = `pkg-config --cflags opencv`
+PKG_CPPFLAGS = -I../inst/include `pkg-config --cflags opencv` `Rscript -e 'Rcpp:::CxxFlags()'`

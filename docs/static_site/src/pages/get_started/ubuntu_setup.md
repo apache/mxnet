@@ -363,23 +363,9 @@ make install
 
 ### Install the MXNet Package for R
 
-Building *MXNet* from source is a 2 step process.
-1. Build the *MXNet* core shared library, `libmxnet.so`, from source.
-2. Build the R bindings.
-
-#### Quick MXNet-R Installation
-You can quickly build MXNet-R with the following two scripts found in the `/docs/install` folder:
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet/docs/install
-./install_mxnet_ubuntu_python.sh
-./install_mxnet_ubuntu_r.sh
-```
-
-Or you can go through a manual process described next.
-
-#### Manual MXNet-R Installation
+Before you build MXNet for R from source code, you must complete
+[building the shared library](#build-the-shared-library).
+source root directory to build the MXNet Perl package:
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
@@ -389,60 +375,43 @@ Or you can go through a manual process described next.
 
 **Build the MXNet core shared library**
 
-**Step 1** Install build tools and git.
+**Step 1** Install R, cran-devtools and dependencies
+
+To install R and the devtools, run
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential git
+sudo apt-get install -y r-base-core r-cran-devtools libcairo2-dev libxml2-dev
 ```
 
-**Step 2** Install OpenBLAS.
+`libxml2-dev` is required for the `roxygen2` dependency and `libcairo2-dev` is
+required for the suggested `imager` dependency.
 
-*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms)
-and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations
-on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](https://www.openblas.net/),
-[ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we
-install OpenBLAS. You can choose to install ATLAS or MKL.
+To generate documentation, it is also required to install `roxygen2`.
 
 ```bash
-sudo apt-get install -y libopenblas-dev liblapack-dev
+R
+> install.packages("roxygen2")
+> Would you like to use a personal library instead?  (y/n) y
+> Would you like to create a personal library ... to install packages into?  (y/n) y
 ```
 
-**Step 3** Install OpenCV.
+Note: To successfully complete the next step, you need a personal R library. If
+you were able to run `install.packages("roxygen2")` above, you either had
+already, or you have successfully created a personal library just now.
 
-*MXNet* uses [OpenCV](https://opencv.org/) for efficient image loading and augmentation operations.
+**Step 2** Make and install the MXNet-R bindings.
 
 ```bash
-sudo apt-get install -y libopencv-dev
+make -f R-package/Makefile rpkg
 ```
 
-**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the
-following code block, or you may try the [download links](download) for your desired MXNet version.
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet mxnet
-cd mxnet
-echo "USE_OPENCV = 1" >> ./config.mk
-echo "USE_BLAS = openblas" >> ./config.mk
-make -j $(nproc)
-```
-
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can
-explore and use more compilation options in `make/config.mk`.
-
-<br/>
-
-**Step 5** Make and install the MXNet-R bindings.
-
-```bash
-make rpkg
-```
 #### Verify MXNet-R Installation
 
 You can verify your MXNet-R installation as follows:
 
 ```bash
-sudo -i R
+R
 ```
 
 At the R prompt enter the following:
