@@ -3494,6 +3494,52 @@ def test_np_randn():
 
 @with_seed()
 @use_np
+def test_np_multivariate_normal():
+    class TestMultivariateNormal(HybridBlock):
+        def __init__(self, size=None):
+            super(TestMultivariateNormal, self).__init__()
+            self.size = size
+
+        def hybrid_forward(self, F, mean, cov):
+            return F.np.random.multivariate_normal(mean, cov, self.size)
+
+    hybridize_list = [True, False]
+    dtypes = ['float16', 'float32', 'float64']
+    size_list = [None, 1, (), (2, 3), (2, 0)]
+    # [mean_shape, cov_shape]: _np.broadcast(mean_shape, cov_shape[:-1]) should not raise error
+    batch_shape_list = [[(2,), (2, 2)], [(3, 2), (2, 2)], [(2,), (3, 2, 2)], [(3, 2), (4, 3, 2, 2)]]
+    # most basic case for mean and cov
+    mean = np.array([0.123456789, 10])
+    cov = np.array([[1, 0], [0, 10]])
+
+    for [hybridize, dtype, size, batch_shape] in itertools.product(hybridize_list,\
+                dtypes, size_list, batch_shape_list):
+        # simplest case: 1-d, 0 batch
+        # compared with official numpy
+        mean_shape = batch_shape[0]
+        cov_shape = batch_shape[1]
+        new_mean = np.broadcast_to(mean, mean_shape).astype(dtype)
+        new_cov = np.broadcast_to(cov, cov_shape).astype(dtype)
+
+        test_multivariate_normal = TestMultivariateNormal(size)
+        if hybridize:
+            test_multivariate_normal.hybridize()
+
+        test_shape = test_multivariate_normal(new_mean, new_cov).shape
+        actual_shape = np.random.multivariate_normal(new_mean, new_cov, size).shape
+
+        desired_shape = np.broadcast_arrays(np.empty(mean_shape), np.empty(cov_shape[:-1]))[0].shape
+
+        if size is not None:
+            size = [size] if isinstance(size, int) else list(size)
+            desired_shape = size + list(desired_shape)
+
+        assert list(desired_shape) == list(test_shape)
+        assert list(desired_shape) == list(actual_shape)
+
+
+@with_seed()
+@use_np
 def test_random_seed():
     for seed in [234, 594, 7240, 20394]:
         ret = []

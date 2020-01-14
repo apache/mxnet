@@ -22,7 +22,8 @@ from ...context import current_context
 from . import _internal as _npi
 
 
-__all__ = ['randint', 'uniform', 'normal', 'rand', 'shuffle', 'gamma', 'exponential']
+__all__ = ['randint', 'uniform', 'normal', 'multivariate_normal',
+           'rand', 'shuffle', 'gamma', 'exponential']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -52,12 +53,12 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
         on the platform. The default value is 'np.int'.
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : symbol, optional
+    out : _Symbol, optional
         The output symbol (default is `None`).
 
     Returns
     -------
-    out : symbol
+    out : _Symbol
         `size`-shaped array of random integers from the appropriate
         distribution, or a single such random int if `size` not provided.
 
@@ -98,7 +99,7 @@ def rand(*size, **kwargs):
         If no argument is given a single Python float is returned.
     Returns
     -------
-    out : ndarray
+    out : _Symbol
        Random values.
     Examples
     --------
@@ -123,10 +124,10 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
 
     Parameters
     ----------
-    low : float, ndarray, optional
+    low : float, _Symbol, optional
         Lower boundary of the output interval.  All values generated will be
         greater than or equal to low.  The default value is 0.
-    high : float, ndarray, optional
+    high : float, _Symbol, optional
         Upper boundary of the output interval.  All values generated will be
         less than high.  The default value is 1.0.
     size : int or tuple of ints, optional
@@ -141,7 +142,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
 
     Returns
     -------
-    out : ndarray
+    out : _Symbol
         Drawn samples from the parameterized uniform distribution.
     """
     from ._symbol import _Symbol as np_symbol
@@ -376,6 +377,87 @@ def exponential(scale=1.0, size=None):
         return _npi.exponential(scale, scale=None, size=size)
     else:
         return _npi.exponential(scale=scale, size=size)
+
+
+def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
+    """
+    multivariate_normal(mean, cov, size=None, check_valid=None, tol=None)
+
+    Draw random samples from a multivariate normal distribution.
+
+    The multivariate normal, multinormal or Gaussian distribution is a
+    generalization of the one-dimensional normal distribution to higher
+    dimensions.  Such a distribution is specified by its mean and
+    covariance matrix.  These parameters are analogous to the mean
+    (average or "center") and variance (standard deviation, or "width,"
+    squared) of the one-dimensional normal distribution.
+
+    This operator is a little different from the one in official NumPy.
+    The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
+    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+
+    Both `mean` and `cov` may have any number of leading dimensions, which correspond
+    to a batch shape. They are not necessarily assumed to have the same batch shape,
+    just ones which can be broadcasted.
+
+    Parameters
+    ----------
+    mean : K-D _Symbol, of shape (..., N)
+        Mean of the N-dimensional distribution.
+    cov : (K+1)-D _Symbol, of shape (..., N, N)
+        Covariance matrix of the distribution. The last two dimensions must be symmetric and
+        positive-semidefinite for proper sampling.
+    size : int or tuple of ints, optional
+        Given a shape of, for example, ``(m,n,k)``,
+        ``m*n*k`` identically distributed batchs of samples are
+        generated, and packed in an `m`-by-`n`-by-`k` arrangement.
+        If no shape is specified, a batch of (`N`-D) sample is returned.
+    check_valid : { 'warn', 'raise', 'ignore' }, optional
+        Behavior when the covariance matrix is not positive semidefinite.
+        (Not supported)
+    tol : float, optional
+        Tolerance when checking the singular values in covariance matrix.
+        cov is cast to double before the check.
+        (Not supported)
+
+    Returns
+    -------
+    out : _Symbol
+        The input shape of `mean` and `cov` should satisfy the requirements of broadcasting.
+        If the parameter `size` is not provided,
+        the output shape is ``np.broadcast(mean.shape, cov.shape[:-1])``.
+        Otherwise, the output shape is ``size + np.broadcast(mean.shape, cov.shape[:-1])``
+
+    Examples
+    --------
+    >>> mean = np.array([1, 2])
+    >>> cov = np.array([[1, 0], [0, 1]])
+    >>> x = np.random.multivariate_normal(mean, cov, (3, 3))
+    >>> x.shape
+    (3, 3, 2)
+
+    The following is probably true, given that 0.6 is roughly twice the
+    standard deviation:
+
+    >>> list((x[0,0,:] - mean) < 0.6)
+    [True, True] # random
+
+    # Performs autobroadcasting when the batch shape of
+    # `mean` and `cov` is different but compatible.
+
+    >>> mean = np.zeros((3,2)) # shape (3, 2)
+    >>> cov = np.array([[1, 0], [0, 100]]) # shape (2, 2)
+    >>> x = np.random.multivariate_normal(mean, cov)
+    >>> x
+    array([[-1.6115597 , -8.726251  ],
+           [ 2.2425299 ,  2.8104177 ],
+           [ 0.36229908, -8.386591  ]])
+    """
+    if check_valid is not None:
+        raise NotImplementedError('Parameter `check_valid` is not supported')
+    if tol is not None:
+        raise NotImplementedError('Parameter `tol` is not supported')
+    return _npi.mvn_fallback(mean, cov, size=size)
 
 
 def shuffle(x):
