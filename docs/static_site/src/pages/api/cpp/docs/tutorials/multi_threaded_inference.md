@@ -102,7 +102,7 @@ $ export LD_LIBRARY_PATH=<MXNET_LIB_DIR>:$LD_LIBRARY_PATH
 ```
 
 ```bash
-$ ./multi_threaded_inference [model_name] [num_threads] [is_gpu] [file_names]
+$ ./multi_threaded_inference [model_name] [is_gpu] [file_names]
 ```
 e.g.
 

@@ -69,6 +69,40 @@ void CreateForwardGraph(const nnvm::Symbol &sym, nnvm::Graph *fwd_graph) {
   }
 }
 
+/* \brief construct grad_graph from fwd_graph and ograd_entries*/
+void CreateBackwardGraph(nnvm::Graph* fwd_graph,
+                         nnvm::Graph* grad_graph,
+                         std::vector<nnvm::NodeEntry>* ograd_entries,
+                         std::unordered_map<uint32_t, uint32_t>* fwd_input_to_grad_output) {
+  using namespace nnvm;
+  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
+  ograd_entries->reserve(fwd_graph->outputs.size());
+  for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
+    nnvm::NodePtr np = Node::Create();
+    np->attrs.name = "_head_grad_" + std::to_string(i);
+    ograd_entries->emplace_back(np);
+  }
+
+  std::vector<NodeEntry> xs;
+  const IndexedGraph &indexed_graph = fwd_graph->indexed_graph();
+  for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+    const uint32_t node_id = indexed_graph.input_nodes()[i];
+    if (indexed_graph.mutable_input_nodes().count(node_id))
+      continue;
+    (*fwd_input_to_grad_output)[i] = xs.size();
+    xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
+  }
+
+  CHECK(!xs.empty())
+    << "There are no inputs in computation graph that require gradients.";
+
+  *grad_graph = pass::MXGradient(
+    *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
+    exec::AggregateGradient, nullptr, nullptr,
+    zero_ops, "_copy");
+
+}
+
 /* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
 void CreateFullGraph(const nnvm::Symbol& sym,
                      nnvm::Graph* fwd_graph,
@@ -77,7 +111,6 @@ void CreateFullGraph(const nnvm::Symbol& sym,
                      std::vector<nnvm::NodeEntry>* ograd_entries,
                      std::unordered_map<uint32_t, uint32_t>* fwd_input_to_grad_output) {
   using namespace nnvm;
-  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   CreateForwardGraph(sym, fwd_graph);
 
   bool do_elim_common_expr = dmlc::GetEnv("MXNET_ELIMINATE_COMMON_EXPR", true);
@@ -85,38 +118,12 @@ void CreateFullGraph(const nnvm::Symbol& sym,
     *fwd_graph = exec::EliminateCommonExpr(std::move(*fwd_graph));
 
   // construct backward graph
-  {
-    ograd_entries->reserve(fwd_graph->outputs.size());
-    for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
-      nnvm::NodePtr np = Node::Create();
-      np->attrs.name = "_head_grad_" + std::to_string(i);
-      ograd_entries->emplace_back(np);
-    }
+  CreateBackwardGraph(fwd_graph, grad_graph, ograd_entries,
+                      fwd_input_to_grad_output);
 
-    std::vector<NodeEntry> xs;
-    const IndexedGraph& indexed_graph = fwd_graph->indexed_graph();
-    for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
-      const uint32_t node_id = indexed_graph.input_nodes()[i];
-      if (indexed_graph.mutable_input_nodes().count(node_id))
-        continue;
-      (*fwd_input_to_grad_output)[i] = xs.size();
-      xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
-    }
-
-    CHECK(!xs.empty())
-        << "There are no inputs in computation graph that require gradients.";
-
-    *grad_graph = pass::MXGradient(
-        *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-        exec::AggregateGradient, nullptr, nullptr,
-        zero_ops, "_copy");
-  }
-
-  // construct full graph
-  {
-    full_graph->outputs = fwd_graph->outputs;
-    for (const auto& i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
-  }
+  // Add backward graph outputs to full graph
+  full_graph->outputs = fwd_graph->outputs;
+  for (const auto &i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
 }
 
 /* \brief Set Ref counts for node entries for forward graph */
@@ -207,6 +214,24 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
                                                      num_forward_outputs,
                                                      full_graph->outputs.end());
   SetRefCounts(fwd_graph, *full_graph);
+}
+
+/* \brief Check if param indices and data indices are set, if not then set data indices */
+void SetInputIndices(const nnvm::Graph& fwd_graph,
+                     const mxnet::Tuple<uint32_t>& param_indices,
+                     mxnet::Tuple<uint32_t>* data_indices) {
+  const auto& indexed_graph = fwd_graph.indexed_graph();
+  if (data_indices->ndim() || param_indices.ndim()) {
+    CHECK_EQ(data_indices->ndim() + param_indices.ndim(),
+             indexed_graph.input_nodes().size());
+  } else {
+    std::vector<uint32_t> tmp;
+    tmp.reserve(indexed_graph.input_nodes().size());
+    for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
+      tmp.emplace_back(i);
+    }
+    data_indices->assign(tmp.begin(), tmp.end());
+  }
 }
 
 }  // namespace

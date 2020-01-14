@@ -298,8 +298,8 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
 
 int main(int argc, char *argv[]) {
   if (argc < 5) {
-    std::cout << "Please provide a model name, num_threads, is_gpu, test_image" << std::endl
-              << "Usage: ./multi_threaded_inference [model_name] [num_threads] [is_gpu] [file_names]"
+    std::cout << "Please provide a model name, is_gpu, test_image" << std::endl
+              << "Usage: ./multi_threaded_inference [model_name] [is_gpu] [file_names]"
               << std::endl
               << "Example: ./.multi_threaded_inference imagenet1k-inception-bn 1 0 apple.jpg"
               << std::endl
@@ -308,12 +308,14 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
   std::string model_name = std::string(argv[1]);
-  int num_threads = std::atoi(argv[2]);
-  bool is_gpu = std::atoi(argv[3]);
-  CHECK(num_threads == argc - 4) << "Number of files provided, should be same as num_threads";
+  //int num_threads = std::atoi(argv[2]);
+  bool is_gpu = std::atoi(argv[2]);
+  CHECK(argc >= 4) << "Number of files provided should be atleast 1";
+  //CHECK(num_threads == argc - 3) << "Number of files provided, should be same as num_threads";
+  int num_threads = argc - 3;
   std::vector<std::string> test_files;
-  for (size_t i = 0; i < argc - 4; ++i) {
-    test_files.emplace_back(argv[4 + i]);
+  for (size_t i = 0; i < argc - 3; ++i) {
+    test_files.emplace_back(argv[3 + i]);
   }
   int epoch = 0;
   bool static_alloc = true;

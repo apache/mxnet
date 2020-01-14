@@ -47,7 +47,6 @@ CFLAGS += -I$(MXNET_ROOT)/include -I$(CPP_PACKAGE)/include -I$(USE_CUDA_PATH)/in
 # If MXNET_LIB_DIR env variable set use that, otherwise defaults to MXNET_ROOT/build
 ifndef MXNET_LIB_DIR
     MXNET_LIB_DIR=$(MXNET_ROOT)/lib
-    # cmake default by default
     # Uncomment below line for CMake build
     #MXNET_LIB_DIR=$(MXNET_ROOT)/build
 endif

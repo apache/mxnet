@@ -60,21 +60,7 @@ CachedOp::CachedOp(
         (idx.num_nodes() - idx.input_nodes().size()) <= config_.inline_limit;
   }
 
-  // Set params
-  {
-    const auto& indexed_graph = fwd_graph_.indexed_graph();
-    if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
-      CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
-               indexed_graph.input_nodes().size());
-    } else {
-      std::vector<uint32_t> tmp;
-      tmp.reserve(indexed_graph.input_nodes().size());
-      for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
-        tmp.emplace_back(i);
-      }
-      config_.data_indices.assign(tmp.begin(), tmp.end());
-    }
-  }
+  SetInputIndices(fwd_graph_, config_.param_indices, &config_.data_indices);
 
   // Set the backward dependency vectors
   {

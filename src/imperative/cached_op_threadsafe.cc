@@ -76,21 +76,8 @@ CachedOpThreadSafe::CachedOpThreadSafe(const nnvm::Symbol& sym,
   CreateForwardGraph(sym.Copy(), &fwd_graph_);
   SetForwardRefCounts(&fwd_graph_);
 
-  // Set param indices
-  {
-    const auto& indexed_graph = fwd_graph_.indexed_graph();
-    if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
-      CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
-               indexed_graph.input_nodes().size());
-    } else {
-      std::vector<uint32_t> tmp;
-      tmp.reserve(indexed_graph.input_nodes().size());
-      for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
-        tmp.emplace_back(i);
-      }
-      config_.data_indices.assign(tmp.begin(), tmp.end());
-    }
-  }
+  SetInputIndices(fwd_graph_, config_.param_indices,
+                  &config_.data_indices);
 }
 
 /*
