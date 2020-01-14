@@ -120,7 +120,7 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       Kernel<check_legal_scale_kernel<IType>, xpu>::Launch(
       s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
-      });
+    });
     _copy<xpu>(s, &indicator_host, indicator_device_ptr);
     CHECK_GE(indicator_host, 0.0) << "ValueError: expect scale >= 0";
     mxnet::TShape new_lshape, new_oshape;
