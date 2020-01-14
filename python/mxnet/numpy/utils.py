@@ -23,7 +23,7 @@ from __future__ import absolute_import
 import numpy as onp
 
 __all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64',
-           'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis']
+           'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis', 'finfo']
 
 float16 = onp.float16
 float32 = onp.float32
@@ -42,3 +42,4 @@ PZERO = onp.PZERO
 NZERO = onp.NZERO
 
 newaxis = None
+finfo = onp.finfo
