@@ -20,7 +20,7 @@
 // Jenkins pipeline
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
-// NOTE: 
+// NOTE:
 // ci_utils and cd_utils are loaded by the originating Jenkins job, e.g. jenkins/Jenkinsfile_release_job
 
 // Only post the following variants to PyPI.
@@ -46,7 +46,7 @@ def build(mxnet_variant) {
   ws("workspace/python_pypi/${mxnet_variant}/${env.BUILD_NUMBER}") {
     ci_utils.init_git()
     cd_utils.restore_static_libmxnet(mxnet_variant)
-    
+
     // create wheel file
     def environment = get_environment(mxnet_variant)
     def nvidia_docker = mxnet_variant.startsWith('cu')
