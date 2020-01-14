@@ -29,7 +29,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import run_in_spawned_process
 from nose.tools import assert_raises, ok_
 import unittest
@@ -9553,6 +9553,7 @@ def check_multihead_attention_selfatt(dtype):
 
 
 @with_seed()
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_selfatt():
     dtypes = ['float32']
     if default_context().device_type == 'gpu':
@@ -9721,6 +9722,7 @@ def check_multihead_attention_encdec(dtype):
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
 @with_seed()
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_encdec():
     dtypes = ['float32']
     if default_context().device_type == 'gpu':
