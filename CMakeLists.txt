@@ -683,7 +683,7 @@ set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS "${CUDA_ARCH_FLAGS_SPACES}")
   # Create dummy file since we want an empty shared library before linking
-  set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
+  set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c src/operator/numpy/random/np_laplace_op.cc)
   file(WRITE ${DUMMY_SOURCE} "")
   list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
   add_library(mxnet_static STATIC ${SOURCE})

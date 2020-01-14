@@ -19,11 +19,11 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_uniform_op.h
- * \brief Operator for numpy sampling from uniform distributions
+ * \file np_laplace_op.h
+ * \brief Operator for numpy sampling from Laplace distributions
  */
-#ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_UNIFORM_OP_H_
-#define MXNET_OPERATOR_NUMPY_RANDOM_NP_UNIFORM_OP_H_
+    #ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_LAPLACE_OP_H_
+#define MXNET_OPERATOR_NUMPY_RANDOM_NP_LAPLACE_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <algorithm>
@@ -39,15 +39,15 @@
 namespace mxnet {
 namespace op {
 
-struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
-  dmlc::optional<float> low;
-  dmlc::optional<float> high;
+struct NumpyLaplaceParam : public dmlc::Parameter<NumpyLaplaceParam> {
+  dmlc::optional<float> loc;
+  dmlc::optional<float> scale;
   std::string ctx;
   int dtype;
   dmlc::optional<mxnet::Tuple<int>> size;
-  DMLC_DECLARE_PARAMETER(NumpyUniformParam) {
-    DMLC_DECLARE_FIELD(low);
-    DMLC_DECLARE_FIELD(high);
+  DMLC_DECLARE_PARAMETER(NumpyLaplaceParam) {
+    DMLC_DECLARE_FIELD(loc);
+    DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
         .set_default(dmlc::optional<mxnet::Tuple<int>>())
         .describe(
@@ -68,10 +68,10 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
   }
 };
 
-inline bool NumpyUniformOpType(const nnvm::NodeAttrs &attrs,
+inline bool NumpyLaplaceOpType(const nnvm::NodeAttrs &attrs,
                                std::vector<int> *in_attrs,
                                std::vector<int> *out_attrs) {
-  const NumpyUniformParam &param = nnvm::get<NumpyUniformParam>(attrs.parsed);
+  const NumpyLaplaceParam &param = nnvm::get<NumpyLaplaceParam>(attrs.parsed);
   int otype = param.dtype;
   if (otype != -1) {
     (*out_attrs)[0] = otype;
@@ -82,80 +82,90 @@ inline bool NumpyUniformOpType(const nnvm::NodeAttrs &attrs,
 }
 
 namespace mxnet_op {
+
 template <int ndim, typename IType, typename OType>
-struct uniform_kernel {
+struct laplace_kernel {
   MSHADOW_XINLINE static void Map(index_t i, const Shape<ndim> &lstride,
                                   const Shape<ndim> &hstride,
-                                  const Shape<ndim> &oshape, IType *low,
-                                  IType *high, float *uniform, OType *out) {
+                                  const Shape<ndim> &oshape, IType *loc,
+                                  IType *scale, float *uniforms, OType *out) {
     Shape<ndim> coord = unravel(i, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto hidx = static_cast<index_t>(dot(coord, hstride));
-    IType low_value = low[lidx];
-    IType high_value = high[hidx];
-    // out[i] = low_value + uniform[i] * (high_value - low_value);
-    out[i] = low_value + uniform[i] * high_value;
+    IType loc_value = loc[lidx];
+    IType scale_value = scale[hidx];
+    if(uniforms[i]<0.5){
+        out[i]=loc_value+scale_value*log(2*uniforms[i]);
+    }else{
+        out[i]=loc_value-scale_value*log(2*(1-uniforms[i]));
+    }
   }
 };
 
 template <int ndim, typename IType, typename OType>
-struct uniform_one_scalar_kernel {
+struct laplace_one_scalar_kernel {
   MSHADOW_XINLINE static void Map(index_t i, int scalar_pos,
                                   const Shape<ndim> &stride,
                                   const Shape<ndim> &oshape, IType *array,
-                                  float scalar, float *uniform, OType *out) {
+                                  float scalar, float *uniforms, OType *out) {
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
-    IType low_value;
-    IType high_value;
+    IType loc_value;
+    IType scale_value;
     if (scalar_pos == 0) {
-      low_value = scalar;
-      high_value = array[idx];
+      loc_value = scalar;
+      scale_value = array[idx];
     } else {
-      low_value = array[idx];
-      high_value = scalar;
+      loc_value = array[idx];
+      scale_value = scalar;
     }
-    // out[i] = low_value + uniform[i] * (high_value - low_value);
-    out[i] = low_value + uniform[i] * high_value;
+      if(uniforms[i]<0.5){
+          out[i]=loc_value+scale_value*log(2*uniforms[i]);
+      }else{
+          out[i]=loc_value-scale_value*log(2*(1-uniforms[i]));
+      }
   }
 };
 
 template <typename OType>
-struct uniform_two_scalar_kernel {
-  MSHADOW_XINLINE static void Map(index_t i, float low, float high,
-                                  float *uniform, OType *out) {
-    //out[i] = low + uniform[i] * (high - low);
-      out[i] = low + uniform[i] * high;
+struct laplace_two_scalar_kernel {
+  MSHADOW_XINLINE static void Map(index_t i, float loc, float scale,
+                                  float *uniforms, OType *out) {
+      if(uniforms[i]<0.5){
+          out[i]=loc+scale*log(2*uniforms[i]);
+      }else{
+          out[i]=loc-scale*log(2*(1-uniforms[i]));
+      }
   }
 };
 }  // namespace mxnet_op
 
 template <typename xpu>
-void NumpyUniformForward(const nnvm::NodeAttrs &attrs,
+void NumpyLaplaceForward(const nnvm::NodeAttrs &attrs,
                          const OpContext &ctx,
                          const std::vector<TBlob> &inputs,
                          const std::vector<OpReqType> &req,
                          const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  const NumpyUniformParam &param = nnvm::get<NumpyUniformParam>(attrs.parsed);
+  const NumpyLaplaceParam &param = nnvm::get<NumpyLaplaceParam>(attrs.parsed);
   CHECK_EQ(outputs.size(), 1);
   Stream<xpu> *s = ctx.get_stream<xpu>();
 
   // Generate base random number.
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
-  Tensor<xpu, 1, float> uniform_tensor =
+  Tensor<xpu, 1, float> laplace_tensor =
       ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(outputs[0].Size()),
                                                       s);
-  prnd->SampleUniform(&uniform_tensor, 0, 1);
+  prnd->SampleUniform(&laplace_tensor, 0, 1);
   mxnet::TShape new_lshape, new_hshape, new_oshape;
 
   // [scalar scalar] case
   if (inputs.size() == 0U) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      Kernel<uniform_two_scalar_kernel<OType>, xpu>::Launch(
-          s, outputs[0].Size(), param.low.value(), param.high.value(),
-          uniform_tensor.dptr_, outputs[0].dptr<OType>());
+      Kernel<laplace_two_scalar_kernel<OType>, xpu>::Launch(
+          s, outputs[0].Size(), param.loc.value(), param.scale.value(),
+          laplace_tensor.dptr_, outputs[0].dptr<OType>());
     });
   } else if (inputs.size() == 1U) {
     // [scalar tensor], [tensor scalar] case
@@ -164,21 +174,21 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs,
     int scalar_pos;
     float scalar_value;
     // int type_flag = param.t;
-    if (param.low.has_value()) {
+    if (param.loc.has_value()) {
       scalar_pos = 0;
-      scalar_value = param.low.value();
+      scalar_value = param.loc.value();
     } else {
       scalar_pos = 1;
-      scalar_value = param.high.value();
+      scalar_value = param.scale.value();
     }
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
           Shape<NDim> oshape = new_oshape.get<NDim>();
           Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());
-          Kernel<uniform_one_scalar_kernel<NDim, IType, OType>, xpu>::Launch(
+          Kernel<laplace_one_scalar_kernel<NDim, IType, OType>, xpu>::Launch(
               s, outputs[0].Size(), scalar_pos, stride, oshape,
-              inputs[0].dptr<IType>(), scalar_value, uniform_tensor.dptr_,
+              inputs[0].dptr<IType>(), scalar_value, laplace_tensor.dptr_,
               outputs[0].dptr<OType>());
         });
       });
@@ -193,10 +203,10 @@ void NumpyUniformForward(const nnvm::NodeAttrs &attrs,
           Shape<NDim> oshape = new_oshape.get<NDim>();
           Shape<NDim> lstride = calc_stride(new_lshape.get<NDim>());
           Shape<NDim> hstride = calc_stride(new_hshape.get<NDim>());
-          Kernel<uniform_kernel<NDim, IType, OType>, xpu>::Launch(
+          Kernel<laplace_kernel<NDim, IType, OType>, xpu>::Launch(
               s, outputs[0].Size(), lstride, hstride, oshape,
               inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
-              uniform_tensor.dptr_, outputs[0].dptr<OType>());
+              laplace_tensor.dptr_, outputs[0].dptr<OType>());
         });
       });
     });

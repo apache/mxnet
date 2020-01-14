@@ -393,6 +393,8 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
 
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    return _mx_nd_np.random.laplace(loc, scale, size, dtype, ctx, out)
 
 def randn(*size, **kwargs):
     r"""Return a sample (or samples) from the "standard normal" distribution.

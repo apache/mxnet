@@ -192,6 +192,55 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         return _npi.normal(loc=loc, scale=scale, size=size,
                            ctx=ctx, dtype=dtype, out=out)
 
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a Laplace distribution.
+
+    Samples are distributed according to a normal distribution parametrized
+    by *loc* (mean) and *scale* (standard deviation).
+
+
+    Parameters
+    ----------
+    loc : float, optional
+        Mean (centre) of the distribution.
+    scale : float, optional
+        Standard deviation (spread or "width") of the distribution.
+    size : int or tuple of ints, optional
+        Output shape. If the given shape is, e.g., `(m, n, k)`, then `m * n * k`
+        samples are drawn. If size is `None` (default), a scalar tensor containing
+        a single value is returned if loc and scale are both scalars.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized normal distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.laplace(loc, scale, loc=None, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.laplace(scale, loc=loc, scale=None, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.laplace(loc, loc=None, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.laplace(loc=loc, scale=scale, size=size,
+                           ctx=ctx, dtype=dtype, out=out)
 
 def multinomial(n, pvals, size=None):
     r"""multinomial(n, pvals, size=None)
