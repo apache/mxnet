@@ -39,7 +39,7 @@
 #include <utility>
 #include <stdexcept>
 
-#define MX_LIBRARY_VERSION 2
+#define MX_LIBRARY_VERSION 3
 
 /*
  * Import from DLPack https://github.com/dmlc/dlpack/blob/master/include/dlpack/dlpack.h
@@ -203,13 +203,8 @@ enum MXDType {
   kUNSET = 100,
 };
 
-enum MXDevType {
-  MX_CPU = 1,
-  MX_GPU = 2,
-};
-
 typedef struct {
-  MXDevType dev_type;
+  std::string dev_type;
   int dev_id;
 } MXContext;
 
@@ -222,7 +217,7 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), ctx({MX_CPU,0}) {}
+  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), ctx({"cpu",0}) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
@@ -242,7 +237,7 @@ struct MXTensor {
   /*! \brief populate DLTensor fields */
   void setDLTensor() {
     dltensor.data = data_ptr;
-    dltensor.ctx.device_type = static_cast<DLDeviceType>(ctx.dev_type);
+    dltensor.ctx.device_type = ctx.dev_type == "gpu" ? kDLGPU : kDLCPU;
     dltensor.ctx.device_id = ctx.dev_id;
     dltensor.ndim = shape.size();
     dltensor.shape = const_cast<int64_t*>(shape.data());
@@ -589,16 +584,33 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
-    forward(NULL), backward(NULL), parse_attrs(NULL), infer_type(NULL),
-    infer_shape(NULL), mutate_inputs(NULL), create_opstate(NULL),
-    isSGop(false) {}
-  ~CustomOp() {}
+    forward_cpu(NULL), backward_cpu(NULL), forward_gpu(NULL), backward_gpu(NULL),
+    parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL),
+    create_opstate(NULL), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp) {
-    forward = fcomp;
+    forward_cpu = fcomp;
+    return *this;
+  }
+  CustomOp& setForward(fcomp_t fcomp, std::string ctx) {
+    if (ctx == "cpu")
+      forward_cpu = fcomp;
+    else if (ctx == "gpu")
+      forward_gpu = fcomp;
+    else
+      throw std::runtime_error("Invalid context");
     return *this;
   }
   CustomOp& setBackward(fcomp_t fcomp) {
-    backward = fcomp;
+    backward_cpu = fcomp;
+    return *this;
+  }
+  CustomOp& setBackward(fcomp_t fcomp, std::string ctx) {
+    if (ctx == "cpu")
+      backward_cpu = fcomp;
+    else if (ctx == "gpu")
+      backward_gpu = fcomp;
+    else
+      throw std::runtime_error("Invalid context");
     return *this;
   }
   CustomOp& setParseAttrs(parseAttrs_t func) {
@@ -625,12 +637,15 @@ class CustomOp {
     isSGop = true;
     return *this;
   }
+  ~CustomOp() {}
 
   /*! \brief operator name */
   const char* name;
   /*! \brief operator functions */
-  fcomp_t forward;
-  fcomp_t backward;
+  fcomp_t forward_cpu;
+  fcomp_t backward_cpu;
+  fcomp_t forward_gpu;
+  fcomp_t backward_gpu;
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;
@@ -763,7 +778,8 @@ class Registry {
 typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
-typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
+typedef int (*opRegGet_t)(int, const char**,
+                          fcomp_t*, fcomp_t*, fcomp_t*, fcomp_t*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*, mutateInputs_t*,
                           createOpState_t*, int*);
@@ -786,8 +802,8 @@ typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* co
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                             const int64_t**, int*, void**, int*, size_t*, int*, int*, int,
-                             const int64_t**, int*, void**, int*, size_t*, int*, int*, int,
+                             const int64_t**, int*, void**, int*, size_t*, char**, int*, int,
+                             const int64_t**, int*, void**, int*, size_t*, char**, int*, int,
                              xpu_malloc_t, void*, void*);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
@@ -859,14 +875,18 @@ extern "C" {
 #else
   void
 #endif
-  _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
+  _opRegGet(int idx, const char** name,
+            fcomp_t* fcomp_cpu, fcomp_t* fcomp_gpu,
+            fcomp_t* fgrad_cpu, fcomp_t* fgrad_gpu,
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate,
             createOpState_t* create_op, int *isSGop) {
     CustomOp op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
-    *fcomp = op.forward;
-    *fgrad = op.backward;
+    *fcomp_cpu = op.forward_cpu;
+    *fcomp_gpu = op.forward_gpu;
+    *fgrad_cpu = op.backward_cpu;
+    *fgrad_gpu = op.backward_gpu;
     *parse = op.parse_attrs;
     *type = op.infer_type;
     *shape = op.infer_shape;
@@ -994,9 +1014,9 @@ extern "C" {
 #endif
   _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
                   const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                  size_t* inIDs, int* indev_type, int* indev_id, int num_in,
+                  size_t* inIDs, char** indev_type, int* indev_id, int num_in,
                   const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                  size_t* outIDs, int* outdev_type, int* outdev_id, int num_out,
+                  size_t* outIDs, char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
@@ -1007,7 +1027,8 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      MXContext inctx = {(MXDevType)indev_type[i], indev_id[i]};
+      std::string ctx_str(indev_type[i]);
+      MXContext inctx = {ctx_str, indev_id[i]};
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
                           inIDs[i], inctx);
     }
@@ -1015,7 +1036,8 @@ extern "C" {
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      MXContext outctx = {(MXDevType)outdev_type[i], outdev_id[i]};
+      std::string ctx_str(indev_type[i]);
+      MXContext outctx = {ctx_str, outdev_id[i]};
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                            outIDs[i], outctx);
     }
@@ -1092,7 +1114,7 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      MXContext inctx = {(MXDevType)indev_type[i], indev_id[i]};
+      MXContext inctx = {"cpu", indev_id[i]};
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
                           inIDs[i], inctx);
     }
@@ -1100,7 +1122,7 @@ extern "C" {
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      MXContext outctx = {(MXDevType)outdev_type[i], outdev_id[i]};
+      MXContext outctx = {"cpu", outdev_id[i]};
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                            outIDs[i], outctx);
     }

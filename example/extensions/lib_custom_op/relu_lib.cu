@@ -1,22 +1,10 @@
 #include <iostream>
 #include "lib_api.h"
 
-void relu_cpu_forward(float *out, float *in, int64_t N) {
-    for (int i=0; i<N; i++) {
-        out[i] = in[i] > 0 ? in[i] : 0;
-    }
-}
-
 __global__ void relu_gpu_forward(float *out, float *in, int64_t N) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < N){
         out[tid] = in[tid] > 0 ? in[tid] : 0;
-    }
-}
-
-void relu_cpu_backward(float *out, float *in, int64_t N) {
-    for (int i=0; i<N; i++) {
-        out[i] = in[i] > 0 ? 1 : 0;
     }
 }
 
@@ -27,41 +15,59 @@ __global__ void relu_gpu_backward(float *out, float *in, int64_t N) {
     }
 }
 
-MXReturnValue forward(std::map<std::string, std::string> attrs,
+MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
+                          std::vector<MXTensor> inputs,
+                          std::vector<MXTensor> outputs,
+                          OpResource res) {
+    float* in_data = inputs[0].data<float>();
+    float* out_data = outputs[0].data<float>();
+    for (int i=0; i<inputs[0].size(); i++) {
+        out_data[i] = in_data[i] > 0 ? in_data[i] : 0;
+    }
+    return MX_SUCCESS;
+}
+
+MXReturnValue backwardCPU(std::map<std::string, std::string> attrs,
+                           std::vector<MXTensor> inputs,
+                           std::vector<MXTensor> outputs,
+                           OpResource res) {
+    float* in_data = inputs[0].data<float>();
+    float* out_data = outputs[0].data<float>();
+    for (int i=0; i<inputs[0].size(); i++) {
+        out_data[i] = in_data[i] > 0 ? 1 : 0;
+    }
+    return MX_SUCCESS;
+}
+
+MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
                       std::vector<MXTensor> outputs,
                       OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    if (inputs[0].ctx.dev_type == MX_GPU){
-        cudaStream_t gpu_stream = reinterpret_cast<cudaStream_t>(res.get_gpu_stream());
-        int64_t N = inputs[0].size();
-        int grid = (N + 255) / 256;
-        int block = 256;
-        relu_gpu_forward<<<grid,block,0,gpu_stream>>>(out_data, in_data, N);
-    } else {
-        relu_cpu_forward(out_data, in_data, inputs[0].size());
-    }
+    cudaStream_t gpu_stream = reinterpret_cast<cudaStream_t>(res.get_gpu_stream());
+    int64_t N = inputs[0].size();
+    int grid = (N + 255) / 256;
+    int block = 256;
+    relu_gpu_forward<<<grid,block,0,gpu_stream>>>(out_data, in_data, N);
+
     return MX_SUCCESS;
 }
 
-MXReturnValue backward(std::map<std::string, std::string> attrs,
+MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
                        std::vector<MXTensor> inputs,
                        std::vector<MXTensor> outputs,
                        OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    if (inputs[0].ctx.dev_type == MX_GPU){
-        cudaStream_t gpu_stream = reinterpret_cast<cudaStream_t>(res.get_gpu_stream());
-        int64_t N = inputs[0].size();
-        int grid = (N + 255) / 256;
-        int block = 256;
-        relu_gpu_backward<<<grid,block,0,gpu_stream>>>(out_data, in_data, N);
-    } else {
-        relu_cpu_backward(out_data, in_data, inputs[0].size());
-    }
+    cudaStream_t gpu_stream = reinterpret_cast<cudaStream_t>(res.get_gpu_stream());
+    int64_t N = inputs[0].size();
+    int grid = (N + 255) / 256;
+    int block = 256;
+    relu_gpu_backward<<<grid,block,0,gpu_stream>>>(out_data, in_data, N);
+
     return MX_SUCCESS;
 }
 
@@ -89,8 +95,10 @@ REGISTER_OP(my_relu)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)
-.setForward(forward)
-.setBackward(backward);
+.setForward(forwardCPU, "cpu")
+.setForward(forwardGPU, "gpu")
+.setBackward(backwardCPU, "cpu")
+.setBackward(backwardGPU, "gpu");
 
 MXReturnValue initialize(int version) {
     if (version >= 10400) {

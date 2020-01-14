@@ -64,3 +64,4 @@ print("CPU running time:")
 print(t2 - t1)
 print("GPU running time:")
 print(t3 - t2)
+

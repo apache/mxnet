@@ -98,6 +98,26 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
+void PopulateCType(const std::vector<NDArray>& inputs,
+                   std::vector<void*>& data,
+                   std::vector<const int64_t *>& shapes,
+                   std::vector<int>& dims,
+                   std::vector<int>& types,
+                   std::vector<size_t>& verIDs,
+                   std::vector<char*>& dev_type,
+                   std::vector<int>& dev_id) {
+  for (size_t i = 0; i < inputs.size(); i++) {
+    data.push_back(inputs[i].data().dptr_);
+    shapes.push_back(inputs[i].shape().data());
+    dims.push_back(inputs[i].shape().ndim());
+    types.push_back(inputs[i].dtype());
+    verIDs.push_back(inputs[i].version());
+    std::string ctx_str = inputs[i].ctx().dev_mask() == Context::kGPU ? "gpu" : "cpu";
+    dev_type.push_back(const_cast<char*>(ctx_str.c_str()));
+    dev_id.push_back(inputs[i].ctx().real_dev_id());
+  }
+}
+
 /*!
  * \brief Loads dynamic library and initializes it
  * \param path library path
@@ -164,20 +184,22 @@ int MXLoadLib(const char *path) {
   for (int i = 0; i < numOps; i++) {
     const char* name;
     // function pointers holding implementation from custom library
-    fcomp_t fcomp_fp = nullptr;
+    fcomp_t fcomp_cpu_fp = nullptr;
+    fcomp_t fcomp_gpu_fp = nullptr;
     parseAttrs_t parse_fp = nullptr;
     inferType_t type_fp = nullptr;
     inferShape_t shape_fp = nullptr;
     // optional attributes
-    fcomp_t fgrad_fp = nullptr;
+    fcomp_t fgrad_cpu_fp = nullptr;
+    fcomp_t fgrad_gpu_fp = nullptr;
     mutateInputs_t mutate_fp = nullptr;
     createOpState_t create_opstate_fp = nullptr;
     bool isSubgraphOp = false;
     int _isSubgraphOp = 0;
 
     // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
-             &mutate_fp, &create_opstate_fp, &_isSubgraphOp);
+    opRegGet(i, &name, &fcomp_cpu_fp, &fcomp_gpu_fp, &fgrad_cpu_fp, &fgrad_gpu_fp,
+             &parse_fp, &type_fp, &shape_fp, &mutate_fp, &create_opstate_fp, &_isSubgraphOp);
     // set bool, dont pass bool across ABI boundary
     isSubgraphOp = _isSubgraphOp;
 
@@ -185,7 +207,8 @@ int MXLoadLib(const char *path) {
       // validate custom operator functions from the dynamic library
       CHECK(parse_fp != nullptr) << "Error loading '" << name
                                  << "' custom op, ParseAttrs function was not set.";
-      CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
+      CHECK(fcomp_cpu_fp != nullptr || fcomp_gpu_fp != nullptr || create_opstate_fp != nullptr)
+                            << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
       CHECK(type_fp  != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
@@ -408,30 +431,11 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_verIDs, out_verIDs;
-      std::vector<int> in_dev_type, out_dev_type;
+      std::vector<char*> in_dev_type, out_dev_type;
       std::vector<int> in_dev_id, out_dev_id;
 
-      // convert input tensors to constituent parts
-      for (size_t i = 0; i < inputs.size(); i++) {
-        in_data.push_back(inputs[i].data().dptr_);
-        in_shapes.push_back(inputs[i].shape().data());
-        in_dims.push_back(inputs[i].shape().ndim());
-        in_types.push_back(inputs[i].dtype());
-        in_verIDs.push_back(inputs[i].version());
-        in_dev_type.push_back(inputs[i].ctx().dev_mask());
-        in_dev_id.push_back(inputs[i].ctx().real_dev_id());
-      }
-
-      // convert output tensors to constituent parts
-      for (size_t i = 0; i < outputs.size(); i++) {
-        out_data.push_back(outputs[i].data().dptr_);
-        out_shapes.push_back(outputs[i].shape().data());
-        out_dims.push_back(outputs[i].shape().ndim());
-        out_types.push_back(outputs[i].dtype());
-        out_verIDs.push_back(outputs[i].version());
-        out_dev_type.push_back(outputs[i].ctx().dev_mask());
-        out_dev_id.push_back(outputs[i].ctx().real_dev_id());
-      }
+      PopulateCType(inputs, in_data, in_shapes, in_dims, in_types, in_verIDs, in_dev_type, in_dev_id);
+      PopulateCType(outputs, out_data, out_shapes, out_dims, out_types, out_verIDs, out_dev_type, out_dev_id);
 
       // get memory resource
       const Resource &resource = ctx.requested[0];
@@ -475,20 +479,36 @@ int MXLoadLib(const char *path) {
       // return type void
     };
 
-    auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
+    auto forward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
-      return fcomp_lambda(fcomp_fp, attrs, ctx, inputs, req, outputs);
+      return fcomp_lambda(fcomp_cpu_fp, attrs, ctx, inputs, req, outputs);
     };
 
-    auto backward_lambda = [=](const nnvm::NodeAttrs& attrs,
+    auto forward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
-      return fcomp_lambda(fgrad_fp, attrs, ctx, inputs, req, outputs);
+      return fcomp_lambda(fcomp_gpu_fp, attrs, ctx, inputs, req, outputs);
+    };
+
+    auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      return fcomp_lambda(fgrad_cpu_fp, attrs, ctx, inputs, req, outputs);
+    };
+
+    auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      return fcomp_lambda(fgrad_gpu_fp, attrs, ctx, inputs, req, outputs);
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -733,11 +753,11 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
                                         fstateful_forward, plevel);
     } else {
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
-      regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_cpu_lambda, plevel);
+      regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_gpu_lambda, plevel);
     }
     // optionally add fgradient if user specified a function
-    if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {
+    if (fgrad_cpu_fp != nullptr || fgrad_gpu_fp != nullptr || create_opstate_fp != nullptr) {
       regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
       std::string grad_name = "_backward_" + name_str;
       nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
@@ -754,8 +774,8 @@ int MXLoadLib(const char *path) {
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
                                             fstateful_backward, plevel);
       } else {
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, plevel);
-        gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_lambda, plevel);
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
+        gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
