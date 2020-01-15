@@ -369,6 +369,13 @@ inline std::vector<nnvm::NodeEntry>CreateNodeEntries(
   if (pInputs)
     pNode->inputs.insert(pNode->inputs.end(), pInputs->begin(), pInputs->end());
 
+  if (!pNode->is_variable()) {
+    CHECK_EQ(pNode->num_inputs(), pNode->inputs.size())
+      << "Number of inputs to operator " << pNode->op()->name << " (" << pNode->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << pNode->attrs.name << " (" << pNode->inputs.size() << ").";
+  }
+
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < pNode->num_outputs(); ++i)
     ret.emplace_back(nnvm::NodeEntry{pNode, i, 0});
