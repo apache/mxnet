@@ -159,12 +159,8 @@ def test_arccos():
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
-        array = random_arrays(shape)
-        # Hack: Decrease std_dev to make
-        # sure all elements
-        # are in range -1 to 1
-        # i.e. Domain of arccos
-        array *= 0.2
+        # Domain of arccos is [-1, 1]
+        array = random_uniform_arrays(shape, low=-1.0, high=1.0)
         check_second_order_unary(array, arccos, grad_grad_op)
 
 
