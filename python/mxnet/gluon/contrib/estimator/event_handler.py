@@ -181,6 +181,8 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         Priority level of the ValidationHandler. Priority level is sorted in
         ascending order. The lower the number is, the higher priority level the
         handler is.
+    event_handlers : EventHandler or list of EventHandlers
+        List of :py:class:`EventHandler` to apply during validaiton.
     """
 
     def __init__(self,
@@ -188,7 +190,8 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
                  eval_fn,
                  epoch_period=1,
                  batch_period=None,
-                 priority=-1000):
+                 priority=-1000,
+                 event_handlers=None):
         self.val_data = val_data
         self.eval_fn = eval_fn
         self.epoch_period = epoch_period
@@ -198,6 +201,7 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         # order to be called among all callbacks
         # validation metrics need to be calculated before other callbacks can access them
         self.priority = priority
+        self.event_handlers = event_handlers
 
     def train_begin(self, estimator, *args, **kwargs):
         # reset epoch and batch counter
@@ -207,12 +211,14 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
     def batch_end(self, estimator, *args, **kwargs):
         self.current_batch += 1
         if self.batch_period and self.current_batch % self.batch_period == 0:
-            self.eval_fn(val_data=self.val_data)
+            self.eval_fn(val_data=self.val_data, batch_axis=estimator.batch_axis,
+                         event_handlers=self.event_handlers)
 
     def epoch_end(self, estimator, *args, **kwargs):
         self.current_epoch += 1
         if self.epoch_period and self.current_epoch % self.epoch_period == 0:
-            self.eval_fn(val_data=self.val_data, batch_axis=estimator.batch_axis)
+            self.eval_fn(val_data=self.val_data, batch_axis=estimator.batch_axis,
+                         event_handlers=self.event_handlers)
 
 
 class LoggingHandler(TrainBegin, TrainEnd, EpochBegin, EpochEnd, BatchBegin, BatchEnd):
