@@ -133,7 +133,7 @@ def test_tanh():
             array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
 
 
-@with_seed()
+@with_seed(1329795168)
 def test_arcsin():
     def arcsin(x):
         return nd.arcsin(x)
