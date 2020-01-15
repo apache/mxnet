@@ -48,22 +48,32 @@ class MXDataset(Dataset):
     def __init__(self, handle, **kwargs):
         super(MXDataset, self).__init__()
         self.handle = handle
+        # get dataset size
+        length = ctypes.c_uint64(0)
+        check_call(_LIB.MXDatasetGetLen(self.handle, ctypes.byref(length)))
+        self._len = length.value
+        # get item size
+        out_size = ctypes.c_int(0)
+        check_call(_LIB.MXDatasetGetOutSize(self.handle, ctypes.byref(out_size)))
+        out_size = int(out_size.value)
+        assert out_size > 0, "Invalid number of outputs: {}".format(out_size)
+        self._out_size = out_size
 
     def __del__(self):
         check_call(_LIB.MXDatasetFree(self.handle))
 
     def __len__(self):
-        len = ctypes.c_uint64(0)
-        check_call(_LIB.MXDatasetGetLen(self.handle, ctypes.byref(len)))
-        return len.value
+        return self._len
 
     def __getitem__(self, idx):
-        out_size = ctypes.c_int(0)
-        check_call(_LIB.MXDatasetGetOutSize(self.handle, ctypes.byref(out_size)))
-        out_size = int(out_size.value)
-        assert out_size > 0, "Invalid number of outputs: {}".format(out_size)
+        orig_idx = idx
+        if idx < 0:
+            idx += self._len
+        # check bound
+        if idx < 0 or idx >= self._len:
+            raise ValueError("Index {} out of bound: (0, {})".format(orig_idx, self._len))
         items = []
-        for i in range(out_size):
+        for i in range(self._out_size):
             hdl = NDArrayHandle()
             check_call(_LIB.MXDatasetGetItem(self.handle,
                                              ctypes.c_uint64(idx),
@@ -73,7 +83,6 @@ class MXDataset(Dataset):
         if len(items) == 1:
             return items[0]
         return tuple(items)
-
 
 def _make_internal_datasets(handle):
     """Create an io iterator by handle."""

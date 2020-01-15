@@ -24,6 +24,7 @@
  */
 #include <dmlc/parameter.h>
 #include <mxnet/io.h>
+#include <mxnet/ndarray.h>
 
 #include <string>
 #include <vector>
@@ -70,16 +71,21 @@ class ImageSequenceDataset : public Dataset {
     }
 
     NDArray GetItem(uint64_t idx, int n) {
-      auto fn = dmlc::Registry<NDArrayFunctionReg>::Find("_cvimread");
-      
 #if MXNET_USE_OPENCV
       CHECK_LT(idx, img_list_.size())
         << "GetItem index: " << idx << " out of bound: " << img_list_.size();
       CHECK_EQ(n, 0) << "ImageSequenceDataset only produce one output";
       cv::Mat res = cv::imread(img_list_[idx], param_.flag);
       const int n_channels = res.channels();
-      LOG(INFO) << "n_channels" << n_channels;
-      return NDArray();
+      NDArray ret;
+      if (n_channels == 1) {
+        ret = SwapImageChannels<1>(res);
+      } else if (n_channels == 3) {
+        ret = SwapImageChannels<3>(res);
+      } else if (n_channels == 4) {
+        ret = SwapImageChannels<4>(res);
+      }
+      return ret;
 #else
     LOG(FATAL) << "Opencv is needed for image decoding.";
 #endif
@@ -90,6 +96,52 @@ class ImageSequenceDataset : public Dataset {
     ImageSequenceDatasetParam param_;
     /*! \brief image list */
     std::vector<std::string> img_list_;
+    /*! \brief image process buffer */
+    std::vector<uint8_t> buffer_;
+
+#if MXNET_USE_OPENCV
+    template<int n_channels>
+    NDArray SwapImageChannels(cv::Mat &img) {
+      int swap_indices[n_channels]; // NOLINT(*)
+      if (n_channels == 1) {
+        swap_indices[0] = 0;
+      } else if (n_channels == 3) {
+        swap_indices[0] = 2;
+        swap_indices[1] = 1;
+        swap_indices[2] = 0;
+      } else if (n_channels == 4) {
+        swap_indices[0] = 2;
+        swap_indices[1] = 1;
+        swap_indices[2] = 0;
+        swap_indices[3] = 3;
+      }
+
+      std::size_t size = img.rows * img.cols * n_channels;
+      if (buffer_.size() < size) {
+        // increase buffer size only when it's less than the new image
+        // otherwise stay unchanged, in case next image is larger
+        buffer_.resize(size);
+      }
+
+      // swap channels while copying elements into buffer
+      for (int i = 0; i < img.rows; ++i) {
+        const uint8_t* im_data = img.ptr<uint8_t>(i);
+        uint8_t* buffer_row = buffer_.data() + i * img.cols * n_channels;
+        for (int j = 0; j < img.cols; ++j) {
+          uint8_t* buffer_col = buffer_row + j * n_channels;
+          for (int k = 0; k < n_channels; ++k) {
+            buffer_col[k] = im_data[swap_indices[k]];
+          }
+        }
+      }
+
+      // sync copy into ndarray
+      TShape arr_shape = TShape({img.rows, img.cols, n_channels});
+      NDArray arr(arr_shape, mxnet::Context::CPU(0), true, mshadow::kUint8);
+      arr.SyncCopyFromCPU(buffer_.data(), size);
+      return arr;
+    }
+#endif
 };
 
 MXNET_REGISTER_IO_DATASET(ImageSequenceDataset)
