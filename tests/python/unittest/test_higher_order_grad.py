@@ -129,7 +129,7 @@ def test_tanh():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
-        check_nth_order_unary(array, tanh, grad_op, 1)
+        check_nth_order_unary(array, tanh, grad_op, 1, rtol=1e-6, atol=1e-6)
         check_second_order_unary(
             array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
 
