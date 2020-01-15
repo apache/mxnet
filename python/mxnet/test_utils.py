@@ -102,6 +102,16 @@ def random_arrays(*shapes):
     return arrays
 
 
+def random_uniform_arrays(*shapes, low=0.0, high=1.0):
+    """Generate some random numpy arrays."""
+    arrays = [np.array(np.random.uniform(), dtype=default_dtype())
+              if len(s) == 0 else np.random.uniform(low, high, size=s).astype(default_dtype())
+              for s in shapes]
+    if len(arrays) == 1:
+        return arrays[0]
+    return arrays
+
+
 def random_sample(population, k):
     """Return a k length list of the elements chosen from the population sequence."""
     assert 0 <= k <= len(population)
