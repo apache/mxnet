@@ -115,7 +115,7 @@ def test_cosh():
         check_second_order_unary(array, cosh, grad_grad_op)
 
 
-@with_seed(879330121)
+@with_seed()
 def test_tanh():
     def tanh(x):
         return nd.tanh(x)
