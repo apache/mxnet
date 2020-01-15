@@ -382,6 +382,151 @@ struct CUDATensors {
   DeviceTensor1 saveInvStd;
 };
 
+namespace {
+  inline int ceil_div(int x, int y) {
+    return (x + y - 1) / y;
+  }
+}  // namespace
+
+template<int NTHREADS, typename DType, typename AType, typename LType>
+__global__ void FrozenBatchNormalizationBackwardKernelCLastPhase1(
+    const DType* input, const DType* gradOutput, AType* temp_space,
+    DType* gradInput, const AType* weight, const AType* runningMean,
+    const AType* runningVar, const index_t outer, const index_t num_channels,
+    const AType eps, const uint32_t flags) {
+  using mxnet::common::cuda::warp_size;
+  constexpr int num_warps = NTHREADS / warp_size;
+  constexpr int nvec = sizeof(LType) >= sizeof(DType) ? sizeof(LType) / sizeof(DType) : 1;
+  const size_t stride = num_channels / nvec;
+
+  union vectorized_loader {
+    LType aligned;
+    DType separate[nvec];  // NOLINT(*)
+
+    __device__ inline vectorized_loader() {}
+    __device__ inline ~vectorized_loader() {}
+  };
+
+  vectorized_loader vec_input, vec_gradOutput;
+
+  __shared__ AType scratch[NTHREADS * 2 * nvec];
+  AType * my_values_gamma = &(scratch[threadIdx.x * nvec]);
+  AType * my_values_beta = &(scratch[(NTHREADS + threadIdx.x) * nvec]);
+
+  AType sum_gamma[nvec];  // NOLINT(*)
+  AType sum_beta[nvec];  // NOLINT(*)
+#pragma unroll
+  for (int i = 0; i < nvec; ++i) {
+    sum_gamma[i] = 0;
+    sum_beta[i] = 0;
+  }
+
+  const size_t offset = blockIdx.x * warp_size;
+  const int my_warp = threadIdx.x / warp_size;
+  const int my_id = threadIdx.x % warp_size;
+
+  AType invstd[nvec];
+  AType mean[nvec];
+  AType gamma[nvec];
+  size_t channel_offset = (offset + my_id) * nvec;
+
+  if (channel_offset < num_channels) {
+#pragma unroll
+    for (int i = 0; i < nvec; ++i) {
+      invstd[i] = variance_to_invstd(runningVar[channel_offset + i], eps);
+      mean[i] = runningMean[channel_offset + i];
+      gamma[i] = weight != nullptr ? weight[channel_offset + i] : 1;
+    }
+  }
+
+  const LType* aligned_gradOutput = reinterpret_cast<const LType*>(gradOutput);
+  const LType* aligned_input = reinterpret_cast<const LType*>(input);
+  LType* gradInput_aligned = reinterpret_cast<LType*>(gradInput);
+
+  const int rows_per_block = (outer + gridDim.y - 1) / gridDim.y;
+  const size_t start_row = my_warp + rows_per_block * blockIdx.y;
+  const size_t end_row = min(outer, static_cast<index_t>(rows_per_block * (blockIdx.y + 1)));
+  if (offset + my_id < stride) {
+    for (size_t i = start_row; i < end_row; i += num_warps) {
+      const index_t idx = i * stride + offset + my_id;
+      vec_gradOutput.aligned = aligned_gradOutput[idx];
+      vec_input.aligned = aligned_input[idx];
+#pragma unroll
+      for (int j = 0; j < nvec; ++j) {
+        sum_beta[j]  += static_cast<AType>(vec_gradOutput.separate[j]);
+        sum_gamma[j] += static_cast<AType>(vec_gradOutput.separate[j]) *
+                        (static_cast<AType>(vec_input.separate[j]) - mean[j]);
+      }
+      if (flags & WRITE_DATA_FLAG) {
+        // Gradient to input
+#pragma unroll
+        for (int j = 0; j < nvec; ++j) {
+          vec_gradOutput.separate[j] *= invstd[j] * gamma[j];
+        }
+        gradInput_aligned[idx] = vec_gradOutput.aligned;
+      }
+    }
+  }
+  __syncthreads();
+#pragma unroll
+  for (int i = 0; i < nvec; ++i) {
+    my_values_gamma[i] = sum_gamma[i];
+    my_values_beta[i] = sum_beta[i];
+  }
+
+  __syncthreads();
+
+  for (int i = num_warps / 2; i > 0; i /= 2) {
+    if (my_warp < i) {
+      const int shared_offset = nvec * i * warp_size;
+#pragma unroll
+      for (int j = 0; j < nvec; ++j) {
+        my_values_gamma[j] += my_values_gamma[j + shared_offset];
+        my_values_beta[j] += my_values_beta[j + shared_offset];
+      }
+    }
+    __syncthreads();
+  }
+
+  if (threadIdx.x < min(warp_size * nvec,
+                        static_cast<int>(num_channels - nvec * offset))) {
+    const size_t offset_out = nvec * offset +
+                              blockIdx.y * num_channels;
+    const size_t offset_beta = gridDim.y * num_channels;
+    temp_space[offset_out + threadIdx.x] = scratch[threadIdx.x];
+    temp_space[offset_beta + offset_out + threadIdx.x] = scratch[NTHREADS * nvec + threadIdx.x];
+  }
+}
+
+template <typename AType>
+__global__ void FrozenBatchNormalizationBackwardKernelCLastPhase2(const AType * temp_space,
+                                                                  const AType * runningVar,
+                                                                  AType * out_gamma,
+                                                                  AType * out_beta,
+                                                                  int lead_dim, int n_blocks,
+                                                                  AType epsilon, uint32_t flags) {
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  if (tid < lead_dim) {
+    AType sum_gamma = 0;
+    AType sum_beta = 0;
+    for (int i = tid; i < lead_dim * n_blocks; i += lead_dim) {
+      sum_gamma += temp_space[i];
+      sum_beta += temp_space[i + lead_dim * n_blocks];
+    }
+    if (flags & WRITE_GAMMA_FLAG) {
+      if ((flags & FIX_GAMMA_FLAG) == 0) {
+        const AType invstd = variance_to_invstd(runningVar[tid], epsilon);
+        out_gamma[tid] = sum_gamma * invstd;
+      } else {
+        out_gamma[tid] = 0;
+      }
+    }
+    if (flags & WRITE_BETA_FLAG) {
+      out_beta[tid] = sum_beta;
+    }
+  }
+}
+
 template<typename DType, typename AType, typename LType>
 static __global__ void FrozenBatchNormalizationBackwardKernelCLast(
   const DType* input,
@@ -472,15 +617,15 @@ __global__ void FrozenBatchNormalizationBackwardKernel(
   const AType gamma = weight != nullptr ? weight[my_channel] : 1;
   constexpr int nvec = sizeof(LType) > sizeof(DType) ? sizeof(LType) / sizeof(DType)
                                                      : 1;
-  union scratch {
+  union vectorized_loader {
     LType aligned;
     DType separate[nvec];  // NOLINT(*)
 
-    __device__ inline scratch() {}
-    __device__ inline ~scratch() {}
+    __device__ inline vectorized_loader() {}
+    __device__ inline ~vectorized_loader() {}
   };
 
-  scratch scratch_input, scratch_grad;
+  vectorized_loader scratch_input, scratch_grad;
 
   const LType* input_aligned = reinterpret_cast<const LType*>(input);
   const LType* gradOutput_aligned = reinterpret_cast<const LType*>(gradOutput);
@@ -810,6 +955,9 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
       input, gradOutput, gradInput, tensors, flags, momentum, eps);
   } else {
     std::cout <<"Frozen" <<std::endl;
+    std::cout << param.axis << std::endl;
+    std::cout << in_data[batchnorm::kData].shape_ << std::endl;
+    std::cout << gradOutput.InnerSize() << " " << gradOutput.ChannelCount() << " " << gradOutput.OuterSize() << std::endl;
     uint32_t flags_copy = flags;
     if (gradInput.Size() <= 0) {
       flags_copy = (flags_copy & ~WRITE_DATA_FLAG);
@@ -826,16 +974,37 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
 
     if (param.axis == -1 || param.axis == in_data[batchnorm::kData].shape_.ndim() - 1) {
       std::cout << "NHWC " << std::endl;
-#ifdef NDEBUG
-    constexpr bool SMALLER_THREADS = false;
-#else
-    constexpr bool SMALLER_THREADS = true;
-#endif
-    dim3 blocks(gradOutput.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
-    FrozenBatchNormalizationBackwardKernelCLast<DType, AccReal, double>
-      <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
-      input.dptr_, gradOutput.dptr_, gradInput.dptr_);
+      const int C = gradOutput.ChannelCount();
+      int ltype = mxnet::common::cuda::get_load_type(C * sizeof(DType));
+      const int M = gradOutput.OuterSize();
+      MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
+        const unsigned int blocks_x = ceil_div(C * sizeof(DType),
+                                               mxnet::common::cuda::warp_size * sizeof(LType));
+        const unsigned int preferred_number_of_blocks = 2 *
+                                                        MultiprocessorCount(ctx.run_ctx.ctx.dev_id);
+        const unsigned int blocks_y = std::max(preferred_number_of_blocks / blocks_x, 1u);
+        const dim3 n_blocks = {blocks_x, blocks_y, 1};
+        auto scratch_space = ctx.requested[batchnorm::kTempSpace]
+                                .get_space_typed<gpu, 1, AccReal>(mshadow::Shape1(C * blocks_y * 2), s);
+        auto stream = mshadow::Stream<gpu>::GetStream(s);
+        constexpr int nthreads_phase1 = 512;
+        constexpr int nthreads_phase2 = 128;
+        FrozenBatchNormalizationBackwardKernelCLastPhase1<nthreads_phase1, DType, AccReal, LType>
+          <<<n_blocks, nthreads_phase1, 0, stream>>>(input.dptr_, gradOutput.dptr_,
+                                                     scratch_space.dptr_,
+                                                     gradInput.dptr_,
+                                                     gamma,
+                                                     tensors.runningMean.dptr_,
+                                                     tensors.runningVar.dptr_,
+                                                     M, C, eps, flags_copy);
+        const int nblocks_phase2 = ceil_div(C, nthreads_phase2);
+        FrozenBatchNormalizationBackwardKernelCLastPhase2<AccReal>
+          <<<nblocks_phase2, nthreads_phase2, 0, stream>>>(scratch_space.dptr_,
+                                                           tensors.runningVar.dptr_,
+                                                           tensors.gradWeight.dptr_,
+                                                           tensors.gradBias.dptr_, C,
+                                                           blocks_y, eps, flags_copy);
+      });
     } else {
       std::cout << "NCHW " << std::endl;
     dim3 blocks(gradOutput.ChannelCount());
