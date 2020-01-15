@@ -156,7 +156,7 @@ C:\Python37\python.exe .\ci\build_windows.py
 These commands produce a library called ```mxnet.dll``` in the ```./build/Release/``` or ```./build/Debug``` folder.
 
 
-We have installed MXNet core library. Next, we will install MXNet interface package for programming language of your choice:
+Now that you have installed MXNet core library, you are ready to optionally install an MXNet interface package for a programming language of your choice:
 - [Python](#install-the-mxnet-package-for-python)
 - [R](#install-the-mxnet-package-for-r)
 - [Julia](#install-the-mxnet-package-for-julia)
