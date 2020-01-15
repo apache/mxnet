@@ -26,6 +26,12 @@
 #include <mxnet/io.h>
 
 #include <string>
+#include <vector>
+
+#if MXNET_USE_OPENCV
+  #include <opencv2/opencv.hpp>
+  #include "./opencv_compatibility.h"
+#endif  // MXNET_USE_OPENCV
 
 namespace mxnet {
 namespace io {
@@ -50,11 +56,13 @@ DMLC_REGISTER_PARAMETER(ImageSequenceDatasetParam);
 class ImageSequenceDataset : public Dataset {
   public:
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-
+      std::vector<std::pair<std::string, std::string> > kwargs_left;
+      param_.InitAllowUnknown(kwargs);
+      img_list_ = dmlc::Split(param_.img_list, ';');
     }
 
     uint64_t GetLen() const {
-      return 0;
+      return img_list_.size();
     }
 
     int GetOutputSize() const {
@@ -62,11 +70,29 @@ class ImageSequenceDataset : public Dataset {
     }
 
     NDArray GetItem(uint64_t idx, int n) {
+      auto fn = dmlc::Registry<NDArrayFunctionReg>::Find("_cvimread");
+      
+#if MXNET_USE_OPENCV
+      CHECK_LT(idx, img_list_.size())
+        << "GetItem index: " << idx << " out of bound: " << img_list_.size();
+      CHECK_EQ(n, 0) << "ImageSequenceDataset only produce one output";
+      cv::Mat res = cv::imread(img_list_[idx], param_.flag);
+      const int n_channels = res.channels();
+      LOG(INFO) << "n_channels" << n_channels;
       return NDArray();
+#else
+    LOG(FATAL) << "Opencv is needed for image decoding.";
+#endif
     };
+
+  private:
+    /*! \brief parameters */
+    ImageSequenceDatasetParam param_;
+    /*! \brief image list */
+    std::vector<std::string> img_list_;
 };
 
-MXNET_REGISTER_IO_DATASET(image_sequence_dataset)
+MXNET_REGISTER_IO_DATASET(ImageSequenceDataset)
  .describe("Image Sequence Dataset")
  .add_arguments(ImageSequenceDatasetParam::__FIELDS__())
  .set_body([]() {

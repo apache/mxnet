@@ -20,6 +20,21 @@
 """C++ Datasets for common data formats."""
 from __future__ import absolute_import
 
+import sys
+import ctypes
+import numpy as np
+
+from .dataset import Dataset
+from ...base import _LIB
+from ...base import c_str_array, mx_uint, py_str
+from ...base import DatasetHandle, NDArrayHandle
+from ...base import mx_real_t
+from ...base import check_call, build_param_doc as _build_param_doc
+from ...ndarray import NDArray
+from ...ndarray.sparse import CSRNDArray
+from ...ndarray import _ndarray_cls
+from ...ndarray import array
+from ...ndarray import concat, tile
 
 class MXDataset(Dataset):
     """A python wrapper a C++ dataset.
@@ -40,19 +55,20 @@ class MXDataset(Dataset):
     def __len__(self):
         len = ctypes.c_uint64(0)
         check_call(_LIB.MXDatasetGetLen(self.handle, ctypes.byref(len)))
-        return len
+        return len.value
 
     def __getitem__(self, idx):
         out_size = ctypes.c_int(0)
         check_call(_LIB.MXDatasetGetOutSize(self.handle, ctypes.byref(out_size)))
+        out_size = int(out_size.value)
         assert out_size > 0, "Invalid number of outputs: {}".format(out_size)
         items = []
         for i in range(out_size):
             hdl = NDArrayHandle()
-            check_call(_LIB.MXDatasetGetOutSize(self.handle,
-                                                ctypes.c_uint64(idx),
-                                                ctypes.c_int(i),
-                                                ctypes.byref(hdl))))
+            check_call(_LIB.MXDatasetGetItem(self.handle,
+                                             ctypes.c_uint64(idx),
+                                             ctypes.c_int(i),
+                                             ctypes.byref(hdl)))
             items.append(_ndarray_cls(hdl, False))
         if len(items) == 1:
             return items[0]
@@ -123,7 +139,7 @@ def _make_internal_datasets(handle):
         if len(args):
             raise TypeError('%s can only accept keyword arguments' % dataset_name)
 
-        return MXDataIter(dataset_handle, **kwargs)
+        return MXDataset(dataset_handle, **kwargs)
 
     creator.__name__ = iter_name
     creator.__doc__ = doc_str
@@ -137,7 +153,7 @@ def _init_internal_dataset_module():
     module_obj = sys.modules[__name__]
     for i in range(size.value):
         hdl = ctypes.c_void_p(plist[i])
-        dataset = _make_io_iterator(hdl)
-        setattr(module_obj, dataiter.__name__, dataiter)
+        dataset = _make_internal_datasets(hdl)
+        setattr(module_obj, dataset.__name__, dataset)
 
 _init_internal_dataset_module()
