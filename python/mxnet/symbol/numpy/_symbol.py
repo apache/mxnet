@@ -6485,6 +6485,7 @@ def bincount(x, weights=None, minlength=0):
     return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
 
 
+@set_module('mxnet.symbol.numpy')
 def pad(array, pad_with, mode="constant", reflect_type="even", constant_values=0):
     """
     Pad an array.
