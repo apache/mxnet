@@ -29,19 +29,20 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
-           'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
+           'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip',
-           'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming',
-           'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round', 'hypot', 'bitwise_xor', 'bitwise_or',
-           'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
-           'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where',
-           'bincount']
+           'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'average', 'mean', 'maximum', 'minimum',
+           'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
+           'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round', 'hypot', 'bitwise_xor',
+           'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot',
+           'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit',
+           'rot90', 'einsum', 'true_divide', 'nonzero', 'shares_memory', 'may_share_memory', 'diff', 'resize',
+           'nan_to_num', 'where', 'bincount']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -260,14 +261,45 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
+def broadcast_to(array, shape):
+    """
+    Broadcast an array to a new shape.
+
+    Parameters
+    ----------
+    array : ndarray or scalar
+        The array to broadcast.
+    shape : tuple
+        The shape of the desired array.
+
+    Returns
+    -------
+    broadcast : array
+        A readonly view on the original array with the given shape. It is
+        typically not contiguous. Furthermore, more than one element of a
+        broadcasted array may refer to a single memory location.
+
+    Raises
+    ------
+    MXNetError
+        If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+    """
+    if _np.isscalar(array):
+        return full(shape, array)
+    return _npi.broadcast_to(array, shape)
+
+
+@set_module('mxnet.ndarray.numpy')
 def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylint: disable=too-many-arguments
     """
     Return a new array of given shape and type, filled with `fill_value`.
+
     Parameters
     ----------
     shape : int or sequence of ints
         Shape of the new array, e.g., ``(2, 3)`` or ``2``.
-    fill_value : scalar
+    fill_value : scalar or ndarray
         Fill value.
     dtype : data-type, optional
         The desired data-type for the array. The default, `None`, means
@@ -280,10 +312,14 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
+
     Returns
     -------
     out : ndarray
         Array of `fill_value` with the given shape, dtype, and order.
+        If `fill_value` is an ndarray, out will have the same context as `fill_value`
+        regardless of the provided `ctx`.
+
     Notes
     -----
     This function differs from the original `numpy.full
@@ -292,11 +328,13 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     - Have an additional `ctx` argument to specify the device
     - Have an additional `out` argument
     - Currently does not support `order` selection
+
     See Also
     --------
     empty : Return a new uninitialized array.
     ones : Return a new array setting values to one.
     zeros : Return a new array setting values to zero.
+
     Examples
     --------
     >>> np.full((2, 2), 10)
@@ -305,11 +343,18 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     >>> np.full((2, 2), 2, dtype=np.int32, ctx=mx.cpu(0))
     array([[2, 2],
            [2, 2]], dtype=int32)
+
     """
     if order != 'C':
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
+    if isinstance(fill_value, NDArray):
+        if dtype is None:
+            ret = broadcast_to(fill_value, shape)
+        else:
+            ret = broadcast_to(fill_value, shape).astype(dtype)
+        return ret
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 # pylint: enable=too-many-arguments, redefined-outer-name
@@ -3686,6 +3731,51 @@ def vstack(arrays, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
+def row_stack(arrays):
+    r"""Stack arrays in sequence vertically (row wise).
+    This is equivalent to concatenation along the first axis after 1-D arrays
+    of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
+    `vsplit`.
+    This function makes most sense for arrays with up to 3 dimensions. For
+    instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions `concatenate` and `stack`
+    provide more general stacking and concatenation operations.
+    Parameters
+    ----------
+    tup : sequence of ndarrays
+        The arrays must have the same shape along all but the first axis.
+        1-D arrays must have the same length.
+    Returns
+    -------
+    stacked : ndarray
+        The array formed by stacking the given arrays, will be at least 2-D.
+    Examples
+    --------
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.vstack((a, b))
+    array([[1., 2., 3.],
+            [2., 3., 4.]])
+    >>> a = np.array([[1], [2], [3]])
+    >>> b = np.array([[2], [3], [4]])
+    >>> np.vstack((a, b))
+    array([[1.],
+            [2.],
+            [3.],
+            [2.],
+            [3.],
+            [4.]])
+    """
+    def get_list(arrays):
+        if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
+            raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
+        return [arr for arr in arrays]
+
+    arrays = get_list(arrays)
+    return _npi.vstack(*arrays)
+
+
+@set_module('mxnet.ndarray.numpy')
 def column_stack(tup):
     """
     Stack 1-D arrays as columns into a 2-D array.
@@ -3713,6 +3803,45 @@ def column_stack(tup):
            [3., 4.]])
     """
     return _npi.column_stack(*tup)
+
+
+@set_module('mxnet.ndarray.numpy')
+def hstack(arrays):
+    """
+    Stack arrays in sequence horizontally (column wise).
+    This is equivalent to concatenation along the second axis,
+    except for 1-D arrays where it concatenates along the first axis.
+    Rebuilds arrays divided by hsplit.
+    This function makes most sense for arrays with up to 3 dimensions.
+    For instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions concatenate,
+    stack and block provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of ndarrays
+        The arrays must have the same shape along all but the second axis, except 1-D arrays which can be any length.
+
+    Returns
+    -------
+    stacked : ndarray
+        The array formed by stacking the given arrays.
+
+    Examples
+    --------
+    >>> from mxnet import np,npx
+    >>> a = np.array((1,2,3))
+    >>> b = np.array((2,3,4))
+    >>> np.hstack((a,b))
+    array([1., 2., 3., 2., 3., 4.])
+    >>> a = np.array([[1],[2],[3]])
+    >>> b = np.array([[2],[3],[4]])
+    >>> np.hstack((a,b))
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
+    return _npi.hstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')

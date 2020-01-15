@@ -274,8 +274,7 @@ static void RNNStatefulComputeExCPU(const OpStatePtr& state_ptr,
                                     const std::vector<NDArray>& inputs,
                                     const std::vector<OpReqType>& req,
                                     const std::vector<NDArray>& outputs) {
-  if ((inputs[0].dtype() == mshadow::kFloat32 || inputs[0].dtype() == mshadow::kFloat16) &&
-      inputs[0].shape().ndim() == 3 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+  if (SupportMKLDNNRnn(inputs[0])) {
     MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
     op.Forward(ctx, inputs, req, outputs);
   } else {
@@ -288,8 +287,7 @@ static void RNNStatefulGradComputeExCPU(const OpStatePtr& state_ptr,
                                         const std::vector<NDArray>& inputs,
                                         const std::vector<OpReqType>& req,
                                         const std::vector<NDArray>& outputs) {
-  if ((inputs[0].dtype() == mshadow::kFloat32 || inputs[0].dtype() == mshadow::kFloat16) &&
-      inputs[0].shape().ndim() == 3 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+  if (SupportMKLDNNRnn(inputs[0])) {
     MKLDNNRnnOp& op = state_ptr.get_state<MKLDNNRnnOp>();
     op.Backward(ctx, inputs, req, outputs);
   } else {

@@ -43,6 +43,7 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
   bool with_eltwise;
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
+  dmlc::optional<bool> channel_wise_quantize;
 
   DMLC_DECLARE_PARAMETER(MKLDNNFCParam) {
     DMLC_DECLARE_FIELD(quantized).set_default(false)
@@ -61,6 +62,9 @@ struct MKLDNNFCParam: public dmlc::Parameter<MKLDNNFCParam> {
     .describe("The maximum scalar value in the form of float32 obtained "
               "through calibration. If present, it will be used to by "
               "quantized fullyconnected op to calculate primitive scale");
+    DMLC_DECLARE_FIELD(channel_wise_quantize)
+    .set_default(dmlc::optional<bool>())
+    .describe("Whether support channel-wise-quantize for weight.");
   }
 };
 
@@ -68,8 +72,7 @@ struct MKLDNNFCFullParam {
   FullyConnectedParam default_param;
   MKLDNNFCParam mkldnn_param;
   MKLDNNPostEltwiseParam eltwise_param;
-  std::vector<float> output_scales = {0.0};
-  std::vector<float> requantize_scales = {0.0};
+  std::vector<float> output_scales = {0.0f};
 };
 
 mkldnn::inner_product_forward::primitive_desc GetFCFwdImpl(

@@ -1672,10 +1672,21 @@ def test_gather():
     idx = mx.nd.random.randint(0, LARGE_X, SMALL_X)
     # Calls gather_nd internally
     tmp = arr[idx]
-    assert np.sum(tmp[0] == 1) == SMALL_Y
+    assert np.sum(tmp[0].asnumpy() == 1) == SMALL_Y
     # Calls gather_nd internally
     arr[idx] += 1
-    assert np.sum(arr[idx[0]] == 2) == SMALL_Y
+    assert np.sum(arr[idx[0]].asnumpy() == 2) == SMALL_Y
+
+
+def test_binary_broadcast():
+    def check_correctness(mxnet_op, numpy_op, atol=1e-3):
+        a = mx.nd.ones((LARGE_X, SMALL_Y)).as_np_ndarray()
+        b = 2*mx.nd.ones((LARGE_X, SMALL_Y)).as_np_ndarray()
+        res = mxnet_op(a, b)
+        np_res = numpy_op(1, 2)
+        assert np.abs(res[-1][-1] - np_res) < atol
+    check_correctness(mx.np.arctan2, np.arctan2)
+    check_correctness(mx.np.hypot, np.hypot)
 
 
 if __name__ == '__main__':

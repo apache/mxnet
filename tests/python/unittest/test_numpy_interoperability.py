@@ -833,6 +833,30 @@ def _add_workload_ones_like(array_pool):
     OpArgMngr.add_workload('ones_like', array_pool['4x1'])
 
 
+def _add_workload_atleast_nd():
+    a_0 = np.array(1)
+    b_0 = np.array(2)
+    a_1 = np.array([1, 2])
+    b_1 = np.array([2, 3])
+    a_2 = np.array([[1, 2], [1, 2]])
+    b_2 = np.array([[2, 3], [2, 3]])
+    a_3 = [a_2, a_2]
+    b_3 = [b_2, b_2]
+
+    OpArgMngr.add_workload('atleast_1d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_1d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_1d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_1d', a_3, b_3)
+    OpArgMngr.add_workload('atleast_2d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_2d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_2d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_2d', a_3, b_3)
+    OpArgMngr.add_workload('atleast_3d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_3d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_3d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_3d', a_3, b_3)
+
+
 def _add_workload_prod(array_pool):
     OpArgMngr.add_workload('prod', array_pool['4x1'])
 
@@ -1413,6 +1437,18 @@ def _add_workload_column_stack():
     OpArgMngr.add_workload('column_stack', [np.array(_np.arange(3)) for _ in range(2)])
 
 
+def _add_workload_hstack(array_pool):
+    OpArgMngr.add_workload('hstack', (np.random.uniform(size=(1, 4)), np.random.uniform(size=(1, 4))))
+    OpArgMngr.add_workload('hstack', array_pool['4x1'])
+    OpArgMngr.add_workload('hstack', array_pool['1x1x0'])
+
+
+def _add_workload_dstack(array_pool):
+    OpArgMngr.add_workload('dstack', (np.random.uniform(size=(5, 1, 2)), np.random.uniform(size=(5, 1, 3))))
+    OpArgMngr.add_workload('dstack', array_pool['4x1'])
+    OpArgMngr.add_workload('dstack', array_pool['1x1x0'])
+
+
 def _add_workload_equal(array_pool):
     # TODO(junwu): fp16 does not work yet with TVM generated ops
     # OpArgMngr.add_workload('equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
@@ -1626,6 +1662,7 @@ def _prepare_workloads():
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
+    _add_workload_atleast_nd()
     _add_workload_prod(array_pool)
     _add_workload_repeat(array_pool)
     _add_workload_reshape()
@@ -1712,6 +1749,8 @@ def _prepare_workloads():
     _add_workload_vdot()
     _add_workload_vstack(array_pool)
     _add_workload_column_stack()
+    _add_workload_hstack(array_pool)
+    _add_workload_dstack(array_pool)
     _add_workload_equal(array_pool)
     _add_workload_not_equal(array_pool)
     _add_workload_greater(array_pool)

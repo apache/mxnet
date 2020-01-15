@@ -1049,10 +1049,10 @@ def test_gather():
     idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
     # Calls gather_nd internally
     tmp = arr[idx]
-    assert np.sum(tmp == 1) == 10
+    assert np.sum(tmp.asnumpy() == 1) == 10
     # Calls gather_nd internally
     arr[idx] += 1
-    assert np.sum(arr[idx] == 2) == 10
+    assert np.sum(arr[idx].asnumpy() == 2) == 10
 
 
 def test_infer_shape():
@@ -1063,6 +1063,17 @@ def test_infer_shape():
     # OUTPUT - arg_shapes, out_shapes, aux_shapes
     _, out_shapes, _ = add.infer_shape(data_1=(LARGE_X,), data_2=(LARGE_X,))
     assert out_shapes == [(LARGE_X,)]
+
+
+def test_binary_broadcast():
+    def check_correctness(mxnet_op, numpy_op, atol=1e-3):
+        a = mx.nd.ones(LARGE_X).as_np_ndarray()
+        b = 2*mx.nd.ones(LARGE_X).as_np_ndarray()
+        res = mxnet_op(a, b)
+        np_res = numpy_op(1, 2)
+        assert np.abs(res[-1] - np_res) < atol
+    check_correctness(mx.np.arctan2, np.arctan2)
+    check_correctness(mx.np.hypot, np.hypot)
 
 
 if __name__ == '__main__':
