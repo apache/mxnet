@@ -33,25 +33,22 @@
 
 set(NCCL_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA NCCL")
 
-# if CUDAToolkit_FOUND is not found, try default location
-#if (NOT CUDAToolkit_FOUND)
-  if (UNIX)
-    set (search_paths "/usr/local/cuda")
+# first check in the /usr/local/cuda before other paths
+if (UNIX)
+  set (search_paths "/usr/local/cuda")
 
-    find_path(NCCL_INCLUDE_DIRS
-    NAMES nccl.h
-    PATHS ${search_paths}
-    PATH_SUFFIXES include
-    )
+  find_path(NCCL_INCLUDE_DIRS
+  NAMES nccl.h
+  PATHS ${search_paths}
+  PATH_SUFFIXES include
+  )
 
-    find_library(NCCL_LIBRARIES
-    NAMES nccl
-    PATHS ${search_paths}
-    PATH_SUFFIXES lib
-    )
-
-  endif()
-  #endif()
+  find_library(NCCL_LIBRARIES
+  NAMES nccl
+  PATHS ${search_paths}
+  PATH_SUFFIXES lib
+  )
+endif()
 
 find_path(NCCL_INCLUDE_DIRS
   NAMES nccl.h
