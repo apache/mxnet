@@ -6876,6 +6876,59 @@ def test_np_diagflat():
 
 @with_seed()
 @use_np
+def test_np_pad():
+    class TestPad(HybridBlock):
+        def __init__(self, pad_width = (), mode="constant", reflect_type="even", constant_values=0):
+            super(TestPad,self).__init__()
+            self._pad_width = pad_width
+            self._mode = mode
+            self._reflect_type =reflect_type
+            self._constant_values = constant_values
+        def hybrid_forward(self,F,A):
+            return F.np.pad(A, self._pad_width, mode=self._mode, reflect_type=self._reflect_type, constant_values=self._constant_values)
+    shapes = [(1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum']
+    for hybridize, shape, dtype, in itertools.product([False,True], shapes, dtypes):
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+
+        for m in mode:
+            x = np.random.uniform(-1.0, 1.0, size = shape).astype(dtype)
+            pw = ()
+            if (type(shape) == int):
+                pw += (2,3)
+            else:
+                for i in range(len(shape)):
+                    pw += ((2,3),)
+            test_pad = TestPad(pw, m, "even", 0)
+            if hybridize:
+                test_pad.hybridize()
+            x.attach_grad()
+
+            if(m != 'constant'):
+                np_out = _np.pad(x.asnumpy(), pw, mode=m)
+            else:
+                np_out = _np.pad(x.asnumpy(), pw, mode=m, constant_values=0)
+            with mx.autograd.record():
+                mx_out = test_pad(x)
+
+            # Code to get the reference backward value
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol = rtol, atol = atol)
+
+            # Test imperative once again
+            mx_out = np.pad(x, pw, m, reflect_type="even", constant_values=0)
+
+            if(m != 'constant'):
+                np_out = _np.pad(x.asnumpy(), pw, mode=m)
+            else:
+                np_out = _np.pad(x.asnumpy(), pw, mode=m, constant_values=0)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_rand():
     # Test shapes.
     shapes = [

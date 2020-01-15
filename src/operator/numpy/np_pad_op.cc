@@ -62,5 +62,5 @@ NNVM_REGISTER_OP(_backward_npi_pad)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   });
 
-}
-}
+}  // namespace op
+}  // namespace mxnet

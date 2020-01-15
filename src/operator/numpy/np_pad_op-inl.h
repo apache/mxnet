@@ -41,7 +41,8 @@ namespace mxnet {
 namespace op {
 
 template <size_t ndim, typename xpu>
-MSHADOW_XINLINE index_t rravel(mshadow::Shape<ndim>& coord, mshadow::Tensor<xpu, 1, index_t>& shape) {
+MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
+                               const mshadow::Tensor<xpu, 1, index_t>& shape) {
   index_t ret = 0;
   #pragma unroll
   for (int i = 0; i < ndim; ++i) {
@@ -51,7 +52,8 @@ MSHADOW_XINLINE index_t rravel(mshadow::Shape<ndim>& coord, mshadow::Tensor<xpu,
 }
 
 template<size_t ndim, typename xpu>
-MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(index_t idx,  mshadow::Tensor<xpu, 1, index_t>& shape) {
+MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(index_t idx,
+                                              const mshadow::Tensor<xpu, 1, index_t>& shape) {
   mshadow::Shape<ndim> ret;
   #pragma unroll
   for (index_t i = ndim-1, j = idx; i >=0; --i) {
@@ -69,17 +71,22 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   double constant_value;
   DMLC_DECLARE_PARAMETER(NumpyPadParam) {
     DMLC_DECLARE_FIELD(pad_width)
-        .describe("Number of values padded to the edges of each axis. ((before_1, after_1), … (before_N,"
-                  "after_N)) unique pad widths for each axis. ((before, after),) yields same before and"
-                  "after pad for each axis. (pad,) or int is a shortcut for before = after = pad width for all"
+        .describe("Number of values padded to the edges of each axis. "
+                  "((before_1, after_1), … (before_N,"
+                  "after_N)) unique pad widths for each axis. ((before, after),) "
+                  "yields same before and"
+                  "after pad for each axis. "
+                  "(pad,) or int is a shortcut for before = after = pad width for all"
                   "axes.");
     DMLC_DECLARE_FIELD(mode)
         .set_default(1)
         .describe("str or function, optional");
     DMLC_DECLARE_FIELD(reflect_type)
         .set_default("even")
-        .describe("Used in ‘reflect’, and ‘symmetric’. The ‘even’ style is the default with an unaltered reflection around "
-                  "the edge value. For the ‘odd’ style, the extended part of the array is created by subtracting the "
+        .describe("Used in ‘reflect’, and ‘symmetric’. "
+                  "The ‘even’ style is the default with an unaltered reflection around "
+                  "the edge value. For the ‘odd’ style,"
+                  "the extended part of the array is created by subtracting the "
                   "reflected values from two times the edge value.");
     DMLC_DECLARE_FIELD(constant_value)
         .set_default(0.0)
@@ -93,23 +100,19 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   }
 };
 
-inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape, const mxnet::Tuple<Tuple<int>> pad_width){
+inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,
+                                       const mxnet::Tuple<Tuple<int>> pad_width) {
   if (ishape.ndim() == 1) {
     auto s = ishape[0] + pad_width[0][0] + pad_width[1][0];
     return mxnet::TShape({s});
-  }
-  else if (ishape.ndim() >= 2) {
+  } else if (ishape.ndim() >= 2) {
     int i;
     int sshape_number = ishape.ndim();
-    int sshape[sshape_number];
-    for (i = ishape.ndim() - 1; i >=0 ;i--){
+    mxnet::TShape oshape(ishape.ndim(), -1);
+    for (i = ishape.ndim() - 1; i >=0; i--) {
       int base = ishape[i];
       base = base + pad_width[i][0] + pad_width[i][1];
-      sshape[i] = base;
-    }
-    mxnet::TShape oshape(ishape.ndim(), -1);
-    for (i = ishape.ndim() - 1; i >=0; i--){
-      oshape[i] = sshape[i];
+      oshape[i] = base;
     }
   return oshape;
   }
@@ -117,8 +120,8 @@ inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape, const mxnet:
 }
 
 inline bool NumpyPadOpShape(const nnvm::NodeAttrs& attrs,
-                                     mxnet::ShapeVector* in_attrs,
-                                     mxnet::ShapeVector* out_attrs) {
+                            mxnet::ShapeVector* in_attrs,
+                            mxnet::ShapeVector* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -130,7 +133,7 @@ inline bool NumpyPadOpShape(const nnvm::NodeAttrs& attrs,
 
   mxnet::TShape oshape = NumpyPadShapeImpl(ishape, param.pad_width);
 
-  if(shape_is_none(oshape)) {
+  if (shape_is_none(oshape)) {
     LOG(FATAL) << "Pad does not exist.";
   }
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
@@ -154,29 +157,29 @@ template <typename xpu, int req, bool back>
 struct constant_pad {
   template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   double constant_value,
                                   size_t ndim) {
     using namespace mxnet_op;
-    MXNET_NDIM_SWITCH(ndim, NDim,{
+    MXNET_NDIM_SWITCH(ndim, NDim, {
       auto j = uunravel<NDim>(i, oshape);
       size_t m;
       bool origin = true;
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
-          KERNEL_ASSIGN(out[i],req, constant_value);
+          KERNEL_ASSIGN(out[i], req, constant_value);
         }
       }
-      if(origin){
-        for(m = 0; m < ndim; m++) {
+      if (origin) {
+        for (m = 0; m < ndim; m++) {
           j[m] = j[m] - pad_width[m][0];
         }
-        index_t l = rravel<NDim>(j,ishape);
+        index_t l = rravel<NDim>(j, ishape);
         KERNEL_ASSIGN(out[i], req, a[l]);
       }
     })
@@ -187,8 +190,8 @@ template <typename xpu, int req, bool back>
 struct pad_copy{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   size_t ndim){
     using namespace mxnet_op;
@@ -196,22 +199,22 @@ struct pad_copy{
       auto j = uunravel<NDim>(i, oshape);
       size_t m;
       bool origin = true;
-      //if is origin
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      // if is origin
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
           break;
         }
       }
-      if(origin){
-        for(m = 0; m < ndim; m++) {
+      if (origin) {
+        for (m = 0; m < ndim; m++) {
           j[m] = j[m] - pad_width[m][0];
         }
         int l = rravel<NDim>(j, ishape);
         KERNEL_ASSIGN(out[i], req, a[l]);
-      }else{
+      } else {
         return;
       }
     })
@@ -224,8 +227,8 @@ template <typename xpu, int req, bool back>
 struct symmetric_pad{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   size_t index,
                                   size_t ndim){
@@ -235,53 +238,53 @@ struct symmetric_pad{
       size_t m;
       bool origin = true;
 
-      for(m = 0; m < index; m++){
-        if(j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]){
+      for (m = 0; m < index; m++) {
+        if (j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]) {
           // we can not do this now
           return;
         }
       }
 
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
           break;
         }
       }
-      if(origin){
-        //this thread is in the origin position, then return
+      if (origin) {
+        // this thread is in the origin position, then return
         return;
       }
-      if(j[index] < pad_width[index][0]){
+      if (j[index] < pad_width[index][0]) {
       // we need to do the assignment
         int distance = pad_width[index][0] - j[index];
         int total = ishape[index];
         // the round of this element
         int round = (distance - 1) / total;
         int position = distance % total;
-        if (position == 0){
+        if (position == 0) {
           position = ishape[index];
         }
-        if (round % 2 == 0){
+        if (round % 2 == 0) {
           j[index] = pad_width[index][0] + position - 1;
-        }else{
+        } else {
           j[index] = pad_width[index][0] + ishape[index] - 1 - (position - 1);
         }
         int l = rravel<NDim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
-      }else if(j[index] >= (pad_width[index][0]+ishape[index])){
+      } else if (j[index] >= (pad_width[index][0]+ishape[index])) {
         int distance = (j[index]+1) - (pad_width[index][0]+ishape[index]);
         int total = ishape[index];
         int position = distance % total;
         int round = (distance - 1) / total;
-        if (position == 0){
+        if (position == 0) {
           position = ishape[index];
         }
-        if (round % 2 == 0){
+        if (round % 2 == 0) {
           j[index] =  pad_width[index][0] + ishape[index] - 1 - (position - 1);
-        }else{
+        } else {
           j[index] = pad_width[index][0] + position - 1;
         }
         int l = rravel<NDim>(j, oshape);
@@ -295,8 +298,8 @@ template <typename xpu, int req, bool back>
 struct edge_pad{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   size_t index,
                                   size_t ndim){
@@ -305,30 +308,30 @@ struct edge_pad{
       auto j = uunravel<NDim>(i, oshape);
       size_t m;
       bool origin = true;
-      for(m = 0; m < index; m++){
-        if(j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]){
+      for (m = 0; m < index; m++) {
+        if (j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]) {
         // we can not do this now, since this is a former axis
           return;
         }
       }
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
           break;
         }
       }
-      if(origin){
-      //this thread is in the origin position, then return
+      if (origin) {
+      // this thread is in the origin position, then return
         return;
       }
-      if(j[index] < pad_width[index][0]){
+      if (j[index] < pad_width[index][0]) {
       // we need to do the assignment
         j[index] = pad_width[index][0];
         int l = rravel<NDim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
-      }else if(j[index] >= (pad_width[index][0]+ishape[index])){
+      } else if (j[index] >= (pad_width[index][0]+ishape[index])) {
         j[index] =  pad_width[index][0] + ishape[index] - 1;
         int l = rravel<NDim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
@@ -341,56 +344,68 @@ template <typename xpu, int req, bool back>
 struct reflect_pad{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   size_t index,
                                   size_t ndim){
     using namespace mxnet_op;
-    MXNET_NDIM_SWITCH(ndim, NDim,{
+    MXNET_NDIM_SWITCH(ndim, NDim, {
       auto j = uunravel<NDim>(i, oshape);
       size_t m;
       bool origin = true;
-      for(m = 0; m < index; m++){
-        if(j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]){
+      for (m = 0; m < index; m++) {
+        if (j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]) {
           // we can not do this now
           return;
         }
       }
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
           break;
         }
       }
-      if(origin){
-        //this thread is in the origin position, then return
+      if (origin) {
+        // this thread is in the origin position, then return
         return;
       }
-      if(j[index] < pad_width[index][0]){
+      if (j[index] < pad_width[index][0]) {
         // we need to do the assignment
         int distance = pad_width[index][0] - j[index];
         int total = ishape[index];
+        if (total == 1) {
+          j[index] = pad_width[index][0];
+          int l = rravel<NDim>(j, oshape);
+          KERNEL_ASSIGN(out[i], req, out[l]);
+          return;
+        }
         int round = (distance - 1) / (total - 1);
-        if (round % 2 == 0){
+        if (round % 2 == 0) {
           int position = (distance + round) % total;
           j[index] = pad_width[index][0] + position;
-        }else{
+        } else {
           int position = (distance + round) % total;
           j[index] =  pad_width[index][0] + ishape[index] - 1 - (position);
         }
         int l = rravel<NDim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
-      }else if(j[index] >= (pad_width[index][0] + ishape[index])){
+      } else if (j[index] >= (pad_width[index][0] + ishape[index])) {
         int distance = (j[index]+1) - (pad_width[index][0] + ishape[index]);
         int total = ishape[index];
+        if (total == 1) {
+          j[index] = pad_width[index][0];
+          int l = rravel<NDim>(j, oshape);
+          KERNEL_ASSIGN(out[i], req, out[l]);
+          return;
+        }
         int round = (distance - 1) / (total - 1);
-        if(round % 2 == 0){
+        if (round % 2 == 0) {
           int position = (distance + round) % total;
           j[index] =  pad_width[index][0] + ishape[index] - 1 - (position);
-        }else{
+        } else {
           int position = (distance + round) % total;
           j[index] = pad_width[index][0] + position;
         }
@@ -405,46 +420,49 @@ template <typename xpu, int req, bool back>
 struct max_pad{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   size_t index,
                                   size_t ndim){
     using namespace mxnet_op;
-    MXNET_NDIM_SWITCH(ndim, NDim,{
+    MXNET_NDIM_SWITCH(ndim, NDim, {
       auto j = uunravel<NDim>(i, oshape);
       size_t m;
       bool origin = true;
-      for(m = 0; m < index; m++){
-        if(j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]){
+      for (m = 0; m < index; m++) {
+        if (j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]) {
           // we can not do this now
           return;
         }
       }
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
           break;
         }
       }
-      if(origin){
-        //this thread is in the origin position, then return
+      if (origin) {
+        // this thread is in the origin position, then return
         return;
       }
-      j[index] = pad_width[index][0];
-      int l = rravel<NDim>(j, oshape);
-      int max_count = 0;
-      auto max_value = out[l];
-      for(max_count = 0; max_count < ishape[index]; max_count++){
-        j[index] = pad_width[index][0] + max_count;
-        l = rravel<NDim>(j, oshape);
-        if (out[l] > max_value){
-            max_value = out[l];
+
+      if (j[index] < pad_width[index][0] || j[index] >= pad_width[index][0] + ishape[index]) {
+        j[index] = pad_width[index][0];
+        int l = rravel<NDim>(j, oshape);
+        int max_count = 0;
+        auto max_value = out[l];
+        for (max_count = 0; max_count < ishape[index]; max_count++) {
+          j[index] = pad_width[index][0] + max_count;
+          l = rravel<NDim>(j, oshape);
+          if (out[l] > max_value) {
+              max_value = out[l];
+          }
         }
+        KERNEL_ASSIGN(out[i], req, max_value);
       }
-      KERNEL_ASSIGN(out[i], req, max_value);
     })
   }
 };
@@ -453,46 +471,51 @@ template <typename xpu, int req, bool back>
 struct min_pad{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width,
                                   size_t index,
                                   size_t ndim){
     using namespace mxnet_op;
-    MXNET_NDIM_SWITCH(ndim, NDim,{
+    MXNET_NDIM_SWITCH(ndim, NDim, {
       auto j = uunravel<NDim>(i, oshape);
       size_t m;
       bool origin = true;
-      for(m = 0; m < index; m++){
-        if(j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]){
+      for (m = 0; m < index; m++) {
+        if (j[m] < pad_width[m][0] || j[m] >= pad_width[m][0] + ishape[m]) {
           // we can not do this now
           return;
         }
       }
-      for(m = 0; m < ndim; m++){
-        if(j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
+      for (m = 0; m < ndim; m++) {
+        if (j[m] >= pad_width[m][0] && j[m] < pad_width[m][0] + ishape[m]) {
           continue;
-        }else{
+        } else {
           origin = false;
           break;
         }
       }
-      if(origin){
-        //this thread is in the origin position, then return
+      if (origin) {
+        // this thread is in the origin position, then return
         return;
       }
-      j[index] = pad_width[index][0];
-      int l = rravel<NDim>(j, oshape);
-      int min_count = 0;
-      auto min_value = out[l];
-      for(min_count = 0; min_count < ishape[index]; min_count++){
-        j[index] = pad_width[index][0] + min_count;
-        l = rravel<NDim>(j, oshape);
-        if (out[l] < min_value){
-            min_value = out[l];
+      if (j[index] < pad_width[index][0] || j[index] >= (pad_width[index][0] + ishape[index])) {
+        j[index] = pad_width[index][0];
+        int l = rravel<NDim>(j, oshape);
+        int min_count = 0;
+        auto min_value = out[l];
+        for (min_count = 0; min_count < ishape[index]; min_count++) {
+          j[index] = pad_width[index][0] + min_count;
+          l = rravel<NDim>(j, oshape);
+          if (out[l] < min_value) {
+              min_value = out[l];
+          }
         }
+        j = uunravel<NDim>(i, oshape);
+        KERNEL_ASSIGN(out[i], req, min_value);
+      } else {
+        return;
       }
-      KERNEL_ASSIGN(out[i], req, min_value);
     })
   }
 };
@@ -502,8 +525,8 @@ template <typename xpu, int req, bool back>
 struct pad_grad{
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
                                   mxnet::Tuple<Tuple<int>> pad_width
                                   ){
     using namespace mxnet_op;
@@ -514,8 +537,8 @@ struct pad_grad{
 template<typename xpu, bool back>
 void NumpyPadOpImpl(const TBlob& in_data,
                     const TBlob& out_data,
-                    mshadow::Tensor<xpu, 1, index_t>& ishape,
-                    mshadow::Tensor<xpu, 1, index_t>& oshape,
+                    const mshadow::Tensor<xpu, 1, index_t>& ishape,
+                    const mshadow::Tensor<xpu, 1, index_t>& oshape,
                     index_t dsize,
                     const NumpyPadParam& param,
                     const std::vector<OpReqType>& req,
@@ -524,8 +547,8 @@ void NumpyPadOpImpl(const TBlob& in_data,
   using namespace mshadow;
   int mode = param.mode;
   int ndim = in_data.ndim();
-  if(!back){
-    if(mode == 1){
+  if (!back) {
+    if (mode == 1) {
     // constant padding start
       MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
@@ -535,7 +558,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
         });
       });
     // constant padding end
-    }else{
+    } else {
       MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
           Kernel<pad_copy<xpu, req_type, back>, xpu>::Launch(
@@ -545,9 +568,9 @@ void NumpyPadOpImpl(const TBlob& in_data,
       });
       index_t index;
       index_t dim = ishape.shape_[0];
-      if(mode == 2){
+      if (mode == 2) {
         // symmetric padding start
-        for (index = dim-1; index>=0; index--){
+        for (index = dim-1; index >= 0; index--) {
           MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
               Kernel<symmetric_pad<xpu, req_type, back>, xpu>::Launch(
@@ -556,10 +579,9 @@ void NumpyPadOpImpl(const TBlob& in_data,
             });
           });
         }
-      }
-      else if(mode == 3){
+      } else if (mode == 3) {
         // edge padding start
-        for (index = dim-1; index>=0; index--){
+        for (index = dim-1; index >= 0; index--) {
           MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
               Kernel<edge_pad<xpu, req_type, back>, xpu>::Launch(
@@ -568,10 +590,9 @@ void NumpyPadOpImpl(const TBlob& in_data,
             });
           });
         }
-      }
-      else if(mode == 4){
+      } else if (mode == 4) {
         // reflect padding start
-        for (index = dim-1; index>=0; index--){
+        for (index = dim-1; index >= 0; index--) {
           MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
               Kernel<reflect_pad<xpu, req_type, back>, xpu>::Launch(
@@ -580,8 +601,8 @@ void NumpyPadOpImpl(const TBlob& in_data,
             });
           });
         }
-      }else if(mode == 5){
-        for (index = dim-1; index>=0; index--){
+      } else if (mode == 5) {
+        for (index = dim-1; index >= 0; index--) {
           MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
               Kernel<max_pad<xpu, req_type, back>, xpu>::Launch(
@@ -590,8 +611,8 @@ void NumpyPadOpImpl(const TBlob& in_data,
             });
           });
         }
-      }else if(mode == 6){
-        for (index = dim-1; index>=0; index--){
+      } else if (mode == 6) {
+        for (index = dim-1; index >= 0; index--) {
           MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
             MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
               Kernel<min_pad<xpu, req_type, back>, xpu>::Launch(
@@ -600,11 +621,11 @@ void NumpyPadOpImpl(const TBlob& in_data,
             });
           });
         }
-      }else{
+      } else {
         // not support yet
       }
     }
-  }else{
+  } else {
     MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
         Kernel<pad_grad<xpu, req_type, back>, xpu>::Launch(
@@ -632,32 +653,35 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
 
-  size_t tempspace_size = in_data.ndim();
-  MXNET_NDIM_SWITCH(tempspace_size, NDim,{
+  size_t ts = in_data.ndim();
+  MXNET_NDIM_SWITCH(ts, NDim, {
     size_t count;
     mshadow::Shape<NDim> inshape;
-    for(count = 0; count < tempspace_size; count++){
+    for (count = 0; count < ts; count++) {
       inshape[count] = static_cast<index_t>((in_data.shape_)[count]);
     }
 
-    Tensor<xpu, 1, index_t> temp_space = ctx.requested[0].get_space_typed<xpu, 1, index_t>(Shape1(2*tempspace_size), s);
-    Tensor<cpu, 1, index_t> tensor_a(reinterpret_cast<index_t*>(inshape.shape_), Shape1(tempspace_size), ctx.get_stream<cpu>());
-    Tensor<xpu, 1, index_t> tensor_input(reinterpret_cast<index_t*>(temp_space.dptr_), Shape1(tempspace_size), ctx.get_stream<xpu>());
-    mshadow::Copy(tensor_input, tensor_a, ctx.get_stream<xpu>());
+    Tensor<xpu, 1, index_t> tsp = ctx.requested[0].
+                                  get_space_typed<xpu, 1, index_t>(Shape1(2*ts), s);
+    Tensor<cpu, 1, index_t> ta(reinterpret_cast<index_t*>(inshape.shape_),
+                               Shape1(ts), ctx.get_stream<cpu>());
+    Tensor<xpu, 1, index_t> ti(reinterpret_cast<index_t*>(tsp.dptr_),
+                               Shape1(ts), ctx.get_stream<xpu>());
+    mshadow::Copy(ti, ta, ctx.get_stream<xpu>());
 
     mshadow::Shape<NDim> outshape;
-    for(count = 0; count < tempspace_size; count++){
+    for (count = 0; count < ts; count++) {
       outshape[count] = static_cast<index_t>((out_data.shape_)[count]);
     }
-    index_t* workspace_curr_ptr = temp_space.dptr_;
-    workspace_curr_ptr += tempspace_size;
-    Tensor<cpu, 1, index_t> tensor_b(reinterpret_cast<index_t*>(outshape.shape_), Shape1(tempspace_size), s);
-    Tensor<xpu, 1, index_t> tensor_output(reinterpret_cast<index_t*>(workspace_curr_ptr), Shape1(tempspace_size), s);
-    mshadow::Copy(tensor_output, tensor_b, ctx.get_stream<xpu>());
+    index_t* wcp = tsp.dptr_;
+    wcp += ts;
+    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_), Shape1(ts), s);
+    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts), s);
+    mshadow::Copy(to, tb, ctx.get_stream<xpu>());
     const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
 
-    NumpyPadOpImpl<xpu, false>(in_data, out_data, tensor_input,
-                               tensor_output, out_data.Size(), param, req, s);
+    NumpyPadOpImpl<xpu, false>(in_data, out_data, ti,
+                               to, out_data.Size(), param, req, s);
   })
 }
 
@@ -675,34 +699,37 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
   const TBlob& in_data = inputs[0];
   const TBlob& out_data = outputs[0];
 
-  size_t tempspace_size = in_data.ndim();
-  MXNET_NDIM_SWITCH(tempspace_size, NDim,{
+  size_t ts = in_data.ndim();
+  MXNET_NDIM_SWITCH(ts, NDim, {
     size_t count;
     mshadow::Shape<NDim> inshape;
-    for(count = 0; count < tempspace_size; count++){
+    for (count = 0; count < ts; count++) {
       inshape[count] = static_cast<index_t>((in_data.shape_)[count]);
     }
-    Tensor<xpu, 1, index_t> temp_space = ctx.requested[0].get_space_typed<xpu, 1, index_t>(Shape1(2*tempspace_size), s);
-    Tensor<cpu, 1, index_t> tensor_a(reinterpret_cast<index_t*>(inshape.shape_), Shape1(tempspace_size), ctx.get_stream<cpu>());
-    Tensor<xpu, 1, index_t> tensor_input(reinterpret_cast<index_t*>(temp_space.dptr_), Shape1(tempspace_size), ctx.get_stream<xpu>());
-    mshadow::Copy(tensor_input, tensor_a, ctx.get_stream<xpu>());
+    Tensor<xpu, 1, index_t> tsp = ctx.requested[0].
+                                  get_space_typed<xpu, 1, index_t>(Shape1(2*ts), s);
+    Tensor<cpu, 1, index_t> ta(reinterpret_cast<index_t*>(inshape.shape_),
+                               Shape1(ts), ctx.get_stream<cpu>());
+    Tensor<xpu, 1, index_t> ti(reinterpret_cast<index_t*>(tsp.dptr_),
+                               Shape1(ts), ctx.get_stream<xpu>());
+    mshadow::Copy(ti, ta, ctx.get_stream<xpu>());
 
     mshadow::Shape<NDim> outshape;
-    for(count = 0; count < tempspace_size; count++){
+    for (count = 0; count < ts; count++) {
       outshape[count] = static_cast<index_t>((out_data.shape_)[count]);
     }
-    index_t* workspace_curr_ptr = temp_space.dptr_;
-    workspace_curr_ptr += tempspace_size;
-    Tensor<cpu, 1, index_t> tensor_b(reinterpret_cast<index_t*>(outshape.shape_), Shape1(tempspace_size), s);
-    Tensor<xpu, 1, index_t> tensor_output(reinterpret_cast<index_t*>(workspace_curr_ptr), Shape1(tempspace_size), s);
-    mshadow::Copy(tensor_output, tensor_b, ctx.get_stream<xpu>());
+    index_t* wcp = tsp.dptr_;
+    wcp += ts;
+    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_), Shape1(ts), s);
+    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts), s);
+    mshadow::Copy(to, tb, ctx.get_stream<xpu>());
     const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
 
-    NumpyPadOpImpl<xpu, true>(in_data, out_data, tensor_output,
-                               tensor_input, out_data.Size(), param, req, s);
+    NumpyPadOpImpl<xpu, true>(in_data, out_data, to,
+                               ti, out_data.Size(), param, req, s);
   })
 }
 
-}
-}
-#endif
+}  // namespace op
+}  // namespace mxnet
+#endif  // MXNET_OPERATOR_NUMPY_NP_PAD_OP_INL_H_

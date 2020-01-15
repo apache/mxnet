@@ -9475,19 +9475,16 @@ def pad(array, pad_width, mode="constant", constant_values=0, reflect_type="even
         'edge'
             Pads with the edge values of array.
         'linear_ramp'
-            Pads with the linear ramp between end_value and the
-            array edge value.
+            not supported yet
         'maximum'
-            Pads with the maximum value of all or part of the
+            Pads with the maximum value of all of the
             vector along each axis.
         'mean'
-            Pads with the mean value of all or part of the
-            vector along each axis.
+            not supported yet
         'median'
-            Pads with the median value of all or part of the
-            vector along each axis.
+           not supported yet
         'minimum'
-            Pads with the minimum value of all or part of the
+            Pads with the minimum value of all of the
             vector along each axis.
         'reflect'
             Pads with the reflection of the vector mirrored on
@@ -9497,91 +9494,33 @@ def pad(array, pad_width, mode="constant", constant_values=0, reflect_type="even
             Pads with the reflection of the vector mirrored
             along the edge of the array.
         'wrap'
-            Pads with the wrap of the vector along the axis.
-            The first values are used to pad the end and the
-            end values are used to pad the beginning.
+            not supported yet
         'empty'
             Pads with undefined values.
             .. versionadded:: 1.17
         <function>
             Padding function, see Notes.
-    stat_length : sequence or int, optional
-        Used in 'maximum', 'mean', 'median', and 'minimum'.  Number of
-        values at edge of each axis used to calculate the statistic value.
-        ((before_1, after_1), ... (before_N, after_N)) unique statistic
-        lengths for each axis.
-        ((before, after),) yields same before and after statistic lengths
-        for each axis.
-        (stat_length,) or int is a shortcut for before = after = statistic
-        length for all axes.
-        Default is ``None``, to use the entire axis.
-    constant_values : sequence or scalar, optional
+    stat_length : not supported yet
+    constant_values : scalar, optional
         Used in 'constant'.  The values to set the padded values for each
         axis.
-        ``((before_1, after_1), ... (before_N, after_N))`` unique pad constants
-        for each axis.
-        ``((before, after),)`` yields same before and after constants for each
-        axis.
-        ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
-        all axes.
         Default is 0.
-    end_values : sequence or scalar, optional
-        Used in 'linear_ramp'.  The values used for the ending value of the
-        linear_ramp and that will form the edge of the padded array.
-        ``((before_1, after_1), ... (before_N, after_N))`` unique end values
-        for each axis.
-        ``((before, after),)`` yields same before and after end values for each
-        axis.
-        ``(constant,)`` or ``constant`` is a shortcut for ``before = after = constant`` for
-        all axes.
-        Default is 0.
+    end_values : not supported yet
     reflect_type : {'even', 'odd'}, optional
-        Used in 'reflect', and 'symmetric'.  The 'even' style is the
-        default with an unaltered reflection around the edge value.  For
-        the 'odd' style, the extended part of the array is created by
-        subtracting the reflected values from two times the edge value.
+        only support even now
     Returns
     -------
     pad : ndarray
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
-    Notes
-    -----
-    .. versionadded:: 1.7.0
-    For an array with rank greater than 1, some of the padding of later
-    axes is calculated from padding of previous axes.  This is easiest to
-    think about with a rank 2 array where the corners of the padded array
-    are calculated by using padded values from the first axis.
-    The padding function, if used, should modify a rank 1 array in-place. It
-    has the following signature::
-        padding_func(vector, iaxis_pad_width, iaxis, kwargs)
-    where
-        vector : ndarray
-            A rank 1 array already padded with zeros.  Padded values are
-            vector[:iaxis_pad_width[0]] and vector[-iaxis_pad_width[1]:].
-        iaxis_pad_width : tuple
-            A 2-tuple of ints, iaxis_pad_width[0] represents the number of
-            values padded at the beginning of vector where
-            iaxis_pad_width[1] represents the number of values padded at
-            the end of vector.
-        iaxis : int
-            The axis currently being calculated.
-        kwargs : dict
-            Any keyword arguments the function requires.
     Examples
     --------
     >>> a = [1, 2, 3, 4, 5]
-    >>> np.pad(a, (2, 3), 'constant', constant_values=(4, 6))
-    array([4, 4, 1, ..., 6, 6, 6])
     >>> np.pad(a, (2, 3), 'edge')
     array([1, 1, 1, ..., 5, 5, 5])
-    >>> np.pad(a, (2, 3), 'linear_ramp', end_values=(5, -4))
-    array([ 5,  3,  1,  2,  3,  4,  5,  2, -1, -4])
-    >>> np.pad(a, (2,), 'maximum')
+    >>> np.pad(a, (2, 2), 'maximum')
     array([5, 5, 1, 2, 3, 4, 5, 5, 5])
-    >>> np.pad(a, (2,), 'mean')
-    array([3, 3, 1, 2, 3, 4, 5, 3, 3])
-    >>> np.pad(a, (2,), 'median')
+    >>> np.pad(a, (2, 2), 'mean')
     array([3, 3, 1, 2, 3, 4, 5, 3, 3])
     >>> a = [[1, 2], [3, 4]]
     >>> np.pad(a, ((3, 2), (2, 3)), 'minimum')
@@ -9595,33 +9534,16 @@ def pad(array, pad_width, mode="constant", constant_values=0, reflect_type="even
     >>> a = [1, 2, 3, 4, 5]
     >>> np.pad(a, (2, 3), 'reflect')
     array([3, 2, 1, 2, 3, 4, 5, 4, 3, 2])
-    >>> np.pad(a, (2, 3), 'reflect', reflect_type='odd')
-    array([-1,  0,  1,  2,  3,  4,  5,  6,  7,  8])
     >>> np.pad(a, (2, 3), 'symmetric')
     array([2, 1, 1, 2, 3, 4, 5, 5, 4, 3])
-    >>> np.pad(a, (2, 3), 'symmetric', reflect_type='odd')
-    array([0, 1, 1, 2, 3, 4, 5, 5, 6, 7])
-    >>> np.pad(a, (2, 3), 'wrap')
-    array([4, 5, 1, 2, 3, 4, 5, 1, 2, 3])
-    >>> def pad_with(vector, pad_width, iaxis, kwargs):
-    ...     pad_value = kwargs.get('padder', 10)
-    ...     vector[:pad_width[0]] = pad_value
-    ...     vector[-pad_width[1]:] = pad_value
     >>> a = np.arange(6)
     >>> a = a.reshape((2, 3))
-    >>> np.pad(a, 2, pad_with)
+    >>> np.pad(a, ((2, 2), (2, 2)), pad_with)
     array([[10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10,  0,  1,  2, 10, 10],
            [10, 10,  3,  4,  5, 10, 10],
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10]])
-    >>> np.pad(a, 2, pad_with, padder=100)
-    array([[100, 100, 100, 100, 100, 100, 100],
-           [100, 100, 100, 100, 100, 100, 100],
-           [100, 100,   0,   1,   2, 100, 100],
-           [100, 100,   3,   4,   5, 100, 100],
-           [100, 100, 100, 100, 100, 100, 100],
-           [100, 100, 100, 100, 100, 100, 100]])
     """
     return _mx_nd_np.pad(array, pad_width, mode, reflect_type, constant_values)

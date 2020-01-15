@@ -1808,6 +1808,18 @@ def _add_workload_where():
     OpArgMngr.add_workload('where', c, a.T, b.T)
 
 
+def _add_workload_pad():
+    array = _np.array([1, 2, 3])
+    pad_width = (5, 5)
+    array = np.array(array)
+    OpArgMngr.add_workload('pad', array, pad_width, mode="constant", constant_values=0)
+    OpArgMngr.add_workload('pad', array, pad_width, mode="edge")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="symmetric", reflect_type="even")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="reflect", reflect_type="even")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="maximum")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="minimum")
+
+
 def _add_workload_nonzero():
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2))
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=()))
@@ -2920,6 +2932,7 @@ def _prepare_workloads():
     _add_workload_unpackbits()
     _add_workload_unwrap()
     _add_workload_vander()
+    _add_workload_pad()
 
 
 _prepare_workloads()
