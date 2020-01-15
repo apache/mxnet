@@ -405,6 +405,7 @@ inline nnvm::NodePtr MakeNode(
       << "Number of inputs to operator " << op_name << " (" << p->num_inputs()
       << ") does not match the actual number of inputs provided to operator "
       << name << " (" << p->inputs.size() << ").";
+  }
   return p;
 }
 
