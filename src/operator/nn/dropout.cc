@@ -122,10 +122,18 @@ Example::
       dshape[param.axes[i]] = 1;
     }
   }
-  // Use 1-bit in mask by rounding up dshape.Size() / 8
-  TShape mshape(1, static_cast<dim_t>((dshape.Size() + 7) / 8));
-  out_shape->push_back(mshape);
-  return true;
+
+  if (mxnet::shape_is_known(dshape)) {
+    // Use 1-bit in mask by rounding up dshape.Size() / 8
+    TShape mshape(1, static_cast<dim_t>((dshape.Size() + 7) / 8));
+    out_shape->push_back(mshape);
+    return true;
+  } else {
+    // In the initial traverse in symbolic mode, shape could be unknown
+    TShape mshape(1, -1);
+    out_shape->push_back(mshape);
+    return false;
+  }
 })
 .set_attr<nnvm::FInferType>("FInferType", [](const nnvm::NodeAttrs& attrs,
       std::vector<int> *in_type, std::vector<int> *out_type) {
