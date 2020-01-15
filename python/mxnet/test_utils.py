@@ -2260,7 +2260,7 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
                       rtol=1e-4, atol=1e-5, compare_states=True, ntensors=1):
     """Compare opt1 and opt2."""
     if not isinstance(shape, list):
-        assert(ntensors==1)
+        assert(ntensors == 1)
         if w_stype == 'default':
             w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
             w1 = w2.copyto(default_context())
