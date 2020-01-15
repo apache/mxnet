@@ -135,7 +135,7 @@ def _make_internal_datasets(handle):
 
         for k, val in kwargs.items():
             # convert ndarray to handle
-            if isinstance(val, NDArrayBase):
+            if hasattr(val, 'handle'):
                 val = val.handle.value
             if isinstance(val, (tuple, list)):
                 val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
