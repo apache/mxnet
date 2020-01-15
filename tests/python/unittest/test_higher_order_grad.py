@@ -121,7 +121,7 @@ def test_tanh():
         return nd.tanh(x)
 
     def grad_op(x):
-        return 1 / nd.cosh(x)**2
+        return 1 - tanh(x)**2
 
     def grad_grad_op(x):
         return -2 * tanh(x) * grad_op(x)
