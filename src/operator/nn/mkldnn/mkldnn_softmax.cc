@@ -163,8 +163,6 @@ class MKLDNNSoftmaxBwd {
   std::shared_ptr<mkldnn::softmax_backward> bwd_;
 };
 
-typedef ParamOpSign<SoftmaxParam> MKLDNNSoftmaxSignature;
-
 static MKLDNNSoftmaxBwd &GetSoftmaxBwd(const SoftmaxParam &param,
                                        const int real_axis,
                                        const std::vector<NDArray> &data,
@@ -194,7 +192,7 @@ static MKLDNNSoftmaxBwd &GetSoftmaxBwd(const SoftmaxParam &param,
 void MKLDNNSoftmaxBackward(const nnvm::NodeAttrs& attrs,
                            const OpContext &ctx,
                            const std::vector<NDArray> &in_data,
-                           const std::vector<OpReqType>& req,
+                           const std::vector<OpReqType> &req,
                            const std::vector<NDArray> &out_data) {
   if (req[0] == kNullOp) return;
   CHECK_EQ(in_data.size(), 2U);
