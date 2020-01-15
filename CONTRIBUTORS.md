@@ -247,6 +247,7 @@ List of Contributors
 * [Disi A](https://github.com/adis300)
 * [Vandana Kannan](https://github.com/vandanavk)
 * [Guanxin Qiao](https://github.com/guanxinq)
+* [dithyrambe](https://github.com/dithyrambe)
 
 Label Bot
 ---------

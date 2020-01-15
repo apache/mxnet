@@ -62,7 +62,11 @@ $(document).ready(function () {
         $('li.versions').each(function(){is_a_match($(this), versionSelect)});
         $('button.opt').removeClass('active');
         $('button.opt').each(function(){is_a_match($(this), platformSelect)});
-        $('button.opt').each(function(){is_a_match($(this), languageSelect)});
+        $('button.opt').each(function(){
+            if (label($(this).text()) === label(languageSelect)) {
+                $(this).addClass(('active'))
+            }
+        });
         $('button.opt').each(function(){is_a_match($(this), processorSelect)});
         $('button.opt').each(function(){is_a_match($(this), environSelect)});
 

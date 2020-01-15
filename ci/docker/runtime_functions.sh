@@ -1243,12 +1243,11 @@ unittest_ubuntu_cpu_R() {
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg                           \
-        USE_BLAS=openblas               \
+    make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
-    make rpkgtest R_LIBS=/tmp/r-site-library
+    make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library
 }
 
 unittest_ubuntu_minimal_R() {
@@ -1259,8 +1258,7 @@ unittest_ubuntu_minimal_R() {
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg                           \
-        USE_BLAS=openblas               \
+    make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
@@ -1289,11 +1287,10 @@ unittest_ubuntu_gpu_R() {
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg                           \
-        USE_BLAS=openblas               \
+    make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
-    make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
+    make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
 unittest_ubuntu_cpu_julia() {
@@ -2098,9 +2095,12 @@ cd_s3_publish() {
     set -ex
     pip3 install --user awscli
     filepath=$(readlink -f wheel_build/dist/*.whl)
-    filename=$(basename $file_path)
+    filename=$(basename $filepath)
     variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)
-    aws s3 cp --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers,full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822 s3://apache-mxnet/dist/${variant}/${filename}
+    if [ -z "${variant}" ]; then
+        variant="cpu"
+    fi
+    aws s3 cp ${filepath} s3://apache-mxnet/dist/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
 build_static_scala_mkl() {
