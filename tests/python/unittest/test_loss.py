@@ -17,7 +17,7 @@
 
 import mxnet as mx
 import numpy as np
-from mxnet import gluon
+from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
 from common import setup_module, with_seed, teardown
 import unittest
@@ -350,29 +350,37 @@ def test_triplet_loss():
 
 @with_seed()
 def test_sdml_loss():
-    col_1 = mx.nd.array([[0.1, 0.2, 0.3, 0.4],
-                         [0.2, 0.1, 0.3, 0.4],
-                         [0.3, 0.2, 0.1, 0.4],
-                         [0.4, 0.3, 0.2, 0.1]])
 
-    col_2_pos = mx.nd.array([[0.1, 0.2, 0.3, 0.4],
-                             [0.2, 0.1, 0.3, 0.4],
-                             [0.3, 0.2, 0.1, 0.4],
-                             [0.4, 0.3, 0.2, 0.1]])
+    N = 5 # number of samples
+    DIM = 10 # Dimensionality
+    EPOCHS = 20
+    
+    # Generate randomized data and 'positive' samples
+    data = mx.random.uniform(-1, 1, shape=(N, DIM))
+    pos = mx.random.uniform(-1, 1, shape=(N, DIM))
+    data_iter = mx.io.NDArrayIter({'data' : data, 'pos' : pos}, batch_size=N)
 
-    col_2_neg = mx.nd.array([[0.4, 0.3, 0.2, 0.1],
-                             [0.1, 0.2, 0.3, 0.4],
-                             [0.2, 0.1, 0.3, 0.4],
-                             [0.3, 0.2, 0.1, 0.4]])
+    # Init model and trainer
+    sdml_loss = gluon.loss.SDMLLoss()
+    model = gluon.nn.Dense(DIM, activation='tanh') # Simple NN encoder
+    model.collect_params().initialize(mx.init.Xavier(), ctx=mx.current_context())
+    trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate' : 0.1})
 
-    Loss = gluon.loss.SDMLLoss(0.1)
-    loss_pos = Loss(col_1, col_2_pos)
-    loss_neg = Loss(col_1, col_2_neg)        
-    precomputed_pos = mx.nd.array([0.88932925, 0.8974053,  0.8959585,  0.84610945])
-    precomputed_neg = mx.nd.array([1.0626626,  0.91473866, 0.94795847, 0.9501095 ])
-    assert_almost_equal(loss_pos, precomputed_pos)
-    assert_almost_equal(loss_neg, precomputed_neg)
+    for i in range(EPOCHS): # Training loop
+        data_iter.reset()
+        for iter_batch in data_iter:
+            batch = [datum.as_in_context(mx.current_context()) for datum in iter_batch.data]
+            with autograd.record():
+                data, pos = batch
+                z_data, z_pos = model(data), model(pos)
+                loss = sdml_loss(z_data, z_pos)
+                loss.backward()
+            trainer.step(1)
 
+    # After training euclidean distance between aligned pairs should be lower than all non-aligned pairs
+    alignments = [np.argmin(np.linalg.norm(elem.asnumpy() - z_pos.asnumpy(), axis=1)) for elem in z_data]
+    # e.g. For N=5, alignments should be [0, 1, 2, 3, 4]
+    assert(alignments == list(range(N)))
 
     
 @with_seed()
