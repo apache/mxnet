@@ -811,6 +811,8 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
+    make cython PYTHON=python2
+    make cython PYTHON=python3
 }
 
 build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
