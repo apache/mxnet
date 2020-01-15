@@ -294,8 +294,7 @@ inline void MultiLAMB(const nnvm::NodeAttrs& attrs,
         2 * kernel_params.nchunks * sizeof(int);
     // take into account the required storage required within MultiSumSqRun
     size_t required_storage_multi_sum_sq = 0;
-    if (ctx.run_ctx.ctx.dev_mask() == kGPU)
-      required_storage_multi_sum_sq = GetRequiredStorageMultiSumSq(inputs);
+    required_storage_multi_sum_sq = GetRequiredStorageMultiSumSq<xpu>(inputs);
     workspace_size += required_storage_multi_sum_sq;
 
     // Request temporary storage

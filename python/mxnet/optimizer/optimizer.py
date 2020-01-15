@@ -1275,8 +1275,8 @@ class LAMB(Optimizer):
 
         if self.aggregate_num <= 1 or not isinstance(index, (tuple, list)):
             if isinstance(index, (tuple, list)):
-              assert(len(index)==self.aggregate_num)
-              index, weight, grad, state = index[0], weight[0], grad[0], state[0]
+                assert(len(index) == self.aggregate_num)
+                index, weight, grad, state = index[0], weight[0], grad[0], state[0]
             assert(isinstance(weight, NDArray))
             assert(isinstance(grad, NDArray))
             self._update_count(index)
@@ -1286,10 +1286,10 @@ class LAMB(Optimizer):
             weight_ptr = weight
             grad_ptr = grad
             if multi_precision:
-              mean, var = state[1]
-              weight32 = state[0]
+                mean, var = state[1]
+                weight32 = state[0]
             else:
-              mean, var = state
+                mean, var = state
             kwargs['t'] = t
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
