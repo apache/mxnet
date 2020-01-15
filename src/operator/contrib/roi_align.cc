@@ -621,6 +621,7 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
 
 
 NNVM_REGISTER_OP(_backward_ROIAlign)
+.set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<ROIAlignParam>)
