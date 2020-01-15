@@ -218,7 +218,7 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
 /* \brief Check if param indices and data indices are set, if not then set data indices */
 void SetInputIndices(const nnvm::Graph& fwd_graph,
                      const mxnet::Tuple<uint32_t>& param_indices,
-                     mxnet::Tuple<uint32_t>* data_indices) __attribute__((unused));
+                     mxnet::Tuple<uint32_t>* data_indices) DMLC_ATTRIBUTE_UNUSED;
 void SetInputIndices(const nnvm::Graph& fwd_graph,
                      const mxnet::Tuple<uint32_t>& param_indices,
                      mxnet::Tuple<uint32_t>* data_indices) {
