@@ -65,12 +65,12 @@ class Normal(ExponentialFamily):
         log_scale = F.np.log(self._scale)
         log_prob = -((value - self._loc) ** 2) / (2 * var)
         log_prob = log_prob - log_scale
-        log_prob = log_prob + F.np.log(F.np.sqrt(2 * math.pi))
+        log_prob = log_prob - F.np.log(F.np.sqrt(2 * math.pi))
         return log_prob
 
     def sample(self, size=None):
         r"""Generate samples of `size` from the normal distribution
-        parameterized by `self.loc` and `self.scale`
+        parameterized by `self._loc` and `self._scale`
 
         Parameters
         ----------
@@ -83,13 +83,13 @@ class Normal(ExponentialFamily):
         Tensor
             Samples from Normal distribution.
         """
-        return self.F.np.random.normal(self.loc,
-                                       self.scale,
+        return self.F.np.random.normal(self._loc,
+                                       self._scale,
                                        size)
 
     def sample_n(self, batch_size=None):
         r"""Generate samples of (batch_size + broadcast(loc, scale).shape)
-        from the normal distribution parameterized by `self.loc` and `self.scale`
+        from the normal distribution parameterized by `self._loc` and `self._scale`
 
         Parameters
         ----------
@@ -101,17 +101,20 @@ class Normal(ExponentialFamily):
         Tensor
             Samples from Normal distribution.
         """
-        return self.F.npx.random.normal_n(self.loc,
-                                          self.scale,
+        return self.F.npx.random.normal_n(self._loc,
+                                          self._scale,
                                           batch_size)
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
         F = self.F
-        new_instance.loc = F.np.broadcast_to(self.loc, batch_shape)
-        new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
+        new_instance.loc = F.np.broadcast_to(self._loc, batch_shape)
+        new_instance.scale = F.np.broadcast_to(self._scale, batch_shape)
         super(Normal, new_instance).__init__(F=F)
         return new_instance
+
+    def support(self):
+        return lambda x: True
 
     @property
     def _natural_params(self):
@@ -123,8 +126,8 @@ class Normal(ExponentialFamily):
         Tuple
             Natural parameters of normal distribution.
         """
-        return (self.loc / (self.scale ** 2),
-                -0.5 * self.F.np.reciprocal(self.scale ** 2))
+        return (self._loc / (self._scale ** 2),
+                -0.5 * self.F.np.reciprocal(self._scale ** 2))
 
     @property
     def _log_normalizer(self, x, y):

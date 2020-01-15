@@ -28,7 +28,7 @@ class Bernoulli(ExponentialFamily):
 
     Parameters
     ----------
-    prob : Tensor or scalar, default 0.5
+    prob : Tensor or scalar, default None
         Probability of sampling `1`.
     logit : Tensor or scalar, default None
         The log-odds of sampling `1`.
@@ -37,7 +37,7 @@ class Bernoulli(ExponentialFamily):
         inferred from parameters if declared None.
     """
 
-    def __init__(self, prob=0.5, logit=None, F=None):
+    def __init__(self, prob=None, logit=None, F=None):
         _F = F if F is not None else getF([prob, logit])
         super(Bernoulli, self).__init__(F=_F)
 
@@ -60,6 +60,7 @@ class Bernoulli(ExponentialFamily):
         """
         return self._prob if self._prob is not None else logit2prob(self._logit, True, self.F)
 
+    @property
     def logit(self):
         """Get the log-odds of sampling `1`.
         
@@ -79,16 +80,14 @@ class Bernoulli(ExponentialFamily):
         return self.prob * (1 - self.prob)
 
     def log_prob(self, value):
+        # FIXME!
+        # constraint_check = self.F.npx.constraint_check(self.support(value))
+        # value = constraint_check * value
+
         F = self.F
         if self._prob is None:
-            # When the distribution is parameterized by logit,
-            # we apply the formula:
-            # max(logit, 0) - value * logit + log(1 + exp(-abs(logit)))
-            relu = F.npx.relu
-            abs_fn = F.np.abs
             logit = self.logit
-            return (relu(logit) - value * logit +
-                    F.npx.activation(-abs_fn(logit), act_type='softrelu'))
+            return logit * (value - 1) - F.np.log(F.np.exp(-logit) + 1)
         else:
             # Parameterized by probability
             eps = 1e-12
@@ -97,6 +96,11 @@ class Bernoulli(ExponentialFamily):
 
     def sample(self, size=None):
         return self.F.npx.random.bernoulli(self._prob, self._logit, size)
+
+    @property
+    def support(self):
+        # TODO: replace bitwise_or with logical_or, return a constraint object.
+        return lambda x: self.F.np.bitwise_or((x == 0.0), (x == 1.0))
 
     @property
     def _natural_params(self):

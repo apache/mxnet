@@ -38,15 +38,27 @@ class Distribution(object):
         self._kl_dict = {}
         self.F = F
 
-    def log_prob(self, x):
+    def log_prob(self, value):
         r"""
-        Returns the log of the probability density/mass function evaluated at `x`.
+        Returns the log of the probability density/mass function evaluated at `value`.
         """
         raise NotImplementedError()
 
-    def prob(self, x):
+    def prob(self, value):
         r"""
-        Returns the probability density/mass function evaluated at `x`.
+        Returns the probability density/mass function evaluated at `value`.
+        """
+        raise NotImplementedError
+
+    def cdf(self, value):
+        r"""
+        Return the cumulative density/mass function evaluated at `value`.
+        """
+        raise NotImplementedError
+
+    def icdf(self, value):
+        r"""
+        Return the inverse cumulative density/mass function evaluated at `value`.
         """
         raise NotImplementedError
 
@@ -96,3 +108,12 @@ class Distribution(object):
         Return the variance of the distribution.
         """
         return NotImplementedError
+
+    @property
+    def support(self):
+        """
+        Return a function representing the distribution's support.
+        """
+        # TODO: return a constraint object
+        return NotImplementedError
+
