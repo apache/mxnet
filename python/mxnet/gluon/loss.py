@@ -950,8 +950,8 @@ class SDMLLoss(Loss):
 
     Parameters
     ----------
-    smoothing_factor : float
-        Probability mass to be distributed over. Must be < 1.0.
+    smoothing_parameter : float
+        Probability mass to be distributed over the minibatch. Must be < 1.0.
     weight : float or None
         Global scalar weight for loss.
     batch_axis : int, default 0
@@ -962,6 +962,7 @@ class SDMLLoss(Loss):
         - **x2**: Minibatch of data points with shape (batch_size, vector_dim)
           Each item in x2 is a positive sample for the same index in x1.
           That is, x1[0] and x2[0] form a positive pair, x1[1] and x2[1] form a positive pair - and so on.
+          All data points in different rows should be decorrelated
 
     Outputs:
         - **loss**: loss tensor with shape (batch_size,).
