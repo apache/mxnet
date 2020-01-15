@@ -22,7 +22,7 @@
  * \file np_laplace_op.h
  * \brief Operator for numpy sampling from Laplace distributions
  */
-    #ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_LAPLACE_OP_H_
+#ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_LAPLACE_OP_H_
 #define MXNET_OPERATOR_NUMPY_RANDOM_NP_LAPLACE_OP_H_
 
 #include <mxnet/operator_util.h>
@@ -82,7 +82,6 @@ inline bool NumpyLaplaceOpType(const nnvm::NodeAttrs &attrs,
 }
 
 namespace mxnet_op {
-
 template <int ndim, typename IType, typename OType>
 struct laplace_kernel {
   MSHADOW_XINLINE static void Map(index_t i, const Shape<ndim> &lstride,
@@ -94,10 +93,10 @@ struct laplace_kernel {
     auto hidx = static_cast<index_t>(dot(coord, hstride));
     IType loc_value = loc[lidx];
     IType scale_value = scale[hidx];
-    if(uniforms[i]<0.5){
-        out[i]=loc_value+scale_value*log(2*uniforms[i]);
-    }else{
-        out[i]=loc_value-scale_value*log(2*(1-uniforms[i]));
+    if (uniforms[i] < 0.5) {
+      out[i] = loc_value + scale_value * log(2 * uniforms[i]);
+    } else {
+      out[i] = loc_value - scale_value * log(2 * (1 - uniforms[i]));
     }
   }
 };
@@ -119,11 +118,11 @@ struct laplace_one_scalar_kernel {
       loc_value = array[idx];
       scale_value = scalar;
     }
-      if(uniforms[i]<0.5){
-          out[i]=loc_value+scale_value*log(2*uniforms[i]);
-      }else{
-          out[i]=loc_value-scale_value*log(2*(1-uniforms[i]));
-      }
+    if (uniforms[i] < 0.5) {
+      out[i] = loc_value + scale_value * log(2 * uniforms[i]);
+    } else {
+      out[i] = loc_value - scale_value * log(2 * (1 - uniforms[i]));
+    }
   }
 };
 
@@ -131,11 +130,11 @@ template <typename OType>
 struct laplace_two_scalar_kernel {
   MSHADOW_XINLINE static void Map(index_t i, float loc, float scale,
                                   float *uniforms, OType *out) {
-      if(uniforms[i]<0.5){
-          out[i]=loc+scale*log(2*uniforms[i]);
-      }else{
-          out[i]=loc-scale*log(2*(1-uniforms[i]));
-      }
+    if (uniforms[i] < 0.5) {
+      out[i] = loc + scale * log(2 * uniforms[i]);
+    } else {
+      out[i] = loc - scale * log(2 * (1 - uniforms[i]));
+    }
   }
 };
 }  // namespace mxnet_op
@@ -216,4 +215,4 @@ void NumpyLaplaceForward(const nnvm::NodeAttrs &attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_UNIFORM_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_LAPLACE_OP_H_
