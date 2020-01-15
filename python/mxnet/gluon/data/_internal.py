@@ -31,6 +31,7 @@ from ...base import DatasetHandle, NDArrayHandle
 from ...base import mx_real_t
 from ...base import check_call, build_param_doc as _build_param_doc
 from ...ndarray import NDArray
+from ...ndarray.ndarray import NDArrayBase
 from ...ndarray.sparse import CSRNDArray
 from ...ndarray import _ndarray_cls
 from ...ndarray import array
@@ -71,7 +72,7 @@ class MXDataset(Dataset):
             idx += self._len
         # check bound
         if idx < 0 or idx >= self._len:
-            raise ValueError("Index {} out of bound: (0, {})".format(orig_idx, self._len))
+            raise IndexError("Index {} out of bound: (0, {})".format(orig_idx, self._len))
         items = []
         for i in range(self._out_size):
             hdl = NDArrayHandle()
@@ -133,6 +134,11 @@ def _make_internal_datasets(handle):
         param_vals = []
 
         for k, val in kwargs.items():
+            # convert ndarray to handle
+            if isinstance(val, NDArrayBase):
+                val = val.handle.value
+            if isinstance(val, (tuple, list)):
+                val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
             param_keys.append(k)
             param_vals.append(str(val))
         # create atomic symbol
