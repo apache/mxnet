@@ -146,8 +146,8 @@ Example::
   }
 
   out_type->clear();
-  out_type->push_back(dtype); // data type for output
-  out_type->push_back(kUint8); // data type for mask
+  out_type->push_back(dtype);  // data type for output
+  out_type->push_back(kUint8);  // data type for mask
   return true;
 })
 .set_attr<FCreateOpState>("FCreateOpState", CreateDropoutState)
