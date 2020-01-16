@@ -369,9 +369,10 @@ class MKLDNNRnnBackward {
   void SetDataGradsMem(void* diff_src, void* diff_state, void* diff_statecell,
                        void* diff_out, void* diff_state_out, void* diff_statecell_out,
                        const int dtype = mshadow::kFloat32);
-  void CommitWeightsDiff(void* diff_weights, void* diff_bias,
-                         const OpReqType req,
-                         const int dtype = mshadow::kFloat32);
+  void SetNativeWeightsGrads() const;
+  void CommitWeightsGrads(void* diff_weights, void* diff_bias,
+                          const OpReqType req,
+                          const int dtype = mshadow::kFloat32);
 
   const mkldnn::primitive& GetBwd() const { return *bwd_.primitive_; }
   const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }
@@ -386,6 +387,8 @@ class MKLDNNRnnBackward {
 
   mkldnn_shared_mem_t diff_weights_layer_;
   mkldnn_shared_mem_t diff_weights_iter_;
+  mkldnn_shared_mem_t diff_weights_layer_r_;
+  mkldnn_shared_mem_t diff_weights_iter_r_;
   mkldnn_shared_mem_t diff_bias_;
 
   mkldnn_args_map_t net_args_;

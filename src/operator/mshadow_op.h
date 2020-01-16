@@ -1101,6 +1101,14 @@ struct minimum : public mxnet_op::tunable {
   }
 };
 
+/*! \brief boolean any/all kernel that determines whether elem is NonZero */
+struct NonZero {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return (a != DType(0));
+  }
+};
+
 /*! \brief sum reducer that ignores NaN values in the input */
 struct nansum {
   /*! \brief do reduction into dst */

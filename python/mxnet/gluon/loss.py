@@ -922,9 +922,9 @@ class CosineEmbeddingLoss(Loss):
 
     def _cosine_similarity(self, F, x, y, axis=-1):
         # Calculates the cosine similarity between 2 vectors
-        x_norm = F.norm(x, axis=axis).reshape(-1, 1)
-        y_norm = F.norm(y, axis=axis).reshape(-1, 1)
-        x_dot_y = F.sum(x * y, axis=axis).reshape(-1, 1)
+        x_norm = F.norm(x, axis=axis).reshape((-1, 1))
+        y_norm = F.norm(y, axis=axis).reshape((-1, 1))
+        x_dot_y = F.sum(x * y, axis=axis).reshape((-1, 1))
         if F is ndarray:
             eps_arr = F.array([1e-12])
         else:

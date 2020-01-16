@@ -84,3 +84,67 @@ def test_custom_op():
 
     assert_almost_equal(in_grad_base[0].asnumpy(), in_grad1[0].asnumpy(), rtol=1e-3, atol=1e-3)
     assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+@unittest.skipIf(check_platform(), "not all machine types supported")
+@unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
+def test_subgraph():
+    # possible places to find library file
+    if (os.name=='posix'):
+        lib = 'libsubgraph_lib.so'
+        if os.path.exists(lib):
+            # plain make build, when run in the CI
+            fname = lib
+        elif os.path.exists('build/'+lib):
+            # plain cmake build when run in the CI
+            fname = 'build/'+lib
+        else:
+            raise MXNetError("library %s not found " % lib)
+    elif (os.name=='nt'):
+        lib = 'libsubgraph_lib.dll'
+        if os.path.exists('windows_package\\lib\\'+lib):
+            # plain make build, when run in the CI
+            fname = 'windows_package\\lib\\'+lib
+        else:
+            # plain cmake build when run in the CI
+            raise MXNetError("library %s not found " % lib)
+
+    fname = os.path.abspath(fname)
+    mx.library.load(fname)
+
+    # test simple graph with add, exp and log operators, library supports exp/log
+    a = mx.sym.var('a')
+    b = mx.sym.var('b')
+    c = a + b
+    d = mx.sym.exp(c)
+    sym = mx.sym.log(d)
+
+    args = {'a':mx.nd.ones((3,2),ctx=mx.cpu()), 'b':mx.nd.ones((3,2),ctx=mx.cpu())}
+    arg_array = [mx.nd.ones((3,2),dtype='float32',ctx=mx.cpu()),
+                 mx.nd.ones((3,2),dtype='float32',ctx=mx.cpu())]
+
+    # baseline - regular execution in MXNet
+    exe = sym.bind(ctx=mx.cpu(), args=args)
+    out = exe.forward()
+
+    # without propogating shapes/types, passing a custom option to subgraph prop "myOpt"
+    # should not create subgraph since subgraph prop requires type info
+    mysym1 = sym.optimize_for("myProp", myOpt='yello')
+    exe1 = mysym1.bind(ctx=mx.cpu(), args=args)
+    out1 = exe1.forward()
+    # check that result matches one executed by MXNet
+    assert_almost_equal(out[0].asnumpy(), out1[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+    # with propogating shapes/types, rejecting subgraph
+    # this tests creating the subgraph and having the subgraph prop reject it
+    mysym2 = sym.optimize_for("myProp", arg_array, reject=True)
+    exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
+    out2 = exe2.forward()
+    # check that result matches one executed by MXNet
+    assert_almost_equal(out[0].asnumpy(), out2[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+    # with propogating shapes/types
+    mysym3 = sym.optimize_for("myProp",arg_array)
+    exe3 = mysym3.bind(ctx=mx.cpu(), args=args)
+    out3 = exe3.forward()
+    # check that result matches one executed by MXNet
+    assert_almost_equal(out[0].asnumpy(), out3[0].asnumpy(), rtol=1e-3, atol=1e-3)

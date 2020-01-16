@@ -98,6 +98,21 @@ set(USE_RANDOM OFF)
 # Whether use NNPack
 set(USE_NNPACK OFF)
 
+# First-class Cuda in modern CMake provides us with CMAKE_CUDA_COMPILER But TVM
+# uses the deprecated findCUDA functionality which requires
+# CUDA_TOOLKIT_ROOT_DIR We follow the FindCUDAToolkit.cmake logic to compute
+# CUDA_TOOLKIT_ROOT_DIR for TVM https://gitlab.kitware.com/cmake/cmake/merge_requests/4093/
+if(USE_CUDA)
+  get_filename_component(cuda_dir "${CMAKE_CUDA_COMPILER}" DIRECTORY)
+  set(CUDA_BIN_DIR "${cuda_dir}" CACHE PATH "" FORCE)
+  unset(cuda_dir)
+  get_filename_component(CUDA_TOOLKIT_ROOT_DIR ${CUDA_BIN_DIR} DIRECTORY ABSOLUTE)
+
+  message("CMAKE_CUDA_COMPILER: ${CMAKE_CUDA_COMPILER}")
+  message("Inferred CUDA_TOOLKIT_ROOT_DIR for TVM as: ${CUDA_TOOLKIT_ROOT_DIR}")
+  set(USE_CUDA ${CUDA_TOOLKIT_ROOT_DIR})
+endif()
+
 # Whether use cuBLAS
 set(USE_CUBLAS OFF)
 
@@ -124,3 +139,6 @@ set(USE_RELAY_DEBUG OFF)
 
 # Use OPENMP thread pool to be compatible with MXNet
 set(USE_OPENMP ON)
+
+# Disable USE_MKLDNN for TVM
+set(USE_MKLDNN OFF)

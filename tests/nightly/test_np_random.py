@@ -78,6 +78,33 @@ def test_np_normal():
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 
+@retry(5)
+@with_seed()
+@use_np
+def test_np_gamma():
+    types = [None, "float32", "float64"]
+    ctx = mx.context.current_context()
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 5
+    for dtype in types:
+        for alpha, beta in [(2.0, 3.0), (0.5, 1.0)]:
+            buckets, probs = gen_buckets_probs_with_ppf(
+                lambda x: ss.gamma.ppf(x, a=alpha, loc=0, scale=beta), num_buckets)
+            buckets = np.array(buckets).tolist()
+            def generator_mx(x): return np.random.gamma(
+                alpha, beta, size=samples, ctx=ctx).asnumpy()
+            verify_generator(generator=generator_mx, buckets=buckets, probs=probs,
+                             nsamples=samples, nrepeat=trials)
+            generator_mx_same_seed =\
+                lambda x: _np.concatenate(
+                    [np.random.gamma(alpha, beta, size=(x // 10), ctx=ctx).asnumpy()
+                        for _ in range(10)])
+            verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs,
+                             nsamples=samples, nrepeat=trials)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

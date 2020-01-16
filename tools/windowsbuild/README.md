@@ -15,10 +15,5 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Nightly Tests for MXNet: The Straight Dope
-
-These are some longer running tests that are scheduled to run every night. 
-
-### Description
-These tests verify that the straight dope tutorials run without error. They are
-run on both single and multi-gpu configurations.
+Due to dll size limitation under windows. Split dll into different dlls according to arch
+Reference https://github.com/apache/incubator-mxnet/pull/16980

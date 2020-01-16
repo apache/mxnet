@@ -103,39 +103,7 @@ core_logic: {
             utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
         }
       }
-    },*/
-    'StraightDope: Python2 Single-GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/straight_dope-single_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_single_gpu_tests', true)
-        }
-      }
-    },
-    'StraightDope: Python2 Multi-GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/straight_dope-multi_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python2_multi_gpu_tests', true)
-        }
-      }
-    },
-    'StraightDope: Python3 Single-GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/straight_dope-single_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_single_gpu_tests', true)
-        }
-      }
-    },
-    'StraightDope: Python3 Multi-GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/straight_dope-multi_gpu') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_straight_dope_python3_multi_gpu_tests', true)
-        }
-      }
-    },
+    }*/,
     'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {

@@ -20,6 +20,107 @@
 """Doc placeholder for numpy ops with prefix _np."""
 
 
+def _np_all(a, axis=None, keepdims=False, out=None):
+    """
+    Test whether all array elements along a given axis evaluate to True.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array or object that can be converted to an array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a logical AND reduction is performed.
+        The default (axis = None) is to perform a logical AND over
+        all the dimensions of the input array.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in
+        the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+    out : ndarray, optional
+        Alternate output array in which to place the result. It must have
+        the same shape as the expected output and its type is preserved
+
+    Returns
+    --------
+    all : ndarray, bool 
+        A new boolean or array is returned unless out is specified,
+        in which case a reference to out is returned.
+
+    Examples:
+    ---------
+    >>> np.all([[True,False],[True,True]])
+    False
+
+    >>> np.all([[True,False],[True,True]], axis=0)
+    array([ True, False])
+
+    >>> np.all([-1, 4, 5])
+    True
+
+    >>> np.all([1.0, np.nan])
+    True
+
+    >>> o=np.array(False)
+    >>> z=np.all([-1, 4, 5], out=o)
+    >>> id(z), id(o), z
+    (28293632, 28293632, array(True)) # may vary  
+    """
+    pass
+
+def _np_any(a, axis=None, keepdims=False, out=None):
+    """
+    Test whether any array element along a given axis evaluates to True.
+    Returns single boolean unless axis is not None 
+
+    Parameters
+    ----------
+    a : array_like
+        Input array or object that can be converted to an array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a logical AND reduction is performed.
+        The default (axis = None) is to perform a logical AND over
+        all the dimensions of the input array.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in
+        the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+    out : ndarray, optional
+        Alternate output array in which to place the result. It must have
+        the same shape as the expected output and its type is preserved
+
+    Returns
+    --------
+    any : bool or ndarray
+        A new boolean or ndarray is returned unless out is specified,
+        in which case a reference to out is returned.
+
+    Examples:
+    ---------
+    >>> np.any([[True, False], [True, True]])
+    True
+
+    >>> np.any([[True, False], [False, False]], axis=0)
+    array([ True, False])
+
+    >>> np.any([-1, 0, 5])
+    True
+
+    >>> np.any(np.nan)
+    True
+
+    >>> o=np.array(False)
+    >>> z=np.any([-1, 4, 5], out=o)
+    >>> z, o
+    (array(True), array(True))
+    >>> # Check now that z is a reference to o
+    >>> z is o
+    True
+    >>> id(z), id(o) # identity of z and o              # doctest: +SKIP
+    (191614240, 191614240)
+    """
+    pass
+
+
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
     Return the cumulative sum of the elements along a given axis.
@@ -408,6 +509,113 @@ def _np_copy(a, out=None):
     pass
 
 
+def _np_atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_1d(1.0)
+    array([1.])
+    >>> x = np.arange(9.0).reshape(3,3)
+    >>> np.atleast_1d(x)
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.atleast_1d(np.array(1), np.array([3, 4]))
+    [array([1.]), array([3., 4.])]
+    """
+    pass
+
+
+def _np_atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_2d(3.0)
+    array([[3.]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_2d(x)
+    array([[0., 1., 2.]])
+    >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
+    [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
+    """
+    pass
+
+def _np_atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+
+    Examples
+    --------
+    >>> np.atleast_3d(3.0)
+    array([[[3.]]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_3d(x).shape
+    (1, 3, 1)
+    >>> x = np.arange(12.0).reshape(4,3)
+    >>> np.atleast_3d(x).shape
+    (4, 3, 1)
+    >>> for arr in np.atleast_3d(np.array([1, 2]), np.array([[1, 2]]), np.array([[[1, 2]]])):
+    ...     print(arr, arr.shape)
+    ...
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1. 2.]]] (1, 1, 2)
+    """
+    pass
+
+
 def _np_reshape(a, newshape, order='C', out=None):
     """
     Gives a new shape to an array without changing its data.
@@ -630,7 +838,7 @@ def _np_squeeze(a, axis=None, out=None):
     pass
 
 
-def _np_max(a, axis=None, out=None, keepdims=False):
+def _np_max(a, axis=None, keepdims=False, out=None):
     """
     Return the maximum of an array or maximum along an axis.
     
@@ -694,7 +902,14 @@ def _np_max(a, axis=None, out=None, keepdims=False):
     pass
 
 
-def _np_min(a, axis=None, out=None, keepdims=False):
+def _np_amax(a, axis=None, keepdims=False, out=None):
+    """
+    Refer to _np_max
+    """
+    pass
+
+
+def _np_min(a, axis=None, keepdims=False, out=None):
     """
     Return the minimum of an array or minimum along an axis.
     
@@ -917,37 +1132,41 @@ def _np__random_shuffle(x):
     pass
 
 
-def _np_broadcast_to(array, shape, out=None):
+def _npx_constraint_check(x, msg):
     """
-    Broadcast an array to a new shape.
-
+    This operator will check if all the elements in a boolean tensor is true.
+    If not, ValueError exception will be raised in the backend with given error message.
+    In order to evaluate this operator, one should multiply the origin tensor by the return value
+    of this operator to force this operator become part of the computation graph,
+    otherwise the check would not be working under symoblic mode.
+    
     Parameters
     ----------
-    array : ndarray
-        The array to broadcast.
-    shape : tuple, optional, default=[]
-        The shape of the desired array.
-    out : ndarray, optional
-        The output ndarray to hold the result.
+    x : ndarray
+        A boolean tensor.
+    msg : string
+        The error message in the exception.
 
     Returns
     -------
-    out : ndarray or list of ndarrays
-
-    Raises
-    ------
-    MXNetError
-        - If the array is not compatible with the new shape according to NumPy's
-        broadcasting rules.
-        - If the shape of the output array is not consistent with the desired shape.
+    out : ndarray
+        If all the elements in the input tensor are true,
+        array(True) will be returned, otherwise ValueError exception would
+        be raised before anything got returned.
 
     Examples
     --------
-    >>> x = np.array([1, 2, 3])
-    >>> np.broadcast_to(x, (3, 3))
-    array([[1., 2., 3.],
-           [1., 2., 3.],
-           [1., 2., 3.]])
+    >>> loc = np.zeros((2,2))
+    >>> scale = np.array(#some_value)
+    >>> constraint = (scale > 0)
+    >>> np.random.normal(loc,
+                     scale * npx.constraint_check(constraint, 'Scale should be larger than zero'))
+
+    If elements in the scale tensor are all bigger than zero, npx.constraint_check would return
+    `np.array(True)`, which will not change the value of `scale` when multiplied by.
+    If some of the elements in the scale tensor violate the constraint,
+    i.e. there exists `False` in the boolean tensor `constraint`,
+    a `ValueError` exception with given message 'Scale should be larger than zero' would be raised.
     """
     pass
 

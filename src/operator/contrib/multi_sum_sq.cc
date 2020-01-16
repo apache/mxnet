@@ -59,6 +59,12 @@ NNVM_REGISTER_OP(multi_sum_sq)
 .add_argument("data", "NDArray-or-Symbol[]", "Arrays")
 .add_arguments(MultiSumSqParam::__FIELDS__());
 
+template<>
+size_t GetRequiredStorageMultiSumSq<cpu>(const std::vector<TBlob> &inputs,
+                                         int* param_max_chunks_per_tensor) {
+  return 0;
+}
+
 template<typename DType>
 inline void CalcSumSq(const std::vector<TBlob> &inputs, int n_inputs,
                       float *out_ptr, mshadow::Stream<cpu> *s) {
