@@ -120,9 +120,6 @@ mkdir -p build && cd build
 cmake -GNinja \
     -DUSE_CUDA=OFF \
     -DUSE_MKL_IF_AVAILABLE=OFF \
-    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DCMAKE_BUILD_TYPE=Release \
 ..
 ninja
@@ -140,9 +137,6 @@ mkdir -p build && cd build
 cmake -GNinja \
     -DUSE_CUDA=OFF \
     -DUSE_MKL_IF_AVAILABLE=ON \
-    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DCMAKE_BUILD_TYPE=Release \
 ..
 ninja
@@ -157,9 +151,6 @@ mkdir -p build && cd build
 cmake -GNinja \
     -DUSE_CUDA=ON \
     -DUSE_MKL_IF_AVAILABLE=OFF \
-    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
     -DCMAKE_BUILD_TYPE=Release \
 ..
 ninja
