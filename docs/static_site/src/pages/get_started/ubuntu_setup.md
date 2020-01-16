@@ -365,7 +365,6 @@ make install
 
 Before you build MXNet for R from source code, you must complete
 [building the shared library](#build-the-shared-library).
-source root directory to build the MXNet Perl package:
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
