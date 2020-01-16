@@ -98,7 +98,6 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
 
     random_uuid = str(uuid.uuid4())
     temp_root = os.path.join(root, random_uuid)
-    temp_file_path = os.path.join(temp_root, file_name+'.params')
     if os.path.exists(file_path):
         if check_sha1(file_path, sha1_hash):
             return file_path
@@ -117,10 +116,7 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
              path=temp_zip_file_path,
              overwrite=True)
     with zipfile.ZipFile(temp_zip_file_path) as zf:
-        util.makedirs(temp_root)
-        zf.extractall(temp_root)
-        os.replace(temp_file_path, file_path)
-        shutil.rmtree(temp_root)
+        zf.extractall(root)
     os.remove(temp_zip_file_path)
 
     if check_sha1(file_path, sha1_hash):
