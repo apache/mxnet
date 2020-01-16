@@ -44,11 +44,6 @@ MXNET_REGISTER_API("_npi.zeros1")
   *ret = ndoutputs[0];
 });
 
-MXNET_REGISTER_API("_npi.zeros0")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  *ret = static_cast<int64_t>(0xdeadbeaf);
-});
-
 MXNET_REGISTER_API("_npi.tensordot_dispatcher")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   bool isscalar = args[2].type_code() == kDLInt;
@@ -96,9 +91,8 @@ MXNET_REGISTER_API("_npi.tensordot_dispatcher")
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });
 
-MXNET_REGISTER_API("_npi.tensordot_dispatcher0")
+MXNET_REGISTER_API("_npi.nop")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  *ret = static_cast<int64_t>(0xdeadbeaf);
 });
 
 }  // namespace mxnet

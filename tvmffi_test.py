@@ -14,10 +14,10 @@ print(a)
 
 print("tvm ffi dummy...")
 repeat = 10000
-a = np.zeros0((3, 4), ctx="cpu(0)", dtype='float64')
+a = np.nop((3, 4), "cpu(0)", 'float64')
 start = time.time()
 for i in range(repeat):
-    a = np.zeros0((3, 4), ctx="cpu(0)", dtype='float64')
+    a = np.nop((3, 4), "cpu(0)", 'float64')
 end = time.time()
 print("time = {}".format((end - start) / repeat))
 
@@ -118,9 +118,9 @@ print("tvm dummy ffi...")
 repeat = 10000
 a = np.ones((2, 2))
 b = np.ones((2, 2))
-c = np.tensordot0(a, b, ((1, 0), (0, 1)))
+c = np.nop(a, b, ((1, 0), (0, 1)))
 start = time.time()
 for i in range(repeat):
-    c = np.tensordot0(a, b, ((1, 0), (0, 1)))
+    c = np.nop(a, b, ((1, 0), (0, 1)))
 end = time.time()
 print("time = {}".format((end - start) / repeat))
