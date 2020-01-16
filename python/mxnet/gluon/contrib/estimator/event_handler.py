@@ -182,7 +182,9 @@ class ValidationHandler(TrainBegin, BatchEnd, EpochEnd):
         ascending order. The lower the number is, the higher priority level the
         handler is.
     event_handlers : EventHandler or list of EventHandlers
-        List of :py:class:`EventHandler` to apply during validaiton.
+        List of :py:class:`EventHandler` to apply during validaiton. This argument
+        is used by self.eval_fn function in order to process customized event
+        handlers.
     """
 
     def __init__(self,
