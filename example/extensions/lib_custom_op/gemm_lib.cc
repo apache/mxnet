@@ -167,8 +167,8 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
 }
 
 REGISTER_OP(my_gemm)
-.setForward(forward)
-.setBackward(backward)
+.setForward(forward, "cpu")
+.setBackward(backward, "cpu")
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape);

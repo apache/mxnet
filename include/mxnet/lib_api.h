@@ -203,6 +203,11 @@ enum MXDType {
   kUNSET = 100,
 };
 
+/*!
+ * \brief Context info passing from MXNet OpContext
+ * dev_type is string repr of supported context, currently only "cpu" and "gpu"
+ * dev_id is the device index where the tensor locates
+ */
 typedef struct {
   std::string dev_type;
   int dev_id;
@@ -217,7 +222,7 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), ctx({"cpu",0}) {}
+  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
@@ -231,13 +236,31 @@ struct MXTensor {
     for (int j = 0; j < ndims; j++) {
       shape.push_back(dims[j]);
     }
-    setDLTensor();
+    DLDeviceType dltype;
+    if (ctx.dev_type == "cpu")
+      dltype = kDLCPU;
+    else if (ctx.dev_type == "gpu")
+      dltype = kDLGPU;
+    else if (ctx.dev_type == "opencl")
+      dltype = kDLOpenCL;
+    else if (ctx.dev_type == "vulcan")
+      dltype = kDLVulkan;
+    else if (ctx.dev_type == "metal")
+      dltype = kDLMetal;
+    else if (ctx.dev_type == "vpi")
+      dltype = kDLVPI;
+    else if (ctx.dev_type == "rocm")
+      dltype = kDLROCM;
+    else
+      dltype = kDLExtDev;
+
+    setDLTensor(dltype);
   }
 
   /*! \brief populate DLTensor fields */
-  void setDLTensor() {
+  void setDLTensor(DLDeviceType dltype) {
     dltensor.data = data_ptr;
-    dltensor.ctx.device_type = ctx.dev_type == "gpu" ? kDLGPU : kDLCPU;
+    dltensor.ctx.device_type = dltype;
     dltensor.ctx.device_id = ctx.dev_id;
     dltensor.ndim = shape.size();
     dltensor.shape = const_cast<int64_t*>(shape.data());
@@ -302,6 +325,8 @@ struct MXTensor {
     return data_ptr == oth.data_ptr &&
            dtype == oth.dtype &&
            verID == oth.verID &&
+           ctx.dev_type == oth.ctx.dev_type &&
+           ctx.dev_id == oth.ctx.dev_id &&
            shape == oth.shape;
   }
 
@@ -315,7 +340,7 @@ struct MXTensor {
   // type can only be MXDType enum types
   MXDType dtype;
 
-  // context of MXTensor representing which device the tensor data locates
+  // context of MXTensor representing which device the tensor data is located
   MXContext ctx;
 
   // version number updated if the tensor has changed since the last use by custom op
@@ -584,33 +609,20 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
-    forward_cpu(NULL), backward_cpu(NULL), forward_gpu(NULL), backward_gpu(NULL),
     parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL),
     create_opstate(NULL), isSGop(false) {}
-  CustomOp& setForward(fcomp_t fcomp) {
-    forward_cpu = fcomp;
-    return *this;
-  }
   CustomOp& setForward(fcomp_t fcomp, std::string ctx) {
-    if (ctx == "cpu")
-      forward_cpu = fcomp;
-    else if (ctx == "gpu")
-      forward_gpu = fcomp;
-    else
-      throw std::runtime_error("Invalid context");
+    char* cstr = new char[ctx.length()+1];
+    strncpy(cstr, ctx.c_str(), ctx.length()+1);
+    forward_ctx_cstr.push_back(cstr);
+    forward_fp.push_back(fcomp);
     return *this;
   }
-  CustomOp& setBackward(fcomp_t fcomp) {
-    backward_cpu = fcomp;
-    return *this;
-  }
-  CustomOp& setBackward(fcomp_t fcomp, std::string ctx) {
-    if (ctx == "cpu")
-      backward_cpu = fcomp;
-    else if (ctx == "gpu")
-      backward_gpu = fcomp;
-    else
-      throw std::runtime_error("Invalid context");
+  CustomOp& setBackward(fcomp_t fgrad, std::string ctx) {
+    char* cstr = new char[ctx.length()+1];
+    strncpy(cstr, ctx.c_str(), ctx.length()+1);
+    backward_ctx_cstr.push_back(cstr);
+    backward_fp.push_back(fgrad);
     return *this;
   }
   CustomOp& setParseAttrs(parseAttrs_t func) {
@@ -641,11 +653,14 @@ class CustomOp {
 
   /*! \brief operator name */
   const char* name;
+
+  /*! \brief each fcomp function is associated with a context speficied by a string*/
+  std::vector<const char*> forward_ctx_cstr;
+  std::vector<fcomp_t> forward_fp;
+  std::vector<const char*> backward_ctx_cstr;
+  std::vector<fcomp_t> backward_fp;
+
   /*! \brief operator functions */
-  fcomp_t forward_cpu;
-  fcomp_t backward_cpu;
-  fcomp_t forward_gpu;
-  fcomp_t backward_gpu;
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;
@@ -779,7 +794,8 @@ typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
 typedef int (*opRegGet_t)(int, const char**,
-                          fcomp_t*, fcomp_t*, fcomp_t*, fcomp_t*,
+                          const char***, fcomp_t**, int*,
+                          const char***, fcomp_t**, int*,
                           parseAttrs_t*, inferType_t*,
                           inferShape_t*, mutateInputs_t*,
                           createOpState_t*, int*);
@@ -876,23 +892,25 @@ extern "C" {
   void
 #endif
   _opRegGet(int idx, const char** name,
-            fcomp_t* fcomp_cpu, fcomp_t* fcomp_gpu,
-            fcomp_t* fgrad_cpu, fcomp_t* fgrad_gpu,
+            const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
+            const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate,
             createOpState_t* create_op, int *isSGop) {
-    CustomOp op = Registry<CustomOp>::get()->get(idx);
-    *name = op.name;
-    *fcomp_cpu = op.forward_cpu;
-    *fcomp_gpu = op.forward_gpu;
-    *fgrad_cpu = op.backward_cpu;
-    *fgrad_gpu = op.backward_gpu;
-    *parse = op.parse_attrs;
-    *type = op.infer_type;
-    *shape = op.infer_shape;
-    *mutate = op.mutate_inputs;
-    *create_op = op.create_opstate;
-    *isSGop = op.isSGop;
+    CustomOp *op = &(Registry<CustomOp>::get()->get(idx));
+    *name = op->name;
+    *parse = op->parse_attrs;
+    *type = op->infer_type;
+    *shape = op->infer_shape;
+    *mutate = op->mutate_inputs;
+    *create_op = op->create_opstate;
+    *isSGop = op->isSGop;
+    *forward_ctx = op->forward_ctx_cstr.data();
+    *forward_fp = op->forward_fp.data();
+    *forward_count = op->forward_fp.size();
+    *backward_ctx = op->backward_ctx_cstr.data();
+    *backward_fp = op->backward_fp.data();
+    *backward_count = op->backward_fp.size();
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
