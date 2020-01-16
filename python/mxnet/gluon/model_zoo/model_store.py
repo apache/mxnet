@@ -23,7 +23,6 @@ import os
 import zipfile
 import logging
 import uuid
-import shutil
 
 from ..utils import download, check_sha1
 from ... import base, util
@@ -97,7 +96,6 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     sha1_hash = _model_sha1[name]
 
     random_uuid = str(uuid.uuid4())
-    temp_root = os.path.join(root, random_uuid)
     if os.path.exists(file_path):
         if check_sha1(file_path, sha1_hash):
             return file_path
