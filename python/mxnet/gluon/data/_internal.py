@@ -49,6 +49,7 @@ class MXDataset(Dataset):
     def __init__(self, handle, **kwargs):
         super(MXDataset, self).__init__()
         self.handle = handle
+        self._kwargs = kwargs
         # get dataset size
         length = ctypes.c_uint64(0)
         check_call(_LIB.MXDatasetGetLen(self.handle, ctypes.byref(length)))

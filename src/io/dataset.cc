@@ -204,7 +204,7 @@ class NDArrayDataset : public Dataset {
     NDArray data_;
     /*! \brief stored ndarray shape */
     int64_t size_;
-};    // class NDArrayDataset
+};  // class NDArrayDataset
 
 MXNET_REGISTER_IO_DATASET(NDArrayDataset)
  .describe("Single NDArray Dataset")

@@ -322,6 +322,10 @@ class _DownloadedDataset(Dataset):
         if not os.path.isdir(root):
             os.makedirs(root)
         self._get_data()
+        from ._internal import NDArrayDataset, TupleDataset
+        self._handle = TupleDataset(
+            datasets=(NDArrayDataset(arr=ndarray.array(self._data)),
+                      NDArrayDataset(arr=ndarray.array(self._label))))
 
     def __getitem__(self, idx):
         if self._transform is not None:
@@ -333,3 +337,6 @@ class _DownloadedDataset(Dataset):
 
     def _get_data(self):
         raise NotImplementedError
+
+    def __handle__(self):
+        return self._handle
