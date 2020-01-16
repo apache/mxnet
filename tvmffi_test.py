@@ -5,122 +5,66 @@ import mxnet as mx
 import time
 from mxnet.ndarray import np
 
-print("tvm ffi...")
-a = np.zeros1((3, 4), ctx="cpu(0)", dtype='float64')
-print(a)
-print("legacy ffi...")
-a = np.zeros((3, 4), ctx=mx.cpu())
-print(a)
 
-print("tvm ffi dummy...")
-repeat = 10000
-a = np.nop((3, 4), "cpu(0)", 'float64')
-start = time.time()
-for i in range(repeat):
-    a = np.nop((3, 4), "cpu(0)", 'float64')
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+def benchmark(func, *args, **kwargs):
+    func(*args, **kwargs)
+    repeat = 10000
+    start = time.time()
+    for i in range(repeat):
+        x = func(*args, **kwargs)
+    end = time.time()
+    return (end - start) / repeat
 
-print("legacy ffi...")
-repeat = 10000
-a = np.zeros((3, 4))
-start = time.time()
-for i in range(repeat):
-    a = np.zeros((3, 4))
-end = time.time()
-print("time = {}".format((end - start) / repeat))
 
-print("tvm ffi...")
-repeat = 10000
-a = np.zeros1((3, 4))
-start = time.time()
-for i in range(repeat):
-    a = np.zeros1((3, 4))
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+# print("tvm ffi...")
+# a = np.zeros1((3, 4), ctx="cpu(0)", dtype='float64')
+# print(a)
+# print("legacy ffi...")
+# a = np.zeros((3, 4), ctx=mx.cpu())
+# print(a)
 
-print("legacy ffi dtype...")
-repeat = 10000
-a = np.zeros((3, 4), dtype='float64')
-start = time.time()
-for i in range(repeat):
-    a = np.zeros((3, 4), dtype='float64')
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+print("########################{:^32}########################".format("zeros benchmark"))
 
-print("tvm ffi dtype...")
-repeat = 10000
-a = np.zeros1((3, 4), dtype='float64')
-start = time.time()
-for i in range(repeat):
-    a = np.zeros1((3, 4), dtype='float64')
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+overhead = benchmark(np.zeros, (3, 4))
+print("{:>16}: {:>10}".format("legacy", overhead))
 
-print("legacy ffi ctx dtype...")
-repeat = 10000
-a = np.zeros((3, 4), ctx="cpu(0)", dtype='float64')
-start = time.time()
-for i in range(repeat):
-    a = np.zeros((3, 4), ctx="cpu(0)", dtype='float64')
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+overhead = benchmark(np.zeros1, (3, 4))
+print("{:>16}: {:>10}".format("tvm", overhead))
 
-print("tvm ffi ctx dtype...")
-repeat = 10000
-a = np.zeros1((3, 4), ctx="cpu(0)", dtype='float64')
-start = time.time()
-for i in range(repeat):
-    a = np.zeros1((3, 4), ctx="cpu(0)", dtype='float64')
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+overhead = benchmark(np.zeros, (3, 4), dtype='float64')
+print("{:>16}: {:>10}".format("legacy dtype", overhead))
+
+overhead = benchmark(np.zeros1, (3, 4), dtype='float64')
+print("{:>16}: {:>10}".format("tvm dtype", overhead))
+
+overhead = benchmark(np.zeros, (3, 4), dtype='float64', ctx='cpu(0)')
+print("{:>16}: {:>10}".format("legacy dtype ctx", overhead))
+
+overhead = benchmark(np.zeros1, (3, 4), dtype='float64', ctx='cpu(0)')
+print("{:>16}: {:>10}".format("tvm dtype ctx", overhead))
 
 ####################### tensordot #########################
 
-print("####  tensordot verification ####")
-print("scalar axis...")
+# print("####  tensordot verification ####")
+# print("scalar axis...")
+# a = np.ones((2, 2))
+# b = np.ones((2, 2))
+# c = np.tensordot1(a, b)
+# print(c)
+
+# print("tuple axes...")
+# a = np.ones((2, 3))
+# b = np.ones((3, 2))
+# c = np.tensordot1(a, b, ((1, 0), (0, 1)))
+# print(c)
+
+
+print("########################{:^32}########################".format("tensordot benchmark"))
 a = np.ones((2, 2))
 b = np.ones((2, 2))
-c = np.tensordot1(a, b)
-print(c)
 
-print("tuple axes...")
-a = np.ones((2, 3))
-b = np.ones((3, 2))
-c = np.tensordot1(a, b, ((1, 0), (0, 1)))
-print(c)
+overhead = benchmark(np.tensordot, a, b, ((1, 0), (0, 1)))
+print("{:>16}: {:>10}".format("legacy", overhead))
 
-
-print("####  tensordot benchmark ####")
-print("legacy ffi...")
-repeat = 10000
-a = np.ones((2, 2))
-b = np.ones((2, 2))
-c = np.tensordot(a, b, ((1, 0), (0, 1)))
-start = time.time()
-for i in range(repeat):
-    c = np.tensordot(a, b, ((1, 0), (0, 1)))
-end = time.time()
-print("time = {}".format((end - start) / repeat))
-
-print("tvm ffi...")
-repeat = 10000
-a = np.ones((2, 2))
-b = np.ones((2, 2))
-c = np.tensordot1(a, b, ((1, 0), (0, 1)))
-start = time.time()
-for i in range(repeat):
-    c = np.tensordot1(a, b, ((1, 0), (0, 1)))
-end = time.time()
-print("time = {}".format((end - start) / repeat))
-
-print("tvm dummy ffi...")
-repeat = 10000
-a = np.ones((2, 2))
-b = np.ones((2, 2))
-c = np.nop(a, b, ((1, 0), (0, 1)))
-start = time.time()
-for i in range(repeat):
-    c = np.nop(a, b, ((1, 0), (0, 1)))
-end = time.time()
-print("time = {}".format((end - start) / repeat))
+overhead = benchmark(np.tensordot1, a, b, ((1, 0), (0, 1)))
+print("{:>16}: {:>10}".format("tvm", overhead))

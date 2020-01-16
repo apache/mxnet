@@ -12,6 +12,69 @@
 
 namespace mxnet {
 
+inline void SetInOut(std::vector<NDArray*>* ndinputs,
+                     std::vector<NDArray*>* ndoutputs,
+                     int num_inputs,
+                     NDArray** inputs,
+                     int *num_outputs,
+                     int infered_num_outputs,
+                     int num_visible_outputs,
+                     NDArray** out_array) {
+  ndinputs->clear();
+  ndinputs->reserve(num_inputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    NDArray* inp = reinterpret_cast<NDArray*>(inputs[i]);
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
+                "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
+                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+    ndinputs->emplace_back(inp);
+  }
+
+  ndoutputs->clear();
+  ndoutputs->reserve(infered_num_outputs);
+  if (out_array == nullptr) {
+    for (int i = 0; i < infered_num_outputs; ++i) {
+      ndoutputs->emplace_back(new NDArray());
+    }
+    *num_outputs = num_visible_outputs;
+  } else {
+    CHECK(*num_outputs == infered_num_outputs || *num_outputs == num_visible_outputs)
+      << "Operator expects " << infered_num_outputs << " (all) or "
+      << num_visible_outputs << " (visible only) outputs, but got "
+      << *num_outputs << " instead.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs->emplace_back(out_array[i]);
+    }
+    for (int i = *num_outputs; i < infered_num_outputs; ++i) {
+      ndoutputs->emplace_back(new NDArray());
+    }
+  }
+}
+
+inline std::vector<NDArray*> Invoke(const nnvm::Op* op,
+                                    nnvm::NodeAttrs& attrs,
+                                    int num_inputs,
+                                    NDArray** inputs,
+                                    int* num_outputs,
+                                    NDArray** outputs) {
+  int infered_num_outputs;
+  int num_visible_outputs;
+  imperative::SetNumOutputs(op, attrs, num_inputs, &infered_num_outputs, &num_visible_outputs);
+
+  std::vector<NDArray*> ndinputs, ndoutputs;
+  SetInOut(&ndinputs, &ndoutputs, num_inputs, inputs,
+      num_outputs, infered_num_outputs, num_visible_outputs, outputs);
+
+  auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
+  if (Imperative::Get()->is_recording()) {
+    Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+  }
+  for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
+  return ndoutputs;
+}
+
 MXNET_REGISTER_API("_npi.zeros1")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   const static nnvm::Op* op = Op::Get("_npi_zeros");
@@ -28,19 +91,8 @@ MXNET_REGISTER_API("_npi.zeros1")
   if (args[2].type_code() != kNull) {
     attrs.dict["ctx"] = args[2].operator std::string();
   }
-
-  const int num_inputs = 0;
-  int infered_num_outputs;
-  int num_visible_outputs;
-  imperative::SetNumOutputs(op, attrs, num_inputs, &infered_num_outputs, &num_visible_outputs);
-
-  std::vector<NDArray*> ndoutputs(1, nullptr), ndinputs;
-  ndoutputs[0] = static_cast<NDArray*>(new NDArray());
-
-  auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
-  if (Imperative::Get()->is_recording()) {
-    Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
-  }
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
@@ -77,17 +129,9 @@ MXNET_REGISTER_API("_npi.tensordot_dispatcher")
     }
     attrs.parsed = std::move(param);
   }
-
-  int num_inputs = 2;
-  int infered_num_outputs;
-  int num_visible_outputs;
-  mxnet::imperative::SetNumOutputs(op, attrs, num_inputs, &infered_num_outputs, &num_visible_outputs);
-
-  std::vector<mxnet::NDArray*> ndoutputs(1, nullptr), ndinputs(2, nullptr);
-  ndoutputs[0] = reinterpret_cast<mxnet::NDArray*>(new mxnet::NDArray());
-  ndinputs[0] = args[0].operator mxnet::NDArray*();
-  ndinputs[1] = args[1].operator mxnet::NDArray*();
-  auto state = mxnet::Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
+  int num_outputs = 0;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke(op, attrs, 2, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });
 
