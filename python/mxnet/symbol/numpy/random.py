@@ -326,16 +326,16 @@ def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         size = None
     if input_type == (True, True):
         return _npi.laplace(loc, scale, loc=None, scale=None, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
+                            ctx=ctx, dtype=dtype, out=out)
     elif input_type == (False, True):
         return _npi.laplace(scale, loc=loc, scale=None, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
+                            ctx=ctx, dtype=dtype, out=out)
     elif input_type == (True, False):
         return _npi.laplace(loc, loc=None, scale=scale, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
+                            ctx=ctx, dtype=dtype, out=out)
     else:
         return _npi.laplace(loc=loc, scale=scale, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
+                            ctx=ctx, dtype=dtype, out=out)
 
 
 def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):

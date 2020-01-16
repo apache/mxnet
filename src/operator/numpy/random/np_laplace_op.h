@@ -49,7 +49,7 @@ struct NumpyLaplaceParam : public dmlc::Parameter<NumpyLaplaceParam> {
     DMLC_DECLARE_FIELD(loc);
     DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
-        .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<int>>())
         .describe(
             "Output shape. If the given shape is, "
             "e.g., (m, n, k), then m * n * k samples are drawn. "
