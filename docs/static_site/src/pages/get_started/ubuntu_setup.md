@@ -40,15 +40,10 @@ Building MXNet from source is a two-step process:
 ## Contents
 
 * [CUDA Dependencies](#cuda-dependencies)
-* [Build the MXNet shared library from source](#build-mxnet-from-source)
+* [Build the MXNet shared library from source](#build-the-mxnet-shared-library-from-source)
 * [Install Language Packages](#installing-language-packages-for-mxnet)
-    * [R](#install-the-mxnet-package-for-r)
-    * [Julia](#install-the-mxnet-package-for-julia)
-    * [Scala](#install-the-mxnet-package-for-scala)
-    * [Java](#install-the-mxnet-package-for-java)
-    * [Perl](#install-the-mxnet-package-for-perl)
-  * [Contributions](#contributions)
-  * [Next Steps](#next-steps)
+* [Contributions](#contributions)
+* [Next Steps](#next-steps)
 
 <hr>
 
@@ -78,7 +73,7 @@ It is recommended that you review the general [build from source](build_from_sou
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
-**Step 1:** Install prerequisite packages.
+#### Step 1: Install prerequisite packages.
 
 ```bash
 sudo apt-get update
@@ -102,7 +97,7 @@ not available on your system, you can install it via `sudo apt-get install -y
 python3-pip`. After installing cmake with `pip3`, it is usually available at
 `~/.local/bin/cmake` or directly as `cmake`.
 
-**Step 2:** Download MXNet sources and configure
+#### Step 2: Download MXNet sources
 
 Clone the repository:
 
@@ -125,7 +120,7 @@ all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 To (optionally) build with MKL math library, please install MKL first based on
 the guide in [Math Library Selection](build_from_source#math-library-selection).
 
-**Step 3:** Build MXNet core shared library.
+#### Step 3: Build MXNet core shared library.
 
 ```bash
 rm -rf build
@@ -148,8 +143,9 @@ bindings described in the next section.
 
 After you have installed the MXNet core library. You may install MXNet interface
 packages for the programming language of your choice:
+
 - [Python](#install-mxnet-for-python)
-- [C++](#install-the-mxnet-package-for-c&plus;&plus;)
+- [C++](#install-the-mxnet-package-for-c)
 - [Clojure](#install-the-mxnet-package-for-clojure)
 - [Julia](#install-the-mxnet-package-for-julia)
 - [Perl](#install-the-mxnet-package-for-perl)
@@ -266,7 +262,8 @@ export MXNET_HOME=$HOME/incubator-mxnet
 ```
 
 Now set the `LD_LIBRARY_PATH` environment variable to where `libmxnet.so` is found. If you can't find it, you might
-have skipped the building MXNet step. Go back and [build MXNet](#build-the-shared-library) first. For example:
+have skipped the building MXNet step. Go back and [build MXNet](#build-the-mxnet-shared-library-from-source)
+first. For example:
 
 ```bash
 export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
@@ -303,7 +300,7 @@ For more details about installing and using MXNet with Julia, see the
 
 ### Install the MXNet Package for Perl
 
-Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library).
+Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-mxnet-shared-library-from-source).
 After you build the shared library, run the following command from the MXNet source root directory to build the MXNet
 Perl package:
 
@@ -333,17 +330,9 @@ make install
 ### Install the MXNet Package for R
 
 Before you build MXNet for R from source code, you must complete
-[building the shared library](#build-the-shared-library).
+[building the shared library](#build-the-mxnet-shared-library-from-source).
 
-**Minimum Requirements**
-1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
-2. [GNU Make](https://www.gnu.org/software/make/)
-
-<br/>
-
-**Build the MXNet core shared library**
-
-**Step 1** Install R, cran-devtools and dependencies
+#### Step 1: Install R, cran-devtools and dependencies
 
 To install R and the devtools, run
 
@@ -368,7 +357,7 @@ Note: To successfully complete the next step, you need a personal R library. If
 you were able to run `install.packages("roxygen2")` above, you either had
 already, or you have successfully created a personal library just now.
 
-**Step 2** Make and install the MXNet-R bindings.
+#### Step 2: Make and install the MXNet-R bindings.
 
 ```bash
 make -f R-package/Makefile rpkg
