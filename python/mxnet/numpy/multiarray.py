@@ -46,7 +46,7 @@ from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
 from .utils import _get_np_op
-from .fallback import *
+from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
