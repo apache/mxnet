@@ -22,6 +22,8 @@ __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
 import logging
+import uuid
+import shutil
 
 from ..utils import download, check_sha1
 from ... import base, util
@@ -93,6 +95,10 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     root = os.path.expanduser(root)
     file_path = os.path.join(root, file_name+'.params')
     sha1_hash = _model_sha1[name]
+
+    random_uuid = str(uuid.uuid4())
+    temp_root = os.path.join(root, random_uuid)
+    temp_file_path = os.path.join(temp_root, file_name+'.params')
     if os.path.exists(file_path):
         if check_sha1(file_path, sha1_hash):
             return file_path
@@ -103,16 +109,19 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
 
     util.makedirs(root)
 
-    zip_file_path = os.path.join(root, file_name+'.zip')
+    temp_zip_file_path = os.path.join(root, file_name+random_uuid+'.zip')
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
     if repo_url[-1] != '/':
         repo_url = repo_url + '/'
     download(_url_format.format(repo_url=repo_url, file_name=file_name),
-             path=zip_file_path,
+             path=temp_zip_file_path,
              overwrite=True)
-    with zipfile.ZipFile(zip_file_path) as zf:
-        zf.extractall(root)
-    os.remove(zip_file_path)
+    with zipfile.ZipFile(temp_zip_file_path) as zf:
+        util.makedirs(temp_root)
+        zf.extractall(temp_root)
+        os.replace(temp_file_path, file_path)
+        shutil.rmtree(temp_root)
+    os.remove(temp_zip_file_path)
 
     if check_sha1(file_path, sha1_hash):
         return file_path

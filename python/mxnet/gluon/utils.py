@@ -35,7 +35,7 @@ import requests
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape, is_np_array, makedirs
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
@@ -298,7 +298,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            makedirs(dirname)
         while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703

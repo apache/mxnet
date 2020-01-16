@@ -19,12 +19,28 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
+import threading
 from common import setup_module, with_seed, teardown
 
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
+@with_seed()
+def test_parallel_download():
+    def fn(model_name):
+        model = get_model(model_name, pretrained=True)#, root='parallel_model/')
+        print(type(model))
+
+    threads = []
+    name = 'mobilenetv2_0.25'
+    for _ in range(10):
+        x = threading.Thread(target=fn, args=(name,))
+        threads.append(x)
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
 
 @with_seed()
 def test_models():
