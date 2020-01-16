@@ -39,6 +39,8 @@ namespace io {
 struct ImageSequenceDatasetParam : public dmlc::Parameter<ImageSequenceDatasetParam> {
     /*! \brief the list of absolute image paths, separated by \0 characters */
     std::string img_list;
+    /*! \brief the path separator character, by default it's \n */
+    char path_sep;
     /*! \brief If flag is 0, always convert to grayscale(1 channel). 
     * If flag is 1, always convert to colored (3 channels).
     * If flag is -1, keep channels unchanged.
@@ -48,6 +50,8 @@ struct ImageSequenceDatasetParam : public dmlc::Parameter<ImageSequenceDatasetPa
     DMLC_DECLARE_PARAMETER(ImageSequenceDatasetParam) {
         DMLC_DECLARE_FIELD(img_list)
             .describe("The list of image absolute paths.");
+        DMLC_DECLARE_FIELD(path_sep).set_default('|')
+            .describe("The path separator for joined image paths.");
         DMLC_DECLARE_FIELD(flag).set_default(1)
             .describe("If 1, always convert to colored, if 0 always convert to grayscale.");
     }
@@ -60,7 +64,7 @@ class ImageSequenceDataset : public Dataset {
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
-      img_list_ = dmlc::Split(param_.img_list, ';');
+      img_list_ = dmlc::Split(param_.img_list, param_.path_sep);
     }
 
     uint64_t GetLen() const {
@@ -127,12 +131,13 @@ class ImageSequenceDataset : public Dataset {
       // swap channels while copying elements into buffer
       for (int i = 0; i < img.rows; ++i) {
         const uint8_t* im_data = img.ptr<uint8_t>(i);
-        uint8_t* buffer_row = buffer_.data() + i * img.cols * n_channels;
+        uint8_t* buffer_data = buffer_.data() + i * img.cols * n_channels;
         for (int j = 0; j < img.cols; ++j) {
-          uint8_t* buffer_col = buffer_row + j * n_channels;
           for (int k = 0; k < n_channels; ++k) {
-            buffer_col[k] = im_data[swap_indices[k]];
+            buffer_data[k] = im_data[swap_indices[k]];
           }
+          im_data += n_channels;
+          buffer_data += n_channels;
         }
       }
 
