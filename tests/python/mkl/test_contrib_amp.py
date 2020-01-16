@@ -109,9 +109,10 @@ def test_amp_conversion():
                                            fp32_ops=["sin"])
         x_bf16 = mx.sym.amp_cast(x, dtype=bfloat16)
         y_bf16 = mx.sym.amp_cast(y, dtype=bfloat16)
-        amp_casted_siny = mx.sym.sin(mx.sym.amp_cast(y_bf16, dtype="float32"))
+        siny = mx.sym.sin(y)
         z = mx.sym.FullyConnected(x_bf16, y_bf16, num_hidden=10, no_bias=True)
-        res_expected = z + amp_casted_siny
+        amp_casted_z = mx.sym.amp_cast(z, dtype="float32")
+        res_expected = amp_casted_z + siny
         assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph"
 
