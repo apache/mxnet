@@ -67,6 +67,7 @@ Example::
 .add_arguments(SoftmaxActivationParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_SoftmaxActivation)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){
