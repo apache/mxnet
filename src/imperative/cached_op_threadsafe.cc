@@ -189,6 +189,7 @@ OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOp>& op_ptr,
         << " is on " << inputs[i]->ctx();
   }
 
+  int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
   OpStatePtr op_state;
   try {
     if (CheckDynamicShapeExists(default_ctx, inputs, true)) {
@@ -200,8 +201,10 @@ OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOp>& op_ptr,
       op_state = DynamicForward(default_ctx, inputs, outputs);
     }
   } catch (const dmlc::Error& e) {
+    Engine::Get()->set_bulk_size(prev_bulk_size);
     throw e;
   }
+  Engine::Get()->set_bulk_size(prev_bulk_size);
   return op_state;
 }
 

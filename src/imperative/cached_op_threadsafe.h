@@ -43,6 +43,8 @@ struct CachedOpThreadSafeConfig
   mxnet::Tuple<uint32_t> data_indices;
   // param_indices indicates which of the indices from the arguments are params
   mxnet::Tuple<uint32_t> param_indices;
+  // decides the bulk size for dynamic forward
+  uint32_t forward_bulk_size;
   bool static_alloc;
   bool static_shape;
   DMLC_DECLARE_PARAMETER(CachedOpThreadSafeConfig) {
@@ -55,6 +57,9 @@ struct CachedOpThreadSafeConfig
     .describe("Optimize for invariant input shapes between iterations. "
               "Must also set static_alloc to True. "
               "Change of input shapes is still allowed but slower.");
+    DMLC_DECLARE_FIELD(forward_bulk_size)
+     .set_default(Imperative::BulkExecMaxNodeTrainFwd())
+     .describe("Segment size of bulk execution during dynamic forward");
     DMLC_DECLARE_FIELD(data_indices)
         .set_default(mxnet::Tuple<uint32_t>())
         .describe("Position of argument variables.");
