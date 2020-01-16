@@ -22,6 +22,8 @@ from __future__ import absolute_import
 import numpy as onp
 
 
-__all__ = ['cond']
+__all__ = [
+    'cond',
+]
 
 cond = onp.linalg.cond

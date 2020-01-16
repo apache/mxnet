@@ -21,4 +21,8 @@ from __future__ import absolute_import
 
 import numpy as onp
 
-__all__ = []
+__all__ = [
+    'heaviside',
+]
+
+heaviside = onp.heaviside
