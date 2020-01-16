@@ -31,28 +31,19 @@
 # install NCCL in the same location as the CUDA toolkit.
 # See https://github.com/caffe2/caffe2/issues/1601
 
-set(NCCL_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA NCCL")
+set(NCCL_ROOT $ENV{NCCL_ROOT} CACHE PATH "Folder contains NVIDIA NCCL")
+set(NCCL_INCLUDE_DIR $ENV{NCCL_INCLUDE_DIR} CACHE PATH "Folder contains NVIDIA NCCL headers")
+set(NCCL_LIB_DIR $ENV{NCCL_LIB_DIR} CACHE PATH "Folder contains NVIDIA NCCL libraries")
 
-# first check in the /usr/local/cuda before other paths
-if (UNIX)
-  set (search_paths "/usr/local/cuda")
-
-  find_path(NCCL_INCLUDE_DIRS
-  NAMES nccl.h
-  PATHS ${search_paths}
-  PATH_SUFFIXES include
-  )
-
-  find_library(NCCL_LIBRARIES
-  NAMES nccl
-  PATHS ${search_paths}
-  PATH_SUFFIXES lib
-  )
+if ($ENV{NCCL_ROOT_DIR})
+  message(WARNING "NCCL_ROOT_DIR is deprecated. Please set NCCL_ROOT instead.")
 endif()
 
 find_path(NCCL_INCLUDE_DIRS
   NAMES nccl.h
   HINTS
+  ${NCCL_ROOT}
+  ${NCCL_ROOT}/include
   ${NCCL_INCLUDE_DIR}
   ${NCCL_ROOT_DIR}
   ${NCCL_ROOT_DIR}/include
@@ -64,6 +55,10 @@ find_library(NCCL_LIBRARIES
   NAMES nccl
   HINTS
   ${NCCL_LIB_DIR}
+  ${NCCL_ROOT}
+  ${NCCL_ROOT}/lib
+  ${NCCL_ROOT}/lib/x86_64-linux-gnu
+  ${NCCL_ROOT}/lib64
   ${NCCL_ROOT_DIR}
   ${NCCL_ROOT_DIR}/lib
   ${NCCL_ROOT_DIR}/lib/x86_64-linux-gnu
@@ -71,6 +66,23 @@ find_library(NCCL_LIBRARIES
   ${CUDA_TOOLKIT_ROOT_DIR}/lib64
   $ENV{NCCL_DIR}/lib
   )
+
+# if not found in any of the above paths, finally, check in the /usr/local/cuda for UNIX systems
+if (UNIX)
+  set (search_paths "/usr/local/cuda")
+
+  find_path(NCCL_INCLUDE_DIRS
+   NAMES nccl.h
+   PATHS ${search_paths}
+   PATH_SUFFIXES include
+  )
+
+  find_library(NCCL_LIBRARIES
+   NAMES nccl
+   PATHS ${search_paths}
+   PATH_SUFFIXES lib
+  )
+endif()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(NCCL DEFAULT_MSG NCCL_INCLUDE_DIRS NCCL_LIBRARIES)
