@@ -1644,6 +1644,15 @@ def _add_workload_heaviside():
     OpArgMngr.add_workload('heaviside', x, np.float32(1.0))
 
 
+def _add_workload_spacing():
+    OpArgMngr.add_workload('spacing', np.float64(1))
+    OpArgMngr.add_workload('spacing', np.float32(1))
+    OpArgMngr.add_workload('spacing', np.inf)
+    OpArgMngr.add_workload('spacing', -np.inf)
+    OpArgMngr.add_workload('spacing', np.float64(1e30))
+    OpArgMngr.add_workload('spacing', np.float32(1e30))
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -1788,6 +1797,7 @@ def _prepare_workloads():
     _add_workload_empty_like()
     _add_workload_nan_to_num()
     _add_workload_heaviside()
+    _add_workload_spacing()
 
 
 _prepare_workloads()
@@ -1823,9 +1833,10 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
                 assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
             else:
                 _np.testing.assert_equal(arr, expected_arr)
-    else:
-        assert isinstance(out, np.ndarray)
+    elif isinstance(out, np.ndarray):
         assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+    else:
+        _np.testing.assert_almost_equal(out, expected_out)
 
 
 def check_interoperability(op_list):

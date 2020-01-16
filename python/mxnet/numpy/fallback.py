@@ -23,6 +23,8 @@ import numpy as onp
 
 __all__ = [
     'heaviside',
+    'spacing',
 ]
 
 heaviside = onp.heaviside
+spacing = onp.spacing
