@@ -145,7 +145,7 @@ def test_arcsin():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         # Domain of arcsin is [-1, 1]
-        array = random_uniform_arrays(shape, low=-1.0, high=1.0)
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)
         check_second_order_unary(array, arcsin, grad_grad_op)
 
 
@@ -160,7 +160,7 @@ def test_arccos():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         # Domain of arccos is [-1, 1]
-        array = random_uniform_arrays(shape, low=-1.0, high=1.0)
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)
         check_second_order_unary(array, arccos, grad_grad_op)
 
 
@@ -226,7 +226,7 @@ def test_arctanh():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         # Domain of arctanh is (-1, 1)
-        array = random_uniform_arrays(shape, low=-0.99, high=1.0)
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)
         check_second_order_unary(array, arctanh, grad_grad_op)
 
 
