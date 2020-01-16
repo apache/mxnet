@@ -645,6 +645,9 @@ TEST(ThreadSafety, Engine) {
 TEST(ThreadSafety, CachedOpFullModel) {
   std::vector<std::string> models_list = {
       "imagenet1k-resnet-18", "imagenet1k-resnet-152", "imagenet1k-resnet-50"};
+  if (mxnet::test::thread_safety_force_cpu) {
+    models_list.push_back("imagenet1k-resnet-152-subgraph");
+  }
   for (const auto &model : models_list) {
     run_inference(model, 1, true, 20);
     run_inference(model, 2, true, 20);

@@ -1390,6 +1390,10 @@ integrationtest_ubuntu_gpu_capi_cpp_package() {
     export PYTHONPATH=./python/
     export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
     python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
+    # Load symbol, convert symbol to leverage fusion with subgraphs, save the model
+    python3 -c "x = mx.sym.load(\"imagenet1k-resnet-152\"); x.get_backend_symbol(\"MKLDNN\"); x.save(\"imagenet1k-resnet-152-subgraph\");"
+    # Copy params file with a different name, used in subgraph symbol testing
+    cp imagenet1k-resnet-152-0000.params imagenet1k-resnet-152-subgraph-0000.params
     build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
     build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
     # Also run thread safety tests in NaiveEngine mode
