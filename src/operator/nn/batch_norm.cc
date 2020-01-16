@@ -593,6 +593,7 @@ then set ``gamma`` to 1 and its gradient to 0.
   });
 
 NNVM_REGISTER_OP(_backward_BatchNorm)
+.set_num_inputs(8)
 .set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)

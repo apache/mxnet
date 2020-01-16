@@ -443,8 +443,8 @@ class PyLAMB(mx.optimizer.Optimizer):
 
     def create_state(self, index, weight):
         stype = weight.stype
-        return (mx.nd.zeros(weight.shape, weight.context, dtype=np.float32, stype=stype),
-                mx.nd.zeros(weight.shape, weight.context, dtype=np.float32, stype=stype))
+        return (mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype),
+                mx.nd.zeros(weight.shape, weight.context, dtype=weight.dtype, stype=stype))
 
 
     def update(self, index, weight, grad, state):
@@ -499,6 +499,47 @@ def test_lamb():
         kwarg['multi_precision'] = True
         compare_optimizer(opt1(**kwarg), opt2(**kwarg), shape, np.float16, rtol=1e-3, atol=1e-3)
 
+@with_seed()
+def test_multilamb():
+    opt1 = PyLAMB
+    opt2 = mx.optimizer.LAMB
+
+    # shapes as Bert-large
+    dims_x = [1024, 4096, 1024, 1024]
+    dims_y = [1, 1, 1024, 4096]
+    dims_occurrences = [9, 1, 4, 2]
+    nlayers = 4 # 24
+    # extra_dims_x=[30522, 512, 30522]
+    # extra_dims_y=[1, 1024, 1024]
+    shapes=[]
+    for l in range(nlayers):
+        for i, (dx,dy) in enumerate(zip(dims_x, dims_y)):
+            for j in range(dims_occurrences[i]):
+                shapes.append((dx,dy))
+    # for dx,dy in zip(extra_dims_x, extra_dims_y):
+    #    shapes.append((dx,dy))
+
+    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
+    bias_options = [{'bias_correction': False}, {'bias_correction': True}]
+
+    for dtype in [np.float16, np.float32, np.float64]:
+        for cg_option in cg_options:
+            for rg_option in rg_options:
+                for wd_option in wd_options:
+                    for bias_option in bias_options:
+                        kwarg = {}
+                        kwarg.update(cg_option)
+                        kwarg.update(rg_option)
+                        kwarg.update(wd_option)
+                        kwarg.update(bias_option)
+                        if (dtype == np.float16):
+                            kwarg.update({'multi_precision': True})
+                        atol = 1e-3
+                        rtol = 1e-6
+                        compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes, dtype,
+                                          rtol=rtol, atol=atol, ntensors=len(shapes))
 
 #SGLD
 class PySGLD(mx.optimizer.Optimizer):
@@ -763,6 +804,7 @@ def test_adam():
                         compare_optimizer(opt1(lazy_update=False, **kwarg), opt2(lazy_update=False, **kwarg), shape,
                                           dtype, w_stype='default', g_stype='row_sparse',
                                           rtol=1e-4, atol=2e-5)
+
 
 # AdaMax
 class PyAdamax(mx.optimizer.Optimizer):

@@ -105,6 +105,7 @@ Examples::
 .add_arguments(NormParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_norm)
+.set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NormParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

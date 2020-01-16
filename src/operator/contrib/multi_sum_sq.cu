@@ -37,6 +37,9 @@ namespace op {
 // https://github.com/NVIDIA/apex/blob/master/csrc/multi_tensor_apply.cuh
 // https://github.com/NVIDIA/apex/blob/master/csrc/multi_tensor_l2norm_kernel.cu
 // https://github.com/NVIDIA/apex/blob/master/csrc/type_shim.h
+
+const int chunk_size = 32768;
+
 template <typename DType>
 struct MultiSumSqKernelParam {
   DType* addresses[ARRAY_LIMIT];
@@ -127,9 +130,23 @@ __global__ void GlobalReductionKernel(MultiSumSqKernelParam<DType> param,
 }
 
 template<>
+size_t GetRequiredStorageMultiSumSq<gpu>(const std::vector<TBlob> &inputs,
+                                         int* param_max_chunks_per_tensor) {
+  // find max num of chunks in tensors
+  int max_chunks_per_tensor = -1;
+  for (size_t t = 0; t < inputs.size(); t++) {
+    int chunks_this_tensor = (inputs[t].shape_.Size() + chunk_size - 1) / chunk_size;
+    if (chunks_this_tensor > max_chunks_per_tensor)
+      max_chunks_per_tensor = chunks_this_tensor;
+  }
+  if (param_max_chunks_per_tensor != NULL)
+    *param_max_chunks_per_tensor = max_chunks_per_tensor;
+  return inputs.size() * max_chunks_per_tensor * sizeof(float);
+}
+
+template<>
 void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int n_inputs,
                         float *out_ptr, const OpContext &ctx) {
-  const int chunk_size = 32768;
   const int block_size = 512;
   using namespace mxnet_op;
   auto s = ctx.get_stream<gpu>();
@@ -137,14 +154,8 @@ void MultiSumSqRun<gpu>(const std::vector<TBlob> &inputs, int n_inputs,
 
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     MultiSumSqKernelParam<DType> param;
-    // find max num of chunks in tensors
-    for (int t = 0; t < n_inputs; t++) {
-      int chunks_this_tensor = (inputs[t].shape_.Size() + chunk_size - 1) / chunk_size;
-      if (chunks_this_tensor > param.max_chunks_per_tensor)
-        param.max_chunks_per_tensor = chunks_this_tensor;
-    }
-     // temporary storage for the reduction of each block
-    size_t workspace_size = n_inputs * param.max_chunks_per_tensor * sizeof(float);
+    size_t workspace_size = GetRequiredStorageMultiSumSq<gpu>(inputs,
+                                                              &param.max_chunks_per_tensor);
     Tensor<gpu, 1, char> workspace =
       ctx.requested[multi_sum_sq::kTempSpace].get_space_typed<gpu, 1, char>(
         Shape1(workspace_size), s);

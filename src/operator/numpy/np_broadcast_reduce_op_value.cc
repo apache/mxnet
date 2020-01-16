@@ -238,7 +238,7 @@ NNVM_REGISTER_OP(_np_prod)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
 
 NNVM_REGISTER_OP(_backward_np_prod)
-.set_num_inputs(1)
+.set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
