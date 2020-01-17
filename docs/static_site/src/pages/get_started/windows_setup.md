@@ -147,7 +147,8 @@ folder. Copy to a local directory and execute:
 ```
 
 This will install the recommended VS Community, Python, git, and other dependencies needed to build in windows.
-After that, follow the steps below starting from "build the MXNet source code" section below.
+Then use the following to build. The `--flavour` option selects the build flavour. Use
+`.\build_windows.py --help` to list the different build flavours.
 
 ```
 C:\Python37\python.exe .\ci\build_windows.py
