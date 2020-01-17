@@ -22,6 +22,8 @@ from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_s
 from mxnet.symbol import Symbol
 import numpy as np
 from mxnet.test_utils import assert_almost_equal
+from mxnet.gluon import nn
+from mxnet import nd
 
 
 def _test_subgraph_exe(subgraph_backend):
@@ -363,6 +365,44 @@ def test_subgraph_exe():
 
 def test_subgraph_v2_exe():
     _test_subgraph_exe('default_v2')
+
+# Here is just a temporary sample test.
+# To do: refactor tests and add more test for gluon.
+class Net(nn.HybridBlock):
+    def __init__(self, **kwargs):
+        super(Net, self).__init__(**kwargs)
+        with self.name_scope():
+            self.fc1 = nn.Dense(256)
+            self.fc2 = nn.Dense(128)
+            self.fc3 = nn.Dense(2)
+
+    def hybrid_forward(self, F, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+def test_subgraph_gluon():
+    #Create networks and initialze.
+    net = Net()
+    net.initialize()
+    x = nd.random.normal(shape=(1, 512))
+
+    # Call hybridize and run inference.
+    net.hybridize()
+    outputs1 = net(x)
+
+    # Call hybridize with default backend and run inference.
+    net.hybridize(backend = "default")
+    op_names = []
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str("default"), mx_uint(len(op_names)),
+                                                     c_str_array(op_names)))
+    outputs2 = net(x)
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str("default")))
+
+    # Compare results.
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
 if __name__ == '__main__':
     import nose
