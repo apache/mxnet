@@ -61,8 +61,7 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     const DType *p1 = weight_ptr + c * offset;
     DType *p2 = update_weight_ptr + c * offset;
-    float alpha = param->fix_gamma ? 1.0f : static_cast<float>(gamma_ptr[c] /
-                  sqrt(var_ptr[c] + param->eps));
+    float alpha = (param->fix_gamma ? 1.0f : gamma_ptr[c]) / sqrt(var_ptr[c] + param->eps);
 
     if (bias_ptr)
       update_bias_ptr[c] =
