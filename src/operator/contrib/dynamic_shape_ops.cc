@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 inline bool DynamicReshapeType(const nnvm::NodeAttrs& attrs,
-                               std::vector<index_t> *in_attrs,
+                               std::vector<int> *in_attrs,
                                std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
