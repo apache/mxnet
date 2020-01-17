@@ -68,6 +68,7 @@ option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output"
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
+cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
@@ -98,6 +99,17 @@ endif()
 
 if(UNIX)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(USE_CCACHE)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  else()
+    message(STATUS "Could not find CCache. Consider installing CCache to speed up compilation.")
+  endif()
 endif()
 
 if(MSVC)

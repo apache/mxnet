@@ -143,6 +143,7 @@ class SafeDockerClient:
                     logging.info("Executed command for reproduction:\n\n%s\n", " ".join(sys.argv))
                 else:
                     logging.info("Container exited with success 👍")
+                    logging.info("Executed command for reproduction:\n\n%s\n", " ".join(sys.argv))
             except Exception as err:
                 logging.exception(err)
                 return 150
