@@ -323,10 +323,7 @@ class _DownloadedDataset(Dataset):
         if not os.path.isdir(root):
             os.makedirs(root)
         self._get_data()
-        from ._internal import NDArrayDataset, TupleDataset
-        self._handle = TupleDataset(
-            datasets=(NDArrayDataset(arr=default_array(self._data)),
-                      NDArrayDataset(arr=default_array(self._label))))
+        self._handle = None
 
     def __getitem__(self, idx):
         if self._transform is not None:
@@ -340,4 +337,9 @@ class _DownloadedDataset(Dataset):
         raise NotImplementedError
 
     def __handle__(self):
+        if self._handle is None:
+            from ._internal import NDArrayDataset, TupleDataset
+            self._handle = TupleDataset(
+                datasets=(NDArrayDataset(arr=default_array(self._data)),
+                          NDArrayDataset(arr=default_array(self._label))))
         return self._handle
