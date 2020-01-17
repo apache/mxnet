@@ -63,4 +63,5 @@ NNVM_REGISTER_OP(_contrib_beamsearch_noop_grad)
 .set_attr<FCompute>("FCompute<cpu>", NoopGrad<cpu>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true);
 }
+
 }

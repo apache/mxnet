@@ -25,8 +25,6 @@ struct beamsearch_set_finished_forward {
         bool e = k == eos_idx;
         bool input = !f && (!o || e);
         bool score = f && s;
-        //bool mask = !(input || score);
-        //out_data[i] = (input * in_data[i]) + (score * scores[j]) + (mask * mask_val);
         if (input) out_data[i] = in_data[i];
         else if (score) out_data[i] = scores[j];
         else out_data[i] = mask_val;
@@ -127,18 +125,16 @@ void BeamsearchSetFinishedForward(const nnvm::NodeAttrs& attrs,
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     using namespace mxnet_op;
     MSHADOW_TYPE_SWITCH(outputs[beamsearch_set_finished::kOut].type_flag_, DType, {
-        MSHADOW_TYPE_SWITCH(inputs[beamsearch_set_finished::kFin].type_flag_, IType, {
-            DType mask_val = param.mask_val;
-            const int score_idx = param.score_idx;
-            const int eos_idx = param.eos_idx;
-            Kernel<beamsearch_set_finished_forward, xpu>::Launch(s, out_shape.Size(),
-                outputs[beamsearch_set_finished::kOut].dptr<DType>(),
-                inputs[beamsearch_set_finished::kDist].dptr<DType>(),
-                inputs[beamsearch_set_finished::kScores].dptr<DType>(),
-                inputs[beamsearch_set_finished::kFin].dptr<IType>(),
-                inputs[beamsearch_set_finished::kOverMax].dptr<IType>(),
-                mask_val, score_idx, eos_idx, out_shape.Size()/batch_beam_shape.Size());
-        });
+        DType mask_val = param.mask_val;
+        const int score_idx = param.score_idx;
+        const int eos_idx = param.eos_idx;
+        Kernel<beamsearch_set_finished_forward, xpu>::Launch(s, out_shape.Size(),
+            outputs[beamsearch_set_finished::kOut].dptr<DType>(),
+            inputs[beamsearch_set_finished::kDist].dptr<DType>(),
+            inputs[beamsearch_set_finished::kScores].dptr<DType>(),
+            inputs[beamsearch_set_finished::kFin].dptr<int>(),
+            inputs[beamsearch_set_finished::kOverMax].dptr<int>(),
+            mask_val, score_idx, eos_idx, out_shape.Size()/batch_beam_shape.Size());
     });
 
 }

@@ -1698,6 +1698,7 @@ def test_take_with_type():
                                         'take_a': 'write'},
                               arg_params=arg_params)
 
+
 @with_seed()
 def test_beamsearch_set_finished():
     batch_beam = 64
