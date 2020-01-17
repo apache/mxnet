@@ -51,7 +51,7 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(idx.dtype(), DType, {
     DType* idx_dptr = idx.data().dptr<DType>();
     for (size_t i = 0; i < idx_size; i++) {
-      shapev[i] = idx_dptr[i];
+      shapev[i] = static_cast<index_t>(idx_dptr[i]);
     }
   });
   shape_value = InferReshapeShape(mxnet::Tuple<index_t>(shapev), inputs[0].shape(), false);

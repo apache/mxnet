@@ -467,6 +467,11 @@ def test_dynamic_reshape():
         exe.backward(out_grads=mx.nd.array(grad_npy))
         assert np.square(exe.grad_dict['data'].asnumpy() - grad_npy.reshape(src_shape)).mean() < 1E-7
 
+        # test ndarray
+        X = mx.nd.random.uniform(shape=src_shape)
+        Y = mx.contrib.nd.dynamic_reshape(X, mx.nd.array(shape_arg))
+        assert_array_equal(Y.shape, dst_shape)
+
     test_cases = [
         [(2, 3, 5, 5),  (0, -1),           (2, 75)],
         [(2, 3, 5, 5),  (0, 0, -1),        (2, 3, 25)],
