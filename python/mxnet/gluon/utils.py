@@ -18,6 +18,8 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
+from __future__ import absolute_import
+
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download']
 
@@ -28,17 +30,13 @@ import uuid
 import warnings
 import collections
 import weakref
-try:
-    import requests
-except ImportError:
-    class requests_failed_to_import(object):
-        pass
-    requests = requests_failed_to_import
+import requests
 
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape
+from ..util import is_np_shape, is_np_array
+from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
 def split_data(data, num_slice, batch_axis=0, even_split=True):
@@ -72,23 +70,18 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    step = size // num_slice
-
-    # If size < num_slice, make fewer slices
-    if not even_split and size < num_slice:
-        step = 1
-        num_slice = size
-
-    if batch_axis == 0:
-        slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
-                  for i in range(num_slice)]
-    elif even_split:
-        slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
+    n_each_section, extras = divmod(size, num_slice)
+    section_sizes = [0] + (extras * [n_each_section + 1] +
+                           (num_slice - extras) * [n_each_section])
+    div_points = np.array(section_sizes).cumsum()
+    if is_np_array():
+        slices = _mx_np.split(data, indices_or_sections=list(div_points[1: -1]), axis=batch_axis)
     else:
-        slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
-                  if i < num_slice - 1 else
-                  ndarray.slice_axis(data, batch_axis, i*step, size)
-                  for i in range(num_slice)]
+        slices = []
+        for i in range(num_slice):
+            st = div_points[i]
+            end = div_points[i + 1]
+            slices.append(ndarray.slice_axis(data, axis=batch_axis, begin=st, end=end))
     return slices
 
 
@@ -98,7 +91,7 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Parameters
     ----------
-    data : NDArray
+    data : NDArray or ndarray
         A batch of data.
     ctx_list : list of Context
         A list of Contexts.
@@ -109,11 +102,12 @@ def split_and_load(data, ctx_list, batch_axis=0, even_split=True):
 
     Returns
     -------
-    list of NDArrays
+    list of NDArrays or ndarrays
         Each corresponds to a context in `ctx_list`.
     """
+    array_fn = _mx_np.array if is_np_array() else ndarray.array
     if not isinstance(data, ndarray.NDArray):
-        data = ndarray.array(data, ctx=ctx_list[0])
+        data = array_fn(data, ctx=ctx_list[0])
     if len(ctx_list) == 1:
         return [data.as_in_context(ctx_list[0])]
 

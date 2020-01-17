@@ -20,23 +20,22 @@ import sys
 import os
 import time
 import multiprocessing as mp
-import unittest
 import mxnet as mx
 import numpy as np
 import unittest
 from nose.tools import assert_raises
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.base import MXNetError
 from mxnet import autograd
-from numpy.testing import assert_allclose
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
 from test_numpy_op import *
+from test_numpy_interoperability import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
@@ -45,9 +44,11 @@ from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
 from test_subgraph_op import *
+from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
-from test_library_loading import *
+from test_extensions import *
+from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
@@ -229,7 +230,7 @@ def check_fft(shape):
                     a[i,j,:,p+1] = out2[i,j+out1[0].shape[1],:,k]
                     p = p+2
 
-    assert_almost_equal(a, out1[0],rtol=1e-3, atol=1e-5)
+    assert_almost_equal(a, out1[0], rtol=1e-3, atol=1e-5)
 
     # backward
     if len(shape) == 2:
@@ -243,7 +244,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[1],rtol=1e-3, atol=1e-5)
+        assert_almost_equal(a.real, exe.grad_arrays[0]/shape[1],rtol=1e-3, atol=1e-5)
 
     if len(shape) == 4:
         out_grad = mx.nd.empty(out1[0].shape)
@@ -256,7 +257,7 @@ def check_fft(shape):
         for exe in exe_list:
             exe.backward([out_grad])
         a = np.fft.ifft(out_grad_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, exe.grad_arrays[0].asnumpy()/shape[3],rtol=1e-3, atol=1e-5)
+        assert_almost_equal(a.real, exe.grad_arrays[0]/shape[3],rtol=1e-3, atol=1e-5)
 
 @with_seed()
 def test_fft():
@@ -266,6 +267,190 @@ def test_fft():
         for order in [2,4]:
             shape = tuple(np.random.randint(1, maxdim, size=order))
             check_fft(shape)
+
+def _make_ndarrays(input_list, ctx=mx.gpu(0)):
+    return [mx.nd.array(arr, dtype=arr.dtype, ctx=ctx) for arr in input_list]
+
+def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
+    values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
+    mx_vals = _make_ndarrays(values_arr, ctx=ctx)
+    sum_sq = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    sum_sq2 = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    # checks that operator is deterministic
+    assert np.array_equal(sum_sq.asnumpy(), sum_sq2.asnumpy())
+
+    ref_sum_sq = mx.nd.array([(v.astype('float32') ** 2).sum() for v in values_arr],
+                             dtype='float32', ctx=ctx)
+    assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+
+@with_seed()
+def test_multi_sum_sq():
+    min_nparam = 100
+    max_nparam = 120
+    min_dim = 50000
+    max_dim = 100000
+    max_ndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.gpu(0)]:
+        for dtype in dtypes:
+            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+            shapes = [np.random.randint(min_dim, max_dim + 1, size=max_ndim) for i in range(nparam)]
+            low_tol = ctx == mx.cpu(0) and ('float16'in [dtype])
+            tol1 = 1e-3 if low_tol else 1e-5
+            tol2 = 1e-6 if low_tol else 1e-7
+            check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2)
+
+def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
+    weights_arr = [np.random.rand(*shape).astype(w_dtype) * 10. for shape in shapes]
+    grads_arr = [np.random.rand(*shape).astype(g_dtype) for shape in shapes]
+
+    lrs = (np.random.rand(len(shapes)).astype('float32') + 0.1) / 100.
+    wds = (np.random.rand(len(shapes)).astype('float32') + 0.1) / 1000.
+    eta = (np.random.rand() + 0.1)
+    eps = (np.random.rand() + 0.1) / 10000.
+
+    mx_w = _make_ndarrays(weights_arr, ctx=ctx)
+    mx_g = _make_ndarrays(grads_arr, ctx=ctx)
+    mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=ctx)
+    mx_wds = mx.nd.array(wds, dtype='float32', ctx=ctx)
+
+    w_sum_sq = mx.nd.multi_sum_sq(*mx_w, num_arrays=len(shapes))
+    g_sum_sq = mx.nd.multi_sum_sq(*mx_g, num_arrays=len(shapes))
+
+    ref_w_sum_sq = mx.nd.array([(w.astype('float32') ** 2).sum() for w in weights_arr],
+                                dtype='float32', ctx=ctx)
+    ref_g_sum_sq = mx.nd.array([(g.astype('float32') ** 2).sum() for g in grads_arr],
+                                dtype='float32', ctx=ctx)
+    assert_almost_equal(ref_w_sum_sq.asnumpy(), w_sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+    assert_almost_equal(ref_g_sum_sq.asnumpy(), g_sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+
+    rescale_grad = (np.random.rand() + 0.5) * 100.
+    mx_new_lrs = mx.nd.multi_lars(mx_lrs, w_sum_sq, g_sum_sq, mx_wds, eta=eta, eps=eps,
+                                  rescale_grad=rescale_grad)
+    ref_w_l2norm = mx.nd.sqrt(ref_w_sum_sq)
+    ref_g_l2norm = mx.nd.sqrt(ref_g_sum_sq * rescale_grad * rescale_grad)
+    ref_new_lrs = mx.nd.zeros(ref_w_l2norm.shape, dtype='float32', ctx=ctx)
+    for i in range(ref_w_l2norm.size):
+        _w = ref_w_l2norm[i]
+        _g = ref_g_l2norm[i]
+        if _w > 0.0 and _g > 0.0:
+            ref_new_lrs[i] = lrs[i] * eta * _w / (_g + wds[i] * _w + eps)
+        else:
+            ref_new_lrs[i] = lrs[i]
+    assert_almost_equal(ref_new_lrs.asnumpy(), mx_new_lrs.asnumpy(), atol=tol2, rtol=tol2)
+
+@with_seed()
+def test_fast_lars():
+    min_nparam = 50
+    max_nparam = 60
+    maxdim = 10000
+    maxndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.cpu(0), mx.gpu(0)]:
+        for w_dtype in dtypes:
+            for g_dtype in dtypes:
+                nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+                shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+                lowTol = ctx == mx.cpu(0) and ('float16'in [w_dtype, g_dtype])
+                tol1 = 1e-3 if lowTol else 1e-5
+                tol2 = 1e-6 if lowTol else 1e-7
+                check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2)
+
+def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
+    def _flatten_list(nested_list):
+        return [item for sublist in nested_list for item in sublist]
+    weights_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    grads_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
+    rescale_grad = (np.random.random() + 1.0)
+    mx_w = _make_ndarrays(weights_arr)
+    mx_g = _make_ndarrays(grads_arr)
+    mx_p_w = _make_ndarrays(weights_arr)
+    mx_p_g = _make_ndarrays(grads_arr)
+    lrs = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 100.)
+    mx_lrs = mx.nd.array(lrs, dtype='float32', ctx=mx.gpu(0))
+    wds = list((np.random.random(size=len(shapes)).astype('float32') + 0.1) / 1000.)
+    mx_wds = mx.nd.array(wds, dtype='float32', ctx=mx.gpu(0))
+    if use_master_weights:
+        weights32_arr = [arr.astype('float32') for arr in weights_arr]
+        mx_w32 = _make_ndarrays(weights32_arr)
+        mx_p_w32 = _make_ndarrays(weights32_arr)
+    if momentum is None:
+        if use_master_weights:
+            mx.nd.multi_mp_sgd_update(
+                                     *_flatten_list(zip(mx_w, mx_g, mx_w32)),
+                                     num_weights=len(shapes), lrs=lrs, wds=wds,
+                                     rescale_grad=rescale_grad, out=mx_w)
+            mx.nd.preloaded_multi_mp_sgd_update(
+                                     *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                     rescale_grad=rescale_grad, out=mx_p_w)
+        else:
+            out = mx.nd.multi_sgd_update(
+                                    *_flatten_list(zip(mx_w, mx_g)),
+                                    num_weights=len(shapes), lrs=lrs, wds=wds,
+                                    rescale_grad=rescale_grad, out=mx_w)
+            preloaded_out = mx.nd.preloaded_multi_sgd_update(
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g)) +
+                                     [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                    rescale_grad=rescale_grad, out=mx_p_w)
+    else:
+        if use_master_weights:
+            momentums_arr = [np.random.rand(*shape).astype("float32") for shape in shapes]
+            mx_m = _make_ndarrays(momentums_arr)
+            mx_p_m = _make_ndarrays(momentums_arr)
+            out = mx.nd.multi_mp_sgd_mom_update(
+                                    *_flatten_list(zip(mx_w, mx_g, mx_m, mx_w32)),
+                                    num_weights=len(shapes), lrs=lrs, wds=wds,
+                                    rescale_grad=0.95, momentum=momentum, out=mx_w)
+            preloaded_out = mx.nd.preloaded_multi_mp_sgd_mom_update(
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                    rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+        else:
+            momentums_arr = [np.random.rand(*shape).astype(dtype) for shape in shapes]
+            mx_m = _make_ndarrays(momentums_arr)
+            mx_p_m = _make_ndarrays(momentums_arr)
+            mx.nd.multi_sgd_mom_update(
+                                    *_flatten_list(zip(mx_w, mx_g, mx_m)),
+                                    num_weights=len(shapes), lrs=lrs, wds=wds,
+                                    rescale_grad=0.95, momentum=momentum, out=mx_w)
+            mx.nd.preloaded_multi_sgd_mom_update(
+                                    *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)) +
+                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
+                                    rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+
+    def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
+        for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
+            assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
+    if dtype == 'float16':
+        rtol = 1e-3
+        atol = 1e-2
+    else:
+        rtol = 1e-5
+        atol = 1e-6
+    _assert_all_almost_equal(mx_p_w, mx_w, rtol, atol)
+    if momentum is not None:
+        _assert_all_almost_equal(mx_p_m, mx_m, rtol, atol)
+    if use_master_weights:
+        _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
+
+@with_seed()
+def test_preloaded_multi_sgd():
+    dtypes = ['float16', 'float32']
+    momentums = [None, 0.9]
+    min_nparam = 5
+    max_nparam = 10
+    maxdim = 6
+    maxndim = 4
+    for dtype in dtypes:
+        use_master_weights_list = [False,] if dtype == 'float32' else [True, False]
+        for use_master_weights in use_master_weights_list:
+            for momentum in momentums:
+                nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+                shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
+                check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
 
 
 @with_seed()
@@ -1153,15 +1338,23 @@ def test_bilinear_resize_op():
                 {'ctx': mx.gpu(0), 'data': (2, 2, 20, 20), 'type_dict': {'data': np.float32}}]
 
     data = mx.sym.Variable('data')
-    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5)
+    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5, align_corners=True)
     check_consistency(sym, ctx_list)
 
-    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale')
+    sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5, align_corners=False)
+    check_consistency(sym, ctx_list)    
+
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale', align_corners=True)
     check_consistency(sym, ctx_list)
 
-    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up')
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale', align_corners=False)
     check_consistency(sym, ctx_list)
 
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up', align_corners=True)
+    check_consistency(sym, ctx_list)
+
+    sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=0.5, scale_width=2, mode='to_even_up', align_corners=False)
+    check_consistency(sym, ctx_list)
 
 @with_seed()
 def test_global_pooling():
@@ -1528,7 +1721,7 @@ def check_rnn_consistency(cell1, cell2):
     mod1.forward(batch, is_train=False)
     mod2.forward(batch, is_train=False)
 
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=1e-2, atol=1e-4)
+    mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -1562,7 +1755,7 @@ def test_lstm_forget_bias():
 
     bias_name = next(x for x in args if x.endswith('f_bias'))
     expected_bias = forget_bias * np.ones(10, )
-    assert_allclose(args[bias_name].asnumpy(), expected_bias)
+    mx.test_utils.assert_allclose(args[bias_name], expected_bias)
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
@@ -1854,9 +2047,9 @@ def check_rnn_layer(layer):
         co, cs = layer(x, states)
 
     # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 def check_rnn_layer_w_rand_inputs(layer):
     layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
@@ -1871,9 +2064,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go.asnumpy(), co.asnumpy(), rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g.asnumpy(), c.asnumpy(), rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 @with_seed()
 def test_sequence_reverse():
@@ -1938,7 +2131,7 @@ def test_cross_device_autograd():
 
         y.backward()
 
-    dx = x.grad.asnumpy()
+    dx = x.grad.copy()
     x.grad[:] = 0
 
     with mx.autograd.record():
@@ -1947,7 +2140,7 @@ def test_cross_device_autograd():
             y = mx.nd.tanh(y)
         y.backward()
 
-    assert_almost_equal(dx, x.grad.asnumpy())
+    assert_almost_equal(dx, x.grad)
 
 @with_seed()
 def test_multi_proposal_op():
@@ -2131,12 +2324,11 @@ def test_softmax_activation():
     with mx.autograd.record():
         gpu_y = mx.nd.SoftmaxActivation(data = gpu_a)
         cpu_y = mx.nd.SoftmaxActivation(data = cpu_a)
-        assert_almost_equal(cpu_y.asnumpy(), gpu_y.asnumpy(), atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(cpu_y, gpu_y, atol = 1e-3, rtol = 1e-3)
 
         gpu_y.backward()
         cpu_y.backward()
-        assert_almost_equal(cpu_a.grad.asnumpy(), gpu_a.grad.asnumpy(),
-                atol = 1e-3, rtol = 1e-3)
+        assert_almost_equal(cpu_a.grad, gpu_a.grad, atol = 1e-3, rtol = 1e-3)
 
 
 @with_seed()
@@ -2166,13 +2358,13 @@ def test_bilinear_sampler_versions():
             exe.arg_dict['data'][:] = test_data
             exe.arg_dict['grid'][:] = test_grid
             exe.forward(is_train=True)
-            assert_almost_equal(exe_list[ref_idx].outputs[0].asnumpy(), exe.outputs[0].asnumpy(), rtol=1e-3, atol=1e-5)
+            mx.test_utils.assert_almost_equal(exe_list[ref_idx].outputs[0], exe.outputs[0], rtol=1e-3, atol=1e-5)
 
         out_grad = np.random.uniform(low=-0.01, high=0.01,size=data_shape[:2] + grid_shape[2:]).astype(np.float32)
         for exe in exe_list:
             exe.backward(mx.nd.array(out_grad))
-            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
 
         data_grad = exe_list[ref_idx].grad_dict['data'].asnumpy()
         grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
@@ -2191,10 +2383,10 @@ def test_bilinear_sampler_versions():
             exe.grad_dict['grid'][:] = grid_initial_grad
             exe.forward(is_train=True)
             exe.backward(mx.nd.array(out_grad))
-            assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
-            assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
-        assert_almost_equal(exe_list[ref_idx].grad_dict['data'].asnumpy(), data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
-        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'].asnumpy(), grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
+            assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['data'], data_grad + data_initial_grad, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe_list[ref_idx].grad_dict['grid'], grid_grad + grid_initial_grad, rtol=1e-3, atol=1e-5)
 
         for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
             # Mixture of kWriteTo and kNullOp
@@ -2208,9 +2400,9 @@ def test_bilinear_sampler_versions():
                 exe.forward(is_train=True)
                 exe.backward(mx.nd.array(out_grad))
                 if req_dict['data'] is 'write':
-                    assert_almost_equal(exe.grad_dict['data'].asnumpy(), exe_list[ref_idx].grad_dict['data'].asnumpy(), rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(exe.grad_dict['data'], exe_list[ref_idx].grad_dict['data'], rtol=1e-3, atol=1e-5)
                 if req_dict['grid'] is 'write':
-                    assert_almost_equal(exe.grad_dict['grid'].asnumpy(), exe_list[ref_idx].grad_dict['grid'].asnumpy(), rtol=1e-3, atol=1e-5)
+                    assert_almost_equal(exe.grad_dict['grid'], exe_list[ref_idx].grad_dict['grid'], rtol=1e-3, atol=1e-5)
 
 
 # isolated execution bulking test function to be invoked with different env var settings
@@ -2240,7 +2432,13 @@ def _test_bulking_in_process(seed, time_per_iteration):
         dx.wait_to_read()
     time_per_iteration.value = (time.time() - start) / num_iterations
 
+
 @with_seed()
+@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
+def test_bulking_operator_gpu():
+    _test_bulking(_test_bulking_in_process)
+
+
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
@@ -2278,6 +2476,10 @@ def test_bulking():
         'The fully-bulked exec time is slower than a half-bulked time by {} secs! {}' \
             .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
+
+@with_seed()
+def test_allclose_function_gpu():
+    allclose_function([mx.cpu(), mx.gpu(0)])
 
 def test_context_num_gpus():
     # Test that num_gpus reports at least one GPU, as the test is run on a GPU host.
@@ -2330,6 +2532,21 @@ def test_math():
         for dtype in dtypes:
             for op in ops:
                 run_math(op, shape, dtype, check_value=check_value)
+
+@with_seed()
+def test_arange_like_dtype():
+    dtypes = [np.float16, np.float32, np.float64]
+
+    for t in dtypes:
+        x = mx.sym.Variable('x', dtype=t)
+        y = mx.sym.reshape(x, shape=(0, 0, -1))
+        z = mx.sym.contrib.arange_like(y, axis=-1)
+
+        mod = z.simple_bind(ctx=mx.gpu(0), x=(3, 4, 5, 6), grad_req='null')
+        mod.arg_arrays[0][:] = np.random.normal(size=mod.arg_arrays[0].shape).astype(t)
+        out = mod.forward(is_train=False)
+        for v in out:
+            assert v.dtype == t
 
 if __name__ == '__main__':
     import nose

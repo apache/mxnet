@@ -93,6 +93,7 @@ with default storage
                             [](const NodeAttrs& attrs) {
                               return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
                             })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_div"});
 
 /*! \brief _scatter_plus_scalar */

@@ -19,10 +19,12 @@
 # pylint: disable= arguments-differ
 "Image transforms."
 
+import random
 from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
 from ....base import numeric_types
+from ....util import is_np_array
 
 
 class Compose(Sequential):
@@ -92,6 +94,8 @@ class Cast(HybridBlock):
         self._dtype = dtype
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.cast(x, self._dtype)
 
 
@@ -109,7 +113,7 @@ class ToTensor(HybridBlock):
         - **data**: input tensor with (H x W x C) or (N x H x W x C) shape and uint8 type.
 
     Outputs:
-        - **out**: output tensor with (C x H x W) or (N x H x W x C) shape and float32 type.
+        - **out**: output tensor with (C x H x W) or (N x C x H x W) shape and float32 type.
 
     Examples
     --------
@@ -134,6 +138,8 @@ class ToTensor(HybridBlock):
         super(ToTensor, self).__init__()
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.to_tensor(x)
 
 
@@ -187,6 +193,8 @@ class Normalize(HybridBlock):
         self._std = std
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.normalize(x, self._mean, self._std)
 
 
@@ -250,9 +258,7 @@ class CropResize(HybridBlock):
         interpolation. See OpenCV's resize function for available choices.
         https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#resize
         Note that the Resize on gpu use contrib.bilinearResize2D operator
-        which only support bilinear interpolation(1). The result would be slightly
-        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
-        use algorithm which aligns corner.
+        which only support bilinear interpolation(1).
 
 
     Inputs:
@@ -341,9 +347,7 @@ class Resize(HybridBlock):
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
         Note that the Resize on gpu use contrib.bilinearResize2D operator
-        which only support bilinear interpolation(1). The result would be slightly
-        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
-        use algorithm which aligns corner.
+        which only support bilinear interpolation(1).
 
 
     Inputs:
@@ -369,6 +373,8 @@ class Resize(HybridBlock):
         self._interpolation = interpolation
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.resize(x, self._size, self._keep, self._interpolation)
 
 class RandomFlipLeftRight(HybridBlock):
@@ -385,6 +391,8 @@ class RandomFlipLeftRight(HybridBlock):
         super(RandomFlipLeftRight, self).__init__()
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_flip_left_right(x)
 
 
@@ -402,6 +410,8 @@ class RandomFlipTopBottom(HybridBlock):
         super(RandomFlipTopBottom, self).__init__()
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_flip_top_bottom(x)
 
 
@@ -427,6 +437,8 @@ class RandomBrightness(HybridBlock):
         self._args = (max(0, 1-brightness), 1+brightness)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_brightness(x, *self._args)
 
 
@@ -452,6 +464,8 @@ class RandomContrast(HybridBlock):
         self._args = (max(0, 1-contrast), 1+contrast)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_contrast(x, *self._args)
 
 
@@ -477,6 +491,8 @@ class RandomSaturation(HybridBlock):
         self._args = (max(0, 1-saturation), 1+saturation)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_saturation(x, *self._args)
 
 
@@ -502,6 +518,8 @@ class RandomHue(HybridBlock):
         self._args = (max(0, 1-hue), 1+hue)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_hue(x, *self._args)
 
 
@@ -536,6 +554,8 @@ class RandomColorJitter(HybridBlock):
         self._args = (brightness, contrast, saturation, hue)
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_color_jitter(x, *self._args)
 
 
@@ -559,4 +579,36 @@ class RandomLighting(HybridBlock):
         self._alpha = alpha
 
     def hybrid_forward(self, F, x):
+        if is_np_array():
+            F = F.npx
         return F.image.random_lighting(x, self._alpha)
+
+
+class RandomApply(Sequential):
+    """Apply a list of transformations randomly given probability
+
+    Parameters
+    ----------
+    transforms
+        List of transformations.
+    p : float
+        Probability of applying the transformations.
+
+
+    Inputs:
+        - **data**: input tensor.
+
+    Outputs:
+        - **out**: transformed image.
+    """
+
+    def __init__(self, transforms, p=0.5):
+        super(RandomApply, self).__init__()
+        self.transforms = transforms
+        self.p = p
+
+    def forward(self, x):
+        if self.p < random.random():
+            return x
+        x = self.transforms(x)
+        return x

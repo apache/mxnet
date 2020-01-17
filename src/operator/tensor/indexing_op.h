@@ -58,6 +58,12 @@ enum EmbeddingOpOutputs {kOut};
 enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
+namespace quantized_embedding {
+enum QuantizedEmbeddingOpInputs {kData, kWeight, kWeightMin, kWeightMax};
+enum QuantizedEmbeddingOpOutputs {kOut, kOutMin, kOutMax};
+enum QuantizedEmbeddingOpResource {kTempSpace};
+}  // namespace quantized_embedding
+
 
 struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
   int input_dim;
@@ -296,11 +302,11 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return dispatched;
 }
 
-/*! \brief name the struct Take instead of take
- * to avoid conflict with the take function in mshadow
+/*! \brief name the struct TakeNonzeroAxis for general take when
+ *         axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
  */
 template<bool clip = true>
-struct Take {
+struct TakeNonzeroAxis {
   /*!
    * \brief Map function for take operator
    * \param i           global thread id
@@ -315,28 +321,28 @@ struct Take {
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const IType* idx,
-                                  const mshadow::Shape<10> in_stride,
-                                  const mshadow::Shape<10> out_stride,
+                                  const IType* idx, const int out_prev_stride,
+                                  const int in_prev_stride, const int in_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
                                   const int axis_dim, const int axis) {
     // i is the global flattened index in the output
-    const int64_t out_head_index = (axis == 0) ? 0 : (i / out_stride[axis - 1]);
-    const int64_t out_rest_index = (axis == 0) ? i : (i % out_stride[axis - 1]);
-    const int64_t out_mid_index = out_rest_index / in_stride[axis];
+    const int64_t out_head_index = i / out_prev_stride;
+    const int64_t out_rest_index = i % out_prev_stride;
+    const int64_t out_mid_index = out_rest_index / in_stride;
     const int64_t out_tail_index = (axis == in_ndims - 1) ?
-                                   0 : (out_rest_index % in_stride[axis]);
+                                   0 : (out_rest_index % in_stride);
     int64_t idx_index = static_cast<int64_t>(idx[out_mid_index]);
     if (clip) {
       idx_index = (idx_index < 0) ? 0 : idx_index;
       idx_index = (idx_index > axis_dim - 1) ? (axis_dim - 1) : idx_index;
+    } else {
+      idx_index %= axis_dim;
+      idx_index += (idx_index < 0) ? axis_dim : 0;
     }
-    idx_index %= axis_dim;
-    idx_index += (idx_index < 0) ? axis_dim : 0;
     const int64_t in_tail_index = out_tail_index;
     const int64_t in_head_index = out_head_index;
-    int64_t in_src_index = in_tail_index + idx_index * in_stride[axis];
-    in_src_index += (axis == 0) ? 0 : in_head_index * in_stride[axis - 1];
+    int64_t in_src_index = in_tail_index + idx_index * in_stride;
+    in_src_index += in_head_index * in_prev_stride;
     out_data[i] = in_data[in_src_index];
   }
 };
@@ -670,9 +676,9 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     .set_default(take_::kClip)
     .describe("Specify how out-of-bound indices bahave. Default is \"clip\"."
               " \"clip\" means clip to the range. So, if all indices mentioned are too large,"
-              " they are replaced by the index that addresses the last element along an axis. "
-              " \"wrap\" means to wrap around. "
-              " \"raise\" means to raise an error, not supported yet.");
+              " they are replaced by the index that addresses the last element along an axis."
+              " \"wrap\" means to wrap around."
+              " \"raise\" means to raise an error when index out of range.");
   }
 };
 
@@ -684,9 +690,6 @@ inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape &idxshape = (*in_attrs)[take_::kIdx];
   if (!shape_is_known(idxshape)) return false;
   const TakeParam& param = nnvm::get<TakeParam>(attrs.parsed);
-  if (param.mode == take_::kRaise) {
-    LOG(FATAL) << "Raise is not supported for the time being...";
-  }
   CHECK(param.axis >= -1 * arrshape.ndim() && param.axis < arrshape.ndim())
     << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
 
@@ -813,14 +816,15 @@ struct TakeGradGeneralKernel {
                                   const IType* src_indptr, const IType* original_idx,
                                   mshadow::Shape<10> in_strides, mshadow::Shape<10> out_strides,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
-                                  const int axis) {
+                                  const int axis, const int K) {
     const int in_head_index = (axis == 0) ? 0 : tid / in_strides[axis - 1];
     const int in_rest_index = (axis == 0) ? tid : tid % in_strides[axis - 1];
     const int in_mid_index = in_rest_index / in_strides[axis];
     const int in_tail_index = (axis == in_ndims - 1) ?
                               0 : (in_rest_index % in_strides[axis]);
     for (IType i = src_indptr[in_mid_index]; i < src_indptr[in_mid_index + 1]; ++i) {
-      const int out_mid_index = original_idx[i];
+      int out_mid_index = original_idx[i];
+      out_mid_index = (out_mid_index < 0) ? out_mid_index + K : out_mid_index;
       int target = in_tail_index + out_mid_index * in_strides[axis];
       target += (axis == 0) ? 0 : in_head_index * out_strides[axis - 1];
       arr_grad[tid] += ograd[target];
@@ -894,7 +898,7 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
       Kernel<TakeGradGeneralKernel, cpu>::Launch(
         s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(), src_indptr_ptr,
         original_idx_ptr, in_strides, out_strides,
-        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis);
+        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
     });
   });
 }
@@ -968,6 +972,15 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
     int num_bits = common::ilog2ui(static_cast<unsigned int>(idxshape.Size()) - 1);
     Tensor<gpu, 1, int> sorted_idx(sorted_idx_ptr, Shape1(idxshape.Size()), s);
     SortByKey(sorted_idx, original_idx, true, &temp_storage, 0, num_bits);
+    cub::DeviceHistogram::HistogramEven(temp_storage_ptr,
+                                        temp_storage_bytes,
+                                        sorted_idx_ptr,
+                                        src_indptr_ptr,
+                                        static_cast<int>(arrshape[axis] + 1),
+                                        0,
+                                        static_cast<int>(arrshape[axis] + 1),
+                                        static_cast<int>(idxshape.Size()),
+                                        mshadow::Stream<gpu>::GetStream(s));
     cub::DeviceScan::ExclusiveSum(temp_storage_ptr,
                                   temp_storage_bytes,
                                   src_indptr_ptr,
@@ -989,7 +1002,7 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
       Kernel<TakeGradGeneralKernel, gpu>::Launch(
         s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
         src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
-        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis);
+        arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
     });
   });
 }
@@ -1023,6 +1036,10 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
       const mxnet::TShape& arrshape = outputs[0].shape_;
       const mxnet::TShape& oshape = inputs[0].shape_;
 
+      if (idxshape.Size() == 0) {
+        return;
+      }
+
       if (req[take_::kIdx] != kNullOp) {
         mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(
           s, idxshape.Size(), outputs[take_::kIdx].dptr<IType>());
@@ -1044,7 +1061,11 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
           if (req[take_::kArr] == kWriteTo) {
             grad_in = scalar<DType>(0.0f);
           }
-          AddTakeGrad(grad_in, idx, grad_out);
+          if (param.mode == take_::kClip) {
+            AddTakeGrad(grad_in, idx, grad_out);
+          } else {
+            AddTakeGrad<false>(grad_in, idx, grad_out);
+          }
         } else {
           LOG(FATAL) << "wrong req";
         }
@@ -1133,7 +1154,7 @@ void BatchTakeOpForward(const nnvm::NodeAttrs& attrs,
  * \brief The parameters of the one_hot operator.
  */
 struct OneHotParam : public dmlc::Parameter<OneHotParam> {
-  int depth;
+  index_t depth;
   double on_value;
   double off_value;
   int axis;
@@ -1153,7 +1174,7 @@ struct OneHotParam : public dmlc::Parameter<OneHotParam> {
   }
 };
 
-inline void GetOneHotParams(const OneHotParam& param, int* depth, double* on_value,
+inline void GetOneHotParams(const OneHotParam& param, index_t* depth, double* on_value,
                             double* off_value, int* dtype) {
   *depth = param.depth;
   CHECK_GE(*depth, 0) << "Dimension size, depth, must be a non-negative integer";
@@ -1172,7 +1193,7 @@ inline bool OneHotOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& ishape = (*in_attrs)[0];
   if (!shape_is_known(ishape)) return false;
 
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = mshadow::kFloat32;
@@ -1193,7 +1214,7 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_NE((*in_attrs)[0], -1) << "Index type must be set for one_hot operator";
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = -1;
@@ -1207,10 +1228,10 @@ inline bool OneHotOpType(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct one_hot {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, const IType* indices,
-                                  int depth, DType on_value) {
-    int offset = i * depth;
-    int j = static_cast<int>(indices[i]);
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const IType* indices,
+                                  index_t depth, DType on_value) {
+    index_t offset = i * depth;
+    index_t j = static_cast<index_t>(indices[i]);
     if (j >= 0 && j < depth) {
       KERNEL_ASSIGN(out[offset+j], req, on_value);
     }
@@ -1229,7 +1250,7 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   // The following line is needed to guard the situation when
   // an output array is empty on GPU. In that case, out.dptr() = 0x0
   if (outputs[0].Size() == 0) return;
-  int depth = 0;
+  index_t depth = 0;
   double on_value = 1.0;
   double off_value = 0.0;
   int dtype = mshadow::kFloat32;
@@ -1250,6 +1271,42 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
     });
   });
 }
+
+struct gather_nd {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, OpReqType req, index_t N, index_t M, index_t K,
+                                  const mshadow::Shape<10> strides,
+                                  const mshadow::Shape<10> mshape,
+                                  DType* out, const DType* data,
+                                  const IType* indices) {
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * (static_cast<index_t>(indices[j*N + i] + mshape[j])%mshape[j]);
+    }
+    for (index_t j = 0; j < K; ++j) {
+      KERNEL_ASSIGN(out[i*K + j], req, data[offset+j]);
+    }
+  }
+};
+
+/*!
+ * \brief If any index in a dimension is out of bound, 
+          then the value in this dimension will be set to be the out-of-bound index
+ */
+struct is_valid_check_gather_nd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* is_valid_dim_ptr, const DType* idx_ptr,
+                                  const index_t N, const mshadow::Shape<10> mshape) {
+    index_t n = N - 1;
+    while (n >= 0) {
+      if (idx_ptr[i*N + n] < -mshape[i] || idx_ptr[i*N + n] > mshape[i] - 1) {
+        is_valid_dim_ptr[i] = idx_ptr[i*N + n];
+        break;
+      }
+      n--;
+    }
+  }
+};
 
 inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector *in_attrs,
@@ -1293,51 +1350,6 @@ inline bool GatherNDType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return true;
 }
-
-struct gather_nd {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, OpReqType req, int N, int M, int K,
-                                  const mshadow::Shape<10> strides,
-                                  DType* out, const DType* data,
-                                  const IType* indices) {
-    int offset = 0;
-    for (int j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<int>(indices[j*N + i]);
-    }
-    for (int j = 0; j < K; ++j) {
-      KERNEL_ASSIGN(out[i*K + j], req, data[offset+j]);
-    }
-  }
-};
-
-template<typename xpu>
-void GatherNDForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  if (req[0] == kNullOp) return;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const mxnet::TShape& dshape = inputs[0].shape_;
-  const mxnet::TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = dshape.ProdShape(M, dshape.ndim());
-  mshadow::Shape<10> strides;
-  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) strides[i] = stride;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
-      Kernel<gather_nd, xpu>::Launch(
-          s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
-    });
-  });
-}
-
 
 struct ScatterNDParam : public dmlc::Parameter<ScatterNDParam> {
   mxnet::TShape shape;

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -28,7 +28,9 @@ import os
 import platform
 import shutil
 import sys
+import tempfile
 import time
+import zipfile
 from distutils.dir_util import copy_tree
 from enum import Enum
 from subprocess import check_call
@@ -51,88 +53,85 @@ class BuildFlavour(Enum):
 
 
 CMAKE_FLAGS = {
-    'WIN_CPU': ('-DUSE_CUDA=0 '
-                '-DUSE_CUDNN=0 '
-                '-DUSE_NVRTC=0 '
-                '-DUSE_OPENCV=1 '
-                '-DUSE_OPENMP=1 '
-                '-DUSE_PROFILER=1 '
-                '-DUSE_BLAS=open '
-                '-DUSE_LAPACK=1 '
-                '-DUSE_DIST_KVSTORE=0 '
-                '-DBUILD_CPP_EXAMPLES=1 '
-                '-DUSE_MKL_IF_AVAILABLE=0 '
-                '-DCMAKE_BUILD_TYPE=Release')
+    'WIN_CPU': (
+        '-DUSE_CUDA=OFF '
+        '-DUSE_CUDNN=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
+        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENMP=ON '
+        '-DUSE_BLAS=open '
+        '-DUSE_LAPACK=ON '
+        '-DUSE_DIST_KVSTORE=OFF '
+        '-DBUILD_CPP_EXAMPLES=ON '
+        '-DUSE_MKL_IF_AVAILABLE=OFF '
+        '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKLDNN': ('-DUSE_CUDA=0 '
-                         '-DUSE_CUDNN=0 '
-                         '-DUSE_NVRTC=0 '
-                         '-DUSE_OPENCV=1 '
-                         '-DUSE_OPENMP=1 '
-                         '-DUSE_PROFILER=1 '
-                         '-DUSE_BLAS=open '
-                         '-DUSE_LAPACK=1 '
-                         '-DUSE_DIST_KVSTORE=0 '
-                         '-DUSE_MKL_IF_AVAILABLE=1 '
-                         '-DUSE_MKLDNN=1 '
-                         '-DCMAKE_BUILD_TYPE=Release')
+    , 'WIN_CPU_MKLDNN': (
+        '-DUSE_CUDA=OFF '
+        '-DUSE_CUDNN=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
+        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENMP=ON '
+        '-DUSE_BLAS=open '
+        '-DUSE_LAPACK=ON '
+        '-DUSE_DIST_KVSTORE=OFF '
+        '-DUSE_MKL_IF_AVAILABLE=ON '
+        '-DUSE_MKLDNN=ON '
+        '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKLDNN_MKL': ('-DUSE_CUDA=0 '
-                         '-DUSE_CUDNN=0 '
-                         '-DUSE_NVRTC=0 '
-                         '-DUSE_OPENCV=1 '
-                         '-DUSE_OPENMP=1 '
-                         '-DUSE_PROFILER=1 '
-                         '-DUSE_BLAS=mkl '
-                         '-DUSE_LAPACK=1 '
-                         '-DUSE_DIST_KVSTORE=0 '
-                         '-DUSE_MKL_IF_AVAILABLE=1 '
-                         '-DUSE_MKLDNN=1 '
-                         '-DCMAKE_BUILD_TYPE=Release')
+    , 'WIN_CPU_MKLDNN_MKL': (
+        '-DUSE_CUDA=OFF '
+        '-DUSE_CUDNN=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
+        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENMP=ON '
+        '-DUSE_BLAS=mkl '
+        '-DUSE_LAPACK=ON '
+        '-DUSE_DIST_KVSTORE=OFF '
+        '-DUSE_MKL_IF_AVAILABLE=ON '
+        '-DUSE_MKLDNN=ON '
+        '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_CPU_MKL': ('-DUSE_CUDA=0 '
-                         '-DUSE_CUDNN=0 '
-                         '-DUSE_NVRTC=0 '
-                         '-DUSE_OPENCV=1 '
-                         '-DUSE_OPENMP=1 '
-                         '-DUSE_PROFILER=1 '
-                         '-DUSE_BLAS=mkl '
-                         '-DUSE_LAPACK=1 '
-                         '-DUSE_DIST_KVSTORE=0 '
-                         '-DUSE_MKL_IF_AVAILABLE=1 '
-                         '-DUSE_MKLDNN=0 '
-                         '-DCMAKE_BUILD_TYPE=Release')
-    , 'WIN_GPU': ('-DUSE_CUDA=1 '
-                  '-DUSE_CUDNN=1 '
-                  '-DUSE_NVRTC=1 '
-                  '-DUSE_OPENCV=1  '
-                  '-DUSE_OPENMP=1 '
-                  '-DUSE_PROFILER=1 '
-                  '-DUSE_BLAS=open '
-                  '-DUSE_LAPACK=1 '
-                  '-DUSE_DIST_KVSTORE=0 '
-                  '-DCUDA_ARCH_NAME=Manual '
-                  '-DCUDA_ARCH_BIN=52 '
-                  '-DCUDA_ARCH_PTX=52 '
-                  '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
-                  '-DUSE_MKL_IF_AVAILABLE=0 '
-                  '-DCMAKE_BUILD_TYPE=Release')
+    , 'WIN_CPU_MKL': (
+        '-DUSE_CUDA=OFF '
+        '-DUSE_CUDNN=OFF '
+        '-DENABLE_CUDA_RTC=OFF '
+        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENMP=ON '
+        '-DUSE_BLAS=mkl '
+        '-DUSE_LAPACK=ON '
+        '-DUSE_DIST_KVSTORE=OFF '
+        '-DUSE_MKL_IF_AVAILABLE=ON '
+        '-DUSE_MKLDNN=OFF '
+        '-DCMAKE_BUILD_TYPE=Release')
 
-    , 'WIN_GPU_MKLDNN': ('-DUSE_CUDA=1 '
-                         '-DUSE_CUDNN=1 '
-                         '-DUSE_NVRTC=1 '
-                         '-DUSE_OPENCV=1 '
-                         '-DUSE_OPENMP=1 '
-                         '-DUSE_PROFILER=1 '
-                         '-DUSE_BLAS=open '
-                         '-DUSE_LAPACK=1 '
-                         '-DUSE_DIST_KVSTORE=0 '
-                         '-DCUDA_ARCH_NAME=Manual '
-                         '-DCUDA_ARCH_BIN=52 '
-                         '-DCUDA_ARCH_PTX=52 '
-                         '-DUSE_MKLDNN=1 '
-                         '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
-                         '-DCMAKE_BUILD_TYPE=Release')
+    , 'WIN_GPU': (
+        '-DUSE_CUDA=ON '
+        '-DUSE_CUDNN=ON '
+        '-DENABLE_CUDA_RTC=ON '
+        '-DUSE_OPENCV=ON  '
+        '-DUSE_OPENMP=ON '
+        '-DUSE_BLAS=open '
+        '-DUSE_LAPACK=ON '
+        '-DUSE_DIST_KVSTORE=OFF '
+        '-DMXNET_CUDA_ARCH="5.2" '
+        '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
+        '-DUSE_MKL_IF_AVAILABLE=OFF '
+        '-DCMAKE_BUILD_TYPE=Release')
+
+    , 'WIN_GPU_MKLDNN': (
+        '-DUSE_CUDA=ON '
+        '-DUSE_CUDNN=ON '
+        '-DENABLE_CUDA_RTC=ON '
+        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENMP=ON '
+        '-DUSE_BLAS=open '
+        '-DUSE_LAPACK=ON '
+        '-DUSE_DIST_KVSTORE=OFF '
+        '-DMXNET_CUDA_ARCH="5.2" '
+        '-DUSE_MKLDNN=ON '
+        '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
+        '-DCMAKE_BUILD_TYPE=Release')
 
 }
 
@@ -146,22 +145,33 @@ def windows_build(args):
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
-    with remember_cwd():
-        os.chdir(path)
-        cmd = "\"{}\" && cmake -G \"NMake Makefiles JOM\" {} {}".format(args.vcvars,
-                                                                        CMAKE_FLAGS[args.flavour],
-                                                                        mxnet_root)
-        logging.info("Generating project with CMake:\n{}".format(cmd))
-        check_call(cmd, shell=True)
+    url = 'https://github.com/Kitware/CMake/releases/download/v3.16.1/cmake-3.16.1-win64-x64.zip'
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cmake_file_path = download_file(url, tmpdir)
+        with zipfile.ZipFile(cmake_file_path, 'r') as zip_ref:
+            # Create $tmpdir\cmake-3.16.1-win64-x64\bin\cmake.exe
+            zip_ref.extractall(tmpdir)
 
-        cmd = "\"{}\" && jom".format(args.vcvars)
-        logging.info("Building with jom:\n{}".format(cmd))
+        with remember_cwd():
+            os.chdir(path)
+            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
+                args.vcvars,
+                os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
+                CMAKE_FLAGS[args.flavour], mxnet_root)
+            logging.info("Generating project with CMake:\n{}".format(cmd))
+            check_call(cmd, shell=True)
 
-        t0 = int(time.time())
-        check_call(cmd, shell=True)
+            cmd = "\"{}\" && jom".format(args.vcvars)
+            logging.info("Building with jom:\n{}".format(cmd))
 
-        logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
-        logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+            t0 = int(time.time())
+            check_call(cmd, shell=True)
+
+            logging.info(
+                "Build flavour: {} complete in directory: \"{}\"".format(
+                    args.flavour, os.path.abspath(path)))
+            logging.info("Build took {}".format(
+                datetime.timedelta(seconds=int(time.time() - t0))))
     windows_package(args)
 
 
@@ -261,4 +271,3 @@ def main():
 
 if __name__ == '__main__':
     sys.exit(main())
-

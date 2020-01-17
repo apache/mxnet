@@ -74,7 +74,7 @@ class AggregateStats {
   void clear();
   /* !\brief by which stat to sort */
   enum class SortBy {
-    Avg, Min, Max, Count
+    Total, Avg, Min, Max, Count
   };
 
  private:

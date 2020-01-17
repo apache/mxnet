@@ -213,11 +213,11 @@ inline void SoftmaxGrad(const Tensor<gpu, 3, DType> &dst,
   cuda::SoftmaxGrad(dst, src, label, ignore_label);
 }
 
-template<typename IndexType, typename DType>
+template<bool clip, typename IndexType, typename DType>
 inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
                         const Tensor<gpu, 1, IndexType>& index,
                         const Tensor<gpu, 2, DType> &src) {
-  cuda::AddTakeGrad(dst, index, src);
+  cuda::AddTakeGrad<clip, IndexType, DType>(dst, index, src);
 }
 
 template<typename IndexType, typename DType>

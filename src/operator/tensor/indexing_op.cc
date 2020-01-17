@@ -29,7 +29,7 @@ namespace mxnet {
 namespace op {
 
 template<bool clip = true>
-struct TakeCPU {
+struct TakeZeroAxisCPU {
   // assume that idx have been flattened to a 1-D tensor (N,)
   // assume that out_data and in_data have been flattened to 2-D tensors, (N, M) and (K, M)
   // M is the number of columns of in_data and out_data
@@ -88,8 +88,9 @@ void EmbeddingOpForwardDnsImpl<cpu>(mshadow::Stream<cpu>* s,
       Tensor<cpu, 2, DType> wmat = weight.get<cpu, 2, DType>(s);
       Tensor<cpu, 2, DType> out = output.get_with_shape<cpu, 2, DType>(
         Shape2(oshape.ProdShape(0, oshape.ndim()-1), oshape[oshape.ndim()-1]), s);
-      Kernel<TakeCPU<true>, cpu>::Launch(s, oshape.Size() / wmat.shape_[1], out.dptr_, wmat.dptr_,
-                                         idx.dptr_, wmat.shape_[1], wmat.shape_[0]);
+      Kernel<TakeZeroAxisCPU<true>, cpu>::Launch(s, oshape.Size() / wmat.shape_[1], out.dptr_,
+                                                 wmat.dptr_, idx.dptr_,
+                                                 wmat.shape_[1], wmat.shape_[0]);
     });
   });
 }
@@ -288,24 +289,37 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& arrshape = inputs[take_::kArr].shape_;
   const mxnet::TShape& oshape = outputs[take_::kOut].shape_;
 
+  if (idxshape.Size() == 0) {
+    return;
+  }
+
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+      if (param.mode == take_::kRaise) {
+        IType min = 0;
+        IType max = static_cast<IType>(arrshape[actual_axis] - 1);
+        // check with single thread is faster since data is small
+        IType* idx_ptr = inputs[take_::kIdx].dptr<IType>();
+        size_t idx_size = idxshape.Size();
+        bool is_valid = CheckIndexOutOfBound(idx_ptr, idx_size, min, max);
+        CHECK(is_valid) << "take operator contains indices out of bound";
+      }
       if (actual_axis == 0) {
         if (param.mode == take_::kClip) {
-          Kernel<TakeCPU<true>, cpu>::Launch(s, idxshape.Size(),
-                                             outputs[take_::kOut].dptr<DType>(),
-                                             inputs[take_::kArr].dptr<DType>(),
-                                             inputs[take_::kIdx].dptr<IType>(),
-                                             oshape.Size()/idxshape.Size(), arrshape[0]);
+          Kernel<TakeZeroAxisCPU<true>, cpu>::Launch(s, idxshape.Size(),
+                                                     outputs[take_::kOut].dptr<DType>(),
+                                                     inputs[take_::kArr].dptr<DType>(),
+                                                     inputs[take_::kIdx].dptr<IType>(),
+                                                     oshape.Size()/idxshape.Size(), arrshape[0]);
         } else {
-          Kernel<TakeCPU<false>, cpu>::Launch(s, idxshape.Size(),
-                                              outputs[take_::kOut].dptr<DType>(),
-                                              inputs[take_::kArr].dptr<DType>(),
-                                              inputs[take_::kIdx].dptr<IType>(),
-                                              oshape.Size()/idxshape.Size(), arrshape[0]);
+          Kernel<TakeZeroAxisCPU<false>, cpu>::Launch(s, idxshape.Size(),
+                                                      outputs[take_::kOut].dptr<DType>(),
+                                                      inputs[take_::kArr].dptr<DType>(),
+                                                      inputs[take_::kIdx].dptr<IType>(),
+                                                      oshape.Size()/idxshape.Size(), arrshape[0]);
         }
       } else {
         mshadow::Shape<10> in_strides;
@@ -319,21 +333,25 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
           out_strides[i] = stride;
         }
         if (param.mode == take_::kClip) {
-          Kernel<Take<true>, cpu>::Launch(s, oshape.Size(),
-                                          outputs[take_::kOut].dptr<DType>(),
-                                          inputs[take_::kArr].dptr<DType>(),
-                                          inputs[take_::kIdx].dptr<IType>(),
-                                          in_strides, out_strides, arrshape.ndim(),
-                                          oshape.ndim(), idxshape.ndim(),
-                                          arrshape[actual_axis], actual_axis);
-        } else if (param.mode == take_::kWrap) {
-          Kernel<Take<false>, cpu>::Launch(s, oshape.Size(),
-                                           outputs[take_::kOut].dptr<DType>(),
-                                           inputs[take_::kArr].dptr<DType>(),
-                                           inputs[take_::kIdx].dptr<IType>(),
-                                           in_strides, out_strides, arrshape.ndim(),
-                                           oshape.ndim(), idxshape.ndim(),
-                                           arrshape[actual_axis], actual_axis);
+          Kernel<TakeNonzeroAxis<true>, cpu>::Launch(s, oshape.Size(),
+                                                     outputs[take_::kOut].dptr<DType>(),
+                                                     inputs[take_::kArr].dptr<DType>(),
+                                                     inputs[take_::kIdx].dptr<IType>(),
+                                                     out_strides[actual_axis-1],
+                                                     in_strides[actual_axis-1],
+                                                     in_strides[actual_axis], arrshape.ndim(),
+                                                     oshape.ndim(), idxshape.ndim(),
+                                                     arrshape[actual_axis], actual_axis);
+        } else {
+          Kernel<TakeNonzeroAxis<false>, cpu>::Launch(s, oshape.Size(),
+                                                      outputs[take_::kOut].dptr<DType>(),
+                                                      inputs[take_::kArr].dptr<DType>(),
+                                                      inputs[take_::kIdx].dptr<IType>(),
+                                                      out_strides[actual_axis-1],
+                                                      in_strides[actual_axis-1],
+                                                      in_strides[actual_axis], arrshape.ndim(),
+                                                      oshape.ndim(), idxshape.ndim(),
+                                                      arrshape[actual_axis], actual_axis);
         }
       }
     });
@@ -417,6 +435,65 @@ inline void SparseEmbeddingOpBackwardRspImpl<cpu>(const bool deterministic,
   });
 }
 
+/*
+ * \brief check if any of the indices is out of bound
+ * \param s the stream
+ * \param idx_ptr the indices on the stream
+ * \param N the number of indices in an axis
+ * \param M the number of axises to exmaine
+ * \param mshape the array that stores shape for each dimension
+ * \param is_valid_dim_ptr the temparary workspace that contains out-of-bound indices
+ */
+template<typename DType>
+void GatherNDCheckBoundCPU(mshadow::Stream<cpu> *s, const DType* idx_ptr, index_t N,
+                        index_t M, const mshadow::Shape<10> mshape, DType* is_valid_dim_ptr) {
+  using namespace mxnet_op;
+  Kernel<set_zero, cpu>::Launch(s, M, is_valid_dim_ptr);
+  Kernel<is_valid_check_gather_nd, cpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
+  for (int m = 0; m < M; m++) {
+    if (is_valid_dim_ptr[m] > mshape[m] - 1 || is_valid_dim_ptr[m] < - mshape[m]) {
+      LOG(FATAL)<< "IndexError: index " << is_valid_dim_ptr[m] << " is out of bounds for axis "
+        << m << " with size " << mshape[m];
+    }
+  }
+}
+
+void GatherNDForwardCPU(const nnvm::NodeAttrs& attrs,
+                     const OpContext& ctx,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  const mxnet::TShape& dshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = dshape.ProdShape(M, dshape.ndim());
+  mshadow::Shape<10> strides;
+  mshadow::Shape<10> mshape;
+  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+    strides[i] = stride;
+    mshape[i] = dshape[i];
+  }
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      // check whether indices are out of bound
+      IType* idx_ptr = inputs[1].dptr<IType>();
+      Tensor<cpu, 1, IType> workspace =
+        ctx.requested[0].get_space_typed<cpu, 1, IType>(Shape1(M), s);
+      IType* is_valid_dim_ptr = reinterpret_cast<IType*>(workspace.dptr_);
+      GatherNDCheckBoundCPU(s, idx_ptr, N, M, mshape, is_valid_dim_ptr);
+      Kernel<gather_nd, cpu>::Launch(
+        s, N, req[0], N, M, K, strides, mshape, outputs[0].dptr<DType>(),
+        inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
+    });
+  });
+}
 
 template<typename DType, typename IType>
 inline typename std::enable_if<(!std::is_same<DType, mshadow::half::half_t>::value), void>::type
@@ -481,8 +558,9 @@ All the input values should be integers in the range [0, input_dim).
 If the input_dim is ip0 and output_dim is op0, then shape of the embedding weight matrix must be
 (ip0, op0).
 
-By default, if any index mentioned is too large, it is replaced by the index that addresses
-the last vector in an embedding matrix.
+When "sparse_grad" is False, if any index mentioned is too large, it is replaced by the index that
+addresses the last vector in an embedding matrix.
+When "sparse_grad" is True, an error will be raised if invalid indices are found.
 
 Examples::
 
@@ -532,6 +610,7 @@ The storage type of weight can be either row_sparse or default.
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -605,6 +684,7 @@ Examples::
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<mxnet::FInferShape>("FInferShape", EmbeddingOpShape<SparseEmbeddingParam>)
 .set_attr<nnvm::FInferType>("FInferType", EmbeddingOpType<SparseEmbeddingParam>)
 .set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
@@ -644,6 +724,7 @@ NNVM_REGISTER_OP(_backward_SparseEmbedding)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpBackwardEx<cpu>);
 
 NNVM_REGISTER_OP(take)
+.add_alias("_npi_take")
 .describe(R"code(Takes elements from an input array along the given axis.
 
 This function slices the input array along a particular axis with the provided indices.
@@ -708,6 +789,7 @@ The storage type of ``take`` output depends upon the input storage type:
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TakeOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
@@ -815,6 +897,7 @@ Examples::
 
 
 NNVM_REGISTER_OP(gather_nd)
+.add_alias("_npi_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 
@@ -848,7 +931,11 @@ Examples::
   })
 .set_attr<mxnet::FInferShape>("FInferShape", GatherNDShape)
 .set_attr<nnvm::FInferType>("FInferType", GatherNDType)
-.set_attr<FCompute>("FCompute<cpu>", GatherNDForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", GatherNDForwardCPU)
 .set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
@@ -1008,6 +1095,7 @@ Examples::
 .add_arguments(ScatterNDParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_scatter_set_nd)
+.add_alias("_npi_scatter_set_nd")
 .describe(R"code(This operator has the same functionality as scatter_nd
 except that it does not reset the elements not indexed by the input
 index `NDArray` in the input data `NDArray`. output should be explicitly

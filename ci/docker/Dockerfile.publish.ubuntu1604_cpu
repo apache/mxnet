@@ -26,9 +26,11 @@ COPY install/ubuntu_base.sh /work/
 RUN /work/ubuntu_base.sh
 
 COPY install/ubuntu_python.sh /work/
+COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
 
 COPY install/ubuntu_scala.sh /work/
+COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
 
 ARG USER_ID=0

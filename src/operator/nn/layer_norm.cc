@@ -194,6 +194,7 @@ axis to be the last item in the input shape.
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_argument("data", "NDArray-or-Symbol", "Input data to layer normalization")
 .add_argument("gamma", "NDArray-or-Symbol", "gamma array")
 .add_argument("beta", "NDArray-or-Symbol", "beta array")

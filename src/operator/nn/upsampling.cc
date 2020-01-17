@@ -195,6 +195,7 @@ Example::
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   }
 })
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", UpSamplingCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", UpSamplingGrad{"_backward_UpSampling"})
 .set_attr<std::string>("key_var_num_args", "num_args")
@@ -210,6 +211,14 @@ Example::
     });
 
 NNVM_REGISTER_OP(_backward_UpSampling)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(attrs.parsed);
+  if (param_.sample_type != up_enum::kNearest) {
+    return 3;
+  } else {
+    return 1;
+  }
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const UpSamplingParam& params = nnvm::get<UpSamplingParam>(attrs.parsed);
   return params.sample_type == up_enum::kNearest ? params.num_args : 2;

@@ -384,7 +384,6 @@ static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &p
   mxnet::TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
       && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && shape[param.axis] % 8 == 0
       && !mxnet::op::batchnorm::disable_mkl;
 }
 
@@ -395,17 +394,11 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
                            const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-  // MKLDNN batchnorm only works well on the special MKLDNN layout.
-  if (SupportMKLDNNBN(inputs[0], param) && inputs[0].IsMKLDNNData()) {
-    std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
-    std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
-
-    if (inputs[0].dtype() == mshadow::kFloat32) {
+  if (SupportMKLDNNBN(inputs[0], param)) {
       MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormForward<float>(ctx, param, in_data, req, outputs, aux_states);
+      MKLDNNRun(MKLDNNBatchNormForward<float>, attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
-    }
   }
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
@@ -415,34 +408,12 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<NDArray> &inputs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
-  CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-
-  mxnet::TShape shape = inputs[0].shape();
-  // MKLDNN batchnorm only works well on the special MKLDNN layout.
-  if (SupportMKLDNNBN(inputs[0], param)
-      && (inputs[3].IsMKLDNNData() || inputs[0].IsMKLDNNData())) {
-    std::vector<NDArray> out_grad(1);
-    std::vector<NDArray> out_data(3);
-    std::vector<NDArray> in_data(3);
-    std::vector<NDArray> aux_states(2);
-    out_grad[0] = inputs[0];
-    out_data[batchnorm::kMean] = inputs[1];
-    out_data[batchnorm::kVar] = inputs[2];
-    in_data[batchnorm::kData] = inputs[3];
-    in_data[batchnorm::kGamma] = inputs[4];
-    in_data[batchnorm::kBeta] = inputs[5];
-    aux_states[batchnorm::kMovingMean] = inputs[6];
-    aux_states[batchnorm::kMovingVar] = inputs[7];
-    const std::vector<NDArray> &in_grad = outputs;
-
-    if (inputs[0].dtype() == mshadow::kFloat32) {
+  if (SupportMKLDNNBN(inputs[0], param)) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormBackward<float>(ctx, param, out_grad, in_data,
-                                     out_data, req, in_grad, aux_states);
+      MKLDNNRun(MKLDNNBatchNormBackward<float>, attrs, ctx, inputs, req, outputs);
       MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
-    }
   }
   FallBackCompute(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
@@ -622,6 +593,7 @@ then set ``gamma`` to 1 and its gradient to 0.
   });
 
 NNVM_REGISTER_OP(_backward_BatchNorm)
+.set_num_inputs(8)
 .set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)

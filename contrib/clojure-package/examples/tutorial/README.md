@@ -17,6 +17,15 @@
 
 # tutorial
 
-Tutorials are based on the Scala api examples here https://mxnet.incubator.apache.org/api/scala/ndarray.html
+
+## Installation
+
+Before you run this example, make sure that you have the clojure package installed.
+In the main clojure package directory, do `lein install`. Then you can run
+`lein install` in this directory.
+
+## Usage
+
+Tutorials are based on the Scala api examples here https://mxnet.apache.org/api/scala/ndarray.html
 
 Start with ndarray then move onto symbol and module

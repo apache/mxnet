@@ -1,0 +1,13 @@
+.idea/
+.cache/
+.vscode/
+*.egg-info/
+dist/
+_build/
+build/
+example/_build/
+node_modules/
+*.log
+**/*.pyc
+**/__pycache__
+.sass-cache/

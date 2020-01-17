@@ -79,7 +79,7 @@ int get_rows_per_block(size_t row_size, int num_threads_per_block) {
   int actual_num_warps_per_row = std::min(desired_num_warps_per_row,
                                           num_threads_per_block / warp_size);
   // actual number of warps needs to be power of 2
-  actual_num_warps_per_row = RoundToPower2(desired_num_warps_per_row);
+  actual_num_warps_per_row = RoundToPower2(actual_num_warps_per_row);
   return num_threads_per_block / (warp_size * actual_num_warps_per_row);
 }
 

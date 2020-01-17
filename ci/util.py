@@ -15,9 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
 import contextlib
 import logging
+import logging.config
+import os
+import subprocess
+import sys
+
+import requests
+
 
 def get_mxnet_root() -> str:
     curpath = os.path.abspath(os.path.dirname(__file__))
@@ -31,6 +37,7 @@ def get_mxnet_root() -> str:
             raise RuntimeError("Got to the root and couldn't find a parent folder with .mxnet_root")
         curpath = parent
     return curpath
+
 
 @contextlib.contextmanager
 def remember_cwd():
@@ -87,11 +94,14 @@ def under_ci() -> bool:
     return 'JOB_NAME' in os.environ
 
 
-def ec2_instance_id_hostname() -> str:
+def ec2_instance_info() -> str:
     import requests
     if under_ci():
         result = []
         try:
+            r = requests.get("http://instance-data/latest/meta-data/instance-type")
+            if r.status_code == 200:
+                result.append(r.content.decode())
             r = requests.get("http://instance-data/latest/meta-data/instance-id")
             if r.status_code == 200:
                 result.append(r.content.decode())
@@ -113,3 +123,44 @@ def chdir_to_script_directory():
     os.chdir(base)
 
 
+def script_name() -> str:
+    """:returns: script name with leading paths removed"""
+    return os.path.split(sys.argv[0])[1]
+
+
+def config_logging():
+    conf_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logging.conf")
+    logging.config.fileConfig(os.getenv('LOGGING_CONF', conf_path))
+
+    # Force botocore and requests are set to WARNING to avoid leaking any credentials
+    # or sensitive information
+    logging.getLogger("botocore").setLevel(logging.WARNING)
+    logging.getLogger("requests").setLevel(logging.WARNING)
+
+
+# Takes url and downloads it to the dest_path directory on Windows.
+def download_file(url, dest_path):
+    file_name = url.split('/')[-1]
+    full_path = "{}\\{}".format(dest_path, file_name)
+    logging.info("Downloading: {}".format(full_path))
+    r = requests.get(url, stream=True)
+    if r.status_code == 404:
+        return r.status_code
+    elif r.status_code != 200:
+        logging.error("{} returned status code {}".format(url, r.status_code))
+    with open(full_path, 'wb') as f:
+        for chunk in r.iter_content(chunk_size=1024):
+            if chunk: # filter out keep-alive new chunks
+                f.write(chunk)
+    return full_path
+
+
+# Takes arguments and runs command on host.  Shell is disabled by default.
+def run_command(args, shell=False):
+    try:
+        logging.info("Issuing command: {}".format(args))
+        res = subprocess.check_output(args, shell=shell, timeout=1800).decode("utf-8").replace("\r\n", "")
+        logging.info("Output: {}".format(res))
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError("command '{}' return with error (code {}): {}".format(e.cmd, e.returncode, e.output))
+    return res

@@ -49,11 +49,17 @@ namespace op {
  * \param keys the keys to sort
  * \param values the values that sorts w.r.t the key
  * \param is_ascend whether to sort key in ascending order
+ * \param begin_bit The beginning bit of the different values in keys. Default 0.
+ * \param end_bit The ending bit of the different values in keys. Default to 8 * sizeof(dtype of key).
+ * \param sorted_keys If specified, keys will be sorted out of place.
+ * \param sorted_values If specified, values will be sorted out of place.
  */
 template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu, 1, VDType> values,
                       bool is_ascend = true, mshadow::Tensor<cpu, 1, char>* workspace = NULL,
-                      const int begin_bit = 0, const int end_bit = sizeof(KDType)*8) {
+                      const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                      mshadow::Tensor<cpu, 1, KDType>* sorted_keys = nullptr,
+                      mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
   CHECK_EQ(keys.size(0), values.size(0))
@@ -62,6 +68,12 @@ inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu,
   std::vector<size_t> idx(keys.size(0));
   std::vector<KDType> keys_vec(keys.size(0));
   std::vector<VDType> values_vec(values.size(0));
+  if (sorted_keys == nullptr) {
+    sorted_keys = &keys;
+  }
+  if (sorted_values == nullptr) {
+    sorted_values = &values;
+  }
   for (index_t i = 0; i < keys.size(0); i++) {
     idx[i] = i;
     keys_vec[i] = keys[i];
@@ -77,18 +89,28 @@ inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu,
                        {return keys_vec[i1] > keys_vec[i2]; });
   }
   for (index_t i = 0; i < values.size(0); i++) {
-    keys[i] = keys_vec[idx[i]];
-    values[i] = values_vec[idx[i]];
+    (*sorted_keys)[i] = keys_vec[idx[i]];
+    (*sorted_values)[i] = values_vec[idx[i]];
   }
 }
 
 /*!
  * \brief CPU/GPU: Return the amount of temporary storage in bytes required for SortByKey
  * \param num_keys number of keys to sort
+ * \param keys_in_place Whether the sorting of keys will happen in place.
+ *                      Default true. If set to false, subsequent
+ *                      call to SortByKey needs to specify the
+ *                      sorted_keys parameter.
+ * \param values_in_place Whether the sorting of values will happen in place.
+ *                        Default true. If set to false, subsequent
+ *                        call to SortByKey needs to specify the
+ *                        sorted_values parameter.
  */
 template <typename KDType, typename VDType, typename xpu>
 inline typename std::enable_if<std::is_same<xpu, cpu>::value, size_t>::type
-SortByKeyWorkspaceSize(const size_t num_keys) {
+SortByKeyWorkspaceSize(const size_t num_keys,
+                       const bool keys_in_place = true,
+                       const bool values_in_place = true) {
   return 0;
 }
 
@@ -97,18 +119,34 @@ SortByKeyWorkspaceSize(const size_t num_keys) {
  * \param keys the keys to sort
  * \param values the values that sorts w.r.t the key
  * \param is_ascend whether to sort key in ascending order
+ * \param begin_bit The beginning bit of the different values in keys. Default 0.
+ * \param end_bit The ending bit of the different values in keys. Default to 8 * sizeof(dtype of key).
+ * \param sorted_keys If specified, keys will be sorted out of place.
+ * \param sorted_values If specified, values will be sorted out of place.
  */
 template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
                       bool is_ascend = true, mshadow::Tensor<gpu, 1, char>* workspace = NULL,
-                      const int begin_bit = 0, const int end_bit = sizeof(KDType)*8);
+                      const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                      mshadow::Tensor<gpu, 1, KDType>* sorted_keys = nullptr,
+                      mshadow::Tensor<gpu, 1, VDType>* sorted_values = nullptr);
 /*!
  * \brief CPU/GPU: Return the amount of temporary storage in bytes required for SortByKey
  * \param num_keys number of keys to sort
+ * \param keys_in_place Whether the sorting of keys will happen in place.
+ *                      Default true. If set to false, subsequent
+ *                      call to SortByKey needs to specify the
+ *                      sorted_keys parameter.
+ * \param values_in_place Whether the sorting of values will happen in place.
+ *                        Default true. If set to false, subsequent
+ *                        call to SortByKey needs to specify the
+ *                        sorted_values parameter.
  */
 template <typename KDType, typename VDType, typename xpu>
 inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
-SortByKeyWorkspaceSize(const size_t num_keys);
+SortByKeyWorkspaceSize(const size_t num_keys,
+                       const bool keys_in_place = true,
+                       const bool values_in_place = true);
 
 }  // namespace op
 }  // namespace mxnet

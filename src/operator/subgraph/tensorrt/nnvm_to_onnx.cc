@@ -171,6 +171,12 @@ std::string ConvertNnvmGraphToOnnx(
   return serialized_onnx_graph;
 }
 
+void ConvertIdentity(NodeProto* node_proto, const NodeAttrs& attrs,
+                     const nnvm::IndexedGraph& /*ig*/,
+                     const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
+  node_proto->set_op_type("Identity");
+}
+
 template <class ConvDeconvParam>
 void ConvDeconvConvertHelper(NodeProto* node_proto, const NodeAttrs& attrs,
                              const nnvm::IndexedGraph& /*ig*/,
@@ -262,10 +268,12 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
   const bool global_pool = pooling_param.global_pool;
 
   if (global_pool) {
-    if (pool_type == 0) {
+    if (pool_type == pool_enum::kMaxPooling) {
       node_proto->set_op_type("GlobalMaxPool");
-    } else {
+    } else if (pool_type == pool_enum::kAvgPooling) {
       node_proto->set_op_type("GlobalAveragePool");
+    } else {
+      LOG(FATAL) << "Pool type of node '" << attrs.name << "' unsupported: " << attrs.name;
     }
     return;
   }
@@ -298,12 +306,29 @@ void ConvertPooling(NodeProto* node_proto, const NodeAttrs& attrs,
     strides->add_ints(static_cast<int64>(kval));
   }
 
-  if (pool_type == 0) {
+  // ceil_mode
+  AttributeProto* const ceil_mode = node_proto->add_attribute();
+  ceil_mode->set_name("ceil_mode");
+  ceil_mode->set_type(AttributeProto::INT);
+  ceil_mode->set_i(static_cast<int64>(pooling_param.pooling_convention == pool_enum::kFull));
+
+  if (pool_type == pool_enum::kMaxPooling) {
     node_proto->set_op_type("MaxPool");
-  } else {
+  } else if (pool_type == pool_enum::kAvgPooling) {
     node_proto->set_op_type("AveragePool");
-  }  // average pooling
-  // not global pooling
+  } else {
+    LOG(FATAL) << "Pool type of node '" << attrs.name << "' unsupported: " << attrs.name;
+  }
+
+  // count_include_pad
+  AttributeProto* const count_include_pad = node_proto->add_attribute();
+  count_include_pad->set_name("count_include_pad");
+  count_include_pad->set_type(AttributeProto::INT);
+  if (pooling_param.count_include_pad.has_value()) {
+    count_include_pad->set_i(pooling_param.count_include_pad.value());
+  } else {
+    count_include_pad->set_i(1);
+  }
 }  // end ConvertPooling
 
 void ConvertRelu(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
@@ -554,7 +579,7 @@ void ConvertConstant(
   auto size = shape.Size();
 
   if (dtype == TensorProto_DataType_FLOAT) {
-    std::shared_ptr<float> shared_data_ptr(new float[size]);
+    std::shared_ptr<float[]> shared_data_ptr(new float[size]);
     float* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
 
@@ -562,7 +587,7 @@ void ConvertConstant(
       initializer_proto->add_float_data(data_ptr[blob_idx]);
     }
   } else if (dtype == TensorProto_DataType_FLOAT16) {
-    std::shared_ptr<uint16_t> shared_data_ptr(new uint16_t[size]);
+    std::shared_ptr<uint16_t[]> shared_data_ptr(new uint16_t[size]);
     uint16_t* const data_ptr = shared_data_ptr.get();
     nd.SyncCopyToCPU(static_cast<void*>(data_ptr), size);
     for (size_t blob_idx = 0; blob_idx < size; ++blob_idx) {
@@ -608,7 +633,7 @@ void ConvertOutput(
 void ConvertClip(NodeProto* node_proto, const NodeAttrs& attrs,
                  const nnvm::IndexedGraph& /*ig*/,
                  const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto param = nnvm::get<ClipParam>(attrs.parsed);
+  const auto& param = nnvm::get<ClipParam>(attrs.parsed);
 
   node_proto->set_op_type("Clip");
 
@@ -628,7 +653,7 @@ void ConvertClip(NodeProto* node_proto, const NodeAttrs& attrs,
 void ConvertPad(NodeProto* node_proto, const NodeAttrs& attrs,
                 const nnvm::IndexedGraph& /*ig*/,
                 const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  const auto param = nnvm::get<PadParam>(attrs.parsed);
+  const auto& param = nnvm::get<PadParam>(attrs.parsed);
 
   node_proto->set_op_type("Pad");
 
@@ -647,7 +672,7 @@ void ConvertPad(NodeProto* node_proto, const NodeAttrs& attrs,
       mode->set_s("reflect");
       break;
     default:
-      throw dmlc::Error("Such mode of padding doesn't exist doesn't exist");
+      throw dmlc::Error("Such mode of padding doesn't exist");
   }
 
   // pads

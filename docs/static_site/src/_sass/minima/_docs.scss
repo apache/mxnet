@@ -1,0 +1,79 @@
+.docs-logo-docs {
+  width: 25px;
+  padding-bottom: 4px;
+  margin-right: 10px;
+}
+
+.docs-logo-container {
+  margin: auto;
+  text-align: center;
+  margin-bottom: 20px;
+
+  img.docs-logo-image {
+    height: 75px;
+    margin: auto;
+  }
+}
+
+.docs-side-bar {
+  margin-left: 0px !important;
+  padding-right: 10px;
+  background-color: $grey-color-light;
+}
+
+.docs-hero {
+  margin-bottom: 20px;
+}
+
+.docs-hero-left {
+
+}
+
+.docs-hero-right {
+
+}
+
+.docs-card {
+  background-color: $grey-color-light;
+  padding: 20px;
+  height: 100%;
+}
+
+.docs-card.docs-side {
+  padding: 5px;
+
+  ul {
+    margin-left: 0;
+  }
+
+  li {
+    margin-left: 20px;
+  }
+}
+
+.docs-action-btn {
+  a {
+    color: $grey-color-dark;
+
+    &:visited {
+      color: $color-mxnet-dark;
+    }
+
+    &:hover {
+      color: orangered;
+    }
+
+  }
+}
+
+.docs-faq {
+  background-color: white;
+}
+
+.docs-architecture {
+  background-color: $grey-color-light;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}

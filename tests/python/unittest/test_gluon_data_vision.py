@@ -146,17 +146,18 @@ def test_crop_resize():
         assert((out_batch_np[0:2,0:4,1,1].flatten() == [37,  52,  67,  82, 127, 142, 157, 172]).all())
         # test normal case with resize
         data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
-        out_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 2)(data_in)
-        data_expected = image.imresize(nd.slice(data_in, (0, 0, 0), (50, 100 , 3)), 25, 25, 2)
+        out_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 1)(data_in)
+        data_expected = transforms.Resize(size=25, interpolation=1)(nd.slice(data_in, (0, 0, 0), (50, 100, 3)))
         assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
         # test 4D input with resize
         data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
-        out_batch_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 2)(data_bath_in)
+        out_batch_nd = transforms.CropResize(0, 0, 100, 50, (25, 25), 1)(data_bath_in)
         for i in range(len(out_batch_nd)):
-            assert_almost_equal(image.imresize(nd.slice(data_bath_in[i], (0, 0, 0), (50, 100, 3)), 25, 25, 2).asnumpy(),
-                out_batch_nd[i].asnumpy())
+            actual = transforms.Resize(size=25, interpolation=1)(nd.slice(data_bath_in[i], (0, 0, 0), (50, 100, 3))).asnumpy()
+            expected = out_batch_nd[i].asnumpy()
+            assert_almost_equal(expected, actual)
         # test with resize height and width should be greater than 0
-        transformer = transforms.CropResize(0, 0, 100, 50, (-25, 25), 2)
+        transformer = transforms.CropResize(0, 0, 100, 50, (-25, 25), 1)
         assertRaises(MXNetError, transformer, data_in)
         # test height and width should be greater than 0 
         transformer = transforms.CropResize(0, 0, -100, -50)
@@ -188,14 +189,6 @@ def test_crop_resize():
         data_in = nd.arange(60).reshape((5, 4, 3)).astype(dtype)
         for test_case in test_list:
             test_crop_backward(data_in, test_case)
-        
-
-
-    # check numeric gradient of nd.image.crop
-    # in_data = np.arange(36).reshape(3, 4, 3)
-    # data = mx.sym.Variable('data')
-    # image_crop_sym = mx.sym.image.crop(data, 0, 0, 2, 2)
-    # check_numeric_gradient(image_crop_sym, [in_data])
 
 
 @with_seed()
@@ -235,6 +228,22 @@ def test_transformer():
 
     transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
+
+@with_seed()
+def test_random_transforms():
+    from mxnet.gluon.data.vision import transforms
+    
+    tmp_t = transforms.Compose([transforms.Resize(300), transforms.RandomResizedCrop(224)])
+    transform = transforms.Compose([transforms.RandomApply(tmp_t, 0.5)])
+
+    img = mx.nd.ones((10, 10, 3), dtype='uint8')
+    iteration = 1000
+    num_apply = 0
+    for _ in range(iteration):
+        out = transform(img)
+        if out.shape[0] == 224:
+            num_apply += 1
+    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
 
 if __name__ == '__main__':

@@ -23,6 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
+from common import with_seed, assert_raises_cudnn_not_satisfied
 import unittest
 
 def test_box_nms_op():
@@ -332,6 +333,117 @@ def test_multibox_prior_op():
     Y = mx.contrib.nd.MultiBoxPrior(X, sizes=[0.75, 0.5, 0.25], ratios=[20, 2, 0.5])
     boxes = Y.reshape((h, w, 5, 4))
     assert_allclose(boxes.asnumpy()[250, 250, 0, :], np.array([-0.948249,  0.362671,  1.636436,  0.530377]), atol=1e-5, rtol=1e-5)
+
+def test_box_encode_op():
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    refs = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    samples = mx.nd.array([[0, 1]])
+    matches = mx.nd.array([[0, 1]])
+    means = mx.nd.array([0.0, 0.0, 0.0, 0.0])
+    stds = mx.nd.array([0.1, 0.1, 0.2, 0.2])
+    Y, mask = mx.nd.contrib.box_encode(samples, matches, anchors, refs, means, stds)
+    assert_allclose(Y.asnumpy(), np.zeros((1, 2, 4)), atol=1e-5, rtol=1e-5)
+    assert_allclose(mask.asnumpy(), np.array([[[0., 0., 0., 0.], [1., 1., 1., 1.]]]), atol=1e-5, rtol=1e-5)
+
+def test_box_decode_op():
+    data = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
+    Y = mx.nd.contrib.box_decode(data, anchors, .1, .1, .2, .2)
+    assert_allclose(Y.asnumpy(), np.array([[[-0.0562755, -0.00865743, 0.26227552, 0.42465743], \
+        [0.13240421, 0.17859563, 0.93759584, 1.1174043 ]]]), atol=1e-5, rtol=1e-5)
+
+@with_seed()
+def test_op_mrcnn_mask_target():
+    if default_context().device_type != 'gpu':
+        return
+
+    num_rois = 2
+    num_classes = 4
+    mask_size = (3, 3)
+    ctx = mx.gpu(0)
+    # (B, N, 4)
+    rois = mx.nd.array([[[2.3, 4.3, 2.2, 3.3],
+                        [3.5, 5.5, 0.9, 2.4]]], ctx=ctx)
+    gt_masks = mx.nd.arange(0, 4*32*32, ctx=ctx).reshape(1, 4, 32, 32)
+
+    # (B, N)
+    matches = mx.nd.array([[2, 0]], ctx=ctx)
+    # (B, N)
+    cls_targets = mx.nd.array([[2, 1]], ctx=ctx)
+
+    mask_targets, mask_cls = mx.nd.contrib.mrcnn_mask_target(rois, gt_masks, matches, cls_targets,
+                                                             num_rois=num_rois,
+                                                             num_classes=num_classes,
+                                                             mask_size=mask_size)
+
+    # Ground truth outputs were generated with GluonCV's target generator
+    # gluoncv.model_zoo.mask_rcnn.MaskTargetGenerator(1, num_rois, num_classes, mask_size)
+    gt_mask_targets = mx.nd.array([[[[[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]],
+                                     [[2193.4    , 2193.7332 , 2194.0667 ],
+                                      [2204.0667 , 2204.4    , 2204.7334 ],
+                                      [2214.7334 , 2215.0667 , 2215.4    ]]],
+                                    [[[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [ 206.33333,  206.66666,  207.     ]],
+                                     [[ 185.     ,  185.33334,  185.66667],
+                                      [ 195.66667,  196.00002,  196.33334],
+                                      [  206.33333,  206.66666,  207.     ]]]]])
+
+    gt_mask_cls = mx.nd.array([[0,0,1,0], [0,1,0,0]])
+    gt_mask_cls = gt_mask_cls.reshape(1,2,4,1,1).broadcast_axes(axis=(3,4), size=(3,3))
+
+    assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
+    assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
+
+@with_seed()
+def test_modulated_deformable_convolution():
+    for num_batch in [1, 2]:
+        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
+            for input_height, input_width in itertools.product([5, 6], [5, 6]):
+                for dilate in [(1, 1), (2, 2)]:
+                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
+                        output_height = input_height
+                        output_width = input_width
+                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+                        offset_data = \
+                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+                            * 0.8 + 0.1
+                        mask_data = np.random.rand(num_batch, num_deformable_group * 3 * 3, output_height, output_width)
+                        mask_data = 0.5 * (1 + np.tanh(0.5 * mask_data)) # sigmoid
+                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+                        bias = np.zeros(num_channel_data)
+
+                        im_data_var = mx.symbol.Variable(name="im_data")
+                        offset_data_var = mx.symbol.Variable(name="offset_data")
+                        mask_data_var = mx.symbol.Variable(name="mask_data")
+                        weight_var = mx.symbol.Variable(name="weight")
+                        bias_var = mx.symbol.Variable(name="bias")
+                        op = mx.sym.contrib.ModulatedDeformableConvolution(name='test_op', data=im_data_var,
+                                                                           offset=offset_data_var, mask=mask_data_var,
+                                                                           weight=weight_var, bias=bias_var,
+                                                                           num_filter=num_channel_data, pad=dilate,
+                                                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                                                           num_deformable_group=num_deformable_group)
+                        if grad_nodes[0] == 'offset_data':
+                            # wider tolerance needed for coordinate differential
+                            rtol, atol = 1.0, 1e-2
+                        else:
+                            rtol, atol = 0.05, 1e-3
+
 
 if __name__ == '__main__':
     import nose

@@ -1,0 +1,38 @@
+---
+layout: page
+title: Blog
+subtitle: Latest news on MXNet and its ecosystem
+permalink: /blog/
+action: See All Blog Posts
+action_url: https://medium.com/apache-mxnet
+---
+
+<div class="row">
+    <div class="col-8">
+    </div>
+    <div class="col-4">
+
+    </div>
+</div>
+
+<div id="medium-widget"></div>
+<script>
+
+    MediumWidget.Init({renderTo: '#medium-widget',
+        params: {
+            "resource": "https://medium.com/apache-mxnet",
+            "postsPerLine": 3,
+            "limit": 9,
+            "picture": "big",
+            "fields": ["description", "claps", "publishAt"],
+            "ratio": "landscape"
+        }
+    })
+
+
+</script>
+
+<div class="blog-more">
+<a style="margin-top:20px" href="https://medium.com/apache-mxnet" class="btn btn-action">See All Blog Posts<span class="span-accented">›</span></a>
+
+</div>

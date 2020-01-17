@@ -26,6 +26,7 @@
 #include "./softmax_output-inl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "./nn/mkldnn/mkldnn_ops-inl.h"
+#include "./nn/mkldnn/mkldnn_base-inl.h"
 #endif
 namespace mxnet {
 namespace op {
@@ -143,7 +144,7 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs &attrs,
   const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0]) && !ctx.is_train && SupportMKLDNNSoftmaxOutput(param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNSoftmaxOutputForward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNSoftmaxOutputForward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -257,6 +258,7 @@ NNVM_REGISTER_OP(SoftmaxOutput)
 NNVM_REGISTER_OP(SoftmaxOutput).add_alias("Softmax");
 
 NNVM_REGISTER_OP(_backward_SoftmaxOutput)
+.set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){

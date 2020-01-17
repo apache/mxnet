@@ -1,0 +1,181 @@
+.home {
+  margin-bottom: 40px;
+}
+
+
+.home .btn {
+  border: 0;
+}
+
+a.btn {
+  padding: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  margin-top: 20px;
+  background-color: white;
+  transition: box-shadow 0.3s linear, border 0.3s linear;
+
+  color: $grey-color-dark;
+
+  &:hover {
+    box-shadow: inset 0 -2px 0 0 $color-mxnet;
+    color: black;
+  }
+}
+
+.btn-action {
+  float: right;
+}
+
+.section {
+  padding-top: 20px;
+  padding-bottom: 30px;
+
+  h2 {
+    text-transform: uppercase;
+  }
+}
+
+// =====
+// Cards
+// =====
+
+
+.card {
+  color: $grey-color-dark;
+  padding: 10px;
+  background-color: white;
+  transition: box-shadow 0.3s linear;
+  height: 100%;
+
+
+  &:hover {
+    box-shadow: inset 0 -2px 0 0 $color-mxnet;
+    filter: none;
+
+    a h3, h4 {
+      color: orangered;
+    }
+  }
+
+  h3 {
+    color: black;
+  }
+
+  p {
+    font-size: 90%;
+  }
+
+  a {
+    color: $grey-color-dark;
+
+    &:hover {
+      color: black;
+    }
+  }
+}
+
+
+.card-header-title {
+  height: 50px;
+}
+
+.card-header-title h3 {
+  float: left
+}
+
+.card-header-title img {
+  float: right;
+  width: 30px;
+}
+
+
+// ==============
+// Key features
+// ==============
+
+.key-features-section {
+  background-color: white;
+  color: $grey-color-dark;
+
+  h3 {
+    color: orangered;
+  }
+
+  .btn {
+    background-color: $grey-color-light;
+  }
+
+  .card-text {
+    @media screen and (min-width: $on-laptop) {
+      min-height: 180px !important;
+    }
+  }
+
+  .card {
+    &:hover {
+      box-shadow: 0 0 0 0 !important;
+    }
+  }
+
+}
+
+.key-feature-image {
+  width: 100%;
+  text-align: center;
+  margin-top: 30px;
+
+  img {
+    width: 70px;
+    filter: grayscale(1);
+  }
+}
+
+// ====
+// ecosystem
+// ====
+
+.ecosystem-section {
+  background-color: $grey-color-light;
+  color: black;
+}
+
+// ===
+// community
+// ===
+
+.community-section {
+  background-color: $grey-color-light;
+  color: $grey-color-dark;
+}
+
+.community-section .card {
+  background-color: white;
+}
+
+// ===
+// trusted-by
+// ===
+
+.trusted-by-section {
+  background-color: white;
+  color: $grey-color-dark;
+}
+
+.trusted-by {
+  margin-top: 30px;
+
+}
+
+// ===
+// news
+// ===
+.news-section {
+  color: $grey-color-dark;
+  min-height: 500px;
+  background-color: white;
+
+  .btn {
+    background-color: $grey-color-light;
+  }
+}

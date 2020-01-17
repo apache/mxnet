@@ -537,11 +537,12 @@ inline bool InferStorageType(const nnvm::NodeAttrs& attrs, const int dev_mask,
 }
 
 NNVM_REGISTER_OP(Custom)
+.add_alias("_npi_Custom")
 .describe(R"code(Apply a custom operator implemented in a frontend language (like Python).
 
 Custom operators should override required methods like `forward` and `backward`.
 The custom operator must be registered before it can be used.
-Please check the tutorial here: http://mxnet.io/faq/new_op.html.
+Please check the tutorial here: https://mxnet.incubator.apache.org/api/faq/new_op
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs){
@@ -585,7 +586,7 @@ Please check the tutorial here: http://mxnet.io/faq/new_op.html.
 NNVM_REGISTER_OP(_backward_Custom)
 .set_num_inputs([](const NodeAttrs& attrs){
     const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
-    return params.bwd_idx.size();
+    return params.bwd_idx.size() + params.num_auxs;
   })
 .set_num_outputs([](const NodeAttrs& attrs){
     const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);

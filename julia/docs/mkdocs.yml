@@ -16,7 +16,7 @@
 # under the License.
 
 site_name: MXNet.jl
-repo_url:  https://github.com/dmlc/MXNet.jl
+repo_url:  https://github.com/apache/incubator-mxnet/tree/master/julia#mxnet
 
 theme: material
 
@@ -62,4 +62,5 @@ nav:
     - Symbolic API: api/symbolic-node.md
     - Neural Networks Factory: api/nn-factory.md
     - Executor: api/executor.md
+    - Key-Value Store: api/kvstore.md
     - Network Visualization: api/visualize.md

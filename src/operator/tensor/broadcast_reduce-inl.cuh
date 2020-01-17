@@ -262,6 +262,7 @@ __global__ void reduce_lines_kernel(const int N, const int M, const bool addto,
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N, const bool addto,
                                 const DType* __restrict big, OType *small, const Shape<ndim> bshape,
                                 const Shape<ndim> sshape) {
@@ -277,6 +278,7 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
 }
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
+__launch_bounds__(kMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N, const bool addto,
                                  const DType* __restrict big,
                                  const DType* __restrict lhs,
@@ -366,9 +368,10 @@ static inline uint64_t calc_num_load(const int X, const int Y, const int* stride
 }
 
 template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small, const mxnet::TShape& big, const mxnet::TShape* lhs,
-  const mxnet::TShape* rhs) {
-
+ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
+                                           const mxnet::TShape& big,
+                                           const mxnet::TShape* lhs,
+                                           const mxnet::TShape* rhs) {
   ReduceImplConfig<ndim> config;
 
   diff(small.get<ndim>(), big.get<ndim>(), &config.rshape, &config.rstride);
@@ -617,8 +620,6 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   ReduceImplConfig<ndim> config =
     ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
   if (safe_acc) {
-    // TODO(haojin2): Use real-only type swtich for windows temporarily due to CI issues.
-#ifndef _WIN32
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
@@ -628,20 +629,19 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
           stream, small, req, big, workspace, config);
       });
     });
-#else
-    MXNET_REAL_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
-      typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
-      MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
-        typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
-        ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
-          stream, small, req, big, workspace, config);
-      });
-    });
-#endif
   } else {
     ReduceImpl<Reducer, ndim, DType, DType, DType, OP>(stream, small, req, big, workspace, config);
   }
+}
+
+template<typename Reducer, int ndim, typename DType, typename OP, bool safe_acc = false>
+void ReduceBool(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+                const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
+  if (req == kNullOp) return;
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+  ReduceImpl<Reducer, ndim, bool, DType, bool, OP>(stream, small, req, big, workspace, config);
 }
 
 template <typename Reducer, int ndim, typename DType, typename OP>

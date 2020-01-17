@@ -69,7 +69,7 @@ struct Shape {
    * \param idx dimension index
    * \return the corresponding dimension size
    */
-  MSHADOW_XINLINE index_t &operator[](index_t idx) {
+  MSHADOW_XINLINE index_t &operator[](int idx) {
     return shape_[idx];
   }
   /*!
@@ -77,7 +77,7 @@ struct Shape {
    * \param idx dimension index
    * \return the corresponding dimension size
    */
-  MSHADOW_XINLINE const index_t &operator[](index_t idx) const {
+  MSHADOW_XINLINE const index_t &operator[](int idx) const {
     return shape_[idx];
   }
   /*!
@@ -484,7 +484,7 @@ struct Tensor: public TRValue<Tensor<Device, dimension, DType>,
    * \param idx the dimension count from the highest dimensin
    * \return the size
    */
-  MSHADOW_XINLINE index_t size(index_t idx) const {
+  MSHADOW_XINLINE index_t size(int idx) const {
     return shape_[idx];
   }
   /*!
@@ -817,7 +817,7 @@ inline void SoftmaxGrad(const Tensor<gpu, 2, DType> &dst,
  * \param index index to take
  * \param src source output
  */
-template<typename IndexType, typename DType>
+template<bool clip = true, typename IndexType, typename DType>
 inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
                         const Tensor<cpu, 1, IndexType>& index,
                         const Tensor<cpu, 2, DType> &src);
@@ -829,7 +829,7 @@ inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
  * \param index index to take
  * \param src source output
  */
-template<typename IndexType, typename DType>
+template<bool clip = true, typename IndexType, typename DType>
 inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
                         const Tensor<gpu, 1, IndexType>& index,
                         const Tensor<gpu, 2, DType> &src);

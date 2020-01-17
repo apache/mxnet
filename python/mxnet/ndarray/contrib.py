@@ -21,6 +21,7 @@
 from __future__ import absolute_import
 import math
 import numpy as np
+import mxnet as mx
 from ..context import current_context
 from ..random import uniform
 from ..base import _as_list
@@ -31,6 +32,9 @@ except ImportError:
     pass
 
 __all__ = ["rand_zipfian", "foreach", "while_loop", "cond", "isinf", "isfinite", "isnan"]
+
+def _flatten_list(nested_list):
+    return [item for sublist in nested_list for item in sublist]
 
 # pylint: disable=line-too-long
 def rand_zipfian(true_classes, num_sampled, range_max, ctx=None):
@@ -514,7 +518,7 @@ def isfinite(data):
     [0. 0. 0. 1.]
     <NDArray 4 @cpu(0)>
     """
-    is_data_not_nan = data == data # pylint: disable=comparison-with-itself
+    is_data_not_nan = data == data  # pylint: disable=comparison-with-itself
     is_data_not_infinite = data.abs() != np.inf
     return ndarray.logical_and(is_data_not_infinite, is_data_not_nan)
 
@@ -542,14 +546,17 @@ def isnan(data):
     [1. 0.]
     <NDArray 2 @cpu(0)>
     """
-    return data != data # pylint: disable=comparison-with-itself
+    return data != data  # pylint: disable=comparison-with-itself
+
+def _get_rescale_grad(rescale_grad, ctx=mx.cpu()):
+    if not isinstance(rescale_grad, ndarray.NDArray):
+        return ndarray.full(shape=(1,), val=rescale_grad, ctx=ctx)
+    else:
+        return rescale_grad.as_in_context(ctx)
 
 def adamw_update(weight, grad, mean, var, rescale_grad, lr, eta, beta1=0.9, beta2=0.999,
                  epsilon=1e-8, wd=0, clip_gradient=-1, out=None, name=None, **kwargs):
-    if not isinstance(rescale_grad, ndarray.NDArray):
-        rescale_grad = ndarray.full(shape=(1,), val=rescale_grad, ctx=weight.context)
-    else:
-        rescale_grad = rescale_grad.as_in_context(weight.context)
+    rescale_grad = _get_rescale_grad(rescale_grad, ctx=weight.context)
     return ndarray._internal._adamw_update(weight=weight, grad=grad, mean=mean, var=var,
                                            rescale_grad=rescale_grad, lr=lr, eta=eta,
                                            beta1=beta1, beta2=beta2, epsilon=epsilon,
@@ -559,13 +566,118 @@ def adamw_update(weight, grad, mean, var, rescale_grad, lr, eta, beta1=0.9, beta
 def mp_adamw_update(weight, grad, mean, var, weight32, rescale_grad, lr, eta, beta1=0.9,
                     beta2=0.999, epsilon=1e-8, wd=0, clip_gradient=-1, out=None,
                     name=None, **kwargs):
-    if not isinstance(rescale_grad, ndarray.NDArray):
-        rescale_grad = ndarray.full(shape=(1,), val=rescale_grad, ctx=weight.context)
-    else:
-        rescale_grad = rescale_grad.as_in_context(weight.context)
+    rescale_grad = _get_rescale_grad(rescale_grad, ctx=weight.context)
     return ndarray._internal._mp_adamw_update(weight=weight, grad=grad, mean=mean, var=var,
                                               weight32=weight32,
                                               rescale_grad=rescale_grad, lr=lr, eta=eta,
                                               beta1=beta1, beta2=beta2, epsilon=epsilon,
                                               wd=wd, clip_gradient=clip_gradient, out=out,
                                               name=name, **kwargs)
+
+def multi_adamw_update(weights, grads, mean, var, rescale_grad, lrs, wds, etas,
+                       out=None, name=None, size=0, **kwargs):
+    if not size:
+        size = len(weights)
+
+    rescale_grad = _get_rescale_grad(rescale_grad, ctx=weights[0].context)
+    temp_list = _flatten_list(zip(weights, grads, mean, var)) + [rescale_grad]
+    return ndarray._internal._multi_adamw_update(*temp_list,
+                                                 out=out,
+                                                 num_weights=size,
+                                                 lrs=lrs,
+                                                 wds=wds,
+                                                 etas=etas,
+                                                 name=name,
+                                                 **kwargs)
+
+def multi_mp_adamw_update(weights, grads, mean, var, weights32, rescale_grad, lrs, wds, etas,
+                          out=None, name=None, size=0, **kwargs):
+    if not size:
+        size = len(weights)
+
+    rescale_grad = _get_rescale_grad(rescale_grad, ctx=weights[0].context)
+    temp_list = _flatten_list(zip(weights, grads, mean, var, weights32)) + [rescale_grad]
+    return ndarray._internal._multi_mp_adamw_update(*temp_list,
+                                                    out=out,
+                                                    num_weights=size,
+                                                    lrs=lrs,
+                                                    wds=wds,
+                                                    etas=etas,
+                                                    name=name,
+                                                    **kwargs)
+
+def multi_lamb_update(weights, grads, mean, var, step_count,
+                      lrs, wds, out=None, num_tensors=0, **kwargs):
+    """Given a list of gradients, update weights, mean and variance of multiple tensors
+    following LAMB Optimizer implementation.
+
+    Parameters
+    ----------
+    weights : List of NDArrays containing the input weights of multiple tensors
+
+    grads : List of NDArrays containing input gradients
+
+    mean : List of NDArrays containing mean of multiple tensors to be updated
+
+    var : List of NDArrays containing variance of multiple tensors to be updated
+
+    step_count : List of scalars with the number of update step for each tensor
+
+    lrs : List of learning rates (one for each tensor)
+
+    wds : List of weight decays (one for each tensor)
+
+    out: List of NDArrays where the updated weights will be stored
+
+    num_tensors : Number of NDArrays/tensors in the list
+    """
+
+    if not num_tensors:
+        num_tensors = len(weights)
+    temp_list = _flatten_list(zip(weights, grads, mean, var))
+    return ndarray._internal._multi_lamb_update(*temp_list,
+                                                out=out,
+                                                num_tensors=num_tensors,
+                                                step_count=step_count,
+                                                learning_rates=lrs,
+                                                wds=wds,
+                                                **kwargs)
+
+def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
+                         lrs, wds, out=None, num_tensors=0, **kwargs):
+    """Given a list of gradients, update weights, mean and variance of multiple tensors
+    following LAMB Optimizer implementation, and using Mixed-Precision.
+
+    Parameters
+    ----------
+    weights : List of NDArrays containing the input weights of multiple tensors
+
+    grads : List of NDArrays containing input gradients
+
+    mean : List of NDArrays containing mean of multiple tensors to be updated
+
+    var : List of NDArrays containing variance of multiple tensors to be updated
+
+    weights32 : Master copy of weights in FP32
+
+    step_count : List of scalars with the number of update step for each tensor
+
+    lrs : List of learning rates (one for each tensor)
+
+    wds : List of weight decays (one for each tensor)
+
+    out: List of NDArrays where the updated weights will be stored
+
+    num_tensors : Number of NDArrays/tensors in the list
+    """
+
+    if not num_tensors:
+        num_tensors = len(weights)
+    temp_list = _flatten_list(zip(weights, grads, mean, var, weights32))
+    return ndarray._internal._multi_mp_lamb_update(*temp_list,
+                                                   out=out,
+                                                   num_tensors=num_tensors,
+                                                   step_count=step_count,
+                                                   learning_rates=lrs,
+                                                   wds=wds,
+                                                   **kwargs)

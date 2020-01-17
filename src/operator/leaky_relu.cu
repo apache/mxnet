@@ -28,14 +28,12 @@
 
 namespace mxnet {
 namespace op {
-template<>
-Operator *CreateOp<gpu>(LeakyReLUParam param, int dtype) {
-  Operator* op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    op = new LeakyReLUOp<gpu, DType>(param);
-  });
-  return op;
-}
+
+NNVM_REGISTER_OP(LeakyReLU)
+.set_attr<FCompute>("FCompute<gpu>", LeakyReLUCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_LeakyReLU)
+.set_attr<FCompute>("FCompute<gpu>", LeakyReLUGradCompute<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -40,8 +40,10 @@ core_logic: {
     custom_steps.compile_unix_cmake_mkldnn_gpu(),
     custom_steps.compile_unix_cmake_gpu(),
     custom_steps.compile_unix_tensorrt_gpu(),
-    custom_steps.compile_unix_int64_gpu()
-  ]) 
+    custom_steps.compile_unix_int64_gpu(),
+    custom_steps.compile_unix_full_gpu_no_tvm_op(),
+    custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
+  ])
 
   utils.parallel_stage('Tests', [
     custom_steps.test_unix_python2_gpu(),
@@ -60,7 +62,8 @@ core_logic: {
     custom_steps.test_unix_cpp_package_gpu(),
     custom_steps.test_unix_scala_gpu(),
     custom_steps.test_unix_distributed_kvstore_gpu(),
-    custom_steps.test_static_python_gpu()
+    custom_steps.test_static_python_gpu(),
+    custom_steps.test_unix_python3_gpu_no_tvm_op(),
 
     // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
     //custom_steps.test_unix_caffe_gpu()

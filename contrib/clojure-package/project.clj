@@ -28,7 +28,7 @@
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-cpu "<insert-snapshot-version>"]
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "<insert-snapshot-version"]
 
-                 ;;; CI
+                 ;;; CI / Local Build
                  [org.apache.mxnet/mxnet-full_2.11 "INTERNAL"]
 
                  [org.clojure/tools.logging "0.4.0"]
@@ -44,4 +44,4 @@
   :repositories [["staging" {:url "https://repository.apache.org/content/repositories/staging"                  :snapshots true
                              :update :always}]
                  ["snapshots" {:url "https://repository.apache.org/content/repositories/snapshots"               :snapshots true
-                              :update :always}]])
+                               :update :always}]])

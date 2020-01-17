@@ -41,7 +41,8 @@ void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
   const TShape inshape = in_data.shape_;
   const int ndim = inshape.ndim();
 
-  Stream<gpu> *stream = ctx.get_stream<gpu>();
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
 
   using namespace mxnet_op;
 
@@ -55,24 +56,24 @@ void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
     IndexArrayBuildSelectedAxesWorkspace(axes, index_products, cpu_workspace.data(), ndim);
 
     Tensor<gpu, 1, int64_t> workspace =
-        ctx.requested[0].get_space_typed<gpu, 1, int64_t>(Shape1(2 * naxes), stream);
+        ctx.requested[0].get_space_typed<gpu, 1, int64_t>(Shape1(2 * naxes), s);
 
-    CUDA_CALL(cudaMemcpy(workspace.dptr_, cpu_workspace.data(), sizeof(int64_t) * (2 * naxes),
-                         cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, cpu_workspace.data(), sizeof(int64_t) * (2 * naxes),
+                              cudaMemcpyHostToDevice, stream));
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayKernel<req_type>, gpu>::Launch(stream, in_data.Size(),
+      Kernel<IndexArrayKernel<req_type>, gpu>::Launch(s, in_data.Size(),
           out_data.dptr<int64_t>(), naxes, workspace.dptr_);
     });
   } else {
     Tensor<gpu, 1, dim_t> workspace =
-        ctx.requested[0].get_space_typed<gpu, 1, dim_t>(Shape1(ndim), stream);
+        ctx.requested[0].get_space_typed<gpu, 1, dim_t>(Shape1(ndim), s);
 
-    CUDA_CALL(cudaMemcpy(workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim,
-        cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim,
+                              cudaMemcpyHostToDevice, stream));
 
     MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(stream, in_data.Size(),
+      Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(s, in_data.Size(),
           out_data.dptr<int64_t>(), ndim, workspace.dptr_);
     });
   }

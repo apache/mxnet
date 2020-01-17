@@ -510,7 +510,7 @@ int MXNDArrayLoadFromBuffer(const void *in,
                             const char*** out_array);
 
 /*!
- * \brief Perform a synchronize copy from a continugous CPU memory region.
+ * \brief Perform a synchronize copy from a contiguous CPU memory region.
  *
  *  This function will call WaitToWrite before the copy is performed.
  *  This is useful to copy data from existing memory region that are
@@ -524,7 +524,7 @@ int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
                                        const void *in,
                                        size_t size);
 /*!
- * \brief Perform a synchronize copy to a continugous CPU memory region.
+ * \brief Perform a synchronize copy to a contiguous CPU memory region.
  *
  *  This function will call WaitToRead before the copy is performed.
  *  This is useful to copy data from existing memory region that are

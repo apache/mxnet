@@ -41,7 +41,7 @@ use Mouse;
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
-        `help <http://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
+        `help <https://mxnet.io/api/python/optimization/optimization.html#the-mxnet-optimizer-package>`_
         on Optimizer for a list of available optimizers.
     optimizer_params : hash ref
         Key-word arguments to be passed to optimizer constructor. For example,

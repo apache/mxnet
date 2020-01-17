@@ -129,6 +129,15 @@ class KVStoreLocal : public KVStore {
     PullImpl(keys, values, priority, ignore_sparse);
   }
 
+  void PushPull(const std::vector<int>& vkeys,
+                const std::vector<int>& okeys,
+                const std::vector<NDArray>& values,
+                const std::vector<NDArray*>& outs,
+                int priority) override {
+    SetKeyType(kIntKey);
+    PushPullImpl(vkeys, okeys, values, outs, priority);
+  }
+
   void PullRowSparse(const std::vector<int>& keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority = 0) override {
@@ -155,6 +164,19 @@ class KVStoreLocal : public KVStore {
     PullImpl(keys, values, priority, ignore_sparse);
   }
 
+  void PushPull(const std::vector<std::string>& str_vkeys,
+                const std::vector<std::string>& str_okeys,
+                const std::vector<NDArray>& values,
+                const std::vector<NDArray*>& outs,
+                int priority) override {
+    SetKeyType(kStringKey);
+    std::vector<int> vkeys(str_vkeys.size());
+    std::vector<int> okeys(str_okeys.size());
+    LookupKeys(str_vkeys, &vkeys);
+    LookupKeys(str_okeys, &okeys);
+    PushPullImpl(vkeys, okeys, values, outs, priority);
+  }
+
   void PullRowSparse(const std::vector<std::string>& str_keys,
                      const std::vector<std::pair<NDArray*, NDArray>>& val_rowids,
                      int priority = 0) override {
@@ -174,7 +196,9 @@ class KVStoreLocal : public KVStore {
                         const std::vector<NDArray>& values) {
     for (size_t i = 0; i < keys.size(); ++i) {
       CHECK(local_.find(keys[i]) == local_.end())
-          << "duplicate init of key " << keys[i];
+          << "duplicate init of key " << keys[i]
+          << ". Please double check if you called kv.init or kv.broadcast with this key "
+          << "multiple times";
       local_[keys[i]] = values[i].Copy(pinned_ctx_);
       comm_->Init(keys[i], values[i].storage_type(), values[i].shape(), values[i].dtype());
     }
@@ -267,6 +291,15 @@ class KVStoreLocal : public KVStore {
   void SetKeyType(const KeyType key_type) {
     if (key_type_ == kUndefinedKey) key_type_ = key_type;
     CHECK_EQ(key_type_, key_type) << "Mixed key types are not allowed";
+  }
+
+  virtual void PushPullImpl(const std::vector<int>& vkeys,
+                            const std::vector<int>& okeys,
+                            const std::vector<NDArray>& values,
+                            const std::vector<NDArray*>& outs,
+                            int priority) {
+    PushImpl(vkeys, values, priority);
+    PullImpl(okeys, outs, priority, true);
   }
 
   /**

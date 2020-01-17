@@ -1,0 +1,18 @@
+---
+layout: page
+---
+<div class="row">
+    <div class="col-3 docs-side-bar">
+        <h3 style="text-transform: capitalize; padding-left:10px">{{page.category}}</h3>
+        <ul>
+            {% for p in site.pages %}
+            {% if p.category == page.category %}
+            <li><a href="{{ p.url  | relative_url }}">{{ p.title }}</a></li>
+            {% endif %}  <!-- page-category -->
+            {% endfor %}   <!-- resource-p -->
+        </ul>
+    </div>
+    <div class="col-9">
+        {{ content }}
+    </div>
+</div>

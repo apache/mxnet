@@ -19,7 +19,7 @@ import os
 import math
 import itertools
 import mxnet as mx
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry, assert_almost_equal
 import numpy as np
 import random as rnd
 from common import setup_module, with_seed, random_seed, teardown
@@ -61,8 +61,10 @@ def check_with_device(device, dtype):
         },
         {
             'name': 'randn',
+            'symbol': mx.sym.random.randn,
             'ndop': mx.nd.random.randn,
             'params': { 'loc': 10.0, 'scale': 0.5 },
+            'inputs': [ ('loc',[ [ 0.0, 2.5 ], [ -9.75, -7.0 ] ]) , ('scale',[ [ 1.0, 3.7 ], [ 4.2, 1.5 ] ]) ],
             'checks': [
                 ('mean', lambda x, params: np.mean(x.astype(np.float64) - params['loc']),  tol),
                 ('std',  lambda x, params: np.std(x.astype(np.float64)) - params['scale'], tol)
@@ -250,6 +252,9 @@ def check_with_device(device, dtype):
 
         params = {'shape': shape, 'dtype': dtype, 'ctx': device}
         params.update({k : mx.nd.array(v, ctx=device, dtype=dtype) for k, v in symbdic['inputs']})
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args = shape
         mx.random.seed(128)
         ret1 = ndop(*args, **params).asnumpy()
         mx.random.seed(128)
@@ -263,14 +268,12 @@ def check_with_device(device, dtype):
                     err = np.abs(check_func(ret2[i,j], stats))
                     assert err < tol, "%f vs %f: symbolic test: %s check for `%s` did not pass" % (err, tol, check_name, name)
 
-        if 'symbol' not in symbdic: continue  # randn does not have symbol
-
         # check symbolic
         symbol = symbdic['symbol']
         X = mx.sym.Variable("X")
         params = symbdic['params'].copy()
         params.update(shape=shape, dtype=dtype)
-        if name.endswith('_like'):
+        if name.endswith('_like') or name == 'randn':
             params['data'] = mx.sym.ones(params.pop('shape'))
         Y = symbol(**params) + X
         x = mx.nd.zeros(shape, dtype=dtype, ctx=device)
@@ -298,7 +301,12 @@ def check_with_device(device, dtype):
         single_param = len(symbdic['inputs']) == 1
         v1 = mx.sym.Variable('v1')
         v2 = mx.sym.Variable('v2')
-        Y = symbol(v1,**params) if single_param else symbol(v1,v2,**params)
+        if name == 'randn':
+            params.pop('shape')  # randn does not accept shape param
+            args=shape
+            Y = symbol(v1, **params) if single_param else symbol(*args, loc=v1, scale=v2,**params)
+        else:
+            Y = symbol(v1,**params) if single_param else symbol(v1,v2,**params)
         bindings = { 'v1' : mx.nd.array(symbdic['inputs'][0][1]) }
         if not single_param :
             bindings.update({ 'v2' : mx.nd.array(symbdic['inputs'][1][1]) })
@@ -315,9 +323,10 @@ def check_with_device(device, dtype):
                 for check_name, check_func, tol in symbdic['checks']:
                     assert np.abs(check_func(samples, params)) < tol, "symbolic test: %s check for `%s` did not pass" % (check_name, name)
 
+        if 'pdfsymbol' not in symbdic: continue  # randn not tested for pdf
+
         # check pdfs with only a subset of the generated samples
         un1 = np.resize(un1, (un1.shape[0], un1.shape[1], pdfshape[0], pdfshape[1]))
-        print(name)
         symbol  = symbdic['pdfsymbol']
         pdffunc = symbdic['pdffunc']
         v0 = mx.sym.Variable('v0')
@@ -355,7 +364,6 @@ def check_with_device(device, dtype):
                 check_symbolic_forward(test_pdf, [un1, p1, p2], [res], atol=forw_atol, rtol=forw_rtol, dtype=dtype)
                 if dtype == np.float64:
                   grad_nodes = ['v1', 'v2'] if symbdic['discrete'] else ['v0', 'v1', 'v2']
-                  print(backw_rtol)
                   check_numeric_gradient(test_pdf, [un1, p1, p2], grad_nodes=grad_nodes, atol=backw_atol, rtol=backw_rtol, dtype=dtype)
 
 @with_seed(1000)
@@ -575,14 +583,14 @@ def test_sample_multinomial():
                 prob = prob.reshape((1, prob.shape[0]))
             for i in range(x.shape[0]):
                 freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
-                mx.test_utils.assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
+                assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
                 rprob = x[i][y[i].astype('int32')]/x[i].sum()
-                mx.test_utils.assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
+                assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
 
                 real_dx = np.zeros((5,))
                 for j in range(samples):
                     real_dx[int(y[i][j])] += 5.0 / rprob[j]
-                mx.test_utils.assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
+                assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
     for dtype in ['uint8', 'float16', 'float32']:
         # Bound check for the output data types. 'int32' and 'float64' require large memory so are skipped.
         x = mx.nd.zeros(2 ** 25)  # Larger than the max integer in float32 without precision loss.
@@ -875,8 +883,8 @@ def test_zipfian_generator():
     # test ndarray
     true_classes = mx.nd.random.uniform(0, range_max, shape=(num_true,)).astype('int32')
     sampled_classes, exp_cnt_true, exp_cnt_sampled = mx.nd.contrib.rand_zipfian(true_classes, num_sampled, range_max)
-    mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
-    mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
     # test symbol
     true_classes_var = mx.sym.var('true_classes')
@@ -885,8 +893,8 @@ def test_zipfian_generator():
     executor = outputs.bind(mx.context.current_context(), {'true_classes' : true_classes})
     executor.forward()
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
-    mx.test_utils.assert_almost_equal(exp_cnt_sampled.asnumpy(), exp_cnt[sampled_classes].asnumpy(), rtol=1e-1, atol=1e-2)
-    mx.test_utils.assert_almost_equal(exp_cnt_true.asnumpy(), exp_cnt[true_classes].asnumpy(), rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)
+    assert_almost_equal(exp_cnt_true, exp_cnt[true_classes], rtol=1e-1, atol=1e-2)
 
 # Issue #10277 (https://github.com/apache/incubator-mxnet/issues/10277) discusses this test.
 @with_seed()

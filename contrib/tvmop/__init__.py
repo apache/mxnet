@@ -18,5 +18,7 @@
 # coding: utf-8
 from .opdef import defop
 from .utils import AllTypes, RealTypes
+from .utils import assign_by_req, reduce_axes
 
 from . import basic
+from . import core

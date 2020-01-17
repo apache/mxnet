@@ -65,7 +65,7 @@ use AI::MXNet::NDArray::Slice;
 use AI::MXNet::Context;
 use Mouse;
 use AI::MXNet::Function::Parameters;
-use overload
+use overload (
     '""' => \&stringify,
     '+'  => \&add,
     '+=' => \&iadd,
@@ -86,7 +86,16 @@ use overload
     '<=' => \&lesser_equal,
     '.=' => \&set,
     '@{}'=> \&split_array,
-    '='  => sub { $_[0] };
+    '='  => sub { $_[0] },
+
+    'sqrt' => sub { $_[0]->sqrt() },
+    'abs' => sub { $_[0]->abs() },
+    'sin' => sub { $_[0]->sin() },
+    'cos' => sub { $_[0]->cos() },
+    'atan2' => \&atan2,
+    'log' => sub { $_[0]->log() },
+    'exp' => sub { $_[0]->exp() },
+);
 
 extends 'AI::MXNet::NDArray::Base';
 has 'writable' => (is => 'rw', isa => 'Int', default => 1, lazy => 1);
@@ -116,7 +125,11 @@ method STORABLE_thaw($cloning, $buf, $writable)
 
 method split_array(@args)
 {
-     $self->shape->[0] > 1 ? $self->split(num_outputs => $self->shape->[0], squeeze_axis => @{ $self->shape } > 1 ? 1 : 0, axis => 0) : [$self];
+    my $shape = $self->shape;
+    return [] if $shape->[0] == 0;
+    my $list = $self->split(num_outputs=>$shape->[0],
+        squeeze_axis=>int(@$shape > 1), axis=>0);
+    $shape->[0] == 1 ? [ $list ] : $list;
 }
 
 method at(Index @indices)
@@ -757,6 +770,12 @@ sub  _ufunc_helper
 method stringify($other=, $reverse=)
 {
     sprintf("<%s %s @%s>", ref($self), join('x', @{ $self->shape }), $self->context);
+}
+
+method atan2($other=, $reverse=)
+{
+    my $val = $reverse ? $other / $self : $self / $other;
+    return __PACKAGE__->arctan($val);
 }
 
 method iadd(AI::MXNet::NDArray|Num $other, $reverse=)
