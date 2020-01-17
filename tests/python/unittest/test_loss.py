@@ -17,7 +17,7 @@
 
 import mxnet as mx
 import numpy as np
-from mxnet import gluon
+from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
 from common import setup_module, with_seed, teardown
 import unittest
@@ -348,6 +348,39 @@ def test_triplet_loss():
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
+@with_seed()
+def test_sdml_loss():
+
+    N = 5 # number of samples
+    DIM = 10 # Dimensionality
+    EPOCHS = 20
+    
+    # Generate randomized data and 'positive' samples
+    data = mx.random.uniform(-1, 1, shape=(N, DIM))
+    pos = data + mx.random.uniform(-0.1, 0.1, shape=(N, DIM)) # correlated paired data
+    data_iter = mx.io.NDArrayIter({'data' : data, 'pos' : pos}, batch_size=N)
+
+    # Init model and trainer
+    sdml_loss = gluon.loss.SDMLLoss()
+    model = gluon.nn.Dense(DIM, activation='tanh') # Simple NN encoder
+    model.collect_params().initialize(mx.init.Xavier(), ctx=mx.current_context())
+    trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate' : 0.1})
+
+    for i in range(EPOCHS): # Training loop
+        data_iter.reset()
+        for iter_batch in data_iter:
+            batch = [datum.as_in_context(mx.current_context()) for datum in iter_batch.data]
+            with autograd.record():
+                data, pos = batch
+                z_data, z_pos = model(data), model(pos)
+                loss = sdml_loss(z_data, z_pos)
+                loss.backward()
+            trainer.step(1)
+
+    # After training euclidean distance between aligned pairs should be lower than all non-aligned pairs
+    avg_loss = loss.sum()/len(loss)
+    assert(avg_loss < 0.05)
+    
 @with_seed()
 def test_cosine_loss():
     #Generating samples
