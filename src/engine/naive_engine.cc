@@ -108,7 +108,7 @@ class NaiveEngine final : public Engine {
     opr->const_vars = const_vars;
     opr->mutable_vars = mutable_vars;
     opr->prop = prop;
-    opr->opr_name = std::string(opr_name);
+    opr->opr_name = opr_name ? std::string(opr_name) : std::string();
     return opr;
   }
 
