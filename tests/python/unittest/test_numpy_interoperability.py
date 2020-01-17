@@ -19,9 +19,11 @@
 from __future__ import absolute_import
 from __future__ import division
 from distutils.version import StrictVersion
+import sys
 import platform
 import itertools
 import numpy as _np
+import unittest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
@@ -1884,6 +1886,7 @@ def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
+@unittest.skipIf(sys.version_info.major < 3, "Skip running fallback ops for Python2")
 @with_seed()
 @use_np
 def test_np_fallback_ops():
