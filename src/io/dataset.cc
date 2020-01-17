@@ -75,7 +75,8 @@ class ImageSequenceDataset : public Dataset {
       return 1;
     }
 
-    NDArray GetItem(uint64_t idx, int n) {
+    NDArray GetItem(uint64_t idx, int n, int* is_scalar) {
+      *is_scalar = 0;
 #if MXNET_USE_OPENCV
       CHECK_LT(idx, img_list_.size())
         << "GetItem index: " << idx << " out of bound: " << img_list_.size();
@@ -189,11 +190,22 @@ class NDArrayDataset : public Dataset {
       return 1;
     }
 
-    NDArray GetItem(uint64_t idx, int n) {
+    NDArray GetItem(uint64_t idx, int n, int* is_scalar) {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
       CHECK_EQ(n, 0) << "NDArrayDataset only produce one output";
       NDArray ret = data_.Slice(idx, idx + 1);
+      if (ret.shape().ndim() > 1) {
+        // remove first dim to be consistent with numpy
+        TShape new_shape;
+        new_shape.assign(ret.shape().begin() + 1, ret.shape().end());
+        ret = ret.Reshape(new_shape);
+        *is_scalar = 0;
+      } else {
+        if (data_.shape().ndim() == 1) {
+          *is_scalar = 1;
+        }
+      }
       return ret;
     };
 
@@ -262,13 +274,13 @@ class TupleDataset : public Dataset {
       return item_size_;
     }
 
-    NDArray GetItem(uint64_t idx, int n) {
+    NDArray GetItem(uint64_t idx, int n, int* is_scalar) {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
       CHECK_GE(n, 0) << "Getting negative item is forbidden";
       CHECK_LT(n, item_size_) << "Item index out of bound: " << n << " vs total " << item_size_;
       auto new_idx = idx_map_[n];
-      return childs_[new_idx.first]->GetItem(idx, new_idx.second);
+      return childs_[new_idx.first]->GetItem(idx, new_idx.second, is_scalar);
     };
 
   private:

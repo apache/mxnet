@@ -24,6 +24,7 @@ __all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset',
 import os
 
 from ... import recordio, ndarray
+from ...util import is_np_shape, is_np_array, set_np, default_array
 
 
 class Dataset(object):
@@ -324,8 +325,8 @@ class _DownloadedDataset(Dataset):
         self._get_data()
         from ._internal import NDArrayDataset, TupleDataset
         self._handle = TupleDataset(
-            datasets=(NDArrayDataset(arr=ndarray.array(self._data)),
-                      NDArrayDataset(arr=ndarray.array(self._label))))
+            datasets=(NDArrayDataset(arr=default_array(self._data)),
+                      NDArrayDataset(arr=default_array(self._label))))
 
     def __getitem__(self, idx):
         if self._transform is not None:

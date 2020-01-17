@@ -1812,10 +1812,11 @@ MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
 MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
                                uint64_t index,
                                int n,
-                               NDArrayHandle *arr) {
+                               NDArrayHandle *arr,
+                               int *is_scalar) {
   API_BEGIN();
   NDArray* pndarray = new NDArray();
-  *pndarray = static_cast<Dataset *>(handle)->GetItem(index, n);
+  *pndarray = static_cast<Dataset *>(handle)->GetItem(index, n, is_scalar);
   *arr = pndarray;
   API_END();                            
 }                               

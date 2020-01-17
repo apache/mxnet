@@ -2719,12 +2719,14 @@ MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
  * \param handle the handle to dataset
  * \param index the index of items in dataset
  * \param n the index of ndarray in output items
+ * \param is_scalar if 1 then output should be casted to scalar rather than ndarray
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
                                uint64_t index,
                                int n,
-                               NDArrayHandle *arr);
+                               NDArrayHandle *arr,
+                               int *is_scalar);
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

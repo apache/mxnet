@@ -142,7 +142,7 @@ class Dataset {
     *  \param idx the integer index for required data
     *  \param n the n-th item
     */
-    virtual NDArray GetItem(uint64_t idx, int n) = 0;
+    virtual NDArray GetItem(uint64_t idx, int n, int* is_scalar) = 0;
     // virtual destructor
     virtual ~Dataset(void) {}
     /*!

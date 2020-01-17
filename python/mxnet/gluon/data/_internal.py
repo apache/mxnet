@@ -34,8 +34,9 @@ from ...ndarray import NDArray
 from ...ndarray.ndarray import NDArrayBase
 from ...ndarray.sparse import CSRNDArray
 from ...ndarray import _ndarray_cls
-from ...ndarray import array
+from ...numpy.multiarray import _np_ndarray_cls
 from ...ndarray import concat, tile
+from ...util import is_np_array
 
 class MXDataset(Dataset):
     """A python wrapper a C++ dataset.
@@ -77,11 +78,19 @@ class MXDataset(Dataset):
         items = []
         for i in range(self._out_size):
             hdl = NDArrayHandle()
+            is_scalar = ctypes.c_int(0)
             check_call(_LIB.MXDatasetGetItem(self.handle,
                                              ctypes.c_uint64(idx),
                                              ctypes.c_int(i),
-                                             ctypes.byref(hdl)))
-            items.append(_ndarray_cls(hdl, False))
+                                             ctypes.byref(hdl),
+                                             ctypes.byref(is_scalar)))
+            create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
+            out_arr = create_ndarray_fn(hdl, False)
+            if is_scalar.value == 1:
+                assert out_arr.size == 1
+                items.append(out_arr[0])
+            else:
+                items.append(out_arr)
         if len(items) == 1:
             return items[0]
         return tuple(items)
