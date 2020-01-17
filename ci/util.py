@@ -94,11 +94,14 @@ def under_ci() -> bool:
     return 'JOB_NAME' in os.environ
 
 
-def ec2_instance_id_hostname() -> str:
+def ec2_instance_info() -> str:
     import requests
     if under_ci():
         result = []
         try:
+            r = requests.get("http://instance-data/latest/meta-data/instance-type")
+            if r.status_code == 200:
+                result.append(r.content.decode())
             r = requests.get("http://instance-data/latest/meta-data/instance-id")
             if r.status_code == 200:
                 result.append(r.content.decode())

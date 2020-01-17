@@ -248,6 +248,7 @@ List of Contributors
 * [Vandana Kannan](https://github.com/vandanavk)
 * [Guanxin Qiao](https://github.com/guanxinq)
 * [dithyrambe](https://github.com/dithyrambe)
+* [Piljae Chae](https://github.com/IHateMint)
 
 Label Bot
 ---------
