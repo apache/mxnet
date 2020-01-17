@@ -326,6 +326,8 @@
          Copyright 2005-2015, Google Inc.
     8. OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
          Copyright (c) 2011, 2012 University of Houston System
+    9. CMake FindCUDAToolkit.cmake - For details, see, cmake/Modules/FindCUDAToolkit.cmake
+         Copyright 2000-2019 Kitware, Inc. and Contributors
 
 
     =======================================================================================
