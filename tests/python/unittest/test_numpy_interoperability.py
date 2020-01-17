@@ -502,6 +502,27 @@ def _add_workload_linalg_tensorsolve():
             OpArgMngr.add_workload('linalg.tensorsolve', np.array(a_np, dtype=dtype), np.array(b_np, dtype=dtype), axes)
 
 
+def _add_workload_linalg_pinv():
+    shapes = [
+        ((1, 1), ()),
+        ((5, 5), ()),
+        ((5, 6), ()),
+        ((6, 5), ()),
+        ((2, 3, 3), (1,)),
+        ((4, 6, 5), (4,)),
+        ((2, 2, 3, 4), (2, 2)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, rcond_shape in shapes:
+            hermitian = False
+            a_np = _np.random.uniform(-10.0, 10.0, a_shape)
+            a_np = _np.array(a_np, dtype=dtype)
+            rcond_np = _np.random.uniform(0., 0.1, rcond_shape)
+            rcond_np = _np.array(rcond_np, dtype=dtype)
+            OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), np.array(rcond_np, dtype=dtype), hermitian)
+
+
 def _add_workload_linalg_slogdet():
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1690,6 +1711,7 @@ def _prepare_workloads():
     _add_workload_linalg_det()
     _add_workload_linalg_tensorinv()
     _add_workload_linalg_tensorsolve()
+    _add_workload_linalg_pinv()
     _add_workload_linalg_slogdet()
     _add_workload_trace()
     _add_workload_tril()
