@@ -100,7 +100,7 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 /*!
  * \brief Convert NDArray to C type arrays for passing to custom library
  */
-void NDArrayToCTypeArray(const std::vector<NDArray>& inputs,
+void NDArrayToCTypes(const std::vector<NDArray>& inputs,
                    std::vector<void*>& data,
                    std::vector<const int64_t *>& shapes,
                    std::vector<int>& dims,
@@ -452,9 +452,9 @@ int MXLoadLib(const char *path) {
       std::vector<char*> in_dev_type, out_dev_type;
       std::vector<int> in_dev_id, out_dev_id;
 
-      NDArrayToCTypeArray(inputs, in_data, in_shapes, in_dims, in_types,
+      NDArrayToCTypes(inputs, in_data, in_shapes, in_dims, in_types,
                           in_verIDs, in_dev_type, in_dev_id);
-      NDArrayToCTypeArray(outputs, out_data, out_shapes, out_dims, out_types,
+      NDArrayToCTypes(outputs, out_data, out_shapes, out_dims, out_types,
                           out_verIDs, out_dev_type, out_dev_id);
 
       // get memory resource
@@ -482,7 +482,7 @@ int MXLoadLib(const char *path) {
 
       // pass the gpu stream associated with the context to custom library
       void* gpu_stream = nullptr;
-      if (inputs[i].ctx().dev_mask() == Context::kGPU) {
+      if (inputs[0].ctx().dev_mask() == Context::kGPU) {
         mshadow::Stream<mxnet::gpu> *s = ctx.get_stream<mxnet::gpu>();
         gpu_stream = static_cast<void*>(mshadow::Stream<gpu>::GetStream(s));
       }
@@ -497,42 +497,6 @@ int MXLoadLib(const char *path) {
       << "Error calling FCompute for custom operator '" << name_str << "'";
 
       // return type void
-    };
-
-    auto forward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-      CHECK(forward_ctx_map.count("cpu") > 0) << "CPU Forward function is not implemented";
-      return fcomp_lambda(forward_ctx_map.at("cpu"), attrs, ctx, inputs, req, outputs);
-    };
-
-    auto forward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-      CHECK(forward_ctx_map.count("gpu") > 0) << "GPU Forward function is not implemented";
-      return fcomp_lambda(forward_ctx_map.at("gpu"), attrs, ctx, inputs, req, outputs);
-    };
-
-    auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                   const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& req,
-                                   const std::vector<NDArray>& outputs) {
-      CHECK(backward_ctx_map.count("cpu") > 0) << "CPU Backward function is not implemented";
-      return fcomp_lambda(backward_ctx_map.at("cpu"), attrs, ctx, inputs, req, outputs);
-    };
-
-    auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                   const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& req,
-                                   const std::vector<NDArray>& outputs) {
-      CHECK(backward_ctx_map.count("gpu") > 0) << "GPU Backward function is not implemented";
-      return fcomp_lambda(backward_ctx_map.at("gpu"), attrs, ctx, inputs, req, outputs);
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -700,7 +664,7 @@ int MXLoadLib(const char *path) {
 
       // pass the gpu stream associated with the context to custom library
       void* gpu_stream = nullptr;
-      if (inputs[i].ctx().dev_mask() == Context::kGPU) {
+      if (inputs[0].ctx().dev_mask() == Context::kGPU) {
         mshadow::Stream<mxnet::gpu> *s = ctx.get_stream<mxnet::gpu>();
         gpu_stream = static_cast<void*>(mshadow::Stream<gpu>::GetStream(s));
       }
@@ -772,8 +736,26 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
                                         fstateful_forward, plevel);
     } else {
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_cpu_lambda, plevel);
-      regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_gpu_lambda, plevel);
+      if (forward_ctx_map.count("cpu") > 0) {
+        auto forward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                      const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
+          return fcomp_lambda(forward_ctx_map.at("cpu"), attrs, ctx, inputs, req, outputs);
+        };
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_cpu_lambda, plevel);
+      }
+      if (forward_ctx_map.count("gpu") > 0) {
+        auto forward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                      const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
+          return fcomp_lambda(forward_ctx_map.at("gpu"), attrs, ctx, inputs, req, outputs);
+        };
+        regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_gpu_lambda, plevel);
+      }
     }
     // optionally add fgradient if user specified a function
     if (backward_ctx_map.size() != 0 || create_opstate_fp != nullptr) {
@@ -793,8 +775,26 @@ int MXLoadLib(const char *path) {
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
                                             fstateful_backward, plevel);
       } else {
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
-        gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
+        if (backward_ctx_map.count("cpu") > 0) {
+          auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
+            return fcomp_lambda(backward_ctx_map.at("cpu"), attrs, ctx, inputs, req, outputs);
+          };
+          gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
+        }
+        if (backward_ctx_map.count("gpu") > 0) {
+          auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
+            return fcomp_lambda(backward_ctx_map.at("gpu"), attrs, ctx, inputs, req, outputs);
+          };
+          gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
+        }
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");

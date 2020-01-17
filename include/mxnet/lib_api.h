@@ -236,37 +236,34 @@ struct MXTensor {
     for (int j = 0; j < ndims; j++) {
       shape.push_back(dims[j]);
     }
-    DLDeviceType dltype;
-    if (ctx.dev_type == "cpu")
-      dltype = kDLCPU;
-    else if (ctx.dev_type == "gpu")
-      dltype = kDLGPU;
-    else if (ctx.dev_type == "opencl")
-      dltype = kDLOpenCL;
-    else if (ctx.dev_type == "vulcan")
-      dltype = kDLVulkan;
-    else if (ctx.dev_type == "metal")
-      dltype = kDLMetal;
-    else if (ctx.dev_type == "vpi")
-      dltype = kDLVPI;
-    else if (ctx.dev_type == "rocm")
-      dltype = kDLROCM;
-    else
-      dltype = kDLExtDev;
-
-    setDLTensor(dltype);
+    setDLTensor();
   }
 
   /*! \brief populate DLTensor fields */
-  void setDLTensor(DLDeviceType dltype) {
+  void setDLTensor() {
     dltensor.data = data_ptr;
-    dltensor.ctx.device_type = dltype;
-    dltensor.ctx.device_id = ctx.dev_id;
     dltensor.ndim = shape.size();
     dltensor.shape = const_cast<int64_t*>(shape.data());
     dltensor.strides = NULL;
     dltensor.byte_offset = 0;
     dltensor.dtype.lanes = 1;
+    dltensor.ctx.device_id = ctx.dev_id;
+    if (ctx.dev_type == "cpu")
+      dltensor.ctx.device_type = kDLCPU;
+    else if (ctx.dev_type == "gpu")
+      dltensor.ctx.device_type = kDLGPU;
+    else if (ctx.dev_type == "opencl")
+      dltensor.ctx.device_type = kDLOpenCL;
+    else if (ctx.dev_type == "vulcan")
+      dltensor.ctx.device_type = kDLVulkan;
+    else if (ctx.dev_type == "metal")
+      dltensor.ctx.device_type = kDLMetal;
+    else if (ctx.dev_type == "vpi")
+      dltensor.ctx.device_type = kDLVPI;
+    else if (ctx.dev_type == "rocm")
+      dltensor.ctx.device_type = kDLROCM;
+    else
+      dltensor.ctx.device_type = kDLExtDev;
     switch (dtype) {
     case kFloat32:
       dltensor.dtype.code = kDLFloat;
@@ -340,11 +337,11 @@ struct MXTensor {
   // type can only be MXDType enum types
   MXDType dtype;
 
-  // context of MXTensor representing which device the tensor data is located
-  MXContext ctx;
-
   // version number updated if the tensor has changed since the last use by custom op
   size_t verID;
+
+  // context of MXTensor representing which device the tensor data is located
+  MXContext ctx;
 
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
@@ -601,7 +598,7 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
                                         std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
-                                      CustomStatefulOp**);
+                                         CustomStatefulOp**);
 
 /*!
  * \brief Class to hold custom operator registration
@@ -611,17 +608,13 @@ class CustomOp {
   explicit CustomOp(const char* op_name) : name(op_name),
     parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL),
     create_opstate(NULL), isSGop(false) {}
-  CustomOp& setForward(fcomp_t fcomp, std::string ctx) {
-    char* cstr = new char[ctx.length()+1];
-    strncpy(cstr, ctx.c_str(), ctx.length()+1);
-    forward_ctx_cstr.push_back(cstr);
+  CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
+    forward_ctx_cstr.push_back(ctx);
     forward_fp.push_back(fcomp);
     return *this;
   }
-  CustomOp& setBackward(fcomp_t fgrad, std::string ctx) {
-    char* cstr = new char[ctx.length()+1];
-    strncpy(cstr, ctx.c_str(), ctx.length()+1);
-    backward_ctx_cstr.push_back(cstr);
+  CustomOp& setBackward(fcomp_t fgrad, const char* ctx) {
+    backward_ctx_cstr.push_back(ctx);
     backward_fp.push_back(fgrad);
     return *this;
   }
@@ -793,73 +786,81 @@ class Registry {
 typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
-typedef int (*opRegGet_t)(int, const char**,
-                          const char***, fcomp_t**, int*,
-                          const char***, fcomp_t**, int*,
-                          parseAttrs_t*, inferType_t*,
-                          inferShape_t*, mutateInputs_t*,
-                          createOpState_t*, int*);
+typedef int (*opRegGet_t)(int idx, const char** name,
+                          const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
+                          const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
+                          parseAttrs_t* parse, inferType_t* type,
+                          inferShape_t* shape, mutateInputs_t* mutate,
+                          createOpState_t* create_op, int *isSGop);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
-typedef int (*opCallFree_t)(void*);
+typedef int (*opCallFree_t)(void* ptr);
 
 #define MXLIB_OPCALLPARSEATTRS_STR "_opCallParseAttrs"
-typedef int (*opCallParseAttrs_t)(parseAttrs_t, const char* const*, const char* const*, int,
-                                  int*, int*);
+typedef int (*opCallParseAttrs_t)(parseAttrs_t parseAttrs, const char* const* keys,
+                                  const char* const* vals, int num,
+                                  int* num_in, int* num_out);
 
 #define MXLIB_OPCALLINFERSHAPE_STR "_opCallInferShape"
-typedef int (*opCallInferShape_t)(inferShape_t, const char* const*, const char* const*, int,
-                                  unsigned int**, int*, int,
-                                  unsigned int***, int**, int);
+typedef int (*opCallInferShape_t)(inferShape_t inferShape, const char* const* keys,
+                                  const char* const* vals, int num,
+                                  unsigned int** inshapes, int* indims, int num_in,
+                                  unsigned int*** outshapes, int** outdims, int num_out);
 
 #define MXLIB_OPCALLINFERTYPE_STR "_opCallInferType"
-typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* const*, int,
-                                  int*, int, int*, int);
+typedef int (*opCallInferType_t)(inferType_t inferType, const char* const* keys,
+                                 const char* const* vals, int num,
+                                 int* intypes, int num_in, int* outtypes, int num_out);
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
-typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                             const int64_t**, int*, void**, int*, size_t*, char**, int*, int,
-                             const int64_t**, int*, void**, int*, size_t*, char**, int*, int,
-                             xpu_malloc_t, void*, void*);
+typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
+                             const int64_t** inshapes, int* indims, void** indata, int* intypes,
+                             size_t* inIDs, char** indev_type, int* indev_id, int num_in,
+                             const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
+                             size_t* outIDs, char** outdev_type, int* outdev_id, int num_out,
+                             xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
-typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
-                                    int**, int*);
+typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
+                                    const char* const* vals, int num,
+                                    int** mutate_indices, int* indices_size);
 
 #define MXLIB_OPCALLCREATEOPSTATE_STR "_opCallCreateOpState"
-typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const char* const*, int,
-                                     void**);
+typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* const* keys,
+                                     const char* const* vals, int num,
+                                     void** state_op);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
-typedef int (*opCallFStatefulComp_t)(int, void*,
-                                     const int64_t**, int*, void**, int*,
-                                     size_t*, int*, int*, int,
-                                     const int64_t**, int*, void**, int*,
-                                     size_t*, int*, int*, int,
-                                     xpu_malloc_t, void*, void*);
+typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
+                                     const int64_t** inshapes, int* indims, void** indata, int* intypes,
+                                     size_t* inIDs, int* indev_type, int* indev_id, int num_in,
+                                     const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
+                                     size_t* outIDs, int* outdev_type, int* outdev_id, int num_out,
+                                     xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
 
 #define MXLIB_PARTREGGETCOUNT_STR "_partRegGetCount"
-typedef int (*partRegGetCount_t)(int, const char**);
+typedef int (*partRegGetCount_t)(int idx, const char** name);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
-typedef void (*partRegGet_t)(int, int, const char**, supportedOps_t*,
-                            acceptSubgraph_t*, const char**);
+typedef void (*partRegGet_t)(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
+                             acceptSubgraph_t* acceptSubgraph, const char** op_name);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
-typedef int (*partCallSupportedOps_t)(supportedOps_t, const char*, int, int *,
-                                      const char* const*, const char* const*, int);
+typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *json,
+                                      int num_ids, int *ids, const char* const* opt_keys,
+                                      const char* const* opt_vals, int num_opts);
+
 #define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
-typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph,
-                                        const char *json, int subgraph_id,
-                                        int *accept, const char* const*,
-                                        const char* const*, int,
-                                        char***, char***, int*);
+typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph, const char *json,
+                                        int subgraph_id, int *accept, const char* const* opt_keys,
+                                        const char* const* opt_vals, int num_opts,
+                                        char*** attr_keys, char*** attr_vals, int *num_attrs);
 
 #define MXLIB_INITIALIZE_STR "initialize"
-typedef int (*initialize_t)(int);
+typedef int (*initialize_t)(int version);
 
 #define MXLIB_OPVERSION_STR "_opVersion"
 typedef int (*opVersion_t)();
@@ -897,20 +898,20 @@ extern "C" {
             parseAttrs_t* parse, inferType_t* type,
             inferShape_t* shape, mutateInputs_t* mutate,
             createOpState_t* create_op, int *isSGop) {
-    CustomOp *op = &(Registry<CustomOp>::get()->get(idx));
-    *name = op->name;
-    *parse = op->parse_attrs;
-    *type = op->infer_type;
-    *shape = op->infer_shape;
-    *mutate = op->mutate_inputs;
-    *create_op = op->create_opstate;
-    *isSGop = op->isSGop;
-    *forward_ctx = op->forward_ctx_cstr.data();
-    *forward_fp = op->forward_fp.data();
-    *forward_count = op->forward_fp.size();
-    *backward_ctx = op->backward_ctx_cstr.data();
-    *backward_fp = op->backward_fp.data();
-    *backward_count = op->backward_fp.size();
+    CustomOp &op = Registry<CustomOp>::get()->get(idx);
+    *name = op.name;
+    *parse = op.parse_attrs;
+    *type = op.infer_type;
+    *shape = op.infer_shape;
+    *mutate = op.mutate_inputs;
+    *create_op = op.create_opstate;
+    *isSGop = op.isSGop;
+    *forward_ctx = op.forward_ctx_cstr.data();
+    *forward_fp = op.forward_fp.data();
+    *forward_count = op.forward_fp.size();
+    *backward_ctx = op.backward_ctx_cstr.data();
+    *backward_fp = op.backward_fp.data();
+    *backward_count = op.backward_fp.size();
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
@@ -1045,19 +1046,15 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      std::string ctx_str(indev_type[i]);
-      MXContext inctx = {ctx_str, indev_id[i]};
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], inctx);
+                          inIDs[i], {indev_type[i], indev_id[i]});
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      std::string ctx_str(indev_type[i]);
-      MXContext outctx = {ctx_str, outdev_id[i]};
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], outctx);
+                           outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
     OpResource res(cpu_malloc, cpu_alloc, stream);
@@ -1072,8 +1069,8 @@ extern "C" {
   int
 #endif
   _opCallMutateInputs(mutateInputs_t mutate, const char* const* keys,
-                    const char* const* vals, int num,
-                    int** mutate_indices, int* indices_size) {
+                      const char* const* vals, int num,
+                      int** mutate_indices, int* indices_size) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
