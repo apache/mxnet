@@ -37,6 +37,11 @@ from subprocess import check_call
 
 from util import *
 
+
+# Fix for broken PATH with newline inserted presumably by VS studio installation of SQL server or
+# other component which makes visual studio stop working.
+os.environ['PATH']=os.environ.get('PATH').replace('\n','')
+
 KNOWN_VCVARS = {
     # https://gitlab.kitware.com/cmake/cmake/issues/18920
     'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat',
