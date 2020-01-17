@@ -52,22 +52,29 @@ class DatasetSampler : public dmlc::DataIter<DType> {
   virtual ~DatasetSampler(void) {}
 };  // class DatasetSampler
 
-struct BatchSample {
-    std::vector<int64_t> samples;
-    std::size_t batch_size;
-};  // struct BatchSample
+typedef std::vector<int64_t> BatchSample;
 
 /*! \brief typedef the factory function of data sampler */
-typedef std::function<DatasetSampler<BatchSample> *()> DataSamplerFactory;
+typedef std::function<DatasetSampler<int64_t> *()> DataSamplerFactory;
 /*!
- * \brief Registry entry for DataIterator factory functions.
+ * \brief Registry entry for DataSampler factory functions.
  */
 struct DataSamplerReg
     : public dmlc::FunctionRegEntryBase<DataSamplerReg,
                                         DataSamplerFactory> {
 };
+
+/*! \brief typedef the factory function of data sampler */
+typedef std::function<DatasetSampler<BatchSample> *()> DataBatchSamplerFactory;
+/*!
+ * \brief Registry entry for DataSampler factory functions.
+ */
+struct DataBatchSamplerReg
+    : public dmlc::FunctionRegEntryBase<DataBatchSamplerReg,
+                                        DataSamplerFactory> {
+};
 //--------------------------------------------------------------
-// The following part are API Registration of Iterators
+// The following part are API Registration of Samplers
 //--------------------------------------------------------------
 /*!
  * \brief Macro to register Samplers
@@ -82,7 +89,10 @@ struct DataSamplerReg
  * \endcode
  */
 #define MXNET_REGISTER_IO_SAMPLER(name)                                    \
-  DMLC_REGISTRY_REGISTER(::mxnet::DataSamplerReg, DataSamplerReg, name)
+  DMLC_REGISTRY_REGISTER(::mxnet::io::DataSamplerReg, DataSamplerReg, name)
+
+#define MXNET_REGISTER_IO_BATCH_SAMPLER(name)                                    \
+  DMLC_REGISTRY_REGISTER(::mxnet::io::DataBatchSamplerReg, DataBatchSamplerReg, name)
 }  // namespace io
 }  // namespace mxnet
 
