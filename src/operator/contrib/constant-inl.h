@@ -38,7 +38,7 @@ struct ConstantParam : public dmlc::Parameter<ConstantParam> {
   DMLC_DECLARE_PARAMETER(ConstantParam) {
     DMLC_DECLARE_FIELD(value)
     .set_default({1.0f, 1.0f})
-    .describe("The target shape");
+    .describe("The target value");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
