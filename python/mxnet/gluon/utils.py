@@ -21,7 +21,7 @@
 from __future__ import absolute_import
 
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
-           'check_sha1', 'download']
+           'check_sha1', 'download', 'replace_file']
 
 import os
 import sys
@@ -35,7 +35,7 @@ import requests
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array
+from ..util import is_np_shape, is_np_array, makedirs
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
@@ -197,8 +197,14 @@ def check_sha1(filename, sha1_hash):
 
 if not sys.platform.startswith('win32'):
     # refer to https://github.com/untitaker/python-atomicwrites
-    def _replace_atomic(src, dst):
-        """Implement atomic os.replace with linux and OSX. Internal use only"""
+    def replace_file(src, dst):
+        """Implement atomic os.replace with linux and OSX.
+
+        Parameters
+        ----------
+        src : source file path
+        dst : destination file path
+        """
         try:
             os.rename(src, dst)
         except OSError:
@@ -240,18 +246,25 @@ else:
             finally:
                 raise OSError(msg)
 
-    def _replace_atomic(src, dst):
+    def replace_file(src, dst):
         """Implement atomic os.replace with windows.
+
         refer to https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-movefileexw
         The function fails when one of the process(copy, flush, delete) fails.
-        Internal use only"""
+
+        Parameters
+        ----------
+        src : source file path
+        dst : destination file path
+        """
         _handle_errors(ctypes.windll.kernel32.MoveFileExW(
             _str_to_unicode(src), _str_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
         ), src)
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True,
+             inplace=False):
     """Download an given URL
 
     Parameters
@@ -270,6 +283,9 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
         The number of times to attempt the download in case of failure or non 200 return codes
     verify_ssl : bool, default True
         Verify SSL certificates.
+    inplace : bool, default False
+        Whether to write to the file at destination path inplace. Usually used if the path of temp
+        file is provided.
 
     Returns
     -------
@@ -298,7 +314,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            makedirs(dirname)
         while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703
@@ -307,26 +323,30 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
                     raise RuntimeError('Failed downloading url {}'.format(url))
-                # create uuid for temporary files
-                random_uuid = str(uuid.uuid4())
-                with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
+                if inplace:
+                    temp_file_name = fname
+                else:
+                    random_uuid = str(uuid.uuid4())
+                    temp_file_name = '{}.{}'.format(fname, random_uuid)
+                with open(temp_file_name, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
-                # if the target file exists(created by other processes)
-                # and have the same hash with target file
-                # delete the temporary file
-                if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
-                    # atmoic operation in the same file system
-                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
-                else:
-                    try:
-                        os.remove('{}.{}'.format(fname, random_uuid))
-                    except OSError:
-                        pass
-                    finally:
-                        warnings.warn(
-                            'File {} exists in file system so the downloaded file is deleted'.format(fname))
+                if not inplace:
+                    # if the target file exists(created by other processes)
+                    # and have the same hash with target file
+                    # delete the temporary file
+                    if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
+                        # atmoic operation in the same file system
+                        replace_file('{}.{}'.format(fname, random_uuid), fname)
+                    else:
+                        try:
+                            os.remove('{}.{}'.format(fname, random_uuid))
+                        except OSError:
+                            pass
+                        finally:
+                            warnings.warn(
+                                'File {} exists in file system so the downloaded file is deleted'.format(fname))
                 if sha1_hash and not check_sha1(fname, sha1_hash):
                     raise UserWarning(
                         'File {} is downloaded but the content hash does not match.'

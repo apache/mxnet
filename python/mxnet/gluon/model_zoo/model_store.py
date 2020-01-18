@@ -22,8 +22,9 @@ __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
 import logging
+import tempfile
 
-from ..utils import download, check_sha1
+from ..utils import download, check_sha1, replace_file
 from ... import base, util
 
 _model_sha1 = {name: checksum for checksum, name in [
@@ -107,12 +108,15 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
     if repo_url[-1] != '/':
         repo_url = repo_url + '/'
-    download(_url_format.format(repo_url=repo_url, file_name=file_name),
-             path=zip_file_path,
-             overwrite=True)
-    with zipfile.ZipFile(zip_file_path) as zf:
-        zf.extractall(root)
-    os.remove(zip_file_path)
+
+    with tempfile.NamedTemporaryFile(dir=root) as zip_file:
+        download(_url_format.format(repo_url=repo_url, file_name=file_name),
+                 path=zip_file.name, overwrite=True, inplace=True)
+        with zipfile.ZipFile(zip_file) as zf:
+            with tempfile.TemporaryDirectory(dir=root) as temp_dir:
+                zf.extractall(temp_dir)
+                temp_file_path = os.path.join(temp_dir, file_name+'.params')
+                replace_file(temp_file_path, file_path)
 
     if check_sha1(file_path, sha1_hash):
         return file_path
