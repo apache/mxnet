@@ -135,8 +135,6 @@ else
 	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
-NVCCFLAGS += --ptxas-options=-v
-
 # CFLAGS for segfault logger
 ifeq ($(USE_SIGNAL_HANDLER), 1)
 	CFLAGS += -DMXNET_USE_SIGNAL_HANDLER=1
