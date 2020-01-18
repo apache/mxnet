@@ -19,9 +19,11 @@
 from __future__ import absolute_import
 from __future__ import division
 from distutils.version import StrictVersion
+import sys
 import platform
 import itertools
 import numpy as _np
+import unittest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
@@ -1159,6 +1161,7 @@ def _add_workload_lcm():
     OpArgMngr.add_workload('lcm', np.array([12, 120], dtype=np.uint8), np.array([20, 200], dtype=np.uint8))
     OpArgMngr.add_workload('lcm', np.array(195225786*2, dtype=np.int32), np.array(195225786*5, dtype=np.int32))
 
+
 def _add_workload_bitwise_or():
     OpArgMngr.add_workload('bitwise_or', np.array([False, False, True, True], dtype=np.bool),
                            np.array([False, True, False, True], dtype=np.bool))
@@ -1169,6 +1172,7 @@ def _add_workload_bitwise_or():
         OpArgMngr.add_workload('bitwise_or', ones, zeros)
         OpArgMngr.add_workload('bitwise_or', zeros, ones)
         OpArgMngr.add_workload('bitwise_or', ones, ones)
+
 
 def _add_workload_bitwise_xor():
     OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=np.bool),
@@ -1624,6 +1628,7 @@ def _add_workload_resize():
     OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 10))
     OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 100))
 
+
 def _add_workload_empty_like():
     OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'))
     OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(9,3,1)), np.int32)
@@ -1641,6 +1646,34 @@ def _add_workload_nan_to_num():
     OpArgMngr.add_workload('nan_to_num', array2, True)
     OpArgMngr.add_workload('nan_to_num', array2, True, -2000, 10000, -10000)
     OpArgMngr.add_workload('nan_to_num', array3, True)
+
+
+def _add_workload_linalg_cond():
+    A = np.array([[1., 0, 1], [0, -2., 0], [0, 0, 3.]])
+    OpArgMngr.add_workload('linalg.cond', A, np.inf)
+    OpArgMngr.add_workload('linalg.cond', A, -np.inf)
+    OpArgMngr.add_workload('linalg.cond', A, 1)
+    OpArgMngr.add_workload('linalg.cond', A, -1)
+    OpArgMngr.add_workload('linalg.cond', A, 'fro')
+
+
+def _add_workload_heaviside():
+    x = np.array([[-30.0, -0.1, 0.0, 0.2], [7.5, np.nan, np.inf, -np.inf]], dtype=np.float64)
+    OpArgMngr.add_workload('heaviside', x, 0.5)
+    OpArgMngr.add_workload('heaviside', x, 1.0)
+
+    x = x.astype(np.float32)
+    OpArgMngr.add_workload('heaviside', x, np.float32(0.5))
+    OpArgMngr.add_workload('heaviside', x, np.float32(1.0))
+
+
+def _add_workload_spacing():
+    OpArgMngr.add_workload('spacing', np.float64(1))
+    OpArgMngr.add_workload('spacing', np.float32(1))
+    OpArgMngr.add_workload('spacing', np.inf)
+    OpArgMngr.add_workload('spacing', -np.inf)
+    OpArgMngr.add_workload('spacing', np.float64(1e30))
+    OpArgMngr.add_workload('spacing', np.float32(1e30))
 
 
 @use_np
@@ -1713,6 +1746,7 @@ def _prepare_workloads():
     _add_workload_linalg_tensorsolve()
     _add_workload_linalg_pinv()
     _add_workload_linalg_slogdet()
+    _add_workload_linalg_cond()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
@@ -1786,6 +1820,8 @@ def _prepare_workloads():
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
     _add_workload_nan_to_num()
+    _add_workload_heaviside()
+    _add_workload_spacing()
 
 
 _prepare_workloads()
@@ -1821,9 +1857,10 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
                 assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
             else:
                 _np.testing.assert_equal(arr, expected_arr)
-    else:
-        assert isinstance(out, np.ndarray)
+    elif isinstance(out, np.ndarray):
         assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+    else:
+        _np.testing.assert_almost_equal(out, expected_out)
 
 
 def check_interoperability(op_list):
@@ -1869,6 +1906,14 @@ def test_np_array_function_protocol():
 @with_array_ufunc_protocol
 def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+
+
+@unittest.skipIf(sys.version_info.major < 3, "Skip running fallback ops for Python2")
+@with_seed()
+@use_np
+def test_np_fallback_ops():
+    op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
+    check_interoperability(op_list)
 
 
 if __name__ == '__main__':
