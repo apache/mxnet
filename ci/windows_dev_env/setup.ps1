@@ -1,4 +1,3 @@
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -47,7 +46,7 @@ Check-Call { setx PATH "$($env:path);c:\Program Files\CMake\bin" }
 Check-Call { C:\ProgramData\chocolatey\choco install ninja -y }
 
 # Deps
-Check-Call { C:\Python37\python  windows_deps_headless_installer.py --gpu }
+Check-Call { C:\Python37\python  windows_deps_headless_installer.py }
 
 # Other software
 #Check-Call { C:\ProgramData\chocolatey\choco install jom -y }
