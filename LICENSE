@@ -333,9 +333,11 @@
          cmake/Modules/FindCUDAToolkit.cmake
          3rdparty/mkldnn/cmake/FindOpenCL.cmake
          Copyright 2000-2019 Kitware, Inc. and Contributors
-    10 ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
+    10. ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
          Copyright (c) 2011, Intel Corporation
-
+    11. Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op-inl.h
+         Copyright (c) 2005-2019, NumPy Developers.
+         Copyright (c) 2019, The Apache Software Foundation.
 
     =======================================================================================
     2-clause BSD licenses
