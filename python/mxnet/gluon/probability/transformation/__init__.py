@@ -18,3 +18,6 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Transformation classes."""
+
+from .transformation import *
+
