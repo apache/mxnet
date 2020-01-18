@@ -22,10 +22,30 @@
  * \file dataloader.cc
  * \brief Pure c++ backed dataloader implementation
  */
+#include <dmlc/parameter.h>
 #include <mxnet/io.h>
 
 namespace mxnet {
 namespace io {
+struct ThreadedDataLoaderParam : public dmlc::Parameter<ThreadedDataLoaderParam> {
+    /*! \brief Multithread worker number. */
+    int num_worker;
+    /*! \brief batchify function name.*/
+    std::string batchify_name;
+    std::string batchify_kwargs;
+    std::string batch_sampler_name;
+    std::string batch_sampler_kwargs;
+    int pin_device_id;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(ThreadedDataLoaderParam) {
+        DMLC_DECLARE_FIELD(num_worker).set_default(0)
+            .describe("Number of thread workers.");
+        DMLC_DECLARE_FIELD(pin_device_id).set_default(-1)
+            .describe("If not negative, will move data to pinned memory.");
+    }
+};  // struct ThreadedDataLoaderParam
+
+DMLC_REGISTER_PARAMETER(ThreadedDataLoaderParam);
 
 template<typename DType = real_t>
 class ThreadedDataLoader : public IIterator<DataBatch> {
@@ -49,7 +69,8 @@ class ThreadedDataLoader : public IIterator<DataBatch> {
   virtual const DataBatch &Value(void) const {
   }
 
- private:
+  private:
+    
   
 };  // class ThreadedDataLoader
 }  // namespace io

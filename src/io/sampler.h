@@ -34,8 +34,7 @@
 
 namespace mxnet {
 namespace io {
-template<typename DType>
-class DatasetSampler : public dmlc::DataIter<DType> {
+class IndexSampler : public dmlc::DataIter<int64_t> {
  public:
   /*!
    * \brief set the parameters and init iter
@@ -47,31 +46,39 @@ class DatasetSampler : public dmlc::DataIter<DType> {
   /*! \brief move to next item */
   virtual bool Next(void) = 0;
   /*! \brief get current data */
-  virtual const DType &Value(void) const = 0;
-  /*! \brief constructor */
-  virtual ~DatasetSampler(void) {}
-};  // class DatasetSampler
+  virtual const int64_t &Value(void) const = 0;
+  /*! \brief deconstructor */
+  virtual ~IndexSampler(void) {}
+};  // class IndexSampler
 
 typedef std::vector<int64_t> BatchSample;
 
-/*! \brief typedef the factory function of data sampler */
-typedef std::function<DatasetSampler<int64_t> *()> DataSamplerFactory;
-/*!
- * \brief Registry entry for DataSampler factory functions.
- */
-struct DataSamplerReg
-    : public dmlc::FunctionRegEntryBase<DataSamplerReg,
-                                        DataSamplerFactory> {
-};
+class BatchSampler : public dmlc::DataIter<BatchSample> {
+ public:
+  /*! \brief deconstructor */
+  virtual ~BatchSampler(void) {
+  }
+  /*!
+   * \brief set the parameters and init iter
+   * \param kwargs key-value pairs
+   */
+  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+  /*! \brief reset the iterator */
+  virtual void BeforeFirst(void) = 0;
+  /*! \brief move to next item */
+  virtual bool Next(void) = 0;
+  /*! \brief get current data */
+  virtual const BatchSample &Value(void) const = 0;
+};  // class BatchSampler
 
 /*! \brief typedef the factory function of data sampler */
-typedef std::function<DatasetSampler<BatchSample> *()> DataBatchSamplerFactory;
+typedef std::function<BatchSampler *()> BatchSamplerFactory;
 /*!
- * \brief Registry entry for DataSampler factory functions.
+ * \brief Registry entry for BatchSampler factory functions.
  */
-struct DataBatchSamplerReg
-    : public dmlc::FunctionRegEntryBase<DataBatchSamplerReg,
-                                        DataSamplerFactory> {
+struct BatchSamplerReg
+    : public dmlc::FunctionRegEntryBase<BatchSamplerReg,
+                                        BatchSamplerFactory> {
 };
 //--------------------------------------------------------------
 // The following part are API Registration of Samplers
@@ -80,19 +87,16 @@ struct DataBatchSamplerReg
  * \brief Macro to register Samplers
  *
  * \code
- * // example of registering a mnist iterator
- * MXNET_REGISTER_IO_SAMPLER(RandomSampler)
- * .describe("Random sampler")
+ * // example of registering a Random Sampler
+ * MXNET_REGISTER_IO_SAMPLER(RandomBatchSampler)
+ * .describe("Random batch sampler")
  * .set_body([]() {
- *     return new RandomSampler();
+ *     return new BatchSampler(new RandomSampler);
  *   });
  * \endcode
  */
-#define MXNET_REGISTER_IO_SAMPLER(name)                                    \
-  DMLC_REGISTRY_REGISTER(::mxnet::io::DataSamplerReg, DataSamplerReg, name)
-
 #define MXNET_REGISTER_IO_BATCH_SAMPLER(name)                                    \
-  DMLC_REGISTRY_REGISTER(::mxnet::io::DataBatchSamplerReg, DataBatchSamplerReg, name)
+  DMLC_REGISTRY_REGISTER(::mxnet::io::BatchSamplerReg, BatchSamplerReg, name)
 }  // namespace io
 }  // namespace mxnet
 
