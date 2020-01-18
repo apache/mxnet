@@ -254,7 +254,7 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
   __shared__ AType saved_mean[shmem_elements];
   __shared__ AType saved_weight[shmem_elements];
   __shared__ AType saved_bias[shmem_elements];
-  union scratch {
+  union vectorized_loader {
     LType aligned;
     DType separate[nvec];  // NOLINT(*)
 
@@ -425,9 +425,9 @@ __global__ void FrozenBatchNormalizationBackwardKernelCLastPhase1(
   const int my_warp = threadIdx.x / warp_size;
   const int my_id = threadIdx.x % warp_size;
 
-  AType invstd[nvec];
-  AType mean[nvec];
-  AType gamma[nvec];
+  AType invstd[nvec];  // NOLINT(*)
+  AType mean[nvec];  // NOLINT(*)
+  AType gamma[nvec];  // NOLINT(*)
   size_t channel_offset = (offset + my_id) * nvec;
 
   if (channel_offset < num_channels) {
@@ -525,74 +525,6 @@ __global__ void FrozenBatchNormalizationBackwardKernelCLastPhase2(const AType * 
       out_beta[tid] = sum_beta;
     }
   }
-}
-
-template<typename DType, typename AType, typename LType>
-static __global__ void FrozenBatchNormalizationBackwardKernelCLast(
-  const DType* input,
-  const DType* gradOutput,
-  DType* gradInput/*,
-  AType* gradWeight,
-  AType* gradBias,
-  const AType* weight,
-  const AType* runningMean,
-  const AType* runningVar,
-  const uint32_t flags,
-  const AccReal momentum,
-  const AccReal eps,
-  const int splitk,
-  const index_t num_channels,
-  const int loads_per_block,
-  const index_t outer_dim,
-  const index_t inner_dim,
-  const index_t NHW*/) {
-#if 0
-  int plane = blockIdx.x;
-  int N = gradOutput.OuterSize() * gradOutput.InnerSize();
-
-  AccReal mean, invstd;
-  mean = ScalarConvert<DType, AccReal>::to(tensors.runningMean[plane]);
-  invstd = variance_to_invstd(tensors.runningVar[plane], eps);
-
-  const AccReal weightVal = ((flags & FIX_GAMMA_FLAG) == 0 && tensors.weight.numElements() > 0) ?
-                      ScalarConvert<DType, AccReal>::to(tensors.weight[plane]) : AccReal(1);
-  const AccReal norm = AccReal(1) / N;
-
-  // Compute two values across (batch, x/y/z) in one pass:
-  // 1. Sum(gradOutput)
-  // 2. DotProduct(input - mean, gradOutput)
-  GradOp<DType, AccReal, DeviceTensor> g(mean, input, gradOutput);
-  Float2< DType, AccReal > res = reduce < Float2 < DType, AccReal >,
-    GradOp< DType, AccReal, DeviceTensor >, DeviceTensor > (g, gradOutput, plane);
-  const AccReal gradOutputSum = res.v1;
-  const AccReal dotP = res.v2;
-
-  const AccReal gradMean = gradOutputSum * norm;
-  const AccReal projScale = dotP * norm * invstd * invstd;
-  const AccReal gradScale = invstd * weightVal;
-
-  if (gradInput.Size() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
-    for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
-      for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
-        const DType gradOut = gradOutput.get_ref(batch, plane, x);
-        gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
-          gradOut * gradScale);
-      }
-    }
-  }
-
-  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
-    if ((flags & FIX_GAMMA_FLAG) == 0) {
-      tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
-    } else {
-      tensors.gradWeight[plane] = DType(0);
-    }
-  }
-
-  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
-  }
-#endif
 }
 
 template<int NTHREADS, typename DType, typename AType, typename LType>
@@ -954,10 +886,6 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input, gradOutput, gradInput, tensors, flags, momentum, eps);
   } else {
-    std::cout <<"Frozen" <<std::endl;
-    std::cout << param.axis << std::endl;
-    std::cout << in_data[batchnorm::kData].shape_ << std::endl;
-    std::cout << gradOutput.InnerSize() << " " << gradOutput.ChannelCount() << " " << gradOutput.OuterSize() << std::endl;
     uint32_t flags_copy = flags;
     if (gradInput.Size() <= 0) {
       flags_copy = (flags_copy & ~WRITE_DATA_FLAG);
@@ -973,7 +901,6 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
                      : nullptr;
 
     if (param.axis == -1 || param.axis == in_data[batchnorm::kData].shape_.ndim() - 1) {
-      std::cout << "NHWC " << std::endl;
       const int C = gradOutput.ChannelCount();
       int ltype = mxnet::common::cuda::get_load_type(C * sizeof(DType));
       const int M = gradOutput.OuterSize();
@@ -985,7 +912,8 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
         const unsigned int blocks_y = std::max(preferred_number_of_blocks / blocks_x, 1u);
         const dim3 n_blocks = {blocks_x, blocks_y, 1};
         auto scratch_space = ctx.requested[batchnorm::kTempSpace]
-                                .get_space_typed<gpu, 1, AccReal>(mshadow::Shape1(C * blocks_y * 2), s);
+                                .get_space_typed<gpu, 1, AccReal>(mshadow::Shape1(C * blocks_y * 2),
+                                                                                  s);
         auto stream = mshadow::Stream<gpu>::GetStream(s);
         constexpr int nthreads_phase1 = 512;
         constexpr int nthreads_phase2 = 128;
@@ -1006,7 +934,6 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
                                                            blocks_y, eps, flags_copy);
       });
     } else {
-      std::cout << "NCHW " << std::endl;
     dim3 blocks(gradOutput.ChannelCount());
     int ltype = mxnet::common::cuda::get_load_type(gradOutput.InnerSize() * sizeof(DType));
     MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
