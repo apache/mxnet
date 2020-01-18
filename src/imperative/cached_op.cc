@@ -712,7 +712,6 @@ OpStatePtr CachedOp::DynamicForward(
   }
   nnvm::Graph& g = runtime.info.fwd_graph;
   const auto& idx = g.indexed_graph();
-  size_t num_inputs = idx.input_nodes().size();
   auto& buff = runtime.buff;
   auto& states = runtime.op_states;
 
@@ -724,39 +723,17 @@ OpStatePtr CachedOp::DynamicForward(
   for (auto& buffered_array : buff) {
     arrays.push_back(&buffered_array);
   }
-  for (size_t i = 0; i < num_inputs; ++i) {
-    arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
-  }
-  for (size_t i = 0; i < idx.outputs().size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    if (!arrays[eid]->is_none()) *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-  }
-
-  // Allocate NDArrays
+  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   const std::string& graph_type = recording ? FULL : FORWARD;
   std::vector<uint32_t> ref_count =
     g.GetAttr<std::vector<uint32_t> >(AddPrefix(graph_type, REF_COUNT));
+  const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
+  CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+  CreateGraphNDs(g, default_ctx, ref_count,
+                 mem_plan, use_naive_run, &array_reqs, &arrays);
 
-  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
-    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
-  }
-  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   if (!use_naive_run) {
-    const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
-    AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
-                  mem_plan, arrays, &array_reqs);
-    const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-    const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      arrays[eid] = outputs[i];
-      if (!outputs[i]->is_none()) continue;
-      *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                            shapes[eid], default_ctx, true, dtypes[eid]);
-    }
     // If CachedOp is running in the inline mode, it uses RunGraph to record
     // computation; otherwise, CachedOp records computation itself.
     // So if it's not the inline mode, we disable recording.

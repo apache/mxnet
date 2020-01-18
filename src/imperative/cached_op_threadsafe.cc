@@ -90,7 +90,6 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   using namespace nnvm;
   using namespace imperative;
 
-  {
   auto state_ptr = GetCachedOpState(default_ctx);
   auto op_state = OpStatePtr::Create<DynamicRuntime>();
   auto &runtime = op_state.get_state<DynamicRuntime>();
@@ -106,7 +105,6 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   }
   nnvm::Graph &g = runtime.info.fwd_graph;
   const auto &idx = g.indexed_graph();
-  size_t num_inputs = idx.input_nodes().size();
   size_t max_nodes = runtime.info.fwd_graph.indexed_graph().num_nodes();
   runtime.op_states.resize(max_nodes);
   auto &states = runtime.op_states;
@@ -121,46 +119,18 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   for (auto &buffered_array : buff) {
     arrays.push_back(&buffered_array);
   }
-  for (size_t i = 0; i < num_inputs; ++i) {
-    arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
-  }
-  for (size_t i = 0; i < idx.outputs().size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    if (!arrays[eid]->is_none())
-      *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-  }
-  // Allocate NDArrays
+  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  const auto &dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t>>(
       "forward_ref_count");
-
-  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
-  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
-    if (ref_count[i] == 0)
-      array_reqs[i] = kNullOp;
-  }
-  const auto &dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
-  const auto &mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
-  AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(), mem_plan,
-                 arrays, &array_reqs);
-  const auto &dtypes = g.GetAttr<DTypeVector>("dtype");
-  const auto &shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-  const auto &stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  for (size_t i = 0; i < outputs.size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    arrays[eid] = outputs[i];
-    if (!outputs[i]->is_none())
-      continue;
-    *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
-  }
-  // If CachedOp is running in the inline mode, it uses RunGraph to record
-  // computation; otherwise, CachedOp records computation itself.
-  // So if it's not the inline mode, we disable recording.
+  const MemoryPlanVector& mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
+  const std::string& graph_type = FORWARD;
+  CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+  CreateGraphNDs(g, default_ctx, ref_count,
+                 mem_plan, false, &array_reqs, &arrays);
   RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
            std::move(ref_count), &states, dispatch_modes, false);
   return op_state;
-  }
 }
 
 OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOp>& op_ptr,

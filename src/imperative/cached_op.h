@@ -46,6 +46,58 @@ std::string AddPrefix(const std::string& prefix,
   return prefix + "_" + s;
 }
 
+/* \brief collect pointers to input and output ndarrays
+ * into a single data structure, this data structure can
+ * be used for Memory allocation pass*/
+void CollectInputOutputNDRefs(const nnvm::Graph& g,
+                              const std::vector<NDArray*>& inputs,
+                              const std::vector<NDArray*>& outputs,
+                              std::vector<NDArray*>* arrays) {
+  const auto& idx = g.indexed_graph();
+  size_t num_inputs = idx.input_nodes().size();
+  for (size_t i = 0; i < num_inputs; ++i) {
+    (*arrays)[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
+  }
+  for (size_t i = 0; i < idx.outputs().size(); ++i) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    if (!(*arrays)[eid]->is_none())
+      *outputs[i] = (*arrays)[eid]->Detach();
+    (*arrays)[eid] = outputs[i];
+  }
+}
+
+/* \brief create ndarrays for the intermediate outputs and final outputs
+ * from the allocated storage (happens in MXPlanMemory NNVM pass)*/
+void CreateGraphNDs(const nnvm::Graph& g,
+                    const mxnet::Context& default_ctx,
+                    const std::vector<uint32_t>& ref_count,
+                    const mxnet::imperative::MemoryPlanVector& mem_plan,
+                    bool use_naive_run,
+                    std::vector<OpReqType>* array_reqs,
+                    std::vector<NDArray*>* arrays) {
+  const auto& idx = g.indexed_graph();
+  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
+    if (ref_count[i] == 0)
+      (*array_reqs)[i] = kNullOp;
+  }
+
+  if (!use_naive_run) {
+    mxnet::imperative::AllocateMemory(g, idx, default_ctx, 0,
+                                      idx.num_node_entries(), mem_plan, *arrays,
+                                      array_reqs);
+    const auto &dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
+    const auto &shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+    const auto &stypes = g.GetAttr<mxnet::StorageTypeVector>("storage_type");
+    for (size_t i = 0; i < idx.outputs().size(); ++i) {
+      auto eid = idx.entry_id(idx.outputs()[i]);
+      if (!(*arrays)[eid]->is_none())
+        continue;
+      *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                                shapes[eid], default_ctx, true, dtypes[eid]);
+    }
+  }
+}
+
 /* \brief create a forward graph from they Symbol */
 void CreateForwardGraph(const nnvm::Symbol &sym, nnvm::Graph *fwd_graph) {
   using namespace nnvm;
