@@ -258,8 +258,8 @@ __global__ void BatchNormalizationUpdateOutputInferenceKernel(
     LType aligned;
     DType separate[nvec];  // NOLINT(*)
 
-    __device__ inline scratch() {}
-    __device__ inline ~scratch() {}
+    __device__ inline vectorized_loader() {}
+    __device__ inline ~vectorized_loader() {}
   } scratch;
 
   if (small_num_channels) {
