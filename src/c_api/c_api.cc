@@ -56,6 +56,7 @@
 #include "../operator/subgraph/partitioner/custom_subgraph_property.h"
 #include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
+#include "../profiler/profiler.h"
 #include "nnvm/pass_functions.h"
 
 using namespace mxnet;
@@ -989,9 +990,12 @@ void CreateNDArray(const DataType* shape,
               "[CreateNDArray] Size of tensor you are trying to allocate is larger than "
               "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   }
-  *out = new NDArray(requested_shape,
-                     Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                     delay_alloc != 0, dtype);
+  NDArray* nd = new NDArray(requested_shape,
+                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+                            delay_alloc != 0, dtype);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
 }
 
 int MXNDArrayCreate(const uint32_t *shape,
@@ -1001,9 +1005,12 @@ int MXNDArrayCreate(const uint32_t *shape,
                     int delay_alloc,
                     NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(mxnet::TShape(shape, shape + ndim),
-                     Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                     delay_alloc != 0);
+  NDArray* nd = new NDArray(mxnet::TShape(shape, shape + ndim),
+                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+                            delay_alloc != 0);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
   API_END();
 }
 
@@ -1054,12 +1061,15 @@ void CreateSparseNDArray(int storage_type,
     aux_shapes.emplace_back(shape_start, shape_start + aux_ndims[i]);
     shape_start += aux_ndims[i];
   }
-  *out = new NDArray(
+  NDArray* nd = new NDArray(
       NDArrayStorageType(storage_type),
       mxnet::TShape(shape, shape + ndim),
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype, aux_types, aux_shapes);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
 }
 
 int MXNDArrayCreateSparseEx(int storage_type,
@@ -2462,14 +2472,20 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
 int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
                                  uint32_t ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
   API_END();
 }
 
 int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
                                    int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
   API_END();
 }
 

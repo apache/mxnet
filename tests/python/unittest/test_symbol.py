@@ -296,7 +296,8 @@ def test_load_000800():
         assert k in attr2, k
         v2 = attr2[k]
         for kk, vv1 in v1.items():
-            if kk.startswith('__') and kk.endswith('__'):
+            if kk.startswith('__') and kk.endswith('__') and \
+               kk != '__profiler_scope__':
                 assert kk in v2 and v2[kk] == vv1, k + str(v1) + str(v2)
 
     check_symbol_consistency(sym1, sym2,
