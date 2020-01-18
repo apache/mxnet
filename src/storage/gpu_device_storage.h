@@ -28,6 +28,7 @@
 #include "mxnet/base.h"
 #include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
+#include "../profiler/gpu_memory_profiler.h"
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
 #endif  // MXNET_USE_CUDA
@@ -66,6 +67,8 @@ inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
   cudaError_t e = cudaMalloc(&handle->dptr, size);
   if (e != cudaSuccess && e != cudaErrorCudartUnloading)
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(e);
+  // record the allocation event in the memory profiler
+  profiler::GpuMemoryProfiler::Get()->addEntry(*handle, size, false);
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

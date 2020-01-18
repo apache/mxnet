@@ -38,6 +38,7 @@ from ..ndarray import (sgd_update, sgd_mom_update, adam_update, rmsprop_update, 
                        mp_lamb_update_phase1, mp_lamb_update_phase2)
 from ..ndarray.contrib import (multi_lamb_update, multi_mp_lamb_update)
 from ..ndarray import sparse
+from ..profiler import Scope
 from ..random import normal
 from ..util import is_np_array
 
@@ -2095,7 +2096,8 @@ class Updater(object):
                 indices[i] = py_str(idx)
                 idx = indices[i]
             if idx not in self.states:
-                self.states[idx] = self.optimizer.create_state_multi_precision(idx, weights[i])
+                with Scope("optimizer_state"):
+                    self.states[idx] = self.optimizer.create_state_multi_precision(idx, weights[i])
                 self.states_synced[idx] = True
             elif not self.states_synced[idx]:
                 self.states[idx] = \

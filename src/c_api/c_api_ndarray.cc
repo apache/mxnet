@@ -37,6 +37,7 @@
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"
 #include "../imperative/cached_op.h"
+#include "../profiler/gpu_memory_profiler.h"
 
 using namespace mxnet;
 
@@ -97,6 +98,7 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
                                                  param_keys, param_vals);
+  attrs.dict["__profiler_scope__"] = profiler::GpuMemoryProfiler::GetCurrentScope();
 
   int infered_num_outputs;
   int num_visible_outputs;

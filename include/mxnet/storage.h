@@ -26,15 +26,52 @@
 #define MXNET_STORAGE_H_
 
 #include <memory>
+#include <string>
 #include "./base.h"
 
 namespace mxnet {
+
+namespace {
+/// \brief Given a path, extract the filename.
+inline std::string __extract_fname(const std::string& path) {
+  std::size_t last_dir_pos = path.find_last_of("/\\");
+  if (last_dir_pos == std::string::npos) {
+    return path;
+  }
+  return path.substr(last_dir_pos + 1);
+}
+}  // namespace anonymous
+
+#if __GNUG__  // if compiled with GCC
+#define MXNET_STORAGE_DEFAULT_NAME_FARG(tag) \
+    std::string(tag) \
+    + "_" + __extract_fname(__FILE__) \
+    + "+" +  std::to_string(__LINE__) \
+    + "_" + __extract_fname(__builtin_FILE()) \
+    + "+" +  std::to_string(__builtin_LINE())
+#else  // !__GNUG__
+#define MXNET_STORAGE_DEFAULT_NAME_FARG(tag) \
+    std::string(tag) \
+    + "_" + __extract_fname(__FILE__) \
+    + "+" +  std::to_string(__LINE__)
+#endif  // __GNUG__
+#define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR  "<unk>:"
 
 /*!
  * \brief Storage manager across multiple devices.
  */
 class Storage {
  public:
+  enum class DataStruct {
+      kDataEntry,        ///< Data Entries (!Important)
+      kTempSpace,        ///< Temporary Workspace
+      kParameter,        ///< Weight Parameter
+      kParameterGrad,    ///< Weight Parameter Gradient
+      kOptimizerState,   ///< Optimizer State (e.g., Adam Mean & Var)
+      kAuxState,         ///< Auxiliary State
+      kEphemeral,        ///< Ephemeral Allocations (i.e., Allocations that are
+                         ///  short-lived and expected to be deallocated soon)
+      kUnknown};
   /*!
    * \brief Storage handle.
    */
@@ -55,18 +92,38 @@ class Storage {
      * \brief Id for IPC shared memory
      */
     int shared_pid{-1};
-    int shared_id{-1};
+    int shared_id {-1};
+    /*!
+     * \brief Attribute Name & Scope for tracking storage allocations.
+     */
+    std::string profiler_scope{"<unk>:"};
+    std::string name{"unknown"};
+    /*!
+     * \brief Data Structure categorizes storage allocations
+     *          based on their functionality.
+     *        It is also used for tracking storage allocations.
+     */
+    DataStruct data_struct;
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.
    * \param size Total size of memory in bytes.
    * \param ctx Context information about the device and ID.
+   * \param profiler scope, name, data_struct 
    * \return Handle struct.
    */
-  Handle Alloc(size_t size, Context ctx) {
+  Handle Alloc(size_t size, Context ctx,
+      const std::string& profiler_scope =
+        MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR,
+      const std::string& name =
+        MXNET_STORAGE_DEFAULT_NAME_FARG("unknown"),
+      const DataStruct data_struct = DataStruct::kUnknown) {
     Handle hd;
     hd.size = size;
     hd.ctx = ctx;
+    hd.profiler_scope = profiler_scope;
+    hd.name = name;
+    hd.data_struct = data_struct;
     this->Alloc(&hd);
     return hd;
   }

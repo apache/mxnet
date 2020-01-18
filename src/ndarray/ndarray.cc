@@ -47,10 +47,13 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
-    bool delay_alloc, int dtype, std::vector<int> aux_types,
-    mxnet::ShapeVector aux_shapes, mxnet::TShape storage_shape) : shape_(shape),
-  dtype_(dtype), storage_type_(stype), entry_(nullptr) {
+NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, 
+                 Context ctx, bool delay_alloc, int dtype,
+                 std::vector<int> aux_types, mxnet::ShapeVector aux_shapes,
+                 mxnet::TShape storage_shape,
+                 const std::string &profiler_scope,
+                 const std::string &name, const Storage::DataStruct data_struct)
+    : shape_(shape), dtype_(dtype), storage_type_(stype), entry_(nullptr) {
   // Assign default aux types if not given
   if (aux_types.size() == 0
       && stype != kDefaultStorage) {
@@ -87,10 +90,12 @@ NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Con
     }
   }
   if (stype == kDefaultStorage)
-    ptr_ = std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype);
+    ptr_ = std::make_shared<Chunk>(shape, ctx, delay_alloc, dtype,
+                                   profiler_scope, name, data_struct);
   else
     ptr_ = std::make_shared<Chunk>(stype, storage_shape, ctx, delay_alloc,
-        dtype, aux_types, aux_shapes);
+                                   dtype, aux_types, aux_shapes,
+                                   profiler_scope, name, data_struct);
 }
 
 void NDArray::SetShapeFromChunk() {
@@ -148,7 +153,10 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
     // free storage
     Storage::Get()->Free(shandle);
     // init storage
-    shandle = Storage::Get()->Alloc(dbytes, ctx);
+    shandle = Storage::Get()->Alloc(dbytes, ctx,
+        shandle.profiler_scope,
+        shandle.name + "_" + STypeToString(),
+        shandle.data_struct);
 #if MXNET_USE_MKLDNN == 1
     mkl_mem_ = nullptr;
 #endif
@@ -183,7 +191,9 @@ NDArray::NDArray(const mkldnn::memory::desc &md)
     : storage_type_(kDefaultStorage), entry_(nullptr) {
   shape_ = mxnet::TShape(md.data.dims, md.data.dims + md.data.ndims);
   dtype_ = get_mxnet_type(md.data.data_type);
-  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_,
+                                 "X", "X",
+                                 Storage::DataStruct::kUnknown);
   ptr_->CheckAndAlloc(md.get_size());
   ptr_->mkl_mem_ = std::make_shared<MKLDNNMemory>(md, ptr_->shandle.dptr);
 }
@@ -193,7 +203,9 @@ NDArray::NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem)
   auto mem_desc = mkldnn_mem->get_desc();
   shape_ = mxnet::TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_ = get_mxnet_type(mem_desc.data.data_type);
-  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
+  ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_,
+                                 "X", "X",
+                                 Storage::DataStruct::kUnknown);
   ptr_->shandle.dptr = mkldnn_mem->get_data_handle();
   ptr_->shandle.size = mem_desc.get_size();
   ptr_->delay_alloc = false;

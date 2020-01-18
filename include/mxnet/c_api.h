@@ -314,6 +314,13 @@ MXNET_DLL int MXSetProcessProfilerState(int state, int profile_process,
 MXNET_DLL int MXSetProfilerState(int state);
 
 /*!
+ * \brief Set the scope of profiler for current process
+ * \param scope indicate the working scope of profiler
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerScope(const char* scope);
+
+/*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
  * \param profile_process an int,

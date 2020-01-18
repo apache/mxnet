@@ -29,6 +29,7 @@ from ..base import mx_uint, check_call, _LIB, py_str
 from ..symbol_doc import _build_doc
 from ..base import _Null, _init_op_module, _is_np_op, _output_is_list
 from ..name import NameManager
+from ..profiler import Scope
 # pylint: enable=unused-import
 
 
@@ -192,6 +193,8 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             key_var_num_args, key_var_num_args))
 
             code.append("""
+    keys.append('profiler_scope')
+    vals.append(Scope._current.value.name)
     return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s, %s)"""%(
                 handle.value, str(is_np_op), str(output_is_list)))
     else:
@@ -245,6 +248,8 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     if not hasattr(NameManager._current, "value"):
         NameManager._current.value = NameManager()
     name = NameManager._current.value.get(name, '%s')
+    _keys.append('profiler_scope')
+    _vals.append(Scope._current.value.name)
     return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name, %s, %s)"""%(
         func_name.lower(), handle.value, str(is_np_op), str(output_is_list)))
 

@@ -764,7 +764,11 @@ class CuDNNDeconvolutionOp {
   void ReserveElements(const std::vector<size_t> &elements) {
     std::vector<Storage::Handle> handles;
     for (size_t alloc_element : elements)
-        handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()));
+        handles.push_back(Storage::Get()->Alloc(
+            alloc_element * sizeof(DType),
+            Context::GPU(),
+            "ephemeral:", "deconv_reserve",
+            Storage::DataStruct::kEphemeral));
     for (auto &handle : handles)
         Storage::Get()->DirectFree(handle);
   }

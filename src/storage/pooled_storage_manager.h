@@ -39,6 +39,7 @@
 #include "./storage_manager.h"
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
+#include "../profiler/gpu_memory_profiler.h"
 
 
 namespace mxnet {
@@ -166,11 +167,15 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     }
     used_memory_ += size;
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuMemoryProfiler::Get()->addEntry(*handle, size, false);
   } else {
     auto&& reuse_pool = reuse_it->second;
     auto ret = reuse_pool.back();
     reuse_pool.pop_back();
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuMemoryProfiler::Get()->addEntry(*handle, size, true);
   }
 }
 
@@ -349,10 +354,14 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
     }
     used_memory_ += size;
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuMemoryProfiler::Get()->addEntry(*handle, size, false);
   } else {
     auto ret = reuse_pool.back();
     reuse_pool.pop_back();
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuMemoryProfiler::Get()->addEntry(*handle, size, true);
   }
 }
 

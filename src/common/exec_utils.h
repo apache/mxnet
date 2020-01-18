@@ -449,18 +449,24 @@ inline void HandleInferStorageTypeError(const size_t num_forward_inputs,
  * Shareable storages include both default storage and row_sparse storage
  * if enable_row_sparse_sharing is `True`, otherwise default storage only.
  */
-inline NDArray ReshapeOrCreate(const std::string& name,
-                               const mxnet::TShape& dest_arg_shape,
+inline NDArray ReshapeOrCreate(const mxnet::TShape& dest_arg_shape,
                                const int dest_arg_dtype,
                                const NDArrayStorageType dest_arg_stype,
                                const Context& ctx,
                                std::unordered_map<std::string, NDArray>* shared_buffer,
-                               bool enable_row_sparse_sharing) {
+                               const bool enable_row_sparse_sharing,
+                               const std::string& profiler_scope,
+                               const std::string& arg_name,
+                               const Storage::DataStruct data_struct) {
+  std::string lookup_name = arg_name;
+  if (data_struct == Storage::DataStruct::kParameterGrad) {
+    lookup_name.insert(0, "grad of ");
+  }
   bool stype_shareable = dest_arg_stype == kDefaultStorage;
   if (enable_row_sparse_sharing) {
     stype_shareable = stype_shareable || dest_arg_stype == kRowSparseStorage;
   }
-  auto it = shared_buffer->find(name);
+  auto it = shared_buffer->find(lookup_name);
   if (it != shared_buffer->end()) {
     // check if size is large enough for sharing
     bool size_shareable = it->second.shape().Size() >= dest_arg_shape.Size();
@@ -471,22 +477,25 @@ inline NDArray ReshapeOrCreate(const std::string& name,
           << "Requested arg array's stype does not match that of the reusable ndarray";
       return it->second.Reshape(dest_arg_shape);
     } else if (stype_shareable) {
-      LOG(WARNING) << "Bucketing: data " << name << " has a shape " << dest_arg_shape
+      LOG(WARNING) << "Bucketing: data " << lookup_name << " has a shape " << dest_arg_shape
                    << ", which is larger than already allocated shape " << it->second.shape()
                    << ". Need to re-allocate. Consider putting default bucket key to be "
                    << "the bucket taking the largest input for better memory sharing.";
       // size is not large enough, creating a larger one for sharing
       // the NDArrays in shared_buffer are guaranteed to be of shareable storages
-      it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+      it->second = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype,
+                             profiler_scope, arg_name, data_struct);
       return it->second;
     } else {
       // not shareable storage
-      return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+      return InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype,
+                       profiler_scope, arg_name, data_struct);
     }
   } else {
-    auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype);
+    auto ret = InitZeros(dest_arg_stype, dest_arg_shape, ctx, dest_arg_dtype,
+                         profiler_scope, arg_name, data_struct);
     if (stype_shareable) {
-      shared_buffer->emplace(name, ret);
+      shared_buffer->emplace(lookup_name, ret);
     }
     return ret;
   }  // if (it != shared_buffer->end())

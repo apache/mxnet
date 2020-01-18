@@ -33,6 +33,7 @@
 #include <stack>
 #include "./c_api_common.h"
 #include "../profiler/profiler.h"
+#include "../profiler/gpu_memory_profiler.h"
 
 namespace mxnet {
 
@@ -360,6 +361,12 @@ int MXDumpProcessProfile(int finished, int profile_process, KVStoreHandle kvStor
 
 int MXSetProfilerState(int state) {
   return MXSetProcessProfilerState(state, static_cast<int>(ProfileProcess::kWorker), nullptr);
+}
+
+int MXSetProfilerScope(const char* const scope) {
+  API_BEGIN();
+  profiler::GpuMemoryProfiler::SetCurrentScope(scope);
+  API_END();
 }
 
 int MXSetProcessProfilerState(int state, int profile_process, KVStoreHandle kvStoreHandle) {

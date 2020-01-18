@@ -31,6 +31,7 @@
 #include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/storage.h>
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
@@ -712,30 +713,45 @@ MSHADOW_XINLINE int ilog2ui(unsigned int a) {
  * \brief Return an NDArray of all zeros.
  */
 inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
-                         const Context &ctx, const int dtype) {
+                         const Context &ctx, const int dtype,
+                         const std::string &profiler_scope,
+                         const std::string &arg_name,
+                         const Storage::DataStruct data_struct) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
-    NDArray ret(shape, ctx, false, dtype);
+    NDArray ret(shape, ctx, false, dtype,
+                profiler_scope, arg_name, data_struct);
     ret = 0;
     return ret;
   }
   // NDArray with non-default storage. Storage allocation is always delayed.
-  return NDArray(stype, shape, ctx, true, dtype);
+  return NDArray(stype, shape, ctx, true, dtype,
+                 {}, {}, mxnet::TShape(mshadow::Shape1(0)),
+                 profiler_scope, arg_name, data_struct);
 }
 
 /*!
  * \brief Helper to add a NDArray of zeros to a std::vector.
  */
-inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
-                             const Context &ctx, const int dtype,
-                             std::vector<NDArray> *vec) {
+inline void EmplaceBackZeros(const NDArrayStorageType stype,
+                             const mxnet::TShape &shape,
+                             const Context &ctx,
+                             const int dtype,
+                             std::vector<NDArray> *vec,
+                             const std::string &profiler_scope,
+                             const std::string &arg_name,
+                             const Storage::DataStruct data_struct) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
-    vec->emplace_back(shape, ctx, false, dtype);
+    vec->emplace_back(shape, ctx, false, dtype,
+                      profiler_scope, arg_name, data_struct);
     vec->back() = 0;
   } else {
     // NDArray with non-default storage. Storage allocation is always delayed.
-    vec->emplace_back(stype, shape, ctx, true, dtype);
+    vec->emplace_back(stype, shape, ctx, true, dtype,
+                      std::vector<int>(), mxnet::ShapeVector(),
+                      mxnet::TShape(mshadow::Shape1(0)),
+                      profiler_scope, arg_name, data_struct);
   }
 }
 
@@ -903,6 +919,20 @@ inline int np_binary_out_infer_type(const int type1, const int type2) {
     return mshadow::kInt32;
   }
   return get_more_precise_type(type1, type2);
+}
+
+inline const std::string
+NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
+  // obtain the profiler scope name, if assigned previously
+  std::string profiler_scope = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
+  const std::unordered_map<std::string, std::string>&
+      node_attrs_dict = attrs.dict;
+  const std::unordered_map<std::string, std::string>::const_iterator
+      profiler_scope_iter  = node_attrs_dict.find("__profiler_scope__");
+  if (profiler_scope_iter != node_attrs_dict.end()) {
+    profiler_scope = profiler_scope_iter->second;
+  }
+  return profiler_scope;
 }
 
 }  // namespace common

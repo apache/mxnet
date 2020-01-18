@@ -21,6 +21,7 @@
 """Profiler setting methods."""
 from __future__ import absolute_import
 import ctypes
+import threading
 import warnings
 from .base import _LIB, check_call, c_str, ProfileHandle, c_str_array, py_str, KVStoreHandle
 
@@ -498,3 +499,43 @@ class Marker(object):
             Default is `process`.
         """
         check_call(_LIB.MXProfileSetMarker(self.domain.handle, c_str(self.name), c_str(scope)))
+
+
+class Scope(object):
+    """
+    The `_profiler.Scope` was developed to assign the profiler scope for the GPU
+    memory profiler. It is implicitly invoked when the Gluon API is used.
+    """
+    _current = threading.local()
+
+    def __init__(self, name='<unk>:'):
+        self._name = name
+        self._old_scope = None
+
+    def __enter__(self):
+        if not hasattr(Scope._current, "value"):
+            Scope._current.value = Scope()
+        self._old_scope = Scope._current.value
+        Scope._current.value = self
+        # Invoke the C API to propagate the profiler scope information to the
+        # C++ backend.
+        check_call(_LIB.MXSetProfilerScope(c_str(self.name)))
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        assert self._old_scope
+        Scope._current.value = self._old_scope
+        # If the old profiler scope is also of type `profiler.Scope`, invoke the
+        # C API once again to recover the previous scope information. Otherwise,
+        # the default scope `<unk>:` will be set.
+        if isinstance(self._old_scope, Scope):
+            check_call(_LIB.MXSetProfilerScope(c_str(self._old_scope.name)))
+        else:
+            check_call(_LIB.MXSetProfilerScope(c_str("<unk>:")))
+
+    @property
+    def name(self):
+        return self._name
+
+# initialize the default profiler scope
+Scope._current.value = Scope()

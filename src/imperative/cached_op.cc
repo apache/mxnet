@@ -924,8 +924,12 @@ OpStatePtr CachedOp::StaticForward(
       *outputs[i] = arrays[eid]->Detach();
     arrays[eid] = outputs[i];
     if (!outputs[i]->is_none()) continue;
+    nnvm::NodeAttrs attrs = idx[idx.outputs()[i].node_id].source->attrs;
     *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                          shapes[eid], default_ctx, true, dtypes[eid]);
+                          shapes[eid], default_ctx, true, dtypes[eid],
+                          {}, {}, TShape(mshadow::Shape1(0)),
+                          common::NodeAttrsGetProfilerScope(attrs),
+                          attrs.name, Storage::DataStruct::kDataEntry);
   }
 
   StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());

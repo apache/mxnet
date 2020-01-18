@@ -189,7 +189,7 @@ inline void SetShapeType(const Context& ctx,
   } else {
     // if infer storage attr is not present, apply the default infer storage function
     infer_stype_success = common::DefaultStorageType(attrs, ctx.dev_mask(), dispatch_mode,
-                                                   &in_storage_types, &out_storage_types);
+                                                     &in_storage_types, &out_storage_types);
   }
   CHECK(infer_stype_success) << "Operator not implemented: "
      << common::operator_stype_string(attrs, ctx.dev_mask(), in_storage_types, out_storage_types);
@@ -205,11 +205,18 @@ inline void SetShapeType(const Context& ctx,
     if (outputs[i]->is_none() || mxnet::op::shape_is_none(outputs[i]->shape())) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
-        *outputs[i] = NDArray(ctx, out_types[i]);
+        *outputs[i] = NDArray(ctx, out_types[i],
+                              common::NodeAttrsGetProfilerScope(attrs),
+                              attrs.name, Storage::DataStruct::kDataEntry);
       } else if (storage_type == kDefaultStorage) {
-        *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i]);
+        *outputs[i] = NDArray(out_shapes[i], ctx, true, out_types[i],
+                              common::NodeAttrsGetProfilerScope(attrs),
+                              attrs.name, Storage::DataStruct::kDataEntry);
       } else {
-        *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
+        *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i],
+                              {}, {}, TShape(mshadow::Shape1(0)),
+                              common::NodeAttrsGetProfilerScope(attrs),
+                              attrs.name, Storage::DataStruct::kDataEntry);
       }
     } else {
       CHECK_EQ(outputs[i]->shape(), out_shapes[i])
@@ -885,24 +892,42 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
     const nnvm::Graph& g,
     const nnvm::IndexedGraph& idx,
     const Context& default_ctx,
-    const uint32_t entry_start, const uint32_t entry_end,
+    const uint32_t entry_start,
+    const uint32_t entry_end,
     const MemoryPlanVector& mem_plan,
     const std::vector<NDArray*>& arrays,
-    std::vector<OpReqType> *array_reqs,
+    std::vector<OpReqType>* array_reqs,
     std::multimap<size_t, NDArray>&& pool = std::multimap<size_t, NDArray>()) {
   using namespace nnvm;
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
+  std::vector<std::string> sprofiler_scope(entry_end - entry_start);
+  std::vector<std::string> sname(entry_end - entry_start);
 
   std::multimap<size_t, NDArray> new_pool;
+
+  for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
+    for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
+      uint32_t eid = idx.entry_id(nid, i);
+      if (eid < entry_start || eid >= entry_end) {
+        continue;
+      }
+      sprofiler_scope[eid] = profiler_scope;
+      sname[eid] = idx[nid].source->attrs.name;
+    }
+  }
 
   for (uint32_t i = entry_start; i < entry_end; ++i) {
     if (mem_plan[i].storage_id == exec::kExternalStorageID) continue;
     CHECK(arrays[i]->is_none());
     if (mem_plan[i].storage_id == exec::kDynamicStorageID) {
       *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
-                           shapes[i], default_ctx, true, dtypes[i]);
+                           shapes[i], default_ctx, true, dtypes[i],
+                           {}, {}, TShape(mshadow::Shape1(0)),
+                           sprofiler_scope[i], sname[i],
+                           Storage::DataStruct::kDataEntry);
       continue;
     }
     CHECK_EQ(stypes[i], kDefaultStorage);
@@ -914,7 +939,9 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
         pool.erase(iter);
       } else {
         NDArray buff(mxnet::TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
-                     default_ctx, true, mshadow::kUint8);
+                     default_ctx, true, mshadow::kUint8,
+                     sprofiler_scope[i], sname[i],
+                     Storage::DataStruct::kDataEntry);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
         new_pool.insert({mem_plan[i].size, buff});
       }

@@ -28,6 +28,7 @@
 #include <dmlc/logging.h>
 #include "./base.h"
 #include "./engine.h"
+#include "./storage.h"
 #include "./random_generator.h"
 
 namespace mxnet {
@@ -120,16 +121,19 @@ struct Resource {
    *  when running on device, so the launched kernels that depend on the temp space
    *  can finish correctly.
    *
-   * \param shape the Shape of returning tensor.
-   * \param stream the stream of retruning tensor.
+   * \param shape  the Shape  of returning tensor.
+   * \param stream the Stream of returning tensor.
+   * \param name   the Name of the operator requesting the resource.
    * \return the mshadow tensor requested.
    * \tparam xpu the device type of random number generator.
    * \tparam ndim the number of dimension of the tensor requested.
    */
   template<typename xpu, int ndim>
   inline mshadow::Tensor<xpu, ndim, real_t> get_space(
-      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
-    return get_space_typed<xpu, ndim, real_t>(shape, stream);
+      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream,
+      const std::string &name =
+        MXNET_STORAGE_DEFAULT_NAME_FARG("temp_space")) const {
+    return get_space_typed<xpu, ndim, real_t>(shape, stream, name);
   }
   /*!
    * \brief Get cpu space requested as mshadow Tensor.
@@ -148,33 +152,38 @@ struct Resource {
    * \brief Get space requested as mshadow Tensor in specified type.
    *  The caller can request arbitrary size.
    *
-   * \param shape the Shape of returning tensor.
-   * \param stream the stream of retruning tensor.
+   * \param shape  the Shape  of returning tensor.
+   * \param stream the Stream of returning tensor.
+   * \parma name   the Name of the operator requesting the resource.
    * \return the mshadow tensor requested.
    * \tparam xpu the device type of random number generator.
    * \tparam ndim the number of dimension of the tensor requested.
    */
   template<typename xpu, int ndim, typename DType>
   inline mshadow::Tensor<xpu, ndim, DType> get_space_typed(
-      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream) const {
+      mshadow::Shape<ndim> shape, mshadow::Stream<xpu> *stream,
+      const std::string &name =
+        MXNET_STORAGE_DEFAULT_NAME_FARG("temp_space")) const {
     CHECK_EQ(req.type, ResourceRequest::kTempSpace);
     return mshadow::Tensor<xpu, ndim, DType>(
-        reinterpret_cast<DType*>(get_space_internal(shape.Size() * sizeof(DType))),
+        reinterpret_cast<DType*>(get_space_internal(
+          shape.Size() * sizeof(DType), name)),
         shape, shape[ndim - 1], stream);
   }
 #if MXNET_USE_CUDNN == 1
   /*!
-   * \brief Get cudnn dropout descriptor from shared state space.
+   * \brief Get cuDNN dropout descriptor from shared state space.
    *
-   * \param dropout_desc reference to previously created cudnn dropout descriptor.
-   * \param stream the stream of retruning tensor.
+   * \param dropout_desc Reference to previously created cuDNN dropout descriptor.
+   * \param stream the Stream of returning tensor.
+   * \param name   the Name of the operator requesting the resource.
    * \return the mshadow tensor requested.
    */
   void get_cudnn_dropout_desc(
-      cudnnDropoutDescriptor_t* dropout_desc,
+      cudnnDropoutDescriptor_t *dropout_desc,
       mshadow::Stream<gpu> *stream,
-      const float dropout,
-      uint64_t seed) const;
+      const float dropout, uint64_t seed,
+      const std::string &name = MXNET_STORAGE_DEFAULT_NAME_FARG("cudnn_dropout_state")) const;
 #endif  // MXNET_USE_CUDNN == 1
 
   /*!
@@ -195,10 +204,11 @@ struct Resource {
   }
   /*!
    * \brief internal function to get space from resources.
-   * \param size The size of the space.
+   * \param size the Size of the space.
+   * \param name the Name of the operator requesting the resource.
    * \return The allocated space.
    */
-  void* get_space_internal(size_t size) const;
+  void* get_space_internal(size_t size, const std::string &name) const;
   /*!
    * \brief internal function to get cpu space from resources.
    * \param size The size of space.
