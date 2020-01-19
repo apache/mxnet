@@ -150,7 +150,7 @@ void FullyConnectedGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                     const std::vector<NDArray> &outputs) {
   // TODO(rongzha1): disable due to flakiness in cpp test IMPERATIVE.FullyConnectedOp
   // Will be fixed when we decide to enable the backward of FC.
-  bool mkldnn_fc_backward_enable = true;
+  bool mkldnn_fc_backward_enable = false;
   if (mkldnn_fc_backward_enable && SupportMKLDNNFC(inputs[0])) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
     MKLDNNRun(MKLDNNFCBackward, attrs, ctx, inputs, req, outputs);
