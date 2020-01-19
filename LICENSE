@@ -279,7 +279,8 @@
           Copyright (c) 2009-2018 The MathJax Consortium
           Copyright (c) 2015-2017 Martin Hensel
           Copyright (c) 2007, Apostolos Syropoulos (<asyropoulos@yahoo.com>)
-
+    28. material-design-icons - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1/iconfont/
+    29. Roboto fonts - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto/
 
     =======================================================================================
     MIT licenses
@@ -940,6 +941,15 @@
     
     For more information, please refer to <http://unlicense.org>
 
+    20. Font-Awesome, SIL Open Font License(OFL)
+
+    For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/
+
+    In the Font Awesome Free download, the SIL OFL license applies to all icons packaged as web and desktop font files.
+
+    For more information, please refer to <https://github.com/FortAwesome/Font-Awesome/blob/master/LICENSE.txt>
+
+    For full text of the SIL Open Font License, refer to <https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL>
 
     =======================================================================================
     Appendix
