@@ -1,9 +1,8 @@
 {
     global:
         NN*;
-        MX*;
+        *MX*;
         _NN*;
-        _MX*;
         nn*;
         mx*;
         _nn*;
@@ -14,6 +13,5 @@
         *Storage*Get*;
         *on_enter_api*;
         *on_exit_api*;
-        *MXAPIHandleException*;
     local: *;
 };

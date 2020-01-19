@@ -1,6 +1,5 @@
-MX*
+*MX*
 NN*
-_MX*
 _NN*
 mx*
 nn*
@@ -12,4 +11,3 @@ Java_org_apache_mxnet*
 *Storage*Get*
 *on_enter_api*
 *on_exit_api*
-*MXAPIHandleException*
