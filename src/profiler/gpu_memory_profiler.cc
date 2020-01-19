@@ -72,8 +72,7 @@ static std::string data_struct_to_str(
   }
 }
 
-GpuMemoryProfiler*
-GpuMemoryProfiler::Get() {
+GpuMemoryProfiler* GpuMemoryProfiler::Get() {
   static GpuMemoryProfiler s_gpu_memory_profiler;
   return &s_gpu_memory_profiler;
 }
@@ -97,18 +96,15 @@ GpuMemoryProfiler::GpuMemoryProfiler() {
 
 static std::string s_current_profiler_scope = "<unk>:";
 
-void
-GpuMemoryProfiler::SetCurrentScope(const std::string& scope) {
+void GpuMemoryProfiler::SetCurrentScope(const std::string& scope) {
   s_current_profiler_scope = scope;
 }
 
-std::string
-GpuMemoryProfiler::GetCurrentScope() {
+std::string GpuMemoryProfiler::GetCurrentScope() {
   return s_current_profiler_scope;
 }
 
-void
-GpuMemoryProfiler::addEntry(const Storage::Handle& handle,
+void GpuMemoryProfiler::addEntry(const Storage::Handle& handle,
     const size_t actual_alloc_size, const bool reuse) {
   // directly skip the recording if the memory profiler is not enabled or
   // the storage handle has been marked as 'ephemeral'
