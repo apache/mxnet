@@ -1,7 +1,6 @@
 import os
 os.environ["MXNET_ENGINE_TYPE"] = "NaiveEngine"
-os.environ['MXNET_ENABLE_CYTHON'] = '1'
-os.environ['MXNET_ENFORCE_CYTHON'] = '1'
+os.environ['MXNET_ENABLE_CYTHON'] = '0'
 
 import mxnet as mx
 import time
@@ -18,12 +17,10 @@ def benchmark(func, *args, **kwargs):
     return (end - start) / repeat
 
 
-# print("tvm ffi...")
-# a = np.zeros1((3, 4), ctx="cpu(0)", dtype='float64')
-# print(a)
-# print("legacy ffi...")
-# a = np.zeros((3, 4), ctx=mx.cpu())
-# print(a)
+print("tvm ffi...")
+a = np.zeros1((3, 4), ctx="cpu(0)", dtype='int64')
+print(a)
+print(a.dtype)
 
 print("########################{:^32}########################".format("zeros benchmark"))
 

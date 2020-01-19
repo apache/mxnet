@@ -78,6 +78,7 @@ typedef union {
   double v_float64;
   void* v_handle;
   const char* v_str;
+  DLDataType v_type;
 } MXNetValue;
 
 /*!
@@ -147,6 +148,16 @@ MXNET_DLL int MXNetFuncGetGlobal(const char* name, MXNetFunctionHandle* out);
  */
 MXNET_DLL int MXNetFuncListGlobalNames(int* out_size,
                                        const char*** out_array);
+
+/*!
+ * \brief Free the object.
+ *
+ * \param obj The object handle.
+ * \note Internally we decrease the reference counter of the object.
+ *       The object will be freed when every reference to the object are removed.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNetObjectFree(MXNetObjectHandle obj);
 
 #ifdef __cplusplus
 }  // extern "C"

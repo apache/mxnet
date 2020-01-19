@@ -14,16 +14,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+# pylint: disable=invalid-name
+"""Runtime Object API"""
+from __future__ import absolute_import
 
-"""Registering ops in mxnet.numpy for imperative programming."""
+import sys
+import ctypes
+from .base import check_call, _LIB
 
+from ._ctypes.function import _set_class_object
+from ._ctypes.object import ObjectBase as _ObjectBase
 
-from ..base import _init_np_op_module
-from ..ndarray.register import _make_ndarray_function
-from .._ffi.function import _init_api
+class Object(_ObjectBase):
+    """Base class for all mxnet's runtime objects."""
+    pass
 
-_init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
-                   mx_module_name=None, make_op_func=_make_ndarray_function)
-
-_init_api("_npi", "mxnet.ndarray.numpy._internal")
-_init_api("mxnet.api")
+_set_class_object(Object)

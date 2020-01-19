@@ -22,31 +22,26 @@ Function namespace.
 """
 from __future__ import absolute_import
 
+import os
 import sys
 import ctypes
 from .base import _LIB, check_call, py_str, c_str
 
-# IMPORT_EXCEPT = RuntimeError if _FFI_MODE == "cython" else ImportError
-
-# try:
-#     # pylint: disable=wrong-import-position
-#     if _FFI_MODE == "ctypes":
-#         raise ImportError()
-#     if sys.version_info >= (3, 0):
-#         from ._cy3.core import _set_class_function, _set_class_module
-#         from ._cy3.core import FunctionBase as _FunctionBase
-#         from ._cy3.core import convert_to_tvm_func
-#     else:
-#         from ._cy2.core import _set_class_function, _set_class_module
-#         from ._cy2.core import FunctionBase as _FunctionBase
-#         from ._cy2.core import convert_to_tvm_func
-# except IMPORT_EXCEPT:
-#     # pylint: disable=wrong-import-position
-#     from ._ctypes.function import _set_class_function, _set_class_module
-#     from ._ctypes.function import FunctionBase as _FunctionBase
-#     from ._ctypes.function import convert_to_tvm_func
-
-from ._cy3.core import FunctionBase as _FunctionBase
+try:
+    if int(os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
+        from ._ctypes.function import FunctionBase as _FunctionBase
+        # To set RETURN_SWITCH for OBJECT_HANDLE
+        from . import object
+    elif sys.version_info >= (3, 0):
+        from ._cy3.core import FunctionBase as _FunctionBase
+    else:
+        from ._cy2.core import FunctionBase as _FunctionBase
+except ImportError:
+    if int(os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
+        raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
+    from ._ctypes.function import FunctionBase as _FunctionBase
+    # To set RETURN_SWITCH for OBJECT_HANDLE
+    from . import object
 
 FunctionHandle = ctypes.c_void_p
 
@@ -149,10 +144,17 @@ def _init_api_prefix(module_name, prefix):
     module = sys.modules[module_name]
 
     for name in list_global_func_names():
-        if not name.startswith(prefix):
-            continue
-        fname = name[len(prefix)+1:]
-        target_module = module
+        if prefix == "api":
+            fname = name
+            if name.startswith("_"):
+                target_module = sys.modules["mxnet._api_internal"]
+            else:
+                target_module = module
+        else:
+            if not name.startswith(prefix):
+                continue
+            fname = name[len(prefix)+1:]
+            target_module = module
 
         if fname.find(".") != -1:
             continue

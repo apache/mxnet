@@ -32,6 +32,9 @@
 #include <mxnet/runtime/ndarray.h>
 #include <mxnet/runtime/container.h>
 #include <mxnet/runtime/ffi_helper.h>
+#include <mxnet/runtime/data_type.h>
+#include <mxnet/node/container.h>
+#include <mxnet/ir/expr.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/base.h>
 #include <functional>
@@ -71,6 +74,13 @@ namespace runtime {
  * \return type code of custom type parsed
  */
 // MXNET_DLL uint8_t ParseCustomDatatype(const std::string& s, const char** scan);
+
+/*!
+ * \brief convert a string to TVM type.
+ * \param s The string to be converted.
+ * \return The corresponding tvm type.
+ */
+inline DLDataType String2DLDataType(std::string s);
 
 // forward declarations
 class MXNetArgs;
@@ -540,6 +550,22 @@ class MXNetArgValue : public MXNetPODValue_ {
       return std::string(value_.v_str);
     }
   }
+  operator DLDataType() const {
+    if (type_code_ == kStr) {
+      return String2DLDataType(operator std::string());
+    }
+    // None type
+    if (type_code_ == kNull) {
+      DLDataType t;
+      t.code = kHandle; t.bits = 0; t.lanes = 0;
+      return t;
+    }
+    MXNET_CHECK_TYPE_CODE(type_code_, kMXNetType);
+    return value_.v_type;
+  }
+  operator MXNetDataType() const {
+    return MXNetDataType(operator DLDataType());
+  }
   operator ::mxnet::NDArray*() const {
     if (type_code_ == kNull) {
       return nullptr;
@@ -548,13 +574,26 @@ class MXNetArgValue : public MXNetPODValue_ {
     return reinterpret_cast<::mxnet::NDArray*>(value_.v_handle);
   }
   operator ::mxnet::TShape() const {
-    MXNET_CHECK_TYPE_CODE(type_code_, kObjectHandle);
-    const ADTObj* obj = static_cast<ADTObj*>(value_.v_handle);
-    TShape ret(obj->size, 0);
-    for (uint32_t i = 0; i < obj->size; ++i) {
-      ret[i] = obj->operator[](i).as<IntegerObj>()->value;
+    ObjectRef x = this->operator ObjectRef();
+    if (const ADTObj* obj = x.as<ADTObj>()) {
+      TShape ret(obj->size, 0);
+      for (uint32_t i = 0; i < obj->size; ++i) {
+        ret[i] = obj->operator[](i).as<IntegerObj>()->value;
+      }
+      return ret;
+    }
+    Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(x);
+    TShape ret(arr.size(), 0);
+    for (size_t i = 0; i < arr.size(); ++i) {
+      ret[i] = arr[i]->value;
     }
     return ret;
+    // const ADTObj* obj = static_cast<ADTObj*>(value_.v_handle);
+    // TShape ret(obj->size, 0);
+    // for (uint32_t i = 0; i < obj->size; ++i) {
+    //   ret[i] = obj->operator[](i).as<IntegerObj>()->value;
+    // }
+    // return ret;
   }
   operator PackedFunc() const {
     if (type_code_ == kNull) return PackedFunc();
@@ -623,6 +662,16 @@ class MXNetRetValue : public MXNetPODValue_ {
     MXNET_CHECK_TYPE_CODE(type_code_, kStr);
     return *ptr<std::string>();
   }
+  operator DLDataType() const {
+    if (type_code_ == kStr) {
+      return String2DLDataType(operator std::string());
+    }
+    MXNET_CHECK_TYPE_CODE(type_code_, kMXNetType);
+    return value_.v_type;
+  }
+  operator MXNetDataType() const {
+    return MXNetDataType(operator DLDataType());
+  }
   operator PackedFunc() const {
     if (type_code_ == kNull) return PackedFunc();
     MXNET_CHECK_TYPE_CODE(type_code_, kFuncHandle);
@@ -673,6 +722,14 @@ class MXNetRetValue : public MXNetPODValue_ {
   MXNetRetValue& operator=(std::string value) {
     this->SwitchToClass(kStr, value);
     return *this;
+  }
+  MXNetRetValue& operator=(DLDataType t) {
+    this->SwitchToPOD(kMXNetType);
+    value_.v_type = t;
+    return *this;
+  }
+  MXNetRetValue& operator=(const MXNetDataType& other) {
+    return operator=(other.operator DLDataType());
   }
   MXNetRetValue& operator=(MXNetByteArray value) {
     this->SwitchToClass(kBytes, std::string(value.data, value.size));
@@ -823,6 +880,48 @@ class MXNetRetValue : public MXNetPODValue_ {
   }
 };
 
+inline DLDataType String2DLDataType(std::string s) {
+  DLDataType t;
+  // handle None type
+  if (s.length() == 0) {
+    t.bits = 0; t.lanes = 0; t.code = kHandle;
+    return t;
+  }
+  t.bits = 32; t.lanes = 1;
+  const char* scan;
+  if (s.substr(0, 3) == "int") {
+    t.code = kDLInt;  scan = s.c_str() + 3;
+  } else if (s.substr(0, 4) == "uint") {
+    t.code = kDLUInt; scan = s.c_str() + 4;
+  } else if (s.substr(0, 5) == "float") {
+    t.code = kDLFloat; scan = s.c_str() + 5;
+  } else if (s.substr(0, 6) == "handle") {
+    t.code = kHandle;
+    t.bits = 64;  // handle uses 64 bit by default.
+    scan = s.c_str() + 6;
+  } else if (s == "bool") {
+    t.code = kDLUInt;
+    t.bits = 1;
+    t.lanes = 1;
+    return t;
+  } else if (s.substr(0, 6) == "custom") {
+    LOG(FATAL) << "custom MXNetDataType is not supported";
+    // t.code = ParseCustomDatatype(s, &scan);
+  } else {
+    scan = s.c_str();
+    LOG(FATAL) << "unknown type " << s;
+  }
+  char* xdelim;  // emulate sscanf("%ux%u", bits, lanes)
+  uint8_t bits = static_cast<uint8_t>(strtoul(scan, &xdelim, 10));
+  if (bits != 0) t.bits = bits;
+  char* endpt = xdelim;
+  if (*xdelim == 'x') {
+    t.lanes = static_cast<uint16_t>(strtoul(xdelim + 1, &endpt, 10));
+  }
+  CHECK(endpt == s.c_str() + s.length()) << "unknown type " << s;
+  return t;
+}
+
 // implementation details
 inline const char* TypeCode2Str(int type_code) {
   switch (type_code) {
@@ -884,6 +983,28 @@ inline int String2MXNetType(const std::string& s) {
   }
   LOG(FATAL) << "should not reach here ";
   return 0;
+}
+
+inline std::ostream& operator<<(std::ostream& os, DLDataType t) {  // NOLINT(*)
+  if (t.bits == 1 && t.lanes == 1 && t.code == kDLUInt) {
+    os << "bool"; return os;
+  }
+  if (t.code < kCustomBegin) {
+    os << TypeCode2Str(t.code);
+  } else {
+    LOG(FATAL) << "custom MXNetDataType is not supported";
+    // os << "custom[" << GetCustomTypeName(t.code) << "]";
+  }
+  if (t.code == kHandle) return os;
+  os << static_cast<int>(t.bits);
+  if (t.lanes != 1) {
+    os << 'x' << static_cast<int>(t.lanes);
+  }
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const MXNetDataType& dtype) { // NOLINT(*)
+  return os << dtype.operator DLDataType();
 }
 
 inline MXNetArgValue MXNetArgs::operator[](int i) const {
@@ -980,6 +1101,13 @@ class MXNetArgsSetter {
   void operator()(size_t i, const std::string& value) const {  // NOLINT(*)
     values_[i].v_str = value.c_str();
     type_codes_[i] = kStr;
+  }
+  void operator()(size_t i, DLDataType value) const {
+    values_[i].v_type = value;
+    type_codes_[i] = kMXNetType;
+  }
+  void operator()(size_t i, MXNetDataType dtype) const {
+    operator()(i, dtype.operator DLDataType());
   }
   void operator()(size_t i, const MXNetByteArray& value) const {  // NOLINT(*)
     values_[i].v_handle = const_cast<MXNetByteArray*>(&value);

@@ -14,17 +14,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Adapted from incubator-tvm/python/tvm/_ffi/runtime_ctypes.py
-Common runtime ctypes.
-"""
+"""The C Types used in API."""
 # pylint: disable=invalid-name
-from __future__ import absolute_import
+from __future__ import absolute_import as _abs
 
 import ctypes
-import json
-import numpy as np
-
+import struct
+from ..base import check_call, _LIB
+from ..runtime_ctypes import TypeCode
+from ...base import NDArrayHandle
+from ...numpy import ndarray
 
 class TypeCode(object):
     """Type code used in API calls"""
@@ -42,11 +41,20 @@ class TypeCode(object):
     STR = 11
     BYTES = 12
     NDARRAY_CONTAINER = 13
+    NDARRAYHANDLE = 14
     EXT_BEGIN = 15
 
 
-class TVMByteArray(ctypes.Structure):
-    """Temp data structure for byte array."""
-    _fields_ = [("data", ctypes.POINTER(ctypes.c_byte)),
-                ("size", ctypes.c_size_t)]
+class MXNetValue(ctypes.Union):
+    """MXNetValue in C API"""
+    _fields_ = [("v_int64", ctypes.c_int64),
+                ("v_float64", ctypes.c_double),
+                ("v_handle", ctypes.c_void_p),
+                ("v_str", ctypes.c_char_p)]
 
+RETURN_SWITCH = {
+    TypeCode.INT: lambda x: x.v_int64,
+    TypeCode.FLOAT: lambda x: x.v_float64,
+    TypeCode.NULL: lambda x: None,
+    TypeCode.NDARRAYHANDLE: lambda x: ndarray(handle=NDArrayHandle(x.v_handle))
+}
