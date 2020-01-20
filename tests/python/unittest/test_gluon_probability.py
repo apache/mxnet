@@ -23,7 +23,7 @@ from mxnet import gluon
 import mxnet.gluon.probability as mgp
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal
-from mxnet import np, npx
+from mxnet import np, npx, autograd
 import numpy as _np
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied)
@@ -120,8 +120,68 @@ def test_gluon_bernoulli():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
 
-        
 
+@with_seed()
+@use_np
+def test_affine_transform():
+    r"""
+    Test the correctness of affine transformation by performing it
+    on a standard normal, since N(\mu, \sigma^2) = \mu + \sigma * N(0, 1)
+    """
+    class TestAffineTransform(HybridBlock):
+        def __init__(self, func):
+            super(TestAffineTransform, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, loc, scale, *args):
+            std_normal = mgp.Normal(F.np.zeros_like(loc),
+                                    F.np.ones_like(scale), F)
+            transforms = [mgp.AffineTransform(loc=0, scale=scale),
+                          mgp.AffineTransform(loc=loc, scale=1)]
+            transformed_normal = mgp.TransformedDistribution(std_normal, transforms)
+            if (len(args) == 0):
+                return getattr(transformed_normal, self._func)
+            return getattr(transformed_normal, self._func)(*args)
+
+    shapes = [(1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]): 
+        loc = np.random.uniform(-1, 1, shape)
+        loc.attach_grad()
+        scale = np.random.uniform(0.5, 1.5, shape)
+        scale.attach_grad()
+        samples = np.random.normal(size=shape)
+        net = TestAffineTransform('log_prob')
+        if hybridize:
+            net.hybridize()
+        with autograd.record():
+            mx_out = net(loc, scale, samples)
+        np_out = _np.log(ss.norm(loc.asnumpy(),
+                                 scale.asnumpy()).pdf(samples.asnumpy()))
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+        mx_out.backward()
+        loc_expected_grad = ((samples - loc) / scale ** 2).asnumpy()
+        scale_expected_grad = (samples - loc) ** 2 * np.power(scale, -3) - (1 / scale)
+        assert_almost_equal(loc.grad.asnumpy(), loc_expected_grad, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+        assert_almost_equal(scale.grad.asnumpy(), scale_expected_grad, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test sampling
+    for shape, hybridize in itertools.product(shapes, [True, False]): 
+        loc = np.random.uniform(-1, 1, shape)
+        loc.attach_grad()
+        scale = np.random.uniform(0.5, 1.5, shape)
+        scale.attach_grad()
+        if not isinstance(shape, tuple):
+            shape = (shape,)
+        expected_shape = (4, 5) + shape
+        net = TestAffineTransform('sample')
+        mx_out = net(loc, scale, expected_shape).asnumpy()
+        assert mx_out.shape == expected_shape
+            
 
 if __name__ == '__main__':
     import nose
