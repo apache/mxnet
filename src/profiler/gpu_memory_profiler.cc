@@ -16,13 +16,13 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <dmlc/parameter.h>
 #include "./gpu_memory_profiler.h"
-
+#include <dmlc/parameter.h>
 #ifdef _WIN32
 #include <windows.h>
 #include <tchar.h>
 #endif
+#include <cstdint>
 #include <ctime>
 #include <string>
 
@@ -94,14 +94,12 @@ GpuMemoryProfiler::GpuMemoryProfiler() {
   }  // enabled_
 }
 
-static std::string s_current_profiler_scope = "<unk>:";
-
 void GpuMemoryProfiler::SetCurrentScope(const std::string& scope) {
-  s_current_profiler_scope = scope;
+  current_profiler_scope_ = scope;
 }
 
 std::string GpuMemoryProfiler::GetCurrentScope() {
-  return s_current_profiler_scope;
+  return current_profiler_scope_;
 }
 
 void GpuMemoryProfiler::addEntry(const Storage::Handle& handle,
@@ -112,7 +110,7 @@ void GpuMemoryProfiler::addEntry(const Storage::Handle& handle,
       handle.data_struct == Storage::DataStruct::kEphemeral) {
     return;
   }
-  alloc_csv_fout_ << static_cast<unsigned long>(time(NULL)) << ","
+  alloc_csv_fout_ << static_cast<uint64_t>(time(NULL)) << ","
                   << "\"" << handle.profiler_scope << "\","
                   << "\"" << handle.name  << "\","
                   << "\"" << data_struct_to_str(handle.data_struct) << "\","

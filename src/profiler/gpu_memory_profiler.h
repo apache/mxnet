@@ -19,9 +19,9 @@
 #ifndef MXNET_PROFILER_GPU_MEMORY_PROFILER_H_
 #define MXNET_PROFILER_GPU_MEMORY_PROFILER_H_
 
+#include <mxnet/storage.h>
 #include <fstream>
 #include <string>
-#include <mxnet/storage.h>
 
 namespace mxnet {
 namespace profiler {
@@ -38,9 +38,10 @@ class GpuMemoryProfiler {
   /// \brief Record an allocation entry in the profiler.
   void addEntry(const Storage::Handle& handle,
       const size_t actual_alloc_size, const bool reuse);
-private:
+ private:
   bool enabled_;
   std::ofstream alloc_csv_fout_;
+  static std::string current_profiler_scope_;
 };
 
 }  // namespace profiler

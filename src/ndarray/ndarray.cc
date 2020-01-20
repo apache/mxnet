@@ -47,7 +47,7 @@ DMLC_REGISTRY_ENABLE(::mxnet::NDArrayFunctionReg);
 
 namespace mxnet {
 
-NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, 
+NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape,
                  Context ctx, bool delay_alloc, int dtype,
                  std::vector<int> aux_types, mxnet::ShapeVector aux_shapes,
                  mxnet::TShape storage_shape,

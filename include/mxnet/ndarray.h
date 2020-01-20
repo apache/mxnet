@@ -202,7 +202,7 @@ class NDArray {
           const std::string &profiler_scope = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR,
           const std::string &name = MXNET_STORAGE_DEFAULT_NAME_FARG("unknown_ndarray"),
           const Storage::DataStruct data_struct = Storage::DataStruct::kUnknown)
-      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id, 
+      : ptr_(std::make_shared<Chunk>(stype, data, aux_data, dev_id,
                                      profiler_scope, name, data_struct)),
         shape_(shape), dtype_(data.type_flag_),
         storage_type_(stype), entry_(nullptr) {
@@ -891,16 +891,14 @@ class NDArray {
 
     /*! \brief default constructor */
     Chunk() : static_data(true), delay_alloc(false),
-              storage_ref_(Storage::_GetSharedRef()),
-              engine_ref_ (Engine ::_GetSharedRef()) {}
+              storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine ::_GetSharedRef()) {}
 
     /*! \brief construct a new chunk */
     Chunk(mxnet::TShape shape, Context ctx_, bool delay_alloc_, int dtype,
           const std::string &profiler_scope,
           const std::string &name, const Storage::DataStruct data_struct)
         : static_data(false), delay_alloc(true), ctx(ctx_),
-          storage_ref_(Storage::_GetSharedRef()),
-          engine_ref_ (Engine ::_GetSharedRef()) {
+          storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine ::_GetSharedRef()) {
       storage_shape = shape;
       if (shape_is_known(storage_shape)) {
         shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
@@ -917,11 +915,9 @@ class NDArray {
 
     Chunk(const TBlob &data, int dev_id,
           const std::string &profiler_scope,
-          const std::string &name,
-          const Storage::DataStruct data_struct)
+          const std::string &name, const Storage::DataStruct data_struct)
         : static_data(true), delay_alloc(false),
-          storage_ref_(Storage::_GetSharedRef()),
-          engine_ref_ (Engine ::_GetSharedRef()) {
+          storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine ::_GetSharedRef()) {
       CHECK(storage_type == kDefaultStorage);
       var = Engine::Get()->NewVariable();
       if (data.dev_mask() == cpu::kDevMask) {
@@ -945,8 +941,7 @@ class NDArray {
           const std::string &profiler_scope,
           const std::string &name, const Storage::DataStruct data_struct)
         : static_data(false), delay_alloc(false),
-          storage_ref_(Storage::_GetSharedRef()),
-          engine_ref_ (Engine ::_GetSharedRef()) {
+          storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine ::_GetSharedRef()) {
       var = Engine::Get()->NewVariable();
       ctx = Context::CPUShared(0);
       shandle.size = shape.Size() * mshadow::mshadow_sizeof(dtype);
@@ -971,8 +966,7 @@ class NDArray {
           storage_type(storage_type_),
           aux_types(aux_types_), ctx(ctx_),
           storage_shape(storage_shape_), aux_shapes(aux_shapes_),
-          storage_ref_(Storage::_GetSharedRef()),
-          engine_ref_ (Engine ::_GetSharedRef()) {
+          storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine ::_GetSharedRef()) {
       shandle.ctx = ctx;
       shandle.profiler_scope = profiler_scope;
       shandle.name = name;
@@ -995,8 +989,7 @@ class NDArray {
           const std::string &profiler_scope,
           const std::string &name, const Storage::DataStruct data_struct)
         : static_data(true), delay_alloc(false), storage_type(storage_type_),
-          storage_ref_(Storage::_GetSharedRef()),
-          engine_ref_ (Engine ::_GetSharedRef()) {
+          storage_ref_(Storage::_GetSharedRef()), engine_ref_(Engine ::_GetSharedRef()) {
       using namespace mshadow;
       CHECK_NE(storage_type, kDefaultStorage);
       // init var

@@ -26,6 +26,7 @@
 #define MXNET_RESOURCE_H_
 
 #include <dmlc/logging.h>
+#include <string>
 #include "./base.h"
 #include "./engine.h"
 #include "./storage.h"

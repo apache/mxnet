@@ -40,7 +40,7 @@ inline std::string __extract_fname(const std::string& path) {
   }
   return path.substr(last_dir_pos + 1);
 }
-}  // namespace anonymous
+}  // anonymous namespace
 
 #if __GNUG__  // if compiled with GCC
 #define MXNET_STORAGE_DEFAULT_NAME_FARG(tag) \

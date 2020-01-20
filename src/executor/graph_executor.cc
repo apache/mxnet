@@ -702,7 +702,8 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                                      grad_stype, arg_grad_ctxes[arg_top],
                                                      shared_buffer, enable_row_sparse_sharing,
                                                      profiler_scope + "arg_grad:",
-                                                     arg_name, Storage::DataStruct::kParameterGrad));
+                                                     arg_name,
+                                                     Storage::DataStruct::kParameterGrad));
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }  // if (kNullOp == grad_req_types[arg_top])
       }  // if (shared_arg_names.count(arg_name))
