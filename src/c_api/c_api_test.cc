@@ -73,8 +73,36 @@ int MXSetSubgraphPropertyOpNames(const char* prop_name,
   API_END();
 }
 
+int MXSetSubgraphPropertyOpNamesV2(const char* prop_name,
+                                 const uint32_t num_ops,
+                                 const char** op_names) {
+  API_BEGIN();
+  std::unordered_set<std::string> op_name_set;
+  for (size_t i = 0; i < num_ops; ++i) {
+    op_name_set.emplace(op_names[i]);
+  }
+  auto& backend =
+      mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto& property : subgraph_prop_list) {
+    property->SetAttr("op_names", op_name_set);
+  }
+  API_END();
+}
+
 int MXRemoveSubgraphPropertyOpNames(const char* prop_name) {
   API_BEGIN();
   mxnet::op::SubgraphPropertyOpNameSet::Get()->erase(prop_name);
+  API_END();
+}
+
+int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name) {
+  API_BEGIN();
+  auto& backend =
+      mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(prop_name);
+  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+  for (auto& property : subgraph_prop_list) {
+    property->RemoveAttr("op_names");
+  }
   API_END();
 }

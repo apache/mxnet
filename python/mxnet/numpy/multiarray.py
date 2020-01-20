@@ -45,6 +45,9 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
+from .utils import _get_np_op
+from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from . import fallback
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
@@ -61,6 +64,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
            'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
+
+__all__ += fallback.__all__
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -123,6 +128,19 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
                                        False,
                                        ctypes.byref(handle)))
     return ndarray(handle=handle, writable=a.writable)
+
+
+def _as_mx_np_array(object, ctx=None):
+    """Convert object to mxnet.numpy.ndarray."""
+    if isinstance(object, (_np.ndarray, integer_types, numeric_types)):
+        return array(object, dtype=object.dtype, ctx=ctx)
+    elif isinstance(object, (list, tuple)):
+        tmp = [_as_mx_np_array(arr) for arr in object]
+        return object.__class__(tmp)
+    elif isinstance(object, (_np.bool_, _np.bool)):
+        return array(object, dtype=_np.bool_, ctx=ctx)
+    else:
+        raise TypeError('Does not support converting {} to mx.np.ndarray.'.format(str(type(object))))
 
 
 # Have to use 0 as default value for stype since pylint does not allow
@@ -209,13 +227,13 @@ class ndarray(NDArray):
             name = ufunc.__name__
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
-                raise ValueError('mxnet.numpy operator `{}` has not been registered in '
-                                 'the _NUMPY_ARRAY_UFUNC_LIST. Please make sure you are '
-                                 'using NumPy >= 1.15.0 and the operator implementation '
-                                 'is compatible with NumPy. Then add the operator name '
-                                 'to the list.'
-                                 .format(name))
-            return mx_ufunc(*inputs, **kwargs)
+                # try to fallback to official NumPy op
+                onp_op = _get_np_op(name)
+                new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
+                out = onp_op(*new_inputs, **kwargs)
+                return _as_mx_np_array(out, ctx=inputs[0].ctx)
+            else:
+                return mx_ufunc(*inputs, **kwargs)
         else:
             return NotImplemented
 
@@ -227,16 +245,26 @@ class ndarray(NDArray):
         """
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
         if mx_np_func is None:
-            raise ValueError('mxnet.numpy operator `{}` has not been registered in '
-                             'the _NUMPY_ARRAY_FUNCTION_LIST. Please make sure you are '
-                             'using NumPy >= 1.17.0 and the operator '
-                             'implementation is compatible with NumPy. Then add '
-                             'the operator name to the list.'.format(func))
-        # Note: this allows subclasses that don't override
-        # __array_function__ to handle mxnet.numpy.ndarray objects
-        if not all(issubclass(t, ndarray) for t in types):
-            return NotImplemented
-        return mx_np_func(*args, **kwargs)
+            # try to fallback to official NumPy op
+            new_args = []
+            cur_ctx = None
+            for arg in args:
+                if isinstance(arg, ndarray):
+                    cur_ctx = arg.ctx
+                    new_args.append(arg.asnumpy())
+                else:
+                    new_args.append(arg)
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                new_kwargs[k] = v.asnumpy() if isinstance(v, ndarray) else v
+            out = func(*new_args, **new_kwargs)
+            return _as_mx_np_array(out, ctx=cur_ctx)
+        else:
+            # Note: this allows subclasses that don't override
+            # __array_function__ to handle mxnet.numpy.ndarray objects
+            if not all(issubclass(t, ndarray) for t in types):
+                return NotImplemented
+            return mx_np_func(*args, **kwargs)
 
     def _get_np_basic_indexing(self, key):
         """

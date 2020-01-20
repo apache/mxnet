@@ -148,6 +148,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.solve',
     'linalg.tensorinv',
     'linalg.tensorsolve',
+    'linalg.pinv',
     'shape',
     'trace',
     'tril',
