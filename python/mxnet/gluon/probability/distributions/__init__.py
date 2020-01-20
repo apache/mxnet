@@ -29,6 +29,8 @@ from .bernoulli import *
 
 from .categorical import *
 
+from .transformed_distribution import *
+
 from .divergence import *
 
 from .utils import *

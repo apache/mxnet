@@ -1,6 +1,6 @@
 import weakref
 
-__all__ = ["Transformation", "ExpTransform"]
+__all__ = ["Transformation", "ExpTransform", "AffineTransform"]
 
 class Transformation(object):
     r"""Abstract class for implementing invertible transformation
@@ -27,11 +27,13 @@ class Transformation(object):
 
     @property
     def inv(self):
+        inv = None
         if self._inv is not None:
-            return self._inv()
-        # Inverse transformation not registered.
-        self._inv = weakref.ref(_InverseTransformation(self))
-        return self._inv()
+            inv = self._inv()
+        if inv is None:
+            inv = _InverseTransformation(self)
+            self._inv = weakref.ref(inv)
+        return inv
 
     def __call__(self, x):
         return self._forward_compute(x)
@@ -74,7 +76,7 @@ class _InverseTransformation(Transformation):
 
 class ExpTransform(Transformation):
     r"""
-    Perform the exponential transform: y = exp{x}
+    Perform the exponential transform: y = exp{x}.
     """
 
     def _forward_compute(self, x):
@@ -85,3 +87,26 @@ class ExpTransform(Transformation):
 
     def log_det_jacobian(self, x, y):
         return x
+
+class AffineTransform(Transformation):
+    r"""
+    Perform pointwise affine transform: y = loc + scale * x.
+    """
+
+    def __init__(self, loc, scale):
+        super(AffineTransform, self).__init__()
+        self._loc = loc
+        self._scale = scale
+
+    def _forward_compute(self, x):
+        return self._loc + self._scale * x
+    
+    def _inverse_compute(self, y):
+        return (y - self._loc) /  self._scale
+
+    def log_det_jacobian(self, x, y):
+        abs_fn = self.F.np.abs
+        log_fn = self.F.np.log
+        ones_fn = self.F.np.ones_like
+        # FIXME: handle multivariate cases.
+        return ones_fn(x) * log_fn(abs_fn(self._scale))
