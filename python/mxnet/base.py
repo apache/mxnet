@@ -735,7 +735,7 @@ def _init_op_module(root_namespace, module_name, make_op_func):
 
     Parameters
     ----------
-    root_namespace : str
+    root_namespace : strss
         Top level module name, `mxnet` in the current cases.
     module_name : str
         Second level module name, `ndarray` and `symbol` in the current cases.
