@@ -42,7 +42,7 @@ inline std::string __extract_fname(const std::string& path) {
 }
 }  // anonymous namespace
 
-#if __GNUG__  // if compiled with GCC
+#if defined(__GNUG__)  // if compiled with GCC
 #define MXNET_STORAGE_DEFAULT_NAME_FARG(tag) \
     std::string(tag) \
     + "_" + __extract_fname(__FILE__) \
