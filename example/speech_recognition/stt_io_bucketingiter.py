@@ -83,7 +83,7 @@ class BucketSTTIter(mx.io.DataIter):
             durations = durations
             audio_paths = audio_paths
             texts = texts
-        self.trainDataList = zip(durations, audio_paths, texts)
+        self.trainDataList = list(zip(durations, audio_paths, texts))
 
         self.trainDataIter = iter(self.trainDataList)
         self.is_first_epoch = True

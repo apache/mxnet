@@ -301,6 +301,10 @@ if(USE_MKLDNN)
   set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
   set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
 
+  if(NOT USE_OPENMP)
+      set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
+  endif()
+
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
