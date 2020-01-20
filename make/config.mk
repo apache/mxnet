@@ -199,7 +199,7 @@ USE_GPERFTOOLS_PATH =
 USE_GPERFTOOLS_STATIC =
 
 # Use JEMalloc if found, and not using gperftools
-USE_JEMALLOC = 1
+USE_JEMALLOC = 0
 
 # path to jemalloc library in case of a non-standard installation
 USE_JEMALLOC_PATH =
