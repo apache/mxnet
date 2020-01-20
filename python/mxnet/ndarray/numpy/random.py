@@ -440,37 +440,29 @@ def shuffle(x):
 
 
 def geometric(p, size=None, dtype=None, ctx=None, out=None):
-    r"""Draw samples from a uniform distribution.
+    """Draw samples from the geometric distribution.
 
-    Samples are uniformly distributed over the half-open interval
-    ``[low, high)`` (includes low, but excludes high).  In other words,
-    any value within the given interval is equally likely to be drawn
-    by `uniform`.
+    Bernoulli trials are experiments with one of two outcomes: success or failure
+    (an example of such an experiment is flipping a coin). The geometric distribution
+    models the number of trials that must be run in order to achieve success.
+    It is therefore supported on the positive integers, k = 1, 2, ....
 
     Parameters
     ----------
-    low : float, ndarray, optional
-        Lower boundary of the output interval.  All values generated will be
-        greater than or equal to low.  The default value is 0.
-    high : float, ndarray, optional
-        Upper boundary of the output interval.  All values generated will be
-        less than high.  The default value is 1.0.
+    p : float or array_like of floats. The probability of success of an individual trial.
     size : int or tuple of ints, optional
-        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
-        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
-        a scalar tensor containing a single value is returned if
-        ``low`` and ``high`` are both scalars.
-    dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Output shape. If the given shape is, e.g., (m, n, k),
+        then m * n * k samples are drawn. If size is None (default), a single value is returned if p is a scalar.
+        Otherwise, np.array(p).size samples are drawn.
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
 
     Returns
     -------
-    out : ndarray
-        Drawn samples from the parameterized uniform distribution.
+    out : ndarray or scalar
+        Drawn samples from the parameterized geometric distribution.
+
+    The geometric distribution models the number of trials that must be run in order to achieve success.
     """
     from ...numpy import ndarray as np_ndarray
     input_type = isinstance(p, np_ndarray)
