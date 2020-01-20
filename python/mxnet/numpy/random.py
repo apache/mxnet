@@ -21,7 +21,7 @@ from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
-           "gamma"]
+           "gamma", "geometric"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -433,3 +433,7 @@ def randn(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.normal(0, 1, size=output_shape, **kwargs)
+
+
+def geometric(p, size=None, dtype=None, ctx=None, out=None):
+    return _mx_nd_np.random.geometric(p, size, dtype, ctx, out)
