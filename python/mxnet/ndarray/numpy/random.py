@@ -480,9 +480,9 @@ def geometric(p, size=None, dtype=None, ctx=None, out=None):
         ctx = current_context()
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.geometric(p, p=None, size=size,
+    if input_type:
+        return _npi.geometric(p, prob=None, size=size,
                               ctx=ctx, dtype=dtype, out=out)
     else:
-        return _npi.geometric(p=p, size=size,
+        return _npi.geometric(prob=p, size=size,
                               ctx=ctx, dtype=dtype, out=out)
