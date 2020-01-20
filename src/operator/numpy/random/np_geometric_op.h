@@ -89,7 +89,7 @@ struct geometric_kernel {
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
     IType prob = probs[idx];
-    out[i] = floor(log(uniforms[i]) / log(1 - prob));
+    out[i] = floor(log(uniforms[i]) / log(1 - prob)) + 1;
   }
 };
 
@@ -97,7 +97,7 @@ template <typename OType>
 struct scalar_geometric_kernel {
   MSHADOW_XINLINE static void Map(index_t i, float prob, float *uniforms,
                                   OType *out) {
-    out[i] = floor(log(uniforms[i]) / log(1 - prob));
+    out[i] = floor(log(uniforms[i]) / log(1 - prob)) + 1;
   }
 };
 
