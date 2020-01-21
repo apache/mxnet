@@ -9453,7 +9453,7 @@ def bincount(x, weights=None, minlength=0):
     return _mx_nd_np.bincount(x, weights=weights, minlength=minlength)
 
 
-@set_module('mxnet.NumPy')
+@set_module('mxnet.numpy')
 def pad(array, pad_width=None, mode="constant", constant_values=0, reflect_type="even"):
     """
     Pad an array.

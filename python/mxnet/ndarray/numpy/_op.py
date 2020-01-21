@@ -7421,7 +7421,7 @@ def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_va
     pad : ndarray
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
-    
+
     Examples
     --------
     >>> a = [1, 2, 3, 4, 5]
@@ -7456,13 +7456,8 @@ def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_va
            [10, 10, 10, 10, 10, 10, 10]])
     """
 
-    if array.size == 0:
-        for axis, width_pair in zip(axes, pad_width):
-            if array.shape[axis] == 0 and any(width_pair):
-                raise ValueError(
-                    "can't extend empty axis {} using modes other than "
-                    "'constant' or 'empty'".format(axis)
-                )
+    if not isinstance(array, NDArray):
+        raise TypeError("Input data should be NDarray")
     else:
         if mode == "constant":
             return _npi.pad(array, pad_width, 1, reflect_type, constant_values)
