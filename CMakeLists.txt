@@ -134,7 +134,9 @@ if(MSVC)
   if(USE_F16C)
     message("F16C instruction set is not yet supported for MSVC")
   endif()
-  # set(CMAKE_C_FLAGS "/MP")
+  if(NOT CMAKE_C_COMPILER MATCHES "clang-cl")
+    set(CMAKE_C_FLAGS "/MP")
+  endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else()
   include(CheckCXXCompilerFlag)
@@ -415,11 +417,8 @@ if(USE_OPENMP)
   endfunction()
 
   find_package(OpenMP REQUIRED)
-  # This should build on Windows, but there's some problem and I don't have a Windows box, so
-  # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     # AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
     list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
