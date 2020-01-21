@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_reduce_op_value_part2.cc
- * \brief CPU Implementation of broadcast and reduce functions based on value.
+ * \file np_moments_op.cc
+ * \brief move some op here from np_reduce_op_value.cc.
  */
 
 #if MXNET_USE_TVM_OP

@@ -23,6 +23,13 @@
  * \brief CPU Implementation of broadcast and reduce functions based on value.
  */
 
+/*
+ * move some op to np_moments_op.cc to aovid win platform build error:
+ * fatal error C1002: compiler is out of heap space in pass 2
+ * 
+ * Do not add new op in this file.
+ */
+
 #if MXNET_USE_TVM_OP
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
