@@ -355,23 +355,6 @@ void MKLDNNConvolutionForwardFullFeature(const MKLDNNConvFullParam &param, const
   auto &data = in_data[conv::kData];
   auto &weight = in_data[conv::kWeight];
   bool no_bias = param.conv_param.no_bias && !param.mkldnn_param.with_bn;
-  if (data.shape()[0] == 32 && data.shape()[1] == 3
-      && data.shape()[2] == 224 && data.shape()[3] == 224) {
-    if ((!data.IsMKLDNNData())&&(!weight.IsMKLDNNData())) {
-      float *pWeight = static_cast<float *>(weight.GetMKLDNNData()->get_data_handle());
-      float *pData = static_cast<float *>(data.GetMKLDNNData()->get_data_handle());
-      for (size_t i = 0; i < 10; i++) {
-        LOG(INFO) << i <<" data " << pData[i] <<" weight " << pWeight[i];
-      }
-      if (!param.conv_param.no_bias && !in_data[conv::kBias].IsMKLDNNData()) {
-        auto &bias = in_data[conv::kBias];
-        float *pBias = static_cast<float *>(bias.GetMKLDNNData()->get_data_handle());
-        for (size_t i = 0; i < 10; i++) {
-          LOG(INFO) << i << " pBias " << pBias[i];
-        }
-      }
-    }
-  }
 
   auto data_mem = data.GetMKLDNNDataReorder(fwd->GetPd().src_desc());
   const mkldnn::memory *weight_mem;
