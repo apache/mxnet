@@ -67,38 +67,39 @@ MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(index_t idx,
 }
 
 struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
-  mxnet::Tuple<Tuple<int>> pad_width;
+  mxnet::Tuple<mxnet::Tuple<int>> pad_width;
   int mode;
   std::string reflect_type;
   double constant_value;
   DMLC_DECLARE_PARAMETER(NumpyPadParam) {
     DMLC_DECLARE_FIELD(pad_width)
+    .set_default(mxnet::Tuple<mxnet::Tuple<int>>())
     .describe("Number of values padded to the edges of each axis. "
-                  "((before_1, after_1), … (before_N,"
-                  "after_N)) unique pad widths for each axis. ((before, after),) "
-                  "yields same before and"
-                  "after pad for each axis. "
-                  "(pad,) or int is a shortcut for before = after = pad width for all"
-                  "axes.");
+              "((before_1, after_1), … (before_N,"
+              "after_N)) unique pad widths for each axis. ((before, after),) "
+              "yields same before and"
+              "after pad for each axis. "
+              "(pad,) or int is a shortcut for before = after = pad width for all"
+              "axes.");
     DMLC_DECLARE_FIELD(mode)
     .set_default(1)
     .describe("str or function, optional");
     DMLC_DECLARE_FIELD(reflect_type)
     .set_default("even")
     .describe("Used in ‘reflect’, and ‘symmetric’. "
-                  "The ‘even’ style is the default with an unaltered reflection around "
-                  "the edge value. For the ‘odd’ style,"
-                  "the extended part of the array is created by subtracting the "
-                  "reflected values from two times the edge value.");
+              "The ‘even’ style is the default with an unaltered reflection around "
+              "the edge value. For the ‘odd’ style,"
+              "the extended part of the array is created by subtracting the "
+              "reflected values from two times the edge value.");
     DMLC_DECLARE_FIELD(constant_value)
     .set_default(0.0)
     .describe("Used in ‘constant’. The values to set the padded values for each axis."
-                  "((before_1, after_1), ... (before_N, after_N)) unique pad constants for"
-                  "each axis."
-                  "((before, after),) yields same before and after constants for each axis."
-                  "(constant,) or constant is a shortcut for before = after = constant for all"
-                  "axes."
-                  "Default is 0.");
+              "((before_1, after_1), ... (before_N, after_N)) unique pad constants for"
+              "each axis."
+              "((before, after),) yields same before and after constants for each axis."
+              "(constant,) or constant is a shortcut for before = after = constant for all"
+              "axes."
+              "Default is 0.");
   }
 };
 
@@ -607,18 +608,18 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
 
-  size_t ts = in_data.ndim();
-  MXNET_NDIM_SWITCH(ts, NDim, {
+  MXNET_NDIM_SWITCH(inputs[0].ndim(), NDim, {
+    using namespace mxnet_op;
+    using namespace mshadow;
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
+    CHECK_EQ(req.size(), 1U);
+    CHECK_EQ(req[0], kWriteTo);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const TBlob& in_data = inputs[0];
+    const TBlob& out_data = outputs[0];
+    size_t ts = in_data.ndim();
     size_t count;
     mshadow::Shape<NDim> inshape;
     for (count = 0; count < ts; count++) {
@@ -655,16 +656,16 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const TBlob& in_data = inputs[0];
-  const TBlob& out_data = outputs[0];
 
-  size_t ts = in_data.ndim();
-  MXNET_NDIM_SWITCH(ts, NDim, {
+  MXNET_NDIM_SWITCH(inputs[0].ndim(), NDim, {
+    using namespace mxnet_op;
+    using namespace mshadow;
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    const TBlob& in_data = inputs[0];
+    const TBlob& out_data = outputs[0];
+    size_t ts = in_data.ndim();
     size_t count;
     mshadow::Shape<NDim> inshape;
     for (count = 0; count < ts; count++) {
