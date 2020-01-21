@@ -40,7 +40,7 @@ static std::string temp_dir_path() {
   return std::string(temp_dir_c_str);
 #undef MAX_PATH
 #else  // !_WIN32
-  const char* temp_dir_c_str = NULL;
+  const char* temp_dir_c_str = nullptr;
 
   (temp_dir_c_str = std::getenv("TMPDIR")) ||
   (temp_dir_c_str = std::getenv("TMP")) ||
@@ -51,7 +51,7 @@ static std::string temp_dir_path() {
 #else
   const char* default_temp_dir_c_str = "/tmp";
 #endif
-  std::string temp_dir = std::string(temp_dir_c_str == NULL ?
+  std::string temp_dir = std::string(temp_dir_c_str == nullptr ?
       default_temp_dir_c_str : temp_dir_c_str);
   return temp_dir;
 #endif  // _WIN32
@@ -113,7 +113,7 @@ void GpuMemoryProfiler::addEntry(const Storage::Handle& handle,
       handle.data_struct == Storage::DataStruct::kEphemeral) {
     return;
   }
-  alloc_csv_fout_ << static_cast<uint64_t>(time(NULL)) << ","
+  alloc_csv_fout_ << static_cast<uint64_t>(time(nullptr)) << ","
                   << "\"" << handle.profiler_scope << "\","
                   << "\"" << handle.name  << "\","
                   << "\"" << data_struct_to_str(handle.data_struct) << "\","
