@@ -608,7 +608,6 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
-
   MXNET_NDIM_SWITCH(inputs[0].ndim(), NDim, {
     using namespace mxnet_op;
     using namespace mshadow;
@@ -656,7 +655,6 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-
   MXNET_NDIM_SWITCH(inputs[0].ndim(), NDim, {
     using namespace mxnet_op;
     using namespace mshadow;
