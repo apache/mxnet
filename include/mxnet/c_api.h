@@ -2827,6 +2827,48 @@ MXNET_DLL int MXKVStorePullRowSparseEx(KVStoreHandle handle,
                                        int priority);
 
 /*!
+ * \brief broadcast a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcast(KVStoreHandle handle,
+                                 mx_uint vnum,
+                                 const int* vkeys,
+                                 mx_uint onum,
+                                 const int* okeys,
+                                 NDArrayHandle* vals,
+                                 NDArrayHandle* outs,
+                                 int priority);
+/*!
+ * \brief broadcast a list of (key, value) pairs from the kvstore,
+ * where each key is a string
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                                   mx_uint vnum,
+                                   const char** vkeys,
+                                   mx_uint onum,
+                                   const char** okeys,
+                                   NDArrayHandle* vals,
+                                   NDArrayHandle* outs,
+                                   int priority);
+
+/*!
  * \brief push and pull a list of (key, value) pairs from the kvstore
  * \param handle handle to the kvstore
  * \param vnum the number of key-value pairs corresponding to vkeys
