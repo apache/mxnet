@@ -18,7 +18,8 @@
 """ Adapted from incubator-tvm/python/tvm/_ffi/_cython/ndarray.pxi """
 
 import ctypes
-from ...numpy import ndarray
+from ... import _global_var
+# from ...numpy import ndarray
 
 # cdef NewArray(NDArrayHandle handle, int stype=-1, int is_np_array=0):
 #     """Create a new array given handle"""
@@ -31,4 +32,5 @@ cdef c_make_array(void* handle):
     # print(create_array_fn)
     # return return ndarray(handle=None if value[0].v_handle == 0 else ctypes.cast(value[0].v_handle, NDArrayHandle))
     # return ctypes.cast(<unsigned long long>handle, ctypes.c_void_p)
-    return ndarray(handle=<unsigned long long>handle)
+    # return ndarray(handle=<unsigned long long>handle)
+    return _global_var._np_ndarray_cls(handle=<unsigned long long>handle)

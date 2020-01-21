@@ -23,7 +23,7 @@ import struct
 from ..base import check_call, _LIB
 from ..runtime_ctypes import TypeCode
 from ...base import NDArrayHandle
-from ...numpy import ndarray
+from ... import _global_var
 
 class TypeCode(object):
     """Type code used in API calls"""
@@ -56,5 +56,5 @@ RETURN_SWITCH = {
     TypeCode.INT: lambda x: x.v_int64,
     TypeCode.FLOAT: lambda x: x.v_float64,
     TypeCode.NULL: lambda x: None,
-    TypeCode.NDARRAYHANDLE: lambda x: ndarray(handle=NDArrayHandle(x.v_handle))
+    TypeCode.NDARRAYHANDLE: lambda x: _global_var._np_ndarray_cls(handle=NDArrayHandle(x.v_handle))
 }
