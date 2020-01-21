@@ -42,17 +42,17 @@ inline std::string __extract_fname(const std::string& path) {
 }
 }  // anonymous namespace
 
-#if defined(__GNUC__) || defined(__GNUG__)  // if compiled with GCC
+#if (defined(__GNUC__) || defined(__GNUG__)) && !defined(__clang__)
 #define MXNET_STORAGE_DEFAULT_NAME_FARG(tag) \
     std::string(tag) \
     + " (" + __extract_fname(__builtin_FILE()) \
     + " +" +  std::to_string(__builtin_LINE()) + ")"
-#else  // !__GNUG__
+#else  // !__GNUC__ || __clang__
 #define MXNET_STORAGE_DEFAULT_NAME_FARG(tag) \
     std::string(tag) \
     + " (" + __extract_fname(__FILE__) \
     + " +" +  std::to_string(__LINE__) + ")"
-#endif  // __GNUG__
+#endif  // __GNUC__ && !__clang__
 
 #define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR  "<unk>:"
 
