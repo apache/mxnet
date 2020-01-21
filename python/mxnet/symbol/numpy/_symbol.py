@@ -6542,7 +6542,7 @@ def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_va
     end_values : not supported yet
     reflect_type : {'even', 'odd'}, optional
         only support even now
-    
+
     Returns
     -------
     pad : ndarray
@@ -6557,8 +6557,6 @@ def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_va
         return _npi.pad(array, pad_width, 3, reflect_type, constant_values)
     elif mode == "reflect" and reflect_type == "even":
         return _npi.pad(array, pad_width, 4, "even", constant_values)
-    elif mode == "empty":
-        pass
     elif mode == "maximum":
         return _npi.pad(array, pad_width, 5, "even", constant_values)
     elif mode == "minimum":

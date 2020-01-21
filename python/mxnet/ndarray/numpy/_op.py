@@ -7455,10 +7455,6 @@ def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_va
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10]])
     """
-
-    if not isinstance(array, NDArray):
-        raise TypeError("Input data should be NDarray")
-    else:
         if mode == "constant":
             return _npi.pad(array, pad_width, 1, reflect_type, constant_values)
         elif mode == "symmetric" and reflect_type == "even":

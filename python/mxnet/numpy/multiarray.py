@@ -9515,7 +9515,7 @@ def pad(x, pad_width=None, mode="constant", constant_values=0, reflect_type="eve
     pad : ndarray
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
-    
+
     Examples
     --------
     >>> a = [1, 2, 3, 4, 5]
