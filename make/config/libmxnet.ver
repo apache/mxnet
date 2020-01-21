@@ -1,12 +1,9 @@
 {
     global:
-        NN*;
+        *NN*;
         *MX*;
-        _NN*;
-        nn*;
-        mx*;
-        _nn*;
-        _mx*;
+        *nn*;
+        *mx*;
         Java_org_apache_mxnet*;
         *NDArray*;
         *Engine*Get*;
