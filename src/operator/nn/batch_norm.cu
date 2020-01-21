@@ -61,7 +61,7 @@ MSHADOW_XINLINE double variance_to_invstd(double var, double eps) {
 
 template <typename AccReal>
 MSHADOW_XINLINE AccReal invstd_to_variance(AccReal invstd, AccReal eps) {
-  return 1.0f / (invstd * invstd) - eps;
+  return static_cast<AccReal>(1.0) / (invstd * invstd) - eps;
 }
 
 template <>
