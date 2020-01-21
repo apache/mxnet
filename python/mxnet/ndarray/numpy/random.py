@@ -434,7 +434,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
 
 
-def exponential(scale, size):
+def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
     Parameters
     ----------
@@ -453,13 +453,16 @@ def exponential(scale, size):
     """
     from ...numpy import ndarray as np_ndarray
     tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = current_context()
     if size == ():
         size = None
     is_tensor = isinstance(scale, tensor_type_name)
     if is_tensor:
-        return _npi.exponential(scale, scale=None, size=size)
+        return _npi.exponential(scale, scale=None, size=size,
+                                ctx=ctx, out=out)
     else:
-        return _npi.exponential(scale=scale, size=size)
+        return _npi.exponential(scale=scale, size=size, ctx=ctx, out=out)
 
 
 def weibull(a, size=None):
