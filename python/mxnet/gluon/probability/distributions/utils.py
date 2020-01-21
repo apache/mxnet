@@ -40,6 +40,24 @@ def getF(*params):
     return nd
 
 
+def sum_right_most(x, ndim):
+    """Sum along the right most `ndim` dimensions of `x`,
+    
+    Parameters
+    ----------
+    x : Tensor
+        Input tensor.
+    ndim : Int
+        Number of dimensions to be summed.
+    
+    Returns
+    -------
+    Tensor
+    """
+    axes = list(range(-ndim, 0))
+    return x.sum(axes)
+
+
 def _clip_prob(prob, F):
     import numpy as onp
     eps = onp.finfo('float32').eps
