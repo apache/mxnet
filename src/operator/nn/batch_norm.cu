@@ -581,7 +581,6 @@ __global__ void FrozenBatchNormalizationBackwardKernel(
       sum_beta += static_cast<AType>(scratch_grad.separate[j]);
       sum_gamma += static_cast<AType>(scratch_grad.separate[j]) *
                    (static_cast<AType>(scratch_input.separate[j]) - mean);
-
     }
 
     if (flags & WRITE_DATA_FLAG) {
