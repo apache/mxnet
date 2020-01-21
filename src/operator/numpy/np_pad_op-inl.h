@@ -22,6 +22,7 @@
  * \file np_pad_op-inl.h
  * \brief Function definition of matrix related operators
  */
+
 #ifndef MXNET_OPERATOR_NUMPY_NP_PAD_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_PAD_OP_INL_H_
 
@@ -44,8 +45,9 @@ template <size_t ndim, typename xpu>
 MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
                                const mshadow::Tensor<xpu, 1, index_t>& shape) {
   index_t ret = 0;
+  int nndim = static_cast<int>(ndim);
   #pragma unroll
-  for (int i = 0; i < (int)ndim; ++i) {
+  for (int i = 0; i < nndim; ++i) {
     ret = ret * shape[i] + (shape[i] > coord[i]) * coord[i];
   }
   return ret;
