@@ -42,8 +42,6 @@ endif()
 find_path(NCCL_INCLUDE_DIRS
   NAMES nccl.h
   HINTS
-  ${NCCL_ROOT}
-  ${NCCL_ROOT}/include
   ${NCCL_INCLUDE_DIR}
   ${NCCL_ROOT_DIR}
   ${NCCL_ROOT_DIR}/include
@@ -55,10 +53,6 @@ find_library(NCCL_LIBRARIES
   NAMES nccl
   HINTS
   ${NCCL_LIB_DIR}
-  ${NCCL_ROOT}
-  ${NCCL_ROOT}/lib
-  ${NCCL_ROOT}/lib/x86_64-linux-gnu
-  ${NCCL_ROOT}/lib64
   ${NCCL_ROOT_DIR}
   ${NCCL_ROOT_DIR}/lib
   ${NCCL_ROOT_DIR}/lib/x86_64-linux-gnu
@@ -72,15 +66,15 @@ if (UNIX)
   set (search_paths "/usr/local/cuda")
 
   find_path(NCCL_INCLUDE_DIRS
-   NAMES nccl.h
-   PATHS ${search_paths}
-   PATH_SUFFIXES include
+    NAMES nccl.h
+    PATHS ${search_paths}
+    PATH_SUFFIXES include
   )
 
   find_library(NCCL_LIBRARIES
-   NAMES nccl
-   PATHS ${search_paths}
-   PATH_SUFFIXES lib
+    NAMES nccl
+    PATHS ${search_paths}
+    PATH_SUFFIXES lib
   )
 endif()
 
