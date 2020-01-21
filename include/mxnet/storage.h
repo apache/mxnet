@@ -103,7 +103,7 @@ class Storage {
      *          based on their functionality.
      *        It is also used for tracking storage allocations.
      */
-    DataStruct data_struct;
+    DataStruct data_struct{DataStruct::kUnknown};
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.

@@ -43,7 +43,7 @@ inline void linalg_check_batch_size(int A, int B, int C) {
 #define EPHEMERAL_GPU_STORAGE_ALLOC(func, var, dtype, size) \
   Storage::Handle var = Storage::Get()->Alloc( \
       sizeof(dtype) * size, Context::GPU(), \
-      "ephemeral:", #func"_"#var, \
+      "<ephemeral>:", #func"_"#var, \
       Storage::DataStruct::kEphemeral);
 #endif
 

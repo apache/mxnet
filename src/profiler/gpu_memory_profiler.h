@@ -41,7 +41,7 @@ class GpuMemoryProfiler {
  private:
   bool enabled_;
   std::ofstream alloc_csv_fout_;
-  const char* current_profiler_scope_;
+  static const char* current_profiler_scope_;
 };
 
 }  // namespace profiler

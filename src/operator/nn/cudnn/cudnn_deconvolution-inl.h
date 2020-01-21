@@ -767,7 +767,7 @@ class CuDNNDeconvolutionOp {
         handles.push_back(Storage::Get()->Alloc(
             alloc_element * sizeof(DType),
             Context::GPU(),
-            "ephemeral:", "deconv_reserve",
+            "<ephemeral>:", "deconv_reserve",
             Storage::DataStruct::kEphemeral));
     for (auto &handle : handles)
         Storage::Get()->DirectFree(handle);

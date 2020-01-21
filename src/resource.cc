@@ -439,7 +439,7 @@ void Resource::get_cudnn_dropout_desc(
     Storage::Get()->DirectFree(
         Storage::Get()->Alloc(dropout_state_size,
           state_space->ctx,
-          "ephemeral:", "dropout_reserve",
+          "<ephemeral>:", "dropout_reserve",
           Storage::DataStruct::kEphemeral));
     CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
                                          dropout,
