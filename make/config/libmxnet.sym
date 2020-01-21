@@ -1,10 +1,7 @@
 *MX*
-NN*
-_NN*
-mx*
-nn*
-_mx*
-_nn*
+*NN*
+*mx*
+*nn*
 Java_org_apache_mxnet*
 *NDArray*
 *Engine*Get*
