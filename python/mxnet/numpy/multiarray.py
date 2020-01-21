@@ -56,7 +56,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
-           'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
+           'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var',
            'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud',
@@ -1531,13 +1531,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pick')
 
-    def sort(self, *args, **kwargs):
+    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise sort(self, axis=axis, kind=kind, order=order)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -4642,6 +4642,47 @@ def argsort(a, axis=-1, kind=None, order=None):
     array([0, 2, 2, 3])
     """
     return _mx_nd_np.argsort(a, axis=axis, kind=kind, order=order)
+
+
+@set_module('mxnet.numpy')
+def sort(a, axis=-1, kind=None, order=None):
+    """
+    Return a sorted copy of an array.
+    Parameters
+    ----------
+    a : ndarray
+        Array to be sorted.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+    Returns
+    -------
+    sorted_array : ndarray
+        Array of the same type and shape as `a`.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+
+    --------
+    Examples
+    --------
+    >>> a = np.array([[1,4],[3,1]])
+    >>> np.sort(a)                # sort along the last axis
+    array([[1, 4],
+           [1, 3]])
+    >>> np.sort(a, axis=None)     # sort the flattened array
+    array([1, 1, 3, 4])
+    >>> np.sort(a, axis=0)        # sort along the first axis
+    array([[1, 1],
+           [3, 4]])
+    """
+    return _mx_nd_np.sort(a, axis=axis, kind=kind, order=order)
 
 
 @set_module('mxnet.numpy')

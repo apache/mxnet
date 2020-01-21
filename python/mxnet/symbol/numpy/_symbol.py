@@ -41,7 +41,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'eye', 'linspace',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
@@ -472,13 +472,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute pick')
 
-    def sort(self, *args, **kwargs):
+    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise sort(self, axis=axis, kind=kind, order=order)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -1623,6 +1623,34 @@ def argsort(a, axis=-1, kind=None, order=None):
         raise NotImplementedError("order is not supported yet...")
 
     return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
+
+
+@set_module('mxnet.symbol.numpy')
+def sort(a, axis=-1, kind=None, order=None):
+    """
+    Return a sorted copy of an array.
+    Parameters
+    ----------
+    a : _Symbol
+        Array to be sorted.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+    Returns
+    -------
+    sorted_array : ndarray
+        Array of the same type and shape as `a`.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+    """
+    return _npi.sort(data=a, axis=axis, is_ascend=True)
 
 
 @set_module('mxnet.symbol.numpy')
