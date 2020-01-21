@@ -106,14 +106,14 @@ def _new_alloc_handle(stype, shape, ctx, delay_alloc, dtype, aux_types, aux_shap
         check_call(_LIB.MXNDArrayCreateSparseEx(
             ctypes.c_int(int(_STORAGE_TYPE_STR_TO_ID[stype])),
             c_array_buf(ctypes.c_uint, native_array('I', shape)),
-            ctypes.c_int(len(shape)),
+            ctypes.c_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
             ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
             num_aux,
             c_array_buf(ctypes.c_int, native_array('i', aux_type_ids)),
-            c_array_buf(ctypes.c_int, native_array('i', aux_shape_lens)),
+            c_array_buf(ctypes.c_uint, native_array('I', aux_shape_lens)),
             c_array_buf(ctypes.c_uint, native_array('I', aux_shapes)),
             ctypes.byref(hdl)))
     return hdl
