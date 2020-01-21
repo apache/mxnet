@@ -104,7 +104,7 @@ class _BlockScope(object):
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
-        self._profiler_scope.__exit__()
+        self._profiler_scope.__exit__(ptype, value, trace)
         self._profiler_scope = None
         _BlockScope._current.value = self._old_scope
 
