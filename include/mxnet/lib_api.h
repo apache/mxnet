@@ -815,9 +815,9 @@ typedef int (*opCallInferType_t)(inferType_t inferType, const char* const* keys,
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
                              const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                             size_t* inIDs, char** indev_type, int* indev_id, int num_in,
+                             size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
                              const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                             size_t* outIDs, char** outdev_type, int* outdev_id, int num_out,
+                             size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
@@ -833,9 +833,9 @@ typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* cons
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
 typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                                     size_t* inIDs, int* indev_type, int* indev_id, int num_in,
+                                     size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
                                      const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                                     size_t* outIDs, int* outdev_type, int* outdev_id, int num_out,
+                                     size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
@@ -1033,9 +1033,9 @@ extern "C" {
 #endif
   _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
                   const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                  size_t* inIDs, char** indev_type, int* indev_id, int num_in,
+                  size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
                   const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                  size_t* outIDs, char** outdev_type, int* outdev_id, int num_out,
+                  size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
@@ -1122,24 +1122,22 @@ extern "C" {
 #endif
   _opCallFStatefulCompute(int is_forward, void* state_op,
                           const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                          size_t* inIDs, int* indev_type, int* indev_id, int num_in,
+                          size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
                           const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                          size_t* outIDs, int* outdev_type, int* outdev_id, int num_out,
+                          size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      MXContext inctx = {"cpu", indev_id[i]};
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], inctx);
+                          inIDs[i], {indev_type[i], indev_id[i]});
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      MXContext outctx = {"cpu", outdev_id[i]};
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], outctx);
+                           outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
     OpResource res(cpu_malloc, cpu_alloc, stream);

@@ -28,22 +28,20 @@
 
 __global__ void relu_gpu_forward(float *out, float *in, int64_t N) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < N){
+    if (tid < N)
         out[tid] = in[tid] > 0 ? in[tid] : 0;
-    }
 }
 
 __global__ void relu_gpu_backward(float *out, float *in, int64_t N) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    if (tid < N){
+    if (tid < N)
         out[tid] = in[tid] > 0 ? 1 : 0;
-    }
 }
 
 MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
-                          std::vector<MXTensor> inputs,
-                          std::vector<MXTensor> outputs,
-                          OpResource res) {
+                         std::vector<MXTensor> inputs,
+                         std::vector<MXTensor> outputs,
+                         OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
     for (int i=0; i<inputs[0].size(); i++) {
@@ -53,9 +51,9 @@ MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
 }
 
 MXReturnValue backwardCPU(std::map<std::string, std::string> attrs,
-                           std::vector<MXTensor> inputs,
-                           std::vector<MXTensor> outputs,
-                           OpResource res) {
+                          std::vector<MXTensor> inputs,
+                          std::vector<MXTensor> outputs,
+                          OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
     for (int i=0; i<inputs[0].size(); i++) {
@@ -65,9 +63,9 @@ MXReturnValue backwardCPU(std::map<std::string, std::string> attrs,
 }
 
 MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
-                      std::vector<MXTensor> inputs,
-                      std::vector<MXTensor> outputs,
-                      OpResource res) {
+                         std::vector<MXTensor> inputs,
+                         std::vector<MXTensor> outputs,
+                         OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
@@ -81,9 +79,9 @@ MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
 }
 
 MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
-                       std::vector<MXTensor> inputs,
-                       std::vector<MXTensor> outputs,
-                       OpResource res) {
+                          std::vector<MXTensor> inputs,
+                          std::vector<MXTensor> outputs,
+                          OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
@@ -124,6 +122,46 @@ REGISTER_OP(my_relu)
 .setForward(forwardGPU, "gpu")
 .setBackward(backwardCPU, "cpu")
 .setBackward(backwardGPU, "gpu");
+
+class MyStatefulRelu : public CustomStatefulOp {
+public:
+    explicit MyStatefulRelu() {}
+    MXReturnValue Forward(std::vector<MXTensor> inputs,
+                          std::vector<MXTensor> outputs,
+                          OpResource op_res) {
+        std::map<std::string, std::string> attrs;
+        if (inputs[0].ctx.dev_type == "gpu") {
+            std::cout << "Info: stateful GPU Forward" << std::endl;
+            return forwardGPU(attrs, inputs, outputs, op_res);
+        }
+        std::cout << "Info: stateful CPU Forward" << std::endl;
+        return forwardCPU(attrs, inputs, outputs, op_res);
+    }
+    MXReturnValue Backward(std::vector<MXTensor> inputs,
+                           std::vector<MXTensor> outputs,
+                           OpResource op_res) {
+        std::map<std::string, std::string> attrs;
+        if (inputs[0].ctx.dev_type == "gpu") {
+            std::cout << "Info: stateful GPU Backward" << std::endl;
+            return backwardGPU(attrs, inputs, outputs, op_res);
+        }
+        std::cout << "Info: stateful CPU Backward" << std::endl;
+        return backwardCPU(attrs, inputs, outputs, op_res);
+    }
+    ~MyStatefulRelu() {}
+};
+
+MXReturnValue createOpState(std::map<std::string, std::string> attrs,
+                            CustomStatefulOp** op_inst) {
+    *op_inst = new MyStatefulRelu();
+    return MX_SUCCESS;
+}
+
+REGISTER_OP(my_state_relu)
+.setParseAttrs(parseAttrs)
+.setInferType(inferType)
+.setInferShape(inferShape)
+.setCreateOpState(createOpState);
 
 MXReturnValue initialize(int version) {
     if (version >= 10400) {

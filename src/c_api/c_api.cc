@@ -101,21 +101,21 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
  * \brief Convert NDArray to C type arrays for passing to custom library
  */
 void NDArrayToCTypes(const std::vector<NDArray>& inputs,
-                   std::vector<void*>& data,
-                   std::vector<const int64_t *>& shapes,
-                   std::vector<int>& dims,
-                   std::vector<int>& types,
-                   std::vector<size_t>& verIDs,
-                   std::vector<char*>& dev_type,
-                   std::vector<int>& dev_id) {
+                      std::vector<void*>& data,
+                      std::vector<const int64_t *>& shapes,
+                      std::vector<int>& dims,
+                      std::vector<int>& types,
+                      std::vector<size_t>& verIDs,
+                      std::vector<const char*>& dev_type,
+                      std::vector<int>& dev_id) {
   for (size_t i = 0; i < inputs.size(); i++) {
     data.push_back(inputs[i].data().dptr_);
     shapes.push_back(inputs[i].shape().data());
     dims.push_back(inputs[i].shape().ndim());
     types.push_back(inputs[i].dtype());
     verIDs.push_back(inputs[i].version());
-    std::string ctx_str = inputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-    dev_type.push_back(const_cast<char*>(ctx_str.c_str()));
+    const char* ctx_str = inputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+    dev_type.push_back(ctx_str);
     dev_id.push_back(inputs[i].ctx().real_dev_id());
   }
 }
@@ -449,13 +449,13 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_verIDs, out_verIDs;
-      std::vector<char*> in_dev_type, out_dev_type;
+      std::vector<const char*> in_dev_type, out_dev_type;
       std::vector<int> in_dev_id, out_dev_id;
 
       NDArrayToCTypes(inputs, in_data, in_shapes, in_dims, in_types,
-                          in_verIDs, in_dev_type, in_dev_id);
+                      in_verIDs, in_dev_type, in_dev_id);
       NDArrayToCTypes(outputs, out_data, out_shapes, out_dims, out_types,
-                          out_verIDs, out_dev_type, out_dev_id);
+                      out_verIDs, out_dev_type, out_dev_id);
 
       // get memory resource
       const Resource &resource = ctx.requested[0];
@@ -608,30 +608,13 @@ int MXLoadLib(const char *path) {
       std::vector<int> in_dims, out_dims;
       std::vector<int> in_types, out_types;
       std::vector<size_t> in_verIDs, out_verIDs;
-      std::vector<int> in_dev_type, out_dev_type;
+      std::vector<const char*> in_dev_type, out_dev_type;
       std::vector<int> in_dev_id, out_dev_id;
 
-      // convert input tensors to constituent parts
-      for (size_t i = 0; i < inputs.size(); i++) {
-        in_data.push_back(inputs[i].data().dptr_);
-        in_shapes.push_back(inputs[i].shape().data());
-        in_dims.push_back(inputs[i].shape().ndim());
-        in_types.push_back(inputs[i].dtype());
-        in_verIDs.push_back(inputs[i].version());
-        in_dev_type.push_back(inputs[i].ctx().dev_mask());
-        in_dev_id.push_back(inputs[i].ctx().real_dev_id());
-      }
-
-      // convert output tensors to constituent parts
-      for (size_t i = 0; i < outputs.size(); i++) {
-        out_data.push_back(outputs[i].data().dptr_);
-        out_shapes.push_back(outputs[i].shape().data());
-        out_dims.push_back(outputs[i].shape().ndim());
-        out_types.push_back(outputs[i].dtype());
-        out_verIDs.push_back(outputs[i].version());
-        out_dev_type.push_back(outputs[i].ctx().dev_mask());
-        out_dev_id.push_back(outputs[i].ctx().real_dev_id());
-      }
+      NDArrayToCTypes(inputs, in_data, in_shapes, in_dims, in_types,
+                      in_verIDs, in_dev_type, in_dev_id);
+      NDArrayToCTypes(outputs, out_data, out_shapes, out_dims, out_types,
+                      out_verIDs, out_dev_type, out_dev_id);
 
       // get memory resource
       const Resource &resource = ctx.requested[0];
@@ -679,22 +662,6 @@ int MXLoadLib(const char *path) {
       << "Error calling FStatefulCompute for custom operator '" << name_str << "'";
     };
 
-    auto fstateful_forward = [=](const OpStatePtr& state_ptr,
-                                 const OpContext& ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
-      fstateful_lambda(true, state_ptr, ctx, inputs, req, outputs);
-    };
-
-    auto fstateful_backward = [=](const OpStatePtr& state_ptr,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-      fstateful_lambda(false, state_ptr, ctx, inputs, req, outputs);
-    };
-
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
@@ -727,14 +694,18 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<FResourceRequest>("FResourceRequest", DefaultSubgraphOpResourceRequest, plevel);
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", DefaultSubgraphOpMutableInputs, plevel);
     }
-
     // optionally add stateful forward
     if (create_opstate_fp != nullptr) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
-      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                        fstateful_forward, plevel);
-      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
-                                        fstateful_forward, plevel);
+      auto fstateful_forward = [=](const OpStatePtr& state_ptr,
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
+        fstateful_lambda(true, state_ptr, ctx, inputs, req, outputs);
+      };
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_forward, plevel);
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstateful_forward, plevel);
     } else {
       if (forward_ctx_map.count("cpu") > 0) {
         auto forward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
@@ -770,10 +741,15 @@ int MXLoadLib(const char *path) {
       gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
       if (create_opstate_fp != nullptr) {
         gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                            fstateful_backward, plevel);
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>",
-                                            fstateful_backward, plevel);
+        auto fstateful_backward = [=](const OpStatePtr& state_ptr,
+                                      const OpContext& ctx,
+                                      const std::vector<NDArray>& inputs,
+                                      const std::vector<OpReqType>& req,
+                                      const std::vector<NDArray>& outputs) {
+          fstateful_lambda(false, state_ptr, ctx, inputs, req, outputs);
+        };
+        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstateful_backward, plevel);
+        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstateful_backward, plevel);
       } else {
         if (backward_ctx_map.count("cpu") > 0) {
           auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,

@@ -38,6 +38,8 @@ b = mx.nd.array([[-2,-1],[1,2]], ctx=mx.gpu())
 print("--------start ndarray compute---------")
 print(mx.nd.my_relu(a))
 print(mx.nd.my_relu(b))
+print(mx.nd.my_state_relu(a))
+print(mx.nd.my_state_relu(b))
 
 print("--------start symbolic compute--------")
 c = mx.sym.Variable('c')
