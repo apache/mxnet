@@ -1497,6 +1497,16 @@ nightly_test_large_vector() {
     nosetests-3.4 tests/nightly/test_large_vector.py:test_basic
 }
 
+#Test Large Vectors
+nightly_test_large_vector() {
+    set -ex
+    export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_tensor
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_nn
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_basic
+}
+
 #Tests Amalgamation Build with 5 different sets of flags
 nightly_test_amalgamation() {
     set -ex
