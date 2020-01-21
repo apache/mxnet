@@ -902,8 +902,8 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
   const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
   const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
   const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-  std::vector<std::string> sprofiler_scope(entry_end - entry_start);
-  std::vector<std::string> sname(entry_end - entry_start);
+  std::vector<std::string> data_entry_profiler_scopes(entry_end - entry_start);
+  std::vector<std::string> data_entry_names(entry_end - entry_start);
 
   std::multimap<size_t, NDArray> new_pool;
 
@@ -914,8 +914,8 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
       if (eid < entry_start || eid >= entry_end) {
         continue;
       }
-      sprofiler_scope[eid] = profiler_scope;
-      sname[eid] = idx[nid].source->attrs.name;
+      data_entry_profiler_scopes[eid - entry_start] = profiler_scope;
+      data_entry_names[eid - entry_start] = idx[nid].source->attrs.name;
     }
   }
 
@@ -926,8 +926,8 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
       *arrays[i] = NDArray(static_cast<NDArrayStorageType>(stypes[i]),
                            shapes[i], default_ctx, true, dtypes[i],
                            {}, {}, TShape(mshadow::Shape1(0)),
-                           sprofiler_scope[i], sname[i],
-                           Storage::DataStruct::kDataEntry);
+                           data_entry_profiler_scopes[i - entry_start],
+                           data_entry_names[i - entry_start], Storage::DataStruct::kDataEntry);
       continue;
     }
     CHECK_EQ(stypes[i], kDefaultStorage);
@@ -940,8 +940,8 @@ inline std::multimap<size_t, NDArray> AllocateMemory(
       } else {
         NDArray buff(mxnet::TShape({static_cast<nnvm::dim_t>(mem_plan[i].size)}),
                      default_ctx, true, mshadow::kUint8,
-                     sprofiler_scope[i], sname[i],
-                     Storage::DataStruct::kDataEntry);
+                     data_entry_profiler_scopes[i - entry_start],
+                     data_entry_names[i - entry_start], Storage::DataStruct::kDataEntry);
         *arrays[i] = buff.AsArray(shapes[i], dtypes[i]);
         new_pool.insert({mem_plan[i].size, buff});
       }
