@@ -41,7 +41,11 @@ NNVM_REGISTER_OP(_npi_exponential)
     }
     return num_inputs;
   })
-.set_num_outputs(1)
+.set_num_outputs(2)
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+    [](const NodeAttrs& attrs) {
+  return 1;
+})
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyExponentialParam& param = nnvm::get<NumpyExponentialParam>(attrs.parsed);
@@ -56,6 +60,7 @@ NNVM_REGISTER_OP(_npi_exponential)
 .set_attr<nnvm::FInferType>("FInferType",
   [](const nnvm::NodeAttrs &attrs, std::vector<int> *in_attrs,  std::vector<int> *out_attrs) {
     (*out_attrs)[0] = mshadow::kFloat32;
+    (*out_attrs)[1] = mshadow::kFloat32;
     return true;
   })
 .set_attr<FResourceRequest>("FResourceRequest",
