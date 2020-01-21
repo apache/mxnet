@@ -49,6 +49,11 @@ std::string AddPrefix(const std::string& prefix,
 /* \brief collect pointers to input and output ndarrays
  * into a single data structure, this data structure can
  * be used for Memory allocation pass*/
+
+void CollectInputOutputNDRefs(const nnvm::Graph& g,
+                              const std::vector<NDArray*>& inputs,
+                              const std::vector<NDArray*>& outputs,
+                              std::vector<NDArray*>* arrays) DMLC_ATTRIBUTE_UNUSED;
 void CollectInputOutputNDRefs(const nnvm::Graph& g,
                               const std::vector<NDArray*>& inputs,
                               const std::vector<NDArray*>& outputs,
@@ -68,6 +73,13 @@ void CollectInputOutputNDRefs(const nnvm::Graph& g,
 
 /* \brief create ndarrays for the intermediate outputs and final outputs
  * from the allocated storage (happens in MXPlanMemory NNVM pass)*/
+void CreateGraphNDs(const nnvm::Graph& g,
+                    const mxnet::Context& default_ctx,
+                    const std::vector<uint32_t>& ref_count,
+                    const mxnet::imperative::MemoryPlanVector& mem_plan,
+                    bool use_naive_run,
+                    std::vector<OpReqType>* array_reqs,
+                    std::vector<NDArray*>* arrays) DMLC_ATTRIBUTE_UNUSED;
 void CreateGraphNDs(const nnvm::Graph& g,
                     const mxnet::Context& default_ctx,
                     const std::vector<uint32_t>& ref_count,
