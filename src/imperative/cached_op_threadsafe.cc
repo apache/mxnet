@@ -100,6 +100,10 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
     // SetForwardGraph runs infer passes on graphs as well
     // as the planmemory pass.
     std::lock_guard<std::mutex> lock(state.mutex);
+    // the below call runs the NNVM graph passes: type inference,
+    // shape inference, storage type inference and if the graph
+    // doesn't have dynamic shapes it also plans and allocates memory
+    // for intermediate and final outputs in the graph
     SetForwardGraph(&state.info, false, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
   }
@@ -125,9 +129,16 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
       "forward_ref_count");
   const MemoryPlanVector& mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
   const std::string& graph_type = FORWARD;
+  // Collect input output pointers to ndarray into the arrays data structure
   CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+  // The SetForwardGraph call in DynamicForward runs the memory planning phase
+  // and allocates storage for intermediate and final outputs of the graph
+  // We need to still create NDArrays (pointer data structure), based on this
+  // allocated memory from memory planning phase. The CreateGraphNDs below does
+  // that.
   CreateGraphNDs(g, default_ctx, ref_count,
                  mem_plan, false, &array_reqs, &arrays);
+  // Invokes operators in the graph in a topologically sorted manner
   RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
            std::move(ref_count), &states, dispatch_modes, false);
   return op_state;

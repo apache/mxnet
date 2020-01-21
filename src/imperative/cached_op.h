@@ -103,6 +103,10 @@ void CreateForwardGraph(const nnvm::Symbol &sym, nnvm::Graph *fwd_graph) {
   using namespace nnvm;
   static const auto _copy_op = Op::Get("_copy");
   NodeEntryMap<size_t> dedup_out;
+  // Iterate through all node entries, emplace node entry outputs of symbol
+  // to graph outputs. Since node entry stores information about the node
+  // as well as the input node of the graph, a graph can be recreated from a
+  // symbol by just copying the outputs
   for (const NodeEntry &nodeEntry : sym.outputs) {
     if (dedup_out.find(nodeEntry) != dedup_out.end()) {
       NodePtr copy_node = Node::Create();
@@ -137,10 +141,16 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
 
   std::vector<NodeEntry> xs;
   const IndexedGraph &indexed_graph = fwd_graph->indexed_graph();
+  // Create vector of inputs to be passed to the gradient pass
   for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
     const uint32_t node_id = indexed_graph.input_nodes()[i];
+    // skip the mutable nodes, which store the auxiliary states,
+    // since we don't need to compute gradient w.r.t auxiliary states
     if (indexed_graph.mutable_input_nodes().count(node_id))
       continue;
+    // Hold a mapping of the node id to its igrad position
+    // Need this mapping in StaticBackward, to obtain the igrad node,
+    // corresponding to a fwd_graph node.
     (*fwd_input_to_grad_output)[i] = xs.size();
     xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
   }
