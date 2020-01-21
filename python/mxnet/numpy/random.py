@@ -20,8 +20,9 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
+
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
-           "gamma"]
+           "gamma", "exponential"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -322,6 +323,28 @@ def rand(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
+
+
+def exponential(scale=1.0, size=None):
+    r"""Draw samples from an exponential distribution.
+
+    Parameters
+    ----------
+    scale : float or array_like of floats
+        The scale parameter, :math:`\beta = 1/\lambda`. Must be
+        non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized exponential distribution.
+    """
+    return _mx_nd_np.random.exponential(scale, size)
 
 
 def shuffle(x):

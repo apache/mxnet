@@ -1,24 +1,7 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
-/*
  * Copyright (c) 2005-2019, NumPy Developers.
+ * Copyright (c) 2019, The Apache Software Foundation.
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +36,8 @@
 /*!
  * \file np_einsum_op-inl.h
  * \brief Function definition of numpy-compatible einsum operator
+ * modified by Haozheng Fan(@hzfan) from:
+ * https://github.com/numpy/numpy/blob/master/numpy/core/src/multiarray/einsum.c.src
  */
 
 #ifndef MXNET_OPERATOR_NUMPY_NP_EINSUM_OP_INL_H_
