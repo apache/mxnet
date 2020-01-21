@@ -30,10 +30,10 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_pad)
-.set_attr<FCompute>("FCompute<gpu>", NumpyPadOpForward<gpu>)
+.set_attr<FCompute>("FCompute<gpu>", NumpyPadOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_pad)
-.set_attr<FCompute>("FCompute<gpu>", NumpyPadOpBackward<gpu>)
+.set_attr<FCompute>("FCompute<gpu>", NumpyPadOpBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
