@@ -191,24 +191,25 @@ int MXLoadLib(const char *path) {
     inferShape_t shape_fp = nullptr;
     // optional attributes
     mutateInputs_t mutate_fp = nullptr;
-    createOpState_t create_opstate_fp = nullptr;
     bool isSubgraphOp = false;
     int _isSubgraphOp = 0;
     // lists of forward and backward function associated with each context
-    const char **forward_ctx, **backward_ctx;
+    const char **forward_ctx, **backward_ctx, **createop_ctx;
     fcomp_t *forward_fcomp, *backward_fcomp;
-    int forward_count, backward_count;
+    createOpState_t *createop_fp;
+    int forward_count, backward_count, createop_count;
 
     // main function to get custom operator implemenation from the custom library
-    opRegGet(i, &name,
+    opRegGet(i, &name, &_isSubgraphOp,
              &forward_ctx, &forward_fcomp, &forward_count,
              &backward_ctx, &backward_fcomp, &backward_count,
-             &parse_fp, &type_fp,&shape_fp, &mutate_fp,
-             &create_opstate_fp, &_isSubgraphOp);
+             &createop_ctx, &createop_fp, &createop_count,
+             &parse_fp, &type_fp, &shape_fp, &mutate_fp);
 
     // construct maps of context to forward/backward custom library function
     std::unordered_map<std::string, fcomp_t> forward_ctx_map;
     std::unordered_map<std::string, fcomp_t> backward_ctx_map;
+    std::unordered_map<std::string, createOpState_t> createop_map;
     for (int i=0; i<forward_count; i++) {
       std::string ctx_str(forward_ctx[i]);
       forward_ctx_map[ctx_str] = forward_fcomp[i];
@@ -217,14 +218,18 @@ int MXLoadLib(const char *path) {
       std::string ctx_str(backward_ctx[i]);
       backward_ctx_map[ctx_str] = backward_fcomp[i];
     }
+    for (int i=0; i<createop_count; i++) {
+      std::string ctx_str(createop_ctx[i]);
+      createop_map[ctx_str] = createop_fp[i];
+    }
     // set bool, dont pass bool across ABI boundary
     isSubgraphOp = _isSubgraphOp;
 
+    // validate custom operator functions from the dynamic library
     if (!isSubgraphOp) {
-      // validate custom operator functions from the dynamic library
       CHECK(parse_fp != nullptr) << "Error loading '" << name
                                  << "' custom op, ParseAttrs function was not set.";
-      CHECK(forward_ctx_map.size() != 0 || create_opstate_fp != nullptr)
+      CHECK(forward_ctx_map.size() != 0 || createop_map.size() != 0)
                             << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
       CHECK(type_fp != nullptr) << "Error loading '" << name
@@ -232,11 +237,9 @@ int MXLoadLib(const char *path) {
       CHECK(shape_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferShape function was not set.";
     } else {
-      // validate custom operator functions from the dynamic library
-      CHECK(create_opstate_fp != nullptr) << "Error loading '" << name
+      CHECK(createop_map.size() != 0) << "Error loading '" << name
                             << "' custom subgraph op, CreateOpState function was not set.";
     }
-
     LOG(INFO) << "\tOp[" << i << "] " << name;
     std::string name_str(name);
 
@@ -563,9 +566,9 @@ int MXLoadLib(const char *path) {
     // library author should implement and return a 'state' which points to an instance
     // in lambda we create OpStatePtr using the returned 'state'
     auto create_opstate = [=] (const NodeAttrs& attrs,
-                                Context ctx,
-                                const std::vector<TShape>& in_shapes,
-                                const std::vector<int>& in_types) {
+                               Context ctx,
+                               const std::vector<TShape>& in_shapes,
+                               const std::vector<int>& in_types) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
       for (auto kv : attrs.dict) {
@@ -584,11 +587,21 @@ int MXLoadLib(const char *path) {
       }
 
       // create a pointer to hold custom op state object
+      // only create one stateful op depending on passing context
+      // user can add new supported context and call to custom library
       void* state_op_inst = nullptr;
-      CHECK(callCreateOpState(create_opstate_fp, attr_keys.data(), attr_vals.data(),
-                              attr_keys.size(), &state_op_inst))
-      << "Error calling CreateOpState for custom operator '" << name_str << "'";
-
+      if (ctx.dev_mask() == Context::kCPU) {
+        CHECK(createop_map.count("cpu") > 0) << "CPU CreateOpState not implemented";
+        CHECK(callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
+                                attr_keys.size(), &state_op_inst))
+        << "Error calling CreateOpState CPU for custom operator '" << name_str << "'";
+      }
+      else if (ctx.dev_mask() == Context::kGPU) {
+        CHECK(createop_map.count("gpu") > 0) << "GPU CreateOpState not implemented";
+        CHECK(callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
+                                attr_keys.size(), &state_op_inst))
+        << "Error calling CreateOpState GPU for custom operator '" << name_str << "'";
+      }
       CHECK(state_op_inst != nullptr)
       << "Error custom library failed to create stateful operator '" << name_str << "'";
 
@@ -695,7 +708,7 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", DefaultSubgraphOpMutableInputs, plevel);
     }
     // optionally add stateful forward
-    if (create_opstate_fp != nullptr) {
+    if (createop_map.size() != 0) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
       auto fstateful_forward = [=](const OpStatePtr& state_ptr,
                                    const OpContext& ctx,
@@ -729,7 +742,7 @@ int MXLoadLib(const char *path) {
       }
     }
     // optionally add fgradient if user specified a function
-    if (backward_ctx_map.size() != 0 || create_opstate_fp != nullptr) {
+    if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
       regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
       std::string grad_name = "_backward_" + name_str;
       nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
@@ -739,7 +752,7 @@ int MXLoadLib(const char *path) {
       gradOp.set_num_outputs(num_inputs);
       gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
       gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-      if (create_opstate_fp != nullptr) {
+      if (createop_map.size() != 0) {
         gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
         auto fstateful_backward = [=](const OpStatePtr& state_ptr,
                                       const OpContext& ctx,

@@ -606,8 +606,7 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
-    parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL),
-    create_opstate(NULL), isSGop(false) {}
+    parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
     forward_ctx_cstr.push_back(ctx);
     forward_fp.push_back(fcomp);
@@ -634,8 +633,9 @@ class CustomOp {
     mutate_inputs = func;
     return *this;
   }
-  CustomOp& setCreateOpState(createOpState_t func) {
-    create_opstate = func;
+  CustomOp& setCreateOpState(createOpState_t func, const char* ctx) {
+    create_opstate_ctx_cstr.push_back(ctx);
+    create_opstate_fp.push_back(func);
     return *this;
   }
   CustomOp& setIsSubgraphOp() {
@@ -652,13 +652,14 @@ class CustomOp {
   std::vector<fcomp_t> forward_fp;
   std::vector<const char*> backward_ctx_cstr;
   std::vector<fcomp_t> backward_fp;
+  std::vector<const char*> create_opstate_ctx_cstr;
+  std::vector<createOpState_t> create_opstate_fp;
 
   /*! \brief operator functions */
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
-  createOpState_t create_opstate;
   bool isSGop;
 };
 
@@ -786,12 +787,12 @@ class Registry {
 typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
-typedef int (*opRegGet_t)(int idx, const char** name,
+typedef int (*opRegGet_t)(int idx, const char** name, int *isSGop,
                           const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
                           const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
+                          const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
                           parseAttrs_t* parse, inferType_t* type,
-                          inferShape_t* shape, mutateInputs_t* mutate,
-                          createOpState_t* create_op, int *isSGop);
+                          inferShape_t* shape, mutateInputs_t* mutate);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
 typedef int (*opCallFree_t)(void* ptr);
@@ -892,19 +893,18 @@ extern "C" {
 #else
   void
 #endif
-  _opRegGet(int idx, const char** name,
+  _opRegGet(int idx, const char** name, int *isSGop,
             const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
             const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
+            const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
             parseAttrs_t* parse, inferType_t* type,
-            inferShape_t* shape, mutateInputs_t* mutate,
-            createOpState_t* create_op, int *isSGop) {
+            inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp &op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *parse = op.parse_attrs;
     *type = op.infer_type;
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
-    *create_op = op.create_opstate;
     *isSGop = op.isSGop;
     *forward_ctx = op.forward_ctx_cstr.data();
     *forward_fp = op.forward_fp.data();
@@ -912,6 +912,9 @@ extern "C" {
     *backward_ctx = op.backward_ctx_cstr.data();
     *backward_fp = op.backward_fp.data();
     *backward_count = op.backward_fp.size();
+    *create_op_ctx = op.create_opstate_ctx_cstr.data();
+    *create_op_fp = op.create_opstate_fp.data();
+    *create_op_count = op.create_opstate_fp.size();
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
@@ -1110,6 +1113,7 @@ extern "C" {
     }
 
     // void pointer to hold custom state op instance created in custom library
+    // eventually state_op pointer is populated by instance from custom library
     CustomStatefulOp** op_ptr = reinterpret_cast<CustomStatefulOp**>(state_op);
     return create_op(attrs, op_ptr);
   }

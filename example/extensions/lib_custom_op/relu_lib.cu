@@ -123,37 +123,51 @@ REGISTER_OP(my_relu)
 .setBackward(backwardCPU, "cpu")
 .setBackward(backwardGPU, "gpu");
 
-class MyStatefulRelu : public CustomStatefulOp {
+class MyStatefulReluCPU : public CustomStatefulOp {
 public:
-    explicit MyStatefulRelu() {}
+    explicit MyStatefulReluCPU() {}
     MXReturnValue Forward(std::vector<MXTensor> inputs,
                           std::vector<MXTensor> outputs,
                           OpResource op_res) {
         std::map<std::string, std::string> attrs;
-        if (inputs[0].ctx.dev_type == "gpu") {
-            std::cout << "Info: stateful GPU Forward" << std::endl;
-            return forwardGPU(attrs, inputs, outputs, op_res);
-        }
-        std::cout << "Info: stateful CPU Forward" << std::endl;
         return forwardCPU(attrs, inputs, outputs, op_res);
     }
     MXReturnValue Backward(std::vector<MXTensor> inputs,
                            std::vector<MXTensor> outputs,
                            OpResource op_res) {
         std::map<std::string, std::string> attrs;
-        if (inputs[0].ctx.dev_type == "gpu") {
-            std::cout << "Info: stateful GPU Backward" << std::endl;
-            return backwardGPU(attrs, inputs, outputs, op_res);
-        }
-        std::cout << "Info: stateful CPU Backward" << std::endl;
         return backwardCPU(attrs, inputs, outputs, op_res);
     }
-    ~MyStatefulRelu() {}
+    ~MyStatefulReluCPU() {}
 };
 
-MXReturnValue createOpState(std::map<std::string, std::string> attrs,
-                            CustomStatefulOp** op_inst) {
-    *op_inst = new MyStatefulRelu();
+MXReturnValue createOpStateCPU(std::map<std::string, std::string> attrs,
+                               CustomStatefulOp** op_inst) {
+    *op_inst = new MyStatefulReluCPU();
+    return MX_SUCCESS;
+}
+
+class MyStatefulReluGPU : public CustomStatefulOp {
+public:
+    explicit MyStatefulReluGPU() {}
+    MXReturnValue Forward(std::vector<MXTensor> inputs,
+                          std::vector<MXTensor> outputs,
+                          OpResource op_res) {
+        std::map<std::string, std::string> attrs;
+        return forwardGPU(attrs, inputs, outputs, op_res);
+    }
+    MXReturnValue Backward(std::vector<MXTensor> inputs,
+                           std::vector<MXTensor> outputs,
+                           OpResource op_res) {
+        std::map<std::string, std::string> attrs;
+        return backwardGPU(attrs, inputs, outputs, op_res);
+    }
+    ~MyStatefulReluGPU() {}
+};
+
+MXReturnValue createOpStateGPU(std::map<std::string, std::string> attrs,
+                               CustomStatefulOp** op_inst) {
+    *op_inst = new MyStatefulReluGPU();
     return MX_SUCCESS;
 }
 
@@ -161,7 +175,8 @@ REGISTER_OP(my_state_relu)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)
-.setCreateOpState(createOpState);
+.setCreateOpState(createOpStateCPU, "cpu")
+.setCreateOpState(createOpStateGPU, "gpu");
 
 MXReturnValue initialize(int version) {
     if (version >= 10400) {

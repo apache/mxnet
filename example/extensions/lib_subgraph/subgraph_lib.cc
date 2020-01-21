@@ -172,7 +172,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
 
 REGISTER_OP(_custom_subgraph_op)
 .setIsSubgraphOp()
-.setCreateOpState(createOpState);
+.setCreateOpState(createOpState, "cpu");
 
 const std::vector<std::string> op_names({"exp","log"});
 

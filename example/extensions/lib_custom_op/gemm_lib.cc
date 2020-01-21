@@ -229,7 +229,7 @@ REGISTER_OP(state_gemm)
 .setInferType(inferType)
 .setInferShape(inferShape)
 .setMutateInputs(mutateInputs)
-.setCreateOpState(createOpState);
+.setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {
