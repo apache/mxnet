@@ -61,6 +61,13 @@ class IIterator : public dmlc::DataIter<DType> {
   inline void SetDataName(const std::string data_name) {
     data_names.push_back(data_name);
   }
+  /*! \brief request iterator length hint for current epoch. 
+   * Note that the returned value can be < 0, indicating
+   * that the length of iterator is unknown unless you went through all data. 
+   */
+  virtual int64_t GetLenHint(void) const {
+    return -1;
+  }
 };  // class IIterator
 
 /*! \brief a single data instance */

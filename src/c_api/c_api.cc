@@ -1701,6 +1701,12 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
   API_END();
 }
 
+int MXDataIterGetLenHint(DataIterHandle handle, int64_t *len) {
+  API_BEGIN();
+  *len = static_cast<IIterator<DataBatch>* >(handle)->GetLenHint();
+  API_END();
+}
+
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();

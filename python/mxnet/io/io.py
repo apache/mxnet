@@ -908,6 +908,14 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
 
+    def __len__(self):
+        length = ctypes.c_int64(-1)
+        check_call(_LIB.MXDataIterGetLenHint(self.handle, ctypes.byref(length)))
+        if length.value < 0:
+            raise TypeError('object of type {} has no len()'.format(type(self)))
+        return length.value
+
+
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
     name = ctypes.c_char_p()

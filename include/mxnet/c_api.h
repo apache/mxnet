@@ -2617,6 +2617,13 @@ MXNET_DLL int MXDataIterNext(DataIterHandle handle,
 MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 
 /*!
+ * \brief Call iterator.GetLenHint
+ * \param handle the handle to iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetLenHint(DataIterHandle handle,
+                                   int64_t *len);
+/*!
  * \brief Get the handle to the NDArray of underlying data
  * \param handle the handle pointer to the data iterator
  * \param out handle to underlying data NDArray
