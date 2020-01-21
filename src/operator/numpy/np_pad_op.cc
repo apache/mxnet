@@ -30,6 +30,39 @@
 namespace mxnet {
 namespace op {
 
+inline bool NumpyPadOpShape(const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector* in_attrs,
+                            mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  const mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape)) {
+    return false;
+  }
+  const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
+
+  mxnet::TShape oshape = NumpyPadShapeImpl(ishape, param.pad_width);
+
+  if (shape_is_none(oshape)) {
+    LOG(FATAL) << "Pad does not exist.";
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+
+  return shape_is_known(out_attrs->at(0));
+}
+
+inline bool NumpyPadOpType(const nnvm::NodeAttrs &attrs,
+                           std::vector<int> *in_attrs,
+                           std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
+  return (*out_attrs)[0] != -1;
+}
+
 DMLC_REGISTER_PARAMETER(NumpyPadParam);
 
 NNVM_REGISTER_OP(_npi_pad)

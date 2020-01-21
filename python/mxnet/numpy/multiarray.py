@@ -9454,9 +9454,10 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.NumPy')
-def pad(array, pad_width, mode="constant", constant_values=0, reflect_type="even"):
+def pad(array, pad_width=None, mode="constant", constant_values=0, reflect_type="even"):
     """
     Pad an array.
+
     Parameters
     ----------
     array : array_like of rank N
@@ -9508,11 +9509,13 @@ def pad(array, pad_width, mode="constant", constant_values=0, reflect_type="even
     end_values : not supported yet
     reflect_type : {'even', 'odd'}, optional
         only support even now
+
     Returns
     -------
     pad : ndarray
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
+    
     Examples
     --------
     >>> a = [1, 2, 3, 4, 5]

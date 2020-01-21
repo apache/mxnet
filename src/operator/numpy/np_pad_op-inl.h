@@ -71,7 +71,7 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   double constant_value;
   DMLC_DECLARE_PARAMETER(NumpyPadParam) {
     DMLC_DECLARE_FIELD(pad_width)
-        .describe("Number of values padded to the edges of each axis. "
+    .describe("Number of values padded to the edges of each axis. "
                   "((before_1, after_1), … (before_N,"
                   "after_N)) unique pad widths for each axis. ((before, after),) "
                   "yields same before and"
@@ -79,18 +79,18 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
                   "(pad,) or int is a shortcut for before = after = pad width for all"
                   "axes.");
     DMLC_DECLARE_FIELD(mode)
-        .set_default(1)
-        .describe("str or function, optional");
+    .set_default(1)
+    .describe("str or function, optional");
     DMLC_DECLARE_FIELD(reflect_type)
-        .set_default("even")
-        .describe("Used in ‘reflect’, and ‘symmetric’. "
+    .set_default("even")
+    .describe("Used in ‘reflect’, and ‘symmetric’. "
                   "The ‘even’ style is the default with an unaltered reflection around "
                   "the edge value. For the ‘odd’ style,"
                   "the extended part of the array is created by subtracting the "
                   "reflected values from two times the edge value.");
     DMLC_DECLARE_FIELD(constant_value)
-        .set_default(0.0)
-        .describe("Used in ‘constant’. The values to set the padded values for each axis."
+    .set_default(0.0)
+    .describe("Used in ‘constant’. The values to set the padded values for each axis."
                   "((before_1, after_1), ... (before_N, after_N)) unique pad constants for"
                   "each axis."
                   "((before, after),) yields same before and after constants for each axis."
@@ -117,40 +117,6 @@ inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,
   return oshape;
   }
   return mxnet::TShape({-1, -1});
-}
-
-inline bool NumpyPadOpShape(const nnvm::NodeAttrs& attrs,
-                            mxnet::ShapeVector* in_attrs,
-                            mxnet::ShapeVector* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  const mxnet::TShape& ishape = (*in_attrs)[0];
-  if (!mxnet::ndim_is_known(ishape)) {
-    return false;
-  }
-  const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
-
-  mxnet::TShape oshape = NumpyPadShapeImpl(ishape, param.pad_width);
-
-  if (shape_is_none(oshape)) {
-    LOG(FATAL) << "Pad does not exist.";
-  }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
-
-  return shape_is_known(out_attrs->at(0));
-}
-
-
-inline bool NumpyPadOpType(const nnvm::NodeAttrs &attrs,
-                           std::vector<int> *in_attrs,
-                           std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
-  return (*out_attrs)[0] != -1;
 }
 
 template <typename xpu, int req, bool back>
@@ -187,7 +153,7 @@ struct constant_pad {
 };
 
 template <typename xpu, int req, bool back>
-struct pad_copy{
+struct pad_copy {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
@@ -221,10 +187,8 @@ struct pad_copy{
   }
 };
 
-
-
 template <typename xpu, int req, bool back>
-struct symmetric_pad{
+struct symmetric_pad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
@@ -295,7 +259,7 @@ struct symmetric_pad{
 };
 
 template <typename xpu, int req, bool back>
-struct edge_pad{
+struct edge_pad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
@@ -341,7 +305,7 @@ struct edge_pad{
 };
 
 template <typename xpu, int req, bool back>
-struct reflect_pad{
+struct reflect_pad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
@@ -417,7 +381,7 @@ struct reflect_pad{
 };
 
 template <typename xpu, int req, bool back>
-struct max_pad{
+struct max_pad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
@@ -468,7 +432,7 @@ struct max_pad{
 };
 
 template <typename xpu, int req, bool back>
-struct min_pad{
+struct min_pad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
@@ -522,13 +486,12 @@ struct min_pad{
 
 
 template <typename xpu, int req, bool back>
-struct pad_grad{
+struct pad_grad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const mshadow::Tensor<xpu, 1, index_t>& ishape,
                                   const mshadow::Tensor<xpu, 1, index_t>& oshape,
-                                  mxnet::Tuple<Tuple<int>> pad_width
-                                  ){
+                                  mxnet::Tuple<Tuple<int>> pad_width){
     using namespace mxnet_op;
     KERNEL_ASSIGN(out[i], req, 1);
   }

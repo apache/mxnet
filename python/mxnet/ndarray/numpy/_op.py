@@ -7359,9 +7359,10 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.ndarray.numpy')
-def pad(array, pad_width, mode="constant", reflect_type="even", constant_values=0):
+def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_values=0):
     """
     Pad an array.
+
     Parameters
     ----------
     array : array_like of rank N
@@ -7410,14 +7411,17 @@ def pad(array, pad_width, mode="constant", reflect_type="even", constant_values=
         Used in 'constant'.  The values to set the padded values for each
         axis.
         Default is 0.
+
     end_values : not supported yet
     reflect_type : {'even', 'odd'}, optional
         only support even now
+
     Returns
     -------
     pad : ndarray
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
+    
     Examples
     --------
     >>> a = [1, 2, 3, 4, 5]
@@ -7475,6 +7479,4 @@ def pad(array, pad_width, mode="constant", reflect_type="even", constant_values=
         elif mode == "minimum":
             return _npi.pad(array, pad_width, 6, "even", constant_values)
         else:
-            raise ValueError(
-                "didn't support these modes and reflect_types."
-                )
+            raise ValueError("didn't support these modes and reflect_types.")

@@ -6888,7 +6888,7 @@ def test_np_pad():
             return F.np.pad(A, self._pad_width, mode=self._mode, reflect_type=self._reflect_type, constant_values=self._constant_values)
     shapes = [(1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
-    mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum']
+    mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum', 'maximum']
     for hybridize, shape, dtype, in itertools.product([False,True], shapes, dtypes):
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
@@ -6913,11 +6913,16 @@ def test_np_pad():
             with mx.autograd.record():
                 mx_out = test_pad(x)
 
-            # Code to get the reference backward value
+            # code to get the reference value
             assert mx_out.shape == np_out.shape
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol = rtol, atol = atol)
 
-            # Test imperative once again
+            # test gradient
+            mx_out.backward()
+            np_backward = np.ones(shape)
+            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
+
+            # test imperative once again
             mx_out = np.pad(x, pw, m, reflect_type="even", constant_values=0)
 
             if(m != 'constant'):
