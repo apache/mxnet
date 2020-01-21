@@ -45,7 +45,7 @@ MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
                                const mshadow::Tensor<xpu, 1, index_t>& shape) {
   index_t ret = 0;
   #pragma unroll
-  for (int i = 0; i < ndim; ++i) {
+  for (int i = 0; i < (int)ndim; ++i) {
     ret = ret * shape[i] + (shape[i] > coord[i]) * coord[i];
   }
   return ret;
@@ -107,7 +107,6 @@ inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,
     return mxnet::TShape({s});
   } else if (ishape.ndim() >= 2) {
     int i;
-    int sshape_number = ishape.ndim();
     mxnet::TShape oshape(ishape.ndim(), -1);
     for (i = ishape.ndim() - 1; i >=0; i--) {
       int base = ishape[i];
