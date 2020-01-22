@@ -34,7 +34,7 @@ Code Reference: https://github.com/hexiangnan/neural_collaborative_filtering
 We provide the processed datasets on [Google Drive](https://drive.google.com/drive/folders/1qACR_Zhc2O2W0RrazzcepM2vJeh0MMdO?usp=sharing): MovieLens 20 Million (ml-20m), you can download directly or 
 run the script to prepare the datasets:
 ```
-python convert.py ./data/
+python convert.py
 ```
 
 train-ratings.csv

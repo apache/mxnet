@@ -48,7 +48,7 @@ else()
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" OFF)
 endif()
 option(USE_GPERFTOOLS "Build with GPerfTools support" OFF)
-option(USE_JEMALLOC "Build with Jemalloc support"   ON)
+option(USE_JEMALLOC "Build with Jemalloc support" OFF)
 option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
 option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
 option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
@@ -68,6 +68,7 @@ option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output"
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
+cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
@@ -98,6 +99,17 @@ endif()
 
 if(UNIX)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(USE_CCACHE)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  else()
+    message(STATUS "Could not find CCache. Consider installing CCache to speed up compilation.")
+  endif()
 endif()
 
 if(MSVC)
@@ -289,12 +301,17 @@ if(USE_MKLDNN)
   set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
   set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
 
+  if(NOT USE_OPENMP)
+      set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
+  endif()
+
   add_subdirectory(3rdparty/mkldnn)
 
   include_directories(3rdparty/mkldnn/include)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
+  set(INSTALL_MKLDNN ON)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -675,7 +692,9 @@ else()
 endif()
 
 add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
+add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
 target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS "${CUDA_ARCH_FLAGS_SPACES}")
@@ -689,10 +708,13 @@ if(UNIX)
   target_link_libraries(mxnet PRIVATE mxnet_static)
   target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
   target_compile_options(sample_lib PUBLIC -shared)
+  target_compile_options(subgraph_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 elseif(MSVC)
   target_compile_options(sample_lib PUBLIC /LD)
+  target_compile_options(subgraph_lib PUBLIC /LD)
   set_target_properties(sample_lib PROPERTIES PREFIX "lib")
+  set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
 
   if(USE_CUDA)
     if(MSVC)
@@ -758,11 +780,15 @@ if(USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
 endif()
 
-if(USE_TVM_OP)
-  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+function(BuildTVMOP)
+  # scope the variables in BuildTVM.cmake to avoid conflict
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
+endfunction()
 
+if(USE_TVM_OP)
+  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  BuildTVMOP()
   if(NOT Python3_EXECUTABLE)
     find_package(PythonInterp 3 REQUIRED)
     set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE FILEPATH "Path to the python3 executable")
@@ -775,12 +801,13 @@ if(USE_TVM_OP)
   if(USE_CUDA)
     set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "\"${CUDA_ARCH_FLAGS}\"")
   endif()
+
   add_custom_command(TARGET mxnet POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env
-          PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-          LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
-          ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
-    )
+    PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
+    LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
+    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
+  )
 endif()
 
 if(USE_PLUGINS_WARPCTC)

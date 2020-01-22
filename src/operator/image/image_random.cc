@@ -185,7 +185,7 @@ Example:
 
 NNVM_REGISTER_OP(_backward_image_normalize)
 .set_attr_parser(ParamParser<NormalizeParam>)
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NormalizeOpBackward<cpu>);

@@ -53,6 +53,12 @@ NNVM_REGISTER_OP(_npi_vstack)
 NNVM_REGISTER_OP(_backward_np_vstack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyVstackBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_hstack)
+.set_attr<FCompute>("FCompute<gpu>", HStackCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_hstack)
+.set_attr<FCompute>("FCompute<gpu>", HStackGradCompute<gpu>);
+
 NNVM_REGISTER_OP(_npi_dstack)
 .set_attr<FCompute>("FCompute<gpu>", DStackCompute<gpu>);
 

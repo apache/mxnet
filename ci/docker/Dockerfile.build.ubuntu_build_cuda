@@ -42,10 +42,10 @@ COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
-COPY install/ubuntu_ar.sh /work/
-RUN /work/ubuntu_ar.sh
+COPY install/ubuntu_binutils.sh /work/
+RUN /work/ubuntu_binutils.sh
 
-ENV CUDNN_VERSION=7.6.0.64
+ENV CUDNN_VERSION=7.6.5.32
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 

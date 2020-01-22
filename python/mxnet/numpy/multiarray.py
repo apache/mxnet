@@ -45,22 +45,27 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
+from .utils import _get_np_op
+from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from . import fallback
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
-           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like',
+           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
-           'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'column_stack', 'dstack', 'average', 'mean',
-           'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign',
-           'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around',
-           'round', 'arctan2', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal', 'greater',
-           'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
+           'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var',
+           'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud',
+           'fliplr', 'around', 'round', 'arctan2', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
+           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
+           'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where', 'bincount']
+
+__all__ += fallback.__all__
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -123,6 +128,19 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
                                        False,
                                        ctypes.byref(handle)))
     return ndarray(handle=handle, writable=a.writable)
+
+
+def _as_mx_np_array(object, ctx=None):
+    """Convert object to mxnet.numpy.ndarray."""
+    if isinstance(object, (_np.ndarray, integer_types, numeric_types)):
+        return array(object, dtype=object.dtype, ctx=ctx)
+    elif isinstance(object, (list, tuple)):
+        tmp = [_as_mx_np_array(arr) for arr in object]
+        return object.__class__(tmp)
+    elif isinstance(object, (_np.bool_, _np.bool)):
+        return array(object, dtype=_np.bool_, ctx=ctx)
+    else:
+        raise TypeError('Does not support converting {} to mx.np.ndarray.'.format(str(type(object))))
 
 
 # Have to use 0 as default value for stype since pylint does not allow
@@ -209,13 +227,13 @@ class ndarray(NDArray):
             name = ufunc.__name__
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
-                raise ValueError('mxnet.numpy operator `{}` has not been registered in '
-                                 'the _NUMPY_ARRAY_UFUNC_LIST. Please make sure you are '
-                                 'using NumPy >= 1.15.0 and the operator implementation '
-                                 'is compatible with NumPy. Then add the operator name '
-                                 'to the list.'
-                                 .format(name))
-            return mx_ufunc(*inputs, **kwargs)
+                # try to fallback to official NumPy op
+                onp_op = _get_np_op(name)
+                new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
+                out = onp_op(*new_inputs, **kwargs)
+                return _as_mx_np_array(out, ctx=inputs[0].ctx)
+            else:
+                return mx_ufunc(*inputs, **kwargs)
         else:
             return NotImplemented
 
@@ -227,16 +245,26 @@ class ndarray(NDArray):
         """
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
         if mx_np_func is None:
-            raise ValueError('mxnet.numpy operator `{}` has not been registered in '
-                             'the _NUMPY_ARRAY_FUNCTION_LIST. Please make sure you are '
-                             'using NumPy >= 1.17.0 and the operator '
-                             'implementation is compatible with NumPy. Then add '
-                             'the operator name to the list.'.format(func))
-        # Note: this allows subclasses that don't override
-        # __array_function__ to handle mxnet.numpy.ndarray objects
-        if not all(issubclass(t, ndarray) for t in types):
-            return NotImplemented
-        return mx_np_func(*args, **kwargs)
+            # try to fallback to official NumPy op
+            new_args = []
+            cur_ctx = None
+            for arg in args:
+                if isinstance(arg, ndarray):
+                    cur_ctx = arg.ctx
+                    new_args.append(arg.asnumpy())
+                else:
+                    new_args.append(arg)
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                new_kwargs[k] = v.asnumpy() if isinstance(v, ndarray) else v
+            out = func(*new_args, **new_kwargs)
+            return _as_mx_np_array(out, ctx=cur_ctx)
+        else:
+            # Note: this allows subclasses that don't override
+            # __array_function__ to handle mxnet.numpy.ndarray objects
+            if not all(issubclass(t, ndarray) for t in types):
+                return NotImplemented
+            return mx_np_func(*args, **kwargs)
 
     def _get_np_basic_indexing(self, key):
         """
@@ -419,7 +447,7 @@ class ndarray(NDArray):
             # check boundary
             for idx in range(pos+1, len(key)):
                 if key[idx] >= self.shape[idx+mask_ndim-1]:
-                    raise IndexError('index {} on a dimension of' # pylint: disable=too-many-format-args
+                    raise IndexError('index {} on a dimension of {}'
                                      .format(key[idx], self.shape[idx+mask_ndim-1]))
             implicit_idces = len(key)+mask_ndim-1 # idces not explictly shown in the key
             implicit_shape = self.shape[implicit_idces:]
@@ -600,7 +628,8 @@ class ndarray(NDArray):
         # handling possible boolean indexing first
         ndim = self.ndim
         shape = self.shape  # pylint: disable=redefined-outer-name
-
+        if isinstance(key, bool): # otherwise will be treated as 0 and 1
+            key = array(key, dtype=_np.bool)
         if isinstance(key, list):
             try:
                 new_key = _np.array(key)
@@ -612,7 +641,9 @@ class ndarray(NDArray):
             key = array(key, dtype='bool', ctx=self.ctx)
 
         if ndim == 0:
-            if key != ():
+            if isinstance(key, ndarray) and key.dtype == _np.bool:
+                pass # will handle by function for boolean indexing
+            elif key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
         # Handle simple cases for higher speed
         if isinstance(key, tuple) and len(key) == 0:
@@ -702,9 +733,13 @@ class ndarray(NDArray):
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+        if isinstance(key, bool): # otherwise will be treated as 0 and 1
+            key = array(key, dtype=_np.bool)
         # handle basic and advanced indexing
         if self.ndim == 0:
-            if not isinstance(key, tuple) or len(key) != 0:
+            if isinstance(key, ndarray) and key.dtype == _np.bool:
+                pass # will be handled by boolean indexing
+            elif not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
             if isinstance(value, numeric_types):
                 self._full(value)
@@ -986,10 +1021,10 @@ class ndarray(NDArray):
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
-        raise NotImplementedError
+        return _mx_nd_np.all(self, axis=axis, keepdims=keepdims, out=out)
 
     def any(self, axis=None, out=None, keepdims=False):
-        raise NotImplementedError
+        return _mx_nd_np.any(self, axis=axis, keepdims=keepdims, out=out)
 
     def as_nd_ndarray(self):
         """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
@@ -1998,7 +2033,7 @@ class ndarray(NDArray):
         return _mx_np_op.squeeze(self, axis=axis)
 
     def broadcast_to(self, shape):  # pylint: disable=redefined-outer-name
-        return _mx_np_op.broadcast_to(self, shape)
+        return _mx_nd_np.broadcast_to(self, shape)
 
     def broadcast_like(self, other):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute broadcast_like')
@@ -2283,6 +2318,34 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=rede
     return _mx_nd_np.ones(shape, dtype, order, ctx)
 
 
+@set_module('mxnet.numpy')
+def broadcast_to(array, shape):  # pylint: disable=redefined-outer-name
+    """
+    Broadcast an array to a new shape.
+
+    Parameters
+    ----------
+    array : ndarray or scalar
+        The array to broadcast.
+    shape : tuple
+        The shape of the desired array.
+
+    Returns
+    -------
+    broadcast : array
+        A readonly view on the original array with the given shape. It is
+        typically not contiguous. Furthermore, more than one element of a
+        broadcasted array may refer to a single memory location.
+
+    Raises
+    ------
+    MXNetError
+        If the array is not compatible with the new shape according to NumPy's
+        broadcasting rules.
+    """
+    return _mx_nd_np.broadcast_to(array, shape)
+
+
 # pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.numpy')
 def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
@@ -2293,7 +2356,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     ----------
     shape : int or sequence of ints
         Shape of the new array, e.g., ``(2, 3)`` or ``2``.
-    fill_value : scalar
+    fill_value : scalar or ndarray
         Fill value.
     dtype : data-type, optional
         The desired data-type for the array. The default, `None`, means
@@ -2311,6 +2374,8 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
     -------
     out : ndarray
         Array of `fill_value` with the given shape, dtype, and order.
+        If `fill_value` is an ndarray, out will have the same context as `fill_value`
+        regardless of the provided `ctx`.
 
     Notes
     -----
@@ -5461,6 +5526,45 @@ def vstack(arrays, out=None):
 
 
 @set_module('mxnet.numpy')
+def row_stack(arrays):
+    r"""Stack arrays in sequence vertically (row wise).
+    This is equivalent to concatenation along the first axis after 1-D arrays
+    of shape `(N,)` have been reshaped to `(1,N)`. Rebuilds arrays divided by
+    `vsplit`.
+    This function makes most sense for arrays with up to 3 dimensions. For
+    instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions `concatenate` and `stack`
+    provide more general stacking and concatenation operations.
+    Parameters
+    ----------
+    tup : sequence of ndarrays
+        The arrays must have the same shape along all but the first axis.
+        1-D arrays must have the same length.
+    Returns
+    -------
+    stacked : ndarray
+        The array formed by stacking the given arrays, will be at least 2-D.
+    Examples
+    --------
+    >>> a = np.array([1, 2, 3])
+    >>> b = np.array([2, 3, 4])
+    >>> np.vstack((a, b))
+    array([[1., 2., 3.],
+           [2., 3., 4.]])
+    >>> a = np.array([[1], [2], [3]])
+    >>> b = np.array([[2], [3], [4]])
+    >>> np.vstack((a, b))
+    array([[1.],
+           [2.],
+           [3.],
+           [2.],
+           [3.],
+           [4.]])
+    """
+    return _mx_nd_np.row_stack(arrays)
+
+
+@set_module('mxnet.numpy')
 def column_stack(tup):
     """
     Stack 1-D arrays as columns into a 2-D array.
@@ -5494,6 +5598,45 @@ def column_stack(tup):
            [3., 4.]])
     """
     return _mx_nd_np.column_stack(tup)
+
+
+@set_module('mxnet.numpy')
+def hstack(arrays):
+    """
+    Stack arrays in sequence horizontally (column wise).
+    This is equivalent to concatenation along the second axis,
+    except for 1-D arrays where it concatenates along the first axis.
+    Rebuilds arrays divided by hsplit.
+    This function makes most sense for arrays with up to 3 dimensions.
+    For instance, for pixel-data with a height (first axis), width (second axis),
+    and r/g/b channels (third axis). The functions concatenate,
+    stack and block provide more general stacking and concatenation operations.
+
+    Parameters
+    ----------
+    tup : sequence of ndarrays
+        The arrays must have the same shape along all but the second axis, except 1-D arrays which can be any length.
+
+    Returns
+    -------
+    stacked : ndarray
+        The array formed by stacking the given arrays.
+
+    Examples
+    --------
+    >>> from mxnet import np,npx
+    >>> a = np.array((1,2,3))
+    >>> b = np.array((2,3,4))
+    >>> np.hstack((a,b))
+    array([1., 2., 3., 2., 3., 4.])
+    >>> a = np.array([[1],[2],[3]])
+    >>> b = np.array([[2],[3],[4]])
+    >>> np.hstack((a,b))
+    array([[1., 2.],
+           [2., 3.],
+           [3., 4.]])
+    """
+    return _mx_nd_np.hstack(arrays)
 
 
 @set_module('mxnet.numpy')
