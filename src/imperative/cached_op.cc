@@ -728,12 +728,14 @@ OpStatePtr CachedOp::DynamicForward(
   const std::string& graph_type = recording ? FULL : FORWARD;
   std::vector<uint32_t> ref_count =
     g.GetAttr<std::vector<uint32_t> >(AddPrefix(graph_type, REF_COUNT));
-  const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
+  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
+    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+  }
   CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
-  CreateGraphNDs(g, default_ctx, ref_count,
-                 mem_plan, use_naive_run, &array_reqs, &arrays);
 
   if (!use_naive_run) {
+    const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
+    CreateGraphNDs(g, default_ctx, mem_plan, &array_reqs, &arrays);
     // If CachedOp is running in the inline mode, it uses RunGraph to record
     // computation; otherwise, CachedOp records computation itself.
     // So if it's not the inline mode, we disable recording.

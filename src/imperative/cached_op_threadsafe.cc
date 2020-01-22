@@ -127,8 +127,11 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   const auto &dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   std::vector<uint32_t> ref_count = g.GetAttr<std::vector<uint32_t>>(
       "forward_ref_count");
+  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
+    if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+  }
+
   const MemoryPlanVector& mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
-  const std::string& graph_type = FORWARD;
   // Collect input output pointers to ndarray into the arrays data structure
   CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
   // The SetForwardGraph call in DynamicForward runs the memory planning phase
@@ -136,8 +139,7 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
   // We need to still create NDArrays (pointer data structure), based on this
   // allocated memory from memory planning phase. The CreateGraphNDs below does
   // that.
-  CreateGraphNDs(g, default_ctx, ref_count,
-                 mem_plan, false, &array_reqs, &arrays);
+  CreateGraphNDs(g, default_ctx, mem_plan, &array_reqs, &arrays);
   // Invokes operators in the graph in a topologically sorted manner
   RunGraph(false, idx, arrays, 0, idx.num_nodes(), std::move(array_reqs),
            std::move(ref_count), &states, dispatch_modes, false);

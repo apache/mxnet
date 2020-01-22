@@ -75,38 +75,27 @@ void CollectInputOutputNDRefs(const nnvm::Graph& g,
  * from the allocated storage (happens in MXPlanMemory NNVM pass)*/
 void CreateGraphNDs(const nnvm::Graph& g,
                     const mxnet::Context& default_ctx,
-                    const std::vector<uint32_t>& ref_count,
                     const mxnet::imperative::MemoryPlanVector& mem_plan,
-                    bool use_naive_run,
                     std::vector<OpReqType>* array_reqs,
                     std::vector<NDArray*>* arrays) DMLC_ATTRIBUTE_UNUSED;
 void CreateGraphNDs(const nnvm::Graph& g,
                     const mxnet::Context& default_ctx,
-                    const std::vector<uint32_t>& ref_count,
                     const mxnet::imperative::MemoryPlanVector& mem_plan,
-                    bool use_naive_run,
                     std::vector<OpReqType>* array_reqs,
                     std::vector<NDArray*>* arrays) {
   const auto& idx = g.indexed_graph();
-  for (size_t i = 0; i < idx.num_node_entries(); ++i) {
-    if (ref_count[i] == 0)
-      (*array_reqs)[i] = kNullOp;
-  }
-
-  if (!use_naive_run) {
-    mxnet::imperative::AllocateMemory(g, idx, default_ctx, 0,
-                                      idx.num_node_entries(), mem_plan, *arrays,
-                                      array_reqs);
-    const auto &dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
-    const auto &shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    const auto &stypes = g.GetAttr<mxnet::StorageTypeVector>("storage_type");
-    for (size_t i = 0; i < idx.outputs().size(); ++i) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      if (!(*arrays)[eid]->is_none())
-        continue;
+  mxnet::imperative::AllocateMemory(g, idx, default_ctx, 0,
+                                    idx.num_node_entries(), mem_plan, *arrays,
+                                    array_reqs);
+  const auto &dtypes = g.GetAttr<nnvm::DTypeVector>("dtype");
+  const auto &shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+  const auto &stypes = g.GetAttr<mxnet::StorageTypeVector>("storage_type");
+  for (size_t i = 0; i < idx.outputs().size(); ++i) {
+    auto eid = idx.entry_id(idx.outputs()[i]);
+    if (!(*arrays)[eid]->is_none())
+      continue;
       *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                                shapes[eid], default_ctx, true, dtypes[eid]);
-    }
+                                  shapes[eid], default_ctx, true, dtypes[eid]);
   }
 }
 
