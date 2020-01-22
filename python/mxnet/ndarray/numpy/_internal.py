@@ -17,4 +17,8 @@
 
 """Namespace for numpy internal ops."""
 
+from ..._ffi.function import _init_api
+
 __all__ = []
+
+_init_api("_npi", "mxnet.ndarray.numpy._internal")

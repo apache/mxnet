@@ -30,9 +30,6 @@ from . import base
 # version info
 __version__ = base.__version__
 
-from . import api
-from . import _api_internal
-
 from . import contrib
 from . import ndarray
 from . import ndarray as nd
@@ -108,3 +105,6 @@ from . import numpy_dispatch_protocol
 from . import numpy_op_fallback
 
 from . import _global_var
+
+from . import _api_internal
+from . import api

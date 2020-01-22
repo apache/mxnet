@@ -20,10 +20,6 @@
 
 from ..base import _init_np_op_module
 from ..ndarray.register import _make_ndarray_function
-from .._ffi.function import _init_api
 
 _init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
                    mx_module_name=None, make_op_func=_make_ndarray_function)
-
-_init_api("_npi", "mxnet.ndarray.numpy._internal")
-_init_api("mxnet.api")

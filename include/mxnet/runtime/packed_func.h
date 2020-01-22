@@ -888,7 +888,7 @@ inline DLDataType String2DLDataType(std::string s) {
     return t;
   }
   t.bits = 32; t.lanes = 1;
-  const char* scan;
+  const char* scan = nullptr;
   if (s.substr(0, 3) == "int") {
     t.code = kDLInt;  scan = s.c_str() + 3;
   } else if (s.substr(0, 4) == "uint") {

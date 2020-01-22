@@ -15,3 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 """Functions defined in MXNet."""
+
+from ._ffi.function import _init_api
+
+_init_api("mxnet.api")
