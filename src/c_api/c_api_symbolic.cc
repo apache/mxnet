@@ -694,7 +694,8 @@ inline void SymbolInferShape(const char** keys,
 
 /*!
  * \brief Executor for Symbol Shape Inference
- * when INT64_TENSOR_SIZE = OFF
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
  * \param num_args number of args
  * \param keys keys
@@ -710,6 +711,7 @@ inline void SymbolInferShape(const char** keys,
  * \param aux_shape_ndim number of dims of auxiliary states shape
  * \param aux_shape_data shape data of auxiliary states
  * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShapeEx(SymbolHandle sym,
                          uint32_t num_args,
@@ -750,7 +752,8 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
 
 /*!
  * \brief Executor for Symbol Shape Inference
- * when INT64_TENSOR_SIZE = ON
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  * \param sym symbol handle
  * \param num_args number of args
  * \param keys keys
@@ -766,6 +769,7 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
  * \param aux_shape_ndim number of dims of auxiliary states shape
  * \param aux_shape_data shape data of auxiliary states
  * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShapeEx64(SymbolHandle sym,
                            uint32_t num_args,
@@ -831,7 +835,8 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
 
 /*!
  * \brief Executor for Symbol Partial Shape Inference
- * when INT64_TENSOR_SIZE = OFF
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
  * \param num_args number of args
  * \param keys keys
@@ -847,6 +852,7 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
  * \param aux_shape_ndim number of dims of auxiliary states shape
  * \param aux_shape_data shape data of auxiliary states
  * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShapePartialEx(SymbolHandle sym,
                                 uint32_t num_args,
@@ -875,7 +881,8 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
 
 /*!
  * \brief Executor for Symbol Partial Shape Inference
- * when INT64_TENSOR_SIZE = ON
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  * \param sym symbol handle
  * \param num_args number of args
  * \param keys keys
@@ -891,6 +898,7 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
  * \param aux_shape_ndim number of dims of auxiliary states shape
  * \param aux_shape_data shape data of auxiliary states
  * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShapePartialEx64(SymbolHandle sym,
                                   uint32_t num_args,
