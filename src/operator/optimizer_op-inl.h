@@ -2160,7 +2160,8 @@ struct FtrlDnsRspDnsKernel {
 
       DType d = - sign::Map(z_data[data_i]) * maximum::Map(abs::Map(z_data[data_i]) - lamda1,
                                                            static_cast<DType>(0));
-      KERNEL_ASSIGN(out_data[data_i], req, d / ((beta + square_root::Map(n_data[data_i])) / lr + wd));
+      KERNEL_ASSIGN(out_data[data_i], req,
+                    d / ((beta + square_root::Map(n_data[data_i])) / lr + wd));
     }
   }
 };

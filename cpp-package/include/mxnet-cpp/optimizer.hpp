@@ -270,8 +270,8 @@ inline RMSPropOptimizer::RMSPropOptimizer(unsigned begin_num_update)
   : Optimizer(begin_num_update) {
   update_handle_ = op_map()->GetSymbolCreator("rmsprop_update");
   alex_update_handle_ = op_map()->GetSymbolCreator("rmspropalex_update");
-  SetParam("gamma1", 0.9f);
-  SetParam("gamma2", 0.9f);
+  SetParam("rho", 0.9f);
+  SetParam("momentum", 0.9f);
   SetParam("epsilon", 1e-8);
 }
 

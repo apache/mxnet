@@ -109,11 +109,10 @@ method update($index, $weight, $grad, $state)
     learning_rate : float, optional
         Step size.
         Default value is set to 0.001.
-    gamma1: float, optional
+    rho: float, optional
         decay factor of moving average for gradient, gradient^2.
         Default value is set to 0.9.
-    gamma2: float, optional
-        "momentum" factor.
+    momentum: float, optional
         Default value if set to 0.9.
         Only used if centered=True
     epsilon : float, optional
@@ -134,8 +133,8 @@ package PerlRMSProp;
 use Mouse;
 extends 'AI::MXNet::Optimizer';
 has '+learning_rate' => (default => 0.001);
-has 'gamma1'         => (is => "ro", isa => "Num",  default => 0.9);
-has 'gamma2'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'rho'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'momentum'         => (is => "ro", isa => "Num",  default => 0.9);
 has 'epsilon'        => (is => "ro", isa => "Num",  default => 1e-8);
 has 'centered'       => (is => "ro", isa => "Bool", default => 0);
 has 'clip_weights'   => (is => "ro", isa => "Num");
@@ -182,7 +181,7 @@ method update($index, $weight, $grad, $state)
         {
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
-        $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
+        $n .= (1 - $self->rho) * ($grad * $grad) + $self->rho * $n;
         $weight -= $lr * $grad/(mx->nd->sqrt($n + $self->epsilon));
     }
     else
@@ -192,9 +191,9 @@ method update($index, $weight, $grad, $state)
         {
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
-        $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
-        $g .= (1 - $self->gamma1) * $grad + $self->gamma1 * $g;
-        $delta .= ($self->gamma2) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g + $self->epsilon));
+        $n .= (1 - $self->rho) * ($grad * $grad) + $self->rho * $n;
+        $g .= (1 - $self->rho) * $grad + $self->rho * $g;
+        $delta .= ($self->momentum) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g + $self->epsilon));
         $weight += $delta;
     }
     if($self->clip_weights)

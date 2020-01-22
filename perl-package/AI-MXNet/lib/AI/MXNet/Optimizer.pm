@@ -1359,11 +1359,10 @@ __PACKAGE__->register;
     learning_rate : Num, optional
         Step size.
         Default value is set to 0.001.
-    gamma1: Num, optional
+    rho: Num, optional
         decay factor of moving average for gradient^2.
         Default value is set to 0.9.
-    gamma2: Num, optional
-        "momentum" factor.
+    momentum: Num, optional
         Default value if set to 0.9.
         Only used if centered=True
     epsilon : Num, optional
@@ -1386,8 +1385,8 @@ use Mouse;
 extends 'AI::MXNet::Optimizer';
 
 has '+learning_rate' => (default => 0.001);
-has 'gamma1'         => (is => "ro", isa => "Num",  default => 0.9);
-has 'gamma2'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'rho'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'momentum'         => (is => "ro", isa => "Num",  default => 0.9);
 has 'epsilon'        => (is => "ro", isa => "Num",  default => 1e-8);
 has 'centered'       => (is => "ro", isa => "Bool", default => 0);
 has 'clip_weights'   => (is => "ro", isa => "Num");
@@ -1397,12 +1396,12 @@ sub BUILD
 {
     my $self = shift;
     $self->kwargs({
-        gamma1       => $self->gamma1,
+        rho       => $self->rho,
         epsilon      => $self->epsilon
     });
     if($self->centered)
     {
-        $self->kwargs->{gamma2} = $self->gamma2;
+        $self->kwargs->{momentum} = $self->momentum;
     }
     if($self->clip_gradient)
     {
