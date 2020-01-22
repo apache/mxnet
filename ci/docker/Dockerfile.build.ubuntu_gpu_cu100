@@ -65,7 +65,8 @@ RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_tutorials.sh /work/
 RUN /work/ubuntu_tutorials.sh
 
-ENV CUDNN_VERSION=7.6.0.64
+ENV CUDA_VERSION=10.0.130
+ENV CUDNN_VERSION=7.6.5.32
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 

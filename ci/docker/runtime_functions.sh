@@ -25,7 +25,7 @@ set -ex
 NOSE_COVERAGE_ARGUMENTS="--with-coverage --cover-inclusive --cover-xml --cover-branches --cover-package=mxnet"
 NOSE_TIMER_ARGUMENTS="--with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error"
 CI_CUDA_COMPUTE_CAPABILITIES="-gencode=arch=compute_52,code=sm_52 -gencode=arch=compute_70,code=sm_70"
-CI_CMAKE_CUDA_ARCH_BIN="52,70"
+CI_CMAKE_CUDA_ARCH="5.2 7.0"
 
 clean_repo() {
     set -ex
@@ -279,8 +279,6 @@ build_armv6() {
     build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -311,8 +309,6 @@ build_armv7() {
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CROSSCOMPILING=ON \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
@@ -332,8 +328,6 @@ build_armv7() {
 build_armv8() {
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DSUPPORT_F16C=OFF\
         -DUSE_OPENCV=OFF\
@@ -358,8 +352,6 @@ build_android_armv7() {
     build_ccache_wrappers
     cmake \
         -DANDROID=ON\
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_SSE=OFF\
         -DSUPPORT_F16C=OFF\
@@ -412,8 +404,6 @@ build_amzn_linux_cpu() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF\
         -DUSE_OPENCV=ON\
         -DUSE_OPENMP=ON\
@@ -505,8 +495,6 @@ build_ubuntu_cpu_cmake_debug() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DPython3_EXECUTABLE=/usr/bin/python3 \
@@ -528,8 +516,6 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
         -DPython3_EXECUTABLE=/usr/bin/python3 \
@@ -554,8 +540,6 @@ build_ubuntu_cpu_cmake_asan() {
     export CC=gcc-8
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
@@ -618,8 +602,6 @@ build_ubuntu_cpu_clang_tidy() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DUSE_CUDA=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -714,8 +696,6 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
@@ -730,10 +710,7 @@ build_ubuntu_gpu_tensorrt() {
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        ..
+    cmake ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
@@ -745,16 +722,13 @@ build_ubuntu_gpu_tensorrt() {
 
     cd /work/build
     cmake -DUSE_CUDA=1                            \
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-          -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
           -DUSE_CUDNN=1                           \
           -DUSE_OPENCV=1                          \
           -DUSE_TENSORRT=1                        \
           -DUSE_OPENMP=0                          \
           -DUSE_MKLDNN=0                          \
           -DUSE_MKL_IF_AVAILABLE=OFF              \
-          -DCUDA_ARCH_NAME=Manual                 \
-          -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+          -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
           -G Ninja                                \
           /work/mxnet
 
@@ -862,9 +836,6 @@ build_ubuntu_gpu_cmake_mkldnn() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
@@ -872,8 +843,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -G Ninja                                \
         /work/mxnet
 
@@ -885,9 +855,6 @@ build_ubuntu_gpu_cmake() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -898,8 +865,7 @@ build_ubuntu_gpu_cmake() {
         -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
@@ -912,9 +878,6 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -925,8 +888,7 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
         -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
@@ -939,9 +901,6 @@ build_ubuntu_cpu_large_tensor() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
@@ -959,9 +918,6 @@ build_ubuntu_gpu_large_tensor() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -972,8 +928,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_MKLDNN=OFF                        \
         -DUSE_DIST_KVSTORE=ON                   \
         -DCMAKE_BUILD_TYPE=Release              \
-        -DCUDA_ARCH_NAME=Manual                 \
-        -DCUDA_ARCH_BIN=$CI_CMAKE_CUDA_ARCH_BIN \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
@@ -1228,12 +1183,11 @@ unittest_ubuntu_cpu_R() {
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg                           \
-        USE_BLAS=openblas               \
+    make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
-    make rpkgtest R_LIBS=/tmp/r-site-library
+    make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library
 }
 
 unittest_ubuntu_minimal_R() {
@@ -1244,8 +1198,7 @@ unittest_ubuntu_minimal_R() {
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg                           \
-        USE_BLAS=openblas               \
+    make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
@@ -1274,11 +1227,10 @@ unittest_ubuntu_gpu_R() {
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
-    make rpkg                           \
-        USE_BLAS=openblas               \
+    make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
     R CMD INSTALL --library=/tmp/r-site-library R-package
-    make rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
+    make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
 }
 
 unittest_ubuntu_cpu_julia() {
@@ -1530,7 +1482,29 @@ nightly_test_large_tensor() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    nosetests-3.4 tests/nightly/test_large_array.py
+    nosetests-3.4 tests/nightly/test_large_array.py:test_tensor
+    nosetests-3.4 tests/nightly/test_large_array.py:test_nn
+    nosetests-3.4 tests/nightly/test_large_array.py:test_basic
+}
+
+#Test Large Vectors
+nightly_test_large_vector() {
+    set -ex
+    export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_tensor
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_nn
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_basic
+}
+
+#Test Large Vectors
+nightly_test_large_vector() {
+    set -ex
+    export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_tensor
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_nn
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_basic
 }
 
 #Tests Amalgamation Build with 5 different sets of flags
@@ -2069,9 +2043,12 @@ cd_s3_publish() {
     set -ex
     pip3 install --user awscli
     filepath=$(readlink -f wheel_build/dist/*.whl)
-    filename=$(basename $file_path)
+    filename=$(basename $filepath)
     variant=$(echo $filename | cut -d'-' -f1 | cut -d'_' -f2 -s)
-    aws s3 cp --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers,full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822 s3://apache-mxnet/dist/${variant}/${filename}
+    if [ -z "${variant}" ]; then
+        variant="cpu"
+    fi
+    aws s3 cp ${filepath} s3://apache-mxnet/dist/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
 build_static_scala_mkl() {

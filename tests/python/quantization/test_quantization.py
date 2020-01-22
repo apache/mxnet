@@ -328,12 +328,11 @@ def test_quantized_elemwise_add():
         elemwise_add_int8_exe.arg_dict[qarg_names[4]][:] = data_low
         elemwise_add_int8_exe.arg_dict[qarg_names[5]][:] = data_high
         qoutput, min_range, max_range = elemwise_add_int8_exe.forward()
-        min_val = min_range.asnumpy().tolist()[0]
-        max_val = max_range.asnumpy().tolist()[0]
 
-        fp32_rslt = output.asnumpy()
-        int8_rslt = qoutput.asnumpy()*max_val/0x7fffffff
-        assert_almost_equal(int8_rslt, int8_rslt, atol = 1e-4)
+        int8_rslt = qoutput.astype(output.dtype)*max_range/0x7fffffff
+        diff = mx.nd.abs(output - int8_rslt)
+        cond = mx.nd.lesser(2, diff).sum().asscalar()
+        assert cond == 0
 
     for qtype in ['int8', 'uint8']:
         check_quantized_elemwise_add((4, 6), qtype)
@@ -1138,15 +1137,17 @@ def test_quantize_gluon_with_forward():
         quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
         quantized_resnet18_v1(random_data)
 
-        quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
-                                                              exclude_layers=None,
-                                                              exclude_layers_match=excluded_names_match,
-                                                              calib_data=calib_data,
-                                                              calib_mode='naive',
-                                                              num_calib_examples=num_calib_examples,
-                                                              ctx=mx.current_context())
-        quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
-        quantized_resnet18_v1(random_data)
+        for mode in ['naive', 'entropy']:
+            qdtype = qdtype if mode is 'naive' else 'auto'
+            quantized_resnet18_v1 = mx.contrib.quant.quantize_net(resnet18_v1, quantized_dtype=qdtype,
+                                                                  exclude_layers=None,
+                                                                  exclude_layers_match=excluded_names_match,
+                                                                  calib_data=calib_data,
+                                                                  calib_mode=mode,
+                                                                  num_calib_examples=num_calib_examples,
+                                                                  ctx=mx.current_context())
+            quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)
+            quantized_resnet18_v1(random_data)
 
     for qdtype in ['int8', 'uint8']:
         check_quantize_net(qdtype)

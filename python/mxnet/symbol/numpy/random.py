@@ -21,7 +21,8 @@ from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
 
-__all__ = ['randint', 'uniform', 'normal', 'rand', 'shuffle']
+
+__all__ = ['randint', 'uniform', 'normal', 'rand', 'shuffle', 'gamma', 'exponential']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -288,6 +289,93 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
             return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
         else:
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
+
+
+def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    """Draw samples from a Gamma distribution.
+
+    Samples are drawn from a Gamma distribution with specified parameters,
+    `shape` (sometimes designated "k") and `scale` (sometimes designated
+    "theta"), where both parameters are > 0.
+
+    Parameters
+    ----------
+    shape : float or array_like of floats
+        The shape of the gamma distribution. Should be greater than zero.
+    scale : float or array_like of floats, optional
+        The scale of the gamma distribution. Should be greater than zero.
+        Default is equal to 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``shape`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : _Symbol
+        Drawn samples from the parameterized gamma distribution.
+
+    The Gamma distribution is often used to model the times to failure of
+    electronic components, and arises naturally in processes for which the
+    waiting times between Poisson distributed events are relevant.
+    """
+    from ._symbol import _Symbol as np_symbol
+    input_type = (isinstance(shape, np_symbol), isinstance(scale, np_symbol))
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if out is not None:
+        size = out.shape
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (False, True):
+        return _npi.gamma(scale, shape=shape, scale=None, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
+    elif input_type == (True, False):
+        return _npi.gamma(shape, shape=None, scale=scale, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
+    else:
+        return _npi.gamma(shape=shape, scale=scale, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
+
+    raise ValueError("Distribution parameters must be either _Symbol or numbers")
+
+
+def exponential(scale=1.0, size=None):
+    r"""Draw samples from an exponential distribution.
+
+    Parameters
+    ----------
+    scale : float or array_like of floats
+        The scale parameter, :math:`\beta = 1/\lambda`. Must be
+        non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized exponential distribution.
+    """
+    from ..numpy import _Symbol as np_symbol
+    tensor_type_name = np_symbol
+    if size == ():
+        size = None
+    is_tensor = isinstance(scale, tensor_type_name)
+    if is_tensor:
+        return _npi.exponential(scale, scale=None, size=size)
+    else:
+        return _npi.exponential(scale=scale, size=size)
 
 
 def shuffle(x):

@@ -1297,5 +1297,30 @@ inline size_t mshadow_sizeof(int type) {
   return size;
 }
 
+/*/ \brief get string with the type name from type enum */
+inline std::string dtype_string(const int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat32:
+      return "float";
+    case mshadow::kFloat64:
+      return "double";
+    case mshadow::kFloat16:
+      return "half";
+    case mshadow::kUint8:
+      return "unsigned char";
+    case mshadow::kInt8:
+      return "char";
+    case mshadow::kInt32:
+      return "int";
+    case mshadow::kInt64:
+      return "long long";
+    case mshadow::kBool:
+      return "bool";
+    default:
+      LOG(FATAL) << "Unknown type enum " << dtype;
+  }
+  return "unknown";
+}
+
 }  // namespace mshadow
 #endif  // MSHADOW_BASE_H_

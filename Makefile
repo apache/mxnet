@@ -457,7 +457,7 @@ endif
 .PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
 	cython2 cython3 cython cyclean
 
-all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib
+all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib subgraph_lib
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
@@ -621,7 +621,7 @@ lib/libtvm_runtime.so:
 	ls $(ROOTDIR)/lib; \
 	cd $(ROOTDIR)
 
-TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib/libtvmop.so --config $(ROOTDIR)/lib/tvmop.conf
+TVM_OP_COMPILE_OPTIONS = -o $(ROOTDIR)/lib --config $(ROOTDIR)/lib/tvmop.conf
 ifneq ($(CUDA_ARCH),)
 	TVM_OP_COMPILE_OPTIONS += --cuda-arch "$(CUDA_ARCH)"
 endif
@@ -667,6 +667,8 @@ pylint:
 # sample lib for MXNet extension dynamically loading custom operator
 sample_lib:
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
+subgraph_lib:
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o libsubgraph_lib.so -I include/mxnet
 
 # Cython build
 cython:
@@ -680,36 +682,6 @@ cython3:
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
-
-# R related shortcuts
-rcpplint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
-
-rpkg:
-	mkdir -p R-package/inst/libs
-	cp src/io/image_recordio.h R-package/src
-	cp -rf lib/libmxnet.so R-package/inst/libs
-
-	if [ -e "lib/libtvm_runtime.so" ]; then \
-		cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
-	fi
-
-	mkdir -p R-package/inst/include
-	cp -rl include/* R-package/inst/include
-	Rscript -e "if(!require(devtools)){install.packages('devtools', repo = 'https://cloud.r-project.org/')}"
-	Rscript -e "if(!require(roxygen2)||packageVersion('roxygen2') < '6.1.1'){install.packages('roxygen2', repo = 'https://cloud.r-project.org/')}"
-	Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cloud.r-project.org/')); install_deps(pkg='R-package', dependencies = TRUE)"
-	cp R-package/dummy.NAMESPACE R-package/NAMESPACE
-	echo "import(Rcpp)" >> R-package/NAMESPACE
-	R CMD INSTALL R-package
-	Rscript -e "require(mxnet); mxnet:::mxnet.export('R-package'); warnings()"
-	rm R-package/NAMESPACE
-	Rscript -e "devtools::document('R-package');warnings()"
-	R CMD INSTALL R-package
-
-rpkgtest:
-	Rscript -e 'require(testthat);res<-test_dir("R-package/tests/testthat");if(!testthat:::all_passed(res)){stop("Test failures", call. = FALSE)}'
-	Rscript -e 'res<-covr:::package_coverage("R-package");fileConn<-file(paste("r-package_coverage_",toString(runif(1)),".json"));writeLines(covr:::to_codecov(res), fileConn);close(fileConn)'
 
 scalaclean:
 	(cd $(ROOTDIR)/scala-package && mvn clean)
@@ -762,7 +734,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) libsample_lib.so
+	$(RM) libsample_lib.so libsubgraph_lib.so
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -774,7 +746,7 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) libsample_lib.so
+	$(RM) libsample_lib.so libsubgraph_lib.so
 endif
 
 clean_all: clean

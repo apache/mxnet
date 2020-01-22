@@ -29,21 +29,12 @@ Author: Dr. Xiangnan He (http://www.comp.nus.edu.sg/~xiangnan/)
 
 Code Reference: https://github.com/hexiangnan/neural_collaborative_filtering
 
-## Environment Settings
-We use MXnet with MKL-DNN as the backend. 
-- MXNet version:  '1.5.1'
-
-## Install
-```
-pip install -r requirements.txt
-```
-
 ## Dataset
 
 We provide the processed datasets on [Google Drive](https://drive.google.com/drive/folders/1qACR_Zhc2O2W0RrazzcepM2vJeh0MMdO?usp=sharing): MovieLens 20 Million (ml-20m), you can download directly or 
 run the script to prepare the datasets:
 ```
-python convert.py ./data/
+python convert.py
 ```
 
 train-ratings.csv
@@ -66,7 +57,9 @@ We provide the pretrained ml-20m model on [Google Drive](https://drive.google.co
 |dtype|HR@10|NDCG@10|
 |:---:|:--:|:--:|
 |float32|0.6393|0.3849|
-|int8|0.6366|0.3824|
+|float32 opt|0.6393|0.3849|
+|int8|0.6395|0.3852|
+|int8 opt|0.6396|0.3852|
 
 ## Training
 
@@ -75,11 +68,20 @@ We provide the pretrained ml-20m model on [Google Drive](https://drive.google.co
 python train.py # --gpu=0
 ```
 
+## Model Optimizer
+
+```
+# optimize model
+python model_optimizer.py
+```
+
 ## Calibration
 
 ```
 # neumf calibration on ml-20m dataset
 python ncf.py --prefix=./model/ml-20m/neumf --calibration
+# optimized neumf calibration on ml-20m dataset
+python ncf.py --prefix=./model/ml-20m/neumf-opt --calibration
 ```
 
 ## Evaluation
@@ -87,15 +89,25 @@ python ncf.py --prefix=./model/ml-20m/neumf --calibration
 ```
 # neumf float32 inference on ml-20m dataset
 python ncf.py --batch-size=1000 --prefix=./model/ml-20m/neumf
+# optimized neumf float32 inference on ml-20m dataset
+python ncf.py --batch-size=1000 --prefix=./model/ml-20m/neumf-opt
 # neumf int8 inference on ml-20m dataset
 python ncf.py --batch-size=1000 --prefix=./model/ml-20m/neumf-quantized
+# optimized neumf int8 inference on ml-20m dataset
+python ncf.py --batch-size=1000 --prefix=./model/ml-20m/neumf-opt-quantized
 ```
 
 ## Benchmark
 
 ```
+usage: bash ./benchmark.sh [[[-p prefix ] [-e epoch] [-d dataset] [-b batch_size] [-i instance] [-c cores/instance]] | [-h]]
+
 # neumf float32 benchmark on ml-20m dataset
-python ncf.py --batch-size=1000 --prefix=./model/ml-20m/neumf --benchmark
+sh benchmark.sh -p model/ml-20m/neumf
+# optimized neumf float32 benchmark on ml-20m dataset
+sh benchmark.sh -p model/ml-20m/neumf-opt
 # neumf int8 benchmark on ml-20m dataset
-python ncf.py --batch-size=1000 --prefix=./model/ml-20m/neumf-quantized --benchmark
+sh benchmark.sh -p model/ml-20m/neumf-quantized
+# optimized neumf int8 benchmark on ml-20m dataset
+sh benchmark.sh -p model/ml-20m/neumf-opt-quantized
 ```

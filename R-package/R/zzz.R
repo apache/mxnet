@@ -34,8 +34,18 @@ NULL
 .onLoad <- function(libname, pkgname) {
   # Require methods for older versions of R
   require(methods)
-  tryCatch(library.dynam("libmxnet", pkgname, libname, local=FALSE), error = function(e) { print('Loading local: inst/libs/libmxnet.so'); dyn.load("R-package/inst/libs/libmxnet.so", local=FALSE) })
-  tryCatch(library.dynam("mxnet", pkgname, libname), error = function(e) { print('Loading local: src/mxnet.so'); dyn.load("R-package/src/mxnet.so") })
+  tryCatch(library.dynam("libmxnet", pkgname, libname, local=FALSE), error = function(e) {
+    print('Loading libmxnet.so failed. Error:')
+    print(e)
+    print('Falling back to loading local: inst/libs/libmxnet.so')
+    dyn.load("R-package/inst/libs/libmxnet.so", local=FALSE)
+  })
+  tryCatch(library.dynam("mxnet", pkgname, libname), error = function(e) {
+    print('Loading mxnet.so failed. Error:')
+    print(e)
+    print('Falling back to loading local: src/mxnet.so')
+    dyn.load("R-package/src/mxnet.so")
+  })
   loadModule("mxnet", TRUE)
   init.symbol.methods()
   init.context.default()

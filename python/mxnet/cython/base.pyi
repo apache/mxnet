@@ -1,4 +1,4 @@
-from ..base import MXNetError
+from ..base import get_last_ffi_error
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
@@ -38,7 +38,7 @@ cdef c_str(pystr):
 
 cdef CALL(int ret):
     if ret != 0:
-        raise MXNetError(NNGetLastError())
+        raise get_last_ffi_error()
 
 
 cdef const char** CBeginPtr(vector[const char*]& vec):
