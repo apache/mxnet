@@ -51,11 +51,11 @@ void ReduceAxesComputeImplWithReducer(const OpContext& ctx,
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
+        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, OType>(
             s, out_data.shape_, req[0], in_data.shape_);
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-        broadcast::ReduceWithReducer<Reducer, NDim, DType, OP, safe_acc>(
+        broadcast::ReduceWithReducer<Reducer, NDim, OType, OP, safe_acc>(
             s, out_data, req[0], workspace, in_data, reducer);
         // no normalization
       });

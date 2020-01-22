@@ -29,6 +29,7 @@
 #include <vector>
 #include <limits>
 #include <cmath>
+#include <cstdio>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
 #include "../../tensor/init_op.h"
@@ -72,12 +73,12 @@ struct nrmlp {
   template<typename AType, typename DType>
   MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers,  volatile DType src, volatile DType& scale) { // NOLINT(*)
     if (src != 0) {
-      DType abs = abs::Map(src);
-      if (scale < abs) {
-        sum_of_powers = 1 + sum_of_powers * AType(lp_power(static_cast<double>(scale / abs), lp));
-        scale = abs;
+      DType src_abs = abs::Map(src);
+      if (scale < src_abs) {
+        sum_of_powers = 1 + sum_of_powers * AType(lp_power(static_cast<double>(scale / src_abs), lp));
+        scale = src_abs;
       } else {
-        sum_of_powers = sum_of_powers + AType(lp_power(static_cast<double>(abs / scale), lp));
+        sum_of_powers = sum_of_powers + AType(lp_power(static_cast<double>(src_abs / scale), lp));
       }
     }
   }
@@ -160,7 +161,7 @@ struct abs_grad : public mxnet_op::tunable {
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
     DType sgn = DType(sign::Map(a));
     DType grad = DType(abs::Map(a)) == DType(abs::Map(b)) ?
-                  DType(1.0) : DType(0.0);
+                 DType(1.0) : DType(0.0);
     return sgn * grad;
   }
 };
@@ -188,6 +189,10 @@ inline void assign_svd_empty(mxnet::ShapeVector *out_attrs);
 bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
                     mxnet::ShapeVector *in_attrs,
                     mxnet::ShapeVector *out_attrs);
+
+bool NumpyNormType(const nnvm::NodeAttrs& attrs,
+                   std::vector<int>* in_attrs,
+                   std::vector<int>* out_attrs);
 
 TShape swapMatDims(const TShape &shape, const TShape &axis);
 
@@ -221,13 +226,6 @@ struct NumpyNormParam : public dmlc::Parameter<NumpyNormParam> {
   }
 };
 
-TShape swapMatDims(const TShape &shape, const TShape &axis);
-TShape inverseTranspose(const TShape &axes);
-
-bool NumpyNormShape(const nnvm::NodeAttrs& attrs,
-                    mxnet::ShapeVector *in_attrs,
-                    mxnet::ShapeVector *out_attrs);
-
 template<typename xpu>
 void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
@@ -238,6 +236,7 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
   double ord = param.ord;
 
   if (req[0] == kNullOp) return;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
 
   mxnet::TShape small;
   mxnet::TShape out_shape = outputs[0].shape_;
@@ -255,16 +254,18 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
   }
   if (param.axis.value().ndim() != 2) {  // elementwise Lp-norm
     if (ord == -std::numeric_limits<double>::infinity()) {  // -inf norm
-      LOG(FATAL) << "Under construction. ";
+      LOG(FATAL) << "-inf norm handled in front-end.";
     } else if (param.ord == std::numeric_limits<double>::infinity()) {  // inf norm
-      LOG(FATAL) << "Under construction.";
+      LOG(FATAL) << "inf norm handled in front-end.";
     } else {
       mshadow_op::nrmlp host_reducer(param.ord);
       mshadow_op::nrmlp *reducer_instance = nullptr;
 #ifdef __CUDACC__
+      cudaStream_t copy_stream = mshadow::Stream<gpu>::GetStream(s);
       cudaMalloc(reinterpret_cast<void**>(&reducer_instance), sizeof(mshadow_op::nrmlp));
-      cudaMemcpy(reducer_instance, &host_reducer,
-                 sizeof(mshadow_op::nrmlp), cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(reducer_instance, &host_reducer, sizeof(mshadow_op::nrmlp),
+                      cudaMemcpyHostToDevice, copy_stream);
+      cudaStreamSynchronize(copy_stream);
 #else
       reducer_instance = &host_reducer;
 #endif
@@ -308,9 +309,9 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
 
   if (param.axis.value().ndim() != 2) {  // Elementwise Lp norm
     if (ord == -std::numeric_limits<double>::infinity()) {  // -inf norm
-      LOG(FATAL) << "Under construction.";
+      LOG(FATAL) << "-inf norm handled in front-end.";
     } else if (ord == std::numeric_limits<double>::infinity()) {  // inf norm
-      LOG(FATAL) << "Under construction.";
+      LOG(FATAL) << "inf norm handled in front-end.";
     } else if (ord == 1) {  // nrmlp_grad does not handle p = 1, legacy code from tensor
       mxnet::TShape src_shape, dst_shape;
       BroadcastReduceShapeCompact(outputs[0].shape_, small, &src_shape, &dst_shape);
@@ -359,9 +360,11 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
       mshadow_op::nrmlp_grad host_mapper(ord);
       mshadow_op::nrmlp_grad *mapper_instance = nullptr;
 #ifdef __CUDACC__
+      cudaStream_t copy_stream = mshadow::Stream<gpu>::GetStream(s);
       cudaMalloc(reinterpret_cast<void**>(&mapper_instance), sizeof(mshadow_op::nrmlp_grad));
-      cudaMemcpy(mapper_instance, &host_mapper,
-                 sizeof(mshadow_op::nrmlp_grad), cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(mapper_instance, &host_mapper, sizeof(mshadow_op::nrmlp_grad),
+                      cudaMemcpyHostToDevice, copy_stream);
+      cudaStreamSynchronize(copy_stream);
 #else
       mapper_instance = &host_mapper;
 #endif
@@ -384,7 +387,7 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
 #endif
     }
   } else {  // matrix norm should switch to matrix norm op
-    LOG(FATAL) << "Under construction.";
+    LOG(FATAL) << "Case handled in matrix norm compute.";
   }
 }
 
@@ -439,7 +442,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (inputs[0].type_flag_ == mshadow::kFloat16) {
-    LOG(FATAL) << "Matrix +/- 2-norm does not support float 16 due to SVD.";
+    LOG(FATAL) << "Matrix +/- 2-norm does not support float 16 due to SVD implementation.";
   }
 
   // spectral norms
@@ -753,7 +756,7 @@ void NumpyNormComputeForward(const nnvm::NodeAttrs& attrs,
     std::vector<TBlob> flat_outputs({
       outputs[0].reshape(TShape(1, 1))
     });
-    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
+    ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
       ctx, flat_inputs, req, flat_outputs, TShape(1, 1));
     return;
   }
@@ -778,6 +781,9 @@ void NumpyNormComputeBackward(const nnvm::NodeAttrs& attrs,
     });
     return;
   }
+  if (!common::is_float(outputs[0].type_flag_)) {
+    LOG(FATAL) << "Computing gradient for integer inputs is not well-undefined behavior.";
+  }
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
 
   if (param.flag == -2) {  // flattened L2 norm
@@ -786,7 +792,7 @@ void NumpyNormComputeBackward(const nnvm::NodeAttrs& attrs,
       inputs[4].reshape(TShape(1, outputs[0].shape_.Size())),
       inputs[5].reshape(TShape(1, 1))
     });
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       if (req[0] == kAddTo) {
         TBlob workspace = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(
                             Shape1(outputs[0].shape_.Size()), s));

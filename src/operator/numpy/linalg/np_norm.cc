@@ -62,8 +62,8 @@ inline bool NumpyLpNormShape(const nnvm::NodeAttrs& attrs,
 }
 
 inline bool NumpyMatrixNormShape(const nnvm::NodeAttrs& attrs,
-                                   mxnet::ShapeVector *in_attrs,
-                                   mxnet::ShapeVector *out_attrs) {
+                                 mxnet::ShapeVector *in_attrs,
+                                 mxnet::ShapeVector *out_attrs) {
   const NumpyNormParam& param = nnvm::get<NumpyNormParam>(attrs.parsed);
   const int ndim = (*in_attrs)[0].ndim();
   auto shape = swapMatDims((*in_attrs)[0], param.axis.value());
@@ -112,6 +112,28 @@ inline void assign_svd_empty(mxnet::ShapeVector *out_attrs) {
   SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape({ 0, 0, 0 }));  // UT
   SHAPE_ASSIGN_CHECK(*out_attrs, 2, TShape({ 0, 0 }));  // L
   SHAPE_ASSIGN_CHECK(*out_attrs, 3, TShape({ 0, 0, 0 }));  // V
+}
+
+bool NumpyNormType(const nnvm::NodeAttrs& attrs,
+                   std::vector<int>* in_attrs,
+                   std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 4U);
+  int in_type = in_attrs->at(0);
+  int out_type;
+  if (!common::is_float(in_type)) {
+    out_type = in_type;
+    LOG(WARNING) << "WARNING: Integer input to norm. This will result in integer "
+                    "output which is different from standard NumPy behavior and "
+                    "breaks gradient compute in backward. Please cast the input "
+                    "to floating point types first.";
+  } else {
+    out_type = in_type;
+  }
+  for (int i = 0; i < 4; ++i) {
+    TYPE_ASSIGN_CHECK(*out_attrs, i, out_type);
+  }
+  return out_attrs->at(0) != -1;
 }
 
 bool NumpyNormShape(const nnvm::NodeAttrs& attrs,

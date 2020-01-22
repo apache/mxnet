@@ -241,10 +241,8 @@ def norm(x, ord=None, axis=None, keepdims=False):
                     return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
         if ord == 'inf':
             return _mx_nd_np.max(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
-            #return _npi.norm(x, ord=float('inf'), axis=axis, keepdims=keepdims, flag=3)
         elif ord == '-inf':
             return _mx_nd_np.min(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
-            #return _npi.norm(x, ord=-float('inf'), axis=axis, keepdims=keepdims, flag=4)
         elif ord is None:
             return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
         elif ord == 2:
