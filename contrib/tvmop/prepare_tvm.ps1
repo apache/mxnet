@@ -32,6 +32,9 @@ Set-Location -Path $tvm_build_dir$llvm_version_name"\build\"
 ninja
 
 Set-Location -Path "..\..\"
+If (test-path "llvm") {
+    Remove-Item "llvm" -Recurse
+}
 New-Item -ItemType Directory -Force -Path "llvm"
 Move-Item $llvm_version_name"\build\bin" -Destination "llvm\bin"
 Move-Item $llvm_version_name"\build\include" -Destination "llvm\include"
@@ -48,4 +51,5 @@ If (!(test-path $clang_linker".backup")) {
 }
 Copy-Item $msvc_linker -Destination $clang_linker
 
-Set-Location -Path $tvm_build_dir"..\..\..\build"
+Set-Location -Path "..\..\..\build"
+Copy-Item "..\contrib\tvmop\space.py" -Destination "..\python\mxnet\space.py"
