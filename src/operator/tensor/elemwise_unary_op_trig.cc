@@ -203,7 +203,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+      auto ones = op.ones_like(x);
+      auto x_grad = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_arcsin",
+                                                   n->attrs.name + "_backward_arcsin",
+                                                   {ones, x}, nullptr, &n)};
       auto x_grad_square = op.square(x_grad);
       auto x_grad_square_mul_x = op.mul(x_grad_square, x);
       auto x_grad_grad = op.mul(dydx_mul_grad_x, x_grad_square_mul_x);
@@ -246,7 +249,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+      auto ones = op.ones_like(x);
+      auto x_grad = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_arccos",
+                                                   n->attrs.name + "_backward_arccos",
+                                                   {ones, x}, nullptr, &n)};
       auto x_grad_square = op.square(x_grad);
       auto x_grad_square_mul_x = op.mul(x_grad_square, x);
       auto x_grad_grad = op.mul(dydx_mul_grad_x, x_grad_square_mul_x);
@@ -295,7 +301,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
       auto dldy_mul_dydx = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto x_grad = op.div(dldy_mul_dydx, dldy);
+      auto ones = op.ones_like(x);
+      auto x_grad = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_arctan",
+                                                   n->attrs.name + "_backward_arctan",
+                                                   {ones, x}, nullptr, &n)};
       auto x_grad_square = op.square(x_grad);
       auto x_grad_square_mul_x = op.mul(x_grad_square, x);
       auto x_grad_square_mul_2_x = op.mul(-2.0, x_grad_square_mul_x);
@@ -501,7 +510,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsinh,
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto grad_x = op.div(dydx_mul_grad_x, dydx);
+      auto ones = op.ones_like(x);
+      auto grad_x = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_arcsinh",
+                                                   n->attrs.name + "_backward_arcsinh",
+                                                   {ones, x}, nullptr, &n)};
       auto grad_x_square = op.square(grad_x);
       auto grad_x_square_mul_x = op.mul(grad_x_square, x);
       auto grad_grad_x = op.mul(dydx_mul_grad_x, grad_x_square_mul_x);
@@ -539,7 +551,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccosh,
       auto dydx_mul_grad_x = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto grad_x = op.div(dydx_mul_grad_x, dydx);
+      auto ones = op.ones_like(x);
+      auto grad_x = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_arccosh",
+                                                   n->attrs.name + "_backward_arccosh",
+                                                   {ones, x}, nullptr, &n)};
       auto grad_x_square = op.square(grad_x);
       auto grad_x_square_mul_x = op.mul(grad_x_square, x);
       auto grad_grad_x = op.mul(dydx_mul_grad_x, grad_x_square_mul_x);
