@@ -131,7 +131,7 @@ def test_tanh():
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
         check_second_order_unary(
-            array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
+            array, tanh, grad_grad_op, rtol=1e-6, atol=1e-5)
 
 
 @with_seed()
