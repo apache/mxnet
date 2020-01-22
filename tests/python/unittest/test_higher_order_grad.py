@@ -215,7 +215,7 @@ def test_arccosh():
         check_second_order_unary(array, arccosh, grad_grad_op)
 
 
-@with_seed(1031105647)
+@with_seed()
 def test_arctanh():
     def arctanh(x):
         return nd.arctanh(x)
