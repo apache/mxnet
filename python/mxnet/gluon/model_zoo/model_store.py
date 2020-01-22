@@ -23,6 +23,7 @@ import os
 import zipfile
 import logging
 import tempfile
+import shutil
 
 from ..utils import download, check_sha1, replace_file
 from ... import base, util
@@ -113,10 +114,11 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
         download(_url_format.format(repo_url=repo_url, file_name=file_name),
                  path=zip_file.name, overwrite=True, inplace=True)
         with zipfile.ZipFile(zip_file) as zf:
-            with tempfile.TemporaryDirectory(dir=root) as temp_dir:
-                zf.extractall(temp_dir)
-                temp_file_path = os.path.join(temp_dir, file_name+'.params')
-                replace_file(temp_file_path, file_path)
+            temp_dir = tempfile.mkdtemp(dir=root)
+            zf.extractall(temp_dir)
+            temp_file_path = os.path.join(temp_dir, file_name+'.params')
+            replace_file(temp_file_path, file_path)
+            shutil.rmtree(temp_dir)
 
     if check_sha1(file_path, sha1_hash):
         return file_path

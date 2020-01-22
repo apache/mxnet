@@ -265,7 +265,7 @@ else:
 
 def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True,
              inplace=False):
-    """Download an given URL
+    """Download a given URL
 
     Parameters
     ----------
