@@ -683,6 +683,21 @@ def test_np_ndarray_indexing():
             mx_indexed_array = mx_indexed_array.asnumpy()
             assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
+    def test_getitem_slice_bound():
+        mx_array = np.arange(10)
+        np_array = mx_array.asnumpy()
+        assert_almost_equal(mx_array[100:], np_array[100:])
+        assert_almost_equal(mx_array[:100], np_array[:100])
+        assert_almost_equal(mx_array[-100:], np_array[-100:])
+        assert_almost_equal(mx_array[:-100], np_array[:-100])
+
+        mx_array = np.arange(81).reshape(3, 3, 3, 3)
+        np_array = mx_array.asnumpy()
+        assert_almost_equal(mx_array[100:], np_array[100:])
+        assert_almost_equal(mx_array[:100], np_array[:100])
+        assert_almost_equal(mx_array[-100:], np_array[-100:])
+        assert_almost_equal(mx_array[:-100], np_array[:-100])
+
     def test_setitem(np_array, index):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
@@ -977,6 +992,7 @@ def test_np_ndarray_indexing():
             test_setitem(np_array, index)
             test_getitem_autograd(np_array, index)
             test_setitem_autograd(np_array, index)
+    test_getitem_slice_bound()
 
 
 @with_seed()
