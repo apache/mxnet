@@ -28,6 +28,8 @@
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
 #include "../common/utils.h"
+#include "./iter_batchloader.h"
+#include "./iter_prefetcher.h"
 
 namespace mxnet {
 namespace io {
@@ -47,35 +49,39 @@ struct RandomSamplerParam : public dmlc::Parameter<RandomSamplerParam> {
 
 DMLC_REGISTER_PARAMETER(RandomSamplerParam);
 
-class RandomSampler : public IIterator<DataBatch> {
+class RandomSampler : public IIterator<DataInst> {
   public:
-    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
       indices_.resize(param_.length);
       std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
       rng_.reset(new common::RANDOM_ENGINE(kRandMagic + param_.seed));
+      out_.data.resize(2);  // label required by DataBatch, we can use fake label here
+      out_.data[1] = TBlob(indices_.data(), TShape({1,}), cpu::kDevMask, 0);
+      BeforeFirst();
     }
 
-    void BeforeFirst(void) {
+    virtual void BeforeFirst(void) {
       std::shuffle(std::begin(indices_), std::end(indices_), *rng_);
       pos_ = 0;
     }
 
-    int64_t GetLenHint(void) const {
+    virtual int64_t GetLenHint(void) const {
       return static_cast<int64_t>(indices_.size());
     }
 
-    bool Next(void) {
+    virtual bool Next(void) {
       if (pos_ < indices_.size()) {
-        data_ = indices_[pos_];
+        int64_t *ptr = indices_.data() + pos_;
+        out_.data[0] = TBlob(ptr, TShape({1,}), cpu::kDevMask, 0);
         ++pos_;
         return true;
       }
       return false;
     }
 
-    const int64_t &Value(void) const {
-      return data_;
+    virtual const DataInst &Value(void) const {
+      return out_;
     }
   private:
     /*! \brief random magic number */
@@ -85,12 +91,24 @@ class RandomSampler : public IIterator<DataBatch> {
     /*! \brief current position for iteration */
     std::size_t pos_;
     /*! \brief data for next value */
-    int64_t data_;
+    DataInst out_;
     /*! \brief random generator engine */
     std::unique_ptr<common::RANDOM_ENGINE> rng_;
     /*! \brief arguments */
     RandomSamplerParam param_;
 };  // class RandomSampler
+
+MXNET_REGISTER_IO_ITER(RandomSamplerIter)
+.describe(R"code(Returns the random sampler iterator.
+)code" ADD_FILELINE)
+.add_arguments(RandomSamplerParam::__FIELDS__())
+.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.set_body([]() {
+    return new PrefetcherIter(
+        new BatchLoader(
+            new RandomSampler()));
+  });
 
 }  // namespace io
 }  // namespace mxnet
