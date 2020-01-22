@@ -214,11 +214,13 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log1p,
     auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
     auto op = mxnet::util::NodeOpGen{n};
 
-    auto dydx = op.div(dydx_mul_dldy, dldy);
-
-    auto d2ydx2_mid = op.mul(dydx_mul_dldy, dydx_mul_dldy);
+    auto ones = op.ones_like(x);
+    auto dydx = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_log1p",
+                                                  n->attrs.name + "_backward_log1p",
+                                                  {ones, x}, nullptr, &n)};
+    auto d2ydx2_mid = op.mul(dydx, dydx);
     auto d2ydx2_neg_mid = op.negative(d2ydx2_mid);
-    auto d2ydx2 = op.div(d2ydx2_neg_mid, dldy);
+    auto d2ydx2 = op.mul(d2ydx2_neg_mid, dldy);
 
     std::vector<nnvm::NodeEntry> ret;
 
