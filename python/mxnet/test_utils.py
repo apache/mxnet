@@ -102,13 +102,10 @@ def random_arrays(*shapes):
     return arrays
 
 
-def random_uniform_arrays(*shapes, low=0.0, high=1.0):
+def random_uniform_arrays(*shapes, low=0.0, high=1.0, dtype=default_dtype()):
     """Generate some random numpy arrays."""
-    arrays = [np.array(np.random.uniform(low, high), dtype=default_dtype())
-              if len(s) == 0 else np.random.uniform(low, high, size=s).astype(default_dtype())
+    arrays = [np.random.uniform(low, high, size=s).astype(dtype)
               for s in shapes]
-    if len(arrays) == 1:
-        return arrays[0]
     return arrays
 
 
