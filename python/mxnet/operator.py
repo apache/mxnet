@@ -734,7 +734,13 @@ def register(reg_name):
         def creator(op_type, argc, keys, vals, ret):
             """internal function"""
             assert py_str(op_type) == reg_name
-            kwargs = dict([(py_str(keys[i]), py_str(vals[i])) for i in range(argc)])
+            kwargs = dict()
+            for i in range(argc):
+                key = py_str(keys[i])
+                if key not in ['__ctx_group__', '__lr_mult__', '__wd_mult__',
+                               '__force_mirroring__',
+                               '__mirror_stage__', '__profiler_scope__']:
+                    kwargs[key] = py_str(vals[i])
             op_prop = prop_cls(**kwargs)
 
             def infer_shape_entry(num_tensor, tensor_dims,
