@@ -73,7 +73,7 @@ MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
     void *workspace_cpu = res.alloc_cpu(8 * sizeof(float));
     void *workspace_gpu = res.alloc_gpu(8 * sizeof(float));
 
-    cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(res.get_cuda_stream());
+    mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
     int block = 256;
     int grid = (N + (block - 1)) / block;
@@ -89,7 +89,7 @@ MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(res.get_cuda_stream());
+    mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
     int block = 256;
     int grid = (N + (block - 1)) / block;
@@ -126,8 +126,6 @@ REGISTER_OP(my_relu)
 .setForward(forwardGPU, "gpu")
 .setBackward(backwardCPU, "cpu")
 .setBackward(backwardGPU, "gpu");
-
-
 
 class MyStatefulReluCPU : public CustomStatefulOp {
 public:

@@ -163,31 +163,30 @@ void CustomFComputeDispatcher(const std::string op_name,
   };
 
   // create lambda without captures so that we can cast it to function pointer
+  // lambda with captures cannot be cast to function pointer and pass to lib_api.h
   // this needs to be a lambda function so that we can do the decltype cast
   typedef decltype(cpu_alloc) alloc_type_cpu;
   auto cpu_malloc = [](void* _cpu_alloc, int size) {
     // cast the void* argument to the type for the cpu_alloc lambda function
     alloc_type_cpu* cpualloc = static_cast<alloc_type_cpu*>(_cpu_alloc);
-    // call cpu_alloc to actually allocate memory and get the pointer
-    void* ptr = (*cpualloc)(size);
-    return ptr;
+    // call cpu_alloc to actually allocate memory and return the pointer
+    return static_cast<void*>((*cpualloc)(size));
   };
   typedef decltype(gpu_alloc) alloc_type_gpu;
   auto gpu_malloc = [](void* _gpu_alloc, int size) {
     alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
-    void* ptr = (*gpualloc)(size);
-    return ptr;
+    return static_cast<void*>((*gpualloc)(size));
   };
 
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
   void *cuda_stream = nullptr;
   if (inputs[0].ctx().dev_mask() == Context::kGPU) {
-    cuda_stream = static_cast<void*>(mshadow::Stream<gpu>::GetStream(gpu_stream));
+    cuda_stream = static_cast<void*>(gpu_stream->stream_);
   }
 
   CHECK((fcomp_fp != nullptr && state_ptr == nullptr)
         || (fcomp_fp == nullptr && state_ptr != nullptr))
-  << "Can only register either regular op or stateful op for '" << op_name << "'";
+    << "Can only register either regular op or stateful op for '" << op_name << "'";
 
   if (fcomp_fp != nullptr) {
     // convert attributes to vector of char*
@@ -203,7 +202,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream))
-    << "Error calling FCompute for custom operator '" << op_name << "'";
+      << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
   if (state_ptr != nullptr) {
@@ -211,7 +210,7 @@ void CustomFComputeDispatcher(const std::string op_name,
     CustomStatefulOpWrapper& op = state_ptr->get_state<CustomStatefulOpWrapper>();
     CustomStatefulOp* state_op_inst = op.get_instance();
     CHECK(state_op_inst != nullptr)
-    << "Error MXNet cannot load custom stateful operator'" << op_name << "'";
+      << "Error custom stateful operator is null for operator '" << op_name << "'";
 
     // call fcompute function
     CHECK(callFStatefulComp(stateful_forward_flag, state_op_inst,
@@ -222,7 +221,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream))
-    << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
+      << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
   }
 }
 
@@ -628,25 +627,26 @@ int MXLoadLib(const char *path) {
       void* state_op_inst = nullptr;
       if (ctx.dev_mask() == Context::kCPU) {
         CHECK(createop_map.count("cpu") > 0)
-        << "CPU CreateOpState not implemented for '" << name_str << "'";
+          << "CPU CreateOpState not implemented for '" << name_str << "'";
         CHECK(callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
                                 attr_keys.size(), &state_op_inst))
-        << "Error calling CreateOpState CPU for custom operator '" << name_str << "'";
+          << "Error calling CreateOpState CPU for custom operator '" << name_str << "'";
       } else if (ctx.dev_mask() == Context::kGPU) {
         CHECK(createop_map.count("gpu") > 0)
-        << "GPU CreateOpState not implemented for '" << name_str << "'";
+          << "GPU CreateOpState not implemented for '" << name_str << "'";
         CHECK(callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
                                 attr_keys.size(), &state_op_inst))
-        << "Error calling CreateOpState GPU for custom operator '" << name_str << "'";
+          << "Error calling CreateOpState GPU for custom operator '" << name_str << "'";
       }
+
       CHECK(state_op_inst != nullptr)
-      << "Error custom library failed to create stateful operator '" << name_str << "'";
+        << "Error custom library failed to create stateful operator '" << name_str << "'";
 
       CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
       return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
     };
 
-    /* -------------- BELOW ARE CUSTOM OPERATOR REGISTRATION --------------- */
+    /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
 
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
@@ -698,23 +698,25 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
     } else {
       if (forward_ctx_map.count("cpu") > 0) {
+        fcomp_t fcomp_cpu = forward_ctx_map.at("cpu");
         auto forward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
                                       const OpContext& ctx,
                                       const std::vector<NDArray>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
-          CustomFComputeDispatcher(name_str, callFComp, forward_ctx_map.at("cpu"), &attrs,
+          CustomFComputeDispatcher(name_str, callFComp, fcomp_cpu, &attrs,
                                    nullptr, 0, nullptr, ctx, inputs, req, outputs);
         };
         regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_cpu_lambda, plevel);
       }
       if (forward_ctx_map.count("gpu") > 0) {
+        fcomp_t fcomp_gpu = forward_ctx_map.at("gpu");
         auto forward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
                                       const OpContext& ctx,
                                       const std::vector<NDArray>& inputs,
                                       const std::vector<OpReqType>& req,
                                       const std::vector<NDArray>& outputs) {
-          CustomFComputeDispatcher(name_str, callFComp, forward_ctx_map.at("gpu"), &attrs,
+          CustomFComputeDispatcher(name_str, callFComp, fcomp_gpu, &attrs,
                                    nullptr, 0, nullptr, ctx, inputs, req, outputs);
         };
         regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_gpu_lambda, plevel);
@@ -746,23 +748,25 @@ int MXLoadLib(const char *path) {
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
       } else {
         if (backward_ctx_map.count("cpu") > 0) {
+          fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
           auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
                                          const OpContext& ctx,
                                          const std::vector<NDArray>& inputs,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
-            CustomFComputeDispatcher(name_str, callFComp, backward_ctx_map.at("cpu"), &attrs,
+            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
                                      nullptr, 0, nullptr, ctx, inputs, req, outputs);
           };
           gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
         }
         if (backward_ctx_map.count("gpu") > 0) {
+          fcomp_t fcomp_back_gpu = backward_ctx_map.at("gpu");
           auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
                                          const OpContext& ctx,
                                          const std::vector<NDArray>& inputs,
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
-            CustomFComputeDispatcher(name_str, callFComp, backward_ctx_map.at("gpu"), &attrs,
+            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
                                      nullptr, 0, nullptr, ctx, inputs, req, outputs);
           };
           gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);

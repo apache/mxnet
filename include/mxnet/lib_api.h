@@ -348,36 +348,42 @@ struct MXTensor {
   DLTensor dltensor;
 };
 
-/*!
- * \brief resource malloc function to allocate memory inside Forward/Backward functions
- */
+/*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
+
+#if defined(__NVCC__)
+  typedef cudaStream_t mx_stream_t;
+#else
+  typedef void* mx_stream_t;
+#endif
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
  */
 class OpResource {
  public:
-  OpResource(xpu_malloc_t cm, void* ca, xpu_malloc_t gm, void* ga, void* st)
-    : cpu_malloc(cm), gpu_malloc(gm), cpu_alloc(ca), gpu_alloc(ga), cuda_stream(st) {}
+  OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
+             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream)
+    : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
+      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream) {}
 
-  /*! \brief allocate memory controlled by MXNet */
+  /*! \brief allocate cpu memory controlled by MXNet */
   void* alloc_cpu(int size) {
     return cpu_malloc(cpu_alloc, size);
   }
 
-  /*! \brief allocate memory controlled by MXNet */
+  /*! \brief allocate gpu memory controlled by MXNet */
   void* alloc_gpu(int size) {
     return gpu_malloc(gpu_alloc, size);
   }
 
-  /*! \brief return the gpu stream object */
-  void* get_cuda_stream() {
-    return cuda_stream;
+  /*! \brief return the cuda stream object with correct type */
+  mx_stream_t get_cuda_stream() {
+    return static_cast<mx_stream_t>(cuda_stream);
   }
 
  private:
-  /*! \brief wrapper to allocation lambda function */
+  /*! \brief allocation lambda function */
   xpu_malloc_t cpu_malloc, gpu_malloc;
   /*! \brief lambda function to return allocated memory handle */
   void *cpu_alloc, *gpu_alloc;
@@ -685,8 +691,8 @@ class CustomOp {
   void raiseDuplicateContextError() {
     std::string op_name_str(name);
     throw std::runtime_error(
-      "Error! Register multiple functions under same context for operator '"
-      + op_name_str + "' is not allowed");
+      "Error! Error! Cannot register multiple functions under same context for operator '"
+      + op_name_str + "'");
   }
 
   /*! \brief dedup context maps - static string ctx to custom function */
@@ -1194,7 +1200,7 @@ extern "C" {
     OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
-    if (is_forward == 1) {
+    if (is_forward) {
       return op_ptr->Forward(inputs, outputs, res);
     }
     return op_ptr->Backward(inputs, outputs, res);
