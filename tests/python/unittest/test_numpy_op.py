@@ -1296,12 +1296,12 @@ def test_npi_boolean_assign():
 
     for hybridize in [False]:
         for config in configs:
-            print(config)
             dshape, mshape, start_axis = config
             test_data = np.random.uniform(size=dshape)
-            mx_mask = np.around(np.random.uniform(size=mshape))
-            valid_num = int(mx_mask.sum())
-            np_mask = mx_mask.asnumpy().astype(_np.bool)
+            np_mask = _np.random.choice(a=[False, True], size=mshape)
+            mx_mask = np.array(np_mask)
+            # to avoid using tvm op greater_scalar in gpu environment
+            valid_num = int(mx_mask.asnumpy().sum())
             vshape = []
             for i in range(len(dshape)):
                 if i < start_axis:
@@ -1311,30 +1311,39 @@ def test_npi_boolean_assign():
                 elif i >= start_axis + len(mshape):
                     vshape.append(dshape[i])
             vshape = tuple(vshape)
-            for val in [42.0, np.array(42.), np.array([42.]), np.random.uniform(size=vshape)]:
-                test_block = TestBooleanAssignScalar(val, start_axis) if isinstance(val, float) else TestBooleanAssignTensor(start_axis)
+            for val in [42.0, _np.array(42.), _np.array([42.]), _np.random.uniform(size=vshape)]:
+                mx_val = val if isinstance(val, float) else np.array(val, dtype=np.float32)
+                test_block = TestBooleanAssignScalar(mx_val, start_axis) if isinstance(mx_val, float) else TestBooleanAssignTensor(start_axis)
                 if hybridize:
                     test_block.hybridize()
                 np_data = test_data.asnumpy()
-                mx_data = test_data.copy()
+                mx_data1 = test_data.copy()
+                mx_data2 = test_data.copy()
                 trailing_axis = len(np_data.shape) - len(np_mask.shape) - start_axis
                 if start_axis == 0:
                     if trailing_axis == 0:
                         np_data[np_mask] = val
+                        mx_data1[mx_mask] = mx_val
                     elif trailing_axis == 1:
                         np_data[np_mask, :] = val
+                        mx_data1[mx_mask, :] = mx_val
                     elif trailing_axis == 2:
                         np_data[np_mask, :, :] = val
+                        mx_data1[mx_mask, :, :] = mx_val
                 elif start_axis == 1:
                     if trailing_axis == 0:
                         np_data[:, np_mask] = val
+                        mx_data1[:, mx_mask] = mx_val
                     elif trailing_axis == 1:
                         np_data[:, np_mask, :] = val
+                        mx_data1[:, mx_mask, :] = mx_val
                 elif start_axis == 2:
                     if trailing_axis == 0:
                         np_data[:, :, np_mask] = val
-                mx_data = test_block(mx_data, mx_mask) if isinstance(val, float) else test_block(mx_data, mx_mask, val)
-                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                        mx_data1[:, :, mx_mask] = mx_val
+                mx_data1 = test_block(mx_data2, mx_mask) if isinstance(val, float) else test_block(mx_data2, mx_mask, mx_val)
+                assert_almost_equal(mx_data1.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                assert_almost_equal(mx_data2.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
