@@ -103,7 +103,7 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
   unsigned m = inputs[2].shape[1];
   // allocate temporary workspace memory through resource manager
   // for multiple arrays better to request a big memory pool
-  void *workspace = res.alloc((k*n + m*k) * sizeof(float));
+  void *workspace = res.alloc_cpu((k*n + m*k) * sizeof(float));
   float *At = static_cast<float*>(workspace);
   float *Bt = static_cast<float*>(workspace) + (k*n);
 

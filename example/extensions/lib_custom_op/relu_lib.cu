@@ -69,11 +69,15 @@ MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    cudaStream_t gpu_stream = reinterpret_cast<cudaStream_t>(res.get_gpu_stream());
+    // test on memory resource allocation
+    void *workspace_cpu = res.alloc_cpu(8 * sizeof(float));
+    void *workspace_gpu = res.alloc_gpu(8 * sizeof(float));
+
+    cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(res.get_cuda_stream());
     int64_t N = inputs[0].size();
-    int grid = (N + 255) / 256;
     int block = 256;
-    relu_gpu_forward<<<grid,block,0,gpu_stream>>>(out_data, in_data, N);
+    int grid = (N + (block - 1)) / block;
+    relu_gpu_forward<<<grid,block,0,cuda_stream>>>(out_data, in_data, N);
 
     return MX_SUCCESS;
 }
@@ -85,11 +89,11 @@ MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    cudaStream_t gpu_stream = reinterpret_cast<cudaStream_t>(res.get_gpu_stream());
+    cudaStream_t cuda_stream = reinterpret_cast<cudaStream_t>(res.get_cuda_stream());
     int64_t N = inputs[0].size();
-    int grid = (N + 255) / 256;
     int block = 256;
-    relu_gpu_backward<<<grid,block,0,gpu_stream>>>(out_data, in_data, N);
+    int grid = (N + (block - 1)) / block;
+    relu_gpu_backward<<<grid,block,0,cuda_stream>>>(out_data, in_data, N);
 
     return MX_SUCCESS;
 }
@@ -123,6 +127,8 @@ REGISTER_OP(my_relu)
 .setBackward(backwardCPU, "cpu")
 .setBackward(backwardGPU, "gpu");
 
+
+
 class MyStatefulReluCPU : public CustomStatefulOp {
 public:
     explicit MyStatefulReluCPU() {}
@@ -141,12 +147,6 @@ public:
     ~MyStatefulReluCPU() {}
 };
 
-MXReturnValue createOpStateCPU(std::map<std::string, std::string> attrs,
-                               CustomStatefulOp** op_inst) {
-    *op_inst = new MyStatefulReluCPU();
-    return MX_SUCCESS;
-}
-
 class MyStatefulReluGPU : public CustomStatefulOp {
 public:
     explicit MyStatefulReluGPU() {}
@@ -164,6 +164,12 @@ public:
     }
     ~MyStatefulReluGPU() {}
 };
+
+MXReturnValue createOpStateCPU(std::map<std::string, std::string> attrs,
+    CustomStatefulOp** op_inst) {
+*op_inst = new MyStatefulReluCPU();
+return MX_SUCCESS;
+}
 
 MXReturnValue createOpStateGPU(std::map<std::string, std::string> attrs,
                                CustomStatefulOp** op_inst) {

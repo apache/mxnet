@@ -357,27 +357,32 @@ typedef void* (*xpu_malloc_t)(void*, int);
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
  */
 class OpResource {
-  public:
-    OpResource(xpu_malloc_t cm, void* ca, void* st)
-     : cpu_malloc(cm), cpu_alloc(ca), gpu_stream(st){}
+ public:
+  OpResource(xpu_malloc_t cm, void* ca, xpu_malloc_t gm, void* ga, void* st)
+    : cpu_malloc(cm), gpu_malloc(gm), cpu_alloc(ca), gpu_alloc(ga), cuda_stream(st) {}
 
-    /*! \brief allocate memory controlled by MXNet */
-    void* alloc(int size) {
-      return cpu_malloc(cpu_alloc, size);
-    }
+  /*! \brief allocate memory controlled by MXNet */
+  void* alloc_cpu(int size) {
+    return cpu_malloc(cpu_alloc, size);
+  }
 
-    /*! \brief return the gpu stream object */
-    void* get_gpu_stream() {
-      return gpu_stream;
-    }
+  /*! \brief allocate memory controlled by MXNet */
+  void* alloc_gpu(int size) {
+    return gpu_malloc(gpu_alloc, size);
+  }
 
-  private:
-     /*! \brief wrapper to allocation lambda function */
-    xpu_malloc_t cpu_malloc;
-     /*! \brief lambda function to return allocated memory handle */
-    void* cpu_alloc;
-     /*! \brief stream object passed from MXNet */
-    void* gpu_stream;
+  /*! \brief return the gpu stream object */
+  void* get_cuda_stream() {
+    return cuda_stream;
+  }
+
+ private:
+  /*! \brief wrapper to allocation lambda function */
+  xpu_malloc_t cpu_malloc, gpu_malloc;
+  /*! \brief lambda function to return allocated memory handle */
+  void *cpu_alloc, *gpu_alloc;
+  /*! \brief cuda stream passed from MXNet */
+  void *cuda_stream;
 };
 
 /*!
@@ -608,13 +613,15 @@ class CustomOp {
   explicit CustomOp(const char* op_name) : name(op_name),
     parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
-    forward_ctx_cstr.push_back(ctx);
-    forward_fp.push_back(fcomp);
+    if (forward_ctx_map.count(ctx) > 0)
+      raiseDuplicateContextError();
+    forward_ctx_map[ctx] = fcomp;
     return *this;
   }
   CustomOp& setBackward(fcomp_t fgrad, const char* ctx) {
-    backward_ctx_cstr.push_back(ctx);
-    backward_fp.push_back(fgrad);
+    if (backward_ctx_map.count(ctx) > 0)
+      raiseDuplicateContextError();
+    backward_ctx_map[ctx] = fgrad;
     return *this;
   }
   CustomOp& setParseAttrs(parseAttrs_t func) {
@@ -634,26 +641,33 @@ class CustomOp {
     return *this;
   }
   CustomOp& setCreateOpState(createOpState_t func, const char* ctx) {
-    create_opstate_ctx_cstr.push_back(ctx);
-    create_opstate_fp.push_back(func);
+    if (create_op_ctx_map.count(ctx) > 0)
+      raiseDuplicateContextError();
+    create_op_ctx_map[ctx] = func;
     return *this;
   }
   CustomOp& setIsSubgraphOp() {
     isSGop = true;
     return *this;
   }
+  void mapToVector() {
+    for (auto kv : forward_ctx_map) {
+      forward_ctx_cstr.push_back(kv.first);
+      forward_fp.push_back(kv.second);
+    }
+    for (auto kv : backward_ctx_map) {
+      backward_ctx_cstr.push_back(kv.first);
+      backward_fp.push_back(kv.second);
+    }
+    for (auto kv : create_op_ctx_map) {
+      create_op_ctx_cstr.push_back(kv.first);
+      create_op_fp.push_back(kv.second);
+    }
+  }
   ~CustomOp() {}
 
   /*! \brief operator name */
   const char* name;
-
-  /*! \brief each fcomp function is associated with a context speficied by a string*/
-  std::vector<const char*> forward_ctx_cstr;
-  std::vector<fcomp_t> forward_fp;
-  std::vector<const char*> backward_ctx_cstr;
-  std::vector<fcomp_t> backward_fp;
-  std::vector<const char*> create_opstate_ctx_cstr;
-  std::vector<createOpState_t> create_opstate_fp;
 
   /*! \brief operator functions */
   parseAttrs_t parse_attrs;
@@ -661,6 +675,23 @@ class CustomOp {
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
   bool isSGop;
+
+  /*! \brief vector repr of ctx map to be easily loaded from c_api */
+  std::vector<const char*> forward_ctx_cstr, backward_ctx_cstr, create_op_ctx_cstr;
+  std::vector<fcomp_t> forward_fp, backward_fp;
+  std::vector<createOpState_t> create_op_fp;
+
+ private:
+  void raiseDuplicateContextError() {
+    std::string op_name_str(name);
+    throw std::runtime_error(
+      "Error! Register multiple functions under same context for operator '"
+      + op_name_str + "' is not allowed");
+  }
+
+  /*! \brief dedup context maps - static string ctx to custom function */
+  std::unordered_map<const char*, fcomp_t> forward_ctx_map, backward_ctx_map;
+  std::unordered_map<const char*, createOpState_t> create_op_ctx_map;
 };
 
 /*! \brief Custom Subgraph Create function template */
@@ -790,7 +821,8 @@ typedef int (*opRegSize_t)(void);
 typedef int (*opRegGet_t)(int idx, const char** name, int *isSGop,
                           const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
                           const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
-                          const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
+                          const char*** create_op_ctx, createOpState_t** create_op_fp,
+                          int* create_op_count,
                           parseAttrs_t* parse, inferType_t* type,
                           inferShape_t* shape, mutateInputs_t* mutate);
 
@@ -814,12 +846,18 @@ typedef int (*opCallInferType_t)(inferType_t inferType, const char* const* keys,
                                  int* intypes, int num_in, int* outtypes, int num_out);
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
-typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
-                             const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                             size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
-                             const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                             size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
-                             xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream);
+typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
+                             const char* const* vals, int num,
+                             const int64_t** inshapes, int* indims,
+                             void** indata, int* intypes,
+                             size_t* inIDs, const char** indev_type,
+                             int* indev_id, int num_in,
+                             const int64_t** outshapes, int* outdims,
+                             void** outdata, int* outtypes,
+                             size_t* outIDs, const char** outdev_type,
+                             int* outdev_id, int num_out,
+                             xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
@@ -833,11 +871,16 @@ typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* cons
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
 typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
-                                     const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                                     size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
-                                     const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                                     size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
-                                     xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream);
+                                     const int64_t** inshapes, int* indims,
+                                     void** indata, int* intypes,
+                                     size_t* inIDs, const char** indev_type,
+                                     int* indev_id, int num_in,
+                                     const int64_t** outshapes, int* outdims,
+                                     void** outdata, int* outtypes,
+                                     size_t* outIDs, const char** outdev_type,
+                                     int* outdev_id, int num_out,
+                                     xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                                     xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
@@ -846,8 +889,9 @@ typedef int (*partRegSize_t)(void);
 typedef int (*partRegGetCount_t)(int idx, const char** name);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
-typedef void (*partRegGet_t)(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
-                             acceptSubgraph_t* acceptSubgraph, const char** op_name);
+typedef void (*partRegGet_t)(int part_idx, int stg_idx, const char** strategy,
+                             supportedOps_t* supportedOps, acceptSubgraph_t* acceptSubgraph,
+                             const char** op_name);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
 typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *json,
@@ -906,15 +950,16 @@ extern "C" {
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
     *isSGop = op.isSGop;
+    op.mapToVector();
     *forward_ctx = op.forward_ctx_cstr.data();
     *forward_fp = op.forward_fp.data();
     *forward_count = op.forward_fp.size();
     *backward_ctx = op.backward_ctx_cstr.data();
     *backward_fp = op.backward_fp.data();
     *backward_count = op.backward_fp.size();
-    *create_op_ctx = op.create_opstate_ctx_cstr.data();
-    *create_op_fp = op.create_opstate_fp.data();
-    *create_op_count = op.create_opstate_fp.size();
+    *create_op_ctx = op.create_op_ctx_cstr.data();
+    *create_op_fp = op.create_op_fp.data();
+    *create_op_count = op.create_op_fp.size();
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
@@ -1039,7 +1084,8 @@ extern "C" {
                   size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
                   const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
                   size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
-                  xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
+                  xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1060,7 +1106,7 @@ extern "C" {
                            outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, stream);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
 
     return fcomp(attrs, inputs, outputs, res);
   }
@@ -1129,7 +1175,8 @@ extern "C" {
                           size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
                           const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
                           size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
-                          xpu_malloc_t cpu_malloc, void* cpu_alloc, void* stream) {
+                          xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
@@ -1144,10 +1191,10 @@ extern "C" {
                            outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, stream);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
-    if (is_forward) {
+    if (is_forward == 1) {
       return op_ptr->Forward(inputs, outputs, res);
     }
     return op_ptr->Backward(inputs, outputs, res);
