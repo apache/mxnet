@@ -94,8 +94,8 @@ void CreateGraphNDs(const nnvm::Graph& g,
     auto eid = idx.entry_id(idx.outputs()[i]);
     if (!(*arrays)[eid]->is_none())
       continue;
-      *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                                  shapes[eid], default_ctx, true, dtypes[eid]);
+    *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
+                                shapes[eid], default_ctx, true, dtypes[eid]);
   }
 }
 
