@@ -195,6 +195,8 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             code.append("""
     if 'profiler_scope' not in keys:
         keys.append('profiler_scope')
+        if not hasattr(Scope._current, "value"):
+            Scope._current.value = Scope()
         vals.append(Scope._current.value.name)
     return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s, %s)"""%(
                 handle.value, str(is_np_op), str(output_is_list)))
@@ -251,6 +253,8 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
     name = NameManager._current.value.get(name, '%s')
     if 'profiler_scope' not in _keys:
         _keys.append('profiler_scope')
+        if not hasattr(Scope._current, "value"):
+            Scope._current.value = Scope()
         _vals.append(Scope._current.value.name)
     return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name, %s, %s)"""%(
         func_name.lower(), handle.value, str(is_np_op), str(output_is_list)))
