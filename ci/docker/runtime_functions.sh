@@ -1232,8 +1232,6 @@ unittest_ubuntu_cpugpu_perl() {
 
 unittest_cpp() {
     set -ex
-    export PYTHONPATH=./python/
-    python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
     build/tests/mxnet_unit_tests
 }
 
