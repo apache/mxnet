@@ -447,7 +447,7 @@ class ndarray(NDArray):
             # check boundary
             for idx in range(pos+1, len(key)):
                 if key[idx] >= self.shape[idx+mask_ndim-1]:
-                    raise IndexError('index {} on a dimension of' # pylint: disable=too-many-format-args
+                    raise IndexError('index {} on a dimension of {}'
                                      .format(key[idx], self.shape[idx+mask_ndim-1]))
             implicit_idces = len(key)+mask_ndim-1 # idces not explictly shown in the key
             implicit_shape = self.shape[implicit_idces:]
@@ -628,7 +628,8 @@ class ndarray(NDArray):
         # handling possible boolean indexing first
         ndim = self.ndim
         shape = self.shape  # pylint: disable=redefined-outer-name
-
+        if isinstance(key, bool): # otherwise will be treated as 0 and 1
+            key = array(key, dtype=_np.bool)
         if isinstance(key, list):
             try:
                 new_key = _np.array(key)
@@ -640,7 +641,9 @@ class ndarray(NDArray):
             key = array(key, dtype='bool', ctx=self.ctx)
 
         if ndim == 0:
-            if key != ():
+            if isinstance(key, ndarray) and key.dtype == _np.bool:
+                pass # will handle by function for boolean indexing
+            elif key != ():
                 raise IndexError('scalar tensor can only accept `()` as index')
         # Handle simple cases for higher speed
         if isinstance(key, tuple) and len(key) == 0:
@@ -730,9 +733,13 @@ class ndarray(NDArray):
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
+        if isinstance(key, bool): # otherwise will be treated as 0 and 1
+            key = array(key, dtype=_np.bool)
         # handle basic and advanced indexing
         if self.ndim == 0:
-            if not isinstance(key, tuple) or len(key) != 0:
+            if isinstance(key, ndarray) and key.dtype == _np.bool:
+                pass # will be handled by boolean indexing
+            elif not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
             if isinstance(value, numeric_types):
                 self._full(value)
