@@ -80,6 +80,12 @@ class NodeOpGen {
                                                    dependent_node->attrs.name + "_negative",
                                                    {x}, nullptr, &dependent_node)};
     }
+
+    nnvm::NodeEntry ones_like(const nnvm::NodeEntry &x) {
+        return nnvm::NodeEntry{mxnet::op::MakeNode("ones_like",
+                                                   dependent_node->attrs.name + "_oneslike",
+                                                   {x}, nullptr, &dependent_node)};
+    }
 };
 
 }  // namespace util

@@ -583,7 +583,10 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctanh,
       auto dldy_mul_dydx = nnvm::NodeEntry{n};
       auto op = mxnet::util::NodeOpGen{n};
 
-      auto x_grad = op.div(dldy_mul_dydx, dldy);
+      auto ones = op.ones_like(x);
+      auto x_grad = nnvm::NodeEntry{mxnet::op::MakeNode("_backward_arctanh",
+                                                   n->attrs.name + "_backward_arctanh",
+                                                   {ones, x}, nullptr, &n)};
       auto x_grad_square = op.square(x_grad);
       auto x_grad_square_mul_x = op.mul(x_grad_square, x);
       auto x_grad_square_mul_2_x = op.mul(2.0, x_grad_square_mul_x);
