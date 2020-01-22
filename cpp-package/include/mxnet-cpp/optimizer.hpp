@@ -128,7 +128,6 @@ inline Optimizer* OptimizerRegistry::Find(const std::string& name) {
   if (cmap().empty()) {
     // Optimizers should only be registered once
     MXNETCPP_REGISTER_OPTIMIZER(sgd, SGDOptimizer);
-    MXNETCPP_REGISTER_OPTIMIZER(ccsgd, SGDOptimizer);  // For backward compatibility
     MXNETCPP_REGISTER_OPTIMIZER(rmsprop, RMSPropOptimizer);
     MXNETCPP_REGISTER_OPTIMIZER(adam, AdamOptimizer);
     MXNETCPP_REGISTER_OPTIMIZER(adagrad, AdaGradOptimizer);
