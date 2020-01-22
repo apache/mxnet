@@ -36,6 +36,7 @@ NNVM_REGISTER_OP(_backward_npi_norm)
   [](const NodeAttrs& attrs) {
      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
+.set_num_inputs(2 * 4 + 1)
 .set_attr<FCompute>("FCompute<cpu>", NumpyNormComputeBackward<cpu>);
 
 }  // namespace op

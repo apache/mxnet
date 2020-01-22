@@ -29,7 +29,6 @@
 #include <vector>
 #include <limits>
 #include <cmath>
-#include <cstdio>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
 #include "../../tensor/init_op.h"
@@ -71,7 +70,7 @@ struct nrmlp {
 
   /*! \brief do stable reduction into dst */
   template<typename AType, typename DType>
-  MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers,  volatile DType src, volatile DType& scale) { // NOLINT(*)
+  MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers, volatile DType src, volatile DType& scale) { // NOLINT(*)
     if (src != 0) {
       DType src_abs = abs::Map(src);
       if (scale < src_abs) {
