@@ -38,7 +38,7 @@ class Bernoulli(ExponentialFamily):
     """
 
     def __init__(self, prob=None, logit=None, F=None):
-        _F = F if F is not None else getF([prob, logit])
+        _F = F if F is not None else getF(prob, logit)
         super(Bernoulli, self).__init__(F=_F)
 
         if (prob is None) == (logit is None):

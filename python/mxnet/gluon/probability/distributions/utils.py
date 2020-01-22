@@ -36,7 +36,7 @@ def getF(*params):
         if isinstance(param, np.ndarray):
             return nd
         elif isinstance(param, sym.numpy._Symbol):
-            return sym.numpy._Symbol
+            return sym
     return nd
 
 

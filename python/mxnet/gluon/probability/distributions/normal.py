@@ -42,7 +42,7 @@ class Normal(ExponentialFamily):
     has_grad = True
 
     def __init__(self, loc=0.0, scale=1.0, F=None):
-        _F = F if F is not None else getF([loc, scale])
+        _F = F if F is not None else getF(loc, scale)
         super(Normal, self).__init__(F=_F)
         self._loc = loc
         self._scale = scale
