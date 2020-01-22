@@ -149,14 +149,15 @@ class Signum(Optimizer):
                 kwargs['momentum'] = self.momentum
             if self.clip_gradient:
                 kwargs['clip_gradient'] = self.clip_gradient
-            if self.wd_lh:
-                kwargs['wd_lh'] = self.wd_lh
 
             # update weight with fused kernel
             if state is not None:
+                if self.wd_lh:
+                    kwargs['wd_lh'] = self.wd_lh
                 signum_update(weight, grad, state, out=weight,
                               lr=lr, wd=wd, **kwargs)
             else:
+                wd += self.wd_lh
                 signsgd_update(weight, grad, out=weight,
                                lr=lr, wd=wd, **kwargs)
 

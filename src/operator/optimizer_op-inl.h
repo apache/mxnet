@@ -2298,8 +2298,8 @@ struct SignSGDKernel {
 
     // param_clip_gradient has no effect for SignSGD
     KERNEL_ASSIGN(out_data[i], req,
-             (1.f-param_lr*param_wd)*weight_data[i]
-               - (param_lr)*((grad_data[i] > 0) - (grad_data[i] < 0)));
+             (1.f - param_lr * param_wd) * weight_data[i]
+               - (param_lr) * mshadow_op::sign::Map(grad_data[i]));
   }
 };
 
@@ -2363,18 +2363,15 @@ struct SignumKernel {
     const DType* grad_data, const DType param_clip_gradient, const DType param_momentum,
     const DType param_lr, const DType param_wd, const DType param_rescale_grad,
     const DType param_wd_lh, const OpReqType req) {
+    DType rescale_grad = param_rescale_grad * grad_data[i];
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-              - (1-param_momentum)*param_wd*weight_data[i]
-              - (1-param_momentum)
-              *mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient);
-    } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                - (1-param_momentum)*param_wd*weight_data[i]
-                - (1-param_momentum)*param_rescale_grad*grad_data[i];
+      rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
-    KERNEL_ASSIGN(out_data[i], req, (1.f-param_lr*param_wd_lh)*weight_data[i]
-      + (param_lr)*((mom_data[i] > 0) - (mom_data[i] < 0)));
+    rescale_grad += param_wd * weight_data[i];
+    mom_data[i] *= param_momentum;
+    mom_data[i] -= (1 - param_momentum) * rescale_grad;
+    KERNEL_ASSIGN(out_data[i], req, (1.f - param_lr * param_wd_lh) * weight_data[i]
+      + (param_lr) * mshadow_op::sign::Map(mom_data[i]));
   }
 };
 
