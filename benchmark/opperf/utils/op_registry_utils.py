@@ -218,13 +218,9 @@ def get_all_misc_binary_operators():
     # Filter for miscellaneous binary operators
     binary_misc_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if "choose_element_0index" == op_name and op_params["params"]["narg"] == 5 and \
-                "data" in op_params["params"]["arg_names"] and \
-                "index" in op_params["params"]["arg_names"]:
+        if "choose_element_0index" == op_name:
             binary_misc_mx_operators[op_name] = mx_operators[op_name]
-        elif "reshape_like" == op_name and op_params["params"]["narg"] == 6 and \
-                "lhs" in op_params["params"]["arg_names"] and \
-                "rhs" in op_params["params"]["arg_names"]:
+        elif "reshape_like" == op_name:
             binary_misc_mx_operators[op_name] = mx_operators[op_name]
     return binary_misc_mx_operators
 
