@@ -890,6 +890,8 @@ class HybridBlock(Block):
         self._flags = []
         self._callback = None
         self._monitor_all = False
+        self._backend = None
+        self._backend_args = {}
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -926,15 +928,17 @@ class HybridBlock(Block):
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
+            if self._backend:
+                # To do: pass in all arguments
+                # Partition the graph.
+                out = out.optimize_for(self._backend, **self._backend_args)
+
             self._cached_graph = symbol_inputs, symbol.Group(out, _check_same_symbol_type(out))
 
         return self._cached_graph
 
     def _build_cache(self, *args):
         data, out = self._get_graph(*args)
-        if self._backend:
-            # To do: pass in all arguments
-            out = out.optimize_for(self._backend, **self.optargs)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
         input_names = out.list_inputs()
@@ -1043,9 +1047,9 @@ class HybridBlock(Block):
         super(HybridBlock, self).register_child(block, name)
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend='', optargs={}, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_args={}, **kwargs):
         self._backend = backend
-        self._optargs = optargs
+        self._backend_args = backend_args
         self._active = active
         self._flags = list(kwargs.items())
         self._clear_cached_op()
