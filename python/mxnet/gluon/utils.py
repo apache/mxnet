@@ -263,8 +263,7 @@ else:
         ), src)
 
 
-def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True,
-             inplace=False):
+def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
     """Download a given URL
 
     Parameters
@@ -283,9 +282,6 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
         The number of times to attempt the download in case of failure or non 200 return codes
     verify_ssl : bool, default True
         Verify SSL certificates.
-    inplace : bool, default False
-        Whether to write to the file at destination path inplace. Usually used if the path of temp
-        file is provided.
 
     Returns
     -------
@@ -323,30 +319,26 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 r = requests.get(url, stream=True, verify=verify_ssl)
                 if r.status_code != 200:
                     raise RuntimeError('Failed downloading url {}'.format(url))
-                if inplace:
-                    temp_file_name = fname
-                else:
-                    random_uuid = str(uuid.uuid4())
-                    temp_file_name = '{}.{}'.format(fname, random_uuid)
-                with open(temp_file_name, 'wb') as f:
+                # create uuid for temporary files
+                random_uuid = str(uuid.uuid4())
+                with open('{}.{}'.format(fname, random_uuid), 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: # filter out keep-alive new chunks
                             f.write(chunk)
-                if not inplace:
-                    # if the target file exists(created by other processes)
-                    # and have the same hash with target file
-                    # delete the temporary file
-                    if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
-                        # atmoic operation in the same file system
-                        replace_file('{}.{}'.format(fname, random_uuid), fname)
-                    else:
-                        try:
-                            os.remove('{}.{}'.format(fname, random_uuid))
-                        except OSError:
-                            pass
-                        finally:
-                            warnings.warn(
-                                'File {} exists in file system so the downloaded file is deleted'.format(fname))
+                # if the target file exists(created by other processes)
+                # and have the same hash with target file
+                # delete the temporary file
+                if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
+                    # atmoic operation in the same file system
+                    replace_file('{}.{}'.format(fname, random_uuid), fname)
+                else:
+                    try:
+                        os.remove('{}.{}'.format(fname, random_uuid))
+                    except OSError:
+                        pass
+                    finally:
+                        warnings.warn(
+                            'File {} exists in file system so the downloaded file is deleted'.format(fname))
                 if sha1_hash and not check_sha1(fname, sha1_hash):
                     raise UserWarning(
                         'File {} is downloaded but the content hash does not match.'

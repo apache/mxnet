@@ -23,6 +23,7 @@ import os
 import zipfile
 import logging
 import tempfile
+import uuid
 import shutil
 
 from ..utils import download, check_sha1, replace_file
@@ -110,15 +111,17 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     if repo_url[-1] != '/':
         repo_url = repo_url + '/'
 
-    with tempfile.NamedTemporaryFile(dir=root) as zip_file:
-        download(_url_format.format(repo_url=repo_url, file_name=file_name),
-                 path=zip_file.name, overwrite=True, inplace=True)
-        with zipfile.ZipFile(zip_file) as zf:
-            temp_dir = tempfile.mkdtemp(dir=root)
-            zf.extractall(temp_dir)
-            temp_file_path = os.path.join(temp_dir, file_name+'.params')
-            replace_file(temp_file_path, file_path)
-            shutil.rmtree(temp_dir)
+    random_uuid = str(uuid.uuid4())
+    temp_zip_file_path = os.path.join(root, file_name+'.zip'+random_uuid)
+    download(_url_format.format(repo_url=repo_url, file_name=file_name),
+             path=temp_zip_file_path, overwrite=True)
+    with zipfile.ZipFile(temp_zip_file_path) as zf:
+        temp_dir = tempfile.mkdtemp(dir=root)
+        zf.extractall(temp_dir)
+        temp_file_path = os.path.join(temp_dir, file_name+'.params')
+        replace_file(temp_file_path, file_path)
+        shutil.rmtree(temp_dir)
+    os.remove(temp_zip_file_path)
 
     if check_sha1(file_path, sha1_hash):
         return file_path
