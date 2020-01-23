@@ -106,7 +106,6 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
 
     util.makedirs(root)
 
-    zip_file_path = os.path.join(root, file_name+'.zip')
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
     if repo_url[-1] != '/':
         repo_url = repo_url + '/'
