@@ -1,4 +1,4 @@
---
+---
 layout: page_api
 title: Multi Threaded Inference
 action: Get Started
@@ -6,7 +6,7 @@ action_url: /get_started
 permalink: /api/cpp/docs/tutorials/multi_threaded_inference
 is_tutorial: true
 tag: cpp
---
+---
 <!--- Licensed to the Apache Software Foundation (ASF) under one -->
 <!--- or more contributor license agreements.  See the NOTICE file -->
 <!--- distributed with this work for additional information -->
@@ -24,7 +24,7 @@ tag: cpp
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-## Multi Threaded Inference API
+# Multi Threaded Inference API
 
 A long standing request from MXNet users has been to invoke parallel inference on a model from multiple threads while sharing the parameters.
 With this use case in mind, the threadsafe version of CachedOp was added to provide a way for customers to do multi-threaded inference for MXNet users.
