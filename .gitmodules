@@ -6,7 +6,7 @@
 	url = https://github.com/dmlc/ps-lite
 [submodule "3rdparty/dlpack"]
 	path = 3rdparty/dlpack
-	url = https://github.com/dmlc/dlpack.git
+	url = https://github.com/dmlc/dlpack
 [submodule "3rdparty/openmp"]
 	path = 3rdparty/openmp
 	url = https://github.com/llvm-mirror/openmp

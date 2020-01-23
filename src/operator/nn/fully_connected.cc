@@ -238,7 +238,7 @@ static bool BackwardFCStorageType(const nnvm::NodeAttrs& attrs,
   bool dispatched = false;
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, mxnet::kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, mxnet::kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+                                     dispatch_mode, DispatchMode::kFCompute);
   }
   if (!dispatched && common::ContainsStorageType(*in_attrs, mxnet::kRowSparseStorage)) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
