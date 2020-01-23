@@ -221,8 +221,6 @@ class Rotate(Block):
     """
     def __init__(self, rotation_degrees, zoom_in=False, zoom_out=False):
         super(Rotate, self).__init__()
-        if (rotation_degrees < -90 or rotation_degrees > 90):
-            raise ValueError("Rotation angle should be between -90 and 90 degrees")
         self._args = (rotation_degrees, zoom_in, zoom_out)
 
     def forward(self, x):

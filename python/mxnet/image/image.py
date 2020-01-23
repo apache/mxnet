@@ -659,10 +659,6 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
         rotation_degrees = nd.array([rotation_degrees] * len(src),
                                     ctx=src.context)
 
-    if ((rotation_degrees < -90).sum().asscalar() > 0.0 or
-            (rotation_degrees > 90).sum().asscalar() > 0.0):
-        raise ValueError("Rotation angles should be between -90 and 90 degrees")
-
     if len(src) != len(rotation_degrees):
         raise ValueError(
             "The number of images must be equal to the number of rotation angles"
@@ -697,14 +693,22 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     h, w = nd.array([h], ctx=src.context), nd.array([w], ctx=src.context)
     # compute the scale factor in case `zoom_in` or `zoom_out` are True
     if zoom_in or zoom_out:
-        if h < w:
-            roth = nd.sqrt(h * h + w * w) * nd.sin(nd.arctan(h / w) + nd.abs(rotation_rad))
+        rho_corner = nd.sqrt(h * h + w * w)
+        ang_corner = nd.arctan(h / w)
+        corner1_x_pos = nd.abs(rho_corner * nd.cos(ang_corner + nd.abs(rotation_rad)))
+        corner1_y_pos = nd.abs(rho_corner * nd.sin(ang_corner + nd.abs(rotation_rad)))
+        corner2_x_pos = nd.abs(rho_corner * nd.cos(ang_corner - nd.abs(rotation_rad)))
+        corner2_y_pos = nd.abs(rho_corner * nd.sin(ang_corner - nd.abs(rotation_rad)))
+        max_x = nd.maximum(corner1_x_pos, corner2_x_pos)
+        max_y = nd.maximum(corner1_y_pos, corner2_y_pos)
+        if zoom_out:
+            scale_x = max_x / w
+            scale_y = max_y / h
+            globalscale = nd.maximum(scale_x, scale_y)
         else:
-            roth = nd.sqrt(h * h + w * w) * nd.cos(nd.arctan(h / w) - nd.abs(rotation_rad))
-        if zoom_in:
-            globalscale = min(h, w) / roth
-        else:
-            globalscale = roth / min(h, w)
+            scale_x = w / max_x
+            scale_y = h / max_y
+            globalscale = nd.minimum(scale_x, scale_y)
         globalscale = globalscale.expand_dims(axis=3)
     else:
         globalscale = 1
