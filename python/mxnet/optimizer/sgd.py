@@ -15,11 +15,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=too-many-lines
 """SGD optimizer"""
 from __future__ import absolute_import
-import os
 import numpy
 from ..ndarray import (zeros, clip)
 from ..ndarray import (sgd_update, sgd_mom_update,
@@ -138,7 +135,6 @@ class SGD(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             # preprocess grad
             grad *= self.rescale_grad
@@ -244,4 +240,3 @@ class SGD(Optimizer):
             self.update(indices, weights, grads, states)
         else:
             super(SGD, self).update_multi_precision(indices, weights, grads, states)
-

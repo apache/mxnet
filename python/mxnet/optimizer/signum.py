@@ -15,8 +15,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=too-many-lines
 """Signum optimizer."""
 from __future__ import absolute_import
 from ..ndarray import (zeros, clip, sign)
@@ -99,7 +97,6 @@ class Signum(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             if state is not None:
                 # preprocess grad
@@ -142,7 +139,6 @@ class Signum(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             kwargs = {'rescale_grad': self.rescale_grad}
             if self.momentum > 0:
@@ -160,4 +156,3 @@ class Signum(Optimizer):
                 wd += self.wd_lh
                 signsgd_update(weight, grad, out=weight,
                                lr=lr, wd=wd, **kwargs)
-

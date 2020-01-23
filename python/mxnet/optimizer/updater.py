@@ -15,8 +15,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=too-many-lines
 """Updater class."""
 from __future__ import absolute_import
 import pickle
@@ -86,11 +84,11 @@ class Updater(object):
                             states)
                         current_index += self.optimizer.aggregate_num
             else:
-                states = [self.states[index] for index in indices]
+                states = [self.states[i] for i in indices]
                 self.optimizer.update_multi_precision(indices, weights, grads, states)
         else:
-            for index, weight, grad in zip(indices, weights, grads):
-                self.optimizer.update_multi_precision([index], [weight], [grad], [self.states[index]])
+            for i, w, g in zip(indices, weights, grads):
+                self.optimizer.update_multi_precision([i], [w], [g], [self.states[i]])
 
     def sync_state_context(self, state, context):
         """sync state context."""

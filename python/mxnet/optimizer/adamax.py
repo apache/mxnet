@@ -15,10 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=W0223
 """Adamax optimizer."""
 from __future__ import absolute_import
-from ..ndarray import (zeros, clip, sqrt, maximum, abs as NDabs)
+from ..ndarray import (zeros, clip, maximum, abs as NDabs)
 from .optimizer import Optimizer, register
 
 __all__ = ['Adamax']
@@ -109,4 +109,3 @@ class Adamax(Optimizer):
             # update weight
             d = mean / var
             weight[:] -= lr * d
-

@@ -76,11 +76,12 @@ method update($index, $weight, $grad, $state)
     my $t = $self->_index_update_count->{$index};
     my ($mean, $variance) = @$state;
     my $wd = $self->_get_wd($index);
-    $grad = $grad * $self->rescale_grad + $wd * $weight;
+    $grad = $grad * $self->rescale_grad;
     if($self->clip_gradient)
     {
         mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, out => $grad);
     }
+    $grad += $wd * $weight;
     $mean *= $self->beta1;
     $mean += $grad * (1 - $self->beta1);
 
@@ -173,7 +174,7 @@ method update($index, $weight, $grad, $state)
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    $grad = $grad * $self->rescale_grad + $wd * $weight;
+    $grad = $grad * $self->rescale_grad;
     if(not $self->centered)
     {
         my ($n) = @$state;
@@ -181,8 +182,9 @@ method update($index, $weight, $grad, $state)
         {
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
+        $grad += $wd * $weight;
         $n .= (1 - $self->rho) * ($grad * $grad) + $self->rho * $n;
-        $weight -= $lr * $grad/(mx->nd->sqrt($n + $self->epsilon));
+        $weight -= $lr * $grad/(mx->nd->sqrt($n) + $self->epsilon);
     }
     else
     {
@@ -191,6 +193,7 @@ method update($index, $weight, $grad, $state)
         {
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
+        $grad += $wd * $weight;
         $n .= (1 - $self->rho) * ($grad * $grad) + $self->rho * $n;
         $g .= (1 - $self->rho) * $grad + $self->rho * $g;
         $delta .= ($self->momentum) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g + $self->epsilon));
@@ -442,12 +445,13 @@ method update($index, $weight, $grad, $state)
         }
         else
         {
+            $grad += $wd * $weight;
             my $mom = $state;
             $mom *= $self->momentum;
-            $grad += $wd * $weight;
-            $mom += $grad;
+            $mom -= $lr * $grad;
+            $grad *= -$lr;
             $grad += $self->momentum * $mom;
-            $weight += -$lr * $grad;
+            $weight += $grad;
         }
     }
     else
@@ -466,11 +470,12 @@ method update($index, $weight, $grad, $state)
         }
         else
         {
-            $mom *= $self->momentum;
             $grad32 += $wd * $weight32;
-            $mom += $grad32;
+            $mom *= $self->momentum;
+            $mom -= $lr * $grad32;
+            $grad32 *= -$lr;
             $grad32 += $self->momentum * $mom;
-            $weight32 += -$lr * $grad32;
+            $weight32 += $grad32;
         }
         my $tmp = $weight32->astype($weight->dtype);
         $tmp->copyto($weight);
@@ -603,8 +608,8 @@ method update($index, $weight, $grad, $state)
         $n->at($row) += $grad_row * $grad_row;
 
         # update weight
-        $weight->at($row) .= (mx->nd->sign($dn->at($row)) * $self->lamda1 - $dn->at($row)) /
-                          (($self->beta + mx->nd->sqrt($n->at($row))) / $lr + $wd) * (mx->nd->abs($dn->at($row)) > $self->lamda1);
+        $weight->at($row) .= - mx->nd->sign($dn->at($row)) * mx->nd->maximum(mx->nd->abs($dn->at($row)) - $self->lamda1, 0) /
+                          (($self->beta + mx->nd->sqrt($n->at($row))) / $lr + $wd);
     }
 }
 
@@ -631,7 +636,7 @@ method update($index, $weight, $grad, $state)
         $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
     }
     $history += mx->nd->square($grad);
-    my $div = $grad / mx->nd->sqrt($history + $self->eps);
+    my $div = $grad / (mx->nd->sqrt($history) + $self->eps);
     $weight += ($div + $weight * $wd) * -$lr;
 }
 

@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=W0223
 """Nadam optimizer."""
 from __future__ import absolute_import
 from ..ndarray import (zeros, clip, sqrt, square)
@@ -122,4 +122,3 @@ class Nadam(Optimizer):
             # update weight
             d = mean_bar / (sqrt(var_prime) + self.epsilon)
             weight[:] -= lr * d
-

@@ -15,8 +15,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=too-many-lines
 """Lamb optimizer."""
 from __future__ import absolute_import
 import numpy
@@ -239,7 +237,8 @@ class LAMB(Optimizer):
                         kwargs['upper_bound'] = self.upper_bound
                     r_1 = weight32.norm()
                     r_2 = g.norm()
-                    mp_lamb_update_phase2(weight, g, r_1, r_2, weight32, lr=lr, out=weight, **kwargs)
+                    mp_lamb_update_phase2(weight, g, r_1, r_2, weight32, lr=lr,
+                                          out=weight, **kwargs)
                 else:
                     mean, var = state
                     g = lamb_update_phase1(weight, grad, mean, var, wd=wd, **kwargs)
@@ -260,4 +259,3 @@ class LAMB(Optimizer):
             self.update(indices, weights, grads, states)
         else:
             super(LAMB, self).update_multi_precision(indices, weights, grads, states)
-

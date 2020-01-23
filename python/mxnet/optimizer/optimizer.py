@@ -340,7 +340,7 @@ class Optimizer(object):
         weights_master_copy = []
         original_states = []
         grads32 = []
-        for index, weight, grad, state in zip(indices, weights, grads, states):
+        for weight, grad, state in zip(weights, grads, states):
             if self.multi_precision and weight.dtype == numpy.float16:
                 weights_master_copy.append(state[0])
                 original_states.append(state[1])
@@ -559,7 +559,7 @@ class Optimizer(object):
 # convenience wrapper for Optimizer.Register
 register = Optimizer.register   # pylint: disable=invalid-name
 
-
+# pylint: disable=W0223
 @register
 class Test(Optimizer):
     """The Test optimizer"""
@@ -576,10 +576,8 @@ class Test(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
             grad = self.rescale_grad * grad
             weight[:] -= lr * (grad + wd * weight)
 
 
 create = Optimizer.create_optimizer  # pylint: disable=invalid-name
-

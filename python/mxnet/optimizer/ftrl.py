@@ -14,8 +14,6 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=too-many-lines
 """FTRL optimizer."""
 from __future__ import absolute_import
 from ..ndarray import (zeros, clip, sqrt, square, sign, maximum, abs as NDabs)
@@ -115,7 +113,6 @@ class Ftrl(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             # preprocess grad
             grad *= self.rescale_grad
@@ -160,7 +157,6 @@ class Ftrl(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             kwargs = {'lamda1': self.lamda1, 'beta': self.beta, 'rescale_grad': self.rescale_grad}
             if self.clip_gradient:

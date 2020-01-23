@@ -2316,7 +2316,7 @@ def compare_optimizer_noise_seeded(opt1, opt2, shapes, dtype, noise_seed,
         if w_stype == 'default':
             w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
             w1 = w2.copyto(default_context())
-        elif w_stype == 'row_sparse' or w_stype == 'csr':
+        elif w_stype in ('row_sparse', 'csr'):
             w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
             w1 = w2.copyto(default_context()).tostype('default')
         else:
@@ -2324,7 +2324,7 @@ def compare_optimizer_noise_seeded(opt1, opt2, shapes, dtype, noise_seed,
         if g_stype == 'default':
             g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
             g1 = g2.copyto(default_context())
-        elif g_stype == 'row_sparse' or g_stype == 'csr':
+        elif g_stype in ('row_sparse', 'csr'):
             g2 = rand_ndarray(shape, g_stype, dtype=dtype)
             g1 = g2.copyto(default_context()).tostype('default')
         else:

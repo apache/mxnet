@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=W0223
 """SGLD optimizer."""
 from __future__ import absolute_import
 import math
@@ -71,11 +71,10 @@ class SGLD(Optimizer):
         states : List of any obj
             List of state returned by `create_state()`.
         """
-        for index, weight, grad, state in zip(indices, weights, grads, states):
+        for index, weight, grad in zip(indices, weights, grads):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             # preprocess grad
             grad *= self.rescale_grad

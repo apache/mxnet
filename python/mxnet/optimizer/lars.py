@@ -15,14 +15,12 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# pylint: disable=too-many-lines
 """LARS optimizer."""
 from __future__ import absolute_import
-import os
 import numpy
-from ..ndarray import (zeros, clip, sqrt, array,
-                       multi_sum_sq, multi_lars, norm as NDnorm,
+from ..ndarray import (zeros, clip, array,
+                       multi_sum_sq, multi_lars,
+                       norm as NDnorm,
                        where, ones_like)
 from ..ndarray import (sgd_update, sgd_mom_update,
                        mp_sgd_update, mp_sgd_mom_update,
@@ -145,7 +143,6 @@ class LARS(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             # compute lars
             # clip grad + wd * weight is performed after computing lars

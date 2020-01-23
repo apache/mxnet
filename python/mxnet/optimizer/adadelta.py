@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: disable=too-many-lines
+# pylint: disable=W0223
 """AdaDelta optimizer."""
 from __future__ import absolute_import
 from ..ndarray import (zeros, clip, sqrt, square)
@@ -89,7 +89,6 @@ class AdaDelta(Optimizer):
             self._update_count(index)
             lr = self._get_lr(index)
             wd = self._get_wd(index)
-            t = self._index_update_count[index]
 
             # preprocess grad
             grad *= self.rescale_grad
