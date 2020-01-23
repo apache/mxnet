@@ -1,3 +1,20 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 CustomOp Example and Tutorial
 =============================
 
@@ -30,7 +47,7 @@ You can start getting familiar with custom operators by running some examples pr
 
 ## Writing Custom Operator Library:
 
-For building a library containing your own custom operator, compose a C++ source file like `myop_lib.cc`, include `lib_api.h` header file, and write your custom operator implementation with those essential functions:
+For building a library containing your own custom operator, compose a C++ source file like `myop_lib.cc`, include `lib_api.h` header file, and write your custom operator implementation with these essential functions:
 - `initialize` - Library Initialization Function
 - `REGISTER_OP` - Operator Registration Marco
 - `parseAttrs` - Attribute Parser
@@ -38,15 +55,17 @@ For building a library containing your own custom operator, compose a C++ source
 - `inferShape` - Shape Inference
 - `forward` - Forward Computation (can be replace with `createOpState`, see below for details)
 
-Then compile it to `libmyop_lib.so` dynamic library using the following command
+Then compile it to `libmyop_lib.so` dynamic library using the following command:
+```bash
+g++ -shared -fPIC -std=c++11 myop_lib.cc -o libmyop_lib.so -I ../../../include/mxnet
+```
 
-    g++ -shared -fPIC -std=c++11 myop_lib.cc -o libmyop_lib.so -I ../../../include/mxnet
-
-Finally you can write a python script to load the library and run your custom operator
-
-    import mxnet as mx
-    mx.library.load(‘libmyop_lib.so’)
-    mx.nd.my_op(...)
+Finally, you can write a Python script to load the library and run your custom operator:
+```python
+import mxnet as mx
+mx.library.load(‘libmyop_lib.so’)
+mx.nd.my_op(...)
+```
 
 ### Writing Regular Custom Operator:
 
