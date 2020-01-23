@@ -43,7 +43,7 @@ from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 """
 
 
-def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the activation
     operators in MXNet.
 
