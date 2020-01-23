@@ -82,14 +82,14 @@ struct PDF_Uniform_Grad {
 template<bool logpdf>
 struct PDF_Normal {
   template<typename DType, typename IType1, typename IType2>
-  MSHADOW_XINLINE static void Map(int start, int length, int sample_size,
+  MSHADOW_XINLINE static void Map(index_t start, index_t length, index_t sample_size,
                                   DType *out, IType1 *sample, IType2 *loc, IType2 *scale) {
-    const int index(start / sample_size);
+    const index_t index(start / sample_size);
     const DType u(loc[index]), s(scale[index]), sq(s * s);
     const DType normalizer(sqrt(2.0 * mxnet_op::PI) * s);
 
-    const int end = start + length;
-    for (int i = start; i < end; ++i) {
+    const index_t end = start + length;
+    for (index_t i = start; i < end; ++i) {
         const DType x(sample[i]);
         const DType exponent((DType(-0.5) * (x - u) * (x - u)) / (sq));
         out[i] = logpdf ? exponent - log(normalizer) : exp(exponent) / normalizer;
@@ -100,14 +100,14 @@ struct PDF_Normal {
 template<bool logpdf>
 struct PDF_Normal_Grad {
   template<typename DType, typename IType1, typename IType2>
-  MSHADOW_XINLINE static void Map(int start, int length, int sample_size, OpReqType req,
+  MSHADOW_XINLINE static void Map(index_t start, index_t length, index_t sample_size, OpReqType req,
                   DType *out, IType1 *sample, IType2 *loc, IType2 *scale,
                   DType *grad_out, IType1 *grad_sample, IType2 *grad_loc, IType2 *grad_scale) {
-    const int index(start / sample_size);
+    const index_t index(start / sample_size);
     const DType u(loc[index]), s(scale[index]), s_squared(s * s), s_cubed(s_squared * s);
 
-    const int end = start + length;
-    for (int i = start; i < end; ++i) {
+    const index_t end = start + length;
+    for (index_t i = start; i < end; ++i) {
         const DType x(sample[i]);
         const DType scaling(grad_out[i]*(logpdf ? DType(1) : out[i]));
         grad_loc[i]    = scaling * (x - u) / s_squared;
@@ -433,25 +433,25 @@ inline bool PdfOpShape(const nnvm::NodeAttrs& attrs,
 template<typename OP>
 struct LaunchExWrapper {
   template<typename ...Args>
-  MSHADOW_XINLINE static void Map(const int start, const int length, const int sample_size,
+  MSHADOW_XINLINE static void Map(const index_t start, const index_t length, const index_t sample_size,
         Args... args) {
     // Apply the operator to the sample in strides of sample_size, so that
     // the operators can assume that their distribution parameters are constant.
-    int i = start;
+    index_t i = start;
 
     // Get aligned
-    const int align_step = sample_size - (i % sample_size);
-    const int first_stride = length > align_step ? align_step : length;
+    const index_t align_step = sample_size - (i % sample_size);
+    const index_t first_stride = length > align_step ? align_step : length;
     OP::Map(i, first_stride, sample_size, args...);
     i += first_stride;
 
-    const int end = start + length - sample_size;
+    const index_t end = start + length - sample_size;
     for (; i < end; i += sample_size) {
       OP::Map(i, sample_size, sample_size, args...);
     }
 
     // Last stride might not be aligned either
-    const int last_stride = start + length - i;
+    const index_t last_stride = start + length - i;
     if (last_stride > 0) {  // Don't overstep even if length <= sample_size
       OP::Map(i, last_stride, sample_size, args...);
     }
