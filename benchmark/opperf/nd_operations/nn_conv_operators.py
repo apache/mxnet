@@ -61,51 +61,98 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     pool2d_benchmark_res = []
     for pool_type in pool_types:
         for global_pool in global_pool_types:
-            for pool1d_data in [(32, 3, 256), (32, 3, 64)]:
-                pool1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
-                                                             run_backward=True,
-                                                             dtype=dtype,
-                                                             ctx=ctx,
-                                                             profiler=profiler,
-                                                             inputs=[{"data": pool1d_data,
-                                                                      "kernel": 3,
-                                                                      "pool_type": pool_type,
-                                                                      "global_pool": global_pool,
-                                                                      "stride": 1,
-                                                                      "pad": 1}
-                                                                     ],
-                                                             warmup=warmup,
-                                                             runs=runs)
-            for pool2d_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
-                pool2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
-                                                             run_backward=True,
-                                                             dtype=dtype,
-                                                             ctx=ctx,
-                                                             profiler=profiler,
-                                                             inputs=[{"data": pool2d_data,
-                                                                      "kernel": (3, 3),
-                                                                      "pool_type": pool_type,
-                                                                      "global_pool": global_pool,
-                                                                      "stride": (1, 1),
-                                                                      "pad": (0, 0)}
-                                                                     ],
-                                                             warmup=warmup,
-                                                             runs=runs)
-    # Run ROI Pooling performance runs
-    roipool_benchmark_res = []
-    for roipool_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
-        roipool_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "ROIPooling")],
-                                                      run_backward=True,
-                                                      dtype=dtype,
-                                                      ctx=ctx,
-                                                      profiler=profiler,
-                                                      inputs=[{"data": roipool_data,
-                                                               "rois": (32, 5),
-                                                               "pooled_size": (2, 2),
-                                                               "spatial_scale": .5}
-                                                             ],
-                                                      warmup=warmup,
-                                                      runs=runs)
+            if large_tensor == 'off':
+                for pool1d_data in [(32, 3, 256), (32, 3, 64)]:
+                    pool1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
+                                                                run_backward=True,
+                                                                dtype=dtype,
+                                                                ctx=ctx,
+                                                                profiler=profiler,
+                                                                inputs=[{"data": pool1d_data,
+                                                                        "kernel": 3,
+                                                                        "pool_type": pool_type,
+                                                                        "global_pool": global_pool,
+                                                                        "stride": 1,
+                                                                        "pad": 1}
+                                                                        ],
+                                                                warmup=warmup,
+                                                                runs=runs)
+                for pool2d_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+                    pool2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
+                                                                run_backward=True,
+                                                                dtype=dtype,
+                                                                ctx=ctx,
+                                                                profiler=profiler,
+                                                                inputs=[{"data": pool2d_data,
+                                                                        "kernel": (3, 3),
+                                                                        "pool_type": pool_type,
+                                                                        "global_pool": global_pool,
+                                                                        "stride": (1, 1),
+                                                                        "pad": (0, 0)}
+                                                                        ],
+                                                                warmup=warmup,
+                                                                runs=runs)
+                # Run ROI Pooling performance runs
+                roipool_benchmark_res = []
+                for roipool_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+                    roipool_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "ROIPooling")],
+                                                                run_backward=True,
+                                                                dtype=dtype,
+                                                                ctx=ctx,
+                                                                profiler=profiler,
+                                                                inputs=[{"data": roipool_data,
+                                                                        "rois": (32, 5),
+                                                                        "pooled_size": (2, 2),
+                                                                        "spatial_scale": .5}
+                                                                        ],
+                                                                warmup=warmup,
+                                                                runs=runs)
+            else:
+                for pool1d_data in [(1, 1, 2**32), (2**32, 1, 3)]:
+                    pool1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
+                                                                run_backward=True,
+                                                                dtype=dtype,
+                                                                ctx=ctx,
+                                                                profiler=profiler,
+                                                                inputs=[{"data": pool1d_data,
+                                                                        "kernel": 3,
+                                                                        "pool_type": pool_type,
+                                                                        "global_pool": global_pool,
+                                                                        "stride": 1,
+                                                                        "pad": 1}
+                                                                        ],
+                                                                warmup=warmup,
+                                                                runs=runs)
+                for pool2d_data in [(2**32, 1, 3, 3), (2**32, 1, 4, 4)]:
+                    pool2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Pooling")],
+                                                                run_backward=True,
+                                                                dtype=dtype,
+                                                                ctx=ctx,
+                                                                profiler=profiler,
+                                                                inputs=[{"data": pool2d_data,
+                                                                        "kernel": (3, 3),
+                                                                        "pool_type": pool_type,
+                                                                        "global_pool": global_pool,
+                                                                        "stride": (1, 1),
+                                                                        "pad": (0, 0)}
+                                                                        ],
+                                                                warmup=warmup,
+                                                                runs=runs)
+                # Run ROI Pooling performance runs
+                roipool_benchmark_res = []
+                for roipool_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+                    roipool_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "ROIPooling")],
+                                                                run_backward=True,
+                                                                dtype=dtype,
+                                                                ctx=ctx,
+                                                                profiler=profiler,
+                                                                inputs=[{"data": roipool_data,
+                                                                        "rois": (32, 5),
+                                                                        "pooled_size": (2, 2),
+                                                                        "spatial_scale": .5}
+                                                                        ],
+                                                                warmup=warmup,
+                                                                runs=runs)
     # Prepare combined results
     mx_pooling_op_results = merge_map_list(pool1d_benchmark_res + pool2d_benchmark_res + roipool_benchmark_res)
     return mx_pooling_op_results
@@ -114,44 +161,84 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
 def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
     # Conv1D Benchmarks
     conv1d_benchmark_res = []
-    for conv_data in [(32, 3, 256), (32, 3, 64)]:
-        conv1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
-                                                     run_backward=True,
-                                                     dtype=dtype,
-                                                     ctx=ctx,
-                                                     profiler=profiler,
-                                                     inputs=[{"data": conv_data,
-                                                              "weight": (64, 3, 3),
-                                                              "bias": (64,),
-                                                              "kernel": (3,),
-                                                              "stride": (1,),
-                                                              "dilate": (1,),
-                                                              "pad": (0,),
-                                                              "num_filter": 64,
-                                                              "layout": 'NCW'}
-                                                             ],
-                                                     warmup=warmup,
-                                                     runs=runs)
-    # Conv2D Benchmarks
-    conv2d_benchmark_res = []
-    for conv_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
-        conv2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
-                                                     run_backward=True,
-                                                     dtype=dtype,
-                                                     ctx=ctx,
-                                                     profiler=profiler,
-                                                     inputs=[{"data": conv_data,
-                                                              "weight": (64, 3, 3, 3),
-                                                              "bias": (64,),
-                                                              "kernel": (3, 3),
-                                                              "stride": (1, 1),
-                                                              "dilate": (1, 1),
-                                                              "pad": (0, 0),
-                                                              "num_filter": 64,
-                                                              "layout": 'NCHW'}
-                                                             ],
-                                                     warmup=warmup,
-                                                     runs=runs)
+    if large_tensor == 'off':
+        for conv_data in [(32, 3, 256), (32, 3, 64)]:
+            conv1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
+                                                        run_backward=True,
+                                                        dtype=dtype,
+                                                        ctx=ctx,
+                                                        profiler=profiler,
+                                                        inputs=[{"data": conv_data,
+                                                                "weight": (64, 3, 3),
+                                                                "bias": (64,),
+                                                                "kernel": (3,),
+                                                                "stride": (1,),
+                                                                "dilate": (1,),
+                                                                "pad": (0,),
+                                                                "num_filter": 64,
+                                                                "layout": 'NCW'}
+                                                                ],
+                                                        warmup=warmup,
+                                                        runs=runs)
+        # Conv2D Benchmarks
+        conv2d_benchmark_res = []
+        for conv_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+            conv2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
+                                                        run_backward=True,
+                                                        dtype=dtype,
+                                                        ctx=ctx,
+                                                        profiler=profiler,
+                                                        inputs=[{"data": conv_data,
+                                                                "weight": (64, 3, 3, 3),
+                                                                "bias": (64,),
+                                                                "kernel": (3, 3),
+                                                                "stride": (1, 1),
+                                                                "dilate": (1, 1),
+                                                                "pad": (0, 0),
+                                                                "num_filter": 64,
+                                                                "layout": 'NCHW'}
+                                                                ],
+                                                        warmup=warmup,
+                                                        runs=runs)
+    else:
+        for conv_data in [(1, 1, 2**32), (2**32, 1, 3)]:
+            conv1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
+                                                        run_backward=True,
+                                                        dtype=dtype,
+                                                        ctx=ctx,
+                                                        profiler=profiler,
+                                                        inputs=[{"data": conv_data,
+                                                                "weight": (1, 1, 3),
+                                                                "bias": (1,),
+                                                                "kernel": (3,),
+                                                                "stride": (1,),
+                                                                "dilate": (1,),
+                                                                "pad": (0,),
+                                                                "num_filter": 1,
+                                                                "layout": 'NCW'}
+                                                                ],
+                                                        warmup=warmup,
+                                                        runs=runs)
+        # Conv2D Benchmarks
+        conv2d_benchmark_res = []
+        for conv_data in [(2**32, 1, 3, 3), (2**32, 1, 4, 4)]:
+            conv2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
+                                                        run_backward=True,
+                                                        dtype=dtype,
+                                                        ctx=ctx,
+                                                        profiler=profiler,
+                                                        inputs=[{"data": conv_data,
+                                                                "weight": (1, 1, 3, 3),
+                                                                "bias": (1,),
+                                                                "kernel": (3, 3),
+                                                                "stride": (1, 1),
+                                                                "dilate": (1, 1),
+                                                                "pad": (0, 0),
+                                                                "num_filter": 1,
+                                                                "layout": 'NCHW'}
+                                                                ],
+                                                        warmup=warmup,
+                                                        runs=runs)
     # Prepare combined results
     mx_conv_op_results = merge_map_list(conv1d_benchmark_res + conv2d_benchmark_res)
     return mx_conv_op_results
