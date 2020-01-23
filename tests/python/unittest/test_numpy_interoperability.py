@@ -95,6 +95,7 @@ def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', np.array([],dtype=_np.int64), (10, 3, 5))
     OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
 
+
 def _add_workload_bincount():
     y = np.arange(4).astype(int)
     y1 = np.array([1, 5, 2, 4, 1], dtype=_np.int64)
@@ -157,6 +158,60 @@ def _add_workload_diagonal():
     OpArgMngr.add_workload('diagonal', B, 0, 0, 1)
     OpArgMngr.add_workload('diagonal', B, offset=1, axis1=0, axis2=2)
     OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
+
+
+def _add_workload_quantile():
+    x1 = np.arange(8) * 0.5
+    x2 = np.arange(100.)
+    q1 = np.array(0)
+    q2 = np.array(1)
+    q3 = np.array(0.5)
+    q4 = np.array([0, 0.75, 0.25, 0.5, 1.0])
+    
+    OpArgMngr.add_workload('quantile', x1, q1)
+    OpArgMngr.add_workload('quantile', x1, q2)
+    OpArgMngr.add_workload('quantile', x1, q3)
+    OpArgMngr.add_workload('quantile', x2, q4, interpolation="midpoint")
+    OpArgMngr.add_workload('quantile', x2, q4, interpolation="nearest")
+    OpArgMngr.add_workload('quantile', x2, q4, interpolation="lower")
+
+
+def _add_workload_percentile():
+    x1 = np.ones(5)
+    q1 = np.array(5)
+    x2 = np.array([[1, 1, 1],
+                   [1, 1, 1],
+                   [4, 4, 3],
+                   [1, 1, 1],
+                   [1, 1, 1]])
+    q2 = np.array(60)
+    x3 = np.arange(10)
+    q3 = np.array([25, 50, 100])
+    x4 = np.arange(11 * 2).reshape(11, 1, 2, 1)
+    x5 = np.array([0, np.nan])
+    
+    OpArgMngr.add_workload('percentile', x1, q1, None, None, None)
+    OpArgMngr.add_workload('percentile', x1, q1, None, None, None, 'linear')
+    OpArgMngr.add_workload('percentile', x2, q2, axis=0)
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='linear')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='lower')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='higher')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='midpoint')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='nearest')
+    OpArgMngr.add_workload('percentile', x3, q3)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=0)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=1)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=2)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=3)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=-1)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=-2)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=-3)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=-4)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=(1,2))
+    OpArgMngr.add_workload('percentile', x4, q3, axis=(-2,-1))
+    OpArgMngr.add_workload('percentile', x4, q2, axis=(1,2), keepdims=True)
+    OpArgMngr.add_workload('percentile', x5, q2)
+    OpArgMngr.add_workload('percentile', x5, q3)
 
 
 def _add_workload_concatenate(array_pool):
@@ -1816,6 +1871,8 @@ def _prepare_workloads():
     _add_workload_where()
     _add_workload_shape()
     _add_workload_diff()
+    _add_workload_quantile()
+    _add_workload_percentile()
     _add_workload_resize()
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
