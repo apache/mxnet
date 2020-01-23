@@ -50,17 +50,16 @@ def test_models():
             model.collect_params().initialize()
         model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
 
+def parallel_download(model_name):
+    model = get_model(model_name, pretrained=True, root='./parallel_download')
+    print(type(model))
 
 @with_seed()
 def test_parallel_download():
-    def fn(model_name):
-        model = get_model(model_name, pretrained=True, root='./parallel_download')
-        print(type(model))
-
     processes = []
     name = 'mobilenetv2_0.25'
     for _ in range(10):
-        p = multiprocessing.Process(target=fn, args=(name,))
+        p = multiprocessing.Process(target=parallel_download, args=(name,))
         processes.append(p)
     for p in processes:
         p.start()
