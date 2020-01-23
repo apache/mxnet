@@ -1559,6 +1559,7 @@ def test_np_broadcast_to():
         ((4, 1), (1, 2, 3, 4, 5)),
         ((4, 1), (1, 0, 3, 4, 5))
     ]
+
     for src_shape, dst_shape in shapes:
         for hybridize in [True, False]:
             test_broadcast_to = TestBroadcastTo(dst_shape)
@@ -1586,6 +1587,32 @@ def test_np_broadcast_to():
                 # `np.empty(())` serves as a dummpy input
                 ret = test_scalar_broadcast_to(np.empty(()))
             assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+    # Test npx functionality
+    shapes = [
+        ((5,), (3, 4, -2), (3, 4, 5)),
+        ((5,), (0, -2), (0, 5)),
+        ((1, 0), (2, -2, -2), (2, 1, 0)),
+        ((3, 4), (1, 2, 3, -2), (1, 2, 3, 4)),
+        ((3, 4), (1, 0, -2, 4), (1, 0, 3, 4))
+    ]
+
+    for src_shape, npx_dst_shape, np_dst_shape in shapes:
+        for hybridize in [True, False]:
+            test_broadcast_to = TestBroadcastTo(npx_dst_shape)
+            if hybridize:
+                test_broadcast_to.hybridize()
+
+            a = _np.random.uniform(size=src_shape).astype(np.float32)
+            expected_ret = _np.broadcast_to(a, np_dst_shape)
+            a_mx = np.array(a, dtype=a.dtype)
+            a_mx.attach_grad()
+            with mx.autograd.record():
+                ret = test_broadcast_to(a_mx)
+            assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
+            ret.backward()
+            expected_grad = collapse_sum_like(_np.ones_like(expected_ret), src_shape)
+            assert_almost_equal(a_mx.grad.asnumpy(), expected_grad, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @with_seed()
