@@ -943,19 +943,19 @@ int MXNDArrayCreateEx(const uint32_t *shape,
   API_END();
 }
 
-int MXNDArrayCreateSparseEx(int storage_type,
-                            const uint32_t *shape,
-                            uint32_t ndim,
-                            int dev_type,
-                            int dev_id,
-                            int delay_alloc,
-                            int dtype,
-                            uint32_t num_aux,
-                            int *aux_type,
-                            uint32_t *aux_ndims,
-                            const uint32_t *aux_shape,
-                            NDArrayHandle *out) {
-  API_BEGIN();
+template<typename DType>
+void CreateSparseNDArray(int storage_type,
+                         const DType *shape,
+                         int ndim,
+                         int dev_type,
+                         int dev_id,
+                         int delay_alloc,
+                         int dtype,
+                         uint32_t num_aux,
+                         int *aux_type,
+                         int *aux_ndims,
+                         const DType *aux_shape,
+                         NDArrayHandle *out) {
   std::vector<int> aux_types;
   mxnet::ShapeVector aux_shapes;
   auto shape_start = aux_shape;
@@ -972,6 +972,44 @@ int MXNDArrayCreateSparseEx(int storage_type,
       Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
       delay_alloc != 0,
       dtype, aux_types, aux_shapes);
+}
+
+int MXNDArrayCreateSparseEx(int storage_type,
+                            const uint32_t *shape,
+                            uint32_t ndim,
+                            int dev_type,
+                            int dev_id,
+                            int delay_alloc,
+                            int dtype,
+                            uint32_t num_aux,
+                            int *aux_type,
+                            uint32_t *aux_ndims,
+                            const uint32_t *aux_shape,
+                            NDArrayHandle *out) {
+  API_BEGIN();
+  CreateSparseNDArray<uint32_t>(storage_type, shape, static_cast<int>(ndim), dev_type, dev_id,
+                                delay_alloc, dtype, num_aux, aux_type,
+                                reinterpret_cast<int *>(aux_ndims), aux_shape, out);
+  API_END();
+}
+
+
+int MXNDArrayCreateSparseEx64(int storage_type,
+                            const int64_t *shape,
+                            int ndim,
+                            int dev_type,
+                            int dev_id,
+                            int delay_alloc,
+                            int dtype,
+                            uint32_t num_aux,
+                            int *aux_type,
+                            int *aux_ndims,
+                            const int64_t *aux_shape,
+                            NDArrayHandle *out) {
+  API_BEGIN();
+  CreateSparseNDArray<int64_t>(storage_type, shape, static_cast<int>(ndim), dev_type, dev_id,
+                               delay_alloc, dtype, num_aux, aux_type,
+                               reinterpret_cast<int *>(aux_ndims), aux_shape, out);
   API_END();
 }
 
