@@ -1332,9 +1332,10 @@ method update(
         {
             $grad = AI::MXNet::NDArray->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
+	$grad += $wd * $weight;
         $history += $grad->square;
         my $div = $grad / (($history)->sqrt + $self->epsilon);
-        $weight += ($div + $weight * $wd) * -$lr;
+        $weight += $div * -$lr;
     }
 }
 

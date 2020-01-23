@@ -17,7 +17,7 @@
 # under the License.
 """Signum optimizer."""
 from __future__ import absolute_import
-from ..ndarray import (zeros, clip, sign)
+from ..ndarray import (zeros, clip)
 from ..ndarray import (signsgd_update, signum_update)
 from .optimizer import Optimizer, register
 

@@ -1058,7 +1058,7 @@ sub test_adagrad
     my $opt1 = 'PerlAdaGrad';
     my $opt2 = mx->optimizer->AdaGrad;
     my $shape = [3, 4, 5];
-    my @eps_options= ({epsilon => 1e-9});
+    my @eps_options= ({}, {epsilon => 1e-9});
     my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
     my @rg_options = ({}, {rescale_grad  => 0.14}, {rescale_grad => 0.8});
     my @wd_options = ({}, {wd => 0});
