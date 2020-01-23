@@ -181,6 +181,49 @@ def test_affine_transform():
         net = TestAffineTransform('sample')
         mx_out = net(loc, scale, expected_shape).asnumpy()
         assert mx_out.shape == expected_shape
+
+
+@with_seed()
+@use_np
+def test_compose_transform():
+    class TestComposeTransform(HybridBlock):
+        def __init__(self, func):
+            super(TestComposeTransform, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, loc, scale, *args):
+            # Generate a log_normal distribution.
+            std_normal = mgp.Normal(F.np.zeros_like(loc),
+                                    F.np.ones_like(scale), F)
+            transforms = mgp.ComposeTransform([
+                            mgp.AffineTransform(loc=0, scale=scale),
+                            mgp.AffineTransform(loc=loc, scale=1),
+                            mgp.ExpTransform()
+                            ])
+            transformed_normal = mgp.TransformedDistribution(std_normal, transforms)
+            if (len(args) == 0):
+                return getattr(transformed_normal, self._func)
+            return getattr(transformed_normal, self._func)(*args)
+
+    shapes = [(1,), (2, 3), 6]
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [False]): 
+        loc = np.random.uniform(-1, 1, shape)
+        loc.attach_grad()
+        scale = np.random.uniform(0.5, 1.5, shape)
+        scale.attach_grad()
+        samples = np.random.uniform(1, 2, size=shape)
+        net = TestComposeTransform('log_prob')
+        if hybridize:
+            net.hybridize()
+        with autograd.record():
+            mx_out = net(loc, scale, samples)
+        np_out = _np.log(
+                    ss.lognorm(s=scale.asnumpy(), scale=np.exp(loc).asnumpy()).
+                    pdf(samples.asnumpy())
+                )
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
             
 
 if __name__ == '__main__':
