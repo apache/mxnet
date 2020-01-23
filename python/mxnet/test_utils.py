@@ -102,8 +102,13 @@ def random_arrays(*shapes):
     return arrays
 
 
-def random_uniform_arrays(*shapes, low=0.0, high=1.0, dtype=default_dtype()):
+def random_uniform_arrays(*shapes, **kwargs):
     """Generate some random numpy arrays."""
+    low = kwargs.pop('low', 0.0)
+    high = kwargs.pop('high', 1.0)
+    dtype = kwargs.pop('dtype', default_dtype())
+    if len(kwargs) > 0:
+        raise TypeError('Got unexpected argument/s : ' + str(kwargs.keys()))
     arrays = [np.random.uniform(low, high, size=s).astype(dtype)
               for s in shapes]
     return arrays
