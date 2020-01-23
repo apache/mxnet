@@ -3,6 +3,7 @@ import weakref
 __all__ = ["Transformation", "ComposeTransform", "ExpTransform", "AffineTransform",
            "PowerTransform", "AbsTransform"]
 
+
 class Transformation(object):
     r"""Abstract class for implementing invertible transformation
     with computable log  det jacobians
@@ -13,6 +14,7 @@ class Transformation(object):
         
     """
     bijective = False
+
     def __init__(self, F=None):
         self._inv = None
         self._F = F
@@ -100,7 +102,7 @@ class ComposeTransform(Transformation):
         inv = None
         if self._inv is not None:
             inv = self._inv()
-        else:
+        if inv is None:
             inv = ComposeTransform([t.inv for t in reversed(self._parts)])
             self._inv = weakref.ref(inv)
             inv._inv = weakref.ref(self)
