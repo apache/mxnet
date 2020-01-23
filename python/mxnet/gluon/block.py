@@ -928,17 +928,16 @@ class HybridBlock(Block):
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
-            if self._backend:
-                # To do: pass in all arguments
-                # Partition the graph.
-                out = out.optimize_for(self._backend, **self._backend_args)
-
             self._cached_graph = symbol_inputs, symbol.Group(out, _check_same_symbol_type(out))
 
         return self._cached_graph
 
     def _build_cache(self, *args):
         data, out = self._get_graph(*args)
+        if self._backend:
+            # To do: pass in all arguments
+            # Partition the graph.
+            out = out.optimize_for(self._backend, **self._backend_args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
         input_names = out.list_inputs()
