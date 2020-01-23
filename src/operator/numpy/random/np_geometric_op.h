@@ -62,7 +62,7 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
         .add_enum("bool", mshadow::kBool)
-        .set_default(mshadow::kFloat32)
+        .set_default(mshadow::int32)
         .describe(
             "DType of the output in case this can't be inferred. "
             "Defaults to float32 if not defined (dtype=None).");
@@ -104,7 +104,7 @@ struct scalar_geometric_kernel {
 template <typename IType>
 struct check_legal_prob_kernel {
   MSHADOW_XINLINE static void Map(index_t i, IType *scalar, float* flag) {
-    if (scalar[i] < 0.0 || scalar[i] > 1.0) {
+    if (scalar[i] <= 0.0 || scalar[i] > 1.0) {
       flag[0] = -1.0;
     }
   }
@@ -134,8 +134,8 @@ void NumpyGeometricForward(const nnvm::NodeAttrs &attrs,
   prnd->SampleUniform(&uniform_tensor, 0.0, 1.0);
   if (inputs.size() == 0U) {
     // scalar prob input
-    CHECK_LE(param.prob.value(), 1.0) << "ValueError: expect probs >= 0 && probs <= 1";
-    CHECK_GE(param.prob.value(), 0.0) << "ValueError: expect probs >= 0 && probs <= 1";
+    CHECK_LE(param.prob.value(), 1.0) << "ValueError: expect probs > 0 && probs <= 1";
+    CHECK_GE(param.prob.value(), 0.0) << "ValueError: expect probs > 0 && probs <= 1";
     MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
       Kernel<scalar_geometric_kernel<OType>, xpu>::Launch(
         s, outputs[0].Size(), param.prob.value(),
@@ -161,10 +161,6 @@ void NumpyGeometricForward(const nnvm::NodeAttrs &attrs,
           Kernel<geometric_kernel<NDim, IType, OType>, xpu>::Launch(
             s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
             uniform_tensor.dptr_, outputs[0].dptr<OType>());
-
-//          Kernel<geometric_kernel<NDim, IType, OType>, xpu>::Launch(
-//              s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
-//              uniform_tensor.dptr_, outputs[0].dptr<OType>());
         });
       });
     });
