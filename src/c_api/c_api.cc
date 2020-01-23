@@ -939,7 +939,7 @@ int MXNDArrayCreateEx(const uint32_t *shape,
                       int dtype,
                       NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<uint32_t>(shape, static_cast<int>ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
