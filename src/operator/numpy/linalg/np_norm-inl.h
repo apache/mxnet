@@ -74,7 +74,8 @@ struct nrmlp {
     if (src != 0) {
       DType src_abs = abs::Map(src);
       if (scale < src_abs) {
-        sum_of_powers = 1 + sum_of_powers * AType(lp_power(static_cast<double>(scale / src_abs), lp));
+        sum_of_powers = sum_of_powers * AType(lp_power(static_cast<double>(scale / src_abs), lp));
+        sum_of_powers = sum_of_powers + 1;
         scale = src_abs;
       } else {
         sum_of_powers = sum_of_powers + AType(lp_power(static_cast<double>(src_abs / scale), lp));
@@ -235,7 +236,6 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
   double ord = param.ord;
 
   if (req[0] == kNullOp) return;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
 
   mxnet::TShape small;
   mxnet::TShape out_shape = outputs[0].shape_;
@@ -260,6 +260,7 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
       mshadow_op::nrmlp host_reducer(param.ord);
       mshadow_op::nrmlp *reducer_instance = nullptr;
 #ifdef __CUDACC__
+      Stream<xpu> *s = ctx.get_stream<xpu>();
       cudaStream_t copy_stream = mshadow::Stream<gpu>::GetStream(s);
       cudaMalloc(reinterpret_cast<void**>(&reducer_instance), sizeof(mshadow_op::nrmlp));
       cudaMemcpyAsync(reducer_instance, &host_reducer, sizeof(mshadow_op::nrmlp),
