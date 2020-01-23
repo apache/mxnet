@@ -327,7 +327,7 @@ void NumpyReduceAxesNoDTypeCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
 }
 
-template<typename xpu, typename reducer, typename OP = op::mshadow_op::NonZero>
+template<typename xpu, typename reducer, typename OP = op::mshadow_op::NonZero, int init>
 void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<TBlob>& inputs,
@@ -335,9 +335,14 @@ void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
                                 const std::vector<TBlob>& outputs) {
   const NumpyReduceAxesBoolParam& param = nnvm::get<NumpyReduceAxesBoolParam>(attrs.parsed);
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    Kernel<set_false, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    if (init == 0) {
+      Kernel<set_false, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    } else {
+      Kernel<set_true, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    }
     return;
   }
   if (param.axis.has_value() && param.axis.value().ndim() == 0) {
