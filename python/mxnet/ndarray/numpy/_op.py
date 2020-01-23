@@ -476,7 +476,7 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     """
     dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
                   _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
-                  _np.float64:'float64', _np.bool_:'bool'}
+                  _np.float64:'float64', _np.bool_:'bool_', bool:'bool', int:'int64', float:'float64'}
     if order != 'C':
         raise NotImplementedError("Only support C-order at this moment")
     if subok:

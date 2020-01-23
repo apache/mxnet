@@ -509,8 +509,8 @@ def test_np_any():
     axes = [True, False]
     shapes = [(), (5, ), (10, ),
               (2, 5), (5, 5), (10, 10),
-              (4, 4, 4), (4, 6, 9), (6, 6, 6),
-              (7, 8, 9, 10), (7, 9, 11, 13)]
+              (4, 4, 4), (4, 6, 9), (6, 6, 6), (6, 0, 5),
+              (7, 8, 9, 10), (7, 9, 11, 13), (0, 7, 7, 5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
 
     combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
@@ -518,7 +518,7 @@ def test_np_any():
         ndim = len(shape)
         samples = random.randint(0, ndim)
         axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
-        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        x = np.random.normal(0, 5.0, size=shape).astype(dtype)
         test_any = TestAny(axis=axis, keepdims=keepdim)
         if hybridize:
             test_any.hybridize()
@@ -548,8 +548,8 @@ def test_np_all():
     axes = [True, False]
     shapes = [(), (5, ), (10, ),
               (2, 5), (5, 5), (10, 10),
-              (4, 4, 4), (4, 6, 9), (6, 6, 6),
-              (7, 8, 9, 10), (7, 9, 11, 13)]
+              (4, 4, 4), (4, 6, 9), (6, 6, 6), (6, 0, 5),
+              (7, 8, 9, 10), (7, 9, 11, 13), (0, 7, 7, 5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
 
     combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
@@ -557,7 +557,7 @@ def test_np_all():
         ndim = len(shape)
         samples = random.randint(0, ndim)
         axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
-        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        x = np.random.normal(0, 5.0, size=shape).astype(dtype)
         test_all = TestAll(axis=axis, keepdims=keepdim)
         if hybridize:
             test_all.hybridize()
@@ -1296,12 +1296,12 @@ def test_npi_boolean_assign():
 
     for hybridize in [False]:
         for config in configs:
-            print(config)
             dshape, mshape, start_axis = config
             test_data = np.random.uniform(size=dshape)
-            mx_mask = np.around(np.random.uniform(size=mshape))
-            valid_num = int(mx_mask.sum())
-            np_mask = mx_mask.asnumpy().astype(_np.bool)
+            np_mask = _np.random.choice(a=[False, True], size=mshape)
+            mx_mask = np.array(np_mask)
+            # to avoid using tvm op greater_scalar in gpu environment
+            valid_num = int(mx_mask.asnumpy().sum())
             vshape = []
             for i in range(len(dshape)):
                 if i < start_axis:
@@ -1311,30 +1311,39 @@ def test_npi_boolean_assign():
                 elif i >= start_axis + len(mshape):
                     vshape.append(dshape[i])
             vshape = tuple(vshape)
-            for val in [42.0, np.array(42.), np.array([42.]), np.random.uniform(size=vshape)]:
-                test_block = TestBooleanAssignScalar(val, start_axis) if isinstance(val, float) else TestBooleanAssignTensor(start_axis)
+            for val in [42.0, _np.array(42.), _np.array([42.]), _np.random.uniform(size=vshape)]:
+                mx_val = val if isinstance(val, float) else np.array(val, dtype=np.float32)
+                test_block = TestBooleanAssignScalar(mx_val, start_axis) if isinstance(mx_val, float) else TestBooleanAssignTensor(start_axis)
                 if hybridize:
                     test_block.hybridize()
                 np_data = test_data.asnumpy()
-                mx_data = test_data.copy()
+                mx_data1 = test_data.copy()
+                mx_data2 = test_data.copy()
                 trailing_axis = len(np_data.shape) - len(np_mask.shape) - start_axis
                 if start_axis == 0:
                     if trailing_axis == 0:
                         np_data[np_mask] = val
+                        mx_data1[mx_mask] = mx_val
                     elif trailing_axis == 1:
                         np_data[np_mask, :] = val
+                        mx_data1[mx_mask, :] = mx_val
                     elif trailing_axis == 2:
                         np_data[np_mask, :, :] = val
+                        mx_data1[mx_mask, :, :] = mx_val
                 elif start_axis == 1:
                     if trailing_axis == 0:
                         np_data[:, np_mask] = val
+                        mx_data1[:, mx_mask] = mx_val
                     elif trailing_axis == 1:
                         np_data[:, np_mask, :] = val
+                        mx_data1[:, mx_mask, :] = mx_val
                 elif start_axis == 2:
                     if trailing_axis == 0:
                         np_data[:, :, np_mask] = val
-                mx_data = test_block(mx_data, mx_mask) if isinstance(val, float) else test_block(mx_data, mx_mask, val)
-                assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                        mx_data1[:, :, mx_mask] = mx_val
+                mx_data1 = test_block(mx_data2, mx_mask) if isinstance(val, float) else test_block(mx_data2, mx_mask, mx_val)
+                assert_almost_equal(mx_data1.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                assert_almost_equal(mx_data2.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
@@ -3485,6 +3494,52 @@ def test_np_randn():
         for shape in shapes:
             data_mx = np.random.randn(*shape, dtype=dtype)
             assert data_mx.shape == shape
+
+
+@with_seed()
+@use_np
+def test_np_multivariate_normal():
+    class TestMultivariateNormal(HybridBlock):
+        def __init__(self, size=None):
+            super(TestMultivariateNormal, self).__init__()
+            self.size = size
+
+        def hybrid_forward(self, F, mean, cov):
+            return F.np.random.multivariate_normal(mean, cov, self.size)
+
+    hybridize_list = [True, False]
+    dtypes = ['float16', 'float32', 'float64']
+    size_list = [None, 1, (), (2, 3), (2, 0)]
+    # [mean_shape, cov_shape]: _np.broadcast(mean_shape, cov_shape[:-1]) should not raise error
+    batch_shape_list = [[(2,), (2, 2)], [(3, 2), (2, 2)], [(2,), (3, 2, 2)], [(3, 2), (4, 3, 2, 2)]]
+    # most basic case for mean and cov
+    mean = np.array([0.123456789, 10])
+    cov = np.array([[1, 0], [0, 10]])
+
+    for [hybridize, dtype, size, batch_shape] in itertools.product(hybridize_list,\
+                dtypes, size_list, batch_shape_list):
+        # simplest case: 1-d, 0 batch
+        # compared with official numpy
+        mean_shape = batch_shape[0]
+        cov_shape = batch_shape[1]
+        new_mean = np.broadcast_to(mean, mean_shape).astype(dtype)
+        new_cov = np.broadcast_to(cov, cov_shape).astype(dtype)
+
+        test_multivariate_normal = TestMultivariateNormal(size)
+        if hybridize:
+            test_multivariate_normal.hybridize()
+
+        test_shape = test_multivariate_normal(new_mean, new_cov).shape
+        actual_shape = np.random.multivariate_normal(new_mean, new_cov, size).shape
+
+        desired_shape = np.broadcast_arrays(np.empty(mean_shape), np.empty(cov_shape[:-1]))[0].shape
+
+        if size is not None:
+            size = [size] if isinstance(size, int) else list(size)
+            desired_shape = size + list(desired_shape)
+
+        assert list(desired_shape) == list(test_shape)
+        assert list(desired_shape) == list(actual_shape)
 
 
 @with_seed()
