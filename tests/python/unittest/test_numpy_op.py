@@ -3413,7 +3413,7 @@ def test_np_lognormal_grad():
                 mx_out = test_lognormal_grad(mean, sigma)
             np_out = _np.random.lognormal(mean = mean.asnumpy(), 
                                             sigma = sigma.asnumpy(), size = out_shape)
-            assert_almost_equal(np_out.shape, mx_out.shape)
+            assert np_out.shape == mx_out.shape
             mx_out.backward()
             assert mean.grad.shape == shape1
             assert sigma.grad.shape == shape2
