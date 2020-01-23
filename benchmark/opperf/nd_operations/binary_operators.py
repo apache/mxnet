@@ -65,7 +65,7 @@ def run_mx_binary_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profi
     return mx_binary_op_results
 
 
-def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the binary
     broadcast operators in MXNet.
 
@@ -90,11 +90,11 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
     # Fetch all Binary Broadcast Operators
     mx_binary_broadcast_ops = get_all_broadcast_binary_operators()
     # Run benchmarks
-    mx_binary_op_results = run_op_benchmarks(mx_binary_broadcast_ops, dtype, ctx, profiler, warmup, runs)
+    mx_binary_op_results = run_op_benchmarks(mx_binary_broadcast_ops, dtype, ctx, profiler, large_tensor, warmup, runs)
     return mx_binary_op_results
 
 
-def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the binary
     element_wise operators in MXNet.
 
@@ -119,5 +119,5 @@ def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32
     # Fetch all Binary Element_wise Operators
     mx_binary_element_wise_ops = get_all_elemen_wise_binary_operators()
     # Run benchmarks
-    mx_binary_op_results = run_op_benchmarks(mx_binary_element_wise_ops, dtype, ctx, profiler, warmup, runs)
+    mx_binary_op_results = run_op_benchmarks(mx_binary_element_wise_ops, dtype, ctx, profiler, large_tensor, warmup, runs)
     return mx_binary_op_results

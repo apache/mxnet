@@ -109,7 +109,7 @@ def prepare_op_inputs(arg_params, arg_values):
     return inputs
 
 
-def prepare_op_inputs(op, arg_params):
+def prepare_op_inputs(op, arg_params, large_tensor):
     inputs = []
 
     # 4d tensor is needed only by following two ops
