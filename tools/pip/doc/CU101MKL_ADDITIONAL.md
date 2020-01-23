@@ -40,5 +40,5 @@ Installation
 ------------
 To install:
 ```bash
-pip install mxnet-cu100mkl
+pip install mxnet-cu101mkl
 ```

@@ -27,7 +27,7 @@ from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
 from common import with_seed, TemporaryDirectory
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
 import scipy.stats as ss
@@ -281,6 +281,62 @@ def test_np_ndarray_binary_element_wise_ops():
             '<=': _np.less_equal
         })
 
+    def _get_grad_func(op, scalar=None, reverse=False):
+        if op == '+':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: ograd
+        elif op == '-':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   -collapse_sum_like(ograd, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd
+        elif op == '*':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2, x1.shape),
+                                                   collapse_sum_like(ograd * x1, x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2
+            else:
+                return lambda ograd, x1, x2, out: ograd * x1
+        elif op == '/':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd / x2, x1.shape),
+                                                   collapse_sum_like(-x1 * ograd / (x2 * x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd / x2
+            else:
+                return lambda ograd, x1, x2, out: -x1 * ograd / (x2 * x2)
+        elif op == 'mod':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd, x1.shape),
+                                                   collapse_sum_like(-ograd * _np.floor(x1 / x2), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd
+            else:
+                return lambda ograd, x1, x2, out: -ograd * _np.floor(x1 / x2)
+        elif op == 'pow':
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (collapse_sum_like(ograd * x2 * _np.power(x1, x2 - 1), x1.shape),
+                                                   collapse_sum_like(ograd * out * _np.log(x1), x2.shape))
+            elif not reverse:
+                return lambda ograd, x1, x2, out: ograd * x2 * _np.power(x1, x2 - 1)
+            else:
+                return lambda ograd, x1, x2, out: ograd * out * _np.log(x1)
+        elif op in ('==', '!=', '<', '<=', '>', '>='):
+            if scalar is None:
+                return lambda ograd, x1, x2, out: (_np.zeros_like(x1), _np.zeros_like(x2))
+            else:
+                return lambda ograd, x1, x2, out: _np.zeros_like(ograd)
+        return None
+
     def get_np_ret(x1, x2, op):
         return np_op_map[op](x1, x2)
 
@@ -364,13 +420,15 @@ def test_np_ndarray_binary_element_wise_ops():
             mx_input1 = abs(_np.random.uniform()) + 1
             np_input1 = mx_input1
         else:
-            mx_input1 = rand_ndarray(shape1, dtype=dtype).abs() + 1
+            mx_input1 = (rand_ndarray(shape1, dtype=dtype).abs() + 1).as_np_ndarray()
+            mx_input1.attach_grad()
             np_input1 = mx_input1.asnumpy()
         if shape2 is None:
             mx_input2 = abs(_np.random.uniform()) + 1
             np_input2 = mx_input2
         else:
-            mx_input2 = rand_ndarray(shape2, dtype=dtype).abs() + 1
+            mx_input2 = (rand_ndarray(shape2, dtype=dtype).abs() + 1).as_np_ndarray()
+            mx_input2.attach_grad()
             np_input2 = mx_input2.asnumpy()
 
         scalar = None
@@ -382,7 +440,9 @@ def test_np_ndarray_binary_element_wise_ops():
             scalar = mx_input1
             reverse = True
 
+        grad_func = _get_grad_func(op, scalar, reverse)
         np_out = get_np_ret(np_input1, np_input2, op)
+        ograd = _np.ones_like(np_out)
         for hybridize in [True, False]:
             if scalar is None:
                 get_mx_ret_np = TestBinaryElementWiseOp(op)
@@ -390,26 +450,49 @@ def test_np_ndarray_binary_element_wise_ops():
                 if hybridize:
                     get_mx_ret_np.hybridize()
                     get_mx_ret_classic.hybridize()
-                mx_out = get_mx_ret_np(mx_input1.as_np_ndarray(), mx_input2.as_np_ndarray())
+                if grad_func is None:
+                    mx_out = get_mx_ret_np(mx_input1, mx_input2)
+                else:
+                    with mx.autograd.record():
+                        mx_out = get_mx_ret_np(mx_input1, mx_input2)
+                    mx_out.backward()
                 assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
                 if op in logic_ops:
                     assert np_out.dtype == mx_out.dtype
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5, use_broadcast=False)
+
+                if grad_func is not None:
+                    x1_grad_expected, x2_grad_expected = grad_func(ograd, np_input1, np_input2, np_out)
+                    assert_almost_equal(mx_input1.grad.asnumpy(), x1_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
+                    assert_almost_equal(mx_input2.grad.asnumpy(), x2_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
             else:
                 get_mx_ret = TestBinaryElementWiseOp(op, scalar=scalar, reverse=reverse)
                 if hybridize:
                     get_mx_ret.hybridize()
                 if reverse:
-                    mx_out = get_mx_ret(mx_input2.as_np_ndarray())
-                    assert type(mx_out) == np.ndarray
+                    mx_input = mx_input2
                 else:
-                    mx_out = get_mx_ret(mx_input1.as_np_ndarray())
-                    assert type(mx_out) == np.ndarray
-                assert np_out.shape == mx_out.shape
+                    mx_input = mx_input1
+
+                if grad_func is None:
+                    mx_out = get_mx_ret(mx_input)
+                else:
+                    with mx.autograd.record():
+                        mx_out = get_mx_ret(mx_input)
+                    mx_out.backward()
+                assert type(mx_out) == np.ndarray
+
                 if op in logic_ops:
                     assert np_out.dtype == mx_out.dtype
-                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5)
+                assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-6, rtol=1e-5, use_broadcast=False)
+
+                # check grad
+                if grad_func is not None:
+                    x_grad_expected = grad_func(ograd, np_input1, np_input2, np_out)
+                    assert_almost_equal(mx_input.grad.asnumpy(), x_grad_expected, atol=1e-5, rtol=1e-3,
+                                        use_broadcast=False)
 
     dtypes = [_np.float32, _np.float64, None]
     ops = np_op_map.keys()
@@ -519,6 +602,34 @@ def test_np_ndarray_copy():
 
 
 @with_seed()
+def test_formatting():
+    def test_0d():
+        a = np.array(np.pi)
+        _a = a.asnumpy()
+        assert '{:0.3g}'.format(a) == '{:0.3g}'.format(_a)
+        assert '{:0.3g}'.format(a[()]) == '{:0.3g}'.format(_a[()])
+
+    def test_nd_format():
+        a = np.array([np.pi])
+        assert_exception('{:30}'.format, TypeError, a)
+
+    def test_nd_no_format():
+        a = np.array([np.pi])
+        _a = a.asnumpy()
+        assert '{}'.format(a) == '{}'.format(_a)
+        b = np.arange(8).reshape(2,2,2)
+        assert '{}'.format(a) == '{}'.format(_a)
+
+    context = mx.context.current_context()
+    if str(context)[:3] != 'gpu':
+        test_0d()
+        test_nd_format()
+        test_nd_no_format() 
+    # if the program is running in GPU, the formatted string would be appended with context notation
+    # for exmpale, if a = np.array([np.pi]), the return value of '{}'.format(a) is '[3.1415927] @gpu(0)'
+
+
+@with_seed()
 @use_np
 def test_np_ndarray_indexing():
     def np_int(index, int_type=np.int32):
@@ -559,13 +670,18 @@ def test_np_ndarray_indexing():
             )
         np_indexed_array = np_array[np_index]
         mx_np_array = np.array(np_array, dtype=np_array.dtype)
-        try:
-            mx_indexed_array = mx_np_array[index]
-        except Exception as e:
-            print('Failed with index = {}'.format(index))
-            raise e
-        mx_indexed_array = mx_indexed_array.asnumpy()
-        assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
+        for autograd in [True, False]:
+            try:
+                if autograd:
+                    with mx.autograd.record():
+                        mx_indexed_array = mx_np_array[index]
+                else:
+                    mx_indexed_array = mx_np_array[index]
+            except Exception as e:
+                print('Failed with index = {}'.format(index))
+                raise e
+            mx_indexed_array = mx_indexed_array.asnumpy()
+            assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
     def test_setitem(np_array, index):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
@@ -608,26 +724,37 @@ def test_np_ndarray_indexing():
         np_indexed_array = _np.random.randint(low=-10000, high=0, size=indexed_array_shape)
         # test value is a native numpy array without broadcast
         assert_same(np_array, np_index, mx_array, index, np_indexed_array)
+        # test value is a list without broadcast
+        assert_same(np_array, np_index, mx_array, index, np_indexed_array.tolist())
         # test value is a mxnet numpy array without broadcast
         assert_same(np_array, np_index, mx_array, index, np.array(np_indexed_array))
         # test value is an numeric_type
         assert_same(np_array, np_index, mx_array, index, _np.random.randint(low=-10000, high=0))
-        if len(indexed_array_shape) > 1:
-            np_value = _np.random.randint(low=-10000, high=0, size=(indexed_array_shape[-1],))
-            # test mxnet ndarray with broadcast
-            assert_same(np_array, np_index, mx_array, index, np.array(np_value))
-            # test native numpy array with broadcast
-            assert_same(np_array, np_index, mx_array, index, np_value)
 
-            # test value shape are expanded to be longer than index array's shape
-            # this is currently only supported in basic indexing
-            if _is_basic_index(index):
-                expanded_value_shape = (1, 1, 1) + np_value.shape
-                assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
-                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
-            # test list with broadcast
-            assert_same(np_array, np_index, mx_array, index,
-                        [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1])
+        np_value = _np.random.randint(low=-10000, high=0,
+                                      size=(indexed_array_shape[-1],) if len(indexed_array_shape) > 0 else ())
+        # test mxnet ndarray with broadcast
+        assert_same(np_array, np_index, mx_array, index, np.array(np_value))
+        # test native numpy array with broadcast
+        assert_same(np_array, np_index, mx_array, index, np_value)
+        # test python list with broadcast
+        assert_same(np_array, np_index, mx_array, index, np_value.tolist())
+
+        # test value shape are expanded to be longer than index array's shape
+        # this is currently only supported in basic indexing
+        if _is_basic_index(index):
+            expanded_value_shape = (1, 1) + np_value.shape
+            assert_same(np_array, np_index, mx_array, index, np.array(np_value.reshape(expanded_value_shape)))
+            assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape))
+            if len(expanded_value_shape) <= np_array[index].ndim:
+                # NumPy does not allow value.ndim > np_array[index].ndim when value is a python list.
+                # It may be a bug of NumPy.
+                assert_same(np_array, np_index, mx_array, index, np_value.reshape(expanded_value_shape).tolist())
+
+        # test list with broadcast
+        assert_same(np_array, np_index, mx_array, index,
+                    [_np.random.randint(low=-10000, high=0)] * indexed_array_shape[-1] if len(indexed_array_shape) > 0
+                    else _np.random.randint(low=-10000, high=0))
 
     def test_getitem_autograd(np_array, index):
         """
@@ -685,6 +812,7 @@ def test_np_ndarray_indexing():
         np_int(slice(1, 5), np.int32),
         np_int(slice(1, 5), np.int64),
         slice(1, 5, 2),
+        slice(1, 2, 2),
         np_int(slice(1, 5, 2), np.int32),
         np_int(slice(1, 5, 2), np.int64),
         slice(7, 0, -1),
@@ -816,6 +944,9 @@ def test_np_ndarray_indexing():
         range(4),
         range(3, 0, -1),
         (range(4,), [1]),
+        (1, 1, slice(None), 1),
+        (1, 1, slice(None, 3), 1),
+        (1, 1, slice(None, 8, 3), 1),
     ]
     for index in index_list:
         test_getitem(np_array, index)
@@ -836,8 +967,8 @@ def test_np_ndarray_indexing():
 
     # test zero-size tensors get and setitem
     shapes_indices = [
-                        ((0), [slice(None, None, None)]),
-                        ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
+        ((0), [slice(None, None, None)]),
+        ((3, 0), [2, (slice(None, None, None)), (slice(None, None, None), None)]),
     ]
     for shape, indices in shapes_indices:
         np_array = _np.zeros(shape)
@@ -889,40 +1020,6 @@ def test_np_save_load_ndarrays():
         for k, v in arr_dict_loaded.items():
             assert k in arr_dict
             assert _np.array_equal(v.asnumpy(), arr_dict[k].asnumpy())
-
-
-@retry(5)
-@with_seed()
-@use_np
-def test_np_uniform():
-    types = [None, "float32", "float64"]
-    ctx = mx.context.current_context()
-    samples = 1000000
-    # Generation test
-    trials = 8
-    num_buckets = 5
-    for dtype in types:
-        for low, high in [(-100.0, -98.0), (99.0, 101.0)]:
-            scale = high - low
-            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.uniform.ppf(x, loc=low, scale=scale), num_buckets)
-            buckets = np.array(buckets, dtype=dtype).tolist()
-            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: mx.np.random.uniform(low, high, size=x, ctx=ctx, dtype=dtype).asnumpy()
-            verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
-
-    # Broadcasting test
-    params = [
-        (1.0, mx.np.ones((4,4)) + 2.0),
-        (mx.np.zeros((4,4)) + 1, 2.0),
-        (mx.np.zeros((1,4)), mx.np.ones((4,4)) + mx.np.array([1, 2, 3, 4])),
-        (mx.np.array([1, 2, 3, 4]), mx.np.ones((2,4,4)) * 5)
-    ]
-    for dtype in types:
-        for low, high in params:
-            expect_mean = (low + high) / 2
-            expanded_size = (samples,) + expect_mean.shape
-            uniform_samples = mx.np.random.uniform(low, high, size=expanded_size, dtype=dtype)
-            mx.test_utils.assert_almost_equal(uniform_samples.asnumpy().mean(0), expect_mean.asnumpy(), rtol=0.20, atol=1e-1)
 
 
 @retry(5)
@@ -1026,8 +1123,6 @@ def test_np_ndarray_boolean_indexing():
         index = np.zeros((4, 4), dtype=bool)
         assert_exception(arr.__getitem__, IndexError, index)
 
-        assert_exception(arr.__getitem__, TypeError, (slice(None), index))
-
     def test_boolean_indexing_onedim():
         # adapted from numpy's test_indexing.py
         # Indexing a 2-dimensional array with
@@ -1058,6 +1153,55 @@ def test_np_ndarray_boolean_indexing():
         assert same(a[b].asnumpy(), _np.array([1, 3], dtype=a.dtype))
         (a[None, b], [[1, 3]])
 
+    def test_boolean_indexing_tuple():
+        # case arr[:, mask, :] and arr[1, mask, 0]
+        # when a boolean array is in a tuple
+        a = np.array([[[0, 1],
+                       [2, 3]],
+                      [[4, 5],
+                       [6, 7]]], dtype=np.int32)
+        b = np.array([[False,True],
+                      [True,False]],dtype=np.bool)
+        _np_a = a.asnumpy()
+        _np_b = b.asnumpy()
+        assert same(a[:, b].asnumpy(), _np_a[:, _np_b])
+        assert same(a[b, :].asnumpy(), _np_a[_np_b, :])
+        assert same(a[0, b].asnumpy(), _np_a[0, _np_b])
+        assert same(a[b, 1].asnumpy(), _np_a[_np_b, 1])
+
+    def test_boolean_indexing_assign():
+        # test boolean indexing assign
+        shape = (3, 2, 3)
+        mx_data = np.random.uniform(size=shape)
+        mx_mask = np.array([[False,True], [True,False], [True,False]],dtype=np.bool)
+        np_data = mx_data.asnumpy()
+        np_mask = mx_mask.asnumpy()
+
+        np_data[np_data>0.5] = 0
+        mx_data[mx_data>0.5] = 0
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        np_data[np_mask] = 1
+        mx_data[mx_mask] = 1
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        # not supported at this moment
+        # only support boolean array at the end of the idces when it is mixed with integers
+        # np_data[np_mask, 1] = 2
+        # mx_data[mx_mask, 1] = 2
+        # assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        np_data[np_mask, :] = 3
+        mx_data[mx_mask, :] = 3
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+        mx_mask = np.array([[False,True, True],[False, True,False]],dtype=np.bool)
+        np_mask = mx_mask.asnumpy()
+        
+        np_data[0, np_mask] = 5
+        mx_data[0, mx_mask] = 5
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        np_data[:, np_mask] = 6
+        mx_data[:, mx_mask] = 6
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
     def test_boolean_indexing_autograd():
         a = np.random.uniform(size=(3, 4, 5))
         a.attach_grad()
@@ -1078,6 +1222,8 @@ def test_np_ndarray_boolean_indexing():
     test_boolean_indexing_onedim()
     test_boolean_indexing_twodim()
     test_boolean_indexing_list()
+    test_boolean_indexing_tuple()
+    test_boolean_indexing_assign()
     test_boolean_indexing_autograd()
 
 
@@ -1109,11 +1255,14 @@ def test_np_ndarray_pickle():
     a = np.random.uniform(size=(4, 5))
     a_copy = a.copy()
     import pickle
-    with open("np_ndarray_pickle_test_file", 'wb') as f:
-        pickle.dump(a_copy, f)
-    with open("np_ndarray_pickle_test_file", 'rb') as f:
-        a_load = pickle.load(f)
-    same(a.asnumpy(), a_load.asnumpy())
+
+    with TemporaryDirectory() as work_dir:
+        fname = os.path.join(work_dir, 'np_ndarray_pickle_test_file')
+        with open(fname, 'wb') as f:
+            pickle.dump(a_copy, f)
+        with open(fname, 'rb') as f:
+            a_load = pickle.load(f)
+        same(a.asnumpy(), a_load.asnumpy())
 
 
 if __name__ == '__main__':

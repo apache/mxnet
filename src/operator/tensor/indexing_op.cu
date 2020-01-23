@@ -33,7 +33,6 @@ namespace op {
 
 /*! \brief If there are out-of-bound indices, out will be assigned to 1.
  */
-
 struct is_valid_check {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, char* out, const DType* data,
@@ -154,8 +153,9 @@ bool CheckIndexOutOfBound(mshadow::Stream<gpu> *s, const DType* data_ptr, size_t
   int32_t is_valid = 0;
   Kernel<set_zero, gpu>::Launch(s, 1, is_valid_ptr);
   Kernel<is_valid_check, gpu>::Launch(s, data_size, is_valid_ptr, data_ptr, min, max);
-  CUDA_CALL(cudaMemcpy(&is_valid, is_valid_ptr, sizeof(char),
-            cudaMemcpyDeviceToHost));
+  CUDA_CALL(cudaMemcpyAsync(&is_valid, is_valid_ptr, sizeof(char),
+                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
   return is_valid == 0;
 }
 
@@ -307,8 +307,9 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
       grad_row_idx, grad_row_idx + data_size, data_size, Stream<gpu>::GetStream(s));
 
   dim_t nnr = 0;
-  CUDA_CALL(cudaMemcpy(&nnr, grad_row_idx + data_size, sizeof(RType),
-      cudaMemcpyDeviceToHost));
+  CUDA_CALL(cudaMemcpyAsync(&nnr, grad_row_idx + data_size, sizeof(RType),
+                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
   CHECK_EQ(output.shape().ndim(), 2) << "Unexcepted ndim";
   output.CheckAndAllocData(Shape2(nnr, output.shape()[1]));
   output.set_aux_shape(kIdx, Shape1(nnr));
@@ -410,8 +411,9 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
                                       num_rows,
                                       mshadow::Stream<gpu>::GetStream(s));
         dim_t nnr = 0;
-        CUDA_CALL(cudaMemcpy(&nnr, &prefix_sum[num_rows-1], sizeof(dim_t),
-            cudaMemcpyDeviceToHost));
+        CUDA_CALL(cudaMemcpyAsync(&nnr, &prefix_sum[num_rows-1], sizeof(dim_t),
+                                  cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+        CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
         if (nnr == 0) {
           FillZerosRspImpl(s, output);
           return;
@@ -430,6 +432,71 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
         Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
             data.dptr<IType>(), ograd.dptr<DType>(), row_length);
       });
+    });
+  });
+}
+
+/*
+ * \brief check if any of the indices is out of bound
+ * \param s the stream
+ * \param idx_ptr the indices on the stream
+ * \param N the number of indices in an axis
+ * \param M the number of axises to exmaine
+ * \param mshape the array that stores shape for each dimension
+ * \param is_valid_dim_ptr the temparary workspace that contains out-of-bound indices
+ */
+template<typename DType>
+void GatherNDCheckBoundGPU(mshadow::Stream<gpu> *s, const DType* idx_ptr, index_t N,
+                          index_t M, const mshadow::Shape<10> mshape, DType* is_valid_dim_ptr) {
+  using namespace mxnet_op;
+  Kernel<set_zero, gpu>::Launch(s, M, is_valid_dim_ptr);
+  Kernel<is_valid_check_gather_nd, gpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
+
+  std::vector<DType> is_valid_dim(M);
+  CUDA_CALL(cudaMemcpyAsync(is_valid_dim.data(), is_valid_dim_ptr, sizeof(DType)*M,
+                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
+  for (int m = 0; m < M; m++) {
+    if (is_valid_dim[m] > mshape[m] - 1 || is_valid_dim[m] < - mshape[m]) {
+      LOG(FATAL)<< "IndexError: index " << is_valid_dim[m] << " is out of bounds for axis "
+        << m << " with size " << mshape[m];
+    }
+  }
+}
+
+void GatherNDForwardGPU(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  const mxnet::TShape& dshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = dshape.ProdShape(M, dshape.ndim());
+  mshadow::Shape<10> strides;
+  mshadow::Shape<10> mshape;
+  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+    strides[i] = stride;
+    mshape[i] = dshape[i];
+  }
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      // check whether indices are out of bound
+      IType* idx_ptr = inputs[1].dptr<IType>();
+      Tensor<gpu, 1, IType> workspace =
+        ctx.requested[0].get_space_typed<gpu, 1, IType>(Shape1(M), s);
+      IType* is_valid_dim_ptr = reinterpret_cast<IType*>(workspace.dptr_);
+      GatherNDCheckBoundGPU(s, idx_ptr, N, M, mshape, is_valid_dim_ptr);
+      Kernel<gather_nd, gpu>::Launch(
+        s, N, req[0], N, M, K, strides, mshape, outputs[0].dptr<DType>(),
+        inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
 }
@@ -810,7 +877,7 @@ NNVM_REGISTER_OP(one_hot)
 .set_attr<FCompute>("FCompute<gpu>", OneHotOpForward<gpu>);
 
 NNVM_REGISTER_OP(gather_nd)
-.set_attr<FCompute>("FCompute<gpu>", GatherNDForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", GatherNDForwardGPU);
 
 NNVM_REGISTER_OP(scatter_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);

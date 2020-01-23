@@ -75,3 +75,5 @@ include/*
 searchtools_custom.js
 theme.conf
 LICENSE.binary.dependencies
+cmake/Modules/FindCUDAToolkit.cmake
+np_einsum_op-inl.h

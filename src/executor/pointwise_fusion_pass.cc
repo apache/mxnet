@@ -36,10 +36,26 @@
 #include "../operator/fusion/fused_op.h"
 #include "../operator/operator_common.h"
 
-#if MXNET_USE_CUDA
-
 namespace mxnet {
 namespace exec {
+
+void WarnFusionNotSupported() {
+  static bool issued_warning = false;
+  if (!issued_warning) {
+    issued_warning = true;
+#if defined(_WIN32)
+    LOG(WARNING) << "Omitting dynamic fused op creation- not enabled on Windows.  "
+                 << "Unset env var MXNET_USE_FUSION=1 to quiet this message.";
+#else
+    LOG(WARNING) << "Omitting dynamic fused op creation- needs MXNet lib built with "
+                   << "USE_CUDA=1 and ENABLE_CUDA_RTC=1.  Unset env var MXNET_USE_FUSION=1 "
+                   << "to quiet this message.";
+#endif  // defined(_WIN32)
+  }
+}
+
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+
 namespace {
   bool IsFusionCompatible(nnvm::Node* n) {
     using namespace mxnet::fusion;
@@ -83,15 +99,7 @@ namespace {
     auto node = nnvm::Node::Create();
     subgraph_sym.outputs = subgraph.outputs;
     node->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(subgraph_sym));
-    std::ostringstream name_oss;
-    // the name of the new node will be the concatenation of all the node names in the subgraph
-    DFSVisit(subgraph.outputs, [&name_oss](const nnvm::NodePtr n) {
-      if (n->op() != nullptr)
-        name_oss << n->op()->name << "_";
-    });
-    auto subgraph_name = name_oss.str();
-    subgraph_name.pop_back();
-    node->attrs.name = subgraph_name;
+    node->attrs.name = "FusedOp";
     node->attrs.dict["num_inputs"] = std::to_string(inputs_size);
     node->attrs.dict["num_outputs"] = std::to_string(subgraph.outputs.size());
     node->attrs.op = Op::Get("_FusedOp");
@@ -152,7 +160,8 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
         auto it = node->control_deps.begin();
         static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
         std::vector<nnvm::NodePtr> new_control_deps;
-        while (it != node->control_deps.end()) {
+        // Use the first control dependency to get the inferattr helper
+        if (it != node->control_deps.end()) {
           if (subgraph_set.count(it->get())) {
             new_control_deps.push_back(*it);
           } else {
@@ -160,8 +169,7 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
               uint32_t node_id = subgraph_node->control_deps.size();
               subgraph_node->control_deps.push_back(*it);
               auto helper_node = op::MakeNode("_FusedOpOutHelper",
-                                              subgraph_node->attrs.name + "_"
-                                              + node->attrs.name + "_outhelper",
+                                              "FusedOp_" + node->attrs.name + "_outhelper",
                                               nullptr,
                                               nullptr,
                                               nullptr);
@@ -179,6 +187,17 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
         node->control_deps = new_control_deps;
       }
     });
+
+    std::ostringstream name_oss;
+    // the name of the new node will be the concatenation of all the node names in the subgraph
+    DFSVisit(subgraph.outputs, [&name_oss](const nnvm::NodePtr n) {
+      if (n->op() != nullptr) {
+        name_oss << n->op()->name << "_";
+      }
+    });
+    auto subgraph_name = name_oss.str();
+    subgraph_name.pop_back();
+    subgraph_node->attrs.name = subgraph_name;
 
     const auto& index = subgraph.indexed_graph();
     DFSVisit(g.outputs, [&subgraph_node, &subgraph_set, &index](const nnvm::NodePtr& node) {
@@ -301,8 +320,8 @@ Graph FusePointwiseBackward(Graph &&g) {
   ret.outputs = g.outputs;
   return ret;
 }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 }  // namespace exec
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA

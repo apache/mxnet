@@ -859,14 +859,17 @@ struct op_with_req {
 
   /*! \brief inputs are two tensors with a float output tensor */
   template<typename DType,
-           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float *rhs) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
   /*! \brief inputs are two tensors with a double output tensor */
   template<typename DType,
-           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double *rhs) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
@@ -883,14 +886,17 @@ struct op_with_req {
 
   /*! \brief inputs are two tensors with a float output tensor */
   template<typename DType,
-           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
 
   /*! \brief inputs are two tensors with a double output tensor */
   template<typename DType,
-           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
@@ -1142,6 +1148,29 @@ struct set_to_int : public tunable {
  */
 using set_zero = set_to_int<0>;
 using set_one  = set_to_int<1>;
+
+/*!
+ * \brief Set to immediate scalar value kernel
+ * \tparam val Scalar immediate
+ */
+template<bool val>
+struct set_to_bool : public tunable {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*!
+ * \brief Special-case kernel shortcut for setting to true and false
+ */
+using set_true = set_to_bool<true>;
+using set_false = set_to_bool<false>;
 }  // namespace mxnet_op
 
 }  // namespace op

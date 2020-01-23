@@ -100,7 +100,7 @@ inline bool NumpyMultinomialOpType(const nnvm::NodeAttrs& attrs,
 }
 
 template<typename DType>
-void CheckPvalGPU(DType* input, int prob_length);
+void CheckPvalGPU(const OpContext& ctx, DType* input, int prob_length);
 
 template<typename DType>
 void CheckPval(DType* input, int prob_length) {
@@ -188,7 +188,7 @@ void NumpyMultinomialForward(const nnvm::NodeAttrs& attrs,
        if (std::is_same<xpu, cpu>::value) {
          CheckPval<DType>(inputs[0].dptr<DType>(), prob_length);
        } else {
-         CheckPvalGPU<DType>(inputs[0].dptr<DType>(), prob_length);
+         CheckPvalGPU<DType>(ctx, inputs[0].dptr<DType>(), prob_length);
        }
       Kernel<multinomial_kernel, xpu>::Launch(
         s, num_output, num_exp, prob_length,

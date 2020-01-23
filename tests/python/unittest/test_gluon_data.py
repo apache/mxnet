@@ -162,6 +162,23 @@ def test_multi_worker():
         for i, batch in enumerate(loader):
             assert (batch.asnumpy() == i).all()
 
+
+@with_seed()
+def test_multi_worker_shape():
+    for thread_pool in [True, False]:
+        batch_size = 1024
+        shape = (batch_size+1, 11, 12)
+
+        data = ArrayDataset(np.ones(shape))
+        loader = gluon.data.DataLoader(
+            data, batch_size=batch_size, num_workers=5, last_batch='keep', thread_pool=thread_pool)
+        for batch in loader:
+            if shape[0] > batch_size:
+                assert batch.shape == (batch_size, shape[1], shape[2])
+                shape = (shape[0] - batch_size, shape[1], shape[2])
+            else:
+                assert batch.shape == shape
+
 class _Dummy(Dataset):
     """Dummy dataset for randomized shape arrays."""
     def __init__(self, random_shape):

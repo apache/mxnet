@@ -411,6 +411,15 @@ inline std::string dev_type_string(const int dev_type) {
   return "unknown";
 }
 
+inline std::string attr_value_string(const nnvm::NodeAttrs& attrs,
+                                     const std::string& attr_name,
+                                     std::string default_val = "") {
+  if (attrs.dict.find(attr_name) == attrs.dict.end()) {
+    return default_val;
+  }
+  return attrs.dict.at(attr_name);
+}
+
 /*! \brief get string representation of the operator stypes */
 inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
                                          const int dev_mask,
@@ -439,10 +448,10 @@ inline std::string operator_stype_string(const nnvm::NodeAttrs& attrs,
 
 /*! \brief get string representation of the operator */
 inline std::string operator_string(const nnvm::NodeAttrs& attrs,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
   std::string result = "";
   std::vector<int> in_stypes;
   std::vector<int> out_stypes;
@@ -736,7 +745,7 @@ inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape
  */
 template<typename DType>
 inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
-  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_COPY_SIZE", 200000);
+  static index_t copy_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
   if (size >= copy_block_size) {
     #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
     for (index_t i = 0; i < size; ++i) {
@@ -744,6 +753,24 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
     }
   } else {
     std::memcpy(dst, src, sizeof(DType) * size);
+  }
+}
+
+/*!
+ * \breif parallelize add by OpenMP
+ */
+template<typename DType>
+inline void ParallelAdd(DType* dst, const DType* src, index_t size) {
+  static index_t add_block_size = dmlc::GetEnv("MXNET_CPU_PARALLEL_SIZE", 200000);
+  if (size >= add_block_size) {
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] += src[i];
+    }
+  } else {
+    for (index_t i = 0; i < size; ++i) {
+      dst[i] += src[i];
+    }
   }
 }
 
@@ -842,7 +869,7 @@ inline bool is_float(const int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
 }
 
-inline int more_precise_type(const int type1, const int type2) {
+inline int get_more_precise_type(const int type1, const int type2) {
   if (type1 == type2) return type1;
   if (is_float(type1) && is_float(type2)) {
     if (type1 == mshadow::kFloat64 || type2 == mshadow::kFloat64) {
@@ -870,12 +897,12 @@ inline int more_precise_type(const int type1, const int type2) {
   return mshadow::kInt8;
 }
 
-inline int np_binary_out_type(const int type1, const int type2) {
+inline int np_binary_out_infer_type(const int type1, const int type2) {
   if ((type1 == mshadow::kUint8 && type2 == mshadow::kInt8) ||
       (type1 == mshadow::kInt8 && type2 == mshadow::kUint8)) {
     return mshadow::kInt32;
   }
-  return more_precise_type(type1, type2);
+  return get_more_precise_type(type1, type2);
 }
 
 }  // namespace common

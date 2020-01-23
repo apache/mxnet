@@ -18,7 +18,7 @@
 # under the License.
 
 # This script builds the libraries of mxnet.
-make_config=make/${STATIC_BUILD_TARGET}/${STATIC_BUILD_TARGET}_${PLATFORM}_${VARIANT}.mk
+make_config=make/staticbuild/${PLATFORM}_${VARIANT}.mk
 if [[ ! -f $make_config ]]; then
     >&2 echo "Couldn't find make config $make_config for the current settings."
     exit 1
@@ -34,16 +34,7 @@ $MAKE DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
 $MAKE DEPS_PATH=$DEPS_PATH PSLITE
 
 if [[ $VARIANT == *mkl ]]; then
-    if [[ $PLATFORM == 'linux' ]]; then
-        MKLDNN_LIBFILE='libmkldnn.so.1'
-    else
-        MKLDNN_LIBFILE='libmkldnn.1.dylib'
-    fi
     $MAKE DEPS_PATH=$DEPS_PATH mkldnn
-    if [ ! -d lib ]; then
-        mkdir lib
-    fi
-    cp 3rdparty/mkldnn/build/install/lib/$MKLDNN_LIBFILE lib
 fi
 
 >&2 echo "Now building mxnet..."

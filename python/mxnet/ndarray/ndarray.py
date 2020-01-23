@@ -110,6 +110,8 @@ _GRAD_REQ_MAP = {
 _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
+_NDARRAY_EMPTY_TUPLE_INDEXING = 2
+_NDARRAY_BOOLEAN_INDEXING = 3
 
 # Caching whether MXNet was built with INT64 support or not
 _INT64_TENSOR_SIZE_ENABLED = None
@@ -245,7 +247,7 @@ fixed-size items.
         shape_info = 'x'.join(['%d' % x for x in self.shape])
         return '\n%s\n<%s %s @%s>' % (str(self.asnumpy()),
                                       self.__class__.__name__,
-                                      shape_info, self.context)
+                                      shape_info, self.ctx)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
@@ -729,14 +731,14 @@ fixed-size items.
         `squeeze_axes`: a sequence of axes to squeeze in the value array.
         """
         if isinstance(value, numeric_types):
-            value_nd = full(bcast_shape, value, ctx=self.context, dtype=self.dtype)
+            value_nd = full(bcast_shape, value, ctx=self.ctx, dtype=self.dtype)
         elif type(value) == self.__class__:  # pylint: disable=unidiomatic-typecheck
-            value_nd = value.as_in_context(self.context)
+            value_nd = value.as_in_context(self.ctx)
             if value_nd.dtype != self.dtype:
                 value_nd = value_nd.astype(self.dtype)
         else:
             try:
-                value_nd = array(value, ctx=self.context, dtype=self.dtype)
+                value_nd = array(value, ctx=self.ctx, dtype=self.dtype)
             except:
                 raise TypeError('{} does not support assignment with non-array-like '
                                 'object {} of type {}'.format(self.__class__, value, type(value)))
@@ -847,26 +849,32 @@ fixed-size items.
         """Whether indexing with the given key results in a contiguous array.
 
         The rule is: From right to left, if in an axis, a slice produces a
-        proper subset, no later axis can produce a proper subset or use
-        a step different from 1.
+        proper subset, the later slice must have <=1 elements.
 
         The ``slc_key`` sequence must have the same length as ``shape`` and
         only contain `slice` objects.
         """
         assert len(slc_key) == len(shape)
-        subset = False
+        is_subset = False
+        total_sliced_elements = np.prod([_get_slice_len(slc, n)
+                                         for slc, n in zip(slc_key, shape)])
+        if total_sliced_elements in (0, 1):
+            return True
         for idx, n in zip(reversed(slc_key), reversed(shape)):
-            start, stop, step = idx.indices(n)
-            if step > 0:
-                num = int(np.ceil(max(stop - start, 0) / step))
-            else:
-                num = int(np.ceil(min(stop - start, 0) / step))
-
-            if num != 1 and (subset or step != 1):
+            _, _, step = idx.indices(n)
+            num_elements = _get_slice_len(idx, n)
+            if num_elements == 0:
+                return True
+            elif num_elements > 1 and (step > 1 or step < 0):
+                # We do not support the case of reverse slicing of multiple elements and
+                # forward slicing of #elements > 1 and step > 1
                 return False
-            if num != n:
-                subset = True
-
+            elif is_subset:
+                if num_elements > 1:
+                    return False
+            else:
+                if num_elements < n:
+                    is_subset = True
         return True
     # pylint: enable=invalid-name
 
@@ -875,14 +883,9 @@ fixed-size items.
         """Return the shape after slicing with the given key."""
         assert len(slc_key) == len(shape)
         sliced_shape = []
-        for idx, n in zip(slc_key, shape):
-            start, stop, step = idx.indices(n)
-            if step > 0:
-                num = int(np.ceil(max(stop - start, 0) / step))
-            else:
-                num = int(np.ceil(min(stop - start, 0) / step))
-            sliced_shape.append(num)
-
+        for slc, n in zip(slc_key, shape):
+            num_elements = _get_slice_len(slc, n)
+            sliced_shape.append(num_elements)
         return tuple(sliced_shape)
 
     # pylint: disable=invalid-name
@@ -890,17 +893,30 @@ fixed-size items.
     def _basic_indexing_contiguous_flat_begin_end(slc_key, shape):
         """Return the flat indices of begin and end for contiguous slicing."""
         assert len(slc_key) == len(shape)
-        begin, end, _ = slc_key[0].indices(shape[0])
-        flat_begin, flat_end = begin, end - 1
-        for idx, n in zip(slc_key[1:], shape[1:]):
+        flat_begin, flat_end = 0, 0
+        for slc, n in zip(slc_key, shape):
             flat_begin *= n
             flat_end *= n
-            begin, end, _ = idx.indices(n)
-            flat_begin += begin
-            flat_end += end - 1
-
+            begin, _, _ = slc.indices(n)
+            num_elements = _get_slice_len(slc, n)
+            if num_elements == 0:
+                return 0, 0
+            else:
+                flat_begin += begin
+                flat_end += begin + num_elements - 1
         return flat_begin, flat_end + 1
     # pylint: enable=invalid-name
+
+    @staticmethod
+    def _drop_int_axes(indexed_shape, int_axes):
+        """drop the axis of indexed_shape corresponding to int axes"""
+        bcast_shape = []
+        for i, size in enumerate(indexed_shape):
+            if i not in int_axes:
+                bcast_shape.append(size)
+        if not bcast_shape:
+            bcast_shape = [1]
+        return tuple(bcast_shape)
 
     def _set_nd_basic_indexing(self, key, value):
         """This function indexes ``self`` with a tuple of ``slice`` objects only."""
@@ -943,14 +959,10 @@ fixed-size items.
             if type(value) == self.__class__:  # pylint: disable=unidiomatic-typecheck
                 if value.handle is not self.handle:
                     # Need to do this before `broadcast_to`.
-                    tmp_shape = _shape_for_bcast(
-                        value.shape, target_ndim=self.ndim, new_axes=int_axes
-                    )
-                    value = value.reshape(tmp_shape)
-
-                    if value.shape != self.shape:
-                        value = value.broadcast_to(self.shape)
-                    value.copyto(self)
+                    bcast_shape = self._drop_int_axes(indexed_shape, int_axes)
+                    value_nd = self._prepare_value_nd(value, bcast_shape=bcast_shape, squeeze_axes=new_axes)
+                    value_nd = value_nd.reshape(indexed_shape)
+                    value_nd.copyto(self)
 
             elif isinstance(value, numeric_types):
                 self._full(value)
@@ -966,9 +978,10 @@ fixed-size items.
 
             else:
                 # Other array-like
-                value_nd = self._prepare_value_nd(
-                    value, bcast_shape=self.shape
-                )
+                # drop the axis of indexed_shape corresponding to int axes
+                bcast_shape = self._drop_int_axes(indexed_shape, int_axes)
+                value_nd = self._prepare_value_nd(value, bcast_shape=bcast_shape, squeeze_axes=new_axes)
+                value_nd = value_nd.reshape(indexed_shape)
                 value_nd.copyto(self)
 
         elif isinstance(value, numeric_types):
@@ -976,16 +989,8 @@ fixed-size items.
 
         else:
             # drop the axis of indexed_shape corresponding to int axes
-            bcast_shape = []
-            for i, size in enumerate(indexed_shape):
-                if i not in int_axes:
-                    bcast_shape.append(size)
-            if bcast_shape == []:
-                bcast_shape = [1]
-            bcast_shape = tuple(bcast_shape)
-            value_nd = self._prepare_value_nd(
-                value, bcast_shape=bcast_shape, squeeze_axes=new_axes
-            )
+            bcast_shape = self._drop_int_axes(indexed_shape, int_axes)
+            value_nd = self._prepare_value_nd(value, bcast_shape=bcast_shape, squeeze_axes=new_axes)
             value_nd = value_nd.reshape(indexed_shape)
             self.slice_assign(value_nd, begin, end, step)
 
@@ -1062,7 +1067,7 @@ fixed-size items.
         for ax in new_axes:  # pylint: disable=invalid-name
             final_shape.insert(ax, 1)
 
-        if final_shape == []:
+        if len(final_shape) == 0:
             # Override for single element indexing
             final_shape = [1]
         return sliced.reshape(final_shape)
@@ -1220,7 +1225,7 @@ fixed-size items.
 
         shape_nd_permut = tuple(self.shape[ax] for ax in axs_nd_permut)
         converted_idcs_short = [
-            self._advanced_index_to_array(idx, ax_len, self.context)
+            self._advanced_index_to_array(idx, ax_len, self.ctx)
             for idx, ax_len in zip(idcs_permut_short, shape_nd_permut)
         ]
         bcast_idcs_permut_short = self._broadcast_advanced_indices(
@@ -1229,7 +1234,7 @@ fixed-size items.
 
         # Get the ndim of advanced indexing subspace
         converted_advanced_idcs = [
-            self._advanced_index_to_array(idx, ax_len, self.context)
+            self._advanced_index_to_array(idx, ax_len, self.ctx)
             for idx, ax_len in zip(adv_idcs_nd, [self.shape[ax] for ax in adv_axs_nd])
         ]
         bcast_advanced_shape = _broadcast_shapes(converted_advanced_idcs)
@@ -2434,6 +2439,23 @@ fixed-size items.
         return Context(Context.devtype2str[dev_typeid.value], dev_id.value)
 
     @property
+    def ctx(self):
+        """Device context of the array. Has the same meaning as context.
+
+        Examples
+        --------
+        >>> x = mx.nd.array([1, 2, 3, 4])
+        >>> x.ctx
+        cpu(0)
+        >>> type(x.ctx)
+        <class 'mxnet.context.Context'>
+        >>> y = mx.nd.zeros((2,3), mx.gpu(0))
+        >>> y.ctx
+        gpu(0)
+        """
+        return self.context
+
+    @property
     def dtype(self):
         """Data-type of the array's elements.
 
@@ -2580,7 +2602,7 @@ fixed-size items.
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, ctx=self.context, dtype=dtype)
+        res = empty(self.shape, ctx=self.ctx, dtype=dtype)
         self.copyto(res)
         return res
 
@@ -2646,7 +2668,7 @@ fixed-size items.
         array([[ 1.,  1.,  1.],
                [ 1.,  1.,  1.]], dtype=float32)
         """
-        return self.copyto(self.context)
+        return self.copyto(self.ctx)
 
     def slice_assign_scalar(self, value, begin, end, step):
         """
@@ -2904,7 +2926,7 @@ fixed-size items.
         """
         This is added as an NDArray class method in order to support polymorphism in NDArray and numpy.ndarray indexing
         """
-        return _internal._full(self.shape, value=value, ctx=self.context, dtype=self.dtype, out=self)
+        return _internal._full(self.shape, value=value, ctx=self.ctx, dtype=self.dtype, out=self)
 
     def _scatter_set_nd(self, value_nd, indices):
         """
@@ -2931,7 +2953,6 @@ def indexing_key_expand_implicit_axes(key, shape):
     """
     if not isinstance(key, tuple):
         key = (key,)
-
     # We need to loop explicitly since tuple functions like `index()` or
     # `count()` use `==` internally, which doesn't play well with fancy
     # indexing.
@@ -2948,7 +2969,12 @@ def indexing_key_expand_implicit_axes(key, shape):
         else:
             if idx is None:
                 num_none += 1
-            nonell_key.append(idx)
+            if isinstance(idx, NDArrayBase) and idx.ndim == 0 and idx.dtype != np.bool_:
+                # This handles ndarray of zero dim. e.g array(1)
+                # while advoid converting zero dim boolean array
+                nonell_key.append(idx.item())
+            else:
+                nonell_key.append(idx)
 
     nonell_key = tuple(nonell_key)
 
@@ -3020,23 +3046,32 @@ def _is_advanced_index(idx):
 def get_indexing_dispatch_code(key):
     """Returns a dispatch code for calling basic or advanced indexing functions."""
     assert isinstance(key, tuple)
+    num_bools = 0
+    basic_indexing = True
 
     for idx in key:
         if isinstance(idx, (NDArray, np.ndarray, list, tuple)):
+            if isinstance(idx, tuple) and len(idx) == 0:
+                return _NDARRAY_EMPTY_TUPLE_INDEXING
             if getattr(idx, 'dtype', None) == np.bool_:
-                raise TypeError('ndarray indexing does not support boolean ndarray'
-                                ' in a tuple of indices. Only single boolean ndarray'
-                                ' as an index is supported.')
-            return _NDARRAY_ADVANCED_INDEXING
+                num_bools += 1
+            basic_indexing = False
         elif sys.version_info[0] > 2 and isinstance(idx, range):
-            return _NDARRAY_ADVANCED_INDEXING
+            basic_indexing = False
         elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
             raise ValueError(
                 'NDArray does not support slicing with key {} of type {}.'
                 ''.format(idx, type(idx))
             )
-
-    return _NDARRAY_BASIC_INDEXING
+    if basic_indexing and num_bools == 0:
+        return _NDARRAY_BASIC_INDEXING
+    elif not basic_indexing and num_bools == 0:
+        return _NDARRAY_ADVANCED_INDEXING
+    elif num_bools == 1:
+        return _NDARRAY_BOOLEAN_INDEXING
+    else:
+        raise TypeError('ndarray indexing does not more than one boolean ndarray'
+                        ' in a tuple of complex indices.')
 
 
 def _get_index_range(start, stop, length, step=1):
@@ -3106,6 +3141,26 @@ def _get_dim_size(start, stop, step):
         assert stop < start
         dim_size = (start - stop - 1) // (-step) + 1
     return dim_size
+
+
+def _get_slice_len(slc, seq_length):
+    """Given a python slice object and the length of the sequence, calculate the number of elements
+     in the slice.
+
+    Parameters
+    ----------
+    slc : py_slice
+        The slice object
+    seq_length : int
+        The length of the object you are going to apply the slice on
+
+    Returns
+    -------
+    ret : int
+        Total number of elements in the slice
+    """
+    start, stop, step = slc.indices(seq_length)
+    return max(0, (stop - start + (step - (1 if step > 0 else -1))) // step)
 
 
 def _get_broadcast_shape(shape1, shape2):
@@ -4542,7 +4597,7 @@ def concatenate(arrays, axis=0, always_copy=True):
         assert shape_rest2 == arr.shape[axis+1:]
         assert dtype == arr.dtype
     ret_shape = shape_rest1 + (shape_axis,) + shape_rest2
-    ret = empty(ret_shape, ctx=arrays[0].context, dtype=dtype)
+    ret = empty(ret_shape, ctx=arrays[0].ctx, dtype=dtype)
 
     idx = 0
     begin = [0 for _ in ret_shape]
@@ -4935,6 +4990,7 @@ class DLDataType(ctypes.Structure):
         "bool": (1, 1, 1),
         "uint32": (1, 32, 1),
         "uint64": (1, 64, 1),
+        'float16': (2, 16, 1),
         "float32": (2, 32, 1),
         "float64": (2, 64, 1),
     }

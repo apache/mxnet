@@ -20,7 +20,9 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial"]
+
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
+           "shuffle", "randn", "gamma", "exponential"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -241,6 +243,84 @@ def multinomial(n, pvals, size=None, **kwargs):
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
 
 
+# pylint: disable=unused-argument
+def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
+    """
+    multivariate_normal(mean, cov, size=None, check_valid=None, tol=None)
+
+    Draw random samples from a multivariate normal distribution.
+
+    The multivariate normal, multinormal or Gaussian distribution is a
+    generalization of the one-dimensional normal distribution to higher
+    dimensions.  Such a distribution is specified by its mean and
+    covariance matrix.  These parameters are analogous to the mean
+    (average or "center") and variance (standard deviation, or "width,"
+    squared) of the one-dimensional normal distribution.
+
+    This operator is a little different from the one in official NumPy.
+    The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
+    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+
+    Both `mean` and `cov` may have any number of leading dimensions, which correspond
+    to a batch shape. They are not necessarily assumed to have the same batch shape,
+    just ones which can be broadcasted.
+
+    Parameters
+    ----------
+    mean : K-D ndarray, of shape (..., N)
+        Mean of the N-dimensional distribution.
+    cov : (K+1)-D ndarray, of shape (..., N, N)
+        Covariance matrix of the distribution. The last two dimensions must be symmetric and
+        positive-semidefinite for proper sampling.
+    size : int or tuple of ints, optional
+        Given a shape of, for example, ``(m,n,k)``,
+        ``m*n*k`` identically distributed batchs of samples are
+        generated, and packed in an `m`-by-`n`-by-`k` arrangement.
+        If no shape is specified, a batch of (`N`-D) sample is returned.
+    check_valid : { 'warn', 'raise', 'ignore' }, optional
+        Behavior when the covariance matrix is not positive semidefinite.
+        (Not supported)
+    tol : float, optional
+        Tolerance when checking the singular values in covariance matrix.
+        cov is cast to double before the check.
+        (Not supported)
+
+    Returns
+    -------
+    out : ndarray
+        The input shape of `mean` and `cov` should satisfy the requirements of broadcasting.
+        If the parameter `size` is not provided,
+        the output shape is ``np.broadcast(mean.shape, cov.shape[:-1])``.
+        Otherwise, the output shape is ``size + np.broadcast(mean.shape, cov.shape[:-1])``
+
+    Examples
+    --------
+    >>> mean = np.array([1, 2])
+    >>> cov = np.array([[1, 0], [0, 1]])
+    >>> x = np.random.multivariate_normal(mean, cov, (3, 3))
+    >>> x.shape
+    (3, 3, 2)
+
+    The following is probably true, given that 0.6 is roughly twice the
+    standard deviation:
+
+    >>> list((x[0,0,:] - mean) < 0.6)
+    [True, True] # random
+
+    # Performs autobroadcasting when the batch shape of
+    # `mean` and `cov` is different but compatible.
+
+    >>> mean = np.zeros((3,2)) # shape (3, 2)
+    >>> cov = np.array([[1, 0], [0, 100]]) # shape (2, 2)
+    >>> x = np.random.multivariate_normal(mean, cov)
+    >>> x
+    array([[-1.6115597 , -8.726251  ],
+           [ 2.2425299 ,  2.8104177 ],
+           [ 0.36229908, -8.386591  ]])
+    """
+    return _mx_nd_np.random.multivariate_normal(mean, cov, size=size, check_valid=None, tol=None)
+
+
 def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     r"""Generates a random sample from a given 1-D array
 
@@ -321,3 +401,136 @@ def rand(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
+
+
+def exponential(scale=1.0, size=None):
+    r"""Draw samples from an exponential distribution.
+
+    Parameters
+    ----------
+    scale : float or array_like of floats
+        The scale parameter, :math:`\beta = 1/\lambda`. Must be
+        non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized exponential distribution.
+    """
+    return _mx_nd_np.random.exponential(scale, size)
+
+
+def shuffle(x):
+    """
+    Modify a sequence in-place by shuffling its contents.
+
+    This function only shuffles the array along the first axis of a
+    multi-dimensional array. The order of sub-arrays is changed but
+    their contents remain the same.
+
+    Parameters
+    ----------
+    x: ndarray
+        The array or list to be shuffled.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> arr = np.arange(10)
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([5., 1., 0., 6., 7., 3., 9., 8., 4., 2.])  # random
+
+    Multi-dimensional arrays are only shuffled along the first axis:
+
+    >>> arr = np.arange(9).reshape((3, 3))
+    >>> np.random.shuffle(arr)
+    >>> arr
+    array([[6., 7., 8.], # random
+           [3., 4., 5.],
+           [0., 1., 2.]])
+    """
+    _mx_nd_np.random.shuffle(x)
+
+
+def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    """Draw samples from a Gamma distribution.
+
+    Samples are drawn from a Gamma distribution with specified parameters,
+    `shape` (sometimes designated "k") and `scale` (sometimes designated
+    "theta"), where both parameters are > 0.
+
+    Parameters
+    ----------
+    shape : float or array_like of floats
+        The shape of the gamma distribution. Should be greater than zero.
+    scale : float or array_like of floats, optional
+        The scale of the gamma distribution. Should be greater than zero.
+        Default is equal to 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``shape`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized gamma distribution.
+
+    The Gamma distribution is often used to model the times to failure of
+    electronic components, and arises naturally in processes for which the
+    waiting times between Poisson distributed events are relevant.
+    """
+    return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
+
+
+def randn(*size, **kwargs):
+    r"""Return a sample (or samples) from the "standard normal" distribution.
+    If positive, int_like or int-convertible arguments are provided,
+    `randn` generates an array of shape ``(d0, d1, ..., dn)``, filled
+    with random floats sampled from a univariate "normal" (Gaussian)
+    distribution of mean 0 and variance 1 (if any of the :math:`d_i` are
+    floats, they are first converted to integers by truncation). A single
+    float randomly sampled from the distribution is returned if no
+    argument is provided.
+    This is a convenience function.  If you want an interface that takes a
+    tuple as the first argument, use `numpy.random.standard_normal` instead.
+    Parameters
+    ----------
+    d0, d1, ..., dn : int, optional
+        The dimensions of the returned array, should be all positive.
+        If no argument is given a single Python float is returned.
+    Returns
+    -------
+    Z : ndarray
+        A ``(d0, d1, ..., dn)``-shaped array of floating-point samples from
+        the standard normal distribution, or a single such float if
+        no parameters were supplied.
+    Notes
+    -----
+    For random samples from :math:`N(\mu, \sigma^2)`, use:
+    ``sigma * np.random.randn(...) + mu``
+    Examples
+    --------
+    >>> np.random.randn()
+    2.1923875335537315 #random
+    Two-by-four array of samples from N(3, 6.25):
+    >>> 2.5 * np.random.randn(2, 4) + 3
+    array([[-4.49401501,  4.00950034, -1.81814867,  7.29718677],  #random
+        [ 0.39924804,  4.68456316,  4.99394529,  4.84057254]]) #random
+    """
+    output_shape = ()
+    for s in size:
+        output_shape += (s,)
+    return _mx_nd_np.random.normal(0, 1, size=output_shape, **kwargs)

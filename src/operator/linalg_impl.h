@@ -1598,7 +1598,8 @@ void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
     get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s); \
   const Tensor<xpu, 2, int> pivot(reinterpret_cast<int *>(workspace.dptr_), \
                                   Shape2(A.size(0), A.size(1))); \
-  const Tensor<xpu, 3, DType> LU(reinterpret_cast<DType *>(pivot.dptr_ + pivot.MSize()), \
+  int offset = pivot.MSize() & 1 ? pivot.MSize() + 1 : pivot.MSize(); \
+  const Tensor<xpu, 3, DType> LU(reinterpret_cast<DType *>(pivot.dptr_ + offset), \
                                  A.shape_); \
   Copy(LU, B, s); \
   linalg_batch_getrf(LU, pivot, true, s); \

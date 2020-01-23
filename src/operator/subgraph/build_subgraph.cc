@@ -559,7 +559,25 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       ++(it->second);
     }
     nnvm::NodePtr n = nnvm::CreateVariableNode(var_name + std::to_string(name_count_map[var_name]));
+    // set attribute for subgraph input to indicate if it is from an arg/param to model
+    if (e->node->is_variable())
+      n->attrs.dict["isArg"] = "True";
+    else
+      n->attrs.dict["isArg"] = "False";
     *e = nnvm::NodeEntry{n, 0, 0};
+  }
+}
+
+/*!
+ * \brief This function reattaches the original input nodes that were cut
+ * by CutGraphInputs. This function is used when subgraphs are rejected, it
+ * reattaches the subgraph back to the main graph where it was cut earlier.
+ */
+void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
+                         std::vector<nnvm::NodeEntry> *orig_entries) {
+  for (size_t i = 0; i < input_entries.size(); ++i) {
+    nnvm::NodeEntry *e = input_entries[i];
+    *e = orig_entries->at(i);
   }
 }
 
@@ -620,6 +638,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
         sn->outputs[n.get()].push_back(i);
       }
     }
+  } else {
+    ReattachGraphInputs(input_entries, &orig_input_entries);
   }
 #if DEBUG_SUBGRAPH
   if (n)

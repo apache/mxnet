@@ -1,4 +1,4 @@
-from ..base import MXNetError
+from ..base import get_last_ffi_error
 
 from libcpp.vector cimport vector
 from libcpp.string cimport string
@@ -38,7 +38,7 @@ cdef c_str(pystr):
 
 cdef CALL(int ret):
     if ret != 0:
-        raise MXNetError(NNGetLastError())
+        raise get_last_ffi_error()
 
 
 cdef const char** CBeginPtr(vector[const char*]& vec):
@@ -68,6 +68,8 @@ cdef extern from "nnvm/c_api.h":
                     const char ***arg_descriptions,
                     const char **return_type);
     int NNSymbolFree(SymbolHandle symbol);
+    int NNSymbolGetNumOutputs(SymbolHandle sym,
+                              nn_uint* output_count);
     int NNSymbolCompose(SymbolHandle sym,
                         const char* name,
                         nn_uint num_args,

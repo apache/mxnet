@@ -2257,36 +2257,57 @@ def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
 
 
 def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
-                      rtol=1e-4, atol=1e-5, compare_states=True):
+                      rtol=1e-4, atol=1e-5, compare_states=True, ntensors=1):
     """Compare opt1 and opt2."""
-    if w_stype == 'default':
-        w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        w1 = w2.copyto(default_context())
-    elif w_stype in ('row_sparse', 'csr'):
-        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
-        w1 = w2.copyto(default_context()).tostype('default')
+    if not isinstance(shape, list):
+        assert(ntensors == 1)
+        if w_stype == 'default':
+            w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            w1 = w2.copyto(default_context())
+        elif w_stype in ('row_sparse', 'csr'):
+            w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+            w1 = w2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+        if g_stype == 'default':
+            g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            g1 = g2.copyto(default_context())
+        elif g_stype in ('row_sparse', 'csr'):
+            g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+            g1 = g2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+
+        state1 = opt1.create_state_multi_precision(0, w1)
+        state2 = opt2.create_state_multi_precision(0, w2)
+        if compare_states:
+            compare_ndarray_tuple(state1, state2)
+
+        opt1.update_multi_precision(0, w1, g1, state1)
+        opt2.update_multi_precision(0, w2, g2, state2)
+        if compare_states:
+            compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
+        assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
     else:
-        raise Exception("type not supported yet")
-    if g_stype == 'default':
-        g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        g1 = g2.copyto(default_context())
-    elif g_stype in ('row_sparse', 'csr'):
-        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
-        g1 = g2.copyto(default_context()).tostype('default')
-    else:
-        raise Exception("type not supported yet")
+        # test multi-tensor: Opt1 single-tensor reference, Opt2 multi-tensor
+        from copy import deepcopy
+        w1, g1 = [], []
+        for s in shape:
+            w1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
+            g1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
+        w1 = tuple(w1)
+        w2 = deepcopy(w1)
+        g1 = tuple(g1)
+        g2 = deepcopy(g1)
+        state2 = [opt2.create_state_multi_precision(0, w2[i]) for i in range(ntensors)]
 
-    state1 = opt1.create_state_multi_precision(0, w1)
-    state2 = opt2.create_state_multi_precision(0, w2)
-    if compare_states:
-        compare_ndarray_tuple(state1, state2)
-
-    opt1.update_multi_precision(0, w1, g1, state1)
-    opt2.update_multi_precision(0, w2, g2, state2)
-    if compare_states:
-        compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-    assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
-
+        opt2.update_multi_precision(list(range(ntensors)), w2, g2, state2)
+        for i in range(ntensors):
+            state1 = opt1.create_state_multi_precision(i, w1[i])
+            opt1.update_multi_precision(i, w1[i], g1[i], state1)
+            if compare_states:
+                compare_ndarray_tuple(state1, state2[i], rtol, atol)
+            compare_ndarray_tuple(w1[i], w2[i], rtol, atol)
 
 def same_symbol_structure(sym1, sym2):
     """Compare two symbols to check if they have the same computation graph structure.
@@ -2384,3 +2405,81 @@ def is_op_runnable():
             print('Cuda arch compute capability: sm_{}'.format(str(cc)))
             return cc >= 53
     return True
+
+
+@use_np
+def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test_grad=True,
+                                      rtol=1E-4, atol=1E-4):
+    """Check whether a HybridBlock has consistent output between the hybridized
+     v.s. non-hybridized versions
+
+    The network should not contain any random number generators.
+
+    Parameters
+    ----------
+    net_builder : function
+        The builder of the HybridBlock that we are going to check the consistency.
+        Inside the implementation, we will call net_builder() to construct the hybrid block.
+        Also, the net_builder will need to support specifying the params
+    data_l : list of mx.np.ndarray
+        List of input ndarrays.
+    numpy_func : function, optional
+        The ground truth numpy function that has the same functionality as net_builder().
+        Default None.
+    test_grad : bool, optional
+        Whether to test the consistency of the gradient. Default True.
+    rtol : float, optional
+        The relative error tolerance, default 1E-4. Default 1E-4.
+    atol : float, optional
+        The absolute error tolerance, default 1E-4. Default 1E-4.
+    """
+    class _NumpyParamDictInit(mx.init.Initializer):
+        """Initializes parameters with the cached numpy ndarrays dictionary
+        """
+        def __init__(self, np_params):
+            super(_NumpyParamDictInit, self).__init__()
+            self._np_params = np_params
+
+        def _init_weight(self, name, arr):
+            arr[()] = self._np_params[name]
+    saved_out_np = None
+    saved_grad_np_l = None
+    params_init = None
+    use_autograd_flags = [False, True] if test_grad else [False]
+    for hybridize in [False, True]:
+        for use_autograd in use_autograd_flags:
+            net = net_builder(prefix='net_')
+            if params_init is None:
+                net.initialize()
+            else:
+                net.initialize(params_init)
+            if hybridize:
+                net.hybridize()
+            in_data_l = [ele.copy() for ele in data_l]
+            if use_autograd:
+                for ele in in_data_l:
+                    ele.attach_grad()
+                with mx.autograd.record():
+                    out = net(*in_data_l)
+                out.backward(out)
+            else:
+                out = net(*in_data_l)
+            if params_init is None:
+                np_params = {k: v.data().asnumpy() for k, v in net.collect_params().items()}
+                params_init = _NumpyParamDictInit(np_params)
+            if saved_out_np is None:
+                saved_out_np = out.asnumpy()
+            else:
+                # Check for correctness
+                assert_almost_equal(out.asnumpy(), saved_out_np, rtol=rtol, atol=atol)
+            if use_autograd:
+                if saved_grad_np_l is None:
+                    saved_grad_np_l = [ele.grad.asnumpy() for ele in in_data_l]
+                else:
+                    # Check for correctness
+                    for data, saved_grad_np in zip(in_data_l, saved_grad_np_l):
+                        assert_almost_equal(data.grad.asnumpy(), saved_grad_np,
+                                            rtol=rtol, atol=atol)
+    if numpy_func is not None:
+        numpy_out = numpy_func(*[ele.asnumpy() for ele in data_l])
+        assert_almost_equal(saved_out_np, numpy_out, rtol=rtol, atol=atol)

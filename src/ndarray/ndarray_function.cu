@@ -84,7 +84,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
     })
   } else {
     CHECK(from.CheckContiguous() && to->CheckContiguous())
-      << "copy across only support continugous memory";
+      << "copy across only support contiguous memory";
     CHECK_EQ(to->type_flag_, from.type_flag_)
       << "Source and target must have the same data type when copying across devices.";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -129,12 +129,13 @@ void ElementwiseSumRspImpl(mshadow::Stream<gpu>* s,
       IType* row_flg = NULL;
       void* d_temp_storage = NULL;
       size_t temp_storage_bytes = 0;
+      cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
       cub::DeviceScan::InclusiveSum(d_temp_storage,
                                     temp_storage_bytes,
                                     row_flg,
                                     row_flg,
                                     num_rows,
-                                    mshadow::Stream<gpu>::GetStream(s));
+                                    stream);
       mshadow::Tensor<gpu, 1, char> workspace = rsc
           .get_space_typed<gpu, 1, char>(mshadow::Shape1(num_rows * sizeof(IType) +
                                                          temp_storage_bytes), s);
@@ -158,11 +159,12 @@ void ElementwiseSumRspImpl(mshadow::Stream<gpu>* s,
                                     row_flg,
                                     row_flg,
                                     num_rows,
-                                    mshadow::Stream<gpu>::GetStream(s));
+                                    stream);
       // Get total number of output non-zero rows from GPU and allocate out data and row_idx
       dim_t nnr_out = 0;
-      CUDA_CALL(cudaMemcpy(&nnr_out, &row_flg[num_rows-1], sizeof(dim_t),
-                           cudaMemcpyDeviceToHost));
+      CUDA_CALL(cudaMemcpyAsync(&nnr_out, &row_flg[num_rows-1], sizeof(dim_t),
+                                cudaMemcpyDeviceToHost, stream));
+      CUDA_CALL(cudaStreamSynchronize(stream));
       out->CheckAndAlloc({mshadow::Shape1(nnr_out)});
       IType* out_row_idx = out->aux_data(kIdx).dptr<IType>();
       DType* out_data = out->data().dptr<DType>();

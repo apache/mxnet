@@ -26,7 +26,7 @@ Essential
 
    .. card::
       :title: Improving Performance
-      :link: https://mxnet.apache.org/api/faq/perf
+      :link: /api/faq/perf
 
       How to get the best performance from MXNet.
 
@@ -38,8 +38,7 @@ Essential
 
    .. card::
       :title: Tuning NumPy Operations
-      :link: https://mxnet.apache.org/versions/master/tutorials/gluon/gotchas_numpy_in_mxnet.html
-
+      :link: ../packages/ndarray/gotchas_numpy_in_mxnet.html
       Gotchas using NumPy in MXNet.
 
 Compression
@@ -49,13 +48,13 @@ Compression
 
    .. card::
       :title: Compression: float16
-      :link: compression/float16.html
+      :link: /api/faq/float16
 
       How to use float16 in your model to boost training speed.
 
    .. card::
       :title: Gradient Compression
-      :link: compression/gradient_compression.html
+      :link: /api/faq/gradient_compression
 
       How to use gradient compression to reduce communication bandwidth and increase speed.
    ..
@@ -74,7 +73,7 @@ Accelerated Backend
 
    .. card::
       :title: TensorRT
-      :link: backend/tensorRt.html
+      :link: backend/tensorrt/tensorrt.html
 
       How to use NVIDIA's TensorRT to boost inference performance.
 
@@ -82,7 +81,7 @@ Accelerated Backend
       TBD Content
       .. card::
          :title: MKL-DNN
-         :link: backend/mkl-dnn.html
+         :link: backend/mkldnn/mkldnn_readme
 
          How to get the most from your CPU by using Intel's MKL-DNN.
 
@@ -100,19 +99,19 @@ Distributed Training
 
    .. card::
       :title: Distributed Training Using the KVStore API
-      :link: https://mxnet.apache.org/versions/master/faq/distributed_training.html
+      :link: /api/faq/distributed_training.html
 
       How to use the KVStore API to use multiple GPUs when training a model.
 
    .. card::
       :title: Training with Multiple GPUs Using Model Parallelism
-      :link: https://mxnet.apache.org/versions/master/faq/model_parallel_lstm.html
+      :link: /api/faq/model_parallel_lstm.html
 
       An overview of using multiple GPUs when training an LSTM.
 
    .. card::
       :title: Data Parallelism in MXNet
-      :link: https://mxnet.apache.org/versions/master/faq/multi_devices.html
+      :link: /api/faq/multi_device
 
       An overview of distributed training strategies.
 

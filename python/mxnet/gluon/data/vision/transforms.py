@@ -19,6 +19,7 @@
 # pylint: disable= arguments-differ
 "Image transforms."
 
+import random
 import numpy as np
 
 from ...block import Block, HybridBlock
@@ -331,9 +332,7 @@ class CropResize(HybridBlock):
         interpolation. See OpenCV's resize function for available choices.
         https://docs.opencv.org/2.4/modules/imgproc/doc/geometric_transformations.html?highlight=resize#resize
         Note that the Resize on gpu use contrib.bilinearResize2D operator
-        which only support bilinear interpolation(1). The result would be slightly
-        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
-        use algorithm which aligns corner.
+        which only support bilinear interpolation(1).
 
 
     Inputs:
@@ -422,9 +421,7 @@ class Resize(HybridBlock):
         Interpolation method for resizing. By default uses bilinear
         interpolation. See OpenCV's resize function for available choices.
         Note that the Resize on gpu use contrib.bilinearResize2D operator
-        which only support bilinear interpolation(1). The result would be slightly
-        different on gpu compared to cpu. OpenCV tend to align center while bilinearResize2D
-        use algorithm which aligns corner.
+        which only support bilinear interpolation(1).
 
 
     Inputs:
@@ -659,3 +656,33 @@ class RandomLighting(HybridBlock):
         if is_np_array():
             F = F.npx
         return F.image.random_lighting(x, self._alpha)
+
+
+class RandomApply(Sequential):
+    """Apply a list of transformations randomly given probability
+
+    Parameters
+    ----------
+    transforms
+        List of transformations.
+    p : float
+        Probability of applying the transformations.
+
+
+    Inputs:
+        - **data**: input tensor.
+
+    Outputs:
+        - **out**: transformed image.
+    """
+
+    def __init__(self, transforms, p=0.5):
+        super(RandomApply, self).__init__()
+        self.transforms = transforms
+        self.p = p
+
+    def forward(self, x):
+        if self.p < random.random():
+            return x
+        x = self.transforms(x)
+        return x

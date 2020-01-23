@@ -28,7 +28,6 @@ from mxnet.module import Module
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
-import test_mkldnn_install as install
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
@@ -72,7 +71,7 @@ def test_mkldnn_ndarray_slice():
     y = net(x)
 
     # trigger computation on ndarray slice
-    assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
+    assert_almost_equal(y[0].asnumpy()[0, 0, 0], np.array(0.3376348))
 
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
@@ -96,7 +95,7 @@ def test_mkldnn_engine_threading():
     for _ in loader:
         y = net(mx.nd.array(np.ones(X))).asnumpy()
         # output should be 016711406 (non-mkldnn mode output)
-        assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
+        assert_almost_equal(y[0, 0, 0, 0], np.array(0.016711406))
         break
 
 @with_seed()
@@ -637,4 +636,5 @@ def test_elemwise_add():
         check_elemwise_add_training(stype)
 
 if __name__ == '__main__':
-    install.test_mkldnn_install()
+    import nose
+    nose.runmodule()

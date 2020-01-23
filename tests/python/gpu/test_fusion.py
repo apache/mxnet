@@ -28,6 +28,7 @@ from common import with_seed
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
     shapes = {inp : kwargs[inp].shape for inp in inputs}
+    ctx = kwargs.get('ctx', mx.gpu(0))
     # Double identity so that there is always something to fuse
     test_sym = mx.sym.Group([mx.sym.identity(mx.sym.identity(s)) for s in sym])
     rtol = {'float16' : 1e-2,
@@ -43,9 +44,9 @@ def check_fused_symbol(sym, **kwargs):
         for grad_req in ['write', 'add']:
             type_dict = {inp : dtype for inp in inputs}
             os.environ["MXNET_USE_FUSION"] = "0"
-            orig_exec = test_sym.simple_bind(ctx=mx.gpu(0), grad_req=grad_req, type_dict=type_dict, **shapes)
+            orig_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             os.environ["MXNET_USE_FUSION"] = "1"
-            fused_exec = test_sym.simple_bind(ctx=mx.gpu(0), grad_req=grad_req, type_dict=type_dict, **shapes)
+            fused_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             fwd_orig = orig_exec.forward(is_train=True, **data)
             out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
             orig_exec.backward(out_grads=out_grads)
@@ -171,7 +172,7 @@ def check_binary_ops():
     check_fused_symbol(3-a, a=arr1)
     check_fused_symbol(a*b, a=arr1, b=arr2)
     check_fused_symbol(a*3, a=arr1)
-    check_fused_symbol(a/b, a=arr1, b=arr2)
+    check_fused_symbol(a/(b+1), a=arr1, b=arr2)
     check_fused_symbol(a/3, a=arr1)
     check_fused_symbol(3/a, a=arr1)
     check_fused_symbol(a**b, a=arr1, b=arr2)
@@ -217,6 +218,94 @@ def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
+
+@with_seed()
+def test_fusion_compiler_cache():
+    # Stresses the internal cache of CUfunctions by creating the same kernel multiple times and
+    # on multiple GPUs if available.
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    shape = rand_shape_2d()
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+
+    # Invoke the same model twice, second time will exercise compile cache
+    check_fused_symbol(a+b, ctx=mx.gpu(0), a=arr1, b=arr2)
+    check_fused_symbol(a+b, ctx=mx.gpu(0), a=arr1, b=arr2)
+
+    # On multi-GPU systems, invoke the same model on other GPUs
+    num_gpus = mx.context.num_gpus()
+    if num_gpus > 1:
+        check_fused_symbol(a+b, ctx=mx.gpu(1), a=arr1, b=arr2)
+
+@with_seed()
+@use_np
+def test_fusion_boolean_inputs():
+    from mxnet.gluon import HybridBlock
+
+    class Foo(HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, valid_length):
+            mask = valid_length.astype(np.float32)
+            mask2 = valid_length.astype(np.float32)
+            mask = mask * F.np.expand_dims(mask2, axis=-1)
+            return mask
+
+    foo = Foo()
+    foo.hybridize(static_alloc=True)
+    out = foo(mx.np.ones((10,), ctx=mx.gpu(), dtype=np.bool))
+    mx.npx.waitall()
+
+@with_seed()
+def test_fusion_different_dimensions():
+    from mxnet.gluon import HybridBlock
+
+    class Foo(HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, x):
+            mask2 = x.astype(np.float32)
+            mask = F.expand_dims(mask2, axis=-1)
+            return mask
+
+    foo = Foo()
+    foo.hybridize(static_alloc=True)
+    # Pass 1-D data
+    out = foo(mx.nd.ones((10,), ctx=mx.gpu()))
+    assert np.all(out.asnumpy() == np.ones((10,1)))
+    assert out.shape == (10,1)
+    # Pass 2-D data
+    out = foo(mx.nd.ones((10,10), ctx=mx.gpu()))
+    assert np.all(out.asnumpy() == np.ones((10,10)))
+    assert out.shape == (10,10,1)
+
+@with_seed()
+def test_fusion_reshape_executor():
+    a = mx.sym.Variable("data1")
+    b = mx.sym.Variable("data2")
+    c = a + b + 1
+    sym = mx.sym.relu(c)
+    orig_shape = (10,10)
+    e = sym.simple_bind(ctx=mx.gpu(), data1=orig_shape, data2=orig_shape)
+    data = mx.nd.zeros(orig_shape, ctx=mx.gpu())
+    out = e.forward(is_train=False)
+    assert out[0].sum().asscalar() == 100
+    changed_shape = (80, 2)
+    new_shape = {'data1': changed_shape, 'data2': changed_shape}
+    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
+    f = e.reshape(allow_up_sizing=True, **new_shape)
+    out = f.forward(is_train=False, data1=data, data2=data)
+    assert out[0].sum().asscalar() == 160
+    # Reshape again
+    changed_shape = (30, 5)
+    new_shape = {'data1': changed_shape, 'data2': changed_shape}
+    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
+    f = e.reshape(allow_up_sizing=True, **new_shape)
+    out = f.forward(is_train=False, data1=data, data2=data)
+    assert out[0].sum().asscalar() == 150
 
 if __name__ == '__main__':
     import nose

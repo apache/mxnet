@@ -169,6 +169,20 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+// bitwise_not
+NNVM_REGISTER_OP(_npi_bitwise_not)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"x"};
+})
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::ComputeInt<cpu, mshadow_op::bitwise_not>)
+.add_argument("x", "NDArray-or-Symbol", "The input array.")
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 // trunc
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_trunc, "x", mshadow_op::trunc)
 .describe(R"code(Return the truncated value of the input, element-wise.
@@ -418,6 +432,35 @@ NNVM_REGISTER_OP(_npi_around)
 .add_argument("x", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(AroundParam::__FIELDS__())
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+DMLC_REGISTER_PARAMETER(NumpyNanToNumParam);
+
+NNVM_REGISTER_OP(_npi_nan_to_num)
+.describe("" ADD_FILELINE)
+.set_attr_parser(ParamParser<NumpyNanToNumParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyNanToNumOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_npi_backward_nan_to_num"})
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyNanToNumParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_backward_nan_to_num)
+.set_attr_parser(ParamParser<NumpyNanToNumParam>)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyNanToNumOpBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

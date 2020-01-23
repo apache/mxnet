@@ -145,13 +145,15 @@ bool ConcatType(const nnvm::NodeAttrs& attrs,
   int dtype = -1;
 
   // checks uniformity of input
-  for (int i : *in_type) {
+  for (size_t i =0; i < in_type->size(); ++i) {
     if (dtype == -1) {
-      dtype = i;
+      dtype = in_type->at(i);
     } else {
-      CHECK(i == dtype ||
-          i == -1) <<
-          "Non-uniform data type in Concat";
+      CHECK(in_type->at(i) == dtype || in_type->at(i) == -1)
+          << "Non-uniform data type in "  << attrs.op->name
+          << ", expected data type " << mxnet::op::type_string(dtype)
+          << ", got data type " << mxnet::op::type_string(in_type->at(i))
+          << " for input " << i;
     }
   }
 
@@ -270,7 +272,7 @@ static void ConcatComputeExCPU(const nnvm::NodeAttrs& attrs,
 #if MXNET_USE_MKLDNN == 1
   } else if (SupportMKLDNNConcat(inputs)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNConcatForward(attrs, op_ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNConcatForward, attrs, op_ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(ConcatCompute<cpu>, attrs, op_ctx, inputs, req, outputs);
@@ -288,7 +290,7 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
                                    const std::vector<NDArray>& outputs) {
   if (SupportMKLDNNConcat(inputs)) {
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNConcatBackward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNConcatBackward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(ConcatGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -394,6 +396,14 @@ CONCAT_FORWARD_ATTRS
 .add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Concat)
+.set_num_inputs([](const NodeAttrs& attrs) {
+#if MXNET_USE_MKLDNN == 1
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return 1 + params.num_args;
+#else
+  return 1;
+#endif
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
   return params.num_args;

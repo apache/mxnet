@@ -76,7 +76,7 @@ _WHITE_LIST = [
 
                 # Docs Jekyll website under different licenses
                'docs/static_site',
-  
+
                # Code shared with project by author - see file for details
                'src/operator/special_functions-inl.h',
 
@@ -98,6 +98,8 @@ _WHITE_LIST = [
                'docs/_static/js/clipboard.js',
                'docs/_static/js/clipboard.min.js',
                'docs/static_site/src/assets/js/clipboard.js',
+               'cmake/Modules/FindCUDAToolkit.cmake',
+               'src/operator/numpy/np_einsum_op-inl.h',
 
                # Licensed under 2-Clause BSD in header
                'example/ssd/dataset/pycocotools/coco.py',

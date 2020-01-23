@@ -88,7 +88,7 @@ Install the dependencies, required for MXNet, with the following commands:
 	brew install graphviz
 	brew install openblas
 	brew tap homebrew/core
-	brew install opencv@3
+	brew install opencv
 
 	# If building with MKLDNN
 	brew install llvm
@@ -202,7 +202,7 @@ Run the following commands to install the MXNet dependencies and build the MXNet
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
-    make rpkg
+    make -f R-package/Makefile rpkg
 ```
 
 ## Install the MXNet Package for Julia

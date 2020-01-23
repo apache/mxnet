@@ -58,6 +58,12 @@ enum EmbeddingOpOutputs {kOut};
 enum EmbeddingOpResource {kTempSpace};
 }  // namespace embedding
 
+namespace quantized_embedding {
+enum QuantizedEmbeddingOpInputs {kData, kWeight, kWeightMin, kWeightMax};
+enum QuantizedEmbeddingOpOutputs {kOut, kOutMin, kOutMax};
+enum QuantizedEmbeddingOpResource {kTempSpace};
+}  // namespace quantized_embedding
+
 
 struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
   int input_dim;
@@ -297,7 +303,7 @@ inline bool SparseEmbeddingOpBackwardStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 /*! \brief name the struct TakeNonzeroAxis for general take when
- * axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
+ *         axis is not zero, use TakeZeroAxisGPU or TakeZeroAxisCPU for axis zero
  */
 template<bool clip = true>
 struct TakeNonzeroAxis {
@@ -1266,6 +1272,42 @@ void OneHotOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct gather_nd {
+  template<typename DType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, OpReqType req, index_t N, index_t M, index_t K,
+                                  const mshadow::Shape<10> strides,
+                                  const mshadow::Shape<10> mshape,
+                                  DType* out, const DType* data,
+                                  const IType* indices) {
+    index_t offset = 0;
+    for (index_t j = 0; j < M; ++j) {
+      offset += strides[j] * (static_cast<index_t>(indices[j*N + i] + mshape[j])%mshape[j]);
+    }
+    for (index_t j = 0; j < K; ++j) {
+      KERNEL_ASSIGN(out[i*K + j], req, data[offset+j]);
+    }
+  }
+};
+
+/*!
+ * \brief If any index in a dimension is out of bound, 
+          then the value in this dimension will be set to be the out-of-bound index
+ */
+struct is_valid_check_gather_nd {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* is_valid_dim_ptr, const DType* idx_ptr,
+                                  const index_t N, const mshadow::Shape<10> mshape) {
+    index_t n = N - 1;
+    while (n >= 0) {
+      if (idx_ptr[i*N + n] < -mshape[i] || idx_ptr[i*N + n] > mshape[i] - 1) {
+        is_valid_dim_ptr[i] = idx_ptr[i*N + n];
+        break;
+      }
+      n--;
+    }
+  }
+};
+
 inline bool GatherNDShape(const nnvm::NodeAttrs& attrs,
                           mxnet::ShapeVector *in_attrs,
                           mxnet::ShapeVector *out_attrs) {
@@ -1308,51 +1350,6 @@ inline bool GatherNDType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*in_attrs, 0, (*out_attrs)[0]);
   return true;
 }
-
-struct gather_nd {
-  template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(index_t i, OpReqType req, index_t N, index_t M, index_t K,
-                                  const mshadow::Shape<10> strides,
-                                  DType* out, const DType* data,
-                                  const IType* indices) {
-    index_t offset = 0;
-    for (index_t j = 0; j < M; ++j) {
-      offset += strides[j] * static_cast<index_t>(indices[j*N + i]);
-    }
-    for (index_t j = 0; j < K; ++j) {
-      KERNEL_ASSIGN(out[i*K + j], req, data[offset+j]);
-    }
-  }
-};
-
-template<typename xpu>
-void GatherNDForward(const nnvm::NodeAttrs& attrs,
-                     const OpContext& ctx,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  if (req[0] == kNullOp) return;
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const mxnet::TShape& dshape = inputs[0].shape_;
-  const mxnet::TShape& ishape = inputs[1].shape_;
-  int M = ishape[0];
-  int N = ishape.Size() / M;
-  int K = dshape.ProdShape(M, dshape.ndim());
-  mshadow::Shape<10> strides;
-  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) strides[i] = stride;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
-      Kernel<gather_nd, xpu>::Launch(
-          s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
-    });
-  });
-}
-
 
 struct ScatterNDParam : public dmlc::Parameter<ScatterNDParam> {
   mxnet::TShape shape;

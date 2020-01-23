@@ -28,13 +28,14 @@ Base.similar(x::NDArray{T,N}; writable = x.writable, ctx = context(x)) where {T,
   NDArray{T,N}(undef, size(x)...; writable = writable, ctx = ctx)
 
 """
-    zeros([DType], dims, [ctx::Context = cpu()])
+    zeros([DType], dims, ctx::Context = current_context())
     zeros([DType], dims...)
     zeros(x::NDArray)
 
 Create zero-ed `NDArray` with specific shape and type.
 """
-function zeros(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
+function zeros(::Type{T}, dims::NTuple{N,Int},
+               ctx::Context = current_context()) where {N,T<:DType}
   x = NDArray{T}(undef, dims..., ctx = ctx)
   x[:] = zero(T)
   x
@@ -42,7 +43,7 @@ end
 
 zeros(::Type{T}, dims::Int...) where {T<:DType} = zeros(T, dims)
 
-zeros(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
+zeros(dims::NTuple{N,Int}, ctx::Context = current_context()) where N =
   zeros(MX_float, dims, ctx)
 zeros(dims::Int...) = zeros(dims)
 
@@ -50,13 +51,14 @@ zeros(x::NDArray)::typeof(x)      = zeros_like(x)
 Base.zeros(x::NDArray)::typeof(x) = zeros_like(x)
 
 """
-    ones([DType], dims, [ctx::Context = cpu()])
+    ones([DType], dims, ctx::Context = current_context())
     ones([DType], dims...)
     ones(x::NDArray)
 
 Create an `NDArray` with specific shape & type, and initialize with 1.
 """
-function ones(::Type{T}, dims::NTuple{N,Int}, ctx::Context = cpu()) where {N,T<:DType}
+function ones(::Type{T}, dims::NTuple{N,Int},
+              ctx::Context = current_context()) where {N,T<:DType}
   arr = NDArray{T}(undef, dims..., ctx = ctx)
   arr[:] = one(T)
   arr
@@ -64,7 +66,7 @@ end
 
 ones(::Type{T}, dims::Int...) where T<:DType = ones(T, dims)
 
-ones(dims::NTuple{N,Int}, ctx::Context = cpu()) where N =
+ones(dims::NTuple{N,Int}, ctx::Context = current_context()) where N =
   ones(MX_float, dims, ctx)
 ones(dims::Int...) = ones(dims)
 
@@ -458,12 +460,12 @@ function Base.fill!(arr::NDArray, x)
 end
 
 """
-    fill(x, dims, ctx=cpu())
+    fill(x, dims, ctx = current_context())
     fill(x, dims...)
 
 Create an `NDArray` filled with the value `x`, like `Base.fill`.
 """
-function fill(x::T, dims::NTuple{N,Integer}, ctx::Context = cpu()) where {T,N}
+function fill(x::T, dims::NTuple{N,Integer}, ctx::Context = current_context()) where {T,N}
   arr = NDArray{T}(undef, dims, ctx = ctx)
   arr[:] = x
   arr

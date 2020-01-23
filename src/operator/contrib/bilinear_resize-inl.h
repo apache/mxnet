@@ -59,6 +59,7 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
   dmlc::optional<float> scale_height;
   dmlc::optional<float> scale_width;
   int mode;
+  bool align_corners;
   DMLC_DECLARE_PARAMETER(BilinearSampleParam) {
     DMLC_DECLARE_FIELD(height).set_default(1).set_range(1, 10000)
     .describe("output height (required, but ignored if scale_height is defined or mode is not "
@@ -97,8 +98,62 @@ struct BilinearSampleParam : public dmlc::Parameter<BilinearSampleParam> {
               "(if original height is odd then result height = original height - 1);"
               "\"to_odd_up\" - resize input to nearest odd height and width "
               "(if original height is odd then result height = original height + 1);");
+  DMLC_DECLARE_FIELD(align_corners).set_default(true)
+    .describe("With align_corners = True, the interpolating doesn't proportionally align the"
+              "output and input pixels, and thus the output values can depend on the input size.");
   }
 };
+
+template <typename DType>
+static inline DType area_pixel_compute_scale(
+  int64_t input_size,
+  int64_t output_size,
+  bool align_corners) {
+  /* We view each pixel as an area, idx + 0.5 as its center index.
+   * Here is an example formula in 1D case.
+   * if align_corners: center of two corner pixel areas are preserved,
+   *     (0.5, 0.5) -> (0.5, 0.5),
+   *     (input_size - 0.5, 0.5) -> (output_size - 0.5)
+   *     scale = (input_size - 0.5 - 0.5) / (output_size - 0.5 - 0.5)
+   *     src_index + 0.5 - 0.5 = scale * (dst_index + 0.5 - 0.5)
+   * if not align_corners: the whole range is scaled accordingly
+   *     scale = input_size / output_size
+   *     src_idx + 0.5 = scale * (dst_index + 0.5)
+   */
+  if (output_size > 1) {
+    return align_corners
+      ? static_cast<DType>(input_size - 1) / (output_size - 1)
+      : static_cast<DType>(input_size) / output_size;
+  } else {
+    return DType(0);
+  }
+}
+
+template <typename DType>
+static inline DType area_pixel_compute_source_index(
+  DType scale,
+  int64_t dst_index,
+  bool align_corners,
+  bool cubic) {
+  if (align_corners) {
+    return scale * dst_index;
+  } else {
+    DType src_idx = scale * (dst_index + 0.5) - 0.5;
+    // [Note] Follow Opencv resize logic:
+    // We allow negative src_idx here and later will use
+    //   dx = src_idx - floorf(src_idx)
+    // to compute the "distance"(which affects weights).
+    // For linear modes, weight distribution doesn't matter
+    // for negative indices as they use 2 pixels to interpolate.
+    // For example, [-1, 0], they both use pixel 0 value so it
+    // doesn't affect if we bound the src_idx to 0 or not.
+    // TODO(chinakook): Our current linear mode impls use unbound indices
+    // where we should and then remove this cubic flag.
+    // This matters in cubic mode, as we might need [-1, 0, 1, 2]
+    // to interpolate and the weights can be affected.
+    return (!cubic && src_idx < 0) ? DType(0) : src_idx;
+  }
+}
 
 static inline bool IsWriting(const OpReqType ort) {
   return ort == kWriteTo || ort == kWriteInplace;
@@ -107,25 +162,29 @@ static inline bool IsWriting(const OpReqType ort) {
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<cpu> *s,
                                            const std::vector<TBlob> &input,
-                                           const std::vector<TBlob> &output);
+                                           const std::vector<TBlob> &output,
+                                           bool align_corners);
 
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<cpu> *s,
                                               const std::vector<TBlob> &input,
                                               const std::vector<TBlob> &output,
-                                              bool modeLike);
+                                              bool modeLike,
+                                              bool align_corners);
 
 #if MXNET_USE_CUDA
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateOutput(mshadow::Stream<gpu> *s,
                                            const std::vector<TBlob> &input,
-                                           const std::vector<TBlob> &output);
+                                           const std::vector<TBlob> &output,
+                                           bool align_corners);
 
 template<typename xpu, typename DType, typename AccReal>
 void SpatialUpSamplingBilinearUpdateGradInput(mshadow::Stream<gpu> *s,
                                               const std::vector<TBlob> &input,
                                               const std::vector<TBlob> &output,
-                                              bool modeLike);
+                                              bool modeLike,
+                                              bool align_corners);
 #endif  // MXNET_USE_CUDA
 
 template <typename xpu>
@@ -138,9 +197,16 @@ inline void BilinearSampleOpForward(const nnvm::NodeAttrs& attrs,
   size_t expected = param.mode == bilinear_resize::like ? 2 : 1;
   CHECK_EQ(inputs.size(), expected);
   CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs[0].CheckContiguous(), true);
+  if (expected == 2) {
+  CHECK_EQ(inputs[1].CheckContiguous(), true);
+  }
+  CHECK_EQ(outputs[0].CheckContiguous(), true);
+
+  bool align_corners = param.align_corners;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    SpatialUpSamplingBilinearUpdateOutput<xpu, DType, AccReal>(s, inputs, outputs);
+    SpatialUpSamplingBilinearUpdateOutput<xpu, DType, AccReal>(s, inputs, outputs, align_corners);
   });
 }
 
@@ -154,6 +220,7 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
   const BilinearSampleParam& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   CHECK_EQ(inputs.size(), 1U);
   bool modeLike = param.mode == bilinear_resize::like;
+  bool align_corners = param.align_corners;
   size_t expected = modeLike ? 2 : 1;
   CHECK_EQ(outputs.size(), expected);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -164,7 +231,8 @@ inline void BilinearSampleOpBackward(const nnvm::NodeAttrs& attrs,
     })
   }
   MSHADOW_REAL_TYPE_SWITCH_EX(inputs[0].type_flag_, DType, AccReal, {
-    SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs, modeLike);
+    SpatialUpSamplingBilinearUpdateGradInput<xpu, DType, AccReal>(s, inputs, outputs
+      , modeLike, align_corners);
   });
 }
 
@@ -254,16 +322,7 @@ static bool BilinearSampleOpInferShape(const nnvm::NodeAttrs& attrs,
 inline uint16_t BilinearSampleOpNumInputs(const NodeAttrs& attrs) {
   auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   if (param.mode == bilinear_resize::like) {
-      return 2;
-  } else {
-    return 1;
-  }
-}
-
-inline uint16_t BilinearSampleOpNumBackwardInputs(const NodeAttrs& attrs) {
-  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
-  if (param.mode == bilinear_resize::like) {
-    return 3;
+    return 2;
   } else {
     return 1;
   }
