@@ -38,7 +38,7 @@ from ...ndarray import _ndarray_cls
 from ...numpy.multiarray import _np_ndarray_cls
 from ...ndarray import concat, tile
 from ...util import is_np_array
-from ... import io as mx_io
+from ...io import io as mx_io
 
 class MXDataset(Dataset):
     """A python wrapper a C++ dataset.
@@ -100,8 +100,9 @@ class MXDataset(Dataset):
 
 class MXSampler(Sampler):
     def __init__(self, name, **kwargs):
-        creator = mx_io.get(name, None)
-        if not creator:
+        try:
+            creator = getattr(mx_io, name)
+        except AttributeError:
             raise ValueError('{} is not a valid MXDataIter class'.format(name))
         self._iter = creator(**kwargs)
 
@@ -109,12 +110,20 @@ class MXSampler(Sampler):
         try:
             size = len(self._iter)
         except TypeError:
-            raise TypeError('Iterator {} does not provide length info'.format(type(self._iter)))
+            raise TypeError('Iterator {} does not provide length info'.format(self._iter))
         return size
 
     def __iter__(self):
         self._iter.reset()
-        return self._iter
+        for item in self._iter:
+            ret = item.data[0].asnumpy().flatten().tolist()
+            pad = item.pad
+            if pad > 0:
+                # remove padded values
+               ret = ret[:-pad]
+            elif len(ret) == 1:
+                ret = ret[0]
+            yield ret
 
 def _make_internal_datasets(handle):
     """Create an io iterator by handle."""

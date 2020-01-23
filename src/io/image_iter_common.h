@@ -194,6 +194,41 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
   }
 };
 
+// Batch Sampler parameters
+struct BatchSamplerParam : public dmlc::Parameter<BatchSamplerParam> {
+  /*! \brief Last batch behavior type */
+  enum LastBatchType {
+    /*! \brief Keep not fully filled last batch */
+    kKeep = 0,
+    /*! \brief Roll over the remaining batch to next epoch */
+    kRollOver,
+    /*! \brief Discard not fully filled last batch */
+    kDiscard
+  };  // enum LastBatchType
+  /*! \brief batch size */
+  uint32_t batch_size;
+  /*! \brief last batch behavior */
+  int last_batch;
+  // declare parameters
+  DMLC_DECLARE_PARAMETER(BatchSamplerParam) {
+    DMLC_DECLARE_FIELD(batch_size)
+        .describe("Batch size.");
+    DMLC_DECLARE_FIELD(last_batch).set_default(kKeep)
+        .add_enum("keep", kKeep)
+        .add_enum("rollover", kRollOver)
+        .add_enum("discard", kDiscard)
+        .describe("Specifies how the last batch is handled if batch_size does not evenly "
+                  "divide sequence length. "
+                  "If 'keep', the last batch will be returned directly, but will contain "
+                  "less element than `batch_size` requires. "
+                  "If 'discard', the last batch will be discarded. "
+                  "If 'rollover', the remaining elements will be rolled over to the next "
+                  "iteration. Note: legacy batch param with round_batch will always round data "
+                  "in order to always provide full batchs. Rollover behavior will instead result "
+                  "in different iteration sizes for each epoch.");
+  }
+};
+
 // Define image record parameters
 struct ImageRecordParam: public dmlc::Parameter<ImageRecordParam> {
   /*! \brief whether to do shuffle */

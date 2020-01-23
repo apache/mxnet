@@ -115,6 +115,10 @@ class PrefetcherIter : public IIterator<DataBatch> {
     iter.BeforeFirst();
   }
 
+  virtual int64_t GetLenHint(void) const {
+    return loader_->GetLenHint();
+  }
+
   virtual bool Next(void) {
     if (out_ != nullptr) {
       recycle_queue_.push(out_); out_ = nullptr;

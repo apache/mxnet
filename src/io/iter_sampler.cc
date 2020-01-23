@@ -33,6 +33,76 @@
 
 namespace mxnet {
 namespace io {
+struct SequentialSamplerParam : public dmlc::Parameter<SequentialSamplerParam> {
+    /*! \brief Length of the sequence. */
+    size_t length;
+    /*! \brief Random seed.*/
+    int start;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(SequentialSamplerParam) {
+        DMLC_DECLARE_FIELD(length)
+            .describe("Length of the sequence.");
+        DMLC_DECLARE_FIELD(start).set_default(0)
+            .describe("Start of the index.");
+    }
+};  // struct SequentialSamplerParam
+
+DMLC_REGISTER_PARAMETER(SequentialSamplerParam);
+
+class SequentialSampler : public IIterator<DataInst> {
+  public:
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      param_.InitAllowUnknown(kwargs);
+      indices_.resize(param_.length);
+      std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
+      out_.data.resize(2);  // label required by DataBatch, we can use fake label here
+      out_.data[1] = TBlob(indices_.data(), TShape({1,}), cpu::kDevMask, 0);
+    }
+
+    virtual void BeforeFirst(void) {
+      pos_ = 0;
+    }
+
+    virtual int64_t GetLenHint(void) const {
+      return static_cast<int64_t>(indices_.size());
+    }
+
+    virtual bool Next(void) {
+      if (pos_ < indices_.size()) {
+        int64_t *ptr = indices_.data() + pos_;
+        out_.data[0] = TBlob(ptr, TShape({1,}), cpu::kDevMask, 0);
+        ++pos_;
+        return true;
+      }
+      return false;
+    }
+
+    virtual const DataInst &Value(void) const {
+      return out_;
+    }
+  private:
+    /*! \brief Stored integer indices */
+    std::vector<int64_t> indices_;
+    /*! \brief current position for iteration */
+    std::size_t pos_;
+    /*! \brief data for next value */
+    DataInst out_;
+    /*! \brief arguments */
+    SequentialSamplerParam param_;
+};  // class SequentialSampler
+
+MXNET_REGISTER_IO_ITER(SequentialSampler)
+.describe(R"code(Returns the sequential sampler iterator.
+)code" ADD_FILELINE)
+.add_arguments(SequentialSamplerParam::__FIELDS__())
+.add_arguments(BatchSamplerParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.set_body([]() {
+    return new PrefetcherIter(
+        new BatchSampler(
+            new SequentialSampler()));
+  });
+
 struct RandomSamplerParam : public dmlc::Parameter<RandomSamplerParam> {
     /*! \brief Length of the sequence. */
     size_t length;
@@ -98,15 +168,15 @@ class RandomSampler : public IIterator<DataInst> {
     RandomSamplerParam param_;
 };  // class RandomSampler
 
-MXNET_REGISTER_IO_ITER(RandomSamplerIter)
+MXNET_REGISTER_IO_ITER(RandomSampler)
 .describe(R"code(Returns the random sampler iterator.
 )code" ADD_FILELINE)
 .add_arguments(RandomSamplerParam::__FIELDS__())
-.add_arguments(BatchParam::__FIELDS__())
+.add_arguments(BatchSamplerParam::__FIELDS__())
 .add_arguments(PrefetcherParam::__FIELDS__())
 .set_body([]() {
     return new PrefetcherIter(
-        new BatchLoader(
+        new BatchSampler(
             new RandomSampler()));
   });
 
