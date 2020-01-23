@@ -1037,12 +1037,13 @@ method update($index, $weight, $grad, $state)
         }
         else
         {
+            $grad += $wd * $weight;
             my $mom = $state;
             $mom *= $self->momentum;
-            $grad += $wd * $weight;
-            $mom += $grad;
+            $mom -= $lr * $grad;
+	    $grad *= -$lr;
             $grad += $self->momentum * $mom;
-            $weight += -$lr * $grad;
+            $weight += $grad;
         }
     }
     else
@@ -1061,11 +1062,12 @@ method update($index, $weight, $grad, $state)
         }
         else
         {
+	    $grad32 += $wd * $weight32;
             $mom *= $self->momentum;
-            $grad32 += $wd * $weight32;
-            $mom += $grad32;
+            $mom -= $lr * $grad32;
+	    $grad32 *= -$lr;
             $grad32 += $self->momentum * $mom;
-            $weight32 += -$lr * $grad32;
+            $weight32 += $grad32;
         }
         my $tmp = $weight32->astype($weight->dtype);
         $tmp->copyto($weight);
@@ -1276,7 +1278,7 @@ __PACKAGE__->register;
     rescale_grad : Num, optional
         rescaling factor of gradient. Normally should be 1/batch_size.
 
-    eps: Num, optional
+    epsilon: Num, optional
         A small float number to make the updating processing stable
         Default value is set to 1e-7.
 
@@ -1288,7 +1290,7 @@ use Mouse;
 
 extends 'AI::MXNet::Optimizer';
 
-has 'eps'    => (is => "rw", isa => "Num", default => 1e-7);
+has 'epsilon'    => (is => "rw", isa => "Num", default => 1e-7);
 
 method create_state(Index $index, AI::MXNet::NDArray $weight)
 {
@@ -1314,7 +1316,7 @@ method update(
     if($is_sparse)
     {
         my %kwargs = (
-            epsilon => $self->eps,
+            epsilon => $self->epsilon,
             rescale_grad => $self->rescale_grad
         );
         if($self->clip_gradient)
@@ -1331,7 +1333,7 @@ method update(
             $grad = AI::MXNet::NDArray->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
         $history += $grad->square;
-        my $div = $grad / ($history + $self->eps)->sqrt;
+        my $div = $grad / (($history)->sqrt + $self->epsilon);
         $weight += ($div + $weight * $wd) * -$lr;
     }
 }
@@ -1460,7 +1462,7 @@ method update(
     if($self->centered)
     {
         AI::MXNet::NDArray->rmspropalex_update(
-            $weight, $grad, $n, $g, $delta,
+            $weight, $grad, $g, $n, $delta,
             {
                 out => $weight,
                 lr  => $lr,

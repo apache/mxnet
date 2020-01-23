@@ -550,8 +550,10 @@ def test_signum():
             if (dtype == np.float16 and
                     ('multi_precision' not in kwarg or not kwarg['multi_precision'])):
                 continue
+            rtol, atol = (1e-3, 1e-4) if dtype is np.float16 else (1e-4, 1e-5)
             compare_optimizer(opt1(use_fused_step=False, **kwarg),
-                              opt2(use_fused_step=True, **kwarg), shapes, dtype)
+                              opt2(use_fused_step=True, **kwarg), shapes, dtype,
+                                   rtol=rtol, atol=atol)
 
 
 @with_seed()

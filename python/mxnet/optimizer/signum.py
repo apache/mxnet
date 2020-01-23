@@ -109,14 +109,14 @@ class Signum(Optimizer):
                 mom = state
                 mom[:] *= self.momentum
                 mom[:] -= (1 - self.momentum) * grad
-                weight[:] *= 1 - lr * self.wd_lh
 
                 # update weight
-                weight[:] += lr * sign(mom)
+                weight[:] *= 1 - lr * self.wd_lh
+                weight[:] += lr * ((mom > 0) - (mom < 0))
             else:
                 # update weight
                 weight[:] *= 1 - lr * (wd + self.wd_lh)
-                weight[:] -= lr * sign(grad)
+                weight[:] -= lr * ((grad > 0) - (grad < 0))
 
     def fused_step(self, indices, weights, grads, states):
         """Perform a fused optimization step using gradients and states.

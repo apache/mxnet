@@ -2299,7 +2299,7 @@ struct SignSGDKernel {
     // param_clip_gradient has no effect for SignSGD
     KERNEL_ASSIGN(out_data[i], req,
              (1.f - param_lr * param_wd) * weight_data[i]
-               - (param_lr) * mshadow_op::sign::Map(grad_data[i]));
+               - (param_lr) * ((grad_data[i] > 0) - (grad_data[i] < 0)));
   }
 };
 
@@ -2371,7 +2371,7 @@ struct SignumKernel {
     mom_data[i] *= param_momentum;
     mom_data[i] -= (1 - param_momentum) * rescale_grad;
     KERNEL_ASSIGN(out_data[i], req, (1.f - param_lr * param_wd_lh) * weight_data[i]
-      + (param_lr) * mshadow_op::sign::Map(mom_data[i]));
+      + (param_lr) * ((mom_data[i] > 0) - (mom_data[i] < 0)));
   }
 };
 
