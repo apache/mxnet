@@ -157,7 +157,7 @@ void NumpyGeometricForward(const nnvm::NodeAttrs &attrs,
           });
           _copy<xpu>(s, &indicator_host, indicator_device_ptr);
           CHECK_GE(indicator_host, 0.0)
-              << "ValueError: expect probs >= 0 && probs <= 1";
+              << "ValueError: expect probs > 0 && probs <= 1";
           Kernel<geometric_kernel<NDim, IType, OType>, xpu>::Launch(
             s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
             uniform_tensor.dptr_, outputs[0].dptr<OType>());
