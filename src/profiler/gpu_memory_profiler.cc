@@ -94,11 +94,12 @@ GpuMemoryProfiler::GpuMemoryProfiler() {
   }  // enabled_
 }
 
-const char* GpuMemoryProfiler::current_profiler_scope_ =
+char GpuMemoryProfiler::current_profiler_scope_[PROFILER_SCOPE_MAX_LEN] =
     MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
 
 void GpuMemoryProfiler::SetCurrentScope(const std::string& scope) {
-  current_profiler_scope_ = scope.c_str();
+  strncpy(current_profiler_scope_, scope.c_str(),
+          PROFILER_SCOPE_MAX_LEN);
 }
 
 std::string GpuMemoryProfiler::GetCurrentScope() {
