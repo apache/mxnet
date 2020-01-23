@@ -180,9 +180,11 @@ void CustomFComputeDispatcher(const std::string op_name,
 
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
   void *cuda_stream = nullptr;
+#if MXNET_USE_CUDA
   if (inputs[0].ctx().dev_mask() == Context::kGPU) {
     cuda_stream = static_cast<void*>(gpu_stream->stream_);
   }
+#endif
 
   CHECK((fcomp_fp != nullptr && state_ptr == nullptr)
         || (fcomp_fp == nullptr && state_ptr != nullptr))
