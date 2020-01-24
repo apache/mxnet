@@ -721,8 +721,7 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     return rot_img
 
 
-def random_rotate(src, angle_limits, zoom_in=False,
-                  zoom_out=False, rotate_with_proba=1.0):
+def random_rotate(src, angle_limits, zoom_in=False, zoom_out=False):
     """Random rotates `src` by an angle included in angle limits.
 
     Parameters
@@ -739,17 +738,11 @@ def random_rotate(src, angle_limits, zoom_in=False,
     zoom_out: bool
         If True input image(s) will be zoomed in a way so that the whole
         original image will be contained in the output result.
-    rotate_with_proba: float in [0., 1]
-        Probability of rotating the image.
     Returns
     -------
     NDArray
         An `NDArray` containing the rotated image(s).
     """
-    if rotate_with_proba < 0 or rotate_with_proba > 1:
-        raise ValueError('Probability of rotating the image should be between 0 and 1')
-    if np.random.random() > rotate_with_proba:
-        return src
     if src.ndim == 3:
         rotation_degrees = np.random.uniform(*angle_limits)
     else:

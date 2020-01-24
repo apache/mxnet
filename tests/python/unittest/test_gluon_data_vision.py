@@ -232,8 +232,6 @@ def test_transformer():
 
 @with_seed()
 def test_rotate():
-    assertRaises(ValueError, transforms.Rotate, -100.)
-    assertRaises(ValueError, transforms.Rotate, 100.)
     transformer = transforms.Rotate(10.)
     assertRaises(TypeError, transformer, mx.nd.ones((3, 30, 60), dtype='uint8'))
     single_image = mx.nd.ones((3, 30, 60), dtype='float32')
@@ -243,11 +241,36 @@ def test_rotate():
     batch_output = transformer(batch_image)
     assert same(batch_output.shape, (3, 3, 30, 60))
 
+    input_image = nd.array([[[0., 0., 0.],
+                             [0., 0., 1.],
+                             [0., 0., 0.]]])
+    rotation_angles_expected_outs = [
+        (90., nd.array([[[0., 1., 0.],
+                         [0., 0., 0.],
+                         [0., 0., 0.]]])),
+        (180., nd.array([[[0., 0., 0.],
+                          [1., 0., 0.],
+                          [0., 0., 0.]]])),
+        (270., nd.array([[[0., 0., 0.],
+                          [0., 0., 0.],
+                          [0., 1., 0.]]])),
+        (360., nd.array([[[0., 0., 0.],
+                          [0., 0., 1.],
+                          [0., 0., 0.]]])),
+    ]
+    for rot_angle, expected_result in rotation_angles_expected_outs:
+        transformer = transforms.Rotate(rot_angle)
+        ans = transformer(input_image)
+        print(ans, expected_result)
+        assert_almost_equal(ans, expected_result, atol=1e-6)
+
 
 @with_seed()
 def test_random_rotation():
-    assertRaises(ValueError, transforms.RandomRotation, [-100., 100.])
-    assertRaises(ValueError, transforms.RandomRotation, [100., -100])
+    # test exceptions for probability input outside of [0,1]
+    assertRaises(ValueError, transforms.RandomRotation, [-10, 10.], rotate_with_proba=1.1)
+    assertRaises(ValueError, transforms.RandomRotation, [-10, 10.], rotate_with_proba=-0.3)
+    # test `forward`
     transformer = transforms.RandomRotation([-10, 10.])
     assertRaises(TypeError, transformer, mx.nd.ones((3, 30, 60), dtype='uint8'))
     single_image = mx.nd.ones((3, 30, 60), dtype='float32')
@@ -256,6 +279,10 @@ def test_random_rotation():
     batch_image = mx.nd.ones((3, 3, 30, 60), dtype='float32')
     batch_output = transformer(batch_image)
     assert same(batch_output.shape, (3, 3, 30, 60))
+    # test identity (rotate_with_proba = 0)
+    transformer = transforms.RandomRotation([-100., 100.], rotate_with_proba=0.0)
+    data = mx.nd.random_normal(shape=(3, 30, 60))
+    assert_almost_equal(data, transformer(data))
 
 
 @with_seed()

@@ -377,7 +377,7 @@ class TestImage(unittest.TestCase):
         ylin = np.expand_dims(np.linspace(0, 0.5, 60), axis=0)
         np_img = np.expand_dims(xlin + ylin, axis=2)
         # rotate with imrotate
-        nd_img = mx.nd.array(np_img.transpose((2, 0, 1)))  #convert to CHW
+        nd_img = mx.nd.array(np_img.transpose((2, 0, 1)))  # convert to CHW
         rot_angle = 6
         args = {'src': nd_img, 'rotation_degrees': rot_angle, 'zoom_in': False, 'zoom_out': False}
         nd_rot = mx.image.imrotate(**args)
@@ -439,7 +439,7 @@ class TestImage(unittest.TestCase):
     @with_seed()
     def test_random_rotate(self):
         angle_limits = [-5., 5.]
-        src_single_image = mx.nd.random.uniform(0, 1,  (3, 30, 60),
+        src_single_image = mx.nd.random.uniform(0, 1, (3, 30, 60),
                                                 dtype=np.float32)
         out_single_image = mx.image.random_rotate(src_single_image,
                                                   angle_limits)
@@ -450,18 +450,6 @@ class TestImage(unittest.TestCase):
         out_batch_image = mx.image.random_rotate(src_batch_image,
                                                  angle_limits)
         self.assertEqual(out_batch_image.shape, (3, 3, 30, 60))
-
-        # test exceptions for probability input outside of [0,1]
-        args = {'src': src_single_image,
-                'angle_limits': angle_limits,
-                'zoom_in': False, 'zoom_out': False,
-                'rotate_with_proba': 1.1}
-        self.assertRaises(ValueError, mx.image.random_rotate, **args)
-        args = {'src': src_single_image,
-                'angle_limits': angle_limits,
-                'zoom_in': False, 'zoom_out': False,
-                'rotate_with_proba': -0.3}
-        self.assertRaises(ValueError, mx.image.random_rotate, **args)
 
 
 if __name__ == '__main__':

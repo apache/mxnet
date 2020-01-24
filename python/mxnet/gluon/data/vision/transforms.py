@@ -206,7 +206,7 @@ class Rotate(Block):
     Parameters
     ----------
     rotation_degrees : float32
-        Desired rotation angle in degrees, in range (-90, 90).
+        Desired rotation angle in degrees.
     zoom_in : bool
         Zoom in image so that no padding is present in final output.
     zoom_out : bool
@@ -255,15 +255,16 @@ class RandomRotation(Block):
     def __init__(self, angle_limits, zoom_in=False, zoom_out=False, rotate_with_proba=1.0):
         super(RandomRotation, self).__init__()
         lower, upper = angle_limits
-        if any(i < -90 for i in angle_limits) or any(i > 90 for i in angle_limits):
-            raise ValueError("rotation angles should be between -90 and 90 degrees")
         if lower >= upper:
             raise ValueError("`angle_limits` must be an ordered tuple")
         if rotate_with_proba < 0 or rotate_with_proba > 1:
             raise ValueError("Probability of rotating the image should be between 0 and 1")
-        self._args = (angle_limits, zoom_in, zoom_out, rotate_with_proba)
+        self._args = (angle_limits, zoom_in, zoom_out)
+        self._rotate_with_proba = rotate_with_proba
 
     def forward(self, x):
+        if np.random.random() > self._rotate_with_proba:
+            return x
         if x.dtype is not np.float32:
             raise TypeError("This transformation only supports float32. "
                             "Consider calling it after ToTensor")
