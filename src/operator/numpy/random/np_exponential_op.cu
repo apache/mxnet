@@ -18,23 +18,18 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_broadcast_reduce_op_boolean.cu
- * \brief GPU Implementation of broadcast and reduce functions based on boolean.
+ * Copyright (c) 2019 by Contributors
+ * \file np_exponential_op.cu
+ * \brief Operator for numpy sampling from exponential distributions
  */
 
-#include "./np_broadcast_reduce_op.h"
+#include "./np_exponential_op.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_any)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
-  mshadow_op::sum, mshadow_op::NonZero, 0>);
-
-NNVM_REGISTER_OP(_np_all)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
-  mshadow_op::product, mshadow_op::NonZero, 1>);
+NNVM_REGISTER_OP(_npi_exponential)
+.set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

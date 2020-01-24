@@ -18,23 +18,24 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_broadcast_reduce_op_boolean.cu
- * \brief GPU Implementation of broadcast and reduce functions based on boolean.
+ * \file np_pinv.cu
+ * \brief GPU implementation placeholder of Pinv Operator
  */
 
-#include "./np_broadcast_reduce_op.h"
+#include "./np_pinv-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_any)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
-  mshadow_op::sum, mshadow_op::NonZero, 0>);
+#if MXNET_USE_CUSOLVER == 1
 
-NNVM_REGISTER_OP(_np_all)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
-  mshadow_op::product, mshadow_op::NonZero, 1>);
+NNVM_REGISTER_OP(_npi_pinv)
+.set_attr<FCompute>("FCompute<gpu>", PinvOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_pinv_scalar_rcond)
+.set_attr<FCompute>("FCompute<gpu>", PinvScalarRcondOpForward<gpu>);
+
+#endif
 
 }  // namespace op
 }  // namespace mxnet

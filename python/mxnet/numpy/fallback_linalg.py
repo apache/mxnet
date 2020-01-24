@@ -15,22 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-find_path(NVTX_INCLUDE_DIRS
-  NAMES nvToolsExt.h
-  PATHS $ENV{NVTOOLSEXT_PATH} ${NVTX_ROOT_DIR}  ${CUDA_TOOLKIT_ROOT_DIR}
-  PATH_SUFFIXES include
-  )
+"""Operators that fallback to official NumPy implementation for np.linalg."""
 
-find_library(NVTX_LIBRARIES
-  NAMES nvToolsExt64_1.lib nvToolsExt32_1.lib nvToolsExt
-  PATHS $ENV{NVTOOLSEXT_PATH} ${NVTX_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
-  PATH_SUFFIXES lib lib64 lib/Win32 lib/x64
-  )
+from __future__ import absolute_import
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(NVTX DEFAULT_MSG NVTX_INCLUDE_DIRS NVTX_LIBRARIES)
+import numpy as onp
 
-if(NVTX_FOUND)
-  message(STATUS "Found NVTX (include: ${NVTX_INCLUDE_DIRS}, library: ${NVTX_LIBRARIES})")
-  mark_as_advanced(NVTX_ROOT_DIR NVTX_INCLUDE_DIRS NVTX_LIBRARIES)
-endif()
+
+__all__ = [
+    'cond',
+]
+
+cond = onp.linalg.cond
