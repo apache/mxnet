@@ -48,7 +48,7 @@ else()
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" OFF)
 endif()
 option(USE_GPERFTOOLS "Build with GPerfTools support" OFF)
-option(USE_JEMALLOC "Build with Jemalloc support"   ON)
+option(USE_JEMALLOC "Build with Jemalloc support" OFF)
 option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
 option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
 option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
@@ -68,6 +68,7 @@ option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output"
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
+cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
@@ -98,6 +99,17 @@ endif()
 
 if(UNIX)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+endif()
+
+if(USE_CCACHE)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CUDA_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+  else()
+    message(STATUS "Could not find CCache. Consider installing CCache to speed up compilation.")
+  endif()
 endif()
 
 if(MSVC)
@@ -288,6 +300,10 @@ if(USE_MKLDNN)
   set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
   set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
   set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+
+  if(NOT USE_OPENMP)
+      set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
+  endif()
 
   add_subdirectory(3rdparty/mkldnn)
 

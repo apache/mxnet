@@ -110,7 +110,7 @@ Examples::
 .add_arguments(BoxNMSParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_contrib_box_nms)
-.set_num_inputs(3)
+.set_num_inputs(4)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<BoxNMSParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

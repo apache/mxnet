@@ -328,15 +328,6 @@ inline uint16_t BilinearSampleOpNumInputs(const NodeAttrs& attrs) {
   }
 }
 
-inline uint16_t BilinearSampleOpNumBackwardInputs(const NodeAttrs& attrs) {
-  auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
-  if (param.mode == bilinear_resize::like) {
-    return 3;
-  } else {
-    return 1;
-  }
-}
-
 inline uint16_t BilinearSampleOpNumBackwardOutputs(const NodeAttrs& attrs) {
   auto& param = nnvm::get<BilinearSampleParam>(attrs.parsed);
   if (param.mode == bilinear_resize::like) {

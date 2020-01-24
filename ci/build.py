@@ -268,9 +268,9 @@ def load_docker_cache(tag, docker_registry) -> None:
 
 
 def log_environment():
-    instance_id = ec2_instance_id_hostname()
-    if instance_id:
-        logging.info("EC2 Instance id: %s", instance_id)
+    instance_info = ec2_instance_info()
+    if instance_info:
+        logging.info("EC2: %s", instance_info)
     pp = pprint.PrettyPrinter(indent=4)
     logging.debug("Build environment: %s", pp.pformat(dict(os.environ)))
 
