@@ -17,7 +17,7 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Base distribution class"""
+"""Base distribution class."""
 __all__ = ['Distribution']
 
 
@@ -28,6 +28,8 @@ class Distribution(object):
     ----------
     F : mx.ndarray or mx.symbol.numpy._Symbol
         Variable that stores the running mode.
+    event_dim : int
+        Variable indicating the dimension of the distribution's support.
     """          
 
     # Variable indicating whether the sampling method has
@@ -37,6 +39,7 @@ class Distribution(object):
     def __init__(self, F=None):
         self._kl_dict = {}
         self.F = F
+        self.event_dim = 0
 
     def log_prob(self, value):
         r"""
@@ -106,14 +109,11 @@ class Distribution(object):
     def variance(self):
         r"""
         Return the variance of the distribution.
-        """
-        return NotImplementedError
+
+    @property
 
     @property
     def support(self):
-        """
-        Return a function representing the distribution's support.
-        """
+        """Return a function representing the distribution's support."""
         # TODO: return a constraint object
         return NotImplementedError
-
