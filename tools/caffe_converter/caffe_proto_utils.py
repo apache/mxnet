@@ -196,7 +196,7 @@ def read_caffe_mean(caffe_mean_file):
         mean_blob.ParseFromString(f.read())
 
     img_mean_np = np.array(mean_blob.data)
-    img_mean_np = img_mean_np.reshape(mean_blob.channels, mean_blob.height, mean_blob.width)
+    img_mean_np = img_mean_np.reshape(mean_blob.channels, mean_blob.height, mean_blob.width)  # pylint: disable=too-many-function-args
 
     # swap channels from Caffe BGR to RGB
     img_mean_np[[0, 2], :, :] = img_mean_np[[2, 0], :, :]

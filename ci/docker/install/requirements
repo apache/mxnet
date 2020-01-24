@@ -21,6 +21,7 @@
 boto3==1.9.229
 cpplint==1.3.0
 Cython==0.29.7
+CommonMark==0.5.4
 decorator==4.4.0
 h5py==2.8.0rc1
 mock==2.0.0
