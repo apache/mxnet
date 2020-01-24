@@ -34,6 +34,7 @@ DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_DTYPE = ['float32', 'int32', 'float32']  # required parameter for amp_cast, cast
 DEFAULT_DTYPE_INT = ['int32', 'int64', 'int32']  # randint works for int* types only
 DEFAULT_DTYPE_FLOAT = ['float16', 'float32', 'float64']  # random_exp works for float* types only
+DEFAULT_DATA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 
 # For Binary miscellaneous operators like choose_element0_index
 # argument data must be indexed via an NDArray.
@@ -44,6 +45,9 @@ DEFAULT_INDEX = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_LHS = [(1024, 1024), (10000, 10), (10000, 1)]
 DEFAULT_RHS = [(1024, 1024), (10000, 10), (10000, 1)]
 
+DEFAULT_LHS_LARGE_TENSOR = [(2**16, 2**16), (2**28, 2**4), (2**32, 1)]
+DEFAULT_RHS_LARGE_TENSOR = [(2**16, 2**16), (2**28, 2**4), (2**32, 1)]
+
 # For operators like - random_uniform, random_normal etc..
 DEFAULT_SHAPE = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_SAMPLE = [(2,)]
@@ -51,6 +55,9 @@ DEFAULT_LOW = [0]
 DEFAULT_HIGH = [5]
 DEFAULT_K = [1]
 DEFAULT_P = [1]
+
+DEFAULT_SHAPE_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_SAMPLE_LARGE_TENSOR = [(2**32,)]
 
 # For operators like - sample_uniform, sample_normal etc..
 # NOTE: There are many overlapping operators in random_* and sample_*,
@@ -72,6 +79,16 @@ DEFAULT_TRANSFORM_TYPE = ['warp', 'affine']
 DEFAULT_DATA_GRIDGEN = [(32, 2, 256, 256), (256, 6)]
 DEFAULT_TARGET_SHAPE = [(256, 6)]
 DEFAULT_DATA_SM = [(32, 32), (64, 64)]
+
+DEFAULT_LOW_ND_LARGE_TENSOR = [[0.0] * 2**16 + [2.5] * 2**16]
+DEFAULT_HIGH_ND_LARGE_TENSOR = [[1.0] * 2**16 + [3.7] * 2**16]
+DEFAULT_MU_ND_LARGE_TENSOR = [[2.0] * 2**16 + [2.5] * 2**16]
+DEFAULT_SIGMA_LARGE_TENSOR = [[1.0] * 2**16 + [3.7] * 2**16]
+DEFAULT_ALPHA_ND_LARGE_TENSOR = [[0.0] * 2**16 + [2.5] * 2**16]
+DEFAULT_BETA_ND_LARGE_TENSOR = [[1.0] * 2**16 + [0.7] * 2**16]
+DEFAULT_LAM_LARGE_TENSOR = [[1.0] * 2**16 + [8.5] * 2**16]
+DEFAULT_K_ND_LARGE_TENSOR = [[20] * 2**16 + [49] * 2**16]
+DEFAULT_P_ND_LARGE_TENSOR = [[0.4] * 2**16 + [0.77] * 2**16]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
@@ -194,6 +211,18 @@ DEFAULT_CLIP_GRADIENT = [-1.0, 0.8]
 DEFAULT_CLIP_WEIGHTS = [-1.0, 0.8]
 DEFAULT_LAZY_UPDATE = [0, 1]
 
+DEFAULT_WEIGHT_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_GRAD_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_MOM_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_MEAN_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_VAR_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_N_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_D_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_V_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_Z_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_G_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_DELTA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+
 # For rearrange operators
 # NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
 # Hence below we append 4d to mark the difference.
@@ -216,6 +245,8 @@ DEFAULT_A = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_MHS = [(1024,), (10000,), (10000,)]
 DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
+DEFAULT_DATA_4d_LARGE_TENSOR = [(1, 4, 2, 2**29), (1,2**4,2**4,2**24)]
+DEFAULT_BLOCK_SIZE_LARGE_TENSOR = [2, 4]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
@@ -433,6 +464,56 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "data_layernorm": DEFAULT_DATA_NN_BASIC,
                    "axis_layernorm": DEFAULT_AXIS}
 
+# Default Inputs for Large Tensor. MXNet Op Param Name to Default Input mapping
+DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
+                                "sample": DEFAULT_SAMPLE_LARGE_TENSOR,
+                                "lhs": DEFAULT_LHS_LARGE_TENSOR,
+                                "rhs": DEFAULT_RHS_LARGE_TENSOR,
+                                "shape": DEFAULT_SHAPE_LARGE_TENSOR,
+                                "low": DEFAULT_LOW,
+                                "high": DEFAULT_HIGH,
+                                "low_nd": DEFAULT_LOW_ND_LARGE_TENSOR,
+                                "high_nd": DEFAULT_HIGH_ND_LARGE_TENSOR,
+                                "mu_nd": DEFAULT_MU_ND_LARGE_TENSOR,
+                                "sigma": DEFAULT_SIGMA_LARGE_TENSOR,
+                                "alpha_nd": DEFAULT_ALPHA_ND_LARGE_TENSOR,
+                                "beta_nd": DEFAULT_BETA_ND_LARGE_TENSOR,
+                                "lam_nd": DEFAULT_LAM_LARGE_TENSOR,
+                                "k": DEFAULT_K,
+                                "p": DEFAULT_P,
+                                "k_nd": DEFAULT_K_ND_LARGE_TENSOR,
+                                "p_nd": DEFAULT_P_ND_LARGE_TENSOR,
+                                "axis_shape": DEFAULT_AXIS_SHAPE,
+                                "axis": DEFAULT_AXIS,
+                                "weight" : DEFAULT_WEIGHT_LARGE_TENSOR,
+                                "weight32" : DEFAULT_WEIGHT_LARGE_TENSOR,
+                                "grad" : DEFAULT_GRAD_LARGE_TENSOR,
+                                "mean" : DEFAULT_MEAN_LARGE_TENSOR,
+                                "var" : DEFAULT_VAR_LARGE_TENSOR,
+                                "mom" : DEFAULT_MOM_LARGE_TENSOR,
+                                "n" : DEFAULT_N_LARGE_TENSOR,
+                                "d" : DEFAULT_D_LARGE_TENSOR,
+                                "v" : DEFAULT_V_LARGE_TENSOR,
+                                "z" : DEFAULT_Z_LARGE_TENSOR,
+                                "g" : DEFAULT_G_LARGE_TENSOR,
+                                "delta" : DEFAULT_DELTA_LARGE_TENSOR,
+                                "lr" : DEFAULT_LR,
+                                "lrs" : DEFAULT_LRS,
+                                "wds" : DEFAULT_LRS,
+                                "gamma1" : DEFAULT_GAMMA_1,
+                                "gamma2" : DEFAULT_GAMMA_2,
+                                "epsilon" : DEFAULT_EPSILON,
+                                "beta1" : DEFAULT_BETA_1,
+                                "beta2" : DEFAULT_BETA_2,
+                                "t" : DEFAULT_T,
+                                "rescale_grad" : DEFAULT_RESCALE_GRAD,
+                                "clip_grad" : DEFAULT_CLIP_GRADIENT,
+                                "lazy_update" : DEFAULT_LAZY_UPDATE,
+                                "data_4d": DEFAULT_DATA_4d_LARGE_TENSOR,
+                                "dim1": DEFAULT_DIM_1,
+                                "dim2": DEFAULT_DIM_2,
+                                "block_size": DEFAULT_BLOCK_SIZE_LARGE_TENSOR,
+                                "args": DEFAULT_ARGS}
 
 # These are names of MXNet operator parameters that is of type NDArray.
 # We maintain this list to automatically recognize these parameters are to be
