@@ -114,7 +114,6 @@ class MXSampler(Sampler):
         return size
 
     def __iter__(self):
-        self._iter.reset()
         for item in self._iter:
             ret = item.data[0].asnumpy().flatten().tolist()
             pad = item.pad
@@ -124,6 +123,7 @@ class MXSampler(Sampler):
             elif len(ret) == 1:
                 ret = ret[0]
             yield ret
+        self._iter.reset()
 
 def _make_internal_datasets(handle):
     """Create an io iterator by handle."""
