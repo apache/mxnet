@@ -26,7 +26,6 @@ In this article, I will cover how to create a new layer from scratch, how to use
 
 To create a new layer in Gluon API, one must create a class that inherits from [Block](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L123) class. This class provides the most basic functionality, and all pre-defined layers inherit from it directly or via other subclasses. Because each layer in Apache MxNet inherits from `Block`, words "layer" and "block" are used interchangeable inside of the Apache MxNet community.
 
-- MXNet [7b24137](https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0). See Instructions in [Setup and Installation](/get_started). 
 The only instance method needed to be implemented is [forward(self, x)](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/block.py#L415), which defines what exactly your layer is going to do during forward propagation. Notice, that it doesn't require to provide what the block should do during back propogation. Back propogation pass for blocks is done by Apache MxNet for you. 
 
 In the example below, we define a new layer and implement `forward()` method to normalize input data by fitting it into a range of [0, 1].
