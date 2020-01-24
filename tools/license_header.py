@@ -108,7 +108,7 @@ _WHITE_LIST = [
                'julia/Project.toml',
                
                # Licensed under Apache 2.0 license
-               example/image-classification/predict-cpp/image-classification-predict.cc
+               'example/image-classification/predict-cpp/image-classification-predict.cc'
                ]
 
 # language extensions and the according commment mark
