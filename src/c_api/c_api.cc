@@ -887,9 +887,9 @@ int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_END();
 }
 
-template<typename DataType, typename dimtype>
+template<typename DataType>
 void CreateNDArray(const DataType* shape,
-                   dimtype ndim,
+                   int ndim,
                    int dev_type,
                    int dev_id,
                    int delay_alloc,
@@ -927,7 +927,7 @@ int MXNDArrayCreateEx64(const int64_t *shape,
                         int dtype,
                         NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<int64_t, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
@@ -939,7 +939,7 @@ int MXNDArrayCreateEx(const uint32_t *shape,
                       int dtype,
                       NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<uint32_t, uint32_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
