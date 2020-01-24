@@ -85,6 +85,10 @@ typedef void *DataIterHandle;
 typedef void *DatasetCreator;
 /*! \brief handle to a Dataset */
 typedef void *DatasetHandle;
+/*! \brief handle to a BatchifyFunction creator*/
+typedef void *BatchifyFunctionCreator;
+/*! \brief handle to a BatchifyFunction */
+typedef void *BatchifyFunctionHandle;
 /*! \brief handle to KVStore */
 typedef void *KVStoreHandle;
 /*! \brief handle to RecordIO */
@@ -2734,6 +2738,54 @@ MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
                                int n,
                                NDArrayHandle *arr,
                                int *is_scalar);
+                              
+/*!
+ * \brief List all the available batchify function entries
+ * \param out_size the size of returned batchify functions
+ * \param out_array the output batchify function entries
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListBatchifyFunctions(uint32_t *out_size,
+                                      BatchifyFunctionCreator **out_array);
+/*!
+ * \brief Init an batchify function, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the batchify function creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting batchify function
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     BatchifyFunctionHandle *out);
+/*!
+ * \brief Get the detailed information about batchify function.
+ * \param creator the batchifyFunctionCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the batchify function 
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXBatchifyFunctionFree(BatchifyFunctionHandle handle);
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

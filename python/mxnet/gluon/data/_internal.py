@@ -125,6 +125,18 @@ class MXSampler(Sampler):
             yield ret
         self._iter.reset()
 
+
+class MXBatchifyFunction(object):
+    def __init__(self, handle, **kwargs):
+        self._kwargs = kwargs
+        self.handle = handle
+
+    def __del__(self):
+        check_call(_LIB.MXBatchifyFunctionFree(self.handle))
+
+    def __call__(self, *args):
+        raise NotImplementedError("MXBatchifyFunction not implemented in python")
+
 def _make_internal_datasets(handle):
     """Create an io iterator by handle."""
     name = ctypes.c_char_p()
@@ -185,7 +197,7 @@ def _make_internal_datasets(handle):
         param_keys = c_str_array(param_keys)
         param_vals = c_str_array(param_vals)
         dataset_handle = DatasetHandle()
-        check_call(_LIB.MXDatasetCreateDataset(
+        check_call(_LIB.MXBatchifyFunctionCreateFunction(
             handle,
             mx_uint(len(param_keys)),
             param_keys, param_vals,
@@ -212,3 +224,93 @@ def _init_internal_dataset_module():
         setattr(module_obj, dataset.__name__, dataset)
 
 _init_internal_dataset_module()
+
+
+'''Init batchify functions'''
+def _make_internal_batchify_functions(handle):
+    """Create an io iterator by handle."""
+    name = ctypes.c_char_p()
+    desc = ctypes.c_char_p()
+    num_args = mx_uint()
+    arg_names = ctypes.POINTER(ctypes.c_char_p)()
+    arg_types = ctypes.POINTER(ctypes.c_char_p)()
+    arg_descs = ctypes.POINTER(ctypes.c_char_p)()
+
+    check_call(_LIB.MXBatchifyFunctionGetFunctionInfo( \
+            handle, ctypes.byref(name), ctypes.byref(desc), \
+            ctypes.byref(num_args), \
+            ctypes.byref(arg_names), \
+            ctypes.byref(arg_types), \
+            ctypes.byref(arg_descs)))
+    bf_name = py_str(name.value)
+
+    narg = int(num_args.value)
+    param_str = _build_param_doc(
+        [py_str(arg_names[i]) for i in range(narg)],
+        [py_str(arg_types[i]) for i in range(narg)],
+        [py_str(arg_descs[i]) for i in range(narg)])
+
+    doc_str = ('%s\n\n' +
+               '%s\n' +
+               'Returns\n' +
+               '-------\n' +
+               'MXBatchifyFunction\n'+
+               '    The result batchify function.')
+    doc_str = doc_str % (desc.value, param_str)
+
+    def creator(*args, **kwargs):
+        """Create an iterator.
+        The parameters listed below can be passed in as keyword arguments.
+
+        Parameters
+        ----------
+        name : string, required.
+            Name of the resulting batchify function.
+
+        Returns
+        -------
+        batchify_func: BatchifyFunction
+            The resulting batchify function.
+        """
+        param_keys = []
+        param_vals = []
+
+        for k, val in kwargs.items():
+            # convert ndarray to handle
+            if hasattr(val, 'handle'):
+                val = val.handle.value
+            if isinstance(val, (tuple, list)):
+                val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
+            param_keys.append(k)
+            param_vals.append(str(val))
+        # create atomic symbol
+        param_keys = c_str_array(param_keys)
+        param_vals = c_str_array(param_vals)
+        batchify_fn_handle = DatasetHandle()
+        check_call(_LIB.MXBatchifyFunctionCreateFunction(
+            handle,
+            mx_uint(len(param_keys)),
+            param_keys, param_vals,
+            ctypes.byref(batchify_fn_handle)))
+
+        if len(args):
+            raise TypeError('%s can only accept keyword arguments' % bf_name)
+
+        return MXBatchifyFunction(batchify_fn_handle, **kwargs)
+
+    creator.__name__ = bf_name
+    creator.__doc__ = doc_str
+    return creator
+
+def _init_internal_batchify_function_module():
+    """List and add all the batchify_functions to current module."""
+    plist = ctypes.POINTER(ctypes.c_void_p)()
+    size = ctypes.c_uint()
+    check_call(_LIB.MXListBatchifyFunctions(ctypes.byref(size), ctypes.byref(plist)))
+    module_obj = sys.modules[__name__]
+    for i in range(size.value):
+        hdl = ctypes.c_void_p(plist[i])
+        bf = _make_internal_batchify_functions(hdl)
+        setattr(module_obj, bf.__name__, bf)
+
+_init_internal_batchify_function_module()

@@ -1291,7 +1291,7 @@ int MXNDArrayAt64(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
-MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
+int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
                                NDArrayHandle *out) {
@@ -1327,7 +1327,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
-MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+int MXNDArrayReshape64(NDArrayHandle handle,
                                  int ndim,
                                  dim_t *dims,
                                  bool reverse,
@@ -1753,7 +1753,7 @@ int MXDataIterGetPadNum(DataIterHandle handle, int *pad) {
   API_END();
 }
 
-MXNET_DLL int MXListDatasets(uint32_t *out_size,
+int MXListDatasets(uint32_t *out_size,
                              DatasetCreator **out_array) {
   API_BEGIN();
   auto &vec = dmlc::Registry<DatasetReg>::List();
@@ -1762,7 +1762,7 @@ MXNET_DLL int MXListDatasets(uint32_t *out_size,
   API_END();                            
 }
 
-MXNET_DLL int MXDatasetCreateDataset(DatasetCreator handle,
+int MXDatasetCreateDataset(DatasetCreator handle,
                                      uint32_t num_param,
                                      const char **keys,
                                      const char **vals,
@@ -1780,7 +1780,7 @@ MXNET_DLL int MXDatasetCreateDataset(DatasetCreator handle,
   API_END_HANDLE_ERROR(delete dataset);                       
 }
 
-MXNET_DLL int MXDatasetGetDatasetInfo(DatasetCreator creator,
+int MXDatasetGetDatasetInfo(DatasetCreator creator,
                                       const char **name,
                                       const char **description,
                                       uint32_t *num_args,
@@ -1793,13 +1793,13 @@ MXNET_DLL int MXDatasetGetDatasetInfo(DatasetCreator creator,
                                  NULL);                         
 }
 
-MXNET_DLL int MXDatasetFree(DatasetHandle handle) {
+int MXDatasetFree(DatasetHandle handle) {
   API_BEGIN();
   delete static_cast<Dataset *>(handle);
   API_END();                            
 }
 
-MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
+int MXDatasetGetLen(DatasetHandle handle,
                               uint64_t *out) {
   API_BEGIN();
   uint64_t len = static_cast<Dataset *>(handle)->GetLen();
@@ -1807,7 +1807,7 @@ MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
   API_END();                            
 }
 
-MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
+int MXDatasetGetOutSize(DatasetHandle handle,
                                   int *out) {
   API_BEGIN();
   int size = static_cast<Dataset *>(handle)->GetOutputSize();
@@ -1815,7 +1815,7 @@ MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
   API_END();                            
 }
 
-MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
+int MXDatasetGetItem(DatasetHandle handle,
                                uint64_t index,
                                int n,
                                NDArrayHandle *arr,
@@ -1825,7 +1825,53 @@ MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
   *pndarray = static_cast<Dataset *>(handle)->GetItem(index, n, is_scalar);
   *arr = pndarray;
   API_END();                            
-}                               
+}
+
+int MXListBatchifyFunctions(uint32_t *out_size,
+                            BatchifyFunctionCreator **out_array) {
+  API_BEGIN();
+  auto &vec = dmlc::Registry<BatchifyFunctionReg>::List();
+  *out_size = static_cast<uint32_t>(vec.size());
+  *out_array = (BatchifyFunctionCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();                         
+}
+
+int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     BatchifyFunctionHandle *out) {
+  BatchifyFunction *bf = nullptr;
+  API_BEGIN();
+  BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(handle);
+  bf = e->body();
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (uint32_t i = 0; i < num_param; ++i) {
+    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+  }
+  bf->Init(kwargs);
+  *out = bf;
+  API_END_HANDLE_ERROR(delete bf);                           
+}
+
+int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions) {
+  BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(creator);
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 NULL);
+}
+
+int MXBatchifyFunctionFree(BatchifyFunctionHandle handle) {
+  API_BEGIN();
+  delete static_cast<BatchifyFunction *>(handle);
+  API_END();
+}                                 
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

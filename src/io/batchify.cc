@@ -23,14 +23,21 @@
  * \brief Mini-batch data combination functions.
  */
 #include <dmlc/parameter.h>
-#include "./batchify.h"
-
-namespace dmlc {
-DMLC_REGISTRY_ENABLE(::mxnet::io::BatchifyFunctionReg);
-}  // namespace dmlc
+#include <mxnet/io.h>
 
 namespace mxnet {
 namespace io {
+struct SequentialBatchifyParam : public dmlc::Parameter<SequentialBatchifyParam> {
+    mxnet::Tuple<std::intptr_t> functions;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(SequentialBatchifyParam) {
+        DMLC_DECLARE_FIELD(functions)
+            .describe("Internal sequentially applied batchify functions. "
+                      "The number of functions must match output of dataset items.");
+    }
+};  // struct SequentialBatchifyParam
+DMLC_REGISTER_PARAMETER(SequentialBatchifyParam);
+
 struct StackBatchifyParam : public dmlc::Parameter<StackBatchifyParam> {
     /*! \brief Length of the sequence. */
     int use_shared_mem;
@@ -43,21 +50,59 @@ struct StackBatchifyParam : public dmlc::Parameter<StackBatchifyParam> {
 
 DMLC_REGISTER_PARAMETER(StackBatchifyParam);
 
+class SequentialBatchify : public BatchifyFunction {
+  public:
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      param_.InitAllowUnknown(kwargs);
+      fs_.reserve(param_.functions.ndim());
+      for (int i = 0; i < param_.functions.ndim(); ++i) {
+          fs_.emplace_back(static_cast<BatchifyFunction*>(
+              reinterpret_cast<void*>(param_.functions[i])));
+      }
+    }
+
+    virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+      auto out_size = SanityCheck(inputs);
+      CHECK_EQ(out_size, fs_.size()) << "In Sequential BatchifyFunction, Elem size "
+        << out_size << " and batchify function size " << fs_.size() << " must match";
+      std::vector<NDArray> ret;
+      ret.reserve(out_size);
+      for (size_t i = 0; i < out_size; ++i) {
+        std::vector<std::vector<NDArray> > inp;
+        inp.reserve(inputs.size());
+        for (size_t j = 0; j < inputs.size(); ++j) {
+            std::vector<NDArray> curr({inputs[j][i]});
+            inp.emplace_back(curr);
+        }
+        ret.emplace_back(fs_[i]->Batchify(inp)[0]);
+      }
+      return ret;
+    }
+
+  private:
+    /*! \brief params */
+    SequentialBatchifyParam param_;
+    /*! \brief internal batchify function pointers */
+    std::vector<BatchifyFunction*> fs_;
+};  // class SequentialBatchify
+
+MXNET_REGISTER_IO_BATCHIFY_FUNCTION(SequentialBatchify)
+  .describe(R"code(Returns the SequentialBatchify function.
+    )code" ADD_FILELINE)
+  .add_arguments(SequentialBatchifyParam::__FIELDS__())
+  .set_body([]() {
+    return new SequentialBatchify();
+});
+
 class StackBatchify : public BatchifyFunction {
   public:
-    std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> > inputs,
-                                  std::vector<int> keep_dim) {
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      param_.InitAllowUnknown(kwargs);
+    }
+
+    virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+      auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
-      CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
-      auto out_size = inputs[0].size();
-      // sanity check: each input has same size
-      for (size_t i = 1; i < bs; ++i) {
-          CHECK_EQ(inputs[i].size(), out_size)
-            << i << "-th input size does not match " << out_size;
-      }
-      CHECK_EQ(out_size, keep_dim.size())
-        << "inputs and keep_dim size mismatch "
-        << out_size << " vs. " << keep_dim.size();
       std::vector<NDArray> ret(out_size);
       
       for (size_t i = 0; i < out_size; ++i) {
@@ -84,8 +129,8 @@ class StackBatchify : public BatchifyFunction {
               slice_view.SyncCopyFromNDArray(inputs[j][i]);
           }
 
-          // reshape if keep_dim is true
-          if (keep_dim[i] == 1 && sshape.ndim() > 1) {
+          // reshape to keep dim
+          if (sshape.ndim() > 1) {
             TShape new_shape = ashape;
             new_shape[0] *= bs;
             ret[i].Reshape(new_shape);
@@ -93,8 +138,17 @@ class StackBatchify : public BatchifyFunction {
       }
       return ret;
     }
+  private:
+    /*! \brief parameters */
+    StackBatchifyParam param_;
 };  // class StackBatchify
 
-MXNET_REGISTER_IO_BATCHIFY_FUNCTION(StackBatchify);
+MXNET_REGISTER_IO_BATCHIFY_FUNCTION(StackBatchify)
+  .describe(R"code(Returns the StackBatchify function.
+    )code" ADD_FILELINE)
+  .add_arguments(StackBatchifyParam::__FIELDS__())
+  .set_body([]() {
+    return new StackBatchify();
+});
 }  // namespace io
 }  // namespace mxnet

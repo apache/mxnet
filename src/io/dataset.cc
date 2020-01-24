@@ -39,7 +39,7 @@ namespace io {
 struct ImageSequenceDatasetParam : public dmlc::Parameter<ImageSequenceDatasetParam> {
     /*! \brief the list of absolute image paths, separated by \0 characters */
     std::string img_list;
-    /*! \brief the path separator character, by default it's \n */
+    /*! \brief the path separator character, by default it's ; */
     char path_sep;
     /*! \brief If flag is 0, always convert to grayscale(1 channel). 
     * If flag is 1, always convert to colored (3 channels).
@@ -173,7 +173,7 @@ DMLC_REGISTER_PARAMETER(NDArrayDatasetParam);
 class NDArrayDataset : public Dataset {
   public:
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
-      std::vector<std::pair<std::string, std::string> > kwargs_left;
+      // std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
       data_ = *(static_cast<NDArray*>(reinterpret_cast<void*>(param_.arr)));
       if (data_.shape().ndim() < 1) {

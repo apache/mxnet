@@ -28,6 +28,7 @@
 namespace dmlc {
 DMLC_REGISTRY_ENABLE(::mxnet::DataIteratorReg);
 DMLC_REGISTRY_ENABLE(::mxnet::DatasetReg);
+DMLC_REGISTRY_ENABLE(::mxnet::BatchifyFunctionReg);
 }  // namespace dmlc
 
 namespace mxnet {

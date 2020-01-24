@@ -186,5 +186,54 @@ struct DatasetReg
  */
 #define MXNET_REGISTER_IO_DATASET(name)                                    \
   DMLC_REGISTRY_REGISTER(::mxnet::DatasetReg, DatasetReg, name)
+
+class BatchifyFunction {
+  public:
+    /*! \brief Destructor */
+    virtual ~BatchifyFunction(void) {};
+    /*! \brief Init */
+    virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
+    /*! \brief The batchify logic */
+    virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) = 0;
+  protected:
+    std::size_t SanityCheck(std::vector<std::vector<NDArray> >& inputs) {
+      auto bs = inputs.size();
+      CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
+      auto out_size = inputs[0].size();
+      // sanity check: each input has same size
+      for (size_t i = 1; i < bs; ++i) {
+          CHECK_EQ(inputs[i].size(), out_size)
+            << i << "-th input size does not match " << out_size;
+      }
+      return out_size;
+    }
+};  // class BatchifyFunction
+
+/*! \brief typedef the factory function of data sampler */
+typedef std::function<BatchifyFunction *()> BatchifyFunctionFactory;
+/*!
+ * \brief Registry entry for DataSampler factory functions.
+ */
+struct BatchifyFunctionReg
+    : public dmlc::FunctionRegEntryBase<BatchifyFunctionReg,
+                                        BatchifyFunctionFactory> {
+};
+//--------------------------------------------------------------
+// The following part are API Registration of Batchify Function
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register Batchify Functions
+ *
+ * \code
+ * // example of registering a Batchify Function
+ * MXNET_REGISTER_IO_BATCHIFY_FUNCTION(StackBatchify)
+ * .describe("Stack Batchify Function")
+ * .set_body([]() {
+ *     return new StackBatchify();
+ *   });
+ * \endcode
+ */
+#define MXNET_REGISTER_IO_BATCHIFY_FUNCTION(name)                                    \
+  DMLC_REGISTRY_REGISTER(::mxnet::BatchifyFunctionReg, BatchifyFunctionReg, name)
 }  // namespace mxnet
 #endif  // MXNET_IO_H_
