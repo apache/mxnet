@@ -76,3 +76,4 @@ searchtools_custom.js
 theme.conf
 LICENSE.binary.dependencies
 cmake/Modules/FindCUDAToolkit.cmake
+image-classification-predict.cc
