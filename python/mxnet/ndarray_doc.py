@@ -23,6 +23,10 @@ import re as _re
 
 from .base import build_param_doc as _build_param_doc
 
+class NDArrayDoc(object):
+    """The basic class"""
+    pass
+
 def _build_doc(func_name,
                desc,
                arg_names,

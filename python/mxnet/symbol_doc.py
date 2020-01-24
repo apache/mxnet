@@ -49,6 +49,15 @@ from __future__ import absolute_import as _abs
 import re as _re
 from .base import build_param_doc as _build_param_doc
 
+class SymbolDoc(object):
+    """The base class for attaching doc to operators."""
+
+    @staticmethod
+    def get_output_shape(sym, **input_shapes):
+        """Get user friendly information of the output shapes."""
+        _, s_outputs, _ = sym.infer_shape(**input_shapes)
+        return dict(zip(sym.list_outputs(), s_outputs))
+
 def _build_doc(func_name,
                desc,
                arg_names,
