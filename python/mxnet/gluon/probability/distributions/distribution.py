@@ -109,11 +109,11 @@ class Distribution(object):
     def variance(self):
         r"""
         Return the variance of the distribution.
-
-    @property
+        """
+        raise NotImplementedError
 
     @property
     def support(self):
         """Return a function representing the distribution's support."""
         # TODO: return a constraint object
-        return NotImplementedError
+        raise NotImplementedError

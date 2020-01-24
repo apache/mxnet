@@ -61,13 +61,38 @@ def test_gluon_normal():
         if hybridize:
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
-        np_out = _np.log(ss.norm(loc.asnumpy(),
-                                 scale.asnumpy()).pdf(samples.asnumpy()))
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # TODO: test cdf
-    # TODO: test icdf
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestNormal("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestNormal("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
 
 
 @with_seed()

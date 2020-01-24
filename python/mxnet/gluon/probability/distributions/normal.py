@@ -61,9 +61,8 @@ class Normal(ExponentialFamily):
             Log likehood of the input.
         """
         F = self.F
-        var = self._scale ** 2
         log_scale = F.np.log(self._scale)
-        log_prob = -((value - self._loc) ** 2) / (2 * var)
+        log_prob = -((value - self._loc) ** 2) / (2 * self.variance)
         log_prob = log_prob - log_scale
         log_prob = log_prob - F.np.log(F.np.sqrt(2 * math.pi))
         return log_prob
@@ -114,7 +113,27 @@ class Normal(ExponentialFamily):
         return new_instance
 
     def support(self):
-        return lambda x: True
+        # FIXME: return constraint object
+        raise NotImplementedError
+
+    def cdf(self, value):
+        erf_func = self.F.npx.erf
+        standarized_samples = ((value - self._loc) /
+                                (math.sqrt(2) * self._scale))
+        erf_term = erf_func(standarized_samples)
+        return 0.5 * (1 + erf_term)
+
+    def icdf(self, value):
+        erfinv_func = self.F.npx.erfinv
+        return self._loc + self._scale * erfinv_func(2 * value - 1) * math.sqrt(2)
+
+    @property
+    def mean(self):
+        return self._loc
+
+    @property
+    def variance(self):
+        return self._scale ** 2
 
     @property
     def _natural_params(self):
