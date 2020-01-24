@@ -23,14 +23,8 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-<<<<<<< HEAD
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
-            "multivariate_normal", 'gamma']
-
-=======
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
            "shuffle", 'gamma', 'exponential']
->>>>>>> upstream/master
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
