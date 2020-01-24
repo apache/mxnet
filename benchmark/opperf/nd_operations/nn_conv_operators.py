@@ -164,7 +164,6 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
     if large_tensor == 'on':
         # Conv1D Benchmarks
         for conv_data in [(2**30, 1, 4), (2**31, 1, 3)]:
-            print("1d", conv_data)
             conv1d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
                                                         run_backward=True,
                                                         dtype=dtype,
@@ -184,7 +183,6 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
                                                         runs=runs)
         # Conv2D Benchmarks
         for conv_data in [(2**29, 1, 3, 3), (2**28, 1, 4, 4)]:
-            print("2d", conv_data)
             conv2d_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Convolution")],
                                                         run_backward=True,
                                                         dtype=dtype,
@@ -250,14 +248,14 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
     # Conv1DTranspose Benchmarks
     conv1d_transpose_benchmark_res = []
     if large_tensor == 'on':
-        for conv_data in [(1, 1, 2**32), (2**31, 1, 3)]:
+        for conv_data in [(2**30, 1, 4), (2**31, 1, 3)]:
             conv1d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
                                                                 run_backward=True,
                                                                 dtype=dtype,
                                                                 ctx=ctx,
                                                                 profiler=profiler,
                                                                 inputs=[{"data": conv_data,
-                                                                            "bias": (1, 1, 3),
+                                                                            "weight": (1, 1, 3),
                                                                             "kernel": (3,),
                                                                             "stride": (1,),
                                                                             "dilate": (1,),
@@ -277,7 +275,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
                                                                 ctx=ctx,
                                                                 profiler=profiler,
                                                                 inputs=[{"data": conv_data,
-                                                                            "bias": (1, 1, 3, 3),
+                                                                            "weight": (1, 1, 3, 3),
                                                                             "kernel": (3, 3),
                                                                             "stride": (1, 1),
                                                                             "pad": (0, 0),
