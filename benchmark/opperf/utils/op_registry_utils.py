@@ -20,7 +20,7 @@ from operator import itemgetter
 from mxnet import runtime
 import mxnet as mx
 
-from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
+from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, DEFAULTS_INPUTS_LARGE_TENSOR, MX_OP_MODULE
 
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
@@ -127,6 +127,9 @@ def prepare_op_inputs(op, arg_params, large_tensor):
 
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
+
+    if large_tensor == 'on':
+        DEFAULTS_INPUTS = DEFAULTS_INPUTS_LARGE_TENSOR
 
     # Prepare op to default input mapping
     arg_values = {}

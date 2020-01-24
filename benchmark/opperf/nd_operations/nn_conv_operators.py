@@ -277,7 +277,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
                                                                 profiler=profiler,
                                                                 inputs=[{"data": conv_data,
                                                                             "weight": (1, 1, 3, 3),
-                                                                            "bias": (64,),
+                                                                            "bias": (1,),
                                                                             "kernel": (3, 3),
                                                                             "stride": (1, 1),
                                                                             "pad": (0, 0),
