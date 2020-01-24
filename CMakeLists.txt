@@ -770,10 +770,8 @@ endif()
 
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
-  list(APPEND pslite_LINKER_LIBS pslite protobuf zmq)
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
-  include_directories(SYSTEM ${pslite_INCLUDE_DIR})
-  list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
+  list(APPEND mxnet_LINKER_LIBS pslite)
 endif()
 
 function(BuildTVMOP)
@@ -821,7 +819,7 @@ if(MSVC)
     target_link_libraries(mxnet PUBLIC dmlc)
   endif()
 else()
-  target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+  target_link_libraries(mxnet_static PUBLIC ${mxnet_LINKER_LIBS})
   target_link_libraries(mxnet PUBLIC dmlc)
 endif()
 
@@ -836,7 +834,6 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
     dmlc
-    ${pslite_LINKER_LIBS}
     )
 else()
     message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
