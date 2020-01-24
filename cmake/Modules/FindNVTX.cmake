@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set(NVTX_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA NVTX")
-
 find_path(NVTX_INCLUDE_DIRS
   NAMES nvToolsExt.h
   PATHS $ENV{NVTOOLSEXT_PATH} ${NVTX_ROOT_DIR}  ${CUDA_TOOLKIT_ROOT_DIR}
