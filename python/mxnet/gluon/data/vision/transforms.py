@@ -19,6 +19,7 @@
 # pylint: disable= arguments-differ
 "Image transforms."
 
+import random
 from ...block import Block, HybridBlock
 from ...nn import Sequential, HybridSequential
 from .... import image
@@ -581,3 +582,33 @@ class RandomLighting(HybridBlock):
         if is_np_array():
             F = F.npx
         return F.image.random_lighting(x, self._alpha)
+
+
+class RandomApply(Sequential):
+    """Apply a list of transformations randomly given probability
+
+    Parameters
+    ----------
+    transforms
+        List of transformations.
+    p : float
+        Probability of applying the transformations.
+
+
+    Inputs:
+        - **data**: input tensor.
+
+    Outputs:
+        - **out**: transformed image.
+    """
+
+    def __init__(self, transforms, p=0.5):
+        super(RandomApply, self).__init__()
+        self.transforms = transforms
+        self.p = p
+
+    def forward(self, x):
+        if self.p < random.random():
+            return x
+        x = self.transforms(x)
+        return x

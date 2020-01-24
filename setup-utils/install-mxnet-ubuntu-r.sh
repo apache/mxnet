@@ -59,7 +59,7 @@ sudo Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='http
 cd ..
 
 echo "Compiling R package. This can take few minutes..."
-sudo make rpkg
+sudo make -f R-package/Makefile rpkg
 
 echo "Installing R package..."
 sudo R CMD INSTALL mxnet_current_r.tar.gz
