@@ -965,7 +965,10 @@ fixed-size items.
                     value_nd.copyto(self)
 
             elif isinstance(value, numeric_types):
-                self._full(value)
+                if isinstance(value, bool):
+                    self._full(int(value))
+                else:
+                    self._full(value)
 
             elif isinstance(value, (np.ndarray, np.generic)):
                 tmp_shape = _shape_for_bcast(

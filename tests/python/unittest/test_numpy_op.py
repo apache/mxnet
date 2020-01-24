@@ -1301,9 +1301,11 @@ def test_npi_boolean_assign():
             dshape, mshape, start_axis = config
             test_data = np.random.uniform(size=dshape)
             valid_num = 0
-            while test_data.size != 0 and valid_num == 0:
-                mx_mask = np.random.choice([False, True], size=mshape)
-                valid_num = int(mx_mask.sum())
+            while valid_num == 0:
+                mx_mask = np.random.choice(np.array([False, True], dtype=np.bool), size=mshape)
+                if test_data.size == 0:
+                    break
+                valid_num = int(mx_mask.asnumpy().sum())
             np_mask = mx_mask.asnumpy().astype(_np.bool)
             vshape = []
             vshape_broadcast = []
@@ -1318,7 +1320,8 @@ def test_npi_boolean_assign():
                     vshape.append(dshape[i])
                     vshape_broadcast.append(dshape[i])
             vshape_broadcast = tuple(vshape_broadcast)
-            for val in [42.0, np.array(42.), np.array([42.]), np.random.uniform(size=vshape), np.random.uniform(size=vshape_broadcast)]:
+            for val in [42.0, _np.array(42.), _np.array([42.]), _np.random.uniform(size=vshape), _np.random.uniform(size=vshape_broadcast)]:
+                mx_val = val if isinstance(val, float) else np.array(val, dtype=np.float32)
                 test_block = TestBooleanAssignScalar(val, start_axis) if isinstance(val, float) else TestBooleanAssignTensor(start_axis)
                 if hybridize:
                     test_block.hybridize()

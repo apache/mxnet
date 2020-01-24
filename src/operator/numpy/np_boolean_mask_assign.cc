@@ -141,19 +141,17 @@ bool BooleanAssignShape(const nnvm::NodeAttrs& attrs,
     } else {
       const TShape& vshape = in_attrs->at(2);
       if (vshape.Size() > 1) {
-        for (int i = 0; i < dshape.ndim(); ++i) {
-          if (i < start_axis) {
-            CHECK_EQ(dshape[i], vshape[i])
-              << "shape mismatch of value with input at dimension " << i
-              << "; dimension is " << dshape[i] << " but corresponding value dimension is "
-              << vshape[i];
-          }
-          if (i >= start_axis + mshape.ndim()) {
-            CHECK_EQ(dshape[i], vshape[i - mshape.ndim() + 1])
-              << "shape mismatch of value with input at dimension " << i
-              << "; dimension is " << dshape[i] << " but corresponding value dimension is "
-              << vshape[i - mshape.ndim() + 1];
-          }
+        for (int i = 0; i < start_axis; ++i) {
+          CHECK_EQ(dshape[i], vshape[i])
+            << "shape mismatch of value with input at dimension " << i
+            << "; dimension is " << dshape[i] << " but corresponding value dimension is "
+            << vshape[i];
+        }
+        for (int i = 1; i <= (dshape.ndim() - start_axis - mshape.ndim()); ++i) {
+          CHECK_EQ(dshape[dshape.ndim() - i], vshape[vshape.ndim() - i])
+            << "shape mismatch of value with input at dimension " << (dshape.ndim() - i)
+            << "; dimension is " << dshape[dshape.ndim() - i]
+            << " but corresponding value dimension is " << vshape[vshape.ndim() - 1];
         }
       }
     }
@@ -225,8 +223,13 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   const TShape& vshape = inputs[2].shape_;
 
   if (inputs.size() == 3U) {
+    // tensor case
     if (inputs[2].shape_.Size() != 1) {
-      if (vshape[start_axis] != 1) {
+      auto vndim = vshape.ndim();
+      auto dndim = dshape.ndim();
+      auto mndim = mshape.ndim();
+      CHECK(vndim <= (dndim - mndim + 1));
+      if ((vndim == (dndim - mndim + 1)) && (vshape[start_axis] != 1)) {
         // tensor case, check tensor size equal to or broadcastable with valid_num
         CHECK_EQ(static_cast<size_t>(valid_num), vshape[start_axis])
           << "boolean array indexing assignment cannot assign " << vshape
@@ -250,20 +253,23 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   }
 
   if (inputs.size() == 3U) {
-    MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
       if (inputs[2].shape_.Size() == 1) {
         Kernel<BooleanAssignCPUKernel<true>, cpu>::Launch(
           s, valid_num, data.dptr<DType>(), prefix_sum.data(), prefix_sum.size(),
           leading, middle, valid_num, trailing, inputs[2].dptr<DType>());
       } else {
-       Kernel<BooleanAssignCPUKernel<false>, cpu>::Launch(
+        bool need_broadcast = (vshape.ndim() == (dshape.ndim() - mshape.ndim() + 1)) ?
+                              (vshape[start_axis] == 1) :
+                              true;
+        Kernel<BooleanAssignCPUKernel<false>, cpu>::Launch(
           s, valid_num, data.dptr<DType>(), prefix_sum.data(), prefix_sum.size(),
-          leading, middle, valid_num, trailing, inputs[2].dptr<DType>(), (vshape[start_axis] == 1));
+          leading, middle, valid_num, trailing, inputs[2].dptr<DType>(), need_broadcast);
       }
     });
   } else {
     CHECK(attrs.dict.find("value") != attrs.dict.end()) << "value needs be provided";
-    MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
       Kernel<BooleanAssignCPUKernel<true>, cpu>::Launch(
         s, valid_num, data.dptr<DType>(), prefix_sum.data(), prefix_sum.size(),
         leading, middle, trailing, static_cast<DType>(std::stod(attrs.dict.at("value"))));
