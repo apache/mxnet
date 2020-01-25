@@ -77,7 +77,7 @@ void CreateFullGraph(const nnvm::Symbol& sym,
     NodeEntryMap<size_t> dedup_out;
     for (const NodeEntry& nodeEntry : sym.outputs) {
       if (dedup_out.find(nodeEntry) != dedup_out.end()) {
-        NodePtr copy_node = Node::Create();
+        ObjectPtr copy_node = Node::Create();
         copy_node->attrs.op = _copy_op;
         copy_node->attrs.name =
             nodeEntry.node->attrs.name + "_copy" + std::to_string(dedup_out[nodeEntry]++);
@@ -101,7 +101,7 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   {
     ograd_entries->reserve(fwd_graph->outputs.size());
     for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
-      nnvm::NodePtr np = Node::Create();
+      nnvm::ObjectPtr np = Node::Create();
       np->attrs.name = "_head_grad_" + std::to_string(i);
       ograd_entries->emplace_back(np);
     }
@@ -339,7 +339,7 @@ CachedOp::~CachedOp() {
 }
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
-    const nnvm::NodePtr& node,
+    const nnvm::ObjectPtr& node,
     const std::vector<nnvm::NodeEntry>& ograds) const {
   using namespace nnvm;
   static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
@@ -1523,7 +1523,7 @@ NNVM_REGISTER_OP(_CachedOp)
   })
 .set_attr_parser(CachedOpParamParser)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
     return op->Gradient(n, ograds);
   })

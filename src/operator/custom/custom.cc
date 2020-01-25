@@ -209,11 +209,11 @@ bool InferType(const NodeAttrs& attrs,
 }
 
 std::vector<nnvm::NodeEntry> Gradient(
-    const nnvm::NodePtr& n,
+    const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& out_grads) {
   const CustomParam& params = nnvm::get<CustomParam>(n->attrs.parsed);
 
-  nnvm::NodePtr g = nnvm::Node::Create();
+  nnvm::ObjectPtr g = nnvm::Node::Create();
   g->attrs.op = nnvm::Op::Get("_backward_Custom");
   g->attrs.name = n->attrs.name;
   g->attrs.parsed = params;
@@ -241,7 +241,7 @@ std::vector<nnvm::NodeEntry> Gradient(
     ret.emplace_back(g, static_cast<uint32_t>(i), 0);
   }
   if (params.num_auxs) {
-    nnvm::NodePtr ng = nnvm::Node::Create();
+    nnvm::ObjectPtr ng = nnvm::Node::Create();
     ng->attrs.op = nnvm::Op::Get("_NoGradient");
     ng->attrs.name = "NoGradient";
     for (size_t i = 0; i < params.num_auxs; ++i) {

@@ -164,7 +164,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", PickOpType)
 .set_attr<FCompute>("FCompute<cpu>", PickOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
     auto ret = MakeGradNode("_backward_pick", n, {ograds[0], n->inputs[1]},
                             n->attrs.dict);

@@ -494,7 +494,7 @@ NNVM_REGISTER_OP(_npi_broadcast_to)
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
+  [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
   })

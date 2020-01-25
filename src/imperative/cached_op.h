@@ -105,7 +105,7 @@ class CachedOp {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
   std::vector<nnvm::NodeEntry> Gradient(
-      const nnvm::NodePtr& node,
+      const nnvm::ObjectPtr& node,
       const std::vector<nnvm::NodeEntry>& ograds) const;
   OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,

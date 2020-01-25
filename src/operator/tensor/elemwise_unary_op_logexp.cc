@@ -109,7 +109,7 @@ The storage type of ``log2`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
                                                   unary_bwd<mshadow_op::log_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: dL/dxgrad
     // inputs[0]: dL/dy (ygrad)
     // inputs[1]: x (ElemewiseGradUseIn)
@@ -134,7 +134,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log,
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
                                                   unary_bwd<mshadow_op::log10_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: dL/dxgrad
     // inputs[0]: dL/dy (ygrad)
     // inputs[1]: x (ElemewiseGradUseIn)
@@ -160,7 +160,7 @@ MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log10,
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log2,
                                                   unary_bwd<mshadow_op::log2_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: dL/dxgrad
     // inputs[0]: dL/dy (ygrad)
     // inputs[1]: x (ElemewiseGradUseIn)
@@ -202,7 +202,7 @@ The storage type of ``log1p`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_log1p,
                                                   unary_bwd<mshadow_op::log1p_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: head_grad_grads (dL/dxgrad)
     // inputs[0]: dL/dy
     // inputs[1]: x (ElemwiseGradUseIn)
@@ -244,7 +244,7 @@ The storage type of ``expm1`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_expm1, unary_bwd<mshadow_op::exp>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: head_grad_grads (dL/dxgrad)
     // inputs[0]: dL/dy
     // inputs[1]: x (ElemwiseGradUseIn)

@@ -184,7 +184,7 @@ NNVM_REGISTER_OP(Convolution)
     return QuantizeType::kMust;
 })
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-    nnvm::NodePtr node = nnvm::Node::Create();
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     node->attrs.op = Op::Get("_contrib_quantized_conv");
     node->attrs.name = "quantized_" + attrs.name;
     node->attrs.dict = attrs.dict;

@@ -34,10 +34,10 @@ namespace util {
 
 class NodeOpGen {
  private:
-    const nnvm::NodePtr &dependent_node;
+    const nnvm::ObjectPtr &dependent_node;
 
  public:
-    explicit NodeOpGen(const nnvm::NodePtr &dependent_node) : dependent_node{dependent_node} {}
+    explicit NodeOpGen(const nnvm::ObjectPtr &dependent_node) : dependent_node{dependent_node} {}
 
     nnvm::NodeEntry mul(const nnvm::NodeEntry &lhs, const nnvm::NodeEntry &rhs) {
         return nnvm::NodeEntry{mxnet::op::MakeNode("elemwise_mul",

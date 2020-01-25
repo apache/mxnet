@@ -63,7 +63,7 @@ DMLC_REGISTER_PARAMETER(ActivationParam);
 // This will determine the order of the inputs for backward computation.
 struct ActivationGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     // ograds, output...
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());

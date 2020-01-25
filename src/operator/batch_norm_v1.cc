@@ -100,7 +100,7 @@ sparse tensors.
 
 NNVM_REGISTER_OP(BatchNorm_v1)
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
       if (index == 3) {
         var->attrs.dict["__init__"] = "[\"zero\", {}]";
