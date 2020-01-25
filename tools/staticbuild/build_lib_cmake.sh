@@ -20,29 +20,25 @@
 set -eo pipefail
 
 # This script builds the libraries of mxnet.
-make_config=make/staticbuild/${PLATFORM}_${VARIANT}.mk
-if [[ ! -f $make_config ]]; then
-    >&2 echo "Couldn't find make config $make_config for the current settings."
+cmake_config=${CURDIR}/config/distribution/${PLATFORM}_${VARIANT}.cmake
+if [[ ! -f $cmake_config ]]; then
+    >&2 echo "Couldn't find cmake config $make_config for the current settings."
     exit 1
 fi
 
->&2 echo "Now building mxnet modules..."
-cp $make_config config.mk
-
 git submodule update --init --recursive || true
 
-$MAKE DEPS_PATH=$DEPS_PATH DMLCCORE
-$MAKE DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
-$MAKE DEPS_PATH=$DEPS_PATH PSLITE
+# Build libmxnet.so
+rm -rf build; mkdir build; cd build
+cmake -GNinja -C $cmake_config -DCMAKE_PREFIX_PATH=${DEPS_PATH} -DCMAKE_FIND_ROOT_PATH=${DEPS_PATH} ..
+ninja
+cd -
 
-if [[ $VARIANT == *mkl ]]; then
-    $MAKE DEPS_PATH=$DEPS_PATH mkldnn
-fi
-
->&2 echo "Now building mxnet..."
-$MAKE DEPS_PATH=$DEPS_PATH
+# Move to lib
+rm -rf lib; mkdir lib; cp -L build/libmxnet.so lib/libmxnet.so
 
 if [[ $PLATFORM == 'linux' ]]; then
+    cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
     if [[ -f /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so ]]; then
         cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
     elif [[ -f /usr/lib/x86_64-linux-gnu/libgfortran.so.3 ]]; then

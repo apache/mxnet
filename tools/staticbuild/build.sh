@@ -72,4 +72,8 @@ cp DISCLAIMER-WIP licenses/
 
 
 # Build mxnet
-source tools/staticbuild/build_lib.sh
+if [[ -z "$CMAKE_STATICBUILD" ]]; then
+    source tools/staticbuild/build_lib.sh
+else
+    source tools/staticbuild/build_lib_cmake.sh
+fi
