@@ -218,6 +218,16 @@ struct gamma_two_scalar_kernel {
     }
   }
 };
+
+template <typename IType>
+struct check_legal_scale_shape_kernel {
+  MSHADOW_XINLINE static void Map(index_t i, IType *scalar, float* flag) {
+    if (scalar[i] < 0) {
+      *flag = -1.0;
+    }
+  }
+};
+
 }  // namespace mxnet_op
 
 template <typename xpu, typename FType>
@@ -276,9 +286,16 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     if (param.shape.has_value()) {
       scalar_pos = 0;
       scalar_value = param.shape.value();
+      MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+        Kernel<check_legal_scale_shape_kernel<IType>, xpu>::Launch(
+            s, inputs[0].Size(), inputs[0].dptr<IType>(), indicator_device_ptr);
+      });
+      _copy<xpu>(s, &indicator_host, indicator_device_ptr);
+      CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     } else {
       scalar_pos = 1;
       scalar_value = param.scale.value();
+      CHECK_GE(scalar_value, 0.0) << "ValueError: scale < 0";
     }
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
@@ -309,6 +326,12 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     });
   } else if (inputs.size() == 2U) {
     // [tensor tensor] case
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+      Kernel<check_legal_scale_shape_kernel<IType>, xpu>::Launch(
+          s, inputs[1].Size(), inputs[1].dptr<IType>(), indicator_device_ptr);
+    });
+    _copy<xpu>(s, &indicator_host, indicator_device_ptr);
+    CHECK_GE(indicator_host, 0.0) << "ValueError: scale < 0";
     int ndim = FillShape(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                          &new_lshape, &new_hshape, &new_oshape);
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, IType, {
