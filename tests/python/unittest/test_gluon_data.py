@@ -381,6 +381,14 @@ def test_dataloader_scope():
 
     assert item is not None
 
+def test_mx_data_loader():
+    from mxnet.gluon.data.dataloader import MXThreadedDataLoader
+
+    dataset = mx.gluon.data.vision.MNIST().__handle__()
+    sampler = mx.gluon.data._internal.MXSampler('SequentialSampler', length=10, batch_size=4, last_batch='rollover')
+    batchify_fn = mx.gluon.data._internal.StackBatchify()
+
+    dl = MXThreadedDataLoader(num_workers=0, dataset=dataset, batch_sampler=sampler, batchify_fn=batchify_fn)
 
 if __name__ == '__main__':
     import nose
