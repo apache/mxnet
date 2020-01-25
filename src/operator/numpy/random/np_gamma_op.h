@@ -246,6 +246,8 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   FType *failure_indicator_device = failure_indic_workspace.dptr_;
   // [scalar scalar] case
   if (inputs.size() == 0U) {
+    CHECK_GE(param.scale.value(), 0.0) << "ValueError: scale (beta) < 0";
+    CHECK_GE(param.shape.value(), 0.0) << "ValueError: shape (alpha) < 0";
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       bool in_resample_stage = false;
       do {
