@@ -148,6 +148,9 @@ of tensors with that shape, in which case the output is a tensor of densities su
 the densities at index *i* in the output are given by the samples at index *i* in *sample*
 parameterized by the values of *alpha* and *beta* at index *i*.
 
+Parameters *alpha* and *beta* can only contain values >=0. That is, they can't have even a single negative value. Else the result contains nan.
+For example, *alpha*, *beta* values can come from uniform distribution (0, 1)
+
 Examples::
 
   random_pdf_gamma(sample=[[1,2,3,4,5]], alpha=[5], beta=[1]) =
@@ -256,6 +259,9 @@ of tensors with that shape, in which case the output is a tensor of densities su
 the densities at index *i* in the output are given by the samples at index *i* in *sample*
 parameterized by the values of *mu* and *alpha* at index *i*.
 
+Parameters *alpha* and *mu* can only contain values >=0. That is, they can't have even a single negative value. Else the result contains nan.
+For example, *alpha*, *mu* values can come from uniform distribution (0, 1)
+
 Examples::
 
     random_pdf_generalized_negative_binomial(sample=[[1, 2, 3, 4]], alpha=[1], mu=[1]) =
@@ -279,6 +285,8 @@ distribution, or *sample* can be a tensor of tensors with that shape, in which c
 the output is a tensor of densities such that the densities at index *i* in the output
 are given by the samples at index *i* in *sample* parameterized by the value of *alpha*
 at index *i*.
+
+Parameter *alpha* can only contain values >=0. For example, *alpha* can come from uniform distribution (0, 1)
 
 Examples::
 
