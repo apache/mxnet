@@ -688,6 +688,9 @@ class MXThreadedDataLoader(object):
         assert isinstance(dataset, MXDataset)
         assert isinstance(batch_sampler, MXSampler)
         assert isinstance(batchify_fn, MXBatchifyFunction)
+        self._dataset = dataset
+        self._batch_sampler = batch_sampler
+        self._batchify_fn = batchify_fn
         self._iter = ThreadedDataLoader(num_workers=num_workers, dataset=dataset,
                                         sampler=batch_sampler, batchify_fn=batchify_fn)
 
