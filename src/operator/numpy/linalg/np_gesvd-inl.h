@@ -69,14 +69,21 @@ struct gesvd {
                  const Tensor<xpu, 2, DType>& L,
                  const Tensor<xpu, 3, DType>& V,
                  const OpContext& ctx,
-                 const nnvm::NodeAttrs& attrs) {
+                 const nnvm::NodeAttrs& attrs,
+                 TBlob* workspace = nullptr) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     if (A.dptr_ != V.dptr_) Copy(V, A, s);
     // From here on, we work on V only
     // Reserve workspace (size determined by query)
     int lwork(linalg_gesvd_workspace_query(UT[0], L[0], V[0], s));
-    Tensor<xpu, 1, DType> work = ctx.requested[0]
-      .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
+    Tensor<xpu, 1, DType> work;
+    if (!workspace) {
+      work = ctx.requested[0]
+        .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
+    } else {
+      work = workspace
+        ->get_with_shape<xpu, 1, DType>(Shape1(lwork), s);
+    }
     // Loop over items in batch
     for (index_t i = 0; i < UT.size(0); ++i) {
       linalg_gesvd(UT[i], L[i], V[i], work, s);
