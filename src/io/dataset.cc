@@ -25,6 +25,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/io.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/tensor_blob.h>
 
 #include <string>
 #include <vector>
@@ -75,7 +76,7 @@ class ImageSequenceDataset : public Dataset {
       return 1;
     }
 
-    NDArray GetItem(uint64_t idx, int n, int* is_scalar) {
+    NDArray GetItem(uint64_t idx, int n, int* is_scalar) const {
       *is_scalar = 0;
 #if MXNET_USE_OPENCV
       CHECK_LT(idx, img_list_.size())
@@ -107,7 +108,7 @@ class ImageSequenceDataset : public Dataset {
 
 #if MXNET_USE_OPENCV
     template<int n_channels>
-    NDArray SwapImageChannels(cv::Mat &img) {
+    NDArray SwapImageChannels(cv::Mat &img) const {
       int swap_indices[n_channels]; // NOLINT(*)
       if (n_channels == 1) {
         swap_indices[0] = 0;
@@ -122,17 +123,14 @@ class ImageSequenceDataset : public Dataset {
         swap_indices[3] = 3;
       }
 
-      std::size_t size = img.rows * img.cols * n_channels;
-      if (buffer_.size() < size) {
-        // increase buffer size only when it's less than the new image
-        // otherwise stay unchanged, in case next image is larger
-        buffer_.resize(size);
-      }
+      TShape arr_shape = TShape({img.rows, img.cols, n_channels});
+      NDArray arr(arr_shape, mxnet::Context::CPU(0), true, mshadow::kUint8);
+      auto ptr = static_cast<uint8_t*>(arr.data().dptr_);
 
       // swap channels while copying elements into buffer
       for (int i = 0; i < img.rows; ++i) {
         const uint8_t* im_data = img.ptr<uint8_t>(i);
-        uint8_t* buffer_data = buffer_.data() + i * img.cols * n_channels;
+        uint8_t* buffer_data = ptr + i * img.cols * n_channels;
         for (int j = 0; j < img.cols; ++j) {
           for (int k = 0; k < n_channels; ++k) {
             buffer_data[k] = im_data[swap_indices[k]];
@@ -141,11 +139,6 @@ class ImageSequenceDataset : public Dataset {
           buffer_data += n_channels;
         }
       }
-
-      // sync copy into ndarray
-      TShape arr_shape = TShape({img.rows, img.cols, n_channels});
-      NDArray arr(arr_shape, mxnet::Context::CPU(0), true, mshadow::kUint8);
-      arr.SyncCopyFromCPU(buffer_.data(), size);
       return arr;
     }
 #endif
@@ -183,14 +176,14 @@ class NDArrayDataset : public Dataset {
     }
 
     uint64_t GetLen() const {
-      return size_;;
+      return size_;
     }
 
     int GetOutputSize() const {
       return 1;
     }
 
-    NDArray GetItem(uint64_t idx, int n, int* is_scalar) {
+    NDArray GetItem(uint64_t idx, int n, int* is_scalar) const {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
       CHECK_EQ(n, 0) << "NDArrayDataset only produce one output";
@@ -267,19 +260,19 @@ class TupleDataset : public Dataset {
     }
 
     uint64_t GetLen() const {
-      return size_;;
+      return size_;
     }
 
     int GetOutputSize() const {
       return item_size_;
     }
 
-    NDArray GetItem(uint64_t idx, int n, int* is_scalar) {
+    NDArray GetItem(uint64_t idx, int n, int* is_scalar) const {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
       CHECK_GE(n, 0) << "Getting negative item is forbidden";
       CHECK_LT(n, item_size_) << "Item index out of bound: " << n << " vs total " << item_size_;
-      auto new_idx = idx_map_[n];
+      auto new_idx = idx_map_.at(n);
       return childs_[new_idx.first]->GetItem(idx, new_idx.second, is_scalar);
     };
 

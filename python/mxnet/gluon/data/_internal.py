@@ -197,7 +197,7 @@ def _make_internal_datasets(handle):
         param_keys = c_str_array(param_keys)
         param_vals = c_str_array(param_vals)
         dataset_handle = DatasetHandle()
-        check_call(_LIB.MXBatchifyFunctionCreateFunction(
+        check_call(_LIB.MXDatasetCreateDataset(
             handle,
             mx_uint(len(param_keys)),
             param_keys, param_vals,
