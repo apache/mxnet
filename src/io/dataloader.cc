@@ -27,12 +27,13 @@
 #include <mxnet/io.h>
 
 #include "./inst_vector.h"
+#include "./iter_prefetcher.h"
 
 namespace mxnet {
 namespace io {
 struct ThreadedDataLoaderParam : public dmlc::Parameter<ThreadedDataLoaderParam> {
     /*! \brief Multithread worker number. */
-    int num_worker;
+    int num_workers;
     /*! \brief dataset pointer.*/
     std::intptr_t dataset;
     /*! \brief sampler pointer.*/
@@ -43,7 +44,7 @@ struct ThreadedDataLoaderParam : public dmlc::Parameter<ThreadedDataLoaderParam>
     int pin_device_id;
     // declare parameters
     DMLC_DECLARE_PARAMETER(ThreadedDataLoaderParam) {
-        DMLC_DECLARE_FIELD(num_worker).set_default(0)
+        DMLC_DECLARE_FIELD(num_workers).set_default(0)
             .describe("Number of thread workers.");
         DMLC_DECLARE_FIELD(dataset)
             .describe("Number of thread workers.");
@@ -65,7 +66,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
   virtual ~ThreadedDataLoader(void) {
   }
   // constructor
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
     int maxthread, threadget;
     #pragma omp parallel
@@ -73,46 +74,109 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       // be conservative, set number of real cores
       maxthread = std::max(omp_get_num_procs(), 1);
     }
-    param_.num_worker = std::min(maxthread, param_.num_worker);
-    #pragma omp parallel num_threads(param_.num_worker)
+    param_.num_workers = std::min(maxthread, param_.num_workers);
+    #pragma omp parallel num_threads(param_.num_workers)
     {
       threadget = omp_get_num_threads();
     }
-    param_.num_worker = threadget;
+    param_.num_workers = threadget;
     dataset_ = static_cast<Dataset*>(reinterpret_cast<void*>(param_.dataset));
+    dataset_len_ = dataset_->GetLen();
+    item_size_ = dataset_->GetOutputSize();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
     batchify_fn_ = static_cast<BatchifyFunction*>(reinterpret_cast<void*>(param_.batchify_fn));
   }
   // before first
-  virtual void BeforeFirst(void) {
+  void BeforeFirst(void) {
     sampler_->BeforeFirst();
   }
 
-  virtual int64_t GetLenHint(void) const {
+  int64_t GetLenHint(void) const {
     return sampler_->GetLenHint();
   }
 
-  virtual bool Next(void) {
+  bool Next(void) {
     bool has_next = sampler_->Next();
     if (!has_next) return false;
     auto samples = sampler_->Value();
     auto batch_size = samples.data[0].shape().Size();
+    if (samples.num_batch_padd > 0) {
+        // when last batch is keep but not fully filled
+        // effective batch size is smaller
+        batch_size -= samples.num_batch_padd;
+    }
+    const int64_t *idx_ptr = static_cast<int64_t*>(
+        samples.data[0].data().dptr_);
+    
+    // __getitem__
+    std::vector<std::vector<NDArray> > inputs(batch_size);
+    #pragma omp parallel for num_threads(param_.num_workers)
+      for (size_t i = 0; i < batch_size; ++i) {
+        omp_exc_.Run([&] {
+          inputs[i].resize(item_size_);
+        });
+      }
+      omp_exc_.Rethrow();
+    size_t workload = batch_size * item_size_;
+    #pragma omp parallel for num_threads(param_.num_workers)
+      for (size_t i = 0; i < workload; ++i) {
+        omp_exc_.Run([&] {
+          size_t x = i / item_size_;
+          size_t y = i % item_size_;
+          int is_scalar;
+          inputs[x][y] = std::move(
+              dataset_->GetItem(idx_ptr[x], y, &is_scalar));
+        });
+      }
+      omp_exc_.Rethrow();
+    
+    // batchify
+    data_ = batchify_fn_->Batchify(inputs);
+    out_.batch_size = data_.size();
+    out_.data.resize(data_.size());
+    #pragma omp parallel for num_threads(param_.num_workers)
+      for (size_t i = 0; i < data_.size(); ++i) {
+        omp_exc_.Run([&] {
+          out_.data[i] = data_[i].data();
+        });
+      }
+      omp_exc_.Rethrow();
     return true;
   }
 
-  virtual const DataBatch &Value(void) const {
+  const TBlobBatch &Value(void) const {
+    return out_;
   }
 
   private:
     /*! \brief Params */
     ThreadedDataLoaderParam param_;
+    /*! \brief output */
+    TBlobBatch out_;
+    /*! \brief batched data cache */
+    std::vector<NDArray> data_;
     /*! \brief pointer to dataset */
     Dataset *dataset_;
+    /*! \brief dataset length */
+    int64_t dataset_len_;
+    /*! \brief dataset output size */
+    int item_size_;
     /*! \brief pointer to sampler iterator */
     IIterator<DataBatch> *sampler_;
     /*! \brief pointer to batchify function */
     BatchifyFunction *batchify_fn_;
-  
+    /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
+    dmlc::OMPException omp_exc_;
 };  // class ThreadedDataLoader
+
+MXNET_REGISTER_IO_ITER(ThreadedDataLoader)
+.describe(R"code(Returns a threaded data loader iterator.
+)code" ADD_FILELINE)
+.add_arguments(ThreadedDataLoaderParam::__FIELDS__())
+.add_arguments(PrefetcherParam::__FIELDS__())
+.set_body([]() {
+    return new PrefetcherIter(
+            new ThreadedDataLoader<mxnet::real_t>());
+  });
 }  // namespace io
 }  // namespace mxnet

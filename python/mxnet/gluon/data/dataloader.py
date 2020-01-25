@@ -676,3 +676,26 @@ class DataLoader(object):
             # https://bugs.python.org/issue34172
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
+
+
+class MXThreadedDataLoader(object):
+    def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
+                 last_batch=None, batch_sampler=None, batchify_fn=None,
+                 num_workers=0, pin_memory=False, pin_device_id=0,
+                 prefetch=None, thread_pool=False, timeout=120):
+        from ._internal import MXDataset, MXSampler, MXBatchifyFunction
+        from ...io.io import ThreadedDataLoader
+        assert isinstance(dataset, MXDataset)
+        assert isinstance(batch_sampler, MXSampler)
+        assert isinstance(batchify_fn, MXBatchifyFunction)
+        self._iter = ThreadedDataLoader(num_workers=num_workers, dataset=dataset,
+                                        sampler=batch_sampler, batchify_fn=batchify_fn)
+
+    def __iter__(self):
+        for i in self._iter:
+            yield i
+        self._iter.reset()
+        return
+
+    def __len__(self):
+        return len(self._iter)

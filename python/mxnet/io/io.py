@@ -965,6 +965,15 @@ def _make_io_iterator(handle):
         param_vals = []
 
         for k, val in kwargs.items():
+            if iter_name == 'ThreadedDataLoader':
+                # convert ndarray to handle
+                if hasattr(val, 'handle'):
+                    val = val.handle.value
+                elif isinstance(val, (tuple, list)):
+                    val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
+                elif isinstance(getattr(val, '_iter', None), MXDataIter):
+                    val = val._iter.handle.value
+                print(k, val)
             param_keys.append(k)
             param_vals.append(str(val))
         # create atomic symbol
