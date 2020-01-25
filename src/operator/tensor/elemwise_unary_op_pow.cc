@@ -224,7 +224,7 @@ The storage type of ``rsqrt`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
   _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : x
@@ -329,7 +329,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
                     ElemwiseBinaryOp::Compute<cpu,
                       unary_bwd<mshadow_op::reciprocal_cube_root_grad>>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : x
