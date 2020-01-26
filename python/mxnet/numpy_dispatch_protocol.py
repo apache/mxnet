@@ -157,6 +157,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'einsum',
     'shares_memory',
     'may_share_memory',
+    'quantile',
+    'percentile',
     'diff',
     'resize',
     'where',

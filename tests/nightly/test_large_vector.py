@@ -23,7 +23,7 @@ import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
+from tests.python.unittest.common import with_seed, teardown
 from nose.tools import with_setup
 import unittest
 
