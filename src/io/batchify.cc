@@ -101,10 +101,13 @@ class StackBatchify : public BatchifyFunction {
     }
 
     virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+      LOG(INFO) << "Entered batchify";
       auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
       std::vector<NDArray> ret(out_size);
-      
+      LOG(INFO) << "out size: " << out_size;
+
+      #pragma omp parallel num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {
           // Process i-th output
           auto ashape = inputs[0][i].shape();
@@ -119,11 +122,11 @@ class StackBatchify : public BatchifyFunction {
           // calculate output ndarray size
           TShape sshape = TShape(ashape.ndim() + 1, 0);
           sshape[0] = bs;
-          for (int k = 0; k < ashape.ndim(); ++i) {
+          for (int k = 0; k < ashape.ndim(); ++k) {
             sshape[k + 1] = ashape[k];
           }
-          
-          ret[i].ReshapeAndAlloc(sshape);
+
+          ret[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
           for (size_t j = 0; j < bs; ++j) {
               auto slice_view = ret[i].Slice(j, j + 1);
               slice_view.SyncCopyFromNDArray(inputs[j][i]);

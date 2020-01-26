@@ -695,8 +695,9 @@ class MXThreadedDataLoader(object):
                                         sampler=batch_sampler, batchify_fn=batchify_fn)
 
     def __iter__(self):
-        for i in self._iter:
-            yield i
+        while self._iter.iter_next():
+            items = self._iter.getitems()
+            yield items
         self._iter.reset()
         return
 

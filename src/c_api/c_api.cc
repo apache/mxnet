@@ -1729,6 +1729,24 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_END();
 }
 
+int MXDataIterGetItemSize(DataIterHandle handle, int *size) {
+  API_BEGIN();
+  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  *size = static_cast<int>(db.data.size());
+  API_END();
+}
+
+int MXDataIterGetItem(DataIterHandle handle, int index, NDArrayHandle *out) {
+  API_BEGIN();
+  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  NDArray* pndarray = new NDArray();
+  CHECK_LT(index, db.data.size()) << "Fetching index " << index
+    << " out of bound: " << db.data.size();
+  *pndarray = db.data[index];
+  *out = pndarray;
+  API_END();
+}
+
 int MXDataIterGetIndex(DataIterHandle handle, uint64_t **out_index, uint64_t *out_size) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();

@@ -908,6 +908,16 @@ class MXDataIter(DataIter):
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
 
+    def getitems(self):
+        nitem = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterGetItemSize(self.handle, ctypes.byref(nitem)))
+        out = []
+        for i in range(nitem.value):
+            hdl = NDArrayHandle()
+            check_call(_LIB.MXDataIterGetItem(self.handle, ctypes.c_int(i), ctypes.byref(hdl)))
+            out.append(_ndarray_cls(hdl, False))
+        return tuple(out)
+
     def __len__(self):
         length = ctypes.c_int64(-1)
         check_call(_LIB.MXDataIterGetLenHint(self.handle, ctypes.byref(length)))

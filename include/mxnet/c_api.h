@@ -2621,7 +2621,7 @@ MXNET_DLL int MXDataIterNext(DataIterHandle handle,
 MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 
 /*!
- * \brief Call iterator.GetLenHint
+ * \brief Call iterator.GetLenHint. Note that some iterators don't provide length.
  * \param handle the handle to iterator
  * \return 0 when success, -1 when failure happens
  */
@@ -2662,6 +2662,25 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
+/*!
+ * \brief Get the size of underlying ndarrays
+ * \param handle the handle pointer to the data iterator
+ * \param size the number of underlying ndarrays
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetItemSize(DataIterHandle handle,
+                                    int *size);
+/*!
+ * \brief Get the handles to specified underlying ndarrays of index
+ * \param handle the handle pointer to the data iterator
+ * \param index the index of the specified ndarray to be fetched
+ * \param out the handle to a 1-D NDArray that stores pointers to handles
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetItem(DataIterHandle handle,
+                                int index,
+                                NDArrayHandle *out);
+
 /*!
  * \brief List all the available dataset entries
  * \param out_size the size of returned datasets
