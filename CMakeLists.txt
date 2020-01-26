@@ -12,10 +12,6 @@ if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-endif()
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
