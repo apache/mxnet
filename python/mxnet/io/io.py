@@ -983,7 +983,6 @@ def _make_io_iterator(handle):
                     val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
                 elif isinstance(getattr(val, '_iter', None), MXDataIter):
                     val = val._iter.handle.value
-                print(k, val)
             param_keys.append(k)
             param_vals.append(str(val))
         # create atomic symbol

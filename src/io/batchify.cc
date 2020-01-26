@@ -101,11 +101,9 @@ class StackBatchify : public BatchifyFunction {
     }
 
     virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) {
-      LOG(INFO) << "Entered batchify";
       auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
       std::vector<NDArray> ret(out_size);
-      LOG(INFO) << "out size: " << out_size;
 
       #pragma omp parallel num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {

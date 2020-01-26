@@ -85,6 +85,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     item_size_ = dataset_->GetOutputSize();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
     batchify_fn_ = static_cast<BatchifyFunction*>(reinterpret_cast<void*>(param_.batchify_fn));
+    this->BeforeFirst();
   }
   // before first
   void BeforeFirst(void) {
@@ -107,9 +108,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     }
     const int64_t *idx_ptr = static_cast<int64_t*>(
         samples.data[0].data().dptr_);
-    for (int64_t ii = 0; ii < batch_size; ++ii) {
-      LOG(INFO) << "Samples: " << ii << " -> " << idx_ptr[ii];
-    }
 
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
@@ -136,7 +134,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     // batchify
     data_ = batchify_fn_->Batchify(inputs);
     out_.batch_size = data_.size();
-    LOG(INFO) << "Data size: " << data_.size();
     out_.data.resize(data_.size());
     #pragma omp parallel for num_threads(param_.num_workers)
       for (size_t i = 0; i < data_.size(); ++i) {
