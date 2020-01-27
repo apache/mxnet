@@ -33,7 +33,7 @@ def check_platform():
 def test_custom_op():
     # possible places to find library file
     if (os.name=='posix'):
-        lib = 'libsample_lib.so'
+        lib = 'libcustomop_lib.so'
         if os.path.exists(lib):
             fname = lib
         elif os.path.exists('build/'+lib):
@@ -41,7 +41,7 @@ def test_custom_op():
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
-        lib = 'libsample_lib.dll'
+        lib = 'libcustomop_lib.dll'
         if os.path.exists('windows_package\\lib\\'+lib):
             fname = 'windows_package\\lib\\'+lib
         else:
@@ -161,10 +161,9 @@ def test_subgraph():
 @unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
 @unittest.skipIf(default_context().device_type == 'cpu', "ignoring custom_op_gpu test on cpu run")
 def test_custom_op_gpu():
-    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
     # possible places to find library file
     if (os.name=='posix'):
-        lib = 'libsamplegpu_lib.so'
+        lib = 'libcustomop_gpu_lib.so'
         if os.path.exists(lib):
             fname = lib
         elif os.path.exists('build/'+lib):
@@ -172,7 +171,7 @@ def test_custom_op_gpu():
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
-        lib = 'libsamplegpu_lib.dll'
+        lib = 'libcustomop_gpu_lib.dll'
         if os.path.exists('windows_package\\lib\\'+lib):
             fname = 'windows_package\\lib\\'+lib
         else:

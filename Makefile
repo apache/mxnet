@@ -665,18 +665,18 @@ pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
 # MXNet extension dynamically loading libraries
-EXT_LIBS = sample_lib subgraph_lib
+EXT_LIBS = custom_op_lib subgraph_lib
 ifeq ($(USE_CUDA), 1)
-	EXT_LIBS += sample_gpu_lib
+	EXT_LIBS += custom_op_gpu_lib
 endif
 extension_libs: $(EXT_LIBS)
 
-sample_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o libsample_lib.so -I include/mxnet
-sample_gpu_lib:
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o libsamplegpu_lib.so -I include/mxnet
+custom_op_lib:
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o build/libcustomop_lib.so -I include/mxnet
+custom_op_gpu_lib:
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o build/libcustomop_gpu_lib.so -I include/mxnet
 subgraph_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o libsubgraph_lib.so -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o build/libsubgraph_lib.so -I include/mxnet
 
 # Cython build
 cython:
@@ -772,7 +772,6 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) lib*_lib.so
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -784,7 +783,6 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
 	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
-	$(RM) lib*_lib.so
 endif
 
 clean_all: clean
