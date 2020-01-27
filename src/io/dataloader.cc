@@ -101,23 +101,19 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     if (!has_next) return false;
     auto samples = sampler_->Value();
     auto batch_size = samples.data[0].shape().Size();
-    if (samples.num_batch_padd > 0) {
-        // when last batch is keep but not fully filled
-        // effective batch size is smaller
-        batch_size -= samples.num_batch_padd;
-    }
+    auto real_batch_size = batch_size - samples.num_batch_padd;
     const int64_t *idx_ptr = static_cast<int64_t*>(
         samples.data[0].data().dptr_);
 
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
-    for (size_t i = 0; i < batch_size; ++i) {
+    for (size_t i = 0; i < real_batch_size; ++i) {
       // omp_exc_.Run([&] {
         inputs[i].resize(item_size_);
       // });
     }
     // omp_exc_.Rethrow();
-    size_t workload = batch_size * item_size_;
+    size_t workload = real_batch_size * item_size_;
     // #pragma omp parallel for num_threads(param_.num_workers)
       for (size_t i = 0; i < workload; ++i) {
         // omp_exc_.Run([&] {
@@ -130,17 +126,16 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       }
       // omp_exc_.Rethrow();
 
+    // pad to normal batch size
+    for (size_t i = real_batch_size; i < batch_size; ++i) {
+      inputs[i] = inputs[0];
+    }
+
     // batchify
     auto batched_data = batchify_fn_->Batchify(inputs);
     out_.batch_size = batched_data.size();
     out_.data = batched_data;
-    // #pragma omp parallel for num_threads(param_.num_workers)
-      // for (size_t i = 0; i < data_.size(); ++i) {
-      //   // omp_exc_.Run([&] {
-      //     out_.data[i] = data_[i];
-      //   // });
-      // }
-      // omp_exc_.Rethrow();
+    out_.num_batch_padd = samples.num_batch_padd;
     return true;
   }
 

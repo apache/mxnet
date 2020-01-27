@@ -698,6 +698,9 @@ class MXThreadedDataLoader(object):
         while self._iter.iter_next():
             self._iter.first_batch = None
             items = self._iter.getitems()
+            pad = self._iter.getpad()
+            if pad > 0:
+                items = tuple([x[:-pad] for x in items])
             yield items
         self._iter.reset()
 
