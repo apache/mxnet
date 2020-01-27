@@ -222,6 +222,8 @@ def get_all_misc_binary_operators():
             binary_misc_mx_operators[op_name] = mx_operators[op_name]
         elif "reshape_like" == op_name:
             binary_misc_mx_operators[op_name] = mx_operators[op_name]
+        elif "ElementWiseSum" == op_name:
+            binary_misc_mx_operators[op_name] = mx_operators[op_name]
     return binary_misc_mx_operators
 
 
