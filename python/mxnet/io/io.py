@@ -35,6 +35,8 @@ from ..base import check_call, build_param_doc as _build_param_doc
 from ..ndarray import NDArray
 from ..ndarray.sparse import CSRNDArray
 from ..ndarray import _ndarray_cls
+from ..numpy.multiarray import _np_ndarray_cls
+from ..util import is_np_array
 from ..ndarray import array
 from ..ndarray import concat, tile
 
@@ -825,6 +827,7 @@ class MXDataIter(DataIter):
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **kwargs):
         super(MXDataIter, self).__init__()
+        self._create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
         self.handle = handle
         self._kwargs = kwargs
         # debug option, used to test the speed with io effect eliminated
@@ -883,12 +886,12 @@ class MXDataIter(DataIter):
     def getdata(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return _ndarray_cls(hdl, False)
+        return self._create_ndarray_fn(hdl, False)
 
     def getlabel(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return _ndarray_cls(hdl, False)
+        return self._create_ndarray_fn(hdl, False)
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)
@@ -916,7 +919,7 @@ class MXDataIter(DataIter):
         for i in range(nitem.value):
             hdl = NDArrayHandle()
             check_call(_LIB.MXDataIterGetItem(self.handle, ctypes.c_int(i), ctypes.byref(hdl)))
-            out.append(_ndarray_cls(hdl, False))
+            out.append(self._create_ndarray_fn(hdl, False))
         return tuple(out)
 
     def __len__(self):
