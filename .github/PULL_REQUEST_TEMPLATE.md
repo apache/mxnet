@@ -21,6 +21,15 @@ Please feel free to remove inapplicable items for your PR.
 - [ ] Feature1, tests, (and when applicable, API doc)
 - [ ] Feature2, tests, (and when applicable, API doc)
 
+Run one of the following commands to return a brief stat about the changes.
+```
+git diff --name-status master...<PR_Branch_Name>
+```
+OR
+```
+git diff --stat master...<PR_Branch_Name>
+```
+
 ## Comments ##
 - If this change is a backward incompatible change, why must this change be made.
 - Interesting edge cases to note here
