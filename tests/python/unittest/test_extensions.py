@@ -23,7 +23,7 @@ import unittest
 import mxnet as mx
 import numpy as np
 from mxnet.base import MXNetError
-from mxnet.test_utils import download, is_cd_run, assert_almost_equal
+from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_context
 
 def check_platform():
     return platform.machine() not in ['x86_64', 'AMD64']
@@ -31,6 +31,7 @@ def check_platform():
 @unittest.skipIf(check_platform(), "not all machine types supported")
 @unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
 def test_custom_op():
+    # possible places to find library file
     if (os.name=='posix'):
         lib = 'libsample_lib.so'
         if os.path.exists(lib):
@@ -47,20 +48,23 @@ def test_custom_op():
             raise MXNetError("library %s not found " % lib)
 
     fname = os.path.abspath(fname)
+    # load the library containing gemm custom operators
     mx.library.load(fname)
 
-    # test simple 2D gemm custom op loaded from sample library
+    # test symbol 2D gemm custom operators
     s = mx.sym.Variable('s')
     t = mx.sym.Variable('t')
     c = mx.sym.my_gemm(s,t)
     d = mx.sym.state_gemm(s,t)
-    base = mx.sym.linalg.gemm2(s,t)  # baseline
+    # baseline gemm from MXNet
+    base = mx.sym.linalg.gemm2(s,t)
 
+    # get some random input matrices
     dim_n, dim_k, dim_m = tuple(np.random.randint(1, 5, size=3))
-
     mat1 = mx.nd.random.uniform(-10, 10, shape=(dim_n, dim_k), ctx=mx.cpu())
     mat2 = mx.nd.random.uniform(-10, 10, shape=(dim_k, dim_m), ctx=mx.cpu())
 
+    # intermediate ndarrays to be populated by gradient compute
     in_grad1 = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
     in_grad2 = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
     in_grad_base = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
@@ -71,17 +75,21 @@ def test_custom_op():
 
     out1 = exe1.forward()
     out2 = exe2.forward()
-    out2 = exe2.forward()  # stateful
+    # test stateful operator by calling it multiple times
+    out2 = exe2.forward()
     out_base = exe_base.forward()
 
+    # check that forward compute matches one executed by MXNet
     assert_almost_equal(out_base[0].asnumpy(), out1[0].asnumpy(), rtol=1e-3, atol=1e-3)
     assert_almost_equal(out_base[0].asnumpy(), out2[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
+    # random output grad ndarray for gradient update
     out_grad = mx.nd.ones((dim_n, dim_m), ctx=mx.cpu())
     exe1.backward([out_grad])
     exe2.backward([out_grad])
     exe_base.backward([out_grad])
 
+    # check that gradient compute matches one executed by MXNet
     assert_almost_equal(in_grad_base[0].asnumpy(), in_grad1[0].asnumpy(), rtol=1e-3, atol=1e-3)
     assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
@@ -148,3 +156,48 @@ def test_subgraph():
     out3 = exe3.forward()
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out3[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+@unittest.skipIf(check_platform(), "not all machine types supported")
+@unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
+@unittest.skipIf(default_context().device_type == 'cpu', "ignoring custom_op_gpu test on cpu run")
+def test_custom_op_gpu():
+    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+    # possible places to find library file
+    if (os.name=='posix'):
+        lib = 'libsamplegpu_lib.so'
+        if os.path.exists(lib):
+            fname = lib
+        elif os.path.exists('build/'+lib):
+            fname = 'build/'+lib
+        else:
+            raise MXNetError("library %s not found " % lib)
+    elif (os.name=='nt'):
+        lib = 'libsamplegpu_lib.dll'
+        if os.path.exists('windows_package\\lib\\'+lib):
+            fname = 'windows_package\\lib\\'+lib
+        else:
+            raise MXNetError("library %s not found " % lib)
+
+    fname = os.path.abspath(fname)
+    # load the library containing gemm custom operators
+    mx.library.load(fname)
+
+    # test symbol custom relu operator in gpu
+    b = mx.nd.array([[-2,-1],[1,2]], ctx=mx.gpu())
+    c = mx.sym.Variable('c')
+    d = mx.sym.Variable('d')
+    e = mx.sym.my_relu(c)
+    base = mx.sym.relu(d)
+    in_grad = [mx.nd.empty((2,2), ctx=mx.gpu())]
+    in_grad_base = [mx.nd.empty((2,2), ctx=mx.gpu())]
+    exe = e.bind(ctx=mx.gpu(), args={'c':b}, args_grad=in_grad)
+    exe_base = base.bind(ctx=mx.gpu(), args={'d':b}, args_grad=in_grad_base)
+    out = exe.forward()
+    out_base = exe_base.forward()
+    assert_almost_equal(out_base[0].asnumpy(), out[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+    # test backward
+    out_grad = mx.nd.ones((2,2), ctx=mx.gpu())
+    exe.backward([out_grad])
+    exe_base.backward([out_grad])
+    assert_almost_equal(in_grad_base[0].asnumpy(), in_grad[0].asnumpy(), rtol=1e-3, atol=1e-3)

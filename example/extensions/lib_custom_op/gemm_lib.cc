@@ -184,10 +184,6 @@ class MyStatefulGemm : public CustomStatefulOp {
                         OpResource op_res) {
     std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
     std::map<std::string, std::string> attrs;
-    if (inputs[0].ctx.dev_type != "cpu") {
-      std::cout << "Forward is not implemented for " << inputs[0].ctx.dev_type << std::endl;
-      return MX_FAIL;
-    }
     return forward(attrs, inputs, outputs, op_res);
   }
 
@@ -195,10 +191,6 @@ class MyStatefulGemm : public CustomStatefulOp {
                          std::vector<MXTensor> outputs,
                          OpResource op_res) {
     std::map<std::string, std::string> attrs;
-    if (inputs[0].ctx.dev_type != "cpu") {
-      std::cout << "Backward is not implemented for " << inputs[0].ctx.dev_type << std::endl;
-      return MX_FAIL;
-    }
     return backward(attrs, inputs, outputs, op_res);
   }
 
@@ -210,7 +202,7 @@ class MyStatefulGemm : public CustomStatefulOp {
 
 MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  // testing passing of keyward arguments
+  // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs["test_kw"]) : 0;
   // creating stateful operator instance
   *op_inst = new MyStatefulGemm(count);

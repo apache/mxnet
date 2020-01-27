@@ -41,6 +41,17 @@
 
 #define MX_LIBRARY_VERSION 3
 
+/*!
+ * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
+ * times may lead to undefined behaviour, so we need to set symbol visibility to hidden
+ * see https://labjack.com/news/simple-cpp-symbol-visibility-demo for details
+ */
+#if defined(_WIN32) && defined(_WIN64) && defined(__WINDOWS__)
+  #define PRIVATE_SYMBOL
+#else
+  #define PRIVATE_SYMBOL  __attribute__ ((visibility ("hidden")))
+#endif
+
 /*
  * Import from DLPack https://github.com/dmlc/dlpack/blob/master/include/dlpack/dlpack.h
  */
@@ -757,7 +768,7 @@ class Registry {
    * \brief get singleton pointer to class
    * \returns pointer to class
    */
-  static Registry* get() {
+  static Registry* get() PRIVATE_SYMBOL {
     static Registry inst;
     return &inst;
   }
@@ -774,7 +785,10 @@ class Registry {
     return entries.size();
   }
   T& get(int idx) {
-    return *(entries[idx]);
+    return *(entries.at(idx));
+  }
+  void clear() {
+    entries.clear();
   }
 
  private:

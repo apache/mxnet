@@ -32,10 +32,10 @@ __global__ void relu_gpu_forward(float *out, float *in, int64_t N) {
         out[tid] = in[tid] > 0 ? in[tid] : 0;
 }
 
-__global__ void relu_gpu_backward(float *out, float *in, int64_t N) {
+__global__ void relu_gpu_backward(float *ingrad, float *outgrad, float *indata, int64_t N) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < N)
-        out[tid] = in[tid] > 0 ? 1 : 0;
+        ingrad[tid] = indata[tid] > 0 ? 1 * outgrad[tid] : 0;
 }
 
 MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
@@ -54,10 +54,11 @@ MXReturnValue backwardCPU(std::map<std::string, std::string> attrs,
                           std::vector<MXTensor> inputs,
                           std::vector<MXTensor> outputs,
                           OpResource res) {
-    float* in_data = inputs[0].data<float>();
-    float* out_data = outputs[0].data<float>();
-    for (int i=0; i<inputs[0].size(); i++) {
-        out_data[i] = in_data[i] > 0 ? 1 : 0;
+    float* out_grad = inputs[0].data<float>();
+    float* in_data = inputs[1].data<float>();
+    float* in_grad = outputs[0].data<float>();
+    for (int i=0; i<inputs[1].size(); i++) {
+        in_grad[i] = in_data[i] > 0 ? 1 * out_grad[i] : 0;
     }
     return MX_SUCCESS;
 }
@@ -68,10 +69,6 @@ MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
                          OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
-
-    // test on memory resource allocation
-    void *workspace_cpu = res.alloc_cpu(8 * sizeof(float));
-    void *workspace_gpu = res.alloc_gpu(8 * sizeof(float));
 
     mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
@@ -86,14 +83,15 @@ MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
                           std::vector<MXTensor> inputs,
                           std::vector<MXTensor> outputs,
                           OpResource res) {
-    float* in_data = inputs[0].data<float>();
-    float* out_data = outputs[0].data<float>();
+    float* out_grad = inputs[0].data<float>();
+    float* in_data = inputs[1].data<float>();
+    float* in_grad = outputs[0].data<float>();
 
     mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
     int block = 256;
     int grid = (N + (block - 1)) / block;
-    relu_gpu_backward<<<grid,block,0,cuda_stream>>>(out_data, in_data, N);
+    relu_gpu_backward<<<grid,block,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
 
     return MX_SUCCESS;
 }
@@ -164,9 +162,9 @@ public:
 };
 
 MXReturnValue createOpStateCPU(std::map<std::string, std::string> attrs,
-    CustomStatefulOp** op_inst) {
-*op_inst = new MyStatefulReluCPU();
-return MX_SUCCESS;
+                               CustomStatefulOp** op_inst) {
+    *op_inst = new MyStatefulReluCPU();
+    return MX_SUCCESS;
 }
 
 MXReturnValue createOpStateGPU(std::map<std::string, std::string> attrs,
