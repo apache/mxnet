@@ -21,6 +21,7 @@
 __all__ = ['Bernoulli']
 from .exp_family import ExponentialFamily
 from .utils import prob2logit, logit2prob, getF
+from .constraint import Boolean
 
 
 class Bernoulli(ExponentialFamily):
@@ -80,10 +81,7 @@ class Bernoulli(ExponentialFamily):
         return self.prob * (1 - self.prob)
 
     def log_prob(self, value):
-        # FIXME!
-        # constraint_check = self.F.npx.constraint_check(self.support(value))
-        # value = constraint_check * value
-
+        self.support.check(value)
         F = self.F
         if self._prob is None:
             logit = self.logit
@@ -99,8 +97,7 @@ class Bernoulli(ExponentialFamily):
 
     @property
     def support(self):
-        # TODO: replace bitwise_or with logical_or, return a constraint object.
-        return lambda x: self.F.np.bitwise_or((x == 0.0), (x == 1.0))
+        return Boolean(self.F)
 
     @property
     def _natural_params(self):

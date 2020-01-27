@@ -37,7 +37,6 @@ class Distribution(object):
     has_grad = False
 
     def __init__(self, F=None):
-        self._kl_dict = {}
         self.F = F
         self.event_dim = 0
 
@@ -115,5 +114,4 @@ class Distribution(object):
     @property
     def support(self):
         """Return a function representing the distribution's support."""
-        # TODO: return a constraint object
         raise NotImplementedError

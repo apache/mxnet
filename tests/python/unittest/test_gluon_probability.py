@@ -145,6 +145,21 @@ def test_gluon_bernoulli():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
 
+    # Test constraint violation
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        prob = np.random.uniform(size=shape)
+        sample = npx.random.bernoulli(prob=0.5, size=shape) + 0.1
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestBernoulli("log_prob", use_logit)
+        if hybridize:
+            net.hybridize()
+        try:
+            mx_out = net(param, sample).asnumpy()
+        except ValueError:
+            pass
+
 
 @with_seed()
 @use_np
