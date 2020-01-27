@@ -77,7 +77,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
     // Promote down by removing last dimensions which represent the samples.
     tshape = mxnet::TShape(tshape.begin(), tshape.begin()+(tshape.ndim()-sshape.ndim()));
   }
-  // Shape assignemnt/checking for inputs.
+  // Shape assignment/checking for inputs.
   for (const auto& in_attr : *in_attrs) {
     if ( !shape_assign(&tshape, in_attr)) return false;
   }
