@@ -95,6 +95,19 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                             "normalization": 'batch'}],
                                                    warmup=warmup,
                                                    runs=runs)
+    # SoftmaxOutput benchmarks
+    linregnoutput_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "LinearRegressionOutput")],
+                                                   run_backward=True,
+                                                   dtype=dtype,
+                                                   ctx=ctx,
+                                                   profiler=profiler,
+                                                   inputs=[{"data": (32, 3, 256, 256),
+                                                            "label": (32, 3, 256, 256)},
+                                                           {"data": (32, 3, 10000, 10),
+                                                            "label": (32, 3, 10000, 10),
+                                                            "grad_scale": .5}],
+                                                   warmup=warmup,
+                                                   runs=runs)
     # Prepare combined results
-    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res)
+    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + linregnoutput_benchmark_res)
     return mx_basic_nn_results
