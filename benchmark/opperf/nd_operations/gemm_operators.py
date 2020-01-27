@@ -59,7 +59,6 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
     """
     # Benchmark tests for dot and batch_dot operators
     if large_tensor == "on":
-        print("dot")
         dot_benchmark_res = run_performance_test(
             [getattr(MX_OP_MODULE, "dot")], run_backward=True,
             dtype=dtype, ctx=ctx,
@@ -74,7 +73,6 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
                     "transpose_b": True}],
             warmup=warmup, runs=runs, profiler=profiler)
 
-        print("batch_dot")
         batch_dot_benchmark_res = run_performance_test(
             [getattr(MX_OP_MODULE, "batch_dot")], run_backward=True,
             dtype=dtype, ctx=ctx,
