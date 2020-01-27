@@ -96,11 +96,10 @@ MXNET_REGISTER_IO_ITER(SequentialSampler)
 )code" ADD_FILELINE)
 .add_arguments(SequentialSamplerParam::__FIELDS__())
 .add_arguments(BatchSamplerParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
 .set_body([]() {
-    return new PrefetcherIter(
+    return 
         new BatchSampler(
-            new SequentialSampler()));
+            new SequentialSampler());
   });
 
 struct RandomSamplerParam : public dmlc::Parameter<RandomSamplerParam> {
@@ -173,11 +172,9 @@ MXNET_REGISTER_IO_ITER(RandomSampler)
 )code" ADD_FILELINE)
 .add_arguments(RandomSamplerParam::__FIELDS__())
 .add_arguments(BatchSamplerParam::__FIELDS__())
-.add_arguments(PrefetcherParam::__FIELDS__())
 .set_body([]() {
-    return new PrefetcherIter(
-        new BatchSampler(
-            new RandomSampler()));
+    return new BatchSampler(
+            new RandomSampler());
   });
 
 }  // namespace io

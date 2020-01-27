@@ -194,7 +194,7 @@ class BatchifyFunction {
     /*! \brief Init */
     virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
     /*! \brief The batchify logic */
-    virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) = 0;
+    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) = 0;
   protected:
     std::size_t SanityCheck(std::vector<std::vector<NDArray> >& inputs) {
       auto bs = inputs.size();

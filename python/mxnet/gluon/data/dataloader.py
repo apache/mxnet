@@ -696,10 +696,10 @@ class MXThreadedDataLoader(object):
 
     def __iter__(self):
         while self._iter.iter_next():
+            self._iter.first_batch = None
             items = self._iter.getitems()
             yield items
         self._iter.reset()
-        return
 
     def __len__(self):
         return len(self._iter)

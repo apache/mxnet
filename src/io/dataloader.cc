@@ -111,37 +111,36 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
 
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
-    #pragma omp parallel for num_threads(param_.num_workers)
-      for (size_t i = 0; i < batch_size; ++i) {
-        omp_exc_.Run([&] {
-          inputs[i].resize(item_size_);
-        });
-      }
-      omp_exc_.Rethrow();
+    for (size_t i = 0; i < batch_size; ++i) {
+      // omp_exc_.Run([&] {
+        inputs[i].resize(item_size_);
+      // });
+    }
+    // omp_exc_.Rethrow();
     size_t workload = batch_size * item_size_;
-    #pragma omp parallel for num_threads(param_.num_workers)
+    // #pragma omp parallel for num_threads(param_.num_workers)
       for (size_t i = 0; i < workload; ++i) {
-        omp_exc_.Run([&] {
+        // omp_exc_.Run([&] {
           size_t x = i / item_size_;
           size_t y = i % item_size_;
           int is_scalar;
           inputs[x][y] = std::move(
               dataset_->GetItem(idx_ptr[x], y, &is_scalar));
-        });
+        // });
       }
-      omp_exc_.Rethrow();
+      // omp_exc_.Rethrow();
 
     // batchify
-    data_ = batchify_fn_->Batchify(inputs);
-    out_.batch_size = data_.size();
-    out_.data.resize(data_.size());
-    #pragma omp parallel for num_threads(param_.num_workers)
-      for (size_t i = 0; i < data_.size(); ++i) {
-        omp_exc_.Run([&] {
-          out_.data[i] = data_[i].data();
-        });
-      }
-      omp_exc_.Rethrow();
+    auto batched_data = batchify_fn_->Batchify(inputs);
+    out_.batch_size = batched_data.size();
+    out_.data = batched_data;
+    // #pragma omp parallel for num_threads(param_.num_workers)
+      // for (size_t i = 0; i < data_.size(); ++i) {
+      //   // omp_exc_.Run([&] {
+      //     out_.data[i] = data_[i];
+      //   // });
+      // }
+      // omp_exc_.Rethrow();
     return true;
   }
 
@@ -154,8 +153,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     ThreadedDataLoaderParam param_;
     /*! \brief output */
     TBlobBatch out_;
-    /*! \brief batched data cache */
-    std::vector<NDArray> data_;
     /*! \brief pointer to dataset */
     Dataset *dataset_;
     /*! \brief dataset length */

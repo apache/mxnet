@@ -175,7 +175,7 @@ class BatchLoader : public IIterator<TBlobBatch> {
 /*! \brief create a batch sampler from single instance iterator
  *  Unlike BatchLoader, BatchSampler will handle flexible length during iteration.
  */
-class BatchSampler : public IIterator<TBlobBatch> {
+class BatchSampler : public IIterator<DataBatch> {
  public:
   explicit BatchSampler(IIterator<DataInst> *base):
     num_overflow_(0), base_(base) {
@@ -190,8 +190,8 @@ class BatchSampler : public IIterator<TBlobBatch> {
     // init batch param, it could have similar param with
     kwargs_left = param_.InitAllowUnknown(kwargs);
     // Init space for out
-    out_.inst_index = new unsigned[param_.batch_size];
-    out_.batch_size = param_.batch_size;
+    // out_.inst_index = new unsigned[param_.batch_size];
+    // out_.batch_size = param_.batch_size;
     out_.data.clear();
     // init base iterator
     base_->Init(kwargs);
@@ -222,14 +222,13 @@ class BatchSampler : public IIterator<TBlobBatch> {
   }
 
   virtual bool Next(void) {
-    out_.batch_size = param_.batch_size;
     out_.num_batch_padd = 0;
 
     size_t top = num_overflow_;  // start with last overflow index
 
     while (base_->Next()) {
       const DataInst& d = base_->Value();
-      out_.inst_index[top] = d.index;
+      // out_.inst_index[top] = d.index;
       if (data_.size() == 0) {
         this->InitData(d);
       }
@@ -271,7 +270,7 @@ class BatchSampler : public IIterator<TBlobBatch> {
     }
     return false;
   }
-  virtual const TBlobBatch &Value(void) const {
+  virtual const DataBatch &Value(void) const {
     return out_;
   }
 
@@ -279,7 +278,7 @@ class BatchSampler : public IIterator<TBlobBatch> {
   /*! \brief batch parameters */
   BatchSamplerParam param_;
   /*! \brief output data */
-  TBlobBatch out_;
+  DataBatch out_;
   /*! \brief number of overflow instances that readed in round_batch mode */
   int num_overflow_;
   /*! \brief tensor to hold data */
@@ -310,7 +309,7 @@ class BatchSampler : public IIterator<TBlobBatch> {
       shape_[i] = dst_shape;
       data_[i].resize(mshadow::Shape1(dst_shape.Size()), src_type_flag);
       unit_size_[i] = src_shape.Size();
-      out_.data.push_back(TBlob(data_[i].dptr_, dst_shape, cpu::kDevMask, src_type_flag, 0));
+      out_.data.push_back(NDArray(TBlob(data_[i].dptr_, dst_shape, cpu::kDevMask, src_type_flag, 0), 0));
     }
   }
 };  // class BatchSampler

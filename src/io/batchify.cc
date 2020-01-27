@@ -24,6 +24,7 @@
  */
 #include <dmlc/parameter.h>
 #include <mxnet/io.h>
+#include "./inst_vector.h"
 
 namespace mxnet {
 namespace io {
@@ -61,11 +62,11 @@ class SequentialBatchify : public BatchifyFunction {
       }
     }
 
-    virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) {
       auto out_size = SanityCheck(inputs);
       CHECK_EQ(out_size, fs_.size()) << "In Sequential BatchifyFunction, Elem size "
         << out_size << " and batchify function size " << fs_.size() << " must match";
-      std::vector<NDArray> ret;
+      std::vector<TBlob> ret;
       ret.reserve(out_size);
       for (size_t i = 0; i < out_size; ++i) {
         std::vector<std::vector<NDArray> > inp;
@@ -100,12 +101,12 @@ class StackBatchify : public BatchifyFunction {
       param_.InitAllowUnknown(kwargs);
     }
 
-    virtual std::vector<NDArray> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) {
       auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
-      std::vector<NDArray> ret(out_size);
+      std::vector<TBlob> ret(out_size);
 
-      #pragma omp parallel num_threads(out_size)
+      // #pragma omp parallel num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {
           // Process i-th output
           auto ashape = inputs[0][i].shape();
@@ -118,24 +119,25 @@ class StackBatchify : public BatchifyFunction {
           }
 
           // calculate output ndarray size
-          TShape sshape = TShape(ashape.ndim() + 1, 0);
+          TShape sshape(ashape.ndim() + 1, 0);
           sshape[0] = bs;
           for (int k = 0; k < ashape.ndim(); ++k) {
             sshape[k + 1] = ashape[k];
           }
 
-          ret[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
-          for (size_t j = 0; j < bs; ++j) {
-              auto slice_view = ret[i].Slice(j, j + 1);
-              slice_view.SyncCopyFromNDArray(inputs[j][i]);
-          }
-
-          // reshape to keep dim
-          if (sshape.ndim() > 1) {
-            TShape new_shape = ashape;
-            new_shape[0] *= bs;
-            ret[i].Reshape(new_shape);
-          }
+          // ret[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
+          int dtype = inputs[0][i].dtype();
+          auto container = new TBlobContainer();
+          container->resize(sshape, dtype);
+          ret[i] = TBlob(container->dptr_, sshape, cpu::kDevMask, dtype, 0);
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
+            DType *ptr = ret[i].dptr<DType>();
+            for (size_t j = 0; j < bs; ++j) {
+              std::memcpy(ptr, inputs[j][i].data().dptr<DType>(), ashape.Size() * sizeof(DType));
+              ptr += ashape.Size();
+            }
+            CHECK_EQ(ptr, ret[i].dptr<DType>() + sshape.Size());
+          })
       }
       return ret;
     }

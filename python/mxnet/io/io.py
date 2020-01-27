@@ -823,9 +823,10 @@ class MXDataIter(DataIter):
     --------
     src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
-    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **kwargs):
         super(MXDataIter, self).__init__()
         self.handle = handle
+        self._kwargs = kwargs
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
 
