@@ -794,6 +794,9 @@ fixed-size items.
             if isinstance(idx, integer_types):
                 conv_idcs.append(_int_to_slice(idx))
                 int_axes.append(ax)
+            elif hasattr(idx, 'ndim'):
+                conv_idcs.append(_int_to_slice(int(idx)))
+                int_axes.append(ax)
             else:
                 conv_idcs.append(idx)
 
@@ -2993,6 +2996,8 @@ def indexing_key_expand_implicit_axes(key, shape):
 
 def _int_to_slice(idx):
     """Return a slice that indexes the same entries as a single int."""
+    if hasattr(idx, 'ndim'):  # idx is a zero-dim ndarray
+        idx = int(idx)
     if idx == -1:
         # Avoid slice(-1, 0)
         return slice(-1, None)
@@ -3055,6 +3060,8 @@ def get_indexing_dispatch_code(key):
                 return _NDARRAY_EMPTY_TUPLE_INDEXING
             if getattr(idx, 'dtype', None) == np.bool_:
                 num_bools += 1
+            if getattr(idx, 'ndim', None) == 0:  # zero-dim array as index treated as integer
+                continue
             basic_indexing = False
         elif sys.version_info[0] > 2 and isinstance(idx, range):
             basic_indexing = False
