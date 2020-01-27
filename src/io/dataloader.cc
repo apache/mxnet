@@ -107,24 +107,29 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
 
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
+    std::vector<int> is_scalars(item_size_, 0);
+    #pragma omp parallel for num_threads(param_.num_workers)
     for (size_t i = 0; i < real_batch_size; ++i) {
-      // omp_exc_.Run([&] {
+      omp_exc_.Run([&] {
         inputs[i].resize(item_size_);
-      // });
+      });
     }
-    // omp_exc_.Rethrow();
+    omp_exc_.Rethrow();
     size_t workload = real_batch_size * item_size_;
-    // #pragma omp parallel for num_threads(param_.num_workers)
-      for (size_t i = 0; i < workload; ++i) {
-        // omp_exc_.Run([&] {
-          size_t x = i / item_size_;
-          size_t y = i % item_size_;
-          int is_scalar;
-          inputs[x][y] = std::move(
-              dataset_->GetItem(idx_ptr[x], y, &is_scalar));
-        // });
-      }
-      // omp_exc_.Rethrow();
+    #pragma omp parallel for num_threads(param_.num_workers)
+    for (size_t i = 0; i < workload; ++i) {
+      omp_exc_.Run([&] {
+        size_t x = i / item_size_;
+        size_t y = i % item_size_;
+        int is_scalar;
+        inputs[x][y] = std::move(
+          dataset_->GetItem(idx_ptr[x], y, &is_scalar));
+        if (x == 0) {
+          is_scalars[y] = is_scalar;
+        }
+      });
+    }
+    omp_exc_.Rethrow();
 
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
@@ -133,6 +138,13 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
 
     // batchify
     auto batched_data = batchify_fn_->Batchify(inputs);
+    for (size_t i = 0; i < is_scalars.size(); ++i) {
+      if (is_scalars[i] == 1) {
+        // batched scalar array should have dim 1 not 2
+        CHECK_EQ(batched_data[i].ndim(), 2);
+        batched_data[i] = batched_data[i].reshape(TShape({batched_data[i].Size()}));
+      }
+    }
     out_.batch_size = batched_data.size();
     out_.data = batched_data;
     out_.num_batch_padd = samples.num_batch_padd;

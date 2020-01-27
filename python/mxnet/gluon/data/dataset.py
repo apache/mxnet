@@ -336,7 +336,7 @@ class _DownloadedDataset(Dataset):
     def _get_data(self):
         raise NotImplementedError
 
-    def __handle__(self):
+    def __mx_handle__(self):
         if self._handle is None:
             from ._internal import NDArrayDataset, TupleDataset
             self._handle = TupleDataset(

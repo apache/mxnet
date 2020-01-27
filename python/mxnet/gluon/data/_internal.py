@@ -38,7 +38,8 @@ from ...ndarray import _ndarray_cls
 from ...numpy.multiarray import _np_ndarray_cls
 from ...ndarray import concat, tile
 from ...util import is_np_array
-from ...io import io as mx_io
+from ...io import io as _io
+
 
 class MXDataset(Dataset):
     """A python wrapper a C++ dataset.
@@ -101,7 +102,7 @@ class MXDataset(Dataset):
 class MXSampler(Sampler):
     def __init__(self, name, **kwargs):
         try:
-            creator = getattr(mx_io, name)
+            creator = getattr(_io, name)
         except AttributeError:
             raise ValueError('{} is not a valid MXDataIter class'.format(name))
         self._iter = creator(**kwargs)
