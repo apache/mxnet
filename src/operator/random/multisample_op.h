@@ -86,7 +86,7 @@ inline bool MultiSampleOpShape(const nnvm::NodeAttrs& attrs,
   }
   if (tshape.ndim() > 0) {
     // Shape assignment/check for propagation from inputs to output.
-    std::vector<int> cshape(tshape.begin(), tshape.end());
+    std::vector<index_t> cshape(tshape.begin(), tshape.end());
     cshape.insert(cshape.end(), sshape.begin(), sshape.end());
     mxnet::TShape oshape(cshape.begin(), cshape.end());
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
