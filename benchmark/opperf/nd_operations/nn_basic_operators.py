@@ -310,7 +310,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    runs=runs)
     # lamb_update_phase1 benchmarks
     lup1_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "lamb_update_phase1")],
-                                                   run_backward=True,
+                                                   run_backward=False,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
@@ -330,7 +330,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    runs=runs)
     # lamb_update_phase2 benchmarks
     lup2_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "lamb_update_phase2")],
-                                                   run_backward=True,
+                                                   run_backward=False,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
