@@ -57,14 +57,13 @@ mv apache-maven-3.3.9/ /usr/local/maven/
 update-alternatives --install /usr/bin/mvn mvn /usr/local/maven/apache-maven-3.3.9/bin/mvn 1
 update-ca-certificates -f
 
-apt-get install -y python python3
+apt-get install -y python python-pip python3 python3-pip
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
-wget -nv https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
-python2 get-pip.py
+pip install --upgrade pip
+pip3 install --upgrade pip
 
 apt-get remove -y python3-urllib3
 
-pip2 install nose cpplint==1.3.0 'numpy>1.16.0,<2.0.0' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
-pip3 install nose cpplint==1.3.0 pylint==2.3.1 'numpy>1.16.0,<2.0.0' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
+pip2 install --upgrade --ignore-installed nose cpplint==1.3.0 'numpy>1.16.0,<2.0.0' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
+pip3 install --upgrade --ignore-installed nose cpplint==1.3.0 pylint==2.3.1 'numpy>1.16.0,<2.0.0' nose-timer 'requests<2.19.0,>=2.18.4' h5py==2.8.0rc1 scipy==1.0.1 boto3
