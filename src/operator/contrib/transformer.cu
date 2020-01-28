@@ -51,16 +51,45 @@ void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
 
   cublasHandle_t blas_handle = mshadow::Stream<gpu>::GetBlasHandle(s);
   auto err = CUBLAS_STATUS_SUCCESS;
-  // TODO(cfujitsang): handle computation_precision
+  auto computeType = CUDA_R_32F;
+  const void *alpha_ptr;
+  const void *beta_ptr;
+  if (dmlc::GetEnv("MXNET_FC_TRUE_FP16", false)){
+    computeType = CUDA_R_16F;
+    alpha_ptr = &CublasType<mshadow::half::half_t>::one;
+    beta_ptr = &CublasType<mshadow::half::half_t>::zero;
+    __half alpha_h = __float2half(alpha);
+    __half beta_h = __float2half(beta);
+    alpha_ptr = static_cast<__half*>(&alpha_h);
+    beta_ptr = static_cast<__half*>(&beta_h);
+  }else{
+    alpha_ptr = &CublasType<float>::one;
+    beta_ptr = &CublasType<float>::zero;
+    alpha_ptr = &alpha;
+    beta_ptr = &beta;
+  }
+  /*if (dmlc::GetEnv("MXNET_FC_TRUE_FP16", false)){
+    computeType = CUDA_R_16F;
+    printf("R_16F compute\n");
+    __half alpha_h = __float2half(alpha);
+    __half beta_h = __float2half(beta);
+    alpha_ptr = static_cast<__half*>(&alpha_h);
+    beta_ptr = static_cast<__half*>(&beta_h);
+  }else{
+    alpha_ptr = static_cast<float*>(&alpha);
+    beta_ptr = static_cast<float*>(&beta);
+  }*/
+  std::cout << typeid(alpha_ptr).name() << '\n';
+
   err = cublasGemmStridedBatchedEx(
       blas_handle, CublasTransposeOp(transA), CublasTransposeOp(transB),
       static_cast<int>(m), static_cast<int>(n), static_cast<int>(k),
-      reinterpret_cast<void*>(&alpha),
+      alpha_ptr,
       a, CublasType<DType>::kCudaFlag, static_cast<int>(lda), strideA,
       b, CublasType<DType>::kCudaFlag, static_cast<int>(ldb), strideB,
-      reinterpret_cast<void*>(&beta),
+      beta_ptr,
       c, CublasType<DType>::kCudaFlag, static_cast<int>(ldc), strideC,
-      static_cast<int>(batchCount), CUDA_R_32F, algo);
+      static_cast<int>(batchCount), computeType, algo);
   CHECK_EQ(err, CUBLAS_STATUS_SUCCESS) << "Cublas gemmEx fail.";
 #else
   LOG(FATAL) << "Not implemented with CUDA < 9.1";
@@ -77,7 +106,7 @@ void gemm_switch_fp32accum(mshadow::Stream<gpu>* s, bool transA, bool transB,
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
   if (!(lda & 0x7) && !(ldb & 0x7) && !(ldc & 0x7)) {
     CublasStridedBatchedGemm(s, transA, transB, m, n, k, alpha, a, lda, strideA, b, ldb,
-      strideB, beta, c, ldc, strideC, batchCount, CUBLAS_GEMM_ALGO0_TENSOR_OP);
+      strideB, beta, c, ldc, strideC, batchCount, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
   } else {
     CublasStridedBatchedGemm(s, transA, transB, m, n, k, alpha, a, lda, strideA, b, ldb,
       strideB, beta, c, ldc, strideC, batchCount);
