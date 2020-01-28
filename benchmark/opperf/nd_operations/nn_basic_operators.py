@@ -215,7 +215,21 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                             "target_shape": (256, 6)}],
                                                    warmup=warmup,
                                                    runs=runs)
-    
+    # IdentityAttachKLSparseReg benchmarks
+    iaklsr_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "IdentityAttachKLSparseReg")],
+                                                   run_backward=True,
+                                                   dtype=dtype,
+                                                   ctx=ctx,
+                                                   profiler=profiler,
+                                                   inputs=[{"data": (32, 3, 256, 6),
+                                                            "grad": (32, 3, 256, 6)},
+                                                           {"data": (32, 3, 10000, 10),
+                                                            "grad": (32, 3, 10000, 10),
+                                                            "sparseness_target": .1,
+                                                            "penalty": .001,
+                                                            "momentum": .9}],
+                                                   warmup=warmup,
+                                                   runs=runs)
     # Prepare combined results
-    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res)
+    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res + iaklsr_benchmark_res)
     return mx_basic_nn_results
