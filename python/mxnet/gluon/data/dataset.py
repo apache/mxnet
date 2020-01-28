@@ -226,6 +226,8 @@ class _LazyTransformDataset(Dataset):
             from ..block import HybridBlock
             from ._internal import LazyTransformDataset
             from ...base import numeric_types
+            if not hasattr(self._data, '__mx_handle__'):
+                raise NotImplementedError("{} don't support backend".format(self._data))
             if isinstance(self._fn, HybridBlock):
                 item = self._data[0]
                 self._fn.hybridize()
@@ -237,7 +239,7 @@ class _LazyTransformDataset(Dataset):
                     is_scalar = [int(isinstance(ret, numeric_types))]
                 cached_op = self._fn._cached_op
                 self.handle = LazyTransformDataset(cached_op=cached_op,
-                                                   dataset=self._data,
+                                                   dataset=self._data.__mx_handle__(),
                                                    scalar_outputs=tuple(is_scalar))
             elif isinstance(self._fn, _TransformFirstClosure):
                 item = self._data[0][0]
@@ -246,12 +248,13 @@ class _LazyTransformDataset(Dataset):
                 is_scalar = [int(isinstance(ret, numeric_types))]
                 cached_op = self._fn._fn._cached_op
                 self.handle = LazyTransformDataset(cached_op=cached_op,
-                                                   dataset=self._data,
+                                                   dataset=self._data.__mx_handle__(),
                                                    scalar_outputs=tuple(is_scalar),
                                                    transform_indices=(0,))
             else:
-                raise NotImplementedError("Not implemented for transforms that are not hybridizable")
-            return self.handle
+                raise NotImplementedError(
+                    "Not implemented for transforms that are not hybridizable")
+        return self.handle
 
 
 class _TransformFirstClosure(object):
