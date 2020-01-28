@@ -159,6 +159,8 @@ def test_gluon_bernoulli():
             mx_out = net(param, sample).asnumpy()
         except ValueError:
             pass
+        else:
+            assert False
 
 
 @with_seed()

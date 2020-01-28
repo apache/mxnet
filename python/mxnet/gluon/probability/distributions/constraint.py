@@ -39,7 +39,8 @@ class Real(Constraint):
     def check(self, value):
         err_msg = "Constraint violated: {} should be a real tensor".format(value)
         condition = (value == value)
-        value = self._check_func(condition, err_msg) * value
+        _value = self._check_func(condition, err_msg) * value
+        return _value
 
     
 
@@ -52,7 +53,8 @@ class Boolean(Constraint):
         err_msg = "Constraint violated: {} should be either 0 or 1.".format(value)
         # FIXME: replace bitwise_or with logical_or instead
         condition = self.F.np.bitwise_or(value == 0, value == 1)
-        value = self._check_func(condition, err_msg) * value
+        _value = self._check_func(condition, err_msg) * value
+        return _value
 
 
 class Interval(Constraint):
@@ -69,6 +71,7 @@ class Interval(Constraint):
                     value, self._low, self._up)
         # FIXME: replace bitwise_and with logical_and
         condition = self.F.np.bitwise_and(value > self._low, value < self._up)
-        value = self._check_func(condition, err_msg) * value
+        _value = self._check_func(condition, err_msg) * value
+        return _value
 
 

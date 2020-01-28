@@ -81,7 +81,7 @@ class Bernoulli(ExponentialFamily):
         return self.prob * (1 - self.prob)
 
     def log_prob(self, value):
-        self.support.check(value)
+        value = self.support.check(value)
         F = self.F
         if self._prob is None:
             logit = self.logit
