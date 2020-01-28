@@ -132,7 +132,6 @@ class Horovod(KVStoreBase):
         else:
             out[:] = hvd.allreduce(value, average=False, name=key, priority=priority)
 
-
     def set_optimizer(self, optimizer):
         pass
 
@@ -150,6 +149,11 @@ class Horovod(KVStoreBase):
     def rank(self):
         import horovod.mxnet as hvd
         return hvd.rank()
+
+    @property
+    def local_rank(self):
+        import horovod.mxnet as hvd
+        return hvd.local_rank()
 
     @property
     def num_workers(self):
