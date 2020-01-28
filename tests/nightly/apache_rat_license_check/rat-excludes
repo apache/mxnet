@@ -76,4 +76,5 @@ searchtools_custom.js
 theme.conf
 LICENSE.binary.dependencies
 cmake/Modules/FindCUDAToolkit.cmake
+image-classification-predict.cc
 np_einsum_op-inl.h
