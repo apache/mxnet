@@ -228,7 +228,21 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                             "momentum": .9}],
                                                    warmup=warmup,
                                                    runs=runs)"""
-    
+    # im2ccol benchmarks
+    im2col_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "im2col")],
+                                                   run_backward=True,
+                                                   dtype=dtype,
+                                                   ctx=ctx,
+                                                   profiler=profiler,
+                                                   inputs=[{"data": (32, 3, 256, 256),
+                                                            "kernel": (3)},
+                                                           {"data": (32, 3, 10000, 10),
+                                                            "kernel": (3, 3),
+                                                            "stride": (1, 1),
+                                                            "dilate": (1, 1),
+                                                            "pad": (1, 1)}],
+                                                   warmup=warmup,
+                                                   runs=runs)
     # Prepare combined results
-    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res + iaklsr_benchmark_res)
+    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res + im2col_benchmark_res)
     return mx_basic_nn_results
