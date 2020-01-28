@@ -328,6 +328,24 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                             "wd": .7}],
                                                    warmup=warmup,
                                                    runs=runs)
+    # lamb_update_phase2 benchmarks
+    lup2_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "lamb_update_phase2")],
+                                                   run_backward=True,
+                                                   dtype=dtype,
+                                                   ctx=ctx,
+                                                   profiler=profiler,
+                                                   inputs=[{"weight": (32, 3, 256, 256),
+                                                            "g": (32, 3, 256, 256),
+                                                            "r1": (1, 3, 256, 256),
+                                                            "r2": (1, 3, 256, 256),
+                                                            "lr": .01},
+                                                           {"weight": (32, 3, 10000, 10),
+                                                            "g": (32, 3, 10000, 10),
+                                                            "r1": (1, 3, 10000, 10),
+                                                            "r2": (1, 3, 10000, 10),
+                                                            "lr": .01}],
+                                                   warmup=warmup,
+                                                   runs=runs)
     # Prepare combined results
-    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res + im2col_benchmark_res + col2im_benchmark_res + groupnorm_benchmark_res + rnn_benchmark_res + lrn_benchmark_res + lup1_benchmark_res)
+    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res + im2col_benchmark_res + col2im_benchmark_res + groupnorm_benchmark_res + rnn_benchmark_res + lrn_benchmark_res + lup1_benchmark_res + lup2_benchmark_res)
     return mx_basic_nn_results
