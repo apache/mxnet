@@ -217,7 +217,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    runs=runs)
     # IdentityAttachKLSparseReg benchmarks
     iaklsr_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "IdentityAttachKLSparseReg")],
-                                                   run_backward=True,
+                                                   run_backward=False,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
