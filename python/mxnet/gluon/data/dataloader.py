@@ -692,7 +692,27 @@ class DataLoader(object):
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
 
+
+class MXThreadedLoaderScope(object):
+    _enable_status = True
+    def __init__(self, enabled=True):
+        self._status = enabled
+        self._old_status = None
+
+    def __enter__(self):
+        self._old_status = MXThreadedLoaderScope._enable_status
+        MXThreadedLoaderScope._enable_status = self._status
+        return self
+
+    def __exit__(self, ptype, value, trace):
+        MXThreadedLoaderScope._enable_status = self._old_status
+
+no_mx_iter = MXThreadedLoaderScope(False)
+use_mx_iter = MXThreadedLoaderScope(True)
+
 def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
+    if not MXThreadedLoaderScope._enable_status:
+        return False, {}
     from ._internal import MXDataset, MXSampler
     from ._internal import StackBatchify, MXBatchifyFunction
     mx_loader_args = {}
