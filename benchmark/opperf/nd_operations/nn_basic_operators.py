@@ -167,7 +167,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    runs=runs)
     # Embedding benchmarks
     embedding_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "Embedding")],
-                                                   run_backward=True,
+                                                   run_backward=False,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
