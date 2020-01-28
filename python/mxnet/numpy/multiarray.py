@@ -134,8 +134,10 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
-    if isinstance(object, (_np.ndarray, integer_types, numeric_types)):
+    if isinstance(object, _np.ndarray):
         return array(object, dtype=object.dtype, ctx=ctx)
+    elif isinstance(object, (integer_types, numeric_types)):
+        return object
     elif isinstance(object, (list, tuple)):
         tmp = [_as_mx_np_array(arr) for arr in object]
         return object.__class__(tmp)
