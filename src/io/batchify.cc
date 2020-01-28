@@ -28,36 +28,24 @@
 
 namespace mxnet {
 namespace io {
-struct SequentialBatchifyParam : public dmlc::Parameter<SequentialBatchifyParam> {
+struct GroupBatchifyParam : public dmlc::Parameter<GroupBatchifyParam> {
     mxnet::Tuple<std::intptr_t> functions;
     // declare parameters
-    DMLC_DECLARE_PARAMETER(SequentialBatchifyParam) {
+    DMLC_DECLARE_PARAMETER(GroupBatchifyParam) {
         DMLC_DECLARE_FIELD(functions)
             .describe("Internal sequentially applied batchify functions. "
                       "The number of functions must match output of dataset items.");
     }
-};  // struct SequentialBatchifyParam
-DMLC_REGISTER_PARAMETER(SequentialBatchifyParam);
+};  // struct GroupBatchifyParam
+DMLC_REGISTER_PARAMETER(GroupBatchifyParam);
 
-struct StackBatchifyParam : public dmlc::Parameter<StackBatchifyParam> {
-    /*! \brief Length of the sequence. */
-    int use_shared_mem;
-    // declare parameters
-    DMLC_DECLARE_PARAMETER(StackBatchifyParam) {
-        DMLC_DECLARE_FIELD(use_shared_mem).set_default(0)
-            .describe("If 1, use shared memory.");
-    }
-};  // struct StackBatchifyParam
-
-DMLC_REGISTER_PARAMETER(StackBatchifyParam);
-
-class SequentialBatchify : public BatchifyFunction {
+class GroupBatchify : public BatchifyFunction {
   public:
     virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
       fs_.reserve(param_.functions.ndim());
       for (int i = 0; i < param_.functions.ndim(); ++i) {
-          fs_.emplace_back(static_cast<BatchifyFunction*>(
+          fs_.emplace_back(*static_cast<BatchifyFunctionPtr*>(
               reinterpret_cast<void*>(param_.functions[i])));
       }
     }
@@ -82,18 +70,30 @@ class SequentialBatchify : public BatchifyFunction {
 
   private:
     /*! \brief params */
-    SequentialBatchifyParam param_;
+    GroupBatchifyParam param_;
     /*! \brief internal batchify function pointers */
-    std::vector<BatchifyFunction*> fs_;
-};  // class SequentialBatchify
+    std::vector<BatchifyFunctionPtr> fs_;
+};  // class GroupBatchify
 
-MXNET_REGISTER_IO_BATCHIFY_FUNCTION(SequentialBatchify)
-  .describe(R"code(Returns the SequentialBatchify function.
+MXNET_REGISTER_IO_BATCHIFY_FUNCTION(GroupBatchify)
+  .describe(R"code(Returns the GroupBatchify function.
     )code" ADD_FILELINE)
-  .add_arguments(SequentialBatchifyParam::__FIELDS__())
+  .add_arguments(GroupBatchifyParam::__FIELDS__())
   .set_body([]() {
-    return new SequentialBatchify();
+    return new GroupBatchify();
 });
+
+struct StackBatchifyParam : public dmlc::Parameter<StackBatchifyParam> {
+    /*! \brief Length of the sequence. */
+    int use_shared_mem;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(StackBatchifyParam) {
+        DMLC_DECLARE_FIELD(use_shared_mem).set_default(0)
+            .describe("If 1, use shared memory.");
+    }
+};  // struct StackBatchifyParam
+
+DMLC_REGISTER_PARAMETER(StackBatchifyParam);
 
 class StackBatchify : public BatchifyFunction {
   public:

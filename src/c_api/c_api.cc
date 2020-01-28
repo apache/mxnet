@@ -1729,21 +1729,35 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_END();
 }
 
-int MXDataIterGetItemSize(DataIterHandle handle, int *size) {
+int MXDataIterGetItems(DataIterHandle handle, int* num_outputs, NDArrayHandle **outputs) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  *size = static_cast<int>(db.data.size());
-  API_END();
-}
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(db.data.size());
+  if (*outputs == nullptr) {
+    *num_outputs = db.data.size();
+    for (int i = 0; i < *num_outputs; ++i) ndoutputs.push_back(new NDArray());
+  } else {
+    CHECK_EQ(*num_outputs, db.data.size())
+        << "MXDataIterGetItems expects " << db.data.size() << " outputs, but "
+        << *num_outputs << " was given.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
+    }
+  }
 
-int MXDataIterGetItem(DataIterHandle handle, int index, NDArrayHandle *out) {
-  API_BEGIN();
-  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  NDArray* pndarray = new NDArray();
-  CHECK_LT(index, db.data.size()) << "Fetching index " << index
-    << " out of bound: " << db.data.size();
-  *pndarray = db.data[index];
-  *out = pndarray;
+  // copy outputs
+  for (int i = 0; i < *num_outputs; ++i) *ndoutputs[i] = db.data[i];
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*num_outputs);
+    for (int i = 0; i < *num_outputs; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
   API_END();
 }
 
@@ -1781,10 +1795,10 @@ int MXListDatasets(uint32_t *out_size,
 }
 
 int MXDatasetCreateDataset(DatasetCreator handle,
-                                     uint32_t num_param,
-                                     const char **keys,
-                                     const char **vals,
-                                     DatasetHandle *out) {
+                           uint32_t num_param,
+                           const char **keys,
+                           const char **vals,
+                           DatasetHandle *out) {
   Dataset *dataset = nullptr;
   API_BEGIN();
   DatasetReg *e = static_cast<DatasetReg *>(handle);
@@ -1794,7 +1808,7 @@ int MXDatasetCreateDataset(DatasetCreator handle,
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
   dataset->Init(kwargs);
-  *out = dataset;
+  *out = new DatasetPtr(dataset);
   API_END_HANDLE_ERROR(delete dataset);                       
 }
 
@@ -1813,35 +1827,63 @@ int MXDatasetGetDatasetInfo(DatasetCreator creator,
 
 int MXDatasetFree(DatasetHandle handle) {
   API_BEGIN();
-  delete static_cast<Dataset *>(handle);
+  delete static_cast<DatasetPtr*>(handle);
   API_END();                            
 }
 
 int MXDatasetGetLen(DatasetHandle handle,
-                              uint64_t *out) {
+                    uint64_t *out) {
   API_BEGIN();
-  uint64_t len = static_cast<Dataset *>(handle)->GetLen();
+  uint64_t len = (*static_cast<DatasetPtr*>(handle))->GetLen();
   *out = len;
   API_END();                            
 }
 
-int MXDatasetGetOutSize(DatasetHandle handle,
-                                  int *out) {
+int MXDatasetGetItems(DatasetHandle handle,
+                      uint64_t index,
+                      int* num_outputs,
+                      NDArrayHandle **outputs,
+                      NDArrayHandle *is_scalar) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-  int size = static_cast<Dataset *>(handle)->GetOutputSize();
-  *out = size;
-  API_END();                            
-}
+  LOG(INFO) << "start api";
+  std::vector<int> is_temp;
+  auto res = (*static_cast<DatasetPtr*>(handle))->GetItem(index, is_temp);
+  LOG(INFO) << "out size: " << res.size();
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(res.size());
+  if (*outputs == nullptr) {
+    *num_outputs = res.size();
+    for (int i = 0; i < *num_outputs; ++i) ndoutputs.push_back(new NDArray());
+  } else {
+    CHECK_EQ(*num_outputs, res.size())
+        << "MXDatasetGetItems expects " << res.size() << " outputs, but "
+        << *num_outputs << " was given.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
+    }
+  }
+  // copy ndarrays
+  LOG(INFO) << "start copy";
+  for (int i = 0; i < *num_outputs; ++i) *ndoutputs[i] = res[i];
 
-int MXDatasetGetItem(DatasetHandle handle,
-                               uint64_t index,
-                               int n,
-                               NDArrayHandle *arr,
-                               int *is_scalar) {
-  API_BEGIN();
-  NDArray* pndarray = new NDArray();
-  *pndarray = static_cast<Dataset *>(handle)->GetItem(index, n, is_scalar);
-  *arr = pndarray;
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*num_outputs);
+    for (int i = 0; i < *num_outputs; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
+
+  if (is_scalar == nullptr) {
+    auto pndarray = new NDArray(TShape({*outputs}, Context::CPU(0), false, kInt32));
+  } else {
+    NDArray *pndarray = static_cast<NDArray*>(is_scalar);
+    CHECK_EQ(pndarray->data().Size(), *num_outputs);
+  }
+  pndarray->SyncCopyFromCPU(dmlc::BeginPtr(is_temp), sizeof(int32_t) * (*num_outputs));
+    *is_scalar = pndarray;
   API_END();                            
 }
 
@@ -1868,7 +1910,7 @@ int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
     kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
   }
   bf->Init(kwargs);
-  *out = bf;
+  *out = new BatchifyFunctionPtr(bf);
   API_END_HANDLE_ERROR(delete bf);                           
 }
 
@@ -1887,7 +1929,7 @@ int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
 
 int MXBatchifyFunctionFree(BatchifyFunctionHandle handle) {
   API_BEGIN();
-  delete static_cast<BatchifyFunction *>(handle);
+  delete static_cast<BatchifyFunctionPtr*>(handle);
   API_END();
 }                                 
 //--------------------------------------------

@@ -913,13 +913,13 @@ class MXDataIter(DataIter):
         return pad.value
 
     def getitems(self):
-        nitem = ctypes.c_int(0)
-        check_call(_LIB.MXDataIterGetItemSize(self.handle, ctypes.byref(nitem)))
-        out = []
-        for i in range(nitem.value):
-            hdl = NDArrayHandle()
-            check_call(_LIB.MXDataIterGetItem(self.handle, ctypes.c_int(i), ctypes.byref(hdl)))
-            out.append(self._create_ndarray_fn(hdl, False))
+        output_vars = ctypes.POINTER(NDArrayHandle)()
+        num_output = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterGetItems(self.handle,
+                                           ctypes.byref(num_output),
+                                           ctypes.byref(output_vars)))
+        out = [self._create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                       False) for i in range(num_output.value)]
         return tuple(out)
 
     def __len__(self):

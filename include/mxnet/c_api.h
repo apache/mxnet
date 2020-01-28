@@ -2663,23 +2663,15 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
 /*!
- * \brief Get the size of underlying ndarrays
- * \param handle the handle pointer to the data iterator
- * \param size the number of underlying ndarrays
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDataIterGetItemSize(DataIterHandle handle,
-                                    int *size);
-/*!
  * \brief Get the handles to specified underlying ndarrays of index
  * \param handle the handle pointer to the data iterator
- * \param index the index of the specified ndarray to be fetched
- * \param out the handle to a 1-D NDArray that stores pointers to handles
+ * \param num_outputs the length of outputs
+ * \param out the handle to an array of NDArrays that stores pointers to handles
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXDataIterGetItem(DataIterHandle handle,
-                                int index,
-                                NDArrayHandle *out);
+MXNET_DLL int MXDataIterGetItems(DataIterHandle handle,
+                                int* num_outputs,
+                                NDArrayHandle **outputs);
 
 /*!
  * \brief List all the available dataset entries
@@ -2735,28 +2727,21 @@ MXNET_DLL int MXDatasetFree(DatasetHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
-                              uint64_t *out);
-/*!
- * \brief Get dataset output size
- * \param handle the handle to dataset
- * \param out return value of GetOutSize
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXDatasetGetOutSize(DatasetHandle handle,
-                                  int *out);                              
+                              uint64_t *out);                        
 /*!
  * \brief Get Output NDArray given specified indices
  * \param handle the handle to dataset
- * \param index the index of items in dataset
- * \param n the index of ndarray in output items
- * \param is_scalar if 1 then output should be casted to scalar rather than ndarray
+ * \param index the index of the dataset item to be retrieved
+ * \param num_outputs the number of output ndarrays
+ * \param outputs the pointers to handles of ndarrays
+ * \param is_scalar if not zeros then output should be casted to scalars
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXDatasetGetItem(DatasetHandle handle,
-                               uint64_t index,
-                               int n,
-                               NDArrayHandle *arr,
-                               int *is_scalar);
+MXNET_DLL int MXDatasetGetItems(DatasetHandle handle,
+                                uint64_t index,
+                                int* num_outputs,
+                                NDArrayHandle **outputs,
+                                NDArrayHandle *is_scalar);
                               
 /*!
  * \brief List all the available batchify function entries

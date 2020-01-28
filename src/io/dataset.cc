@@ -27,6 +27,8 @@
 #include <mxnet/ndarray.h>
 #include <mxnet/tensor_blob.h>
 
+#include "../imperative/cached_op.h"
+
 #include <string>
 #include <vector>
 
@@ -72,16 +74,12 @@ class ImageSequenceDataset : public Dataset {
       return img_list_.size();
     }
 
-    int GetOutputSize() const {
-      return 1;
-    }
-
-    NDArray GetItem(uint64_t idx, int n, int* is_scalar) const {
-      *is_scalar = 0;
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+      is_scalar.resize(1);
+      is_scalar[0] = 0;
 #if MXNET_USE_OPENCV
       CHECK_LT(idx, img_list_.size())
         << "GetItem index: " << idx << " out of bound: " << img_list_.size();
-      CHECK_EQ(n, 0) << "ImageSequenceDataset only produce one output";
       cv::Mat res = cv::imread(img_list_[idx], param_.flag);
       const int n_channels = res.channels();
       NDArray ret;
@@ -92,7 +90,7 @@ class ImageSequenceDataset : public Dataset {
       } else if (n_channels == 4) {
         ret = SwapImageChannels<4>(res);
       }
-      return ret;
+      return std::vector<NDArray>({ret});
 #else
     LOG(FATAL) << "Opencv is needed for image decoding.";
 #endif
@@ -103,8 +101,6 @@ class ImageSequenceDataset : public Dataset {
     ImageSequenceDatasetParam param_;
     /*! \brief image list */
     std::vector<std::string> img_list_;
-    /*! \brief image process buffer */
-    std::vector<uint8_t> buffer_;
 
 #if MXNET_USE_OPENCV
     template<int n_channels>
@@ -179,27 +175,23 @@ class NDArrayDataset : public Dataset {
       return size_;
     }
 
-    int GetOutputSize() const {
-      return 1;
-    }
-
-    NDArray GetItem(uint64_t idx, int n, int* is_scalar) const {
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+      is_scalar.resize(1);
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
-      CHECK_EQ(n, 0) << "NDArrayDataset only produce one output";
       NDArray ret = data_.Slice(idx, idx + 1);
       if (ret.shape().ndim() > 1) {
         // remove first dim to be consistent with numpy
         TShape new_shape;
         new_shape.assign(ret.shape().begin() + 1, ret.shape().end());
         ret = ret.Reshape(new_shape);
-        *is_scalar = 0;
+        is_scalar[0] = 0;
       } else {
         if (data_.shape().ndim() == 1) {
-          *is_scalar = 1;
+          is_scalar[0] = 1;
         }
       }
-      return ret;
+      return std::vector<NDArray>({ret});
     };
 
   private:
@@ -218,43 +210,36 @@ MXNET_REGISTER_IO_DATASET(NDArrayDataset)
      return new NDArrayDataset();
 });
 
-struct TupleDatasetParam : public dmlc::Parameter<TupleDatasetParam> {
+struct GroupDatasetParam : public dmlc::Parameter<GroupDatasetParam> {
     /*! \brief the source ndarray */
     Tuple<std::intptr_t> datasets;
     // declare parameters
-    DMLC_DECLARE_PARAMETER(TupleDatasetParam) {
+    DMLC_DECLARE_PARAMETER(GroupDatasetParam) {
         DMLC_DECLARE_FIELD(datasets)
             .describe("A small set of pointers to other c++ datasets.");
     }
-};  // struct TupleDatasetParam
+};  // struct GroupDatasetParam
 
-DMLC_REGISTER_PARAMETER(TupleDatasetParam);
+DMLC_REGISTER_PARAMETER(GroupDatasetParam);
 
-class TupleDataset : public Dataset {
+class GroupDataset : public Dataset {
   public:
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
       auto childs = param_.datasets;
       childs_.reserve(childs.ndim());
-      item_size_ = 0;
       size_t child_cnt = 0;
       for (auto child : childs) {
-        auto d = static_cast<Dataset*>(reinterpret_cast<void*>(child));
+        auto d = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(child));
         if (child_cnt == 0) {
           size_ = d->GetLen();
         } else {
           CHECK_EQ(size_, d->GetLen())
-            << "All child dataset of TupleDataset must be identical "
+            << "All child dataset of GroupDataset must be identical "
             << "Given mismatch: " << size_ << " vs " << d->GetLen();
         }
         childs_.emplace_back(d);
-        // generate lookup table for indexing
-        int old_size = item_size_;
-        item_size_ += d->GetOutputSize();
-        for (int i = old_size; i < item_size_; ++i) {
-          idx_map_[i] = std::make_pair(child_cnt, i - old_size);
-        }
         child_cnt++;
       }
     }
@@ -263,37 +248,88 @@ class TupleDataset : public Dataset {
       return size_;
     }
 
-    int GetOutputSize() const {
-      return item_size_;
-    }
-
-    NDArray GetItem(uint64_t idx, int n, int* is_scalar) const {
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
-      CHECK_GE(n, 0) << "Getting negative item is forbidden";
-      CHECK_LT(n, item_size_) << "Item index out of bound: " << n << " vs total " << item_size_;
-      auto new_idx = idx_map_.at(n);
-      return childs_[new_idx.first]->GetItem(idx, new_idx.second, is_scalar);
+      std::vector<NDArray> ret;
+      is_scalar.clear();
+      for (auto child : childs_) {
+        std::vector<int> temp_scalar;
+        auto v = child->GetItem(idx, temp_scalar);
+        ret.insert(ret.end(), v.begin(), v.end());
+        for (size_t j = 0; j < v.size(); ++j) {
+          is_scalar.emplace_back(temp_scalar[j]);
+        }
+      }
     };
 
   private:
     /*! \brief parameters */
-    TupleDatasetParam param_;
+    GroupDatasetParam param_;
     /*! \brief stored child datasets */
-    std::vector<Dataset*> childs_;
+    std::vector<DatasetPtr> childs_;
     /*! \brief overall dataset size, equals to all child datasets */
     uint64_t size_;
-    /*! \brief overall item output size, which is the sum of childs' */
-    int item_size_;
-    /*! \brief a table to get the corresponding child dataset and data index */
-    std::unordered_map<int, std::pair<int, int> > idx_map_;
-};   // class TupleDataset
+};   // class GroupDataset
 
-MXNET_REGISTER_IO_DATASET(TupleDataset)
- .describe("Tuple like Dataset that combine a bunch of datasets")
- .add_arguments(TupleDatasetParam::__FIELDS__())
+MXNET_REGISTER_IO_DATASET(GroupDataset)
+ .describe("Grouped Dataset that combine a bunch of datasets")
+ .add_arguments(GroupDatasetParam::__FIELDS__())
  .set_body([]() {
-     return new TupleDataset();
+     return new GroupDataset();
+});
+
+struct LazyTransformDatasetParam : public dmlc::Parameter<LazyTransformDatasetParam> {
+    /*! \brief the source ndarray */
+    std::intptr_t cached_op;
+    /*! \brief internal dataset */
+    std::intptr_t dataset;
+    /*! \brief indices for items that needs transformation */
+    Tuple<int> transform_indices;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(LazyTransformDatasetParam) {
+        DMLC_DECLARE_FIELD(cached_op)
+            .describe("Pointer to cached transform function.");
+        DMLC_DECLARE_FIELD(dataset)
+            .describe("Pointer to internal dataset.");
+        DMLC_DECLARE_FIELD(transform_indices).set_default(Tuple<int>({}))
+            .describe("The indices for dataset items that need to be transformed/processed. "
+                      "If `transform_indices` is empty(default), then all items will be processed.");
+    }
+};  // struct LazyTransformDatasetParam
+
+DMLC_REGISTER_PARAMETER(LazyTransformDatasetParam);
+
+class LazyTransformDataset : public Dataset {
+  public:
+    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      param_.InitAllowUnknown(kwargs);
+      cached_op_ = *static_cast<CachedOpPtr*>(reinterpret_cast<void*>(param_.cached_op));
+      base_data_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
+    }
+
+    uint64_t GetLen() const {
+      return base_data_->GetLen();
+    }
+
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+      return std::vector<NDArray>();
+    };
+
+  private:
+    /*! \brief parameters */
+    LazyTransformDatasetParam param_;
+    /*! \brief stored cached op */
+    CachedOpPtr cached_op_;
+    /*! \brief internal dataset */
+    DatasetPtr base_data_;
+};   // class LazyTransformDataset
+
+MXNET_REGISTER_IO_DATASET(LazyTransformDataset)
+ .describe("Dataset that apply lazy transformation to internal dataset")
+ .add_arguments(LazyTransformDatasetParam::__FIELDS__())
+ .set_body([]() {
+     return new LazyTransformDataset();
 });
 }  // namespace io
 }  // namespace mxnet

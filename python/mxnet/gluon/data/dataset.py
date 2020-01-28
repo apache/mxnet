@@ -338,8 +338,8 @@ class _DownloadedDataset(Dataset):
 
     def __mx_handle__(self):
         if self._handle is None:
-            from ._internal import NDArrayDataset, TupleDataset
-            self._handle = TupleDataset(
+            from ._internal import NDArrayDataset, GroupDataset
+            self._handle = GroupDataset(
                 datasets=(NDArrayDataset(arr=default_array(self._data)),
                           NDArrayDataset(arr=default_array(self._label))))
         return self._handle

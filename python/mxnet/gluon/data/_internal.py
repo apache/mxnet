@@ -58,12 +58,6 @@ class MXDataset(Dataset):
         length = ctypes.c_uint64(0)
         check_call(_LIB.MXDatasetGetLen(self.handle, ctypes.byref(length)))
         self._len = length.value
-        # get item size
-        out_size = ctypes.c_int(0)
-        check_call(_LIB.MXDatasetGetOutSize(self.handle, ctypes.byref(out_size)))
-        out_size = int(out_size.value)
-        assert out_size > 0, "Invalid number of outputs: {}".format(out_size)
-        self._out_size = out_size
 
     def __del__(self):
         check_call(_LIB.MXDatasetFree(self.handle))
@@ -78,25 +72,24 @@ class MXDataset(Dataset):
         # check bound
         if idx < 0 or idx >= self._len:
             raise IndexError("Index {} out of bound: (0, {})".format(orig_idx, self._len))
-        items = []
-        for i in range(self._out_size):
-            hdl = NDArrayHandle()
-            is_scalar = ctypes.c_int(0)
-            check_call(_LIB.MXDatasetGetItem(self.handle,
-                                             ctypes.c_uint64(idx),
-                                             ctypes.c_int(i),
-                                             ctypes.byref(hdl),
-                                             ctypes.byref(is_scalar)))
-            create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
-            out_arr = create_ndarray_fn(hdl, False)
-            if is_scalar.value == 1:
-                assert out_arr.size == 1
-                items.append(out_arr[0])
-            else:
-                items.append(out_arr)
-        if len(items) == 1:
-            return items[0]
-        return tuple(items)
+        create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
+        output_vars = ctypes.POINTER(NDArrayHandle)()
+        num_output = ctypes.c_int(0)
+        is_scalars = ctypes.POINTER(ctypes.c_int)()
+        print('call!')
+        check_call(_LIB.MXDataIterGetItems(self.handle,
+                                           ctypes.c_uint64(idx),
+                                           ctypes.byref(num_output),
+                                           ctypes.byref(output_vars),
+                                           ctypes.byref(is_scalars)))
+        print('call end')
+        out = [self._create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                       False) for i in range(num_output.value)]
+        for i in range(num_output.value):
+            if is_scalars[i].value == 1:
+                assert out[i].size == 1
+                out[i] = out[i].asnumpy()[0]
+        return tuple(out)
 
 
 class MXSampler(Sampler):

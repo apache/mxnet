@@ -140,25 +140,15 @@ class Dataset {
     */
     virtual uint64_t GetLen(void) const = 0;
     /*! 
-    *  \brief Get the output size. 
-    *  For example, if the GetItem should return two array, the output size is 2.
-    */
-    virtual int GetOutputSize(void) const = 0;
-    /*! 
-    *  \brief Get the ndarray data given index in dataset and output tuple
+    *  \brief Get the ndarray items given index in dataset
     *  \param idx the integer index for required data
-    *  \param n the n-th item
     */
-    virtual NDArray GetItem(uint64_t idx, int n, int* is_scalar) const = 0;
+    virtual std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const = 0;
     // virtual destructor
     virtual ~Dataset(void) {}
-    /*!
-    * \brief factory function
-    * \param name Name of the dataset
-    * \return The created dataset.
-    */
-    static Dataset* Create(const std::string& name);
 };  // class Dataset
+
+using DatasetPtr = std::shared_ptr<Dataset>;
 
 /*! \brief typedef the factory function of dataset */
 typedef std::function<Dataset *()> DatasetFactory;
@@ -208,6 +198,8 @@ class BatchifyFunction {
       return out_size;
     }
 };  // class BatchifyFunction
+
+using BatchifyFunctionPtr = std::shared_ptr<BatchifyFunction>;
 
 /*! \brief typedef the factory function of data sampler */
 typedef std::function<BatchifyFunction *()> BatchifyFunctionFactory;

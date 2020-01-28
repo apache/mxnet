@@ -80,11 +80,10 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       threadget = omp_get_num_threads();
     }
     param_.num_workers = threadget;
-    dataset_ = static_cast<Dataset*>(reinterpret_cast<void*>(param_.dataset));
+    dataset_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
     dataset_len_ = dataset_->GetLen();
-    item_size_ = dataset_->GetOutputSize();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
-    batchify_fn_ = static_cast<BatchifyFunction*>(reinterpret_cast<void*>(param_.batchify_fn));
+    batchify_fn_ = *static_cast<BatchifyFunctionPtr*>(reinterpret_cast<void*>(param_.batchify_fn));
     this->BeforeFirst();
   }
   // before first
@@ -107,29 +106,34 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
 
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
-    std::vector<int> is_scalars(item_size_, 0);
+    std::vector<int> is_scalars;
     #pragma omp parallel for num_threads(param_.num_workers)
     for (size_t i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
-        inputs[i].resize(item_size_);
-      });
-    }
-    omp_exc_.Rethrow();
-    size_t workload = real_batch_size * item_size_;
-    #pragma omp parallel for num_threads(param_.num_workers)
-    for (size_t i = 0; i < workload; ++i) {
-      omp_exc_.Run([&] {
-        size_t x = i / item_size_;
-        size_t y = i % item_size_;
-        int is_scalar;
-        inputs[x][y] = std::move(
-          dataset_->GetItem(idx_ptr[x], y, &is_scalar));
-        if (x == 0) {
-          is_scalars[y] = is_scalar;
+        std::vector<int> is_temp;
+        inputs[i] = std::move(
+          dataset_->GetItem(idx_ptr[i], is_temp));
+        if (i == 0) {
+          is_scalars = is_temp;
         }
       });
     }
     omp_exc_.Rethrow();
+    // size_t workload = real_batch_size * item_size_;
+    // #pragma omp parallel for num_threads(param_.num_workers)
+    // for (size_t i = 0; i < workload; ++i) {
+    //   omp_exc_.Run([&] {
+    //     size_t x = i / item_size_;
+    //     size_t y = i % item_size_;
+    //     int is_scalar;
+    //     inputs[x][y] = std::move(
+    //       dataset_->GetItem(idx_ptr[x], y, &is_scalar));
+    //     if (x == 0) {
+    //       is_scalars[y] = is_scalar;
+    //     }
+    //   });
+    // }
+    // omp_exc_.Rethrow();
 
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
@@ -161,15 +165,13 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     /*! \brief output */
     TBlobBatch out_;
     /*! \brief pointer to dataset */
-    Dataset *dataset_;
+    DatasetPtr dataset_;
     /*! \brief dataset length */
     int64_t dataset_len_;
-    /*! \brief dataset output size */
-    int item_size_;
     /*! \brief pointer to sampler iterator */
     IIterator<DataBatch> *sampler_;
     /*! \brief pointer to batchify function */
-    BatchifyFunction *batchify_fn_;
+    BatchifyFunctionPtr batchify_fn_;
     /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
     dmlc::OMPException omp_exc_;
 };  // class ThreadedDataLoader
