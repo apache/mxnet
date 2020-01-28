@@ -258,6 +258,7 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
 #if CUDA_VERSION >= 9000
   auto cublas_math_mode = GetEnvAllowTensorCore() ? CUBLAS_TENSOR_OP_MATH
                                                   : CUBLAS_DEFAULT_MATH;
+  //printf("ALLOW TENSORS? %i\n", GetEnvAllowTensorCore());
   auto previous_math_mode = SetCublasMathMode(blas_handle, cublas_math_mode);
 #endif
 
@@ -271,7 +272,24 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
 #else
   cublasDataType_t half_datatype = CUBLAS_DATA_HALF;
 #endif
-  CUBLAS_CALL(cublasSgemmEx(blas_handle,
+  //if (dmlc::GetEnv("MXNET_FC_TRUE_FP16", false)){
+    printf("CUBLAS HAHAH HALF\n");
+    auto algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP;
+    __half alpha_h = __float2half(alpha);
+    __half beta_h = __float2half(beta);
+  //}
+  CUBLAS_CALL(cublasGemmEx(blas_handle,
+                           (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
+                           (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
+                           C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
+                           &alpha_h,
+                           B.dptr_, half_datatype, B.stride_,
+                           A.dptr_, half_datatype, A.stride_,
+                           &beta_h,
+                           C.dptr_, half_datatype, C.stride_,
+                           CUDA_R_16F, algo));
+  //print("NORMAL\n");
+  /*CUBLAS_CALL(cublasSgemmEx(blas_handle,
                             (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
                             (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
                             C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
@@ -279,7 +297,7 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
                             B.dptr_, half_datatype, B.stride_,
                             A.dptr_, half_datatype, A.stride_,
                             &beta_f,
-                            C.dptr_, half_datatype, C.stride_));
+                            C.dptr_, half_datatype, C.stride_));*/
 #if CUDA_VERSION >= 9000
   SetCublasMathMode(blas_handle, previous_math_mode);
 #endif
