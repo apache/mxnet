@@ -287,6 +287,8 @@ struct LazyTransformDatasetParam : public dmlc::Parameter<LazyTransformDatasetPa
     std::intptr_t dataset;
     /*! \brief indices for items that needs transformation */
     Tuple<int> transform_indices;
+    /*! \brief is_scalar information for outputs */
+    Tuple<int> scalar_outputs;
     // declare parameters
     DMLC_DECLARE_PARAMETER(LazyTransformDatasetParam) {
         DMLC_DECLARE_FIELD(cached_op)
@@ -296,6 +298,8 @@ struct LazyTransformDatasetParam : public dmlc::Parameter<LazyTransformDatasetPa
         DMLC_DECLARE_FIELD(transform_indices).set_default(Tuple<int>({}))
             .describe("The indices for dataset items that need to be transformed/processed. "
                       "If `transform_indices` is empty(default), then all items will be processed.");
+        DMLC_DECLARE_FIELD(scalar_outputs)
+            .describe("Indicate whether outputs are scalars, the size must match the output size.");
     }
 };  // struct LazyTransformDatasetParam
 
@@ -314,8 +318,50 @@ class LazyTransformDataset : public Dataset {
     }
 
     std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
-      return std::vector<NDArray>();
-    };
+      auto inputs = base_data_->GetItem(idx, is_scalar);
+      std::vector<NDArray> outputs;
+      // check output size
+      CHECK_EQ(param_.scalar_outputs.ndim(), cached_op_->num_outputs())
+        << "Output scalar info size: " << param_.scalar_outputs.ndim() << " vs. output size: "
+        << cached_op_->num_outputs() << " mismatch!";
+      // check input size
+      Tuple<int> tindices;
+      if (param_.transform_indices.ndim() == 0) {
+        std::vector<int> default_indices;
+        default_indices.reserve(cached_op_->num_inputs());
+        for (size_t i = 0; i < cached_op_->num_inputs(); ++i) {
+          default_indices.emplace_back(static_cast<int>(i));
+        }
+        tindices = Tuple<int>(default_indices.begin(), default_indices.end());
+      } else {
+        tindices = param_.transform_indices;
+      }
+      CHECK_EQ(tindices.ndim(), cached_op_->num_inputs())
+        << "Mismatched transform indices and transform inputs: " << tindices.ndim()
+        << " vs. " << cached_op_->num_inputs();
+      auto num_inputs = tindices.ndim();
+      CHECK_GE(inputs.size(), num_inputs)
+        << "LazyTransformDataset input size " << inputs.size() << " smaller than transform input size: "
+        << num_inputs;
+      outputs.resize(cached_op_->num_outputs());
+      std::vector<NDArray*> ndinputs;
+      std::vector<NDArray*> ndoutputs;
+      ndinputs.reserve(num_inputs);
+      ndoutputs.reserve(outputs.size());
+      for (size_t i = 0; i < num_inputs; ++i) {
+        ndinputs.emplace_back(&inputs[tindices[i]]);
+      }
+      for (size_t i = 0; i < outputs.size(); ++i) {
+        ndoutputs.emplace_back(&outputs[i]);
+      }
+      cached_op_->Forward(cached_op_, ndinputs, ndoutputs);
+      std::vector<NDArray> ret = inputs;
+      for (int i = 0; i < tindices.ndim(); ++i) {
+        ret[tindices[i]] = outputs[i];
+        is_scalar[tindices[i]] = param_.scalar_outputs[i];
+      }
+      return ret;
+    }
 
   private:
     /*! \brief parameters */

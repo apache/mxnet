@@ -210,6 +210,7 @@ class _LazyTransformDataset(Dataset):
     def __init__(self, data, fn):
         self._data = data
         self._fn = fn
+        self.handle = None
 
     def __len__(self):
         return len(self._data)
@@ -219,6 +220,38 @@ class _LazyTransformDataset(Dataset):
         if isinstance(item, tuple):
             return self._fn(*item)
         return self._fn(item)
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ..block import HybridBlock
+            from ._internal import LazyTransformDataset
+            from ...base import numeric_types
+            if isinstance(self._fn, HybridBlock):
+                item = self._data[0]
+                self._fn.hybridize()
+                if isinstance(item, tuple):
+                    ret = self._fn(*item)
+                    is_scalar = [int(isinstance(x, numeric_types)) for x in ret]
+                else:
+                    ret = self._fn(item)
+                    is_scalar = [int(isinstance(ret, numeric_types))]
+                cached_op = self._fn._cached_op
+                self.handle = LazyTransformDataset(cached_op=cached_op,
+                                                   dataset=self._data,
+                                                   scalar_outputs=tuple(is_scalar))
+            elif isinstance(self._fn, _TransformFirstClosure):
+                item = self._data[0][0]
+                self._fn._fn.hybridize()
+                ret = self._fn._fn(item)
+                is_scalar = [int(isinstance(ret, numeric_types))]
+                cached_op = self._fn._fn._cached_op
+                self.handle = LazyTransformDataset(cached_op=cached_op,
+                                                   dataset=self._data,
+                                                   scalar_outputs=tuple(is_scalar),
+                                                   transform_indices=(0,))
+            else:
+                raise NotImplementedError("Not implemented for transforms that are not hybridizable")
+            return self.handle
 
 
 class _TransformFirstClosure(object):

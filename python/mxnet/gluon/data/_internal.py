@@ -76,11 +76,11 @@ class MXDataset(Dataset):
         output_vars = ctypes.POINTER(NDArrayHandle)()
         num_output = ctypes.c_int(0)
         is_scalars = NDArrayHandle()
-        check_call(_LIB.MXDatasetGetItem(self.handle,
-                                           ctypes.c_uint64(idx),
-                                           ctypes.byref(num_output),
-                                           ctypes.byref(output_vars),
-                                           ctypes.byref(is_scalars)))
+        check_call(_LIB.MXDatasetGetItems(self.handle,
+                                          ctypes.c_uint64(idx),
+                                          ctypes.byref(num_output),
+                                          ctypes.byref(output_vars),
+                                          ctypes.byref(is_scalars)))
         out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
                                        False) for i in range(num_output.value)]
         nd_isscalar = create_ndarray_fn(is_scalars).asnumpy()
@@ -88,7 +88,9 @@ class MXDataset(Dataset):
             if nd_isscalar[i] == 1:
                 assert out[i].size == 1
                 out[i] = out[i].asnumpy()[0]
-        return tuple(out)
+        if len(out) > 1:
+            return tuple(out)
+        return out[0]
 
 
 class MXSampler(Sampler):
@@ -162,7 +164,7 @@ def _make_internal_datasets(handle):
     doc_str = doc_str % (desc.value, param_str)
 
     def creator(*args, **kwargs):
-        """Create an iterator.
+        """Create a dataset.
         The parameters listed below can be passed in as keyword arguments.
 
         Parameters
