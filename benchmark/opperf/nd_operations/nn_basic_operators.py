@@ -183,7 +183,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    runs=runs)
     # Correlation benchmarks
     correlation_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "Correlation")],
-                                                   run_backward=False,
+                                                   run_backward=True,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
@@ -199,7 +199,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    runs=runs)
     # SpatialTransformer benchmarks
     st_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "SpatialTransformer")],
-                                                   run_backward=False,
+                                                   run_backward=True,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
@@ -215,6 +215,7 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                             "target_shape": (256, 6)}],
                                                    warmup=warmup,
                                                    runs=runs)
+    
     # Prepare combined results
     mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res)
     return mx_basic_nn_results
