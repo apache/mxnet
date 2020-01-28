@@ -1,4 +1,24 @@
-__all__ = ["Constraint", "Real", "Boolean", "Interval"]
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# coding: utf-8
+# pylint: disable=wildcard-import
+"""Base class and implementations of constraint"""
+__all__ = ["Constraint", "Real", "Boolean", "Interval", "GreaterThan", "Positive"]
 
 class Constraint(object):
     """Base class for constraints.
@@ -75,3 +95,25 @@ class Interval(Constraint):
         return _value
 
 
+class GreaterThan(Constraint):
+    """
+    Constrain to be greater than `lower_bound`.
+    """
+    def __init__(self, F, lower_bound):
+        super(GreaterThan, self).__init__(F)
+        self._low = lower_bound
+    
+    def check(self, value):
+        err_msg = "Constraint violated: {} should be greater than {}".format(
+                    value, self._low)
+        condition = value > self._low
+        _value = self._check_func(condition, err_msg) * value
+        return _value
+
+
+class Positive(GreaterThan):
+    """
+    Constrain to be greater than zero.
+    """
+    def __init__(self, F):
+        super(Positive, self).__init__(F, 0)

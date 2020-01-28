@@ -36,6 +36,7 @@ import json
 import unittest
 import random
 import itertools
+from numbers import Number
 
 
 @with_seed()
@@ -115,7 +116,7 @@ def test_gluon_bernoulli():
         return np.log(prob) - np.log1p(-prob)
 
     # Test log_prob
-    shapes = [(1,), (2, 3), 6]
+    shapes = [(), (1,), (2, 3), 6]
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
         prob = np.random.uniform(size=shape)
         sample = npx.random.bernoulli(prob=0.5, size=shape)
@@ -161,6 +162,48 @@ def test_gluon_bernoulli():
             pass
         else:
             assert False
+
+
+@with_seed()
+@use_np
+def test_gluon_half_normal():
+    class TestHalfNormal(HybridBlock):
+        def __init__(self, func):
+            super(TestHalfNormal, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, scale, *args):
+            half_normal = mgp.HalfNormal(scale, F)
+            return getattr(half_normal, self._func)(*args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test sampling
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestHalfNormal("sample")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale).asnumpy()
+        if isinstance(shape, Number):
+            shape = (shape,)
+        assert mx_out.shape == shape
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.abs(np.random.normal(size=shape))
+        net = TestHalfNormal("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.halfnorm(0, scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False) 
+    
+    # Test cdf
+
+    # Test icdf
 
 
 @with_seed()

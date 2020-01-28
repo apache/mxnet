@@ -23,6 +23,7 @@ from .distribution import Distribution
 from .utils import prob2logit, logit2prob, getF
 
 
+# FIXME: Finish implementation
 class Categorical(Distribution):
     """Create a categorical distribution object.
 

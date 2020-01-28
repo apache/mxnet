@@ -184,7 +184,7 @@ class PowerTransform(Transformation):
 
 class AbsTransform(Transformation):
     def _forward_compute(self, x):
-        return self.F.abs(x)
+        return self.F.np.abs(x)
 
     def _inverse_compute(self, y):
         return y
