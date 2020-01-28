@@ -12,10 +12,6 @@ if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-endif()
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
@@ -33,6 +29,7 @@ option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
+cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
@@ -653,7 +650,7 @@ if(USE_CUDA)
     endif()
   endif()
   if(UNIX)
-    if(CUDA_nvToolsExt_LIBRARY)
+    if(USE_NVTX AND CUDA_nvToolsExt_LIBRARY)
       list(APPEND mxnet_LINKER_LIBS CUDA::nvToolsExt)
       add_definitions(-DMXNET_USE_NVTX=1)
     else()
@@ -770,10 +767,8 @@ endif()
 
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
-  list(APPEND pslite_LINKER_LIBS pslite protobuf zmq)
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
-  include_directories(SYSTEM ${pslite_INCLUDE_DIR})
-  list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
+  list(APPEND mxnet_LINKER_LIBS pslite)
 endif()
 
 function(BuildTVMOP)
@@ -821,7 +816,7 @@ if(MSVC)
     target_link_libraries(mxnet PUBLIC dmlc)
   endif()
 else()
-  target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+  target_link_libraries(mxnet_static PUBLIC ${mxnet_LINKER_LIBS})
   target_link_libraries(mxnet PUBLIC dmlc)
 endif()
 
@@ -836,7 +831,6 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
     dmlc
-    ${pslite_LINKER_LIBS}
     )
 else()
     message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
