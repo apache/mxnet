@@ -996,10 +996,6 @@ cd_unittest_ubuntu() {
     fi
 }
 
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
 unittest_ubuntu_python3_cpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -1024,8 +1020,6 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_mkl.xml --verbose tests/python/mkl
 }
 
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
 unittest_ubuntu_python3_gpu() {
     set -ex
     export PYTHONPATH=./python/
@@ -1077,8 +1071,6 @@ unittest_ubuntu_tensorrt_gpu() {
 }
 
 # quantization gpu currently only runs on P3 instances
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
 # need to separte it from unittest_ubuntu_python3_gpu()
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
@@ -1328,7 +1320,6 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     popd
 }
 
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
 test_ubuntu_cpu_python3() {
     set -ex
     pushd .
@@ -1480,7 +1471,6 @@ nightly_model_backwards_compat_train() {
     ./tests/nightly/model_backwards_compatibility_check/train_mxnet_legacy_models.sh
 }
 
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
 nightly_straight_dope_python3_single_gpu_tests() {
     set -ex
     cd /work/mxnet/tests/nightly/straight_dope
@@ -1491,7 +1481,6 @@ nightly_straight_dope_python3_single_gpu_tests() {
       test_notebooks_single_gpu.py --nologcapture
 }
 
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
 nightly_straight_dope_python3_multi_gpu_tests() {
     set -ex
     cd /work/mxnet/tests/nightly/straight_dope
@@ -1517,8 +1506,6 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     nosetests-3.4 $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_tutorials.xml test_tutorials.py --nologcapture
 }
 
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_SUBGRAPH_VERBOSE=0
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
