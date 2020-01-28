@@ -2716,7 +2716,7 @@ MXNET_DLL int MXDatasetGetDatasetInfo(DatasetCreator creator,
                                       const char ***arg_descriptions);
 /*!
  * \brief Free the handle to the IO module
- * \param handle the handle pointer to the dataset 
+ * \param handle the handle pointer to the dataset
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDatasetFree(DatasetHandle handle);
@@ -2727,7 +2727,7 @@ MXNET_DLL int MXDatasetFree(DatasetHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
-                              uint64_t *out);                        
+                              uint64_t *out);
 /*!
  * \brief Get Output NDArray given specified indices
  * \param handle the handle to dataset
@@ -2742,7 +2742,7 @@ MXNET_DLL int MXDatasetGetItems(DatasetHandle handle,
                                 int* num_outputs,
                                 NDArrayHandle **outputs,
                                 NDArrayHandle *is_scalar);
-                              
+
 /*!
  * \brief List all the available batchify function entries
  * \param out_size the size of returned batchify functions
@@ -2786,7 +2786,7 @@ MXNET_DLL int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
                                       const char ***arg_descriptions);
 /*!
  * \brief Free the handle to the IO module
- * \param handle the handle pointer to the batchify function 
+ * \param handle the handle pointer to the batchify function
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXBatchifyFunctionFree(BatchifyFunctionHandle handle);

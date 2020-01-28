@@ -353,7 +353,7 @@ int MXLoadLib(const char *path) {
     /*
      * Below are a series of lambda functions that will be registered in the NNVM op registration
      * Each one has the standard MXNet signature and converts to types supported by externally
-     * registered operators. 
+     * registered operators.
      */
 
     // lambda function to call parse attributes
@@ -1791,7 +1791,7 @@ int MXListDatasets(uint32_t *out_size,
   auto &vec = dmlc::Registry<DatasetReg>::List();
   *out_size = static_cast<uint32_t>(vec.size());
   *out_array = (DatasetCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
-  API_END();                            
+  API_END();
 }
 
 int MXDatasetCreateDataset(DatasetCreator handle,
@@ -1809,7 +1809,7 @@ int MXDatasetCreateDataset(DatasetCreator handle,
   }
   dataset->Init(kwargs);
   *out = new DatasetPtr(dataset);
-  API_END_HANDLE_ERROR(delete dataset);                       
+  API_END_HANDLE_ERROR(delete dataset);
 }
 
 int MXDatasetGetDatasetInfo(DatasetCreator creator,
@@ -1822,21 +1822,20 @@ int MXDatasetGetDatasetInfo(DatasetCreator creator,
   DatasetReg *e = static_cast<DatasetReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);                         
+                                 NULL);
 }
 
 int MXDatasetFree(DatasetHandle handle) {
   API_BEGIN();
   delete static_cast<DatasetPtr*>(handle);
-  API_END();                            
+  API_END();
 }
 
-int MXDatasetGetLen(DatasetHandle handle,
-                    uint64_t *out) {
+int MXDatasetGetLen(DatasetHandle handle, uint64_t *out) {
   API_BEGIN();
   uint64_t len = (*static_cast<DatasetPtr*>(handle))->GetLen();
   *out = len;
-  API_END();                            
+  API_END();
 }
 
 int MXDatasetGetItems(DatasetHandle handle,
@@ -1846,10 +1845,8 @@ int MXDatasetGetItems(DatasetHandle handle,
                       NDArrayHandle *is_scalar) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-  LOG(INFO) << "start api";
   std::vector<int> is_temp;
   auto res = (*static_cast<DatasetPtr*>(handle))->GetItem(index, is_temp);
-  LOG(INFO) << "out size: " << res.size();
   std::vector<NDArray*> ndoutputs;
   ndoutputs.reserve(res.size());
   if (*outputs == nullptr) {
@@ -1864,8 +1861,7 @@ int MXDatasetGetItems(DatasetHandle handle,
     }
   }
   // copy ndarrays
-  LOG(INFO) << "start copy";
-  for (int i = 0; i < *num_outputs; ++i) *ndoutputs[i] = res[i];
+  for (int i = 0; i < *num_outputs; ++i) *(ndoutputs[i]) = res[i];
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();
@@ -1876,15 +1872,10 @@ int MXDatasetGetItems(DatasetHandle handle,
     *outputs = dmlc::BeginPtr(ret->ret_handles);
   }
 
-  if (is_scalar == nullptr) {
-    auto pndarray = new NDArray(TShape({*outputs}, Context::CPU(0), false, kInt32));
-  } else {
-    NDArray *pndarray = static_cast<NDArray*>(is_scalar);
-    CHECK_EQ(pndarray->data().Size(), *num_outputs);
-  }
-  pndarray->SyncCopyFromCPU(dmlc::BeginPtr(is_temp), sizeof(int32_t) * (*num_outputs));
-    *is_scalar = pndarray;
-  API_END();                            
+  auto pndarray = new NDArray(TShape({*num_outputs}), Context::CPU(0), false, kInt32);
+  pndarray->SyncCopyFromCPU(dmlc::BeginPtr(is_temp), (*num_outputs));
+  *is_scalar = pndarray;
+  API_END();
 }
 
 int MXListBatchifyFunctions(uint32_t *out_size,
@@ -1893,7 +1884,7 @@ int MXListBatchifyFunctions(uint32_t *out_size,
   auto &vec = dmlc::Registry<BatchifyFunctionReg>::List();
   *out_size = static_cast<uint32_t>(vec.size());
   *out_array = (BatchifyFunctionCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
-  API_END();                         
+  API_END();
 }
 
 int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
@@ -1911,7 +1902,7 @@ int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
   }
   bf->Init(kwargs);
   *out = new BatchifyFunctionPtr(bf);
-  API_END_HANDLE_ERROR(delete bf);                           
+  API_END_HANDLE_ERROR(delete bf);
 }
 
 int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
@@ -1931,7 +1922,7 @@ int MXBatchifyFunctionFree(BatchifyFunctionHandle handle) {
   API_BEGIN();
   delete static_cast<BatchifyFunctionPtr*>(handle);
   API_END();
-}                                 
+}
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

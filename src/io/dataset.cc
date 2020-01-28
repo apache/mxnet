@@ -44,7 +44,7 @@ struct ImageSequenceDatasetParam : public dmlc::Parameter<ImageSequenceDatasetPa
     std::string img_list;
     /*! \brief the path separator character, by default it's ; */
     char path_sep;
-    /*! \brief If flag is 0, always convert to grayscale(1 channel). 
+    /*! \brief If flag is 0, always convert to grayscale(1 channel).
     * If flag is 1, always convert to colored (3 channels).
     * If flag is -1, keep channels unchanged.
     */
@@ -261,6 +261,7 @@ class GroupDataset : public Dataset {
           is_scalar.emplace_back(temp_scalar[j]);
         }
       }
+      return ret;
     };
 
   private:
