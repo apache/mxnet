@@ -216,16 +216,13 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    warmup=warmup,
                                                    runs=runs)
     # IdentityAttachKLSparseReg benchmarks
-    print(getattr(MX_OP_MODULE, "IdentityAttachKLSparseReg"))
     iaklsr_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "IdentityAttachKLSparseReg")],
                                                    run_backward=True,
                                                    dtype=dtype,
                                                    ctx=ctx,
                                                    profiler=profiler,
-                                                   inputs=[{"data": (32, 3, 256, 6),
-                                                            "grad": (32, 3, 256, 6)},
+                                                   inputs=[{"data": (32, 3, 256, 6)},
                                                            {"data": (32, 3, 10000, 10),
-                                                            "grad": (32, 3, 10000, 10),
                                                             "sparseness_target": .1,
                                                             "penalty": .001,
                                                             "momentum": .9}],

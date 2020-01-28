@@ -199,8 +199,6 @@ def get_all_unary_operators():
                 "data" in op_params["params"]["arg_names"]) or \
                 op_name in cast_ops:
             unary_broadcast_mx_operators[op_name] = mx_operators[op_name]
-        elif 'IdentityAttachKLSparseReg' in op_name:
-            print(op_params)
     return unary_broadcast_mx_operators
 
 
