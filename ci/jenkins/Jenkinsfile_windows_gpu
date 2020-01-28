@@ -32,7 +32,7 @@ node('utility') {
 utils.assign_node_labels(utility: 'utility', windows_cpu: 'mxnetwindows-cpu', windows_gpu: 'mxnetwindows-gpu')
 
 utils.main_wrapper(
-core_logic: {
+core_logic_patch: {
   utils.parallel_stage('Build', [
     custom_steps.compile_windows_gpu(),
     custom_steps.compile_windows_gpu_mkldnn()

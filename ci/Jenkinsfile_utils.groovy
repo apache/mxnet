@@ -273,6 +273,9 @@ def main_wrapper(args) {
   try {
     update_github_commit_status('PENDING', 'Job has been enqueued')
     //args['core_logic']()
+    if args.containsKey('core_logic_patch') {
+        args['core_logic_patch']()
+    }
 
     // set build status to success at the end
     currentBuild.result = "SUCCESS"
