@@ -46,7 +46,7 @@
  * times may lead to undefined behaviour, so we need to set symbol visibility to hidden
  * see https://labjack.com/news/simple-cpp-symbol-visibility-demo for details
  */
-#if defined(_WIN32) && defined(_WIN64) && defined(__WINDOWS__)
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   #define PRIVATE_SYMBOL
 #else
   #define PRIVATE_SYMBOL  __attribute__ ((visibility ("hidden")))
@@ -786,9 +786,6 @@ class Registry {
   }
   T& get(int idx) {
     return *(entries.at(idx));
-  }
-  void clear() {
-    entries.clear();
   }
 
  private:
