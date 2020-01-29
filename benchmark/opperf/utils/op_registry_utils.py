@@ -120,6 +120,9 @@ def prepare_op_inputs(op, arg_params):
     
     custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
 
+    # For ops with args that need to change shape/value for different ops
+    custom_data = ['Activation', 'LeakyReLU', 'Softmax']
+
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
