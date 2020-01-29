@@ -160,6 +160,7 @@ DEFAULT_STATE = [(1, 4, 1), (2, 10000, 4)]
 DEFAULT_MODE = ["rnn_relu", "rnn_tanh"]
 DEFAULT_STATE_SIZE = [1, 4]
 DEFAULT_NUM_LAYERS = [1, 2]
+DEFAULT_P_RNN = [.5]
 
 # For optimizer operators
 DEFAULT_WEIGHT = [(1024, 1024), (10000, 1), (10000, 100)]
@@ -358,18 +359,20 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "kernel_col2im": DEFAULT_KERNEL,
                    "stride_col2im": DEFAULT_STRIDE,
                    "data_rnn": DEFAULT_DATA_RNN,
+                   "p_rnn": DEFAULT_P_RNN,
                    "parameters": DEFAULT_PARAMETERS,
                    "state": DEFAULT_STATE,
                    "state_size": DEFAULT_STATE_SIZE,
                    "num_layers": DEFAULT_NUM_LAYERS,
-                   "mode": DEFAULT_MODE,
+                   "mode_rnn": DEFAULT_MODE,
                    "data_groupnorm": DEFAULT_DATA_GN,
-                   "gamma": DEFAULT_BETA_GAMMA,
-                   "beta": DEFAULT_BETA_GAMMA,
+                   "gamma_groupnorm": DEFAULT_BETA_GAMMA,
+                   "beta_groupnorm": DEFAULT_BETA_GAMMA,
                    "num_groups": DEFAULT_NUM_GROUPS,
                    "eps": DEFAULT_EPSILON,
                    "data_dropout": DEFAULT_DATA_DROPOUT,
                    "mode_dropout": DEFAULT_MODE_DROPOUT,
+                   "p_dropout": DEFAULT_P,
                    "data_nn_basic": DEFAULT_DATA_NN_BASIC,
                    "num_hidden": DEFAULT_NUM_HIDDEN,
                    "weight_fullyconnected": DEFAULT_WEIGHT_FC,

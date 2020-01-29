@@ -345,10 +345,10 @@ def get_all_nn_basic_operators():
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
-    # Filter for Optimizer operators
+    # Filter for NN Basic operators
     nn_basic_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
-         if op_name in nn_basic_ops and op_name not in unique_ops:
+    for op_name, _ in mx_operators.items():
+         if op_name in nn_basic_ops:
              nn_basic_mx_operators[op_name] = mx_operators[op_name]
     return nn_basic_mx_operators
 
