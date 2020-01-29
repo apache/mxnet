@@ -51,35 +51,26 @@ void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
 
   cublasHandle_t blas_handle = mshadow::Stream<gpu>::GetBlasHandle(s);
   auto err = CUBLAS_STATUS_SUCCESS;
-  auto computeType = CUDA_R_32F;
+  using TrueFP16Type = DType;
+  using PseudoFP16Type = typename CublasType<DType>::ScaleType;
+  // Set up alpha and beta values in the possible formats needed (only different when dtype == half)
+  TrueFP16Type trueFP16_alpha = static_cast<TrueFP16Type>(alpha);
+  TrueFP16Type trueFP16_beta = static_cast<TrueFP16Type>(beta);
+  PseudoFP16Type pseudoFP16_alpha = static_cast<PseudoFP16Type>(alpha);
+  PseudoFP16Type pseudoFP16_beta = static_cast<PseudoFP16Type>(beta);
   const void *alpha_ptr;
   const void *beta_ptr;
-  if (dmlc::GetEnv("MXNET_FC_TRUE_FP16", false)){
-    computeType = CUDA_R_16F;
-    alpha_ptr = &CublasType<mshadow::half::half_t>::one;
-    beta_ptr = &CublasType<mshadow::half::half_t>::zero;
-    __half alpha_h = __float2half(alpha);
-    __half beta_h = __float2half(beta);
-    alpha_ptr = static_cast<__half*>(&alpha_h);
-    beta_ptr = static_cast<__half*>(&beta_h);
-  }else{
-    alpha_ptr = &CublasType<float>::one;
-    beta_ptr = &CublasType<float>::zero;
-    alpha_ptr = &alpha;
-    beta_ptr = &beta;
+  cudaDataType_t computeType;
+  bool use_true_fp16 = dmlc::GetEnv("MXNET_FC_TRUE_FP16", false);
+  if (use_true_fp16) {
+    alpha_ptr = &trueFP16_alpha;
+    beta_ptr = &trueFP16_beta;
+    computeType = CublasType<TrueFP16Type>::kCudaFlag;
+  } else {
+    alpha_ptr = &pseudoFP16_alpha;
+    beta_ptr = &pseudoFP16_beta;
+    computeType = CublasType<PseudoFP16Type>::kCudaFlag;
   }
-  /*if (dmlc::GetEnv("MXNET_FC_TRUE_FP16", false)){
-    computeType = CUDA_R_16F;
-    printf("R_16F compute\n");
-    __half alpha_h = __float2half(alpha);
-    __half beta_h = __float2half(beta);
-    alpha_ptr = static_cast<__half*>(&alpha_h);
-    beta_ptr = static_cast<__half*>(&beta_h);
-  }else{
-    alpha_ptr = static_cast<float*>(&alpha);
-    beta_ptr = static_cast<float*>(&beta);
-  }*/
-  std::cout << typeid(alpha_ptr).name() << '\n';
 
   // cublasGemmStridedBatchedEx is only supported for GPU with architecture
   // capabilities equal or greater than 5.0. Fall back to
