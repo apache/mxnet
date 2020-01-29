@@ -414,7 +414,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "pad_im2col": DEFAULT_PAD,
                    "alpha_lrn": DEFAULT_ALPHA,
                    "beta_lrn": DEFAULT_BETA_LRN,
-                   "nsize": DEFAULT_NSIZE}
+                   "nsize": DEFAULT_NSIZE,
+                   "axis_layernorm": DEFAULT_AXIS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
