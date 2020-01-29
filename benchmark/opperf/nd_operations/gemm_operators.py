@@ -36,7 +36,7 @@ TODO
 
 
 def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype)for all the GEMM
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the GEMM
     operators (dot, batch_dot, khatri_rao) in MXNet.
 
     Parameters
@@ -47,6 +47,8 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    large_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100

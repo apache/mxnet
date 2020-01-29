@@ -44,8 +44,8 @@ from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
 
 def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype)for all the activation
-    operators in MXNet.
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the activation
+    operators (relu, sigmoid, softmax) in MXNet.
 
     Parameters
     ----------
@@ -55,6 +55,8 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler=
         Precision to use for benchmarks
     profiler: str, default 'native'
         Module to use for tracking benchmark excecution time
+    large_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100

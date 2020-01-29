@@ -55,7 +55,7 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 
 def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the neural network
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the neural network
     optimizer update operators in MXNet.
 
     Parameters
@@ -66,6 +66,8 @@ def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    large_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
