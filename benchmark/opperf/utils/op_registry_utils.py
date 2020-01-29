@@ -310,6 +310,26 @@ def get_all_reduction_operators():
     return reduction_mx_operators
 
 
+def get_all_nn_activation_operators():
+    """Gets all NN Activation operators registered with MXNet.
+
+     Returns
+     -------
+     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+     """
+    nn_activation_ops = ['Softmax', 'SoftmaxActivation', 'softmin', 'Activation', 'LeakyReLU', 'hard_sigmoid', 'softmax', 'log_softmax']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for NN Activation operators
+    nn_activation_mx_operators = {}
+    for op_name, _ in mx_operators.items():
+         if op_name in nn_activation_ops and op_name not in unique_ops:
+             nn_activation_mx_operators[op_name] = mx_operators[op_name]
+    return nn_activation_mx_operators
+
+
 def get_all_optimizer_operators():
     """Gets all Optimizer operators registered with MXNet.
 

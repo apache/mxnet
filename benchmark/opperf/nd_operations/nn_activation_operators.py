@@ -16,28 +16,36 @@
 # under the License.
 
 import mxnet as mx
-from benchmark.opperf.utils.benchmark_utils import run_performance_test
-from benchmark.opperf.utils.common_utils import merge_map_list
-from benchmark.opperf.rules.default_params import MX_OP_MODULE
+
+from benchmark.opperf.utils.op_registry_utils import get_all_nn_activation_operators
+from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
 """Performance benchmark tests for MXNet NDArray Activation Operators.
 
-1. LeakyRelu
-    1.1 Elu
-    1.2 Selu
-    1.3 Leaky
-    1.4 PRelu
-    1.5 RRelu
-3. Hard_Sigmoid
-4. Softmax
-5. Log_Softmax
+1. LeakyReLU
+    1.1 elu
+    1.2 selu
+    1.3 leaky
+    1.4 gelu
+2. hard_sigmoid
+3. Softmax
+4. SoftmaxActivation
+5. softmax
+6. log_softmax
+7. softmin
+8. Activation
+    8.1 relu
+    8.2 sigmoid
+    8.3 softrelu
+    8.4 softsign
+    8.5 tanh
 
 """
 
 
 def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the activation
-    operators (relu, sigmoid, softmax) in MXNet.
+    operators in MXNet.
 
     Parameters
     ----------
@@ -55,56 +63,11 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler=
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Relu and its variation
-    relu_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "LeakyReLU")],
-                                              run_backward=True,
-                                              dtype=dtype,
-                                              ctx=ctx,
-                                              profiler=profiler,
-                                              inputs=[{"data": (1024, 1024), "act_type": "leaky", "slope": 0.1},
-                                                      {"data": (10000, 1), "act_type": "leaky", "slope": 0.1},
-                                                      {"data": (10000, 100), "act_type": "leaky", "slope": 0.1},
-                                                      {"data": (1024, 1024), "act_type": "elu", "slope": 0.1},
-                                                      {"data": (10000, 1), "act_type": "elu", "slope": 0.1},
-                                                      {"data": (10000, 100), "act_type": "elu", "slope": 0.1},
-                                                      {"data": (1024, 1024), "act_type": "selu"},
-                                                      {"data": (10000, 1), "act_type": "selu"},
-                                                      {"data": (10000, 100), "act_type": "selu"},
-                                                      {"data": (1024, 1024), "act_type": "prelu", "gamma": (1, 1024)},
-                                                      {"data": (10000, 1), "act_type": "prelu", "gamma": (1, 1)},
-                                                      {"data": (10000, 100), "act_type": "prelu", "gamma": (1, 100)}
-                                                      ],
-                                              warmup=warmup,
-                                              runs=runs)
 
-    # Sigmoid => Covered as part of Unary ops
-    # Hard_Sigmoid
-    hard_sigmoid_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "hard_sigmoid")],
-                                                      run_backward=True,
-                                                      dtype=dtype,
-                                                      ctx=ctx,
-                                                      profiler=profiler,
-                                                      inputs=[{"data": (1024, 1024), "alpha": 0.25, "beta": 0.5},
-                                                              {"data": (10000, 1), "alpha": 0.25, "beta": 0.5},
-                                                              {"data": (10000, 100), "alpha": 0.25, "beta": 0.5}
-                                                              ],
-                                                      warmup=warmup,
-                                                      runs=runs)
+    # Fetch all NN Activation Operators
+    mx_nn_activation_broadcast_ops = get_all_nn_activation_operators()
 
-    # Softmax, LogSoftmax
-    softmax_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "softmax"),
-                                                  getattr(MX_OP_MODULE, "log_softmax")],
-                                                 run_backward=True,
-                                                 dtype=dtype,
-                                                 ctx=ctx,
-                                                 profiler=profiler,
-                                                 inputs=[{"data": (1024, 1024), "axis": -1, "temperature": 0.5},
-                                                         {"data": (10000, 1), "axis": -1, "temperature": 0.5},
-                                                         {"data": (10000, 100), "axis": -1, "temperature": 0.5}
-                                                         ],
-                                                 warmup=warmup,
-                                                 runs=runs)
-
-    # Prepare combined results
-    mx_activation_op_results = merge_map_list(relu_benchmark_res + hard_sigmoid_benchmark_res + softmax_benchmark_res)
-    return mx_activation_op_results
+    # Run benchmarks
+    mx_nn_activation_op_results = run_op_benchmarks(mx_nn_activation_broadcast_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_nn_activation_op_results
+    
