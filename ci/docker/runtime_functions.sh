@@ -1748,6 +1748,7 @@ build_julia_docs() {
 
    echo "Julia will check for MXNet in $MXNET_HOME/lib"
 
+
    make -C julia/docs
 
    GZIP=-9 tar -zcvf $julia_doc_artifact -C $julia_doc_path .
