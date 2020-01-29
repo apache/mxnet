@@ -105,6 +105,19 @@ DEFAULT_STRIDE_1 = [2]
 DEFAULT_STRIDE_2 = [2]
 DEFAULT_ALPHA = [.001]
 DEFAULT_NSIZE = [3]
+DEFAULT_PARAMETERS = [(7,), (104,)]
+DEFAULT_STATE = [(1, 4, 1), (2, 10000, 4)]
+DEFAULT_MODE = ["rnn_relu", "rnn_tanh"]
+DEFAULT_STATE_SIZE = [1, 4]
+DEFAULT_NUM_LAYERS = [1, 2]
+DEFAULT_NUM_GROUPS = [1, 10]
+DEFAULT_TRANSFORM = ["affine"]
+DEFAULT_SAMPLER = ["bilinear"]
+DEFAULT_DILATE = [(1,), (1, 1)]
+DEFAULT_PAD = [(1,), (1, 1)]
+DEFAULT_OUTPUT_SIZE = [(64, 16, 1), (32, 8, 1)]
+DEFAULT_KERNEL = [(1, 1, 1), (1, 1, 1)]
+DEFAULT_STRIDE = [(2, 2, 2), (1, 1, 1)]
 
 # LayerNorm
 DEFAULT_GAMMA_LN = [(32,), (32,)]
@@ -127,8 +140,7 @@ DEFAULT_WEIGHT_EMBEDDING = [(3, 4), (16, 9)]
 
 # GroupNorm
 DEFAULT_DATA_GN = [(32, 3, 256, 256), (32, 10, 10000, 10)]
-DEFAULT_BETA_GAMMA = [(1,), (10,)]
-DEFAULT_NUM_GROUPS = [1, 10]
+DEFAULT_BETA_GAMMA_GN = [(1,), (10,)]
 
 # Dropout
 DEFAULT_DATA_DROPOUT = [(32, 3, 256, 256), (10000, 10)]
@@ -136,29 +148,17 @@ DEFAULT_MODE_DROPOUT = ["always"]
 
 # SpatialTransformer
 DEFAULT_DATA_ST = [(32, 3, 256, 6), (256, 3, 10000, 6)]
-DEFAULT_LOC_TAR = [(32, 6), (256, 6)]
-DEFAULT_TRANSFORM = ["affine"]
-DEFAULT_SAMPLER = ["bilinear"]
+DEFAULT_LOC_TAR_ST = [(32, 6), (256, 6)]
 
 # im2col
 DEFAULT_KERNEL_I2C = [(3,), (3, 3)]
 DEFAULT_STRIDE_I2C = [(1,), (1, 1)]
-DEFAULT_DILATE = [(1,), (1, 1)]
-DEFAULT_PAD = [(1,), (1, 1)]
 
 # col2im
 DEFAULT_DATA_C2I = [(32, 64, 256), (32, 64, 256)]
-DEFAULT_OUTPUT_SIZE = [(64, 16, 1), (32, 8, 1)]
-DEFAULT_KERNEL = [(1, 1, 1), (1, 1, 1)]
-DEFAULT_STRIDE = [(2, 2, 2), (1, 1, 1)]
 
 # RNN
 DEFAULT_DATA_RNN = [(32, 4, 4), (512, 10000, 10)]
-DEFAULT_PARAMETERS = [(7,), (104,)]
-DEFAULT_STATE = [(1, 4, 1), (2, 10000, 4)]
-DEFAULT_MODE = ["rnn_relu", "rnn_tanh"]
-DEFAULT_STATE_SIZE = [1, 4]
-DEFAULT_NUM_LAYERS = [1, 2]
 DEFAULT_P_RNN = [.5]
 
 # LRN
@@ -352,8 +352,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "rhs_fill_element_0index": DEFAULT_RHS_FEI,
                    "mhs": DEFAULT_MHS,
                    "data_spatialtransformer": DEFAULT_DATA_ST,
-                   "loc": DEFAULT_LOC_TAR,
-                   "target_shape": DEFAULT_LOC_TAR,
+                   "loc": DEFAULT_LOC_TAR_ST,
+                   "target_shape": DEFAULT_LOC_TAR_ST,
                    "transform_type_spatialtransformer": DEFAULT_TRANSFORM,
                    "sampler_type": DEFAULT_SAMPLER,
                    "data_col2im": DEFAULT_DATA_C2I,
@@ -368,8 +368,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "num_layers": DEFAULT_NUM_LAYERS,
                    "mode_rnn": DEFAULT_MODE,
                    "data_groupnorm": DEFAULT_DATA_GN,
-                   "gamma_groupnorm": DEFAULT_BETA_GAMMA,
-                   "beta_groupnorm": DEFAULT_BETA_GAMMA,
+                   "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN,
+                   "beta_groupnorm": DEFAULT_BETA_GAMMA_GN,
                    "num_groups": DEFAULT_NUM_GROUPS,
                    "eps": DEFAULT_EPSILON,
                    "data_dropout": DEFAULT_DATA_DROPOUT,
