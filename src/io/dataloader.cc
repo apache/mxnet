@@ -111,29 +111,13 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     for (size_t i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
         std::vector<int> is_temp;
-        inputs[i] = std::move(
-          dataset_->GetItem(idx_ptr[i], is_temp));
+        inputs[i] = dataset_->GetItem(idx_ptr[i], is_temp);
         if (i == 0) {
           is_scalars = is_temp;
         }
       });
     }
     omp_exc_.Rethrow();
-    // size_t workload = real_batch_size * item_size_;
-    // #pragma omp parallel for num_threads(param_.num_workers)
-    // for (size_t i = 0; i < workload; ++i) {
-    //   omp_exc_.Run([&] {
-    //     size_t x = i / item_size_;
-    //     size_t y = i % item_size_;
-    //     int is_scalar;
-    //     inputs[x][y] = std::move(
-    //       dataset_->GetItem(idx_ptr[x], y, &is_scalar));
-    //     if (x == 0) {
-    //       is_scalars[y] = is_scalar;
-    //     }
-    //   });
-    // }
-    // omp_exc_.Rethrow();
 
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
@@ -146,7 +130,8 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       if (is_scalars[i] == 1) {
         // batched scalar array should have dim 1 not 2
         CHECK_EQ(batched_data[i].ndim(), 2);
-        batched_data[i] = batched_data[i].reshape(TShape({batched_data[i].Size()}));
+        batched_data[i] = batched_data[i].reshape(
+          TShape({static_cast<dim_t>(batched_data[i].Size())}));
       }
     }
     out_.batch_size = batched_data.size();
