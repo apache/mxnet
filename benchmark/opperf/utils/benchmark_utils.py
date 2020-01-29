@@ -180,6 +180,13 @@ def run_performance_test(ops, inputs, run_backward=True,
 
 
 def run_op_benchmarks(ops, dtype, ctx, profiler, warmup, runs):
+    """
+    ['FullyConnected', 'Dropout', 'BatchNorm', 'SoftmaxOutput', 'LinearRegressionOutput',
+                    'LogisticRegressionOutput', 'MAERegressionOutput', 'SVMOutput', 'L2Normalization',
+                    'LayerNorm', 'InstanceNorm', 'Embedding', 'Correlation', 'SpatialTransformer', 'im2col',
+                    'col2im', 'GroupNorm', 'RNN', 'LRN']
+    segfault: batchnorm
+    """
     # For each operator, run benchmarks
     mx_op_benchmark_results = []
     for op, op_params in ops.items():
