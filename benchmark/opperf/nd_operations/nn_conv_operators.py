@@ -53,6 +53,27 @@ MXNet NDArray NN Convolution Operators
 
 
 def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the pooling
+    operators in MXNet.
+
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    large_tensor: str, default 'off'
+        Tensor size to use for tests
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
     pool_types = ['avg', 'max', 'sum']
     global_pool_types = [0, 1]
 
@@ -159,6 +180,27 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
 
 
 def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the convolution
+    operators in MXNet.
+
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    large_tensor: str, default 'off'
+        Tensor size to use for tests
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
     conv1d_benchmark_res = []
     conv2d_benchmark_res = []
     if large_tensor == 'on':
@@ -245,6 +287,27 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
 
 
 def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='native', large_tensor='off', dtype='float32', warmup=10, runs=50):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the transpose convolution
+    operators in MXNet.
+
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    large_tensor: str, default 'off'
+        Tensor size to use for tests
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
     # Conv1DTranspose Benchmarks
     conv1d_transpose_benchmark_res = []
     if large_tensor == 'on':

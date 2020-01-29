@@ -38,7 +38,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_broadcast_binary_op
     get_all_elemen_wise_binary_operators, get_all_misc_binary_operators
 
 
-def run_mx_binary_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_mx_binary_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the miscellaneous
     binary operators in MXNet.
 
@@ -61,12 +61,12 @@ def run_mx_binary_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profi
     # Fetch all Miscellaneous Binary Operators
     mx_binary_misc_ops = get_all_misc_binary_operators()
     # Run benchmarks
-    mx_binary_op_results = run_op_benchmarks(mx_binary_misc_ops, dtype, ctx, profiler, warmup, runs)
+    mx_binary_op_results = run_op_benchmarks(mx_binary_misc_ops, dtype, ctx, profiler, large_tensor, warmup, runs)
     return mx_binary_op_results
 
 
 def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the binary
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the binary
     broadcast operators in MXNet.
 
     Parameters
@@ -77,6 +77,8 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    large_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -95,7 +97,7 @@ def run_mx_binary_broadcast_operators_benchmarks(ctx=mx.cpu(), dtype='float32', 
 
 
 def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', large_tensor='off', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the binary
+    """Runs benchmarks with the given context, precision (dtype), and input data size (large_tensor) for all the binary
     element_wise operators in MXNet.
 
     Parameters
@@ -106,6 +108,8 @@ def run_mx_binary_element_wise_operators_benchmarks(ctx=mx.cpu(), dtype='float32
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    large_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 10
         Number of times to run for warmup
     runs: int, default 50
