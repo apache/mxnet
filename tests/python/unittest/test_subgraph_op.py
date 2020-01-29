@@ -337,14 +337,14 @@ def check_subgraph_exe8(sym, subgraph_backend, op_names):
 
     exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe2.forward()
-
+    
     # compare outputs
     outputs1 = exe1.outputs
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
-
+    
 def check_subgraph_exe9(sym, subgraph_backend, op_names):
     inputs = [mx.sym.var(i, dtype=mx_real_t) for i in sym[1]]
     sym_block = nn.SymbolBlock(sym[0], inputs)
@@ -358,7 +358,7 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     sym_block.hybridize(backend=subgraph_backend)
     outputs2 = sym_block(*x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
-
+    
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
@@ -381,7 +381,6 @@ def check_subgraph_backend_sym(subgraph_backend):
 def check_subgraph_backend_gluon(subgraph_backend):
     for sym, op_names in get_graphs():
         check_subgraph_exe9(sym, subgraph_backend, op_names)
-
 
 def test_subgraph():
     check_subgraph('default')

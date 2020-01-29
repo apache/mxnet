@@ -934,14 +934,9 @@ class HybridBlock(Block):
 
     def _build_cache(self, *args):
         data, out = self._get_graph(*args)
-        if self._backend:
-            # To do: pass in all arguments
-            # Partition the graph.
-            out = out.optimize_for(self._backend, **self._backend_args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
         input_names = out.list_inputs()
-
         param_names = set(params.keys())
         expected_names = set(input_names)
         for name in expected_names:
@@ -960,6 +955,18 @@ class HybridBlock(Block):
             unused = ', '.join(list(param_names - set(used_param_names)))
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
+        if self._backend:
+            arg_array = []
+            ctx = None
+            for name in out.list_arguments():
+                if name in data_names.keys():
+                    arg_array.append(args[data_names[name]])
+                else:
+                    if ctx == None:
+                        ctx = params.get(name)._ctx_list[0]
+                    arg_array.append(ndarray.random.uniform(shape=params.get(name)._shape))
+            # Partition the graph.
+            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
 
         data_indices = []
         param_indices = []
