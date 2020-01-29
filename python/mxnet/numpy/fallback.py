@@ -21,10 +21,41 @@
 import numpy as onp
 
 __all__ = [
+    'allclose',
+    'alltrue',
     'angle',
+    'apply_along_axis',
+    'apply_over_axes',
+    'argpartition',
+    'argwhere',
+    'array_equal',
+    'array_equiv',
+    'choose',
+    'compress',
+    'corrcoef',
+    'correlate',
+    'count_nonzero',
+    'cov',
     'cross',
+    'diag_indices_from',
+    'digitize',
+    'divmod',
+    'ediff1d',
+    'extract',
+    'fabs',
+    'fill_diagonal',
+    'flatnonzero',
+    'float_power',
+    'fmax',
+    'fmin',
+    'fmod',
+    'frexp',
     'heaviside',
+    'interp',
     'isneginf',
+    'intersect1d',
+    'isclose',
+    'isfinite',
     'spacing',
     'nanargmax',
     'nanargmin',
@@ -53,7 +84,6 @@ __all__ = [
     'put_along_axis',
     'putmask',
     'pv',
-    'rank',
     'rate',
     'ravel_multi_index',
     'real',
@@ -70,10 +100,41 @@ __all__ = [
     'unwrap',
 ]
 
-heaviside = onp.heaviside
-spacing = onp.spacing
+allclose = onp.allclose
+alltrue = onp.alltrue
 angle = onp.angle
+apply_along_axis = onp.apply_along_axis
+apply_over_axes = onp.apply_over_axes
+argpartition = onp.argpartition
+argwhere = onp.argwhere
+array_equal = onp.array_equal
+array_equiv = onp.array_equiv
+choose = onp.choose
+compress = onp.compress
+corrcoef = onp.corrcoef
+correlate = onp.correlate
+count_nonzero = onp.count_nonzero
+cov = onp.cov
 cross = onp.cross
+diag_indices_from = onp.diag_indices_from
+digitize = onp.digitize
+divmod = onp.divmod
+ediff1d = onp.ediff1d
+extract = onp.extract
+fabs = onp.fabs
+fill_diagonal = onp.fill_diagonal
+flatnonzero = onp.flatnonzero
+float_power = onp.float_power
+fmax = onp.fmax
+fmin = onp.fmin
+fmod = onp.fmod
+frexp = onp.frexp
+geomspace = onp.geomspace
+heaviside = onp.heaviside
+interp = onp.interp
+intersect1d = onp.intersect1d
+isclose = onp.isclose
+isfinite = onp.isfinite
 isneginf = onp.isneginf
 nanargmax = onp.nanargmax
 nanargmin = onp.nanargmin
@@ -103,7 +164,6 @@ promote_types = onp.promote_types
 put_along_axis = onp.put_along_axis
 putmask = onp.putmask
 pv = onp.pv
-rank = onp.rank
 rate = onp.rate
 ravel_multi_index = onp.ravel_multi_index
 real = onp.real
@@ -112,6 +172,7 @@ roots = onp.roots
 round_ = onp.round_
 safe_eval = onp.safe_eval
 signbit = onp.signbit
+spacing = onp.spacing
 take_along_axis = onp.take_along_axis
 tril_indices_from = onp.tril_indices_from
 trim_zeros = onp.trim_zeros
