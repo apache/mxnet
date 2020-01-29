@@ -957,14 +957,18 @@ class HybridBlock(Block):
                           "Is this intended?"%unused, stacklevel=4)
         if self._backend:
             arg_array = []
-            ctx = None
-            for name in out.list_arguments():
-                if name in data_names.keys():
-                    arg_array.append(args[data_names[name]])
-                else:
-                    if ctx == None:
-                        ctx = params.get(name)._ctx_list[0]
-                    arg_array.append(ndarray.random.uniform(shape=params.get(name)._shape))
+            ctx = args[0].context
+            try:
+                for name in out.list_arguments():
+                    if name in data_names.keys():
+                        arg_array.append(args[data_names[name]])
+                    else:
+                        arg_array.append(params.get(name).data())
+
+            except DeferredInitializationError:
+                arg_array = None
+            except RuntimeError:
+                arg_array = None
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
 
@@ -1053,9 +1057,12 @@ class HybridBlock(Block):
         super(HybridBlock, self).register_child(block, name)
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_args={}, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_args=None, **kwargs):
         self._backend = backend
-        self._backend_args = backend_args
+        if backend_args is None:
+            self._backend_args = {}
+        else:
+            self._backend_args = backend_args
         self._active = active
         self._flags = list(kwargs.items())
         self._clear_cached_op()
@@ -1175,7 +1182,6 @@ class HybridBlock(Block):
                     params = {k: v.data(ctx) for k, v in self._reg_params.items()}
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
-
         params = {i: j.var() for i, j in self._reg_params.items()}
         with self.name_scope():
             return self.hybrid_forward(symbol, x, *args, **params)

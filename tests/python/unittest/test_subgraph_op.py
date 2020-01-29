@@ -22,6 +22,7 @@ from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_s
 from mxnet.symbol import Symbol
 import numpy as np
 from mxnet.test_utils import assert_almost_equal
+from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import nd
 
@@ -51,8 +52,9 @@ def network_structure_3():
     ret = ret1 + ret2
     ret = mx.sym.BatchNorm(ret)
     ret = mx.sym.BatchNorm(ret)
-    return (ret, ['data'], [(2, 3, 10, 10)])
-   
+    # Return the same and shape of 'data' and auxiliary states
+    return  (ret, ['data', *ret.list_auxiliary_states()], [(2, 3, 10, 10), (3,), (3,), (3,), (3,)])
+
 def network_structure_4():
     # the last op has multiple duplicate outputs
     data = mx.sym.var('data', shape=(2, 3, 10, 10))
@@ -84,23 +86,24 @@ def network_structure_7():
     return (ret, ['data'], [(1,)])
 
 def get_graphs(): 
-    return [(network_structure_1(), ['Convolution']),
+    return [
+            (network_structure_1(), ['Convolution']),
             (network_structure_2(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus']),
             (network_structure_2(), ['exp', 'cos', '_Plus', 'elemwise_add', '_plus']),
-            # To do: fix batch norm issue for gluon tests.
-            #(network_structure_3(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus']),
-            #(network_structure_3(), ['exp', 'cos', '_Plus', 'elemwise_add', '_plus']),
-            #(network_structure_3(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus', 'BatchNorm']),
-            #(network_structure_3(), ['exp', 'cos', '_Plus', 'elemwise_add', '_plus', 'BatchNorm']),
-            #(network_structure_3(), ['exp', 'BatchNorm']),
-            #(network_structure_3(), ['BatchNorm']),
+            (network_structure_3(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus']),
+            (network_structure_3(), ['exp', 'cos', '_Plus', 'elemwise_add', '_plus']),
+            (network_structure_3(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus', 'BatchNorm']),
+            (network_structure_3(), ['exp', 'cos', '_Plus', 'elemwise_add', '_plus', 'BatchNorm']),
+            (network_structure_3(), ['exp', 'BatchNorm']),
+            (network_structure_3(), ['BatchNorm']),
             (network_structure_4(), ['exp']),
             (network_structure_5(), ['_plus', '_Plus', 'elemwise_add']),
             (network_structure_6(), []),
             (network_structure_6(), [mx.sym.sin.__name__]),
             (network_structure_6(), [mx.sym.Convolution.__name__]),
             (network_structure_6(), [mx.sym.sin.__name__, mx.sym.Convolution.__name__]),
-            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])]
+            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])
+            ]
 
 def check_subgraph_exe1(sym, subgraph_backend, op_names):
     """Use the partitioned sym to simple_bind an executor and compare the outputs
@@ -348,7 +351,7 @@ def check_subgraph_exe8(sym, subgraph_backend, op_names):
 def check_subgraph_exe9(sym, subgraph_backend, op_names):
     inputs = [mx.sym.var(i, dtype=mx_real_t) for i in sym[1]]
     sym_block = nn.SymbolBlock(sym[0], inputs)
-    sym_block.collect_params().initialize()
+    sym_block.initialize()
     shapes = sym[2]
     x = [mx.nd.random.uniform(shape=s) for s in shapes]
     outputs1 = sym_block(*x)
@@ -358,12 +361,12 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     sym_block.hybridize(backend=subgraph_backend)
     outputs2 = sym_block(*x)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
-    
+
     # compare outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
-
+    
 def check_subgraph(subgraph_backend):
     for sym, op_names in get_graphs():
         check_subgraph_exe1(sym[0], subgraph_backend, op_names)
@@ -399,6 +402,64 @@ def test_subgraph_backend_gluon():
 
 def test_subgraph_backend_gluon_v2():
     check_subgraph_backend_gluon('default_v2')
+
+def test_subgraph_backend_gluon_ext1():
+    def get_net():
+        net = nn.HybridSequential()  # Here we use the class HybridSequential.
+        net.add(nn.Dense(256, activation='relu'),
+                nn.Dense(128, activation='relu'),
+                nn.Dense(2))
+        return net
+
+    x = nd.random.normal(shape=(1, 512))
+    net = get_net()
+    net.collect_params().initialize()
+    outputs1 = net(x)
+
+    subgraph_backend = 'default'
+    op_names = []
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                c_str_array(op_names)))
+    net.hybridize(backend = subgraph_backend)
+    outputs2 = net(x)
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    # compare outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+
+def test_subgraph_backend_gluon_ext2():
+    class Net(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            with self.name_scope():
+                self.fc1 = nn.Dense(256)
+                self.fc2 = nn.Dense(128)
+                self.fc3 = nn.Dense(2)
+
+        def hybrid_forward(self, F, x):
+            x = F.relu(self.fc1(x))
+            x = F.relu(self.fc2(x))
+            return self.fc3(x)
+
+    x = nd.random.normal(shape=(1, 512))
+    net = Net()
+    net.collect_params().initialize()
+    outputs1 = net(x)
+
+    subgraph_backend = 'default'
+    op_names = []
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                c_str_array(op_names)))
+    net.hybridize(backend = subgraph_backend)
+    outputs2 = net(x)
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    # compare outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
 if __name__ == '__main__':
     import nose
