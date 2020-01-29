@@ -203,12 +203,12 @@ def run_op_benchmarks(ops, dtype, ctx, profiler, warmup, runs):
 
             # Run benchmarks
             cur_op_res = run_performance_test(op_params["nd_op_handle"],
-                                            run_backward=op_params["has_backward"],
-                                            dtype=dtype, ctx=ctx,
-                                            profiler=profiler,
-                                            inputs=inputs,
-                                            warmup=warmup, runs=runs)
-        mx_op_benchmark_results += cur_op_res
+                                              run_backward=op_params["has_backward"],
+                                              dtype=dtype, ctx=ctx,
+                                              profiler=profiler,
+                                              inputs=inputs,
+                                              warmup=warmup, runs=runs)
+            mx_op_benchmark_results += cur_op_res
 
     # Prepare combined results for all operators
     mx_op_benchmark_results = merge_map_list(mx_op_benchmark_results)
