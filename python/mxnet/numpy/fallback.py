@@ -51,16 +51,34 @@ __all__ = [
     'fmod',
     'frexp',
     'heaviside',
+    'histogram2d',
+    'histogram_bin_edges',
+    'histogramdd',
+    'i0',
+    'in1d',
     'interp',
     'isneginf',
     'intersect1d',
     'isclose',
     'isfinite',
-    'spacing',
+    'isin',
+    'isinf',
+    'isnan',
+    'isposinf',
+    'ix_',
+    'lexsort',
+    'min_scalar_type',
+    'mirr',
+    'modf',
+    'msort',
     'nanargmax',
     'nanargmin',
     'nancumprod',
     'nancumsum',
+    'nanmax',
+    'nanmedian',
+    'nanmin',
+    'nanpercentile',
     'nanprod',
     'nanquantile',
     'ndim',
@@ -80,7 +98,10 @@ __all__ = [
     'polysub',
     'positive',
     'ppmt',
+    'product',
     'promote_types',
+    'ptp',
+    'put',
     'put_along_axis',
     'putmask',
     'pv',
@@ -88,16 +109,29 @@ __all__ = [
     'ravel_multi_index',
     'real',
     'real_if_close',
+    'rollaxis',
     'roots',
+    'round',
     'round_',
     'safe_eval',
+    'searchsorted',
+    'select',
+    'setdiff1d',
+    'setxor1d',
     'signbit',
+    'size',
+    'sometrue',
+    'spacing',
     'take_along_axis',
+    'trapz',
     'tril_indices_from',
     'trim_zeros',
     'triu',
     'triu_indices_from',
+    'union1d',
+    'unpackbits',
     'unwrap',
+    'vander',
 ]
 
 allclose = onp.allclose
@@ -131,17 +165,39 @@ fmod = onp.fmod
 frexp = onp.frexp
 geomspace = onp.geomspace
 heaviside = onp.heaviside
+histogram2d = onp.histogram2d
+histogram_bin_edges = onp.histogram_bin_edges
+histogramdd = onp.histogramdd
+i0 = onp.i0
+in1d = onp.in1d
 interp = onp.interp
 intersect1d = onp.intersect1d
 isclose = onp.isclose
 isfinite = onp.isfinite
+isin = onp.isin
+isinf = onp.isinf
+isnan = onp.isnan
 isneginf = onp.isneginf
+isposinf = onp.isposinf
+ix_ = onp.ix_
+lexsort = onp.lexsort
+min_scalar_type = onp.min_scalar_type
+mirr = onp.mirr
+modf = onp.modf
+msort = onp.msort
 nanargmax = onp.nanargmax
 nanargmin = onp.nanargmin
 nancumprod = onp.nancumprod
 nancumsum = onp.nancumsum
+nanmax = onp.nanmax
+nanmedian = onp.nanmedian
+nanmin = onp.nanmin
+nanpercentile = onp.nanpercentile
 nanprod = onp.nanprod
 nanquantile = onp.nanquantile
+nanstd = onp.nanstd
+nansum = onp.nansum
+nanvar = onp.nanvar
 ndim = onp.ndim
 nper = onp.nper
 npv = onp.npv
@@ -159,8 +215,11 @@ polyint = onp.polyint
 polymul = onp.polymul
 polysub = onp.polysub
 positive = onp.positive
+product = onp.product
 ppmt = onp.ppmt
 promote_types = onp.promote_types
+ptp = onp.ptp
+put = onp.put
 put_along_axis = onp.put_along_axis
 putmask = onp.putmask
 pv = onp.pv
@@ -168,14 +227,26 @@ rate = onp.rate
 ravel_multi_index = onp.ravel_multi_index
 real = onp.real
 real_if_close = onp.real_if_close
+rollaxis = onp.rollaxis
 roots = onp.roots
+round = onp.round
 round_ = onp.round_
 safe_eval = onp.safe_eval
+searchsorted = onp.searchsorted
+select = onp.select
+setdiff1d = onp.setdiff1d
+setxor1d = onp.setxor1d
 signbit = onp.signbit
+size = onp.size
+sometrue = onp.sometrue
 spacing = onp.spacing
 take_along_axis = onp.take_along_axis
+trapz = onp.trapz
 tril_indices_from = onp.tril_indices_from
 trim_zeros = onp.trim_zeros
 triu = onp.triu
 triu_indices_from = onp.triu_indices_from
+union1d = onp.union1d
+unpackbits = onp.unpackbits
 unwrap = onp.unwrap
+vander = onp.vander

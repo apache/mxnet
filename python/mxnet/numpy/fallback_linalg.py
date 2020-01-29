@@ -23,14 +23,16 @@ import numpy as onp
 
 __all__ = [
     'cond',
-    'qr',
+    'lstsq',
     'matrix_power',
     'matrix_rank',
     'multi_dot',
+    'qr',
 ]
 
 cond = onp.linalg.cond
-qr = onp.linalg.qr
+lstsq = onp.linalg.lstsq
 matrix_power = onp.linalg.matrix_power
 matrix_rank = onp.linalg.matrix_rank
 multi_dot = onp.linalg.multi_dot
+qr = onp.linalg.qr
