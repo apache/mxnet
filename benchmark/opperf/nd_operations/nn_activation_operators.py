@@ -70,3 +70,4 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler=
     # Run benchmarks
     mx_activation_op_results = run_op_benchmarks(mx_activation_ops, dtype, ctx, profiler, warmup, runs)
     return mx_activation_op_results
+    
