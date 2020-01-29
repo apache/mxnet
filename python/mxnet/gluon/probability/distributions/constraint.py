@@ -20,6 +20,7 @@
 """Base class and implementations of constraint"""
 __all__ = ["Constraint", "Real", "Boolean", "Interval", "GreaterThan", "Positive"]
 
+
 class Constraint(object):
     """Base class for constraints.
 

@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import
 """Categorical class."""
 __all__ = ['Categorical']
+
 from .distribution import Distribution
 from .utils import prob2logit, logit2prob, getF
 

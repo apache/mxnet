@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import
 """Bernoulli class."""
 __all__ = ['Bernoulli']
+
 from .exp_family import ExponentialFamily
 from .utils import prob2logit, logit2prob, getF
 from .constraint import Boolean

@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import
 """KL divergence functions."""
 __all__ = ['register_kl', 'kl_divergence']
+
 from .utils import getF
 
 

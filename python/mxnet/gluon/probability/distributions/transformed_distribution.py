@@ -18,6 +18,7 @@
 # coding: utf-8
 """Transformed distribution"""
 __all__ = ['TransformedDistribution']
+
 from ..transformation import Transformation
 from .distribution import Distribution
 

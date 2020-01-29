@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import
 """Normal distribution"""
 __all__ = ['Normal']
+
 import math
 from .exp_family import ExponentialFamily
 from .utils import getF

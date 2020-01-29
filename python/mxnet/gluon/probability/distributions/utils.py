@@ -18,7 +18,9 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Distribution utilities"""
-__all__ = ['getF', 'prob2logit', 'logit2prob']
+__all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property']
+
+from functools import update_wrapper
 from .... import nd, sym, np
 
 
@@ -88,3 +90,17 @@ def logit2prob(logit, binary=True, F=None):
     if binary:
         return F.npx.sigmoid(logit)
     return F.npx.softmax(logit)
+
+
+class cached_property(object):
+    r"""Use as a decorator for loading class attribute, but caches the value."""
+    def __init__(self, func):
+        self._func = func
+        update_wrapper(self, self._func)
+
+    def __get__(self, instance, cls=None):
+        if instance is None:
+            return self
+        value = self._func(instance)
+        setattr(instance, self._func.__name__, value)
+        return value

@@ -19,6 +19,7 @@
 # pylint: disable=wildcard-import
 """Exponential family class"""
 __all__ = ['ExponentialFamily']
+
 from .distribution import Distribution
 
 
