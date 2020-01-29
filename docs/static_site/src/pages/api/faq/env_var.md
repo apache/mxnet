@@ -360,7 +360,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
 
 * MXNET_FC_TRUE_FP16
   - Values: 0(false) or 1(true) ```(default=0)```
-  - If this variable is set to true, MXNet will performs true FP16 computation in CUBLAS gemms when input datatype is float16.
+  - If this variable is set to true, MXNet will perform fp16 accumulation when using cuBLAS and input datatype is set to float16. This could increase the speed of the computation, but might result in loss of accuracy. This makes this setting useful mainly for inference usecases.
 
 Settings for Minimum Memory Usage
 ---------------------------------
