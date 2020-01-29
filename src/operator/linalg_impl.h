@@ -249,6 +249,7 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
                                              mshadow::half::half_t beta,
                                              bool tA, bool tB, Stream<gpu> *s) {
   using namespace mxnet;
+  using namespace mxnet::common::cuda;
   using mshadow::gpu;
   CHECK_NOTNULL(s);
   check_gemm(A, B, C, alpha, beta, tA, tB);
@@ -258,46 +259,46 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
 #if CUDA_VERSION >= 9000
   auto cublas_math_mode = GetEnvAllowTensorCore() ? CUBLAS_TENSOR_OP_MATH
                                                   : CUBLAS_DEFAULT_MATH;
-  //printf("ALLOW TENSORS? %i\n", GetEnvAllowTensorCore());
   auto previous_math_mode = SetCublasMathMode(blas_handle, cublas_math_mode);
 #endif
 
-  // pseudo-fp16 (fp32 math with fp16 I/O)
-  float alpha_f = float(alpha);  // NOLINT(*)
-  float beta_f = float(beta);  // NOLINT(*)
-
-  // As of cuda8, cublas adopted the cuda datatype, rather than maintaining its own datatype.
+// As of cuda8, cublas adopted the cuda datatype, rather than maintaining its own datatype.
 #if CUDA_VERSION >= 8000
   cudaDataType_t half_datatype = CUDA_R_16F;
 #else
   cublasDataType_t half_datatype = CUBLAS_DATA_HALF;
 #endif
-  //if (dmlc::GetEnv("MXNET_FC_TRUE_FP16", false)){
-    printf("CUBLAS HAHAH HALF\n");
-    auto algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP;
-    __half alpha_h = __float2half(alpha);
-    __half beta_h = __float2half(beta);
-  //}
+  auto algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP;
+  using TrueFP16Type = mshadow::half::half_t;
+  using PseudoFP16Type = typename CublasType<mshadow::half::half_t>::ScaleType;
+  TrueFP16Type trueFP16_alpha = static_cast<TrueFP16Type>(alpha);
+  TrueFP16Type trueFP16_beta = static_cast<TrueFP16Type>(beta);
+  PseudoFP16Type pseudoFP16_alpha = static_cast<PseudoFP16Type>(alpha);
+  PseudoFP16Type pseudoFP16_beta = static_cast<PseudoFP16Type>(beta);
+  const void *alpha_ptr;
+  const void *beta_ptr;
+  cudaDataType_t computeType;
+  bool use_true_fp16 = dmlc::GetEnv("MXNET_FC_TRUE_FP16", false);
+  if (use_true_fp16) {
+    alpha_ptr = &trueFP16_alpha;
+    beta_ptr = &trueFP16_beta;
+    computeType = CublasType<TrueFP16Type>::kCudaFlag;
+  } else {
+    alpha_ptr = &pseudoFP16_alpha;
+    beta_ptr = &pseudoFP16_beta;
+    computeType = CublasType<PseudoFP16Type>::kCudaFlag;
+  }
+
   CUBLAS_CALL(cublasGemmEx(blas_handle,
                            (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
                            (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
                            C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
-                           &alpha_h,
+                           alpha_ptr,
                            B.dptr_, half_datatype, B.stride_,
                            A.dptr_, half_datatype, A.stride_,
-                           &beta_h,
+                           beta_ptr,
                            C.dptr_, half_datatype, C.stride_,
-                           CUDA_R_16F, algo));
-  //print("NORMAL\n");
-  /*CUBLAS_CALL(cublasSgemmEx(blas_handle,
-                            (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
-                            (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
-                            C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
-                            &alpha_f,
-                            B.dptr_, half_datatype, B.stride_,
-                            A.dptr_, half_datatype, A.stride_,
-                            &beta_f,
-                            C.dptr_, half_datatype, C.stride_));*/
+                           computeType, algo));
 #if CUDA_VERSION >= 9000
   SetCublasMathMode(blas_handle, previous_math_mode);
 #endif
