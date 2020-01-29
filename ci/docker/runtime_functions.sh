@@ -786,7 +786,6 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 
-    make cython PYTHON=python2
     make cython PYTHON=python3
 }
 
