@@ -381,14 +381,33 @@ def test_dataloader_scope():
 
     assert item is not None
 
+def test_mx_cpp_datasets():
+    # _DownloadedDataset
+    mnist = mx.gluon.data.vision.MNIST(train=False).__mx_handle__()
+    assert len(mnist) == 10000
+    cifar10 = mx.gluon.data.vision.CIFAR10(train=False).__mx_handle__()
+    assert len(cifar10) == 10000
+
+    # _SampledDataset
+    s_mnist = mnist.take(100).__mx_handle__()
+    assert len(s_mnist) == 100
+    assert np.all(s_mnist[0][0].asnumpy() == mnist[0][0].asnumpy())
+    assert s_mnist[0][1] == mnist[0][1]
+
+    # ArrayDataset
+    mc = mx.gluon.data.ArrayDataset(mnist.take(100), cifar10.take(100)).__mx_handle__()
+    assert len(mc) == 100
+    assert len(mc[0]) == 4  # two from mnist, two from cifar10
+    assert mc[0][1] == mnist[0][1]
+    assert mc[0][3] == cifar10[0][1]
+
 def test_mx_data_loader():
-    from mxnet.gluon.data.dataloader import MXThreadedDataLoader
+    from mxnet.gluon.data.dataloader import DataLoader
 
-    dataset = mx.gluon.data.vision.MNIST().__handle__()
-    sampler = mx.gluon.data._internal.MXSampler('SequentialSampler', length=10, batch_size=4, last_batch='rollover')
-    batchify_fn = mx.gluon.data._internal.StackBatchify()
-
-    dl = MXThreadedDataLoader(num_workers=0, dataset=dataset, batch_sampler=sampler, batchify_fn=batchify_fn)
+    dataset = mx.gluon.data.vision.MNIST(train=False)
+    dl = DataLoader(num_workers=0, dataset=dataset, batch_size=32)
+    for _ in dl:
+        pass
 
 if __name__ == '__main__':
     import nose

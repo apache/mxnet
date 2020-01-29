@@ -642,7 +642,7 @@ class DataLoader(object):
         if use_mx_iter:
             print("Using MXNet backend ThreadedDataLoader...")
             self._mx_iter = MXThreadedDataLoader(
-                num_workers=min(1, self._num_workers),
+                num_workers=self._num_workers,
                 pin_memory=self._pin_memory,
                 pin_device_id=self._pin_device_id,
                 prefetch=self._prefetch, **mx_iter_args)
@@ -768,6 +768,10 @@ class MXThreadedDataLoader(object):
         self._dataset = dataset
         self._batch_sampler = batch_sampler
         self._batchify_fn = batchify_fn
+        if num_workers == 0:
+            num_workers = 1  # different convention for single thread
+        if prefetch == 0:
+            prefetch = 1  # at least one buffer required
         self._iter = ThreadedDataLoader(num_workers=num_workers, dataset=dataset,
                                         sampler=batch_sampler, batchify_fn=batchify_fn,
                                         prefetch_buffer=prefetch, ctx='cpu')

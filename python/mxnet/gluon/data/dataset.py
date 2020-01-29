@@ -279,18 +279,47 @@ class _FilteredDataset(Dataset):
     def __getitem__(self, idx):
         return self._dataset[self._indices[idx]]
 
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import MXDataset, IndexedDataset
+            if hasattr(self._dataset, '__mx_handle__'):
+                dataset = self._dataset.__mx_handle__()
+            elif isinstance(self._dataset, MXDataset):
+                dataset = self._dataset
+            else:
+                raise NotImplementedError('{} not supported.'.format(self._dataset))
+            self.handle = IndexedDataset(base=dataset,
+                                         indices=self._indices)
+        return self.handle
+
+
 class _SampledDataset(Dataset):
     """Dataset with elements chosen by a sampler"""
     def __init__(self, dataset, sampler):
         self._dataset = dataset
         self._sampler = sampler
         self._indices = list(iter(sampler))
+        self.handle = None
 
     def __len__(self):
         return len(self._sampler)
 
     def __getitem__(self, idx):
         return self._dataset[self._indices[idx]]
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import MXDataset, IndexedDataset
+            if hasattr(self._dataset, '__mx_handle__'):
+                dataset = self._dataset.__mx_handle__()
+            elif isinstance(self._dataset, MXDataset):
+                dataset = self._dataset
+            else:
+                raise NotImplementedError('{} not supported.'.format(self._dataset))
+            self.handle = IndexedDataset(base=dataset,
+                                         indices=self._indices)
+        return self.handle
+
 
 class ArrayDataset(Dataset):
     """A dataset that combines multiple dataset-like objects, e.g.
@@ -314,6 +343,7 @@ class ArrayDataset(Dataset):
             if isinstance(data, ndarray.NDArray) and len(data.shape) == 1:
                 data = data.asnumpy()
             self._data.append(data)
+        self.handle = None
 
     def __getitem__(self, idx):
         if len(self._data) == 1:
@@ -323,6 +353,20 @@ class ArrayDataset(Dataset):
 
     def __len__(self):
         return self._length
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import MXDataset, NDArrayDataset, GroupDataset
+            datasets = []
+            for data in self._data:
+                if isinstance(data, MXDataset):
+                    datasets.append(data)
+                elif hasattr(data, '__mx_handle__'):
+                    datasets.append(data.__mx_handle__())
+                else:
+                    datasets.append(NDArrayDataset(arr=default_array(data)))
+            self.handle = GroupDataset(datasets=datasets)
+        return self.handle
 
 
 class RecordFileDataset(Dataset):
@@ -359,7 +403,7 @@ class _DownloadedDataset(Dataset):
         if not os.path.isdir(root):
             os.makedirs(root)
         self._get_data()
-        self._handle = None
+        self.handle = None
 
     def __getitem__(self, idx):
         if self._transform is not None:
@@ -373,9 +417,9 @@ class _DownloadedDataset(Dataset):
         raise NotImplementedError
 
     def __mx_handle__(self):
-        if self._handle is None:
+        if self.handle is None:
             from ._internal import NDArrayDataset, GroupDataset
-            self._handle = GroupDataset(
+            self.handle = GroupDataset(
                 datasets=(NDArrayDataset(arr=default_array(self._data)),
                           NDArrayDataset(arr=default_array(self._label))))
-        return self._handle
+        return self.handle

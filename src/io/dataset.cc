@@ -280,6 +280,56 @@ MXNET_REGISTER_IO_DATASET(GroupDataset)
      return new GroupDataset();
 });
 
+struct IndexedDatasetParam : public dmlc::Parameter<IndexedDatasetParam> {
+    /*! \brief the base dataset */
+    std::intptr_t base;
+    /*! \brief the indices */
+    Tuple<uint64_t> indices;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(IndexedDatasetParam) {
+        DMLC_DECLARE_FIELD(base)
+            .describe("Pointer to the internal c++ dataset that is going to be indexed.");
+        DMLC_DECLARE_FIELD(indices)
+            .describe("The indices for the internal dataset. Output[i] will be base[indices[i]].");
+    }
+};  // struct IndexedDatasetParam
+
+DMLC_REGISTER_PARAMETER(IndexedDatasetParam);
+
+class IndexedDataset : public Dataset {
+  public:
+    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      param_.InitAllowUnknown(kwargs);
+      base_data_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.base));
+    }
+
+    uint64_t GetLen() const {
+      return param_.indices.ndim();
+    }
+
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+      CHECK_GT(param_.indices.ndim(), idx) << "IndexError: " << idx
+        << " from total: " << param_.indices.ndim();
+      auto new_idx = param_.indices[idx];
+      CHECK_GT(base_data_->GetLen(), new_idx) << "IndexError: " << new_idx
+        << " from original dataset with size: " << base_data_->GetLen();
+      return base_data_->GetItem(new_idx, is_scalar);
+    };
+
+  private:
+    /*! \brief parameters */
+    IndexedDatasetParam param_;
+    /*! \brief stored child dataset */
+    DatasetPtr base_data_;
+};   // class IndexedDataset
+
+MXNET_REGISTER_IO_DATASET(IndexedDataset)
+ .describe("Grouped Dataset that combine a bunch of datasets")
+ .add_arguments(IndexedDatasetParam::__FIELDS__())
+ .set_body([]() {
+     return new IndexedDataset();
+});
+
 struct LazyTransformDatasetParam : public dmlc::Parameter<LazyTransformDatasetParam> {
     /*! \brief the source ndarray */
     std::intptr_t cached_op;
