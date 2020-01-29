@@ -81,6 +81,86 @@ DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
 # NOTE: Data used is DEFAULT_DATA
 DEFAULT_AXIS = [0]
 
+# For NN basic operators
+# General
+DEFAULT_DATA_NN_BASIC = [(32, 3, 256, 256), (32, 3, 10000, 10)]
+DEFAULT_NUM_HIDDEN = [64]
+DEFAULT_BIAS = [(64,)]
+DEFAULT_FLATTEN = [True, False]
+DEFAULT_GAMMA = [(3,)]
+DEFAULT_BETA = [(3,)]
+DEFAULT_MOVING_MEAN = [(3,)]
+DEFAULT_MOVING_VAR = [(3,)]
+DEFAULT_LABEL = [(32, 3, 256, 256), (32, 3, 10000, 10)]
+DEFAULT_GRAD_SCALE = [.5]
+DEFAULT_NORMALIZATION = ["batch"]
+DEFAULT_MARGIN = [.5]
+DEFAULT_REG_COEFF = [.5]
+DEFAULT_INPUT_DIM = [3, 16]
+DEFAULT_OUTPUT_DIM = [4, 9]
+DEFAULT_SPARSE_GRAD = [False]
+DEFAULT_KERNEL_SIZE = [3]
+DEFAULT_MAX_DISPLACEMENT = [2]
+DEFAULT_STRIDE_1 = [2]
+DEFAULT_STRIDE_2 = [2]
+DEFAULT_ALPHA = [.001]
+DEFAULT_BETA_LRN = [.2]
+DEFAULT_NSIZE = [3]
+
+# LayerNorm
+DEFAULT_GAMMA_LN = [(32,), (32,)]
+DEFAULT_BETA_LN = [(32,), (32,)]
+
+# L2Normalization
+DEFAULT_MODE_L2 = ['channel', 'instance', 'spatial']
+
+# SVMOutput
+DEFAULT_LABEL_SVM = [(32, 3, 256), (32, 3, 10000)]
+
+# SoftmaxOutput
+DEFAULT_LABEL_SM = [(32, 3, 256), (32, 3, 10000)]
+
+# FullyConnected
+DEFAULT_WEIGHT_FC = [(64, 3 * 256 * 256), (64, 10)]
+
+# Embedding
+DEFAULT_WEIGHT_EMBEDDING = [(3, 4), (16, 9)]
+
+# GroupNorm
+DEFAULT_DATA_GN = [(32, 3, 256, 256), (32, 10, 10000, 10)]
+DEFAULT_BETA_GAMMA = [(1,), (10,)]
+DEFAULT_NUM_GROUPS = [1, 10]
+
+# Dropout
+DEFAULT_DATA_DROPOUT = [(32, 3, 256, 256), (10000, 10)]
+DEFAULT_MODE_DROPOUT = ["always"]
+
+# SpatialTransformer
+DEFAULT_DATA_ST = [(32, 3, 256, 6), (256, 3, 10000, 6)]
+DEFAULT_LOC_TAR = [(32, 6), (256, 6)]
+DEFAULT_TRANSFORM = ["affine"]
+DEFAULT_SAMPLER = ["bilinear"]
+
+# im2col
+DEFAULT_KERNEL_I2C = [(3,), (3, 3)]
+DEFAULT_STRIDE_I2C = [(1,), (1, 1)]
+DEFAULT_DILATE = [(1,), (1, 1)]
+DEFAULT_PAD = [(1,), (1, 1)]
+
+# col2im
+DEFAULT_DATA_C2I = [(32, 64, 256), (32, 64, 256)]
+DEFAULT_OUTPUT_SIZE = [(64, 16, 1), (32, 8, 1)]
+DEFAULT_KERNEL = [(1, 1, 1), (1, 1, 1)]
+DEFAULT_STRIDE = [(2, 2, 2), (1, 1, 1)]
+
+# RNN
+DEFAULT_DATA_RNN = [(32, 4, 4), (512, 10000, 10)]
+DEFAULT_PARAMETERS = [(7,), (104,)]
+DEFAULT_STATE = [(1, 4, 1), (2, 10000, 4)]
+DEFAULT_MODE = ["rnn_relu", "rnn_tanh"]
+DEFAULT_STATE_SIZE = [1, 4]
+DEFAULT_NUM_LAYERS = [1, 2]
+
 # For optimizer operators
 DEFAULT_WEIGHT = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_GRAD = [(1024, 1024), (10000, 1), (10000, 100)]
@@ -267,7 +347,69 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "a": DEFAULT_A,
                    "lhs_fill_element_0index": DEFAULT_LHS_FEI,
                    "rhs_fill_element_0index": DEFAULT_RHS_FEI,
-                   "mhs": DEFAULT_MHS}
+                   "mhs": DEFAULT_MHS,
+                   "data_spatialtransformer": DEFAULT_DATA_ST,
+                   "loc": DEFAULT_LOC_TAR,
+                   "target_shape": DEFAULT_LOC_TAR,
+                   "transform_type_spatialtransformer": DEFAULT_TRANSFORM,
+                   "sampler_type": DEFAULT_SAMPLER,
+                   "data_col2im": DEFAULT_DATA_C2I,
+                   "output_size": DEFAULT_OUTPUT_SIZE,
+                   "kernel_col2im": DEFAULT_KERNEL,
+                   "stride_col2im": DEFAULT_STRIDE,
+                   "data_rnn": DEFAULT_DATA_RNN,
+                   "parameters": DEFAULT_PARAMETERS,
+                   "state": DEFAULT_STATE,
+                   "state_size": DEFAULT_STATE_SIZE,
+                   "num_layers": DEFAULT_NUM_LAYERS,
+                   "mode": DEFAULT_MODE,
+                   "data_groupnorm": DEFAULT_DATA_GN,
+                   "gamma": DEFAULT_BETA_GAMMA,
+                   "beta": DEFAULT_BETA_GAMMA,
+                   "num_groups": DEFAULT_NUM_GROUPS,
+                   "eps": DEFAULT_EPSILON,
+                   "data_dropout": DEFAULT_DATA_DROPOUT,
+                   "mode_dropout": DEFAULT_MODE_DROPOUT,
+                   "data_nn_basic": DEFAULT_DATA_NN_BASIC,
+                   "num_hidden": DEFAULT_NUM_HIDDEN,
+                   "weight_fullyconnected": DEFAULT_WEIGHT_FC,
+                   "weight_embedding": DEFAULT_WEIGHT_EMBEDDING,
+                   "bias": DEFAULT_BIAS,
+                   "flatten": DEFAULT_FLATTEN,
+                   "gamma_batchnorm": DEFAULT_GAMMA,
+                   "beta_batchnorm": DEFAULT_BETA,
+                   "moving_mean": DEFAULT_MOVING_MEAN,
+                   "moving_var": DEFAULT_MOVING_VAR,
+                   "label_softmaxoutput": DEFAULT_LABEL_SM,
+                   "label_maeregressionoutput": DEFAULT_LABEL,
+                   "label_logisticregressionoutput": DEFAULT_LABEL,
+                   "label_linearregressionoutput": DEFAULT_LABEL,
+                   "label_svmoutput": DEFAULT_LABEL_SVM,
+                   "grad_scale": DEFAULT_GRAD_SCALE,
+                   "normalization": DEFAULT_NORMALIZATION,
+                   "margin": DEFAULT_MARGIN,
+                   "regularization_coefficient": DEFAULT_REG_COEFF,
+                   "mode_l2normalization": DEFAULT_MODE_L2,
+                   "gamma_layernorm": DEFAULT_GAMMA_LN,
+                   "beta_layernorm": DEFAULT_BETA_LN,
+                   "gamma_instancenorm": DEFAULT_GAMMA,
+                   "beta_instancenorm": DEFAULT_BETA,
+                   "input_dim": DEFAULT_INPUT_DIM,
+                   "output_dim": DEFAULT_OUTPUT_DIM,
+                   "sparse_grad": DEFAULT_SPARSE_GRAD,
+                   "data1": DEFAULT_DATA_NN_BASIC,
+                   "data2": DEFAULT_DATA_NN_BASIC,
+                   "kernel_size": DEFAULT_KERNEL_SIZE,
+                   "max_displacement": DEFAULT_MAX_DISPLACEMENT,
+                   "stride1": DEFAULT_STRIDE_1,
+                   "stride2": DEFAULT_STRIDE_2,
+                   "kernel_im2col": DEFAULT_KERNEL_I2C,
+                   "stride_im2col": DEFAULT_STRIDE_I2C,
+                   "dilate_im2col": DEFAULT_DILATE,
+                   "pad_im2col": DEFAULT_PAD,
+                   "alpha_lrn": DEFAULT_ALPHA,
+                   "beta_lrn": DEFAULT_BETA_LRN,
+                   "nsize": DEFAULT_NSIZE}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.

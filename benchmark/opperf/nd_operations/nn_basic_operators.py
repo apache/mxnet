@@ -16,22 +16,68 @@
 # under the License.
 
 import mxnet as mx
-from benchmark.opperf.utils.benchmark_utils import run_performance_test
-from benchmark.opperf.utils.common_utils import merge_map_list
-from benchmark.opperf.rules.default_params import MX_OP_MODULE
+
+from benchmark.opperf.utils.op_registry_utils import get_all_nn_basic_operators
+from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
+#from benchmark.opperf.utils.benchmark_utils import run_performance_test
+#from benchmark.opperf.utils.common_utils import merge_map_list
+#from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 """Performance benchmark tests for MXNet NDArray basic NN Operators.
 
 1. FullyConnected
 2. Dropout
 3. BatchNorm
+4. SoftmaxOutput
+5. LinearRegressionOutput
+6. LogisticRegressionOutput
+7. MAERegressionOutput
+8. SVMOutput
+9. L2Normalization
+10. LayerNorm
+11. InstanceNorm
+12. Embedding
+13. Correlation
+14. SpatialTransformer
+15. im2col
+16. col2im
+17. GroupNorm
+18. RNN
+19. LRN
 
 """
 
 
 def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+    """Runs benchmarks with the given context and precision (dtype)for all the unary
+    operators in MXNet.
+
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
+
+    # Fetch all Unary Operators
+    mx_nn_basic_ops = get_all_nn_basic_operators()
+    # Run benchmarks
+    # print(mx_nn_basic_ops)
+    mx_nn_basic_op_results = run_op_benchmarks(mx_nn_basic_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_nn_basic_op_results
+
     # FullyConnnected operator benchmarks
-    fc_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "FullyConnected")],
+    """fc_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "FullyConnected")],
                                             run_backward=True,
                                             dtype=dtype,
                                             ctx=ctx,
@@ -297,4 +343,4 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                              runs=runs)
     # Prepare combined results
     mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res + softmaxoutput_benchmark_res + regressionoutput_benchmark_res + svmoutput_benchmark_res + l2_benchmark_res + layernorm_benchmark_res + instancenorm_benchmark_res + embedding_benchmark_res + correlation_benchmark_res + st_benchmark_res + im2col_benchmark_res + col2im_benchmark_res + groupnorm_benchmark_res + rnn_benchmark_res + lrn_benchmark_res)
-    return mx_basic_nn_results
+    return mx_basic_nn_results"""

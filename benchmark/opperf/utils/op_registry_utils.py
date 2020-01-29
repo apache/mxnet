@@ -117,10 +117,13 @@ def prepare_op_inputs(op, arg_params):
 
     # 3d tensor is needed by following ops
     ops_3d = {'CTCLoss', 'ctc_loss'}
-
+    
     # For ops with args that need to change shape/value for different ops
-    custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator',
-                   'sample_multinomial', 'linalg_maketrian', 'squeeze', 'fill_element_0index'}
+    custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian',
+                   'SpatialTransformer', 'col2im', 'RNN', 'GroupNorm', 'Dropout', 'FullyConnected',
+                   'SoftmaxOutput', 'LinearRegressionOutput', 'BatchNorm', 'LogisticRegressionOutput',
+                   'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
+                   'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
@@ -327,6 +330,27 @@ def get_all_reduction_operators():
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
 
+def get_all_nn_basic_operators():
+    """Gets all NN basic operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    nn_basic_ops = ['FullyConnected', 'Dropout', 'BatchNorm', 'SoftmaxOutput', 'LinearRegressionOutput',
+                    'LogisticRegressionOutput', 'MAERegressionOutput', 'SVMOutput', 'L2Normalization',
+                    'LayerNorm', 'InstanceNorm', 'Embedding', 'Correlation', 'SpatialTransformer', 'im2col',
+                    'col2im', 'GroupNorm', 'RNN', 'LRN']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Optimizer operators
+    nn_basic_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+         if op_name in nn_basic_ops and op_name not in unique_ops:
+             nn_basic_mx_operators[op_name] = mx_operators[op_name]
+    return nn_basic_mx_operators
 
 def get_all_nn_activation_operators():
     """Gets all NN Activation operators registered with MXNet.
