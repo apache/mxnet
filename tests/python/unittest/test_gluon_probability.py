@@ -309,7 +309,49 @@ def test_compose_transform():
                 )
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
-            
+
+
+@use_np
+def test_cached_property():
+    x = np.random.normal()
+    x.attach_grad()
+    scale = 0.1
+
+    class Dummy(object):
+        def __init__(self, x):
+            super(Dummy, self).__init__()
+            self.x = x
+
+        @mgp.cached_property
+        def y(self):
+            return scale * self.x + 1
+
+    with autograd.record():
+        obj = Dummy(x)
+        obj.y.backward()
+    assert_almost_equal(x.grad.asnumpy(), scale * np.ones((1,)))
+
+    class DummyBlock(HybridBlock):
+        def hybrid_forward(self, F, x):
+            obj = Dummy(x)
+            return obj.y
+
+    x = np.random.normal()
+    x.attach_grad()
+    net = DummyBlock()
+    with autograd.record():
+        y = net(x)
+        y.backward()
+    assert_almost_equal(x.grad.asnumpy(), scale * np.ones((1,)))
+
+    x = np.random.normal()
+    x.attach_grad()
+    net.hybridize()
+    with autograd.record():
+        y = net(x)
+        y.backward()
+    assert_almost_equal(x.grad.asnumpy(), scale * np.ones((1,)))
+
 
 if __name__ == '__main__':
     import nose
