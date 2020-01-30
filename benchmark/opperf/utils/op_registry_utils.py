@@ -309,7 +309,8 @@ def get_all_rearrange_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    rearrange_ops = ['transpose','swapaxes','flip','depth_to_space','space_to_depth']
+    rearrange_ops = ['transpose', 'swapaxes', 'flip', 'depth_to_space',
+                     'space_to_depth', 'SwapAxis', 'reverse']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -320,6 +321,7 @@ def get_all_rearrange_operators():
         if op_name in rearrange_ops and op_name not in unique_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
+
 
 def get_all_loss_operators():
     """Gets all Neural Network loss operators registered with MXNet.
@@ -339,6 +341,48 @@ def get_all_loss_operators():
         if op_name in loss_ops and op_name not in unique_ops:
             loss_mx_operators[op_name] = mx_operators[op_name]
     return loss_mx_operators
+
+
+def get_all_shape_operators():
+    """Gets all array shape manipulation operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    shape_ops = ['split', 'SliceChannel', 'diag', 'reshape',
+                     'reshape_like', 'size_array', 'shape_array']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Shape Manipulation operators
+    shape_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in shape_ops and op_name not in unique_ops:
+            shape_mx_operators[op_name] = mx_operators[op_name]
+    return shape_mx_operators
+
+
+def get_all_expanding_operators():
+    """Gets all array expanding operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    expanding_ops = ['broadcast_axes', 'broadcast_axis', 'broadcast_to', 'broadcast_like',
+                     'repeat', 'tile', 'pad', 'expand_dims']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Expanding operators
+    expanding_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in expanding_ops and op_name not in unique_ops:
+            expanding_mx_operators[op_name] = mx_operators[op_name]
+    return expanding_mx_operators
 
 
 def get_operators_with_no_benchmark(operators_with_benchmark):
