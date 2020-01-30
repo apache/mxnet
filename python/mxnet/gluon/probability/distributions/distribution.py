@@ -20,6 +20,8 @@
 """Base distribution class."""
 __all__ = ['Distribution']
 
+from .utils import cached_property
+
 
 class Distribution(object):
     r"""Base class for distribution.
@@ -28,17 +30,41 @@ class Distribution(object):
     ----------
     F : mx.ndarray or mx.symbol.numpy._Symbol
         Variable that stores the running mode.
-    event_dim : int
+    event_dim : int, default None
         Variable indicating the dimension of the distribution's support.
+    validate_args : bool, default None
+        Whether to validate the distribution parameters
     """          
 
     # Variable indicating whether the sampling method has
     # pathwise gradient.
     has_grad = False
+    support = None
+    has_enumerate_support = False
+    arg_constraints = {}
+    _validate_args = False
 
-    def __init__(self, F=None):
+    @staticmethod
+    def set_default_validate_args(value):
+        if value not in [True, False]:
+            raise ValueError
+        Distribution._validate_args = value
+
+    def __init__(self, F=None, event_dim=None, validate_args=None):
         self.F = F
-        self.event_dim = 0
+        self.event_dim = event_dim
+        if validate_args is not None:
+            self._validate_args = validate_args
+        if self._validate_args:
+            for param, constraint in self.arg_constraints.items():
+                if constraint.F is None:
+                    constraint.F = F
+                if param not in self.__dict__ and isinstance(getattr(type(self), param),
+                                                             cached_property):
+                    # skip param that is decorated by cached_property
+                    continue
+                setattr(self, param, constraint.check(getattr(self, param)))
+        super(Distribution, self).__init__()
 
     def log_prob(self, value):
         r"""
@@ -54,13 +80,13 @@ class Distribution(object):
 
     def cdf(self, value):
         r"""
-        Return the cumulative density/mass function evaluated at `value`.
+        Returns the cumulative density/mass function evaluated at `value`.
         """
         raise NotImplementedError
 
     def icdf(self, value):
         r"""
-        Return the inverse cumulative density/mass function evaluated at `value`.
+        Returns the inverse cumulative density/mass function evaluated at `value`.
         """
         raise NotImplementedError
 
@@ -77,7 +103,7 @@ class Distribution(object):
         raise NotImplementedError
 
     def broadcast_to(self, batch_shape):
-        """
+        r"""
         Returns a new distribution instance with parameters expanded
         to `batch_shape`. This method calls `numpy.broadcast_to` on
         the parameters.
@@ -98,20 +124,52 @@ class Distribution(object):
         raise NotImplementedError
 
     @property
+    def arg_constraints(self):
+        """
+        Returns a dictionary from parameter names to
+        :class:`~mxnet.gluon.probability.distributions.constraint.Constraint` objects that
+        should be satisfied by each parameter of this distribution. Args that
+        are not ndarray/symbol need not appear in this dict.
+        """
+        raise NotImplementedError
+
+    @property
     def mean(self):
         r"""
-        Return the mean of the distribution.
+        Returns the mean of the distribution.
         """
         raise NotImplementedError
 
     @property
     def variance(self):
         r"""
-        Return the variance of the distribution.
+        Returns the variance of the distribution.
         """
         raise NotImplementedError
 
     @property
+    def stddev(self):
+        """
+        Returns the standard deviation of the distribution.
+        """
+        return self.variance.sqrt()
+
+    @property
     def support(self):
-        """Return a function representing the distribution's support."""
+        r"""
+        Returns a function representing the distribution's support.
+        """
         raise NotImplementedError
+
+    def entropy(self):
+        r"""
+        Returns entropy of distribution.
+        """
+        raise NotImplementedError
+
+    def perplexity(self):
+        r"""
+        Returns perplexity of distribution.
+        """
+        F = self.F
+        return F.np.exp(self.entropy())

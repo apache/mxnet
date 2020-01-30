@@ -33,7 +33,7 @@ class Constraint(object):
         Running mode parameter.
     """
 
-    def __init__(self, F):
+    def __init__(self, F=None):
         self.F = F
 
     def check(self, value):
@@ -52,6 +52,14 @@ class Constraint(object):
     def _check_func(self):
         return self.F.npx.constraint_check
 
+    @property
+    def F(self):
+        return self.F
+
+    @F.setter
+    def F(self, F):
+        self.F = F
+
 
 class Real(Constraint):
     """
@@ -62,8 +70,6 @@ class Real(Constraint):
         condition = (value == value)
         _value = self._check_func(condition, err_msg) * value
         return _value
-
-    
 
 
 class Boolean(Constraint):
@@ -82,7 +88,7 @@ class Interval(Constraint):
     """
     Constrain to a real interval `[lower_bound, upper_bound]`
     """
-    def __init__(self, F, lower_bound, upper_bound):
+    def __init__(self, lower_bound, upper_bound, F=None):
         super(Interval, self).__init__(F)
         self._low = lower_bound
         self._up = upper_bound
@@ -100,7 +106,7 @@ class GreaterThan(Constraint):
     """
     Constrain to be greater than `lower_bound`.
     """
-    def __init__(self, F, lower_bound):
+    def __init__(self, lower_bound, F=None):
         super(GreaterThan, self).__init__(F)
         self._low = lower_bound
     
@@ -116,5 +122,5 @@ class Positive(GreaterThan):
     """
     Constrain to be greater than zero.
     """
-    def __init__(self, F):
+    def __init__(self, F=None):
         super(Positive, self).__init__(F, 0)

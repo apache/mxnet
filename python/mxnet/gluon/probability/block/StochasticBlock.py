@@ -79,7 +79,7 @@ class StochasticSequential(StochasticBlock):
         for block in self._children.values():
             x = block(x)
             if hasattr(block, '_losses'):
-                self.add_loss(block.losses)
+                self.add_loss(block._losses)
         return x
 
     def __repr__(self):
