@@ -3127,6 +3127,7 @@ def test_np_argmin_argmax():
                 else:
                     mx_ret = getattr(np, op_name)(a, axis=axis)
                     np_ret = getattr(_np, op_name)(a.asnumpy(), axis=axis)
+                    assert mx_ret.dtype == np_ret.dtype
                     assert same(mx_ret.asnumpy(), np_ret)
 
                 for hybridize in [False, True]:
@@ -3142,6 +3143,7 @@ def test_np_argmin_argmax():
                             pass
                     else:
                         mx_ret = net(a)
+                        assert mx_ret.dtype == np_ret.dtype
                         assert same(mx_ret.asnumpy(), np_ret)
 
 
