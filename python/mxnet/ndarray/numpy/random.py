@@ -23,7 +23,8 @@ from . import _internal as _npi
 from ..ndarray import NDArray
 
 
-__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "shuffle", 'gamma', 'exponential']
+__all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
+           "shuffle", 'gamma', 'beta', 'exponential']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -245,6 +246,87 @@ def multinomial(n, pvals, size=None):
         return _npi.multinomial(n=n, pvals=pvals, size=size)
 
 
+def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
+    """
+    multivariate_normal(mean, cov, size=None, check_valid=None, tol=None)
+
+    Draw random samples from a multivariate normal distribution.
+
+    The multivariate normal, multinormal or Gaussian distribution is a
+    generalization of the one-dimensional normal distribution to higher
+    dimensions.  Such a distribution is specified by its mean and
+    covariance matrix.  These parameters are analogous to the mean
+    (average or "center") and variance (standard deviation, or "width,"
+    squared) of the one-dimensional normal distribution.
+
+    This operator is a little different from the one in official NumPy.
+    The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
+    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+
+    Both `mean` and `cov` may have any number of leading dimensions, which correspond
+    to a batch shape. They are not necessarily assumed to have the same batch shape,
+    just ones which can be broadcasted.
+
+    Parameters
+    ----------
+    mean : K-D ndarray, of shape (..., N)
+        Mean of the N-dimensional distribution.
+    cov : (K+1)-D ndarray, of shape (..., N, N)
+        Covariance matrix of the distribution. The last two dimensions must be symmetric and
+        positive-semidefinite for proper sampling.
+    size : int or tuple of ints, optional
+        Given a shape of, for example, ``(m,n,k)``,
+        ``m*n*k`` identically distributed batchs of samples are
+        generated, and packed in an `m`-by-`n`-by-`k` arrangement.
+        If no shape is specified, a batch of (`N`-D) sample is returned.
+    check_valid : { 'warn', 'raise', 'ignore' }, optional
+        Behavior when the covariance matrix is not positive semidefinite.
+        (Not supported)
+    tol : float, optional
+        Tolerance when checking the singular values in covariance matrix.
+        cov is cast to double before the check.
+        (Not supported)
+
+    Returns
+    -------
+    out : ndarray
+        The input shape of `mean` and `cov` should satisfy the requirements of broadcasting.
+        If the parameter `size` is not provided,
+        the output shape is ``np.broadcast(mean.shape, cov.shape[:-1])``.
+        Otherwise, the output shape is ``size + np.broadcast(mean.shape, cov.shape[:-1])``
+
+    Examples
+    --------
+    >>> mean = np.array([1, 2])
+    >>> cov = np.array([[1, 0], [0, 1]])
+    >>> x = np.random.multivariate_normal(mean, cov, (3, 3))
+    >>> x.shape
+    (3, 3, 2)
+
+    The following is probably true, given that 0.6 is roughly twice the
+    standard deviation:
+
+    >>> list((x[0,0,:] - mean) < 0.6)
+    [True, True] # random
+
+    # Performs autobroadcasting when the batch shape of
+    # `mean` and `cov` is different but compatible.
+
+    >>> mean = np.zeros((3,2)) # shape (3, 2)
+    >>> cov = np.array([[1, 0], [0, 100]]) # shape (2, 2)
+    >>> x = np.random.multivariate_normal(mean, cov)
+    >>> x
+    array([[-1.6115597 , -8.726251  ],
+           [ 2.2425299 ,  2.8104177 ],
+           [ 0.36229908, -8.386591  ]])
+    """
+    if check_valid is not None:
+        raise NotImplementedError('Parameter `check_valid` is not supported')
+    if tol is not None:
+        raise NotImplementedError('Parameter `tol` is not supported')
+    return _npi.mvn_fallback(mean, cov, size=size)
+
+
 def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     r"""Generates a random sample from a given 1-D array
 
@@ -402,6 +484,63 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
                           ctx=ctx, dtype=dtype, out=out)
 
     raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
+
+
+def beta(a, b, size=None, dtype=None, ctx=None):
+    r"""Draw samples from a Beta distribution.
+
+    The Beta distribution is a special case of the Dirichlet distribution,
+    and is related to the Gamma distribution.  It has the probability
+    distribution function
+
+    .. math:: f(x; a,b) = \frac{1}{B(\alpha, \beta)} x^{\alpha - 1}
+                                                     (1 - x)^{\beta - 1},
+
+    where the normalisation, B, is the beta function,
+
+    .. math:: B(\alpha, \beta) = \int_0^1 t^{\alpha - 1}
+                                 (1 - t)^{\beta - 1} dt.
+
+    It is often seen in Bayesian inference and order statistics.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, positive (>0).
+    b : float or array_like of floats
+        Beta, positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Notes
+    -------
+    To use this  operator with scalars as input, please run ``npx.set_np()`` first.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution.
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    # use fp64 to prevent precision loss
+    X = gamma(a, 1, size=size, dtype='float64', ctx=ctx)
+    Y = gamma(b, 1, size=size, dtype='float64', ctx=ctx)
+    out = X/(X + Y)
+    return out.astype(dtype)
 
 
 def rand(*size, **kwargs):

@@ -713,6 +713,11 @@ template<>
 MSHADOW_XINLINE bool MinValue<bool>(void) {
   return false;
 }
+/*! \brief minimum value of unsigned int */
+template<>
+MSHADOW_XINLINE unsigned int MinValue<unsigned int>(void) {
+  return 0;
+}
 
 /*!
  * \brief negative infinity of certain types
@@ -784,6 +789,11 @@ MSHADOW_XINLINE int64_t MaxValue<int64_t>(void) {
 template<>
 MSHADOW_XINLINE bool MaxValue<bool>(void) {
   return true;
+}
+/*! \brief maximum value of uint32_t */
+template<>
+MSHADOW_XINLINE uint32_t MaxValue<uint32_t>(void) {
+  return -1;
 }
 
 /*!
