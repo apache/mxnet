@@ -22,7 +22,7 @@ from ..ndarray import numpy as _mx_nd_np
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", "randn", "gamma", "exponential"]
+           "shuffle", "randn", "gamma", 'beta', "exponential"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -493,6 +493,53 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     waiting times between Poisson distributed events are relevant.
     """
     return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
+
+
+def beta(a, b, size=None, dtype=None, ctx=None):
+    r"""Draw samples from a Beta distribution.
+
+    The Beta distribution is a special case of the Dirichlet distribution,
+    and is related to the Gamma distribution.  It has the probability
+    distribution function
+
+    .. math:: f(x; a,b) = \frac{1}{B(\alpha, \beta)} x^{\alpha - 1}
+                                                     (1 - x)^{\beta - 1},
+
+    where the normalisation, B, is the beta function,
+
+    .. math:: B(\alpha, \beta) = \int_0^1 t^{\alpha - 1}
+                                 (1 - t)^{\beta - 1} dt.
+
+    It is often seen in Bayesian inference and order statistics.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, positive (>0).
+    b : float or array_like of floats
+        Beta, positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Notes
+    -------
+    To use this  operator with scalars as input, please run ``npx.set_np()`` first.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution.
+    """
+    return _mx_nd_np.random.beta(a, b, size=size, dtype=dtype, ctx=ctx)
 
 
 def randn(*size, **kwargs):
