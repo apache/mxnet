@@ -7170,25 +7170,16 @@ def test_scatter_gather_nd():
 
 @with_seed()
 def test_gather_nd_check_bound():
+    def _test_gather_nd_exception(data, indices):
+        output = mx.nd.gather_nd(data, indices).asnumpy()
     # check if indices is out of bound
     data = mx.nd.array([[0, 1, 2], [3, 4, 5]])
     indices1 = mx.nd.array([[0, 1, 0], [0, 1, 3]])
     indices2 = mx.nd.array([[0, 1, 0], [0, 1, -5]])
-    try:
-        mx.nd.gather_nd(data, indices1)
-        mx.nd.waitall()
-    except IndexError:
-            # skip errors since the test is supposed to raise error
-            # IndexError: index 3 is out of bounds for axis 1 with size 3
-            pass
-
-    try:
-        mx.nd.gather_nd(data, indices2)
-        mx.nd.waitall()
-    except IndexError:
-            # skip errors since the test is supposed to raise error
-            # IndexError: index -5 is out of bounds for axis 1 with size 3
-            pass
+    assertRaises(IndexError, _test_gather_nd_exception, data, indices1)
+    # IndexError: index 3 is out of bounds for axis 1 with size 3
+    assertRaises(IndexError, _test_gather_nd_exception, data, indices2)
+    # IndexError: index -5 is out of bounds for axis 1 with size 3
 
     # check if the negative indices are wrapped correctly
     indices1 = mx.nd.array([[0, 1, -1], [0, 1, -2]])

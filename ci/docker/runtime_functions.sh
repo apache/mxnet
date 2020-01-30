@@ -152,7 +152,7 @@ gather_licenses() {
     cp tools/dependencies/LICENSE.binary.dependencies licenses/
     cp NOTICE licenses/
     cp LICENSE licenses/
-    cp DISCLAIMER licenses/
+    cp DISCLAIMER-WIP licenses/
 }
 
 build_ubuntu_cpu_release() {
@@ -1497,6 +1497,16 @@ nightly_test_large_vector() {
     nosetests-3.4 tests/nightly/test_large_vector.py:test_basic
 }
 
+#Test Large Vectors
+nightly_test_large_vector() {
+    set -ex
+    export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_tensor
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_nn
+    nosetests-3.4 tests/nightly/test_large_vector.py:test_basic
+}
+
 #Tests Amalgamation Build with 5 different sets of flags
 nightly_test_amalgamation() {
     set -ex
@@ -2038,7 +2048,7 @@ cd_s3_publish() {
     if [ -z "${variant}" ]; then
         variant="cpu"
     fi
-    aws s3 cp ${filepath} s3://apache-mxnet/dist/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
+    aws s3 cp ${filepath} s3://apache-mxnet/dist/python/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
 build_static_scala_mkl() {

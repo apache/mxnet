@@ -54,10 +54,26 @@ MXNET_DLL int MXSetSubgraphPropertyOpNames(const char* prop_name,
                                            const char** op_names);
 
 /*!
+ * \brief Given a subgraph property name, use the provided op names
+ * as the op_names attribute for that subgraph property, instead of
+ * the predefined one. This is only for the purpose of testing.
+ * Compared to MXSetSubgraphPropertyOpNames(), this API will add
+ * op_names to the backend property.
+ */
+MXNET_DLL int MXSetSubgraphPropertyOpNamesV2(const char* prop_name,
+                                           const uint32_t num_ops,
+                                           const char** op_names);
+/*!
  * \brief Given a subgraph property name, delete the op name set
  * in the SubgraphPropertyOpNameSet.
  */
 MXNET_DLL int MXRemoveSubgraphPropertyOpNames(const char* prop_name);
+/*!
+ * \brief Given a subgraph property name, remove op_names attribute of
+ * the in the SubgraphBackend property.
+ */
+MXNET_DLL int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name);
+
 
 #ifdef __cplusplus
 }
