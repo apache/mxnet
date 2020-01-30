@@ -489,7 +489,6 @@ class ndarray(NDArray):
         else:
             raise NotImplementedError('type %s is not supported.'%(type(value)))
 
-
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
         """Return self[key].
