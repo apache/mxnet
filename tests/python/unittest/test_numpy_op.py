@@ -2063,6 +2063,7 @@ def test_np_binary_funcs():
         'power': (1.0, 3.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
+        'bitwise_and': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_or': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
@@ -3127,6 +3128,7 @@ def test_np_argmin_argmax():
                 else:
                     mx_ret = getattr(np, op_name)(a, axis=axis)
                     np_ret = getattr(_np, op_name)(a.asnumpy(), axis=axis)
+                    assert mx_ret.dtype == np_ret.dtype
                     assert same(mx_ret.asnumpy(), np_ret)
 
                 for hybridize in [False, True]:
@@ -3142,6 +3144,7 @@ def test_np_argmin_argmax():
                             pass
                     else:
                         mx_ret = net(a)
+                        assert mx_ret.dtype == np_ret.dtype
                         assert same(mx_ret.asnumpy(), np_ret)
 
 
@@ -3465,6 +3468,52 @@ def test_np_random():
                 if not isinstance(shape, tuple):
                     expected_shape = () if shape is None else (shape,)
                 assert out.shape == expected_shape
+
+
+@with_seed()
+@use_np
+def test_np_random_beta():
+    class TestRandomBeta(HybridBlock):
+        def __init__(self, size=None, dtype=None, ctx=None):
+            super(TestRandomBeta, self).__init__()
+            self._size = size
+            self._dtype = dtype
+            self._ctx = ctx
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
+
+    def _test_random_beta_range(output):
+        bigger_than_zero = _np.all(output > 0)
+        smaller_than_one = _np.all(output < 1)
+        return bigger_than_zero and smaller_than_one
+
+    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # since fp16 might incur precision issue, the corresponding test is skipped
+    dtype_list = [np.float32, np.float64]
+    hybridize_list = [False, True]
+    data = np.array([1])
+    for [param_shape, in_dtype, out_dtype, hybridize] in itertools.product(shape_list,
+            dtype_list, dtype_list, hybridize_list):
+        if sys.version_info.major < 3 and param_shape == ():
+            continue
+        mx_data = data.astype(in_dtype)
+        np_data = mx_data.asnumpy()
+        test_random_beta = TestRandomBeta(size=param_shape, dtype=out_dtype)
+        if hybridize:
+            test_random_beta.hybridize()
+        np_out = _np.random.beta(np_data, np_data, size=param_shape)
+        mx_out = test_random_beta(mx_data, mx_data)
+        mx_out_imperative = mx.np.random.beta(mx_data, mx_data, size=param_shape, dtype=out_dtype)
+
+        assert_almost_equal(np_out.shape, mx_out.shape)
+        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert _test_random_beta_range(mx_out.asnumpy()) == True
+        assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
+
+        # test scalar
+        mx_out_imperative = mx.np.random.beta(1, 1, size=param_shape, dtype=out_dtype)
+        assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
 
 
 @with_seed()
