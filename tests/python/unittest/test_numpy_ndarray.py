@@ -30,7 +30,6 @@ from common import with_seed, TemporaryDirectory
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
-import scipy.stats as ss
 
 
 @with_seed()
