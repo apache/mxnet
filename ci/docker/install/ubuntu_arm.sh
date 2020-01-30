@@ -21,4 +21,5 @@ set -ex
 
 apt update || true
 apt install -y \
-    unzip
+    unzip \
+    python3
