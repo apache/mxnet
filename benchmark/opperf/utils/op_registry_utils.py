@@ -119,6 +119,9 @@ def prepare_op_inputs(op, arg_params):
     # 4d tensor is needed only by following two ops
     ops_4d = ['depth_to_space','space_to_depth']
 
+    # 3d tensor is needed by following ops
+    ops_3d = ['CTCLoss', 'ctc_loss']
+
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
@@ -127,6 +130,10 @@ def prepare_op_inputs(op, arg_params):
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
         elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
+        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
+        elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
         elif arg_name in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
