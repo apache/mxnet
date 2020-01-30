@@ -163,6 +163,8 @@ def run_performance_test(ops, inputs, run_backward=True,
     -------
     List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
+    Note: when run_performance_test is called on the nd.Embedding operator with run_backward=True, an error will
+    be thrown. Track issue here: https://github.com/apache/incubator-mxnet/issues/11314
     """
     kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
 
