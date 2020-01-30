@@ -42,7 +42,7 @@ from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_opera
 from benchmark.opperf.nd_operations.nn_optimizer_operators import run_optimizer_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_loss_operators import run_loss_operators_benchmarks
 from benchmark.opperf.nd_operations.array_manipulation_operators import run_rearrange_operators_benchmarks, \
-    run_shape_operators_benchmarks, run_expanding_operators_benchmarks
+    run_shape_operators_benchmarks, run_expanding_operators_benchmarks, run_rounding_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark, \
@@ -84,6 +84,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all Array Rearrange operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_rearrange_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
+
+    # Run all Array Shape Manipulation operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_shape_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
     # Run all Array Expansion operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_expanding_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))

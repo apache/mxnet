@@ -18,7 +18,7 @@
 import mxnet as mx
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 from benchmark.opperf.utils.op_registry_utils import get_all_rearrange_operators, \
-    get_all_shape_operators, get_all_expanding_operators
+    get_all_shape_operators, get_all_expanding_operators, get_all_rounding_operators
 
 """Performance benchmark tests for MXNet Array Manipulation Operators.
 
@@ -45,6 +45,15 @@ Array Expanding Operators
 5. tile
 6. pad
 7. expand_dims
+
+
+Array Rounding Operators
+1. round
+2. rint
+3. fix
+4. floor
+5. ceil
+6. trunc
 
 """
 
@@ -131,3 +140,31 @@ def run_expanding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     # Run benchmarks
     mx_expanding_op_results = run_op_benchmarks(mx_expanding_ops, dtype, ctx, profiler, warmup, runs)
     return mx_expanding_op_results
+
+
+def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+    """Runs benchmarks with the given context and precision (dtype) for all the
+    array rounding operators  in MXNet.
+
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
+    # Fetch all array rounding operators
+    mx_rounding_ops = get_all_rounding_operators()
+
+    # Run benchmarks
+    mx_rounding_op_results = run_op_benchmarks(mx_rounding_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_rounding_op_results

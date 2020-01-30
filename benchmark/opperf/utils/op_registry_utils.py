@@ -385,6 +385,27 @@ def get_all_expanding_operators():
     return expanding_mx_operators
 
 
+def get_all_rounding_operators():
+    """Gets all array rounding operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    rounding_ops = ['round', 'rint', 'fix', 'floor',
+                     'ceil', 'trunc']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Rounding operators
+    rounding_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in rounding_ops and op_name not in unique_ops:
+            rounding_mx_operators[op_name] = mx_operators[op_name]
+    return rounding_mx_operators
+
+
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.
 
