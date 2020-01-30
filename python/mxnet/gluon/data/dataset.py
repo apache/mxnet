@@ -242,6 +242,8 @@ class _LazyTransformDataset(Dataset):
                                                    dataset=self._data.__mx_handle__(),
                                                    scalar_outputs=tuple(is_scalar))
             elif isinstance(self._fn, _TransformFirstClosure):
+                if not isinstance(self._fn._fn, HybridBlock):
+                    raise NotImplementedError("Block not supported.")
                 item = self._data[0][0]
                 self._fn._fn.hybridize()
                 ret = self._fn._fn(item)

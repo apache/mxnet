@@ -721,7 +721,10 @@ def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
     if isinstance(dataset, MXDataset):
         mx_loader_args['dataset'] = dataset
     elif hasattr(dataset, '__mx_handle__'):
-        mx_loader_args['dataset'] = dataset.__mx_handle__()
+        try:
+            mx_loader_args['dataset'] = dataset.__mx_handle__()
+        except:
+            return False, {}
     else:
         return False, {}
 
