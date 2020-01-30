@@ -433,8 +433,8 @@ inline bool PdfOpShape(const nnvm::NodeAttrs& attrs,
 template<typename OP>
 struct LaunchExWrapper {
   template<typename ...Args>
-  MSHADOW_XINLINE static void Map(const index_t start, const index_t length, const index_t sample_size,
-        Args... args) {
+  MSHADOW_XINLINE static void Map(const index_t start, const index_t length,
+                                  const index_t sample_size, Args... args) {
     // Apply the operator to the sample in strides of sample_size, so that
     // the operators can assume that their distribution parameters are constant.
     index_t i = start;
