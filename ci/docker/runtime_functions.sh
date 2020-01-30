@@ -124,7 +124,7 @@ build_wheel() {
     export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
 
     cd ${PYTHON_DIR}
-    python setup.py bdist_wheel --universal
+    python3 setup.py bdist_wheel --universal
 
     # repackage
 
@@ -1065,7 +1065,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python tests/python/tensorrt/lenet5_train.py
+    tests/python/tensorrt/lenet5_train.py
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
 }
 
@@ -1229,7 +1229,7 @@ integrationtest_ubuntu_cpu_onnx() {
 	set -ex
 	export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-	python tests/python-pytest/onnx/backend_test.py
+	tests/python-pytest/onnx/backend_test.py
 	pytest tests/python-pytest/onnx/mxnet_export_test.py
 	pytest tests/python-pytest/onnx/test_models.py
 	pytest tests/python-pytest/onnx/test_node.py
@@ -1241,14 +1241,14 @@ integrationtest_ubuntu_gpu_python() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python example/image-classification/test_score.py
+    example/image-classification/test_score.py
 }
 
 integrationtest_ubuntu_gpu_caffe() {
     set -ex
     export PYTHONPATH=/work/deps/caffe/python:./python
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python tools/caffe_converter/test_converter.py
+    tools/caffe_converter/test_converter.py
 }
 
 integrationtest_ubuntu_cpu_asan() {
@@ -1400,7 +1400,7 @@ nightly_test_KVStore_singleNode() {
     set -ex
     export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python tests/nightly/test_kvstore.py
+    tests/nightly/test_kvstore.py
 }
 
 #Test Large Tensor Size
