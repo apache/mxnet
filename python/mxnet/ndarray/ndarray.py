@@ -5031,7 +5031,7 @@ def dl_managed_tensor_deleter(dl_managed_tensor_handle):
     ctypes.pythonapi.Py_DecRef(pyobj)
 
 
-def from_numpy(ndarray, zero_copy=True):
+def from_numpy(ndarray, zero_copy=True, array_cls=NDArray):
     """Returns an MXNet's ndarray backed by numpy's ndarray.
     When `zero_copy` is set to be true,
     this API consumes numpy's ndarray and produces MXNet's ndarray
@@ -5043,10 +5043,11 @@ def from_numpy(ndarray, zero_copy=True):
     ----------
     ndarray: numpy.ndarray
         input data
-
     zero_copy: bool
         Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
         This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+    array_cls: ndarray class type
+        The class type of the output array.
 
     Returns
     -------
@@ -5090,4 +5091,4 @@ def from_numpy(ndarray, zero_copy=True):
     c_obj = _make_dl_managed_tensor(ndarray)
     handle = NDArrayHandle()
     check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
-    return NDArray(handle=handle)
+    return array_cls(handle=handle)
