@@ -359,12 +359,36 @@ inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch)
   return true;
 }
 
+inline std::vector<nnvm::NodeEntry>CreateNodeEntries(
+  nnvm::NodePtr pNode,
+  const std::vector<nnvm::NodeEntry>* pOgrads = nullptr,
+  const std::vector<nnvm::NodeEntry>* pInputs = nullptr) {
+  if (pOgrads)
+    pNode->inputs.insert(pNode->inputs.end(), pOgrads->begin(), pOgrads->end());
+
+  if (pInputs)
+    pNode->inputs.insert(pNode->inputs.end(), pInputs->begin(), pInputs->end());
+
+  if (!pNode->is_variable()) {
+    CHECK_EQ(pNode->num_inputs(), pNode->inputs.size())
+      << "Number of inputs to operator " << pNode->op()->name << " (" << pNode->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << pNode->attrs.name << " (" << pNode->inputs.size() << ").";
+  }
+
+  std::vector<nnvm::NodeEntry> ret;
+  for (uint32_t i = 0; i < pNode->num_outputs(); ++i)
+    ret.emplace_back(nnvm::NodeEntry{pNode, i, 0});
+
+  return ret;
+}
+
 // make a new node with operator op_name. Inputs are not filled.
 inline nnvm::NodePtr MakeNode(
     const char* op_name, const std::string& name,
-    std::vector<nnvm::NodeEntry> const * inputs,
-    std::unordered_map<std::string, std::string> const * dict,
-    nnvm::NodePtr const * fwd_node) {
+    std::vector<nnvm::NodeEntry> const * inputs = nullptr,
+    std::unordered_map<std::string, std::string> const * dict = nullptr,
+    nnvm::NodePtr const * fwd_node = nullptr) {
   auto p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
   p->attrs.name = name;
@@ -375,6 +399,12 @@ inline nnvm::NodePtr MakeNode(
   }
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
+  }
+  if (inputs != nullptr) {
+    CHECK_EQ(p->num_inputs(), p->inputs.size())
+      << "Number of inputs to operator " << op_name << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << name << " (" << p->inputs.size() << ").";
   }
   return p;
 }
@@ -395,11 +425,8 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
     const std::unordered_map<std::string, std::string>& dict) {
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     &inputs, &dict, &n);
-  std::vector<nnvm::NodeEntry> ret;
-  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(p, i, 0);
-  }
-  return ret;
+
+  return CreateNodeEntries(p);
 }
 
 // quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
@@ -446,13 +473,8 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
-  p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
-  p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
-  std::vector<nnvm::NodeEntry> ret;
-  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(p, i, 0);
-  }
-  return ret;
+
+  return CreateNodeEntries(p, &ograds, &inputs);
 }
 
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */

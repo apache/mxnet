@@ -986,10 +986,10 @@ class ndarray(NDArray):
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
-        raise NotImplementedError
+        return _mx_nd_np.all(self, axis=axis, keepdims=keepdims, out=out)
 
     def any(self, axis=None, out=None, keepdims=False):
-        raise NotImplementedError
+        return _mx_nd_np.any(self, axis=axis, keepdims=keepdims, out=out)
 
     def as_nd_ndarray(self):
         """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""

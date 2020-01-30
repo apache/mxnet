@@ -586,7 +586,7 @@ Please check the tutorial here: https://mxnet.incubator.apache.org/api/faq/new_o
 NNVM_REGISTER_OP(_backward_Custom)
 .set_num_inputs([](const NodeAttrs& attrs){
     const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
-    return params.bwd_idx.size();
+    return params.bwd_idx.size() + params.num_auxs;
   })
 .set_num_outputs([](const NodeAttrs& attrs){
     const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);

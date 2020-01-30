@@ -406,6 +406,20 @@ The definition of GRU here is slightly different from paper but compatible with 
 .add_arguments(RNNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_RNN)
+.set_num_inputs([](const NodeAttrs& attrs) {
+    const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
+    int ret = 5;
+    if (params.state_outputs) {
+      ret += 2;
+    }
+    if (params.mode == rnn_enum::kLstm) {
+      ++ret;
+      if (params.state_outputs) {
+      ret += 2;
+      }
+    }
+    return ret;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const RNNParam& params = nnvm::get<RNNParam>(attrs.parsed);
   return GetNumInputArguments(params);
