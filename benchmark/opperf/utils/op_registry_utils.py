@@ -313,7 +313,26 @@ def get_all_rearrange_operators():
         if op_name in rearrange_ops and op_name not in unique_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
-    
+
+def get_all_loss_operators():
+    """Gets all Neural Network loss operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    loss_ops = ['smooth_l1', 'CTCLoss', 'ctc_loss', 'MakeLoss', 'softmax_cross_entropy']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for NN Loss operators
+    loss_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in loss_ops and op_name not in unique_ops:
+            loss_mx_operators[op_name] = mx_operators[op_name]
+    return loss_mx_operators
+
 
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.
