@@ -104,12 +104,19 @@ DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
 
 # For indexing routines
-DEFAULT_INDICES = [(1024, 1024), (10000, 1), (10000, 100)]
-DEFAULT_BEGIN = [[900, 900], [0, 0], [500, 50]]
-DEFAULT_END = [[1000, 1000], [100, 0], [1000, 75]]
+DEFAULT_INDEX = [(1024,1), (10000,1), (10000,1)]
+DEFAULT_INDICES = [(1, 1)]
+DEFAULT_BEGIN = [0] # slice_axis expects int, slice can have tuple/int
+DEFAULT_END =[1] # same as above
 DEFAULT_SHAPE_LIKE = [(100, 100), (10, 1), (100, 10)]
+DEFAULT_X = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Y = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_COND = [(1024,), (10000,), (10000,)]
+DEFAULT_DEPTH = [0]
+# For ravel_multi_index op, ndim(shape) = 2; hence data NDArray's first dim = 2
+# First dimension of input of ravel operator should match shape parameter dimension
+# DEFAULT_SHAPE is reused for ravel_multi_index op
+RAVEL_DATA = [(2,1024)]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
@@ -162,12 +169,16 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "block_size": DEFAULT_BLOCK_SIZE,
                    "args": DEFAULT_ARGS,
                    "a": DEFAULT_DATA,
+                   "index": DEFAULT_INDEX,
                    "indices": DEFAULT_INDICES,
                    "begin": DEFAULT_BEGIN,
                    "end": DEFAULT_END,
                    "shape_like": DEFAULT_SHAPE_LIKE,
+                   "x": DEFAULT_X,
                    "y": DEFAULT_Y,
-                   "cond": DEFAULT_COND}
+                   "condition": DEFAULT_COND,
+                   "depth": DEFAULT_DEPTH,
+                   "ravel_data": RAVEL_DATA}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -180,4 +191,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
-                          "cond", "a"]
+                          "x", "condition", "a", "index", "raveL_data"]

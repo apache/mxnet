@@ -58,7 +58,7 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     # Filter out deprecated operators
     filters += ("normal", "uniform", "BatchNorm_v1", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
                 "Pooling_v1", "Concat", "Reshape", "Convolution_v1", "SliceChannel", "Crop",
-                "crop", "onehot_encode")
+                "crop", "onehot_encode", "batch_take")
 
     if merge_op_forward_backward:
         filters += ("_backward",)
@@ -123,7 +123,9 @@ def prepare_op_inputs(op, arg_params):
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
                                   arg_params["params"]["arg_types"]):
-        if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
+        if "NDArray" in arg_type and op == "ravel_multi_index":
+            arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
+        elif "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
         elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
@@ -322,8 +324,12 @@ def get_all_indexing_routines():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'batch_take', 'one_hot',
-                         'pick', 'where', 'ravel_multi_index', 'unravel_index', 'gather_nd', 'scatter_nd']
+    # @ChaiBapchya unravel_index errors out on certain inputs
+    # tracked here https://github.com/apache/incubator-mxnet/issues/16771
+    # @ChaiBapchya scatter_nd errors with core dump
+    # tracked here https://github.com/apache/incubator-mxnet/issues/17480
+    indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
+                         'where', 'ravel_multi_index', 'gather_nd']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()

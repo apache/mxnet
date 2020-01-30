@@ -25,14 +25,13 @@ from benchmark.opperf.utils.op_registry_utils import get_all_indexing_routines
 2. slice_axis
 3. slice_like
 4. take
-5. batch_take
-6. pick
-7. where
-8. ravel_multi_index
-9. unravel_index
-10. gather_nd
-11. scatter_nd
-12. one_hot
+5. pick [to do]
+6. where
+7. ravel_multi_index
+8. unravel_index [to do]
+9. gather_nd
+10. scatter_nd [to do]
+11. one_hot
 """
 
 
