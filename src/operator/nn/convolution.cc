@@ -239,8 +239,6 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
       << "incorrect stride size: " << param_.stride;
     CHECK_GT(param_.dilate.Size(), 0U) \
       << "incorrect dilate size: " << param_.dilate;
-    CHECK_EQ(param_.dilate.Size(), 1U)
-      << "Dilate is not supported in 3d convolution";
     Shape<5> oshape;
     oshape[0] = dshape[0];
     oshape[1] = param_.num_filter;
