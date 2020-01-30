@@ -109,15 +109,14 @@ inline SizeParam GetHeightAndWidth(int data_h,
   return SizeParam(resized_h, resized_w);
 }
 
-inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
-                             mxnet::ShapeVector *in_attrs,
-                             mxnet::ShapeVector *out_attrs) {
+inline bool ResizeShapeImpl(const ResizeParam& param,
+                            mxnet::ShapeVector *in_attrs,
+                            mxnet::ShapeVector *out_attrs) {
   // input attrs should only be (h, w, c) or (n, h, w, c)
   CHECK((in_attrs->at(0).ndim() == 3U) || (in_attrs->at(0).ndim() == 4U))
     << "Input image dimension should be 3 or 4 but got "
     << in_attrs->at(0).ndim();
   const auto& ishape = (*in_attrs)[0];
-  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
   SizeParam size;
   if (ishape.ndim() == 3) {
     size = GetHeightAndWidth(ishape[H], ishape[W], param);
@@ -128,6 +127,13 @@ inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
       mxnet::TShape({ishape[N], size.height, size.width, ishape[kC]}));
   }
   return true;
+}
+
+inline bool ResizeShape(const nnvm::NodeAttrs& attrs,
+                             mxnet::ShapeVector *in_attrs,
+                             mxnet::ShapeVector *out_attrs) {
+  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+  return ResizeShapeImpl(param, in_attrs, out_attrs);
 }
 
 inline void ResizeImpl(const std::vector<TBlob> &inputs,
@@ -168,13 +174,10 @@ inline void ResizeImpl(const std::vector<TBlob> &inputs,
 }
 
 template <typename xpu>
-inline void Resize(const nnvm::NodeAttrs &attrs,
-                   const OpContext &ctx,
-                   const std::vector<TBlob> &inputs,
-                   const std::vector<OpReqType> &req,
-                   const std::vector<TBlob> &outputs) {
-  CHECK_EQ(outputs.size(), 1U);
-  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+inline void ResizeImplWrapper(const ResizeParam& param,
+                              const OpContext &ctx,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<TBlob> &outputs) {
   SizeParam size;
   if (std::is_same<xpu, gpu>::value) {
 #if MXNET_USE_CUDA
@@ -206,6 +209,17 @@ inline void Resize(const nnvm::NodeAttrs &attrs,
         param.interp, i * input_step, i * output_step);
     }
   }
+}
+
+template <typename xpu>
+inline void Resize(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  CHECK_EQ(outputs.size(), 1U);
+  const ResizeParam& param = nnvm::get<ResizeParam>(attrs.parsed);
+  ResizeImplWrapper<xpu>(param, ctx, inputs, outputs);
 }
 
 }  // namespace image

@@ -23,6 +23,7 @@
  * \brief Mini-batch data combination functions.
  */
 #include <dmlc/parameter.h>
+#include <dmlc/omp.h>
 #include <mxnet/io.h>
 #include "./inst_vector.h"
 
@@ -106,8 +107,9 @@ class StackBatchify : public BatchifyFunction {
       auto bs = inputs.size();
       std::vector<TBlob> ret(out_size);
 
-      // #pragma omp parallel num_threads(out_size)
+      #pragma omp parallel num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {
+        omp_exc_.Run([&] {
           // Process i-th output
           auto ashape = inputs[0][i].shape();
           CHECK_GE(ashape.ndim(), 1) << "Data dim must be larger than 1";
@@ -138,12 +140,15 @@ class StackBatchify : public BatchifyFunction {
             }
             CHECK_EQ(ptr, ret[i].dptr<DType>() + sshape.Size());
           })
+        });
       }
       return ret;
     }
   private:
     /*! \brief parameters */
     StackBatchifyParam param_;
+    /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
+    dmlc::OMPException omp_exc_;
 };  // class StackBatchify
 
 MXNET_REGISTER_IO_BATCHIFY_FUNCTION(StackBatchify)

@@ -33,6 +33,7 @@ namespace op {
 namespace image {
 
 DMLC_REGISTER_PARAMETER(CropParam);
+DMLC_REGISTER_PARAMETER(RandomCropParam);
 
 NNVM_REGISTER_OP(_image_crop)
 .add_alias("_npx__image_crop")
@@ -81,6 +82,32 @@ NNVM_REGISTER_OP(_backward_image_crop)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", CropOpBackward<cpu>);
 
+NNVM_REGISTER_OP(_image_random_crop)
+.add_alias("_npx__image_random_crop")
+.describe(R"code(Randomly crop an image NDArray of shape (H x W x C) or (N x H x W x C) 
+to the given size. Upsample result if `src` is smaller than `size`.
+Example:
+    .. code-block:: python
+        im = mx.nd.array(cv2.imread("flower.jpg"))
+        cropped_im, rect  = mx.image.random_crop(im, (100, 100))
+        print(cropped_im)
+        <NDArray 100x100x1 @cpu(0)>
+)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(2)
+.set_attr_parser(ParamParser<RandomCropParam>)
+.set_attr<nnvm::FNumVisibleOutputs>(
+  "FNumVisibleOutputs", [](const NodeAttrs& attrs) { return static_cast<uint32_t>(1); })
+.set_attr<mxnet::FInferShape>("FInferShape", RandomCropShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
+.set_attr<FCompute>("FCompute<cpu>", RandomCropOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.set_attr<FResourceRequest>("FResourceRequest",                           \
+    [](const NodeAttrs& attrs) {                                            \
+      return std::vector<ResourceRequest>{ResourceRequest::kRandom};        \
+    })
+.add_argument("data", "NDArray-or-Symbol", "The input.")
+.add_arguments(RandomCropParam::__FIELDS__());
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet

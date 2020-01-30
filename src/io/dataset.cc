@@ -398,7 +398,7 @@ class LazyTransformDataset : public Dataset {
       std::vector<NDArray*> ndoutputs;
       ndinputs.reserve(num_inputs);
       ndoutputs.reserve(outputs.size());
-      for (size_t i = 0; i < num_inputs; ++i) {
+      for (int i = 0; i < num_inputs; ++i) {
         ndinputs.emplace_back(&inputs[tindices[i]]);
       }
       for (size_t i = 0; i < outputs.size(); ++i) {

@@ -42,12 +42,12 @@ def test_to_tensor():
     out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
     assert_almost_equal(out_nd.asnumpy(), np.transpose(
                         data_in.astype(dtype=np.float32) / 255.0, (0, 3, 1, 2)))
-    
+
     # Invalid Input
     invalid_data_in = nd.random.uniform(0, 255, (5, 5, 300, 300, 3)).astype(dtype=np.uint8)
     transformer = transforms.ToTensor()
     assertRaises(MXNetError, transformer, invalid_data_in)
-    
+
     # Bounds (0->0, 255->1)
     data_in = np.zeros((10, 20, 3)).astype(dtype=np.uint8)
     out_nd = transforms.ToTensor()(nd.array(data_in, dtype='uint8'))
@@ -126,7 +126,7 @@ def test_resize():
         assertRaises(MXNetError, invalid_transform, data_in)
 
     for dtype in ['uint8', 'float32', 'float64']:
-        _test_resize_with_diff_type(dtype)    
+        _test_resize_with_diff_type(dtype)
 
 
 @with_seed()
@@ -159,7 +159,7 @@ def test_crop_resize():
         # test with resize height and width should be greater than 0
         transformer = transforms.CropResize(0, 0, 100, 50, (-25, 25), 1)
         assertRaises(MXNetError, transformer, data_in)
-        # test height and width should be greater than 0 
+        # test height and width should be greater than 0
         transformer = transforms.CropResize(0, 0, -100, -50)
         assertRaises(MXNetError, transformer, data_in)
         # test cropped area is bigger than input data
@@ -168,7 +168,7 @@ def test_crop_resize():
         assertRaises(MXNetError, transformer, data_bath_in)
 
     for dtype in ['uint8', 'float32', 'float64']:
-        _test_crop_resize_with_diff_type(dtype)  
+        _test_crop_resize_with_diff_type(dtype)
 
     # test nd.image.crop backward
     def test_crop_backward(test_nd_arr, TestCase):
@@ -215,6 +215,7 @@ def test_transformer():
         transforms.Resize(300),
         transforms.Resize(300, keep_ratio=True),
         transforms.CenterCrop(256),
+        transforms.RandomCrop(256, pad=16),
         transforms.RandomResizedCrop(224),
         transforms.RandomFlipLeftRight(),
         transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
@@ -228,6 +229,31 @@ def test_transformer():
 
     transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
+@with_seed()
+def test_random_crop():
+    x = mx.nd.ones((245, 480, 3), dtype='uint8')
+    y = mx.nd.image.random_crop(x, width=100, height=100)
+
+@with_seed()
+def test_hybrid_transformer():
+    from mxnet.gluon.data.vision import transforms
+
+    transform = transforms.HybridCompose([
+        transforms.Resize(300),
+        transforms.Resize(300, keep_ratio=True),
+        transforms.CenterCrop(256),
+        transforms.RandomCrop(256, pad=16),
+        transforms.RandomFlipLeftRight(),
+        transforms.RandomColorJitter(0.1, 0.1, 0.1, 0.1),
+        transforms.RandomBrightness(0.1),
+        transforms.RandomContrast(0.1),
+        transforms.RandomSaturation(0.1),
+        transforms.RandomHue(0.1),
+        transforms.RandomLighting(0.1),
+        transforms.ToTensor(),
+        transforms.Normalize([0, 0, 0], [1, 1, 1])])
+
+    transform(mx.nd.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
 @with_seed()
 def test_random_transforms():

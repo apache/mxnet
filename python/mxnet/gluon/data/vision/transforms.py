@@ -74,6 +74,39 @@ class Compose(Sequential):
                 self.add(i)
 
 
+class HybridCompose(HybridSequential):
+    """Sequentially composes multiple transforms. This is the Hybrid version of Compose.
+
+    Parameters
+    ----------
+    transforms : list of transform Blocks.
+        The list of transforms to be composed.
+
+
+    Inputs:
+        - **data**: input tensor with shape of the first transform Block requires.
+
+    Outputs:
+        - **out**: output tensor with shape of the last transform Block produces.
+
+    Examples
+    --------
+    >>> transformer = transforms.HybridCompose([transforms.Resize(300),
+    ...                                   transforms.CenterCrop(256),
+    ...                                   transforms.ToTensor()])
+    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
+    >>> transformer(image)
+    <NDArray 3x256x256 @cpu(0)>
+    """
+    def __init__(self, transforms):
+        super(HybridCompose, self).__init__()
+        for i in transforms:
+            if not isinstance(i, HybridBlock):
+                raise ValueError("{} is not a HybridBlock, try use `Compose` instead".format(i))
+            self.add(i)
+        self.hybridize()
+
+
 class Cast(HybridBlock):
     """Cast input to a specific data type
 
@@ -295,7 +328,54 @@ class CropResize(HybridBlock):
             out = F.image.resize(out, self._size, False, self._interpolation)
         return out
 
-class CenterCrop(Block):
+class RandomCrop(HybridBlock):
+    """Randomly crop `src` with `size` (width, height).
+    Padding is optional.
+    Upsample result if `src` is smaller than `size`
+    .
+    Parameters
+    ----------
+    size : int or tuple of (W, H)
+        Size of the final output.
+    pad: int or tuple
+        if int, size of the zero-padding
+        if tuple, number of values padded to the edges of each axis.
+            ((before_1, after_1), ... (before_N, after_N)) unique pad widths for each axis.
+            ((before, after),) yields same before and after pad for each axis.
+            (pad,) or int is a shortcut for before = after = pad width for all axes.
+    pad_value : int
+        The value to use for padded pixels
+    interpolation : int
+        Interpolation method for resizing. By default uses bilinear
+        interpolation. See OpenCV's resize function for available choices.
+    Inputs:
+        - **data**: input tensor with (Hi x Wi x C) shape.
+    Outputs:
+        - **out**: output tensor with ((H+2*pad) x (W+2*pad) x C) shape.
+    """
+
+    def __init__(self, size, pad=None, pad_value=0, interpolation=1):
+        super(RandomCrop, self).__init__()
+        if isinstance(size, numeric_types):
+            size = (size, size)
+        self._args = ((0, 1), (0, 1), size[0], size[1], interpolation)
+        self._pad_value = pad_value
+        if isinstance(pad, int):
+            self.pad = (0, 0, 0, 0, pad, pad, pad, pad, 0, 0)  # workaround as 5D
+        elif pad is not None:
+            assert len(pad) >= 4
+            self.pad = tuple([0] * 4 + list(pad) + [0] * (6 - len(pad)))
+        else:
+            self.pad = pad
+
+    def hybrid_forward(self, F, x):
+        if self.pad:
+            x = F.cast(x.expand_dims(0).expand_dims(0), 'float32')
+            x_pad = F.pad(x, pad_width=self.pad, mode='constant', constant_value=self._pad_value)
+            x = F.cast(x_pad.squeeze(0).squeeze(0), 'uint8')
+        return F.image.random_crop(x, *self._args)
+
+class CenterCrop(HybridBlock):
     """Crops the image `src` to the given `size` by trimming on all four
     sides and preserving the center of the image. Upsamples if `src` is
     smaller than `size`.
@@ -326,10 +406,10 @@ class CenterCrop(Block):
         super(CenterCrop, self).__init__()
         if isinstance(size, numeric_types):
             size = (size, size)
-        self._args = (size, interpolation)
+        self._args = (size[0], size[1], interpolation)
 
-    def forward(self, x):
-        return image.center_crop(x, *self._args)[0]
+    def hybrid_forward(self, F, x):
+        return F.image.random_crop(x, (0.5, 0.5), (0.5, 0.5), *self._args)
 
 
 class Resize(HybridBlock):
