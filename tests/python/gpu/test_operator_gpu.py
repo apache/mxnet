@@ -761,6 +761,7 @@ def _conv_with_num_streams(seed):
                 print('Failing conv size = {}'.format(size))
                 raise
 
+@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14329")
 @with_seed()
 def test_convolution_multiple_streams():
     for num_streams in [1, 2]:
