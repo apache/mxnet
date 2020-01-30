@@ -30,7 +30,7 @@ Array Rearrange Operators
 5. space_to_depth
 
 Array Shape Manipulation Operators
-1. split = SliceChannel
+1. split (alias SliceChannel)
 2. diag
 3. reshape
 4. reshape_like
