@@ -232,4 +232,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
-                          "A", "B", "C"]
+                          "A", "B", "C", "rois"]
