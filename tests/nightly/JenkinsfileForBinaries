@@ -103,7 +103,7 @@ core_logic: {
             utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
         }
       }
-    }*/,
+    },*/
     'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {
