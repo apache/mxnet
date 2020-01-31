@@ -455,7 +455,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 endif
 
 .PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
-	cython2 cython3 cython cyclean
+	cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages sample_lib subgraph_lib
 
@@ -673,9 +673,6 @@ subgraph_lib:
 # Cython build
 cython:
 	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
-
-cython2:
-	cd python; python2 setup.py build_ext --inplace --with-cython
 
 cython3:
 	cd python; python3 setup.py build_ext --inplace --with-cython
