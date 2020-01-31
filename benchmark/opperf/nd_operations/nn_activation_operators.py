@@ -53,6 +53,8 @@ def run_activation_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler=
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
+    profiler: str, default 'native'
+        Module to use for tracking benchmark excecution time
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
