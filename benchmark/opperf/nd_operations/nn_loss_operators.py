@@ -49,8 +49,8 @@ def run_loss_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
 
     """
     # Fetch all loss operators
-    mx_rearrange_ops = get_all_loss_operators()
+    mx_loss_ops = get_all_loss_operators()
 
     # Run benchmarks
-    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, warmup, runs)
-    return mx_rearrange_op_results
+    mx_loss_op_results = run_op_benchmarks(mx_loss_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_loss_op_results
