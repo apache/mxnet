@@ -124,7 +124,7 @@ build_wheel() {
     export MXNET_LIBRARY_PATH=${BUILD_DIR}/libmxnet.so
 
     cd ${PYTHON_DIR}
-    python3 setup.py bdist_wheel --universal
+    python3 setup.py bdist_wheel
 
     # repackage
 
