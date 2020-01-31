@@ -445,6 +445,10 @@ NNVM_REGISTER_OP(Deconvolution)
 .add_arguments(DeconvolutionParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Deconvolution)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  return params.no_bias ? 3 : 4;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
   return params.no_bias ? 2 : 3;

@@ -55,7 +55,7 @@ NNVM_REGISTER_OP(_np_any)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesBoolShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyReduceAxesBoolType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBoolCompute<cpu,
-  mshadow_op::sum, mshadow_op::NonZero>)
+  mshadow_op::sum, mshadow_op::NonZero, 0>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());
@@ -76,7 +76,7 @@ NNVM_REGISTER_OP(_np_all)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxesBoolShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyReduceAxesBoolType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBoolCompute<cpu,
-  mshadow_op::product, mshadow_op::NonZero>)
+  mshadow_op::product, mshadow_op::NonZero, 1>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyReduceAxesBoolParam::__FIELDS__());

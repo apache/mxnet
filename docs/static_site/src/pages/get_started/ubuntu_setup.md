@@ -99,79 +99,45 @@ are running version 3.10.2` during Step 3. In that case please update CMake on
 your system. You can download and install latest CMake from https://cmake.org or
 via `pip3` with `pip3 install --user --upgrade "cmake>=3.13.2"`. If `pip3` is
 not available on your system, you can install it via `sudo apt-get install -y
-python3-pip`.
+python3-pip`. After installing cmake with `pip3`, it is usually available at
+`~/.local/bin/cmake` or directly as `cmake`.
 
-**Step 2:** Download MXNet sources
+**Step 2:** Download MXNet sources and configure
 
 Clone the repository:
 
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet
+cp config/config.cmake config.cmake
 ```
+
+Please edit the config.cmake file based on your needs. The file contains a
+series of `set(name value CACHE TYPE "Description")` entries. For example, to
+build without Cuda, change `set(USE_CUDA ON CACHE TYPE "Build with CUDA
+support")` to `set(USE_CUDA OFF CACHE TYPE "Build with CUDA support")`.
+
+For a GPU-enabled build make sure you have installed the [CUDA dependencies
+first](#cuda-dependencies)). When building a GPU-enabled build on a machine
+without GPU, MXNet build can't autodetect your GPU architecture and will target
+all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
+`config.cmake` to your desired cuda architecture to speed up the build.
+
+To (optionally) build with MKL math library, please install MKL first based on
+the guide in [Math Library Selection](build_from_source#math-library-selection).
 
 **Step 3:** Build MXNet core shared library.
 
-For a CPU-only build with OpenBLAS math library run:
-
 ```bash
 rm -rf build
 mkdir -p build && cd build
-cmake -GNinja \
-    -DUSE_CUDA=OFF \
-    -DUSE_MKL_IF_AVAILABLE=OFF \
-    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_BUILD_TYPE=Release \
-..
-ninja
+cmake -GNinja -C ../config.cmake ..
+cmake --build
 ```
 
-For a CPU-only build with MKL math library and MKL-DNN you need to make sure MKL
-is installed according to
-[Math Library Selection](build_from_source#math-library-selection) and
-[MKL-DNN README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html)
-respectively. Then run:
-
-```bash
-rm -rf build
-mkdir -p build && cd build
-cmake -GNinja \
-    -DUSE_CUDA=OFF \
-    -DUSE_MKL_IF_AVAILABLE=ON \
-    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_BUILD_TYPE=Release \
-..
-ninja
-```
-
-For a GPU-enabled build make sure you have installed the
-[CUDA dependencies first](#cuda-dependencies)) and run:
-
-```bash
-rm -rf build
-mkdir -p build && cd build
-cmake -GNinja \
-    -DUSE_CUDA=ON \
-    -DUSE_MKL_IF_AVAILABLE=OFF \
-    -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-    -DCMAKE_BUILD_TYPE=Release \
-..
-ninja
-```
-
-*Note* - You can explore and use more compilation options as they are delcared
-in the top of `CMakeLists.txt` and also review common
-[usage examples](build_from_source#usage-examples).
-
-Building from source creates a library called ```libmxnet.so``` in the `build` folder in your MXNet project root.
-
-After building the MXNet library, you may install language bindings.
+After a successful build, you will find the `libmxnet.so` in the `build` folder
+in your MXNet project root. `libmxnet.so` is required to install language
+bindings described in the next section.
 
 <hr>
 
@@ -365,7 +331,6 @@ make install
 
 Before you build MXNet for R from source code, you must complete
 [building the shared library](#build-the-shared-library).
-source root directory to build the MXNet Perl package:
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.

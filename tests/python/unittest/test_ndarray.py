@@ -665,13 +665,9 @@ def test_reduce():
                       mx.nd.max, True)
     test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.min),
                       mx.nd.min, True)
-    # argmax and argmin are sensitive to the precision of the calculation (repro seed 1985162693).
-    # Force numpy to match mxnet's float32.
-    test_reduce_inner(lambda data, axis,
-                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmax),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmax),
                       mx.nd.argmax, False, check_dtype=False)
-    test_reduce_inner(lambda data, axis,
-                             keepdims:np_reduce(np.float32(data), axis, keepdims, np.argmin),
+    test_reduce_inner(lambda data, axis, keepdims:np_reduce(data, axis, keepdims, np.argmin),
                       mx.nd.argmin, False, check_dtype=False)
 
 

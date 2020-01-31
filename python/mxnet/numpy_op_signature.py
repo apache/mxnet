@@ -49,7 +49,7 @@ def _get_builtin_op(op_name):
     op = getattr(op_module, op_name[(len(op_name_prefix)+len(submodule_name)):], None)
     if op is None:
         raise ValueError('Cannot find operator {} in module {}'
-                         .format(op_name[op_name_prefix:], root_module.__name__))
+                         .format(op_name[len(op_name_prefix):], root_module.__name__))
     return op
 
 

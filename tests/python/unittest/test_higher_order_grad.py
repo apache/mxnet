@@ -121,7 +121,7 @@ def test_tanh():
         return nd.tanh(x)
 
     def grad_op(x):
-        return 1 / nd.cosh(x)**2
+        return 1 - tanh(x)**2
 
     def grad_grad_op(x):
         return -2 * tanh(x) * grad_op(x)
@@ -129,6 +129,7 @@ def test_tanh():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
+        check_nth_order_unary(array, tanh, grad_op, 1, rtol=1e-6, atol=1e-6)
         check_second_order_unary(
             array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
 
