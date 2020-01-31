@@ -50,7 +50,8 @@ apt-get install -y \
     sudo \
     unzip \
     vim-nox \
-    wget
+    wget \
+    strace
 
 # Use libturbojpeg package as it is correctly compiled with -fPIC flag
 # https://github.com/HaxeFoundation/hashlink/issues/147
