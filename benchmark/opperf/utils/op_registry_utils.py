@@ -23,8 +23,7 @@ import mxnet as mx
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 
 # Operators where parameter have special criteria that cannot be cleanly automated.
-# Example: sample_multinomial operator has a parameter 'data'. It expects values to sum up to 1.
-unique_ops = ("sample_multinomial",)
+unique_ops = ()
 
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
@@ -121,6 +120,7 @@ def prepare_op_inputs(op, arg_params):
 
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
+    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial']
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -128,6 +128,8 @@ def prepare_op_inputs(op, arg_params):
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type and op == "ravel_multi_index":
             arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
+        elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
         elif "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
         elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
@@ -254,13 +256,17 @@ def get_all_random_sampling_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
+    # Additional Random Sampling ops which do not start with "random_" or "sample_"
+    additional_random_sampling_ops = ['GridGenerator', 'BilinearSampler']
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
+    for op_name, op_params in mx_operators.items():
+        if (op_name.startswith(("random_", "sample_")) or \
+            op_name in additional_random_sampling_ops) and op_name not in unique_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
 
