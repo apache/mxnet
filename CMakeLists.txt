@@ -913,7 +913,6 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
-  add_cython_modules(2) # Build cython module for python2 if python2 is found
   add_cython_modules(3) # Build cython module for python3 if python3 is found
   if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
     message(FATAL_ERROR "No python interpreter found to build cython modules")

@@ -21,7 +21,8 @@
 # the whole docker cache for the image
 
 set -ex
-perl -pi -e 's/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/' /etc/apt/sources.list
+# FIXME(larroy) enable in a different PR
+#perl -pi -e 's/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/' /etc/apt/sources.list
 apt-get update || true
 
 # Avoid interactive package installers such as tzdata.
