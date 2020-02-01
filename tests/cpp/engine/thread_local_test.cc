@@ -56,7 +56,7 @@ static int ThreadSafetyTest(int num, std::vector<int>* tmp_inputs, std::vector<i
     return 0;
 }
 
-TEST(ThreadLocal, verify_thread_safety) {
+TEST(ThreadLocal, VerifyThreadSafety) {
     std::vector<int> tmp_inputs;
     tmp_inputs.resize(num_elements);
     std::vector<int*> outputs;

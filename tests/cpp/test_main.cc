@@ -47,6 +47,7 @@ bool debug_output = false;
 bool quick_test = false;
 bool performance_run = false;
 bool csv = false;
+bool thread_safety_force_cpu = false;
 }  // namespace test
 }  // namespace mxnet
 
@@ -104,6 +105,8 @@ int main(int argc, char ** argv) {
       mxnet::test::csv = true;
     } else if (!strcmp(arg, "--quick") || !strcmp(arg, "-q")) {
       mxnet::test::quick_test = true;
+    } else if (!strcmp(arg, "--thread-safety-with-cpu")) {
+      mxnet::test::thread_safety_force_cpu = true;
     } else if (!strcmp(arg, "--backtrace")) {
         backtrace_test();
         return 0;

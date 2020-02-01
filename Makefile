@@ -646,6 +646,7 @@ $(BIN) :
 # CPP Package
 ifeq ($(USE_CPP_PACKAGE), 1)
 include cpp-package/cpp-package.mk
+CFLAGS += -DMXNET_USE_CPP_PACKAGE=1
 endif
 
 include mkldnn.mk
