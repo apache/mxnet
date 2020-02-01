@@ -24,7 +24,7 @@ Below 19 random sampling Operators are covered:
 ['random_exponential', 'random_gamma', 'random_generalized_negative_binomial', 'random_negative_binomial',
 'random_normal', 'random_poisson', 'random_randint', 'random_uniform', 'sample_exponential', 'sample_gamma',
 'sample_generalized_negative_binomial', 'sample_multinomial', 'sample_negative_binomial', 'sample_normal',
-'sample_poisson', 'sample_uniform', 'GridGenerator', 'sample_multinomial', 'BilinearSampler']
+'sample_poisson', 'sample_uniform', 'GridGenerator', 'BilinearSampler']
 
 """
 

@@ -22,9 +22,6 @@ import mxnet as mx
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 
-# Operators where parameter have special criteria that cannot be cleanly automated.
-unique_ops = ()
-
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
     """From a given list of operators, filter out all operator names starting with given filters and prepares
@@ -264,9 +261,8 @@ def get_all_random_sampling_operators():
 
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
-        if (op_name.startswith(("random_", "sample_")) or \
-            op_name in additional_random_sampling_ops) and op_name not in unique_ops:
+    for op_name, _ in mx_operators.items():
+        if (op_name.startswith(("random_", "sample_")) or op_name in additional_random_sampling_ops):
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
 
@@ -285,8 +281,7 @@ def get_all_reduction_operators():
     reduction_mx_operators = {}
     for op_name, op_params in mx_operators.items():
         if op_params["params"]["narg"] == 4 and \
-                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])) \
-                and op_name not in unique_ops:
+                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])):
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
 
@@ -307,9 +302,9 @@ def get_all_optimizer_operators():
 
     # Filter for Optimizer operators
     optimizer_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in optimizer_ops and op_name not in unique_ops:
-            optimizer_mx_operators[op_name] = mx_operators[op_name]
+    for op_name, op_params in mx_operators.items():
+         if op_name in optimizer_ops:
+             optimizer_mx_operators[op_name] = mx_operators[op_name]
     return optimizer_mx_operators
 
 def get_all_sorting_searching_operators():
@@ -326,8 +321,8 @@ def get_all_sorting_searching_operators():
 
     # Filter for Sort and search operators
     sort_search_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in sort_search_ops and op_name not in unique_ops:
+    for op_name, op_params in mx_operators.items():
+        if op_name in sort_search_ops:
             sort_search_mx_operators[op_name] = mx_operators[op_name]
     return sort_search_mx_operators
 
@@ -346,8 +341,8 @@ def get_all_rearrange_operators():
 
     # Filter for Array Rearrange operators
     rearrange_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in rearrange_ops and op_name not in unique_ops:
+    for op_name, op_params in mx_operators.items():
+        if op_name in rearrange_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
 
