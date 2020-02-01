@@ -84,6 +84,7 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
                  "transpose_b": True}],
         warmup=warmup, runs=runs, profiler=profiler)
     # Operator khatri_rao is not yet implemented for GPU
+    khatri_rao_benchmark_res = []
     if ctx != mx.gpu():
         # Benchmark tests for khatri_rao operator
         khatri_rao_benchmark_res = run_performance_test(
