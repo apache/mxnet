@@ -1409,6 +1409,7 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     cd tests/nightly/
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
+    ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
     ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
