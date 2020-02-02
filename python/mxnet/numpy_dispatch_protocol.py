@@ -257,6 +257,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'ceil',
     'trunc',
     'floor',
+    'bitwise_and',
     'bitwise_xor',
     'bitwise_or',
     'logical_not',

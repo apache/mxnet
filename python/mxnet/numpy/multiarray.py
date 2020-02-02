@@ -60,13 +60,15 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var',
            'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud',
-           'fliplr', 'around', 'round', 'arctan2', 'hypot', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
+           'fliplr', 'around', 'round', 'arctan2', 'hypot',
+           'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
            'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where',
            'bincount']
 
 __all__ += fallback.__all__
+
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -488,7 +490,6 @@ class ndarray(NDArray):
             _npi.boolean_mask_assign_tensor(data=data, mask=mask, value=value, start_axis=pos, out=data)
         else:
             raise NotImplementedError('type %s is not supported.'%(type(value)))
-
 
     # pylint: disable=too-many-return-statements
     def __getitem__(self, key):
@@ -7096,6 +7097,46 @@ def hypot(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.numpy')
 @wrap_np_binary_func
+def bitwise_and(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise XOR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : ndarray or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : ndarray, optional
+        A location into which the result is stored. If provided, it must have a shape that the
+        inputs broadcast to. If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : ndarray
+        Result.
+
+    Examples
+    --------
+    >>> np.bitwise_and(13, 17)
+    1
+
+    >>> np.bitwise_and(14, 13)
+    12
+    >>> np.bitwise_and(np.array([14,3], dtype='int32'), 13)
+    array([26,  5], dtype=int32)
+
+    >>> np.bitwise_and(np.array([11,7], dtype='int32'), np.array([4,25], dtype='int32'))
+    array([0, 1], dtype=int32)
+    >>> np.bitwise_and(np.array([2,5,255], dtype='int32'), np.array([3,14,16], dtype='int32'))
+    array([ 2,  4, 16], dtype=int32)
+    >>> np.bitwise_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([False,  True])
+    """
+    return _mx_nd_np.bitwise_and(x1, x2, out=out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
 def bitwise_xor(x1, x2, out=None, **kwargs):
     r"""
     Compute the bit-wise XOR of two arrays element-wise.
@@ -7122,10 +7163,10 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     >>> np.bitwise_xor(31, 5)
     26
     >>> np.bitwise_xor(np.array([31,3], dtype=np.int32), 5)
-    array([26,  6])
+    array([26,  6], dtype=int32)
 
     >>> np.bitwise_xor(np.array([31,3], dtype='int32'), np.array([5,6], dtype='int32'))
-    array([26,  5])
+    array([26,  5], dtype=int32)
     >>> np.bitwise_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, False])
     """

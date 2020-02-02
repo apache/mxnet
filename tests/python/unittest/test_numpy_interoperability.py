@@ -1229,6 +1229,18 @@ def _add_workload_bitwise_or():
         OpArgMngr.add_workload('bitwise_or', ones, ones)
 
 
+def _add_workload_bitwise_and():
+    OpArgMngr.add_workload('bitwise_and', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_and', zeros, zeros)
+        OpArgMngr.add_workload('bitwise_and', ones, zeros)
+        OpArgMngr.add_workload('bitwise_and', zeros, ones)
+        OpArgMngr.add_workload('bitwise_and', ones, ones)
+
+
 def _add_workload_bitwise_xor():
     OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=np.bool),
                            np.array([False, True, False, True], dtype=np.bool))
@@ -1816,6 +1828,7 @@ def _prepare_workloads():
     _add_workload_inner()
     _add_workload_hypot()
     _add_workload_lcm()
+    _add_workload_bitwise_and()
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
     _add_workload_ldexp()
