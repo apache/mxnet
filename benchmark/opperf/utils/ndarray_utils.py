@@ -116,7 +116,7 @@ def get_mx_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
     elif isinstance(in_tensor, np.ndarray):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
-    elif isinstance(in_tensor, mx.ndarray):
+    elif isinstance(in_tensor, nd.NDArray):
         tensor = in_tensor.as_in_context(ctx=ctx).astype(dtype=dtype)
     else:
         raise ValueError("Invalid input type for creating input tensor. Input can be tuple() of shape or Numpy Array or"
