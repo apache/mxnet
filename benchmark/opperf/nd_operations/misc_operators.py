@@ -85,6 +85,8 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                                    {"args": [(10000, 10)]}],
                                            warmup=warmup,
                                            runs=runs)
+    # There are currently issus with UpSampling with bilinear interpolation.
+    # track issue here: https://github.com/apache/incubator-mxnet/issues/9138
     upsampling_benchmark = run_performance_test([getattr(MX_OP_MODULE, "UpSampling")],
                                                 run_backward=True,
                                                 dtype=dtype,
