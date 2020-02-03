@@ -65,8 +65,9 @@ DEFAULT_K_ND = [[20, 49]]
 DEFAULT_P_ND = [[0.4, 0.77]]
 DEFAULT_GRID = [(32, 2, 256, 256)]
 DEFAULT_DATA_BILINEAR = [(32, 2, 256, 256)]
-DEFAULT_TRANSFORM_TYPE = ['warp']
-DEFAULT_DATA_GRIDGEN = [(32, 2, 256, 256)]
+DEFAULT_TRANSFORM_TYPE = ['warp', 'affine']
+DEFAULT_DATA_GRIDGEN = [(32, 2, 256, 256), (256, 6)]
+DEFAULT_TARGET_SHAPE = [(256, 6)]
 DEFAULT_DATA_SM = [(32, 32), (64, 64)]
 
 # For reduction operators
@@ -204,6 +205,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "data_bilinearsampler": DEFAULT_DATA_BILINEAR,
                    "transform_type": DEFAULT_TRANSFORM_TYPE,
                    "data_gridgenerator": DEFAULT_DATA_GRIDGEN,
+                   "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE,
                    "data_sample_multinomial": DEFAULT_DATA_SM}
 
 

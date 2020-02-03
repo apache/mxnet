@@ -19,7 +19,7 @@
 1. Operators are automatically fetched from MXNet operator registry.
 2. Default Inputs are generated. See rules/default_params.py. You can override the default values.
 
-Below 19 random sampling Operators are covered:
+Below 18 random sampling Operators are covered:
 
 ['random_exponential', 'random_gamma', 'random_generalized_negative_binomial', 'random_negative_binomial',
 'random_normal', 'random_poisson', 'random_randint', 'random_uniform', 'sample_exponential', 'sample_gamma',

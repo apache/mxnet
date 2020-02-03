@@ -262,7 +262,7 @@ def get_all_random_sampling_operators():
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
     for op_name, _ in mx_operators.items():
-        if (op_name.startswith(("random_", "sample_")) or op_name in additional_random_sampling_ops):
+        if op_name.startswith(("random_", "sample_")) or op_name in additional_random_sampling_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
 
