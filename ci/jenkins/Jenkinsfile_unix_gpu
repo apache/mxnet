@@ -47,11 +47,8 @@ core_logic: {
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_unix_python2_gpu(),
     custom_steps.test_unix_python3_gpu(),
-    custom_steps.test_unix_python2_quantize_gpu(),
     custom_steps.test_unix_python3_quantize_gpu(),
-    custom_steps.test_unix_python2_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
     custom_steps.test_unix_python3_tensorrt_gpu(),

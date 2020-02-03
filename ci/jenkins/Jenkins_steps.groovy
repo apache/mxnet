@@ -44,19 +44,6 @@ mx_lib_cpp_examples_no_tvm_op = 'lib/libmxnet.so, lib/libmxnet.a, build/libcusto
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/cpp-package/example/*'
 
 // Python unittest for CPU
-// Python 2
-def python2_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu', false)
-  }
-}
-
-def python2_ut_cython(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_cpu_cython', false)
-  }
-}
-
 // Python 3
 def python3_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
@@ -79,13 +66,6 @@ def python3_ut_mkldnn(docker_container_name) {
 
 // GPU test has two parts. 1) run unittest on GPU, 2) compare the results on
 // both CPU and GPU
-// Python 2
-def python2_gpu_ut(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python2_gpu', true)
-  }
-}
-
 // Python 3
 def python3_gpu_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
@@ -696,74 +676,6 @@ def test_static_python_gpu() {
   }]
 }
 
-def test_unix_python2_cpu() {
-    return ['Python2: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python2-cpu') {
-          try {
-            utils.unpack_and_init('cpu', mx_lib_cython)
-            python2_ut_cython('ubuntu_cpu')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_cpu_train.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_cpu_quantization.xml')
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python2_gpu() {
-    return ['Python2: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/ut-python2-gpu') {
-          try {
-            utils.unpack_and_init('gpu', mx_lib)
-            python2_gpu_ut('ubuntu_gpu_cu101')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_gpu.xml')
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python2_quantize_gpu() {
-    return ['Python2: Quantize GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/ut-python2-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init('gpu', mx_lib)
-              utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python2_quantization_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python2_quantize_gpu.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python2_mkldnn_gpu() {
-    return ['Python2: MKLDNN-GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/ut-python2-mkldnn-gpu') {
-          try {
-            utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib)
-            python2_gpu_ut('ubuntu_gpu_cu101')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python2_mkldnn_gpu.xml')
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_python3_cpu() {
     return ['Python3: CPU': {
       node(NODE_LINUX_CPU) {
@@ -874,24 +786,6 @@ def test_unix_python3_cpu_no_tvm_op() {
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_no_tvm_op_unittest.xml')
             utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_no_tvm_op_quantization.xml')
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python2_mkldnn_cpu() {
-    return ['Python2: MKLDNN-CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python2-mkldnn-cpu') {
-          try {
-            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib)
-            python2_ut('ubuntu_cpu')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python2_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python2_mkldnn_cpu_train.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python2_mkldnn_cpu_quantization.xml')
           }
         }
       }
@@ -1333,43 +1227,6 @@ def test_centos7_scala_cpu() {
             utils.unpack_and_init('centos7_cpu', mx_lib)
             utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
             utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_windows_python2_cpu() {
-    return ['Python 2: CPU Win':{
-      node(NODE_WINDOWS_CPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-cpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_cpu'
-              powershell 'ci/windows/test_py2_cpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python2_cpu.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
-def test_windows_python2_gpu() {
-    return ['Python 2: GPU Win':{
-      node(NODE_WINDOWS_GPU) {
-        timeout(time: max_time, unit: 'MINUTES') {
-          ws('workspace/ut-python-gpu') {
-            try {
-              utils.init_git_win()
-              unstash 'windows_package_gpu'
-              powershell 'ci/windows/test_py2_gpu.ps1'
-            } finally {
-              utils.collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python2_gpu.xml')
-              utils.collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python2_gpu.xml')
-            }
           }
         }
       }
