@@ -3381,6 +3381,56 @@ def test_np_normal_grad():
 
 @with_seed()
 @use_np
+def test_np_lognormal_grad():
+    class TestLognormalGrad(HybridBlock):
+        def __init__(self, shape):
+            super(TestLognormalGrad, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, mean, sigma):
+            return F.np.random.lognormal(mean, sigma, self._shape)
+
+    param_shape = [
+        [(3, 2), (3, 2)],
+        [(3, 2, 2), (3, 2, 2)],
+        [(3, 4, 5), (4, 1)],
+    ]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
+    for hybridize in [False, True]:
+        for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+            test_lognormal_grad = TestLognormalGrad(out_shape)
+            if hybridize:
+                test_lognormal_grad.hybridize()
+            mean = np.zeros(shape1)
+            mean.attach_grad()
+            sigma = np.ones(shape2)
+            sigma.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_lognormal_grad(mean, sigma)
+            np_out = _np.random.lognormal(mean = mean.asnumpy(), 
+                                            sigma = sigma.asnumpy(), size = out_shape)
+            assert np_out.shape == mx_out.shape
+            mx_out.backward()
+            assert mean.grad.shape == shape1
+            assert sigma.grad.shape == shape2
+            assert_almost_equal(mean.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
+
+    for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+        mx_out = np.random.lognormal(np.zeros(shape1), np.ones(shape2), out_shape)
+        np_out = _np.random.lognormal(np.zeros(shape1).asnumpy(), np.ones(shape2).asnumpy(), out_shape)
+        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
+    def _test_lognormal_exception(sigma):
+        output = np.random.lognormal(sigma=sigma).asnumpy()
+    assertRaises(ValueError, _test_lognormal_exception, -1)
+
+
+@with_seed()
+@use_np
 def test_npx_sample_n():
     def shape_formatter(s):
         if s is None:
