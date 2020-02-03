@@ -119,7 +119,7 @@ def prepare_op_inputs(op, arg_params):
     ops_3d = ['CTCLoss', 'ctc_loss']
 
     # For ops with args that need to change shape/value for different ops
-    custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
+    custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian', 'squeeze']
 
     int_only = ['random_randint']
 
@@ -408,20 +408,40 @@ def get_all_rearrange_operators():
     return rearrange_mx_operators
 
 
-def get_all_indexing_routines():
-    """Gets all indexing routines registered with MXNet.
+def get_all_miscellaneous_operators():
+    """Gets all Miscellaneous operators registered with MXNet.
 
     Returns
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
+    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Miscellaneous operators
+    misc_mx_operators = {}
+    for op_name, _ in mx_operators.items():
+        if op_name in misc_ops:
+            misc_mx_operators[op_name] = mx_operators[op_name]
+    return misc_mx_operators
+
+def get_all_indexing_routines():
+    """Gets all indexing routines registered with MXNet.
+
     # @ChaiBapchya unravel_index errors out on certain inputs
     # tracked here https://github.com/apache/incubator-mxnet/issues/16771
     # @ChaiBapchya scatter_nd errors with core dump
     # tracked here https://github.com/apache/incubator-mxnet/issues/17480
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
     indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
                          'where', 'ravel_multi_index', 'gather_nd', 'pick']
-
+    
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
