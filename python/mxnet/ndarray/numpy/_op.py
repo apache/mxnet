@@ -25,6 +25,7 @@ from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
 from . import _internal as _npi
+from . import _api_internal
 from ..ndarray import NDArray
 
 
@@ -7524,7 +7525,7 @@ def zeros1(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined
     #     ctx = str(current_context())
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
-    return _npi.zeros1(shape, dtype, ctx)
+    return _api_internal.zeros1(shape, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7581,7 +7582,7 @@ def tensordot1(a, b, axes=2):
            [ 4796.,  5162.],
            [ 4928.,  5306.]])
     """
-    return _npi.tensordot_dispatcher(a, b, axes)
+    return _api_internal.tensordot_dispatcher(a, b, axes)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7590,4 +7591,4 @@ def nop(*args):
     nop(*args)
     A dummy function for FFI test.
     """
-    return _npi.nop(*args)
+    return _api_internal.nop(*args)

@@ -15,6 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Namespace for numpy internal ops."""
+"""Namespace for numpy internal api."""
+
+from ..._ffi.function import _init_api
 
 __all__ = []
+
+_init_api("_npi", "mxnet.ndarray.numpy._internal")
