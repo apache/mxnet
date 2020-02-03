@@ -103,6 +103,12 @@ DEFAULT_BLOCK_SIZE = [2, 5]
 DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
 
+# For loss operators
+DEFAULT_DATA_3d = [(1024, 100, 100)]
+DEFAULT_LABEL = [(100,100)]
+DEFAULT_DATA_SMCE = [(1024, 1024)]
+DEFAULT_LABEL_SMCE = [(1024,)]
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "sample": DEFAULT_SAMPLE,
@@ -152,7 +158,11 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "dim1": DEFAULT_DIM_1,
                    "dim2": DEFAULT_DIM_2,
                    "block_size": DEFAULT_BLOCK_SIZE,
-                   "args": DEFAULT_ARGS}
+                   "args": DEFAULT_ARGS,
+                   "data_smce": DEFAULT_DATA_SMCE,
+                   "data_3d": DEFAULT_DATA_3d,
+                   "label_smce": DEFAULT_LABEL_SMCE,
+                   "label": DEFAULT_LABEL}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -164,4 +174,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
-                          "v", "z", "g", "delta", "args"]
+                          "v", "z", "g", "delta", "args", "label"]

@@ -70,16 +70,20 @@ def test_sync_push_pull():
             kv.push('9', arr)
             kv.pull('9', out=val)
             check_diff_to_scalar(val, num)
-            kv.pushpull('10', arr, out=val)
-            check_diff_to_scalar(val, num)
+            vals = [mx.nd.zeros(shape) for j in range(num_gpus)]
+            kv.pushpull('10', arr, out=vals)
+            for v in vals:
+                check_diff_to_scalar(v, num)
 
             big_arr = [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
             big_val = mx.nd.zeros(big_shape)
             kv.push('99', big_arr)
             kv.pull('99', out=big_val)
             check_diff_to_scalar(big_val, num)
-            kv.pushpull('100', big_arr, out=big_val)
-            check_diff_to_scalar(big_val, num)
+            big_vals = [mx.nd.zeros(big_shape) for j in range(num_gpus)]
+            kv.pushpull('100', big_arr, out=big_vals)
+            for bv in big_vals:
+                check_diff_to_scalar(bv, num)
 
     check_default_keys(kv, my_rank, nworker, nrepeat=3)
     print('worker ' + str(my_rank) + ' is done')

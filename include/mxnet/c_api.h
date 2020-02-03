@@ -1366,10 +1366,23 @@ MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
                                  const char** keys,
                                  const char** vals,
                                  CachedOpHandle *out);
+
+/*!
+ * \brief create cached operator, allows to choose thread_safe version
+ * of cachedop
+ */
+MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
+                                 int num_flags,
+                                 const char** keys,
+                                 const char** vals,
+                                 CachedOpHandle *out,
+                                 bool thread_safe DEFAULT(false));
+
 /*!
  * \brief free cached operator
  */
 MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
+
 /*!
  * \brief invoke cached operator
  */
@@ -1378,6 +1391,7 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
                                NDArrayHandle *inputs,
                                int *num_outputs,
                                NDArrayHandle **outputs);
+
 /*!
  * \brief invoke a cached op
  * \param handle the handle to the cached op
@@ -2825,6 +2839,48 @@ MXNET_DLL int MXKVStorePullRowSparseEx(KVStoreHandle handle,
                                        NDArrayHandle* vals,
                                        const NDArrayHandle* row_ids,
                                        int priority);
+
+/*!
+ * \brief broadcast a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcast(KVStoreHandle handle,
+                                 mx_uint vnum,
+                                 const int* vkeys,
+                                 mx_uint onum,
+                                 const int* okeys,
+                                 NDArrayHandle* vals,
+                                 NDArrayHandle* outs,
+                                 int priority);
+/*!
+ * \brief broadcast a list of (key, value) pairs from the kvstore,
+ * where each key is a string
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                                   mx_uint vnum,
+                                   const char** vkeys,
+                                   mx_uint onum,
+                                   const char** okeys,
+                                   NDArrayHandle* vals,
+                                   NDArrayHandle* outs,
+                                   int priority);
 
 /*!
  * \brief push and pull a list of (key, value) pairs from the kvstore
