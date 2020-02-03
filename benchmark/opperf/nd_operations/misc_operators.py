@@ -16,19 +16,19 @@
 # under the License.
 
 """Performance benchmark tests for MXNet NDArray Miscellaneous Operations.
-1. Operators are automatically fetched from MXNet operator registry.
-2. Default Inputs are generated. See rules/default_params.py. You can override the default values.
 
 Below 16 Miscellaneous Operators are covered:
 
-['reset_arrays', ]
+['reset_arrays', 'multi_all_finite', 'multi_sum_sq', 'add_n', 'UpSampling', 'Custom', 'squeeze',
+'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask', 'cast_storage',
+'cumsum', 'fill_element_0index']
 
 """
 
 import mxnet as mx
 
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
-from benchmark.opperf.utils.op_registry_utils import get_all_miscellaneous_operators
+from benchmark.opperf.utils.op_registry_utils import get_remaining_miscellaneous_operators
 
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
@@ -115,8 +115,8 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                             warmup=warmup,
                                             runs=runs)
 
-    # Fetch remaining Random Sampling Operators
-    mx_misc_ops = get_all_miscellaneous_operators()
+    # Fetch remaining Miscellaneous Operators
+    mx_misc_ops = get_remaining_miscellaneous_operators()
     # Run benchmarks
     mx_misc_op_results = run_op_benchmarks(mx_misc_ops, dtype, ctx, profiler, warmup, runs)
     return merge_map_list(array_ops_benchmark + add_n_benchmark + upsampling_benchmark + custom_benchmark + [mx_misc_op_results])

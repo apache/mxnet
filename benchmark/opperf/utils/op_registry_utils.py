@@ -409,8 +409,8 @@ def get_all_rearrange_operators():
     return rearrange_mx_operators
 
 
-def get_all_miscellaneous_operators():
-    """Gets all Miscellaneous operators registered with MXNet.
+def get_remaining_miscellaneous_operators():
+    """Gets remaining Miscellaneous operators registered with MXNet not covered by individual tests.
 
     Returns
     -------
