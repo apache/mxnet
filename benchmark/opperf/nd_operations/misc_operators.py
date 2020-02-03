@@ -76,7 +76,7 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                                warmup=warmup,
                                                runs=runs)
     add_n_benchmark = run_performance_test([getattr(MX_OP_MODULE, "add_n")],
-                                           run_backward=False,
+                                           run_backward=True,
                                            dtype=dtype,
                                            ctx=ctx,
                                            profiler=profiler,
@@ -86,7 +86,7 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                            warmup=warmup,
                                            runs=runs)
     upsampling_benchmark = run_performance_test([getattr(MX_OP_MODULE, "UpSampling")],
-                                                run_backward=False,
+                                                run_backward=True,
                                                 dtype=dtype,
                                                 ctx=ctx,
                                                 profiler=profiler,
@@ -102,7 +102,7 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     c = CustomAddOneProp()
     c.create_operator(ctx, [(1024,1024)], [dtype])
     custom_benchmark = run_performance_test([getattr(MX_OP_MODULE, "Custom")],
-                                            run_backward=False,
+                                            run_backward=True,
                                             dtype=dtype,
                                             ctx=ctx,
                                             profiler=profiler,
