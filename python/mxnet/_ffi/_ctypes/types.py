@@ -19,9 +19,6 @@
 from __future__ import absolute_import as _abs
 
 import ctypes
-import struct
-from ..base import check_call, _LIB
-from ..runtime_ctypes import TypeCode
 from ...base import NDArrayHandle
 from ... import _global_var
 

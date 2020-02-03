@@ -22,31 +22,8 @@ Common runtime ctypes.
 from __future__ import absolute_import
 
 import ctypes
-import json
-import numpy as np
-
-
-class TypeCode(object):
-    """Type code used in API calls"""
-    INT = 0
-    UINT = 1
-    FLOAT = 2
-    HANDLE = 3
-    NULL = 4
-    TVM_TYPE = 5
-    TVM_CONTEXT = 6
-    ARRAY_HANDLE = 7
-    OBJECT_HANDLE = 8
-    MODULE_HANDLE = 9
-    FUNC_HANDLE = 10
-    STR = 11
-    BYTES = 12
-    NDARRAY_CONTAINER = 13
-    EXT_BEGIN = 15
-
 
 class TVMByteArray(ctypes.Structure):
     """Temp data structure for byte array."""
     _fields_ = [("data", ctypes.POINTER(ctypes.c_byte)),
                 ("size", ctypes.c_size_t)]
-

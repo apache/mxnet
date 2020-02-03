@@ -23,10 +23,8 @@ Base library for MXNet FFI.
 from __future__ import absolute_import
 
 import sys
-import os
 import ctypes
 import numpy as np
-
 from ..base import _LIB, check_call
 
 if sys.version_info[0] == 3:

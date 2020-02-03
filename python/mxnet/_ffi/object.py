@@ -18,15 +18,10 @@
 """Runtime Object API"""
 from __future__ import absolute_import
 
-import sys
-import ctypes
-from .base import check_call, _LIB
-
 from ._ctypes.function import _set_class_object
 from ._ctypes.object import ObjectBase as _ObjectBase
 
 class Object(_ObjectBase):
     """Base class for all mxnet's runtime objects."""
-    pass
 
 _set_class_object(Object)

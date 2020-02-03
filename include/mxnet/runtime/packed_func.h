@@ -25,7 +25,6 @@
 #ifndef MXNET_RUNTIME_PACKED_FUNC_H_
 #define MXNET_RUNTIME_PACKED_FUNC_H_
 
-#include <sstream>
 #include <dmlc/logging.h>
 #include <mxnet/runtime/c_runtime_api.h>
 #include <mxnet/runtime/object.h>
@@ -45,6 +44,7 @@
 #include <memory>
 #include <utility>
 #include <type_traits>
+#include <sstream>
 
 namespace mxnet {
 // forward declarations

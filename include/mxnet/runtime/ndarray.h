@@ -40,6 +40,6 @@ struct array_type_info {
   static const int code = -1;
 };
 
-}  // namespace mxnet
 }  // namespace runtime
+}  // namespace mxnet
 #endif  // MXNET_RUNTIME_NDARRAY_H_

@@ -82,7 +82,7 @@ int64_t inline SliceNoneValue() {
 }
 
 class IntegerObj: public Object {
-public:
+ public:
   int64_t value;
   static constexpr const uint32_t _type_index = TypeIndex::kInteger;
   static constexpr const char* _type_key = "vm.Integer";
@@ -90,7 +90,7 @@ public:
 };
 
 class Integer: public ObjectRef {
-public:
+ public:
   explicit Integer(int64_t value,
                    ObjectPtr<IntegerObj>&& data = make_object<IntegerObj>()) {
     data->value = value;

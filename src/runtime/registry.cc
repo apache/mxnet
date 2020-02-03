@@ -25,11 +25,11 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <mxnet/runtime/registry.h>
-#include "../c_api/c_api_common.h"
 #include <unordered_map>
 #include <mutex>
 #include <memory>
 #include <array>
+#include "../c_api/c_api_common.h"
 
 namespace mxnet {
 namespace runtime {
