@@ -222,15 +222,17 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
-    mean : float or array_like of floats, optional
+    mean : float, optional
         Mean value of the underlying normal distribution. Default is 0.
-    sigma : float or array_like of floats, optional
+    sigma : float, optional
         Standard deviation of the underlying normal distribution. Must be
         non-negative. Default is 1.
     size : int or tuple of ints, optional
@@ -242,12 +244,11 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Data type of output samples. Default is 'float32'
     ctx : Context, optional
         Device context of output. Default is current context.
-    out : ``ndarray``, optional
-        Store output to an existing ``ndarray``.
+
     Returns
     -------
-    out : ndarray or scalar
-        Drawn samples from the parameterized log-normal distribution.
+    out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
+        Drawn samples from the parameterized lognormal distribution.
     """
     from . import _symbol as _mx_np_symbol
     return _mx_np_symbol.exp(normal(loc=mean, scale=sigma, size=size, dtype=dtype, ctx=ctx, out=out))
@@ -261,9 +262,9 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
 
     Parameters
     ----------
-    loc : float or array_like of floats, optional
+    loc : float, optional
         Parameter of the distribution. Default is 0.
-    scale : float or array_like of floats, optional
+    scale : float, optional
         Parameter of the distribution. Must be non-negative.
         Default is 1.
     size : int or tuple of ints, optional
@@ -271,10 +272,12 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``loc`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
 
     Returns
     -------
-    out : ndarray or scalar
+    out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
         Drawn samples from the parameterized logistic distribution.
     """
     from ._symbol import _Symbol as np_symbol
@@ -300,10 +303,6 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
 def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a Gumbel distribution.
 
-    Draw samples from a Gumbel distribution with specified location and
-    scale.  For more information on the Gumbel distribution, see
-    Notes and References below.
-
     Parameters
     ----------
     loc : float or array_like of floats, optional
@@ -316,11 +315,13 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``loc`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
 
     Returns
     -------
-    out : ndarray or scalar
-        Drawn samples from the parameterized Gumbel distribution.
+    out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
+        Drawn samples from the parameterized gumbel distribution.
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
@@ -616,10 +617,12 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
 
     Returns
     -------
-    out : ndarray or scalar
+    out : _Symbol (symbol representing `mxnet.numpy.ndarray` in computational graphs)
         Drawn samples from the parameterized exponential distribution.
     """
     from ..numpy import _Symbol as np_symbol

@@ -205,10 +205,12 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
     mean : float or array_like of floats, optional
@@ -227,10 +229,12 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized log-normal distribution.
+
     Notes
     -----
     A variable `x` has a log-normal distribution if `log(x)` is normally
@@ -245,6 +249,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     the same way that a normal distribution results if the variable is the
     *sum* of a large number of independent, identically-distributed
     variables.
+
     References
     ----------
     .. [1] Limpert, E., Stahel, W. A., and Abbt, M., "Log-normal
@@ -253,6 +258,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
     .. [2] Reiss, R.D. and Thomas, M., "Statistical Analysis of Extreme
         Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
+
     Examples
     --------
     Draw samples from the distribution:
@@ -280,36 +286,15 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``loc`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized logistic distribution.
-
-    Notes
-    -----
-    The probability density for the Logistic distribution is
-
-    .. math:: P(x) = P(x) = \frac{e^{-(x-\mu)/s}}{s(1+e^{-(x-\mu)/s})^2},
-
-    where :math:`\mu` = location and :math:`s` = scale.
-
-    The Logistic distribution is used in Extreme Value problems where it
-    can act as a mixture of Gumbel distributions, in Epidemiology, and by
-    the World Chess Federation (FIDE) where it is used in the Elo ranking
-    system, assuming the performance of each player is a logistically
-    distributed random variable.
-
-    References
-    ----------
-    .. [1] Reiss, R.-D. and Thomas M. (2001), "Statistical Analysis of
-        Extreme Values, from Insurance, Finance, Hydrology and Other
-        Fields," Birkhauser Verlag, Basel, pp 132-133.
-    .. [2] Weisstein, Eric W. "Logistic Distribution." From
-        MathWorld--A Wolfram Web Resource.
-        http://mathworld.wolfram.com/LogisticDistribution.html
-    .. [3] Wikipedia, "Logistic-distribution",
-        https://en.wikipedia.org/wiki/Logistic_distribution
 
     Examples
     --------
@@ -335,8 +320,7 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a Gumbel distribution.
 
     Draw samples from a Gumbel distribution with specified location and
-    scale.  For more information on the Gumbel distribution, see
-    Notes and References below.
+    scale.
 
     Parameters
     ----------
@@ -350,51 +334,15 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``loc`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized Gumbel distribution.
-
-    Notes
-    -----
-    The Gumbel (or Smallest Extreme Value (SEV) or the Smallest Extreme
-    Value Type I) distribution is one of a class of Generalized Extreme
-    Value (GEV) distributions used in modeling extreme value problems.
-    The Gumbel is a special case of the Extreme Value Type I distribution
-    for maximums from distributions with "exponential-like" tails.
-
-    The probability density for the Gumbel distribution is
-
-    .. math:: p(x) = \frac{e^{-(x - \mu)/ \beta}}{\beta} e^{ -e^{-(x - \mu)/
-            \beta}},
-
-    where :math:`\mu` is the mode, a location parameter, and
-    :math:`\beta` is the scale parameter.
-
-    The Gumbel (named for German mathematician Emil Julius Gumbel) was used
-    very early in the hydrology literature, for modeling the occurrence of
-    flood events. It is also used for modeling maximum wind speed and
-    rainfall rates.  It is a "fat-tailed" distribution - the probability of
-    an event in the tail of the distribution is larger than if one used a
-    Gaussian, hence the surprisingly frequent occurrence of 100-year
-    floods. Floods were initially modeled as a Gaussian process, which
-    underestimated the frequency of extreme events.
-
-    It is one of a class of extreme value distributions, the Generalized
-    Extreme Value (GEV) distributions, which also includes the Weibull and
-    Frechet.
-
-    The function has a mean of :math:`\mu + 0.57721\beta` and a variance
-    of :math:`\frac{\pi^2}{6}\beta^2`.
-
-    References
-    ----------
-    .. [1] Gumbel, E. J., "Statistics of Extremes,"
-        New York: Columbia University Press, 1958.
-    .. [2] Reiss, R.-D. and Thomas, M., "Statistical Analysis of Extreme
-        Values from Insurance, Finance, Hydrology and Other Fields,"
-        Basel: Birkhauser Verlag, 2001.
 
     Examples
     --------
@@ -651,6 +599,10 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------

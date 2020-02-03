@@ -197,10 +197,12 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
     mean : float or array_like of floats, optional
@@ -219,6 +221,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -246,6 +249,10 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``loc`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -276,8 +283,7 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a Gumbel distribution.
 
     Draw samples from a Gumbel distribution with specified location and
-    scale.  For more information on the Gumbel distribution, see
-    Notes and References below.
+    scale.
 
     Parameters
     ----------
@@ -291,6 +297,10 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``loc`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -526,6 +536,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
+
     Parameters
     ----------
     scale : float or array_like of floats
@@ -536,6 +547,11 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
