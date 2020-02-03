@@ -481,7 +481,7 @@ def get_all_miscellaneous_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask']
+    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask', 'cast_storage', 'cumsum', 'fill_element_0index']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
