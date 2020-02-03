@@ -37,7 +37,6 @@ namespace mxnet {
 namespace op {
 
 struct IntgemmFullyConnectedParam : public dmlc::Parameter<IntgemmFullyConnectedParam> {
-  float out_float_multiplier;
   int out_type;
   int num_hidden;
   bool no_bias;
