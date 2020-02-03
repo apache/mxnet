@@ -314,6 +314,10 @@ if(USE_MKLDNN)
   set(INSTALL_MKLDNN ON)
 endif()
 
+if(USE_CPP_PACKAGE)
+    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
+endif()
+
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -853,7 +857,6 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
-add_subdirectory(tests)
 
 include(GNUInstallDirs)
 install(TARGETS ${MXNET_INSTALL_TARGETS}
@@ -915,6 +918,7 @@ endif()
 if(BUILD_CPP_EXAMPLES)
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
+add_subdirectory(tests)
 
 # ---[ Linter target
 if(MSVC)
@@ -927,7 +931,6 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
-  add_cython_modules(2) # Build cython module for python2 if python2 is found
   add_cython_modules(3) # Build cython module for python3 if python3 is found
   if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
     message(FATAL_ERROR "No python interpreter found to build cython modules")

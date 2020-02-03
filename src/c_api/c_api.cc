@@ -1868,6 +1868,58 @@ int MXKVStorePullEx(KVStoreHandle handle,
   API_END();
 }
 
+int MXKVStoreBroadcast(KVStoreHandle handle,
+                       mx_uint vnum,
+                       const int* vkeys,
+                       mx_uint onum,
+                       const int* okeys,
+                       NDArrayHandle* vals,
+                       NDArrayHandle* outs,
+                       int priority) {
+  API_BEGIN();
+  std::vector<int> v_vkeys(vnum);
+  std::vector<int> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
+  API_END();
+}
+
+int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                         mx_uint vnum,
+                         const char** vkeys,
+                         mx_uint onum,
+                         const char** okeys,
+                         NDArrayHandle* vals,
+                         NDArrayHandle* outs,
+                         int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_vkeys(vnum);
+  std::vector<std::string> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
+  API_END();
+}
+
 int MXKVStorePushPull(KVStoreHandle handle,
                       mx_uint vnum,
                       const int* vkeys,
