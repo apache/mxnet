@@ -964,15 +964,14 @@ class HybridBlock(Block):
                     if name in data_names.keys():
                         arg_array.append(args[data_names[name]])
                     else:
-                        arg_array.append(params.get(name).data())
-            # Exceptions are thrown, because the params are not initialized.
-            # In this case, we don't care and will just not use the params.
-            except DeferredInitializationError:
-                self._deferred_infer_shape(*args)
-                arg_array = None
-                if not hasattr(self,OPTIMIZE_FOR_DEFERRED):
-                    self.OPTIMIZE_FOR_DEFERRED = True
-                    print('Warning: cannot gather params when calling optimize_for for backend "%s"' % self._backend)
+                        p = params.get(name)
+                        # check if param is already initialized
+                        if p._data:
+                            arg_array.append(params.get(name).data())
+                        else:
+                            # if not initialized, partition without inferring shapes/types
+                            arg_array = None
+                            break
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
 
