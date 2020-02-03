@@ -24,7 +24,6 @@
  * The only difference from Quantize/QuantizeV2 is that it bans -128.
  */
 
-#include "prepare_op-common.h"
 #include <mxnet/operator_util.h>
 #include <vector>
 #include "../../mshadow_op.h"
@@ -37,12 +36,54 @@
 namespace mxnet {
 namespace op {
 
+bool PrepareDataOpShape(const nnvm::NodeAttrs& attrs,
+                    mxnet::ShapeVector* in_attrs,
+                    mxnet::ShapeVector* out_attrs) {
+  // data and maximum
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
+  SHAPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
+
+  SHAPE_ASSIGN_CHECK(*in_attrs, 1, mxnet::TShape(1, 1));
+
+  return shape_is_known(out_attrs->at(0));
+}
+
+bool PrepareDataOpType(const nnvm::NodeAttrs& attrs,
+                   std::vector<int>* in_attrs,
+                   std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  // This routine converts from float to int8 with a scaling factor
+  TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kFloat32);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
+  return true;
+}
+
+bool PrepareDataOpStorageType(const nnvm::NodeAttrs& attrs,
+                          const int dev_mask,
+                          DispatchMode* dispatch_mode,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  STORAGE_TYPE_ASSIGN_CHECK(*out_attrs, 0, kDefaultStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, 0, kDefaultStorage);
+  STORAGE_TYPE_ASSIGN_CHECK(*in_attrs, 1, kDefaultStorage);
+  DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+  return true;
+}
+
 void PrepareDataOpForwardCPU(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<TBlob>& outputs) {
-  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   CHECK_EQ(req[0], kWriteTo) << "intgemm only overwrites";
@@ -57,8 +98,8 @@ void PrepareDataOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   const float *A = in.dptr<float>();
   int8_t *quantA = out.dptr<int8_t>();
-  const PrepareParam& param = nnvm::get<PrepareParam>(attrs.parsed);
-  ::intgemm::Int8::Quantize(A, quantA, param.multiplier, size);
+  const float multiplier = 127.0 / *inputs[1].dptr<float>();
+  ::intgemm::Int8::Quantize(A, quantA, multiplier, size);
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_prepare_data)
@@ -66,24 +107,23 @@ NNVM_REGISTER_OP(_contrib_intgemm_prepare_data)
 
 It it suitable for preparing an data matrix for use by intgemm's C=data * weights operation.
 
-The float32 values are multiplied by the provided multiplier before casting to int8.  Typically this is 127.0 / maxabsolute(A).
+The float32 values are scaled such that maxabs maps to 127. Typically maxabs = maxabsolute(A).
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<PrepareParam>)
-.set_num_inputs(1)
+.set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"data"};
+    return std::vector<std::string>{"data", "maxabs"};
   })
-.set_attr<mxnet::FInferShape>("FInferShape", PrepareOpShape)
-.set_attr<nnvm::FInferType>("FInferType", PrepareOpType)
-.set_attr<FInferStorageType>("FInferStorageType", PrepareOpStorageType)
+.set_attr<mxnet::FInferShape>("FInferShape", PrepareDataOpShape)
+.set_attr<nnvm::FInferType>("FInferType", PrepareDataOpType)
+.set_attr<FInferStorageType>("FInferStorageType", PrepareDataOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", PrepareDataOpForwardCPU)
 .add_argument("data", "NDArray-or-Symbol", "Activation matrix to be prepared for multiplication.")
+.add_argument("maxabs", "NDArray-or-Symbol", "Maximum absolute value to be used for scaling.  (The values will be multiplied by 127.0 / maxabs.")
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
 // will be reverted after the improvement of CachedOP is done.
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_arguments(PrepareParam::__FIELDS__());
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet
