@@ -6955,8 +6955,8 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
-# TODO (lnyuan): Temporarily disable cudnn in tests due to flaky test issue
-# https://github.com/apache/incubator-mxnet/issues/14288
+## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
+## tracked at https://github.com/apache/incubator-mxnet/issues/14288
 @with_seed()
 def test_dropout():
     def zero_count(array, ratio):

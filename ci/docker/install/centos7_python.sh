@@ -28,8 +28,5 @@ yum -y install python36u
 
 # Install PIP
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-python2.7 get-pip.py
 python3.6 get-pip.py
-
-pip2 install nose pylint numpy nose-timer requests h5py scipy==1.0.1
-pip3 install nose pylint numpy nose-timer requests h5py scipy==1.0.1
+pip3 install nose pylint numpy nose-timer requests h5py scipy==1.2.3
