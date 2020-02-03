@@ -119,7 +119,8 @@ def prepare_op_inputs(op, arg_params):
     ops_3d = ['CTCLoss', 'ctc_loss']
 
     # For ops with args that need to change shape/value for different ops
-    custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian', 'squeeze']
+    custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator',
+                   'sample_multinomial', 'linalg_maketrian', 'squeeze', 'fill_element_0index']
 
     int_only = ['random_randint']
 
@@ -415,7 +416,7 @@ def get_all_miscellaneous_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask']
+    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask', 'cast_storage', 'cumsum', 'fill_element_0index']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()

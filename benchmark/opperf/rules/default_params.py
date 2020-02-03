@@ -125,6 +125,11 @@ DEFAULT_WSS = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_GSS = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_WDS = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_ETA = [.5]
+DEFAULT_STYPE = ['default', 'csr', 'row_sparse']
+DEFAULT_A = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_MHS = [(1024,), (10000,), (10000,)]
+DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
@@ -257,7 +262,12 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "grads_sum_sq": DEFAULT_GSS,
                    "wds": DEFAULT_WDS,
                    "eta": DEFAULT_ETA,
-                   "eps": DEFAULT_EPSILON}
+                   "eps": DEFAULT_EPSILON,
+                   "stype": DEFAULT_STYPE,
+                   "a": DEFAULT_A,
+                   "lhs_fill_element_0index": DEFAULT_LHS_FEI,
+                   "rhs_fill_element_0index": DEFAULT_RHS_FEI,
+                   "mhs": DEFAULT_MHS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.

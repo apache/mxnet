@@ -34,6 +34,8 @@ from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
+from benchmark.opperf.custom_operations.custom_operations import CustomAddOneProp
+
 
 def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the miscellaneous
@@ -58,14 +60,29 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
 
     """
     # Individual tests for ops with positional args
-    reset_arrays_benchmark = run_performance_test([getattr(MX_OP_MODULE, "reset_arrays")],
+    array_ops_benchmark = run_performance_test([getattr(MX_OP_MODULE, "reset_arrays"),
+                                                   getattr(MX_OP_MODULE, "multi_all_finite"),
+                                                   getattr(MX_OP_MODULE, "multi_sum_sq")],
                                             run_backward=False,
                                             dtype=dtype,
                                             ctx=ctx,
                                             profiler=profiler,
                                             inputs=[{"args": [(1024, 1024)],
-                                                     "num_arrays": 1}
-                                                    ],
+                                                     "num_arrays": 1},
+                                                    {"args": [(10000, 1)],
+                                                     "num_arrays": 1},
+                                                    {"args": [(10000, 10)],
+                                                     "num_arrays": 1}],
+                                            warmup=warmup,
+                                            runs=runs)
+    add_n_benchmark = run_performance_test([getattr(MX_OP_MODULE, "add_n")],
+                                            run_backward=False,
+                                            dtype=dtype,
+                                            ctx=ctx,
+                                            profiler=profiler,
+                                            inputs=[{"args": [(1024, 1024)]},
+                                                    {"args": [(10000, 1)]},
+                                                    {"args": [(10000, 10)]}],
                                             warmup=warmup,
                                             runs=runs)
     upsampling_benchmark = run_performance_test([getattr(MX_OP_MODULE, "UpSampling")],
@@ -75,8 +92,26 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                             profiler=profiler,
                                             inputs=[{"args": (32, 3, 256, 256),
                                                      "scale": 2,
-                                                     "sample_type": "nearest"}
-                                                    ],
+                                                     "sample_type": "nearest"},
+                                                    {"args": (32, 3, 10000, 1),
+                                                     "scale": 4,
+                                                     "sample_type": "nearest"}],
+                                            warmup=warmup,
+                                            runs=runs)
+    # Create and register CustomAddOne operator for use in Custom op testing
+    c = CustomAddOneProp()
+    c.create_operator(ctx, [(1024,1024)], [dtype])
+    custom_benchmark = run_performance_test([getattr(MX_OP_MODULE, "Custom")],
+                                            run_backward=False,
+                                            dtype=dtype,
+                                            ctx=ctx,
+                                            profiler=profiler,
+                                            inputs=[{"args": [(1024, 1024)],
+                                                     "op_type": "CustomAddOne"},
+                                                    {"args": [(10000, 1)],
+                                                     "op_type": "CustomAddOne"},
+                                                    {"args": [(10000, 10)],
+                                                     "op_type": "CustomAddOne"}],
                                             warmup=warmup,
                                             runs=runs)
 
@@ -84,4 +119,4 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     mx_misc_ops = get_all_miscellaneous_operators()
     # Run benchmarks
     mx_misc_op_results = run_op_benchmarks(mx_misc_ops, dtype, ctx, profiler, warmup, runs)
-    return merge_map_list(reset_arrays_benchmark + upsampling_benchmark + [mx_misc_op_results])
+    return merge_map_list(array_ops_benchmark + add_n_benchmark + upsampling_benchmark + custom_benchmark + [mx_misc_op_results])
