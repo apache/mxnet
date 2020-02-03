@@ -25,7 +25,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_indexing_routines
 2. slice_axis
 3. slice_like
 4. take
-5. pick [to do]
+5. pick
 6. where
 7. ravel_multi_index
 8. unravel_index [to do]

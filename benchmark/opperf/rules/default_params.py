@@ -104,7 +104,7 @@ DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
 
 # For indexing routines
-DEFAULT_INDEX = [(1024,1), (10000,1), (10000,1)]
+DEFAULT_INDEX = [(1,1024), (1,1), (1,100)]
 DEFAULT_INDICES = [(1, 1)]
 DEFAULT_BEGIN = [0] # slice_axis expects int, slice can have tuple/int
 DEFAULT_END =[1] # same as above
@@ -116,7 +116,7 @@ DEFAULT_DEPTH = [0]
 # For ravel_multi_index op, ndim(shape) = 2; hence data NDArray's first dim = 2
 # First dimension of input of ravel operator should match shape parameter dimension
 # DEFAULT_SHAPE is reused for ravel_multi_index op
-RAVEL_DATA = [(2,1024)]
+RAVEL_DATA = [(2, 1024)]
 
 # For loss operators
 DEFAULT_DATA_3d = [(1024, 100, 100)]

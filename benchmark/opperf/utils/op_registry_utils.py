@@ -336,11 +336,11 @@ def get_all_indexing_routines():
     # @ChaiBapchya scatter_nd errors with core dump
     # tracked here https://github.com/apache/incubator-mxnet/issues/17480
     indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
-                         'where', 'ravel_multi_index', 'gather_nd']
-    
+                         'where', 'ravel_multi_index', 'gather_nd', 'pick']
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
-    
+
     # Filter for Indexing routines
     indexing_mx_routines = {}
     for op_name, _ in mx_operators.items():

@@ -26,9 +26,7 @@ from .op_registry_utils import prepare_op_inputs
 from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
 from .profiler_utils import cpp_profile, python_profile
 
-no_backward = ['gather_nd']
-
-no_backward = ['softmax_cross_entropy']
+no_backward = ['gather_nd', 'softmax_cross_entropy']
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     mx.random.seed(41)
@@ -38,9 +36,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key == 'index':
-                kwargs[key] = nd.array([1, 0], ctx=ctx, dtype=dtype)
-            elif key in PARAMS_OF_TYPE_NDARRAY and key=='args':
+            if key in PARAMS_OF_TYPE_NDARRAY and key=='args':
                 args_list.append(get_mx_ndarray(ctx=ctx, in_tensor=value,
                                                 dtype=dtype,
                                                 initializer=nd.normal,
