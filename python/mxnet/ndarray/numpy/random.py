@@ -24,7 +24,7 @@ from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", 'gamma', 'beta', 'exponential', 'weibull']
+           "shuffle", 'gamma', 'beta', 'exponential', 'lognormal', 'weibull']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -192,6 +192,39 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     else:
         return _npi.normal(loc=loc, scale=scale, size=size,
                            ctx=ctx, dtype=dtype, out=out)
+
+
+def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw samples from a log-normal distribution.
+    Draw samples from a log-normal distribution with specified mean,
+    standard deviation, and array shape.  Note that the mean and standard
+    deviation are not the values for the distribution itself, but of the
+    underlying normal distribution it is derived from.
+    Parameters
+    ----------
+    mean : float or array_like of floats, optional
+        Mean value of the underlying normal distribution. Default is 0.
+    sigma : float or array_like of floats, optional
+        Standard deviation of the underlying normal distribution. Must be
+        non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``mean`` and ``sigma`` are both scalars.
+        Otherwise, ``np.broadcast(mean, sigma).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized log-normal distribution.
+    """
+    from . import _op as _mx_np_op
+    return _mx_np_op.exp(normal(loc=mean, scale=sigma, size=size, dtype=dtype, ctx=ctx, out=out))
 
 
 def multinomial(n, pvals, size=None):

@@ -17,21 +17,20 @@
 
 import mxnet as mx
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
-from benchmark.opperf.utils.op_registry_utils import get_all_rearrange_operators
+from benchmark.opperf.utils.op_registry_utils import get_all_loss_operators
 
-"""Performance benchmark tests for MXNet NDArray Rearrange Operators.
+"""Performance benchmark tests for MXNet Neural Network Loss Operators
 
-1. transpose
-2. swapaxes
-3. flip
-4. depth_to_space
-5. space_to_depth
+1. smooth_l1
+2. CTCLoss
+3. MakeLoss
+4. softmax_cross_entropy
 """
 
 
-def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_loss_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
-    rearrange operators in MXNet.
+    Neural Network loss operators in MXNet.
 
     Parameters
     ----------
@@ -39,6 +38,8 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
+    profiler: str, default 'native'
+        Type of Profiler to use (native/python)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -49,9 +50,9 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Fetch all array rerrange operators
-    mx_rearrange_ops = get_all_rearrange_operators()
+    # Fetch all loss operators
+    mx_loss_ops = get_all_loss_operators()
 
     # Run benchmarks
-    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, warmup, runs)
-    return mx_rearrange_op_results
+    mx_loss_op_results = run_op_benchmarks(mx_loss_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_loss_op_results
