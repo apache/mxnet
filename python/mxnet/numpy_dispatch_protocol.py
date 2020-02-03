@@ -174,6 +174,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'shares_memory',
     'may_share_memory',
     'quantile',
+    'median',
     'percentile',
     'diff',
     'ediff1d',
