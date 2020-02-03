@@ -22,7 +22,7 @@ from ..ndarray import numpy as _mx_nd_np
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", "randn", "gamma", "exponential"]
+           "shuffle", "randn", "gamma", 'beta', "exponential", "lognormal"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -199,6 +199,65 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     array(True)
     """
     return _mx_nd_np.random.normal(loc, scale, size, dtype, ctx, out)
+
+
+def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw samples from a log-normal distribution.
+    Draw samples from a log-normal distribution with specified mean,
+    standard deviation, and array shape.  Note that the mean and standard
+    deviation are not the values for the distribution itself, but of the
+    underlying normal distribution it is derived from.
+    Parameters
+    ----------
+    mean : float or array_like of floats, optional
+        Mean value of the underlying normal distribution. Default is 0.
+    sigma : float or array_like of floats, optional
+        Standard deviation of the underlying normal distribution. Must be
+        non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``mean`` and ``sigma`` are both scalars.
+        Otherwise, ``np.broadcast(mean, sigma).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized log-normal distribution.
+    Notes
+    -----
+    A variable `x` has a log-normal distribution if `log(x)` is normally
+    distributed.  The probability density function for the log-normal
+    distribution is:
+    .. math:: p(x) = \frac{1}{\sigma x \sqrt{2\pi}}
+                    e^{(-\frac{(ln(x)-\mu)^2}{2\sigma^2})}
+    where :math:`\mu` is the mean and :math:`\sigma` is the standard
+    deviation of the normally distributed logarithm of the variable.
+    A log-normal distribution results if a random variable is the *product*
+    of a large number of independent, identically-distributed variables in
+    the same way that a normal distribution results if the variable is the
+    *sum* of a large number of independent, identically-distributed
+    variables.
+    References
+    ----------
+    .. [1] Limpert, E., Stahel, W. A., and Abbt, M., "Log-normal
+        Distributions across the Sciences: Keys and Clues,"
+        BioScience, Vol. 51, No. 5, May, 2001.
+        https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
+    .. [2] Reiss, R.D. and Thomas, M., "Statistical Analysis of Extreme
+        Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
+    Examples
+    --------
+    Draw samples from the distribution:
+    >>> mu, sigma = 3., 1. # mean and standard deviation
+    >>> s = np.random.lognormal(mu, sigma, 1000)
+    """
+    return _mx_nd_np.random.lognormal(mean, sigma, size, dtype, ctx, out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
@@ -493,6 +552,53 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     waiting times between Poisson distributed events are relevant.
     """
     return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
+
+
+def beta(a, b, size=None, dtype=None, ctx=None):
+    r"""Draw samples from a Beta distribution.
+
+    The Beta distribution is a special case of the Dirichlet distribution,
+    and is related to the Gamma distribution.  It has the probability
+    distribution function
+
+    .. math:: f(x; a,b) = \frac{1}{B(\alpha, \beta)} x^{\alpha - 1}
+                                                     (1 - x)^{\beta - 1},
+
+    where the normalisation, B, is the beta function,
+
+    .. math:: B(\alpha, \beta) = \int_0^1 t^{\alpha - 1}
+                                 (1 - t)^{\beta - 1} dt.
+
+    It is often seen in Bayesian inference and order statistics.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, positive (>0).
+    b : float or array_like of floats
+        Beta, positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Notes
+    -------
+    To use this  operator with scalars as input, please run ``npx.set_np()`` first.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution.
+    """
+    return _mx_nd_np.random.beta(a, b, size=size, dtype=dtype, ctx=ctx)
 
 
 def randn(*size, **kwargs):
