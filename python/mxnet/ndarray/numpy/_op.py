@@ -84,7 +84,7 @@ def shape(a):
 
 
 @set_module('mxnet.ndarray.numpy')
-def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -112,9 +112,10 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=red
     if order != 'C':
         raise NotImplementedError
     if ctx is None:
-        ctx = current_context()
-    dtype = _np.float32 if dtype is None else dtype
-    return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype)
+        ctx = str(current_context())
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.zeros1(shape, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
