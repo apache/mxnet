@@ -119,6 +119,9 @@ def prepare_op_inputs(op, arg_params):
     # 4d tensor is needed only by following two ops
     ops_4d = ['depth_to_space', 'space_to_depth']
 
+    # 3d tensor is needed by following ops
+    ops_3d = ['CTCLoss', 'ctc_loss']
+
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
@@ -129,6 +132,10 @@ def prepare_op_inputs(op, arg_params):
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
         elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
+        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
+        elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
         elif arg_name in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
@@ -330,16 +337,36 @@ def get_all_indexing_routines():
     # tracked here https://github.com/apache/incubator-mxnet/issues/17480
     indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
                          'where', 'ravel_multi_index', 'gather_nd']
-
+    
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
-
+    
     # Filter for Indexing routines
     indexing_mx_routines = {}
     for op_name, _ in mx_operators.items():
         if op_name in indexing_routines and op_name not in unique_ops:
             indexing_mx_routines[op_name] = mx_operators[op_name]
     return indexing_mx_routines
+
+
+def get_all_loss_operators():
+    """Gets all Neural Network loss operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    loss_ops = ['smooth_l1', 'CTCLoss', 'ctc_loss', 'MakeLoss', 'softmax_cross_entropy']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for NN Loss operators
+    loss_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in loss_ops and op_name not in unique_ops:
+            loss_mx_operators[op_name] = mx_operators[op_name]
+    return loss_mx_operators
 
 
 def get_operators_with_no_benchmark(operators_with_benchmark):

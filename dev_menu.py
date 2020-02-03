@@ -67,7 +67,7 @@ class CMake(object):
     def read_config(self):
         assert os.path.isfile(self.cmake_options_yaml)
         with open(self.cmake_options_yaml, 'r') as f:
-            self.cmake_options = yaml.load(f)
+            self.cmake_options = yaml.safe_load(f)
 
     def _cmdlineflags(self):
         res = []
