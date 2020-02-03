@@ -75,7 +75,7 @@ inline std::vector<NDArray*> Invoke(const nnvm::Op* op,
   return ndoutputs;
 }
 
-MXNET_REGISTER_API("_npi.zeros1")
+MXNET_REGISTER_API("_npi.zeros")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   const static nnvm::Op* op = Op::Get("_npi_zeros");
   nnvm::NodeAttrs attrs;
@@ -96,7 +96,7 @@ MXNET_REGISTER_API("_npi.zeros1")
   *ret = ndoutputs[0];
 });
 
-MXNET_REGISTER_API("_npi.tensordot_dispatcher")
+MXNET_REGISTER_API("_npi.tensordot")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   bool isscalar = args[2].type_code() == kDLInt;
   const nnvm::Op* op = Op::Get(isscalar ?

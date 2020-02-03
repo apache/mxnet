@@ -459,7 +459,7 @@ def rand_shape_3d(dim0=10, dim1=10, dim2=10, allow_zero_size=False):
 
 def rand_shape_nd(num_dim, dim=10, allow_zero_size=False):
     low = 0 if allow_zero_size else 1
-    return tuple(rnd.randint(low, dim+1, size=num_dim))
+    return tuple([int(x) for x in rnd.randint(low, dim+1, size=num_dim)])
 
 
 def rand_coord_2d(x_low, x_high, y_low, y_high):

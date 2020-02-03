@@ -944,7 +944,7 @@ inline int String2MXNetTypeWithBool(const std::string& s) {
     return mshadow::kFloat32;
   } else if (s == "float64") {
     return mshadow::kFloat64;
-  } else if (s == "flaot16") {
+  } else if (s == "float16") {
     return mshadow::kFloat16;
   } else if (s == "uint8") {
     return mshadow::kUint8;
@@ -968,7 +968,7 @@ inline int String2MXNetType(const std::string& s) {
     return mshadow::kFloat32;
   } else if (s == "float64") {
     return mshadow::kFloat64;
-  } else if (s == "flaot16") {
+  } else if (s == "float16") {
     return mshadow::kFloat16;
   } else if (s == "uint8") {
     return mshadow::kUint8;

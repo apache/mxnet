@@ -66,7 +66,7 @@ cdef extern from "mxnet/runtime/memory.h" namespace "mxnet::runtime":
     cdef ObjectPtr[T] make_object[T]()
 
 
-cdef inline ADT convert_tuple(tuple src_tuple) except +:
+cdef inline ADT convert_tuple(tuple src_tuple) except *:
     cdef uint32_t size = len(src_tuple)
     cdef ADTBuilder builder = ADTBuilder(0, size)
 
@@ -76,14 +76,14 @@ cdef inline ADT convert_tuple(tuple src_tuple) except +:
     return builder.Get()
 
 
-# cdef inline Slice convert_slice(slice slice_obj) except +:
+# cdef inline Slice convert_slice(slice slice_obj) except *:
 #     cdef int64_t kNoneValue = SliceNoneValue()
 #     return Slice(<int>(slice_obj.start) if slice_obj.start is not None else kNoneValue,
 #                  <int>(slice_obj.stop) if slice_obj.stop is not None else kNoneValue,
 #                  <int>(slice_obj.step) if slice_obj.step is not None else kNoneValue)
 
 
-cdef inline ObjectRef convert_object(object src_obj) except +:
+cdef inline ObjectRef convert_object(object src_obj) except *:
     if isinstance(src_obj, int):
         return Integer(<int>src_obj)
     elif isinstance(src_obj, tuple):
