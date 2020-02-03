@@ -474,6 +474,26 @@ def get_all_loss_operators():
     return loss_mx_operators
 
 
+def get_all_miscellaneous_operators():
+    """Gets all Miscellaneous operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Miscellaneous operators
+    misc_mx_operators = {}
+    for op_name, _ in mx_operators.items():
+        if op_name in misc_ops:
+            misc_mx_operators[op_name] = mx_operators[op_name]
+    return misc_mx_operators
+
+
 def get_operators_with_no_benchmark(operators_with_benchmark):
     """Gets all MXNet operators with not benchmark.
 
