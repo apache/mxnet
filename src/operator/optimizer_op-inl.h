@@ -228,7 +228,7 @@ struct MultiSGDKernel {
   MSHADOW_XINLINE static void Map(index_t i, const MultiSGDKernelParam<DType, MPDType>& param,
     const OpReqType req) {
     for (int index = 0; index < param.count; ++index) {
-      if ((size_t)i < param.sizes[index]) {
+      if (i < static_cast<index_t>(param.sizes[index])) {
         MPDType w = has_mixed_precision ? param.weights32[index][i] :
                                           MPDType(param.weights[index][i]);
         MPDType mom = has_momentum ? param.mom[index][i] : MPDType(0);
