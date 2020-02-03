@@ -956,19 +956,23 @@ class HybridBlock(Block):
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
         if self._backend:
-            arg_array = []
             ctx = args[0].context
+            arg_array = []
+            # Build args list if params are initialized
             try:
                 for name in out.list_arguments():
                     if name in data_names.keys():
                         arg_array.append(args[data_names[name]])
                     else:
                         arg_array.append(params.get(name).data())
-
+            # Exceptions are thrown, because the params are not initialized.
+            # In this case, we don't care and will just not use the params.
             except DeferredInitializationError:
+                self._deferred_infer_shape(*args)
                 arg_array = None
-            except RuntimeError:
-                arg_array = None
+                if not hasattr(self,OPTIMIZE_FOR_DEFERRED):
+                    self.OPTIMIZE_FOR_DEFERRED = True
+                    print('Warning: cannot gather params when calling optimize_for for backend "%s"' % self._backend)
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
 
