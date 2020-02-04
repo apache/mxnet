@@ -404,7 +404,15 @@ class Random<gpu, DType> {
     // Now set the seed.
     curandStatus_t status;
     status = curandSetPseudoRandomGeneratorSeed(gen_, static_cast<uint64_t>(seed));
+    this->rseed_ = static_cast<unsigned>(seed);
     CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "Set CURAND seed failed.";
+  }
+  /*!
+    * \brief get random seed used in random generator
+    * \return seed in unsigned
+    */
+  inline unsigned GetSeed() const {
+    return rseed_;
   }
   /*!
    * \brief get a set of random integers
@@ -466,6 +474,7 @@ class Random<gpu, DType> {
   uniform(Shape<dim> shape);
 
  private:
+  unsigned rseed_;
   inline void GenGaussian(float *dptr, size_t size, float mu, float sigma) {
     curandStatus_t status;
     status = curandGenerateNormal(gen_, dptr, size, mu, sigma);
