@@ -574,7 +574,7 @@ endif()
 if(USE_CUDA)
   # CUDA_SELECT_NVCC_ARCH_FLAGS is not deprecated, though part of deprecated
   # FindCUDA https://gitlab.kitware.com/cmake/cmake/issues/19199
-  include(${CMAKE_ROOT}/Modules/FindCUDA/select_compute_arch.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream/select_compute_arch.cmake)
   CUDA_SELECT_NVCC_ARCH_FLAGS(CUDA_ARCH_FLAGS ${MXNET_CUDA_ARCH})
   message("-- CUDA: Using the following NVCC architecture flags ${CUDA_ARCH_FLAGS}")
   set(arch_code_list)
