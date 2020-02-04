@@ -18,7 +18,7 @@
 """Runtime Object api"""
 from __future__ import absolute_import
 import ctypes
-from ..base import _LIB, check_call
+from ...base import _LIB, check_call
 from . import function
 from .types import RETURN_SWITCH, TypeCode
 

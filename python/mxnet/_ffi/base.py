@@ -25,7 +25,6 @@ from __future__ import absolute_import
 import sys
 import ctypes
 import numpy as np
-from ..base import _LIB, check_call
 
 string_types = (str,)
 integer_types = (int, np.int32)

@@ -22,8 +22,8 @@ from __future__ import absolute_import
 import ctypes
 from numbers import Number, Integral
 
-from ...base import get_last_ffi_error
-from ..base import _LIB, c_str
+from ...base import get_last_ffi_error, _LIB
+from ..base import c_str
 from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
 from .object import ObjectBase

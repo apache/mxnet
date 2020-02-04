@@ -25,7 +25,8 @@ from __future__ import absolute_import
 import os
 import sys
 import ctypes
-from .base import _LIB, check_call, py_str, c_str
+from ..base import _LIB, check_call
+from .base import py_str, c_str
 
 try:
     if int(os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
