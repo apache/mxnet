@@ -3600,6 +3600,36 @@ def test_np_exponential():
 
 @with_seed()
 @use_np
+def test_np_random_weibull():
+    class TestRandomWeibull(HybridBlock):
+        def __init__(self, shape):
+            super(TestRandomWeibull, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, a):
+            return F.np.random.weibull(a, self._shape)
+
+    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    for hybridize in [False, True]:
+        for shape in shapes:
+            test_weibull = TestRandomWeibull(shape)
+            if hybridize:
+                test_weibull.hybridize()
+            np_out = _np.random.weibull(1, size = shape)
+            mx_out = test_weibull(np.array([1]))
+
+    for shape in shapes:
+        mx_out = np.random.weibull(np.array([1]), shape)
+        np_out = _np.random.weibull(np.array([1]).asnumpy(), shape)
+        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
+    def _test_weibull_exception(a):
+        output = np.random.weibull(a=a).asnumpy()
+    assertRaises(ValueError, _test_weibull_exception, -1)
+
+
+@with_seed()
+@use_np
 def test_np_randn():
     # Test shapes.
     shapes = [
