@@ -969,7 +969,7 @@ class HybridBlock(Block):
         flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
                 self._flags
 
-        args,_ = _flatten(args, "input")
+        args, _ = _flatten(args, "input")
         args_without_none = [ele for ele in args if ele is not None]
         try:
             cargs = [args_without_none[i] if is_arg else i.data()
