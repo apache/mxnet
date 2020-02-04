@@ -27,22 +27,16 @@ import ctypes
 import numpy as np
 from ..base import _LIB, check_call
 
-if sys.version_info[0] == 3:
-    string_types = (str,)
-    integer_types = (int, np.int32)
-    numeric_types = integer_types + (float, np.float32)
-    # this function is needed for python3
-    # to convert ctypes.char_p .value back to python str
-    if sys.platform == "win32":
-        encoding = 'cp' + str(ctypes.cdll.kernel32.GetACP())
-        py_str = lambda x: x.decode(encoding)
-    else:
-        py_str = lambda x: x.decode('utf-8')
+string_types = (str,)
+integer_types = (int, np.int32)
+numeric_types = integer_types + (float, np.float32)
+# this function is needed for python3
+# to convert ctypes.char_p .value back to python str
+if sys.platform == "win32":
+    encoding = 'cp' + str(ctypes.cdll.kernel32.GetACP())
+    py_str = lambda x: x.decode(encoding)
 else:
-    string_types = (basestring,)
-    integer_types = (int, long, np.int32)
-    numeric_types = integer_types + (float, np.float32)
-    py_str = lambda x: x
+    py_str = lambda x: x.decode('utf-8')
 
 #----------------------------
 # helper function in ctypes.
