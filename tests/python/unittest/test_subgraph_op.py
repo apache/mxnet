@@ -53,7 +53,7 @@ def network_structure_3():
     ret = mx.sym.BatchNorm(ret)
     ret = mx.sym.BatchNorm(ret)
     # Return the same and shape of 'data' and auxiliary states
-    return  (ret, ['data', *ret.list_auxiliary_states()], [(2, 3, 10, 10), (3,), (3,), (3,), (3,)])
+    return  (ret, ['data'] + ret.list_auxiliary_states(), [(2, 3, 10, 10), (3,), (3,), (3,), (3,)])
 
 def network_structure_4():
     # the last op has multiple duplicate outputs
