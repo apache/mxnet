@@ -955,25 +955,6 @@ class HybridBlock(Block):
             unused = ', '.join(list(param_names - set(used_param_names)))
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
-        if self._backend:
-            ctx = args[0].context
-            arg_array = []
-            # Build args list if params are initialized
-            try:
-                for name in out.list_arguments():
-                    if name in data_names.keys():
-                        arg_array.append(args[data_names[name]])
-                    else:
-                        p = params.get(name)
-                        # check if param is already initialized
-                        if p._data:
-                            arg_array.append(params.get(name).data())
-                        else:
-                            # if not initialized, partition without inferring shapes/types
-                            arg_array = None
-                            break
-            # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
 
         data_indices = []
         param_indices = []
@@ -987,6 +968,29 @@ class HybridBlock(Block):
                 self._cached_op_args.append((False, params[name]))
         flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
                 self._flags
+
+        args_without_none = [ele for ele in args if ele is not None]
+        try:
+            cargs = [args_without_none[i] if is_arg else i.data()
+                     for is_arg, i in self._cached_op_args]
+        except DeferredInitializationError:
+            self._deferred_infer_shape(*args)
+            cargs = []
+            for is_arg, i in self._cached_op_args:
+                if is_arg:
+                    cargs.append(args_without_none[i])
+                else:
+                    i._finish_deferred_init()
+                    cargs.append(i.data())
+
+        if self._backend:
+            ctx = args[0].context
+            # get list of params in the order of out.list_arguments
+            arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
+                              for name in out.list_arguments()]
+            # Partition the graph.
+            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
+
         self._cached_op = ndarray.CachedOp(out, flags)
 
     def _deferred_infer_shape(self, *args):
@@ -1028,19 +1032,10 @@ class HybridBlock(Block):
                 raise ValueError("The argument structure of HybridBlock does not match"
                                  " the cached version. Stored format = {}, input format = {}"
                                  .format(fmt, self._in_format))
+
         args_without_none = [ele for ele in args if ele is not None]
-        try:
-            cargs = [args_without_none[i] if is_arg else i.data()
-                     for is_arg, i in self._cached_op_args]
-        except DeferredInitializationError:
-            self._deferred_infer_shape(*args)
-            cargs = []
-            for is_arg, i in self._cached_op_args:
-                if is_arg:
-                    cargs.append(args_without_none[i])
-                else:
-                    i._finish_deferred_init()
-                    cargs.append(i.data())
+        cargs = [args_without_none[i] if is_arg else i.data()
+                 for is_arg, i in self._cached_op_args]
         out = self._cached_op(*cargs)
         if isinstance(out, NDArray):
             out = [out]
