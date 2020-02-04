@@ -387,7 +387,7 @@ def get_all_loss_operators():
     # Filter for NN Loss operators
     loss_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_name in loss_ops and op_name not in unique_ops:
+        if op_name in loss_ops:
             loss_mx_operators[op_name] = mx_operators[op_name]
     return loss_mx_operators
 
