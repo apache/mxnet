@@ -23,7 +23,7 @@ from . import _internal as _npi
 
 
 __all__ = ['randint', 'uniform', 'normal', 'multivariate_normal',
-           'rand', 'shuffle', 'gamma', 'beta', 'exponential', 'lognormal', 'weibull']
+           'rand', 'shuffle', 'gamma', 'beta', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -522,6 +522,92 @@ def weibull(a, size):
         return _npi.weibull(a, a=None, size=size)
     else:
         return _npi.weibull(a=a, size=size)
+
+
+def pareto(a, size):
+    r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+            Shape of the distribution. Must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` is a scalar. Otherwise,
+        ``np.array(a).size`` samples are drawn.
+
+    Returns
+    -------
+    out : _Symbol
+        Drawn samples from the Pareto distribution.
+
+    Examples
+    --------
+    >>> np.random.pareto(a=5)
+    array(0.12749612)
+    >>> mx.numpy.random.pareto(a=5, size=[2,3])
+    array([[0.06933999, 0.0344373 , 0.10654891],
+            [0.0311172 , 0.12911797, 0.03370714]])
+    >>> np.random.pareto(a=np.array([2,3])
+    array([0.26636696, 0.15685666])
+
+    The probability density for the Pareto distribution is f(x) = \frac{am^a}{x^{a+1}}
+    where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution
+    is a power law distribution. Pareto created it to describe the wealth in the economy.
+    """
+    from ..numpy import _Symbol as np_symbol
+    tensor_type_name = np_symbol
+    if size == ():
+        size = None
+    is_tensor = isinstance(a, tensor_type_name)
+    if is_tensor:
+        return _npi.pareto(a, a=None, size=size)
+    else:
+        return _npi.pareto(a=a, size=size)
+
+
+def power(a, size):
+    r"""Draw samples in [0, 1] from a power distribution with given parameter a.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Shape of the distribution. Must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` is a scalar. Otherwise,
+        ``np.array(a).size`` samples are drawn.
+
+    Returns
+    -------
+    out : _Symbol
+        Drawn samples from the power distribution.
+
+    Examples
+    --------
+    >>> np.random.power(a=5)
+    array(0.8602478)
+    >>> np.random.power(a=5, size=[2,3])
+    array([[0.988391  , 0.5153122 , 0.9383134 ],
+           [0.9078098 , 0.87819266, 0.730635]])
+    >>> np.random.power(a=np.array([2,3])
+    array([0.7499419 , 0.88894516])
+
+    The probability density function is f(x; a) = ax^{a-1}, 0 \le x \le 1, a>0.
+    The power distribution is just the inverse of the Pareto distribution and
+    a special case of the Beta distribution.
+    """
+    from ..numpy import _Symbol as np_symbol
+    tensor_type_name = np_symbol
+    if size == ():
+        size = None
+    is_tensor = isinstance(a, tensor_type_name)
+    if is_tensor:
+        return _npi.powerd(a, a=None, size=size)
+    else:
+        return _npi.powerd(a=a, size=size)
 
 
 def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):

@@ -3630,6 +3630,76 @@ def test_np_random_weibull():
 
 @with_seed()
 @use_np
+def test_np_random_a():
+    op_names = ['pareto', 'power', 'weibull']
+    # these distributions have one required parameter a
+    shapes = [(1,), (2, 3), (4, 0, 5), 6, (7, 8), (), None]
+
+    def _test_random_x_range(output):
+        ge_zero = _np.all(output >= 0)
+        smaller_equal_one = _np.all(output <= 1)
+        return ge_zero and smaller_equal_one
+
+    # test imperative size shapes
+    for [shape, op_name] in itertools.product(shapes, op_names):
+        op = getattr(np.random, op_name, None)
+        assert op is not None
+        out = op(1.0, size=shape)
+        expected_shape = shape
+        if not isinstance(shape, tuple):
+            expected_shape = () if shape is None else (shape,)
+        assert out.shape == expected_shape
+        # test range of generated values for power distribution
+        if op_name == 'power':
+            assert _test_random_x_range(out.asnumpy()) == True
+
+    # test symbolic/hybridized size shapes
+    class TestRandomA(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestRandomA, self).__init__()
+            self._shape = shape
+            self._op_name = op_name
+
+        def hybrid_forward(self, F, a):
+            op = getattr(F.np.random, self._op_name, None)
+            assert op is not None
+            return op(a, size=self._shape)
+
+    hybridize = [False, True]
+    for [op_name, shape, hybridize] in itertools.product(op_names, shapes, hybridize):
+        test_op = TestRandomA(shape, op_name)
+        if hybridize:
+            test_op.hybridize()
+        mx_out = test_op(np.array(1.0))
+        expected_shape = shape
+        if not isinstance(shape, tuple):
+            expected_shape = () if shape is None else (shape,)
+        assert mx_out.shape == expected_shape
+
+    # test broadcasting of required parameter a shape when a is array-like
+    ashapes = [(1,), (2, 3), (4, 0, 5), 6, (7, 8)]
+    for shape in ashapes:
+        a = np.ones(shape)
+        for op_name in op_names:
+            op = getattr(np.random, op_name, None)
+            assert op is not None
+            mx_out = op(a, size=None)
+            expected_shape = a.shape
+            assert mx_out.shape == expected_shape
+
+    # test illegal parameter values
+    def _test_exception(a):
+        output = op(a=a).asnumpy()
+    for op in op_names:
+        op = getattr(np.random, op_name, None)
+        if op is not None:
+            assertRaises(ValueError, _test_exception, -1)
+        if op in ['pareto', 'power']:
+            assertRaises(ValueError, _test_exception, 0)
+
+
+@with_seed()
+@use_np
 def test_np_randn():
     # Test shapes.
     shapes = [
