@@ -102,6 +102,18 @@ def random_arrays(*shapes):
     return arrays
 
 
+def random_uniform_arrays(*shapes, **kwargs):
+    """Generate some random numpy arrays."""
+    low = kwargs.pop('low', 0.0)
+    high = kwargs.pop('high', 1.0)
+    dtype = kwargs.pop('dtype', default_dtype())
+    if len(kwargs) > 0:
+        raise TypeError('Got unexpected argument/s : ' + str(kwargs.keys()))
+    arrays = [np.random.uniform(low, high, size=s).astype(dtype)
+              for s in shapes]
+    return arrays
+
+
 def random_sample(population, k):
     """Return a k length list of the elements chosen from the population sequence."""
     assert 0 <= k <= len(population)
