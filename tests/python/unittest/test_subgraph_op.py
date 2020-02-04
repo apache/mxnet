@@ -355,15 +355,16 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     # create Gluon block for given symbol
     inputs = [mx.sym.var(i, dtype=mx_real_t) for i in sym[1]]
     sym_block = nn.SymbolBlock(sym[0], inputs)
-    sym_block.initialize()
-    x = [mx.nd.random.uniform(shape=s) for s in sym[2]]
+    sym_block.initialize(ctx=mx.current_context())
+    x = [mx.nd.random.uniform(shape=s,ctx=mx.current_context()) for s in sym[2]]
     # hybridize and export to get baseline
     sym_block.hybridize()
     outputs1 = sym_block(*x)
     sym_block.export('check_subgraph_exe9')
 
     # load model and partition
-    sym_block = nn.SymbolBlock.imports('check_subgraph_exe9-symbol.json',sym[1], 'check_subgraph_exe9-0000.params')
+    sym_block = nn.SymbolBlock.imports('check_subgraph_exe9-symbol.json',sym[1], 'check_subgraph_exe9-0000.params',
+                                       ctx=mx.current_context())
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
     sym_block.hybridize(backend=subgraph_backend)
@@ -427,15 +428,15 @@ def test_subgraph_backend_gluon_ext1():
         return net
 
     # regular inference
-    x = nd.random.normal(shape=(1, 512))
+    x = nd.random.normal(shape=(1, 512),ctx=mx.current_context())
     net = get_net()
-    net.collect_params().initialize()
+    net.collect_params().initialize(ctx=mx.current_context())
     outputs1 = net(x)
     net.save_parameters('test_subgraph_backend_gluon_ext1.params')
 
     # after partitioning
     net = get_net()
-    net.load_parameters('test_subgraph_backend_gluon_ext1.params')
+    net.load_parameters('test_subgraph_backend_gluon_ext1.params',ctx=mx.current_context())
     subgraph_backend = 'default'
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
@@ -464,15 +465,15 @@ def test_subgraph_backend_gluon_ext2():
             x = F.relu(self.fc2(x))
             return self.fc3(x)
     # regular inference
-    x = nd.random.normal(shape=(1, 512))
+    x = nd.random.normal(shape=(1, 512),ctx=mx.current_context())
     net = Net()
-    net.collect_params().initialize()
+    net.collect_params().initialize(ctx=mx.current_context())
     outputs1 = net(x)
     net.save_parameters('test_subgraph_backend_gluon_ext2.params')
 
     # after partitioning
     net = Net()
-    net.load_parameters('test_subgraph_backend_gluon_ext2.params')
+    net.load_parameters('test_subgraph_backend_gluon_ext2.params',ctx=mx.current_context())
     subgraph_backend = 'default'
     op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
