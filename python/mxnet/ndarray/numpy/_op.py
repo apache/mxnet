@@ -113,6 +113,8 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
         raise NotImplementedError
     if ctx is None:
         ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
     return _api_internal.zeros(shape, dtype, ctx)

@@ -574,26 +574,24 @@ class MXNetArgValue : public MXNetPODValue_ {
     return reinterpret_cast<::mxnet::NDArray*>(value_.v_handle);
   }
   operator ::mxnet::TShape() const {
-    ObjectRef x = this->operator ObjectRef();
-    if (const ADTObj* obj = x.as<ADTObj>()) {
-      TShape ret(obj->size, 0);
-      for (uint32_t i = 0; i < obj->size; ++i) {
-        ret[i] = obj->operator[](i).as<IntegerObj>()->value;
+    if (type_code_ == kDLInt) {
+      return TShape(1, value_.v_int64);
+    } else {
+      ObjectRef x = this->operator ObjectRef();
+      if (const ADTObj* obj = x.as<ADTObj>()) {
+        TShape ret(obj->size, 0);
+        for (uint32_t i = 0; i < obj->size; ++i) {
+          ret[i] = obj->operator[](i).as<IntegerObj>()->value;
+        }
+        return ret;
+      }
+      Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(x);
+      TShape ret(arr.size(), 0);
+      for (size_t i = 0; i < arr.size(); ++i) {
+        ret[i] = arr[i]->value;
       }
       return ret;
     }
-    Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(x);
-    TShape ret(arr.size(), 0);
-    for (size_t i = 0; i < arr.size(); ++i) {
-      ret[i] = arr[i]->value;
-    }
-    return ret;
-    // const ADTObj* obj = static_cast<ADTObj*>(value_.v_handle);
-    // TShape ret(obj->size, 0);
-    // for (uint32_t i = 0; i < obj->size; ++i) {
-    //   ret[i] = obj->operator[](i).as<IntegerObj>()->value;
-    // }
-    // return ret;
   }
   operator PackedFunc() const {
     if (type_code_ == kNull) return PackedFunc();

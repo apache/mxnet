@@ -31,8 +31,8 @@ cdef inline int make_arg(object arg,
     """Pack arguments into c args mxnet call accept"""
     cdef unsigned long long ptr
 
-    if isinstance(arg, tuple):
-        temp_objs[0] = convert_tuple(<tuple>arg)
+    if isinstance(arg, (list, tuple)):
+        temp_objs[0] = convert_object(arg)
         value[0].v_handle = (<void*>(temp_objs[0].get()))
         tcode[0] = kObjectHandle
     elif isinstance(arg, NDArrayBase):

@@ -76,6 +76,15 @@ cdef inline ADT convert_tuple(tuple src_tuple) except *:
     return builder.Get()
 
 
+cdef inline ADT convert_list(list src) except *:
+    cdef uint32_t size = len(src)
+    cdef ADTBuilder builder = ADTBuilder(0, size)
+
+    for i in range(size):
+        builder.EmplaceInit(i, convert_object(src[i]))
+
+    return builder.Get()
+
 # cdef inline Slice convert_slice(slice slice_obj) except *:
 #     cdef int64_t kNoneValue = SliceNoneValue()
 #     return Slice(<int>(slice_obj.start) if slice_obj.start is not None else kNoneValue,
@@ -88,6 +97,8 @@ cdef inline ObjectRef convert_object(object src_obj) except *:
         return Integer(<int>src_obj)
     elif isinstance(src_obj, tuple):
         return convert_tuple(src_obj)
+    elif isinstance(src_obj, list):
+        return convert_list(src_obj)
     # elif src_obj is Ellipsis:
     #     return CreateEllipsis()
     # elif isinstance(src_obj, slice):

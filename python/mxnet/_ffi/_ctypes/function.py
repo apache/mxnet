@@ -53,7 +53,7 @@ def _make_mxnet_args(args, temp_args):
         elif isinstance(arg, str):
             values[i].v_str = c_str(arg)
             type_codes[i] = TypeCode.STR
-        elif isinstance(arg, tuple):
+        elif isinstance(arg, (list, tuple)):
             arg = convert_to_node(arg)
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
