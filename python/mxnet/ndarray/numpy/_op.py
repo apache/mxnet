@@ -789,7 +789,7 @@ def insert(arr, obj, values, axis=None):
 
 
 #pylint: disable= too-many-arguments, no-member, protected-access
-def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None, np_fallback_op=None):
+def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, out=None):
     """ Helper function for element-wise operation.
     The function will perform numpy-like broadcasting if needed and call different functions.
 
@@ -834,10 +834,6 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         return lfn_scalar(lhs, float(rhs), out=out)
     elif isinstance(lhs, ndarray) and isinstance(rhs, ndarray):
         return fn_array(lhs, rhs, out=out)
-    elif isinstance(lhs, _np.ndarray) and isinstance(rhs, ndarray):
-        return from_numpy(np_fallback_op(lhs, rhs.asnumpy()), array_cls=ndarray).as_in_ctx(rhs.ctx)
-    elif isinstance(lhs, ndarray) and isinstance(rhs, _np.ndarray):
-        return from_numpy(np_fallback_op(lhs.asnumpy(), rhs), array_cls=ndarray).as_in_ctx(lhs.ctx)
     else:
         raise TypeError('type {} not supported'.format(str(type(rhs))))
 #pylint: enable= too-many-arguments, no-member, protected-access
@@ -1050,7 +1046,7 @@ def multiply(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), not supported yet.
     """
-    return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out, _np.multiply)
+    return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4912,7 +4908,7 @@ def ravel(x, order='C'):
     >>> print(np.ravel(x.T))
     [1. 4. 2. 5. 3. 6.]
     """
-    if order != 'C':
+    if order == 'F':
         raise NotImplementedError('order {} is not supported'.format(order))
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)

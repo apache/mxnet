@@ -38,11 +38,11 @@ from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle, c_array
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
 from ..context import Context
-from ..util import _sanity_check_params, set_module, wrap_np_unary_func, wrap_np_binary_func
+from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
-from ..ndarray.ndarray import _storage_type
+from ..ndarray.ndarray import _storage_type, from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -135,7 +135,8 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
     if isinstance(object, _np.ndarray):
-        return array(object, dtype=object.dtype, ctx=ctx)
+        ret = from_numpy(object, array_cls=ndarray)
+        return ret if ctx is None else ret.as_in_ctx(ctx=ctx)
     elif isinstance(object, (integer_types, numeric_types)):
         return object
     elif isinstance(object, (list, tuple)):
@@ -944,6 +945,20 @@ class ndarray(NDArray):
     def __le__(self, other):
         """x.__le__(y) <=> x <= y"""
         return less_equal(self, other)
+
+    def __matmul__(self, other):
+        """x.__matmul__(y) <=> x @ y"""
+        return matmul(self, other)
+
+    def __rmatmul__(self, other):
+        """x.__rmatmul__(y) <=> y @ x"""
+        return matmul(other, self)
+
+    def __imatmul__(self, other):
+        """x.__imatmul__(y) <=> x @= y"""
+        # TODO(junwu): enable this after PR16990 is merged
+        # return matmul(self, other, out=self)
+        raise NotImplementedError
 
     def __bool__(self):
         num_elements = self.size
