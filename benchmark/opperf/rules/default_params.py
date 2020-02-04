@@ -91,7 +91,7 @@ DEFAULT_GAMMA = [(3,)]
 DEFAULT_BETA = [(3,)]
 DEFAULT_MOVING_MEAN = [(3,)]
 DEFAULT_MOVING_VAR = [(3,)]
-DEFAULT_LABEL = [(32, 3, 256, 256), (32, 3, 10000, 10)]
+DEFAULT_LABEL_REG = [(32, 3, 256, 256), (32, 3, 10000, 10)]
 DEFAULT_GRAD_SCALE = [.5]
 DEFAULT_NORMALIZATION = ["batch"]
 DEFAULT_MARGIN = [.5]
@@ -386,9 +386,9 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "moving_mean": DEFAULT_MOVING_MEAN,
                    "moving_var": DEFAULT_MOVING_VAR,
                    "label_softmaxoutput": DEFAULT_LABEL_SM,
-                   "label_maeregressionoutput": DEFAULT_LABEL,
-                   "label_logisticregressionoutput": DEFAULT_LABEL,
-                   "label_linearregressionoutput": DEFAULT_LABEL,
+                   "label_maeregressionoutput": DEFAULT_LABEL_REG,
+                   "label_logisticregressionoutput": DEFAULT_LABEL_REG,
+                   "label_linearregressionoutput": DEFAULT_LABEL_REG,
                    "label_svmoutput": DEFAULT_LABEL_SVM,
                    "grad_scale": DEFAULT_GRAD_SCALE,
                    "normalization": DEFAULT_NORMALIZATION,
