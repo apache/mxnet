@@ -352,13 +352,18 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     """Call hybridize() to partition the graph, and then compare results of the partitioned 
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend 
     which means we'll pass shapes/types"""
+    # create Gluon block for given symbol
     inputs = [mx.sym.var(i, dtype=mx_real_t) for i in sym[1]]
     sym_block = nn.SymbolBlock(sym[0], inputs)
     sym_block.initialize()
-    shapes = sym[2]
-    x = [mx.nd.random.uniform(shape=s) for s in shapes]
+    x = [mx.nd.random.uniform(shape=s) for s in sym[2]]
+    # hybridize and export to get baseline
+    sym_block.hybridize()
     outputs1 = sym_block(*x)
-    
+    sym_block.export('check_subgraph_exe9')
+
+    # load model and partition
+    sym_block = nn.SymbolBlock.imports('check_subgraph_exe9-symbol.json',sym[1], 'check_subgraph_exe9-0000.params')
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
     sym_block.hybridize(backend=subgraph_backend)
@@ -369,20 +374,6 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
-    
-def check_subgraph_exe10(sym, subgraph_backend, op_names):
-    """Call hybridize() to partition the graph without passing shapes/types""" 
-    inputs = [mx.sym.var(i, dtype=mx_real_t) for i in sym[1]]
-    sym_block = nn.SymbolBlock(sym[0], inputs)
-    sym_block.initialize()
-    shapes = sym[2]
-    x = [mx.nd.random.uniform(shape=s) for s in shapes]
-    
-    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                c_str_array(op_names)))
-    sym_block.hybridize(backend=subgraph_backend)
-    outputs = sym_block(*x)
-    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
 def check_subgraph(subgraph_backend):
     for sym, op_names in get_graphs():
@@ -401,7 +392,6 @@ def check_subgraph_backend_sym(subgraph_backend):
 def check_subgraph_backend_gluon(subgraph_backend):
     for sym, op_names in get_graphs():
         check_subgraph_exe9(sym, subgraph_backend, op_names)
-        check_subgraph_exe10(sym, subgraph_backend, op_names)
 
 # Test graph partition for 'default' backend.
 def test_subgraph():
@@ -427,21 +417,27 @@ def test_subgraph_backend_gluon():
 def test_subgraph_backend_gluon_v2():
     check_subgraph_backend_gluon('default_v2')
 
-# To do: add tests without the inference before partition. Need to refactor test.
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
 def test_subgraph_backend_gluon_ext1():
-    net = nn.HybridSequential()  # Here we use the class HybridSequential.
-    net.add(nn.Dense(256, activation='relu'),
-            nn.Dense(128, activation='relu'),
-            nn.Dense(2))
+    def get_net():
+        net = nn.HybridSequential()  # Here we use the class HybridSequential.
+        net.add(nn.Dense(256, activation='relu'),
+                nn.Dense(128, activation='relu'),
+                nn.Dense(2))
+        return net
 
+    # regular inference
     x = nd.random.normal(shape=(1, 512))
- 
+    net = get_net()
     net.collect_params().initialize()
     outputs1 = net(x)
+    net.save_parameters('test_subgraph_backend_gluon_ext1.params')
 
+    # after partitioning
+    net = get_net()
+    net.load_parameters('test_subgraph_backend_gluon_ext1.params')
     subgraph_backend = 'default'
-    op_names = []
+    op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
     net.hybridize(backend = subgraph_backend)
@@ -467,14 +463,18 @@ def test_subgraph_backend_gluon_ext2():
             x = F.relu(self.fc1(x))
             x = F.relu(self.fc2(x))
             return self.fc3(x)
-
+    # regular inference
     x = nd.random.normal(shape=(1, 512))
     net = Net()
     net.collect_params().initialize()
     outputs1 = net(x)
+    net.save_parameters('test_subgraph_backend_gluon_ext2.params')
 
+    # after partitioning
+    net = Net()
+    net.load_parameters('test_subgraph_backend_gluon_ext2.params')
     subgraph_backend = 'default'
-    op_names = []
+    op_names = ['FullyConnected']
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                 c_str_array(op_names)))
     net.hybridize(backend = subgraph_backend)
