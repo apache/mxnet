@@ -92,12 +92,21 @@ DEFAULT_CLIP_GRADIENT = [-1.0,0.8]
 DEFAULT_CLIP_WEIGHTS = [-1.0,0.8]
 DEFAULT_LAZY_UPDATE = [0,1]
 
-# For rearrange operators
-# NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
+# For array manipulation operators
+# NOTE: Data needs to be a 4D tensor for  operators like space_to_depth, depth_to_space etc
 # Hence below we append 4d to mark the difference.
 # For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
 DEFAULT_DATA_4d = [(1, 4, 2, 4), (10,25,10,100)]
 DEFAULT_BLOCK_SIZE = [2, 5]
+DEFAULT_NUM_OUTPUTS = [1]
+DEFAULT_PAD_WIDTH_4d = [(0, 0, 0, 0, 1, 1, 1, 1)]
+DEFAULT_MODE_4d = ["constant"]
+DEFAULT_REPEATS = [2]
+
+# broadcast_axis needs input array with atleast 1 dim of size 1
+# since axis is 0 (default) size(dim0)=1
+DEFAULT_DATA_DIM1 = [(1, 1024), (1, 1), (1, 100)]
+DEFAULT_SIZE = [2]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
@@ -162,7 +171,14 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "data_smce": DEFAULT_DATA_SMCE,
                    "data_3d": DEFAULT_DATA_3d,
                    "label_smce": DEFAULT_LABEL_SMCE,
-                   "label": DEFAULT_LABEL}
+                   "label": DEFAULT_LABEL,
+                   "num_outputs": DEFAULT_NUM_OUTPUTS,
+                   "data_dim1": DEFAULT_DATA_DIM1,
+                   "size": DEFAULT_SIZE,
+                   "mode_4d": DEFAULT_MODE_4d,
+                   "pad_width_4d": DEFAULT_PAD_WIDTH_4d,
+                   "repeats": DEFAULT_REPEATS,
+                   "reps": DEFAULT_REPEATS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.

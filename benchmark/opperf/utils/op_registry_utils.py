@@ -116,32 +116,47 @@ def prepare_op_inputs(arg_params, arg_values):
 def prepare_op_inputs(op, arg_params):
     inputs = []
 
-    # 4d tensor is needed only by following two ops
-    ops_4d = ['depth_to_space','space_to_depth']
+    # 4d tensor is needed by following ops
+    ops_4d = ['depth_to_space', 'space_to_depth', 'pad']
 
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
+
+    # following ops need atleast 1 dim of size 1
+    ops_dim1 = ['broadcast_axis', 'broadcast_like', 'broadcast_to', 'broadcast_axes']
 
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
                                   arg_params["params"]["arg_types"]):
-        if "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
-        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
-        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
-        elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
-        elif arg_name in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
-        elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
-        elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
-            # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
-            # Ex: axis in sum is shape, axis in sort is int.
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
+        if "NDArray" in arg_type:
+            if arg_name + "_nd" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
+            elif op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
+            elif op == 'softmax_cross_entropy':
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
+            elif op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
+            elif op in ops_dim1 and arg_name + "_dim1" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_dim1"]
+            elif arg_name in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
+        else:
+            # arg_type is not NDArray
+            if op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
+            elif op in ops_dim1 and arg_name + "_dim1" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_dim1"]
+            # default case
+            elif arg_name in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
+            elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
+            elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
+                # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
+                # Ex: axis in sum is shape, axis in sort is int.
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator

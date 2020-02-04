@@ -49,7 +49,8 @@ def _get_operator_profile(operator_name, operator_profile_results):
     # allows to retrieve alias operator profile from the profiler results
     # TODO handling - "identity" : "_copy"
     alias_map = {"broadcast_plus": "broadcast_add", "broadcast_minus": "broadcast_sub", "flatten": "Flatten", "max_axis": "max",
-                 "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min", "CTCLoss": "ctc_loss"}
+                 "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min",
+                 "CTCLoss": "ctc_loss", "broadcast_axes": "broadcast_axis"}
 
     op_name = None
 
