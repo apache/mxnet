@@ -87,8 +87,7 @@ message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERA
 project(mxnet C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
-  if (NOT MSVC AND (NOT DEFINED CMAKE_CUDA_COMPILER OR "${CMAKE_CUDA_COMPILER}" STREQUAL "CMAKE_CUDA_COMPILER-NOTFOUND")
-        AND EXISTS "/usr/local/cuda/bin/nvcc")
+  if (UNIX AND NOT CMAKE_CUDA_COMPILER_LOADED AND EXISTS "/usr/local/cuda/bin/nvcc")
     set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
     message(WARNING "CMAKE_CUDA_COMPILER guessed: ${CMAKE_CUDA_COMPILER}")
   endif()
