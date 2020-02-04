@@ -139,7 +139,7 @@ NNVM_REGISTER_OP(broadcast_like)
     })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
+  [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds))
         return MakeZeroGradNodes(n, ograds);

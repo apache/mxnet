@@ -1155,7 +1155,7 @@ inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
 
 struct ReduceGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode(
         op_name, n,
@@ -1670,7 +1670,7 @@ Defined in )code";
   .set_num_outputs(1)                                           \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .set_attr<nnvm::FGradient>("FGradient",                       \
-    [](const nnvm::NodePtr& n,                                  \
+    [](const nnvm::ObjectPtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
       return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
                                  {{"keepdims", "true"}});              \

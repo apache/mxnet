@@ -49,7 +49,7 @@ The storage type of ``sin`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sin, unary_bwd<mshadow_op::sin_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
@@ -92,7 +92,7 @@ The storage type of ``cos`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cos, unary_bwd<mshadow_op::cos_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dx_grad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
@@ -142,7 +142,7 @@ The storage type of ``tan`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tan, unary_bwd<mshadow_op::tan_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad (dL/dy)
       // n->inputs[1] : y = f(x) = tan(x) (ElemwiseGradUseOut)
@@ -190,7 +190,7 @@ The storage type of ``arcsin`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsin,
                                                   unary_bwd<mshadow_op::arcsin_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
@@ -233,7 +233,7 @@ The storage type of ``arccos`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccos,
                                                   unary_bwd<mshadow_op::arccos_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
@@ -279,7 +279,7 @@ The storage type of ``arctan`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctan,
                                                   unary_bwd<mshadow_op::arctan_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
@@ -364,7 +364,7 @@ The storage type of ``sinh`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sinh, unary_bwd<mshadow_op::sinh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
@@ -402,7 +402,7 @@ The storage type of ``cosh`` output is always dense
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_cosh, unary_bwd<mshadow_op::cosh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseUseIn)
@@ -444,7 +444,7 @@ The storage type of ``tanh`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_tanh, unary_bwd<mshadow_op::tanh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad (dL/dy)
       // n->inputs[1] : y = f(x) = tanh(x) (ElemwiseGradUseOut)
@@ -488,7 +488,7 @@ The storage type of ``arcsinh`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arcsinh,
                                                   unary_bwd<mshadow_op::arcsinh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
@@ -526,7 +526,7 @@ The storage type of ``arccosh`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arccosh,
                                                   unary_bwd<mshadow_op::arccosh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)
@@ -567,7 +567,7 @@ The storage type of ``arctanh`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_arctanh,
                                                   unary_bwd<mshadow_op::arctanh_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: head_grad_grads (dL/dxgrad)
       // inputs[0]: dL/dy
       // inputs[1]: x (ElemwiseGradUseIn)

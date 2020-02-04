@@ -384,7 +384,7 @@ void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
 
 struct ConvolutionGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     const ConvolutionParam& param = nnvm::get<ConvolutionParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
