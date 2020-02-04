@@ -970,19 +970,15 @@ class HybridBlock(Block):
                 self._flags
 
         args, _ = _flatten(args, "input")
-        args_without_none = [ele for ele in args if ele is not None]
         try:
-            cargs = [args_without_none[i] if is_arg else i.data()
-                     for is_arg, i in self._cached_op_args]
+            for is_arg, i in self._cached_op_args:
+                if not is_arg:
+                    i.data()
         except DeferredInitializationError:
             self._deferred_infer_shape(*args)
-            cargs = []
             for is_arg, i in self._cached_op_args:
-                if is_arg:
-                    cargs.append(args_without_none[i])
-                else:
+                if not is_arg:
                     i._finish_deferred_init()
-                    cargs.append(i.data())
 
         if self._backend:
             ctx = args[0].context
