@@ -255,9 +255,10 @@ class DropoutOp {
       Stream<xpu> *s = ctx.get_stream<xpu>();
 
       // set dropout state.
-      Random<xpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned>(s);
+      Random<xpu, unsigned> *prnd = ctx.requested[1].get_random<xpu, unsigned>(s);
       unsigned seed = prnd->GetSeed();
-      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_, seed);
+      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_,
+          static_cast<uint64_t>(seed));
       // describe input/output tensor
       int dim[4], stride[4];
       dim[0] = 1;
