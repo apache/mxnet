@@ -64,6 +64,9 @@ def main():
     parser.add_argument('-H', '--hostfile', type=str,
                         help = 'the hostfile of slave machines which will run \
                         the job. Required for ssh and mpi launcher')
+    parser.add_argument('-SH', '--server-hostfile', type=str,
+                        help = 'the hostfile of server machines which will run \
+                        the job. Required for byteps launcher')
     parser.add_argument('--sync-dst-dir', type=str,
                         help = 'if specificed, it will sync the current \
                         directory into slave machines\'s SYNC_DST_DIR if ssh \
@@ -71,6 +74,13 @@ def main():
     parser.add_argument('--launcher', type=str, default='ssh',
                         choices = ['local', 'ssh', 'mpi', 'sge', 'yarn'],
                         help = 'the launcher to use')
+    bps_group = parser.add_argument_group('byteps-backend')
+    bps_group.add_argument('--byteps-launch', action='store_true',
+                        help = 'Whether use byteps launcher to launch')
+    bps_group.add_argument('--scheduler-ip', type=str, 
+                        help = 'the ip address of the scheduler for BytePS')
+    bps_group.add_argument('--scheduler-port', type=int,
+                        help = 'the port of the scheduler for BytePS')
     parser.add_argument('--env-server', action='append', default=[],
                         help = 'Given a pair of environment_variable:value, sets this value of \
                         environment variable for the server processes. This overrides values of \
@@ -92,6 +102,16 @@ def main():
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
     args.command += unknown
+    if args.byteps_launch == True:
+        if args.scheduler_ip is None:
+            args.scheduler_ip = '127.0.0.1'
+        if args.scheduler_port is None:
+            args.scheduler_port = 2333
+        print(args)
+        import byteps_launcher as bpsl
+        bpsl.combined_submit(args)
+        return
+    
     if args.num_servers is None:
         args.num_servers = args.num_workers
     if args.p3:
