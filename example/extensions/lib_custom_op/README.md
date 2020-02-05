@@ -28,7 +28,7 @@ Custom operators (CustomOp) enable users to write new operators without compilin
 
 ### Have MXNet Ready
 
-Custom Operator support was recently merged (#15921, #17270) and is not available in a released version of MXNet yet. It will be part of the forthcoming 1.7 release, until then please install MXNet by compiling from source or downloading one of the nightly builds. For running the example below, it doesn’t matter if it is a CUDA, MKLDNN or Vanila build. The custom operator doesn’t interact with the execution of other native MXNet operators. Note that if you want to run GPU examples and write your custom operators running on GPU, you still need MXNet CUDA build.
+Custom Operator support was merged (#15921, #17270) and is not available in versions of MXNet prior to v1.7.0. To access the feature now, please install MXNet by compiling from source using master or using the previously mentioned commits, downloading one of the nightly builds, or from a release of MXNet 1.7.0+. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom operator doesn’t interact with the execution of other native MXNet operators. Note that if you want to run GPU examples and write your custom operators running on GPU, you still need an MXNet CUDA build.
 
 ### Run An Example
 
@@ -36,6 +36,7 @@ You can start getting familiar with custom operators by running some examples pr
 
 1. Run `make gemm_lib`. The Makefile will generate a dynamic library **libgemm_lib.so** compiled from `gemm_lib.cc`. This is the library you are going to load that contains everything for the custom gemm operator.
 2. Run `python test_gemm.py`. It’ll first load the library compiled from step 1, find the operators, register them in the MXNet backend, then invoke the operator like a regular MXNet operator and output the result.
+
 ```
 [19:22:02] ../src/c_api/c_api.cc:286: Found 2 operators in library
 [19:22:02] ../src/c_api/c_api.cc:350: 	Op[0] my_gemm
@@ -50,15 +51,17 @@ You can start getting familiar with custom operators by running some examples pr
 
 Note that you can safely ignore the `Found 0 partitioners` info as it is not related to the custom operator.
 
-### Basic Files For Gemm Library
+### Basic Files For A GeMM Library
 
 * **lib_custom_op/gemm_lib.cc**: This file has a source code implementation of all required components of a custom operator, as well as the registration of the custom operator.
 
-* **lib_custom_op/Makefile**: Compile source code to a dynamic shared library, with a header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom operator is compatible with C++11 onwards.
+* **lib_custom_op/Makefile**: Compile `gemm_lib.cc` to a dynamic shared library named `libgemm_lib.so`, with a include path of the header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom operator is compatible with C++11 onwards.
 
 * **lib_custom_op/test_gemm.py**: This file calls `mx.library.load(‘libgemm_lib.so’)` to load the library containing the custom operator, invokes the operator using both NDArray and Symbol APIs, and prints outputs of the forward and backward passes. The outputs should be the same as the regular MXNet `gemm` operator.
 
-## Writing Custom CPU Operator Library
+* **include/mxnet/lib_api.h**: This file from MXNet source code is the one-stop header to include all necessary data types and function prototypes for writing a custom operator library. You can either specify the include path in `Makefile`, or copy the header file over to `example/extensions/lib_custom_op` folder for `gemm_lib.cc` to include. Note that apart from this header, the custom operator library is independent of MXNet source.
+
+## Writing A Custom CPU Operator Library
 
 For building your own library containing custom CPU operator, compose a C++ source file like `myop_lib.cc`, include `lib_api.h` header file, and write your custom operator implementation with these essential functions:
 - `initialize` - Library Initialization Function
@@ -69,29 +72,39 @@ For building your own library containing custom CPU operator, compose a C++ sour
 - `forward` - Forward Computation (can be replace with `createOpState`, see below for details)
 
 Then compile it to `libmyop_lib.so` dynamic library using the following command:
+
 ```bash
 g++ -shared -fPIC -std=c++11 myop_lib.cc -o libmyop_lib.so -I ../../../include/mxnet
 ```
 
+If you don't want to download MXNet source and choose only using `lib_api.h` header, you can copy the header over to the same folder of `myop_lib.cc` and run:
+
+```bash
+g++ -shared -fPIC -std=c++11 myop_lib.cc -o libmyop_lib.so
+```
+
 Finally, you can write a Python script to load the library and run your custom operator:
+
 ```python
 import mxnet as mx
 mx.library.load(‘libmyop_lib.so’)
 mx.nd.my_op(...)
 ```
 
-### Writing Regular Custom Operator
+### Writing A Regular Custom Operator
 
 There are several essential building blocks for making a custom operator:
 
 * [initialize](./gemm_lib.cc#L227):
     * This function is the library initialization function necessary for any dynamic libraries. It checks if you are using a compatible version of MXNet. Note that this `version` parameter is passed from MXNet when library is loaded.
+
 ```c++
     MXReturnValue initialize(int version)
 ```
 
 * [parseAttrs](./gemm_lib.cc#L118):
     * This function specifies number of input and output tensors for the custom operator; also this is where a custom operator can validate the attributes (ie. options) specified by the user.
+
 ```c++
     MXReturnValue parseAttrs(
         std::map<std::string,
@@ -103,6 +116,7 @@ There are several essential building blocks for making a custom operator:
 
 * [inferType](./gemm_lib.cc#L124):
     * This function specifies how the custom operator infers output data types using input data types.
+
 ```c++
     MXReturnValue inferType(
         std::map<std::string, std::string> attrs,
@@ -112,6 +126,7 @@ There are several essential building blocks for making a custom operator:
 
 * [inferShape](./gemm_lib.cc#L143):
     * This function specifies how the custom operator infers output tensor shape using input shape.
+
 ```c++
     MXReturnValue inferShape(
         std::map<std::string, std::string> attrs,
@@ -121,6 +136,7 @@ There are several essential building blocks for making a custom operator:
 
 * [forward](./gemm_lib.cc#L56):
     * This function specifies the computation of the forward pass of the operator.
+
 ```c++
     MXReturnValue forward(
         std::map<std::string, std::string> attrs,
@@ -144,6 +160,7 @@ Also there are some optional functions you can specify:
 
 * [backward](./gemm_lib.cc#L90) - Backward gradient function:
     * This function specifies the computation of the backward pass of the operator.
+
 ```c++
     MXReturnValue backward(
         std::map<std::string, std::string> attrs,
@@ -154,6 +171,7 @@ Also there are some optional functions you can specify:
 
 * [mutateInputs](./gemm_lib.cc#L214) - Specify mutable input:
     * This function allows you to mark some inputs to be mutable inputs. It is useful when using aux parameters for BatchNorm-like operators.
+
 ```c++
     MXReturnValue mutateInputs(
         std::map<std::string, std::string> attrs,
@@ -196,7 +214,7 @@ Most of the building blocks for making a stateful custom operator is the same as
     .setCreateOpState(createOpState, "cpu");
 ```
 
-## Writing Custom GPU Operator Library
+## Writing A Custom GPU Operator Library
 
 Most of the building blocks for registering GPU custom operators are the exactly same as CPU ones, except you need to specify the `"gpu"` context name when registering `forward`, `backward` or `createOpState` function.
 
@@ -207,9 +225,10 @@ For illustration purposes, we provided a `ReLU` (Rectified Linear Unit) activati
 1. Run `make relu_lib`. The Makefile will invoke `NVCC` compiler to compile the CUDA kernel along with regular custom operator functions from `relu_lib.cu` to generate `librelu_lib.so` library.
 2. Run `python test_relu.py`. It’ll register the GPU `ReLU` operator in the MXNet backend, then invoke the operator by feeding an `NDArray` input with GPU context, and output the result tensor with GPU context.
 
-### Regular GPU Custom Operator
+### Writing A Regular GPU Custom Operator
 
 Since most of the building blocks for registering GPU custom operators are the exactly same as CPU ones, the registering function for an operator supporting both GPU and CPU will look like this:
+
 ```c++
     REGISTER_OP(my_op_gpu)
     ...
@@ -224,6 +243,7 @@ Note that you can write only the GPU funcitons, as operators don’t have to sup
 After you register forward or backward functions with context name `“gpu”`, MXNet will dispatch forward or backward GPU functions you just registered when the operator is invoked with GPU context.
 
 In the registered `forwardGPU` function, specify the grid and block size and launch the CUDA kernel. In the GPU operators input and output tensors are pre-allocated on the GPU memory, just like in the CPU operator tensors are pre-allocated on the CPU memory. As a result, you don’t need to call `cudaMemcpy` to move the tensor data to GPU device.
+
 ```c++
     MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
                              std::vector<MXTensor> inputs,
@@ -243,6 +263,7 @@ In the registered `forwardGPU` function, specify the grid and block size and lau
 Note that the `cuda_stream` object used for launching kernels is passed from MXNet backend via `OpResource` object. See below for details of `Operator Resource`.
 
 At this point all the attribute functions for each operator (`parseAttrs`, `inferShape`, etc.) run on the CPU, including the `forwardGPU` function. The only part that will actually run on the GPU is the CUDA kernel function that is launched from `forwardGPU` function (ie. my_op_gpu_forward).
+
 ```c++
     __global__ void my_op_gpu_forward(float *out, float *in, int64_t N) {
         int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -252,9 +273,10 @@ At this point all the attribute functions for each operator (`parseAttrs`, `infe
     }
 ```
 
-### Stateful GPU Custom Operator
+### Writing A Stateful GPU Custom Operator
 
 Recall that for stateful custom operators, you need to define a class that inherits `CustomStatefulOp` and overrides the `forward` and `backward` functions. Stateful operators are created context-aware, so you can create different classes for GPU and CPU stateful operators separately if desired. To do so, you register a createOpState function for each context separately like this
+
 ```c++
     REGISTER_OP(my_state_op_gpu)
     ...
@@ -263,6 +285,7 @@ Recall that for stateful custom operators, you need to define a class that inher
 ```
 
 Then you can create different classes for CPU and GPU stateful operators. MXNet will create the stateful operator instance based on the running context when the operator is invoked, and call stateful `forward` or `backward` function from the instantiated stateful operator class.
+
 ```c++
     class MyStatefulOpCPU : public CustomStatefulOp {
     public:
@@ -308,6 +331,7 @@ Optionally, you can use the same class for CPU and GPU, but you’ll need to che
 Most operators running in MXNet need some shared resources managed by MXNet. Custom operators also need `CPU memory allocation`, `GPU memory allocation`, and `CUDA stream` managed by MXNet backend to implement some functionalities. Those resources are provided in `OpResource` class in `forward` and `backward` functions.
 
 1. CPU memory allocation: MXNet manages memory very carefully to reduce the memory usage and risk of memory leak. Instead of using `malloc` to obtain a temporary workspace from heap memory, it is strongly recommended to use MXNet managed memory allocation function. The `alloc_cpu(int size)` function in `OpResource` class is an API to allocate a chunk of CPU memory through MXNet, and it is safe and easy to use.
+
 ```c++
     unsigned n = inputs[1].shape[0];
     unsigned m = inputs[1].shape[1];
