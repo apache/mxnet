@@ -83,7 +83,7 @@ class NDArray {
  public:
   /*! \brief default constructor */
   NDArray()
-    : entry_(nullptr) {
+    : autograd_entry_(nullptr) {
   }
   /*!
    * \brief constructs a new dynamic NDArray
@@ -98,7 +98,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
   /*! \brief constructor for NDArray with storage type
    */
@@ -117,7 +117,7 @@ class NDArray {
         shape_(),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
   /*!
    * \brief constructing a static NDArray that shares data with TBlob
@@ -131,7 +131,7 @@ class NDArray {
         shape_(data.shape_),
         dtype_(data.type_flag_),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
 
   /*!
@@ -149,7 +149,7 @@ class NDArray {
         }),
         shape_(data.shape_),
         dtype_(data.type_flag_), storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
 
   /*! \brief create ndarray from shared memory */
@@ -158,7 +158,7 @@ class NDArray {
         shape_(shape),
         dtype_(dtype),
         storage_type_(kDefaultStorage),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
 
   /*!
@@ -177,7 +177,7 @@ class NDArray {
         shape_(shape),
         dtype_(data.type_flag_),
         storage_type_(stype),
-        entry_(nullptr) {
+        autograd_entry_(nullptr) {
   }
   /*!
    * \brief initialize the NDArray, assuming it is not assigned a meaningful shape before
@@ -326,9 +326,9 @@ class NDArray {
   inline bool is_none() const {
     return ptr_.get() == nullptr;
   }
-  /*! \return updated grad state in entry_ */
+  /*! \return updated grad state in autograd_entry_ */
   bool fresh_out_grad() const;
-  /*! \return updated grad state in entry_ */
+  /*! \return updated grad state in autograd_entry_ */
   void set_fresh_out_grad(bool state) const;
   /*! \brief Returns true if a sparse ndarray's aux_data and storage are initialized
    * Throws an exception if the indices array shape is inconsistent
@@ -367,27 +367,19 @@ class NDArray {
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
+   *
+   * If the array has not been computed yet (deferred compute), this will
+   * trigger computation.
    */
-  inline void WaitToRead() const {
-    if (is_none()) return;
-    Engine::Get()->WaitForVar(ptr_->var);
-  }
+  void WaitToRead() const;
   /*!
    * \brief Block until all the pending read/write operations with respect
    *    to current NDArray are finished, and write can be performed.
+   *
+   * If the array has not been computed yet (deferred compute), this will
+   * trigger computation.
    */
-  inline void WaitToWrite() const {
-    if (is_none()) return;
-    /*!
-     * Push an empty mutable function to flush all preceding reads to the
-     * variable.
-     */
-    Engine::Get()->PushAsync(
-      [](RunContext, Engine::CallbackOnComplete on_complete) {
-        on_complete();
-      }, Context{}, {}, {ptr_->var});
-    Engine::Get()->WaitForVar(ptr_->var);
-  }
+  void WaitToWrite() const;
   /*! \return the associated variable of the ndarray.*/
   inline Engine::VarHandle var() const {
     return ptr_->var;
@@ -648,11 +640,13 @@ class NDArray {
    */
   NDArray ReshapeWithRecord(const mxnet::TShape &shape);
   /*!
-   * \brief Return a copy of this NDArray without autograd history
+   * \brief Return a copy of this NDArray without autograd and deferred compute
+   * history
    */
   NDArray Detach() const {
     NDArray ret(*this);
-    ret.entry_ = nnvm::NodeEntry(nullptr);
+    ret.autograd_entry_ = nnvm::NodeEntry(nullptr);
+    ret.deferredcompute_entry_ = nnvm::NodeEntry(nullptr);
     return ret;
   }
 
@@ -1111,7 +1105,9 @@ class NDArray {
   /*! \brief storage type of data */
   NDArrayStorageType storage_type_ = kUndefinedStorage;
   /*! \brief node entry for autograd */
-  nnvm::NodeEntry entry_;
+  nnvm::NodeEntry autograd_entry_;
+  /*! \brief node entry for deferred computation tracking */
+  nnvm::NodeEntry deferredcompute_entry_;
   /*!
    * \brief internal TBlob
    * \note When user access tblob_ by some const methods like

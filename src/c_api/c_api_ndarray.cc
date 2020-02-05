@@ -112,9 +112,17 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
   SetNDInputsOutputs(op, &ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outputs);
 
-  auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
-  if (Imperative::Get()->is_recording()) {
-    Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+  if (Imperative::Get()->is_deferred_compute()) {
+    Imperative::Get()->RecordDeferredCompute(std::move(attrs), ndinputs, ndoutputs);
+  } else {
+    for (NDArray* input : ndinputs) {
+      Imperative::DCInfo::Compute(*input);
+    }
+    auto state = Imperative::Get()->Invoke(
+      Context::CPU(), attrs, ndinputs, ndoutputs);
+    if (Imperative::Get()->is_recording()) {
+      Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
+    }
   }
 
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
@@ -431,5 +439,44 @@ int MXCachedOpRegisterOpHook(NDArrayHandle handle,
   }
   CachedOpPtr op = *static_cast<CachedOpPtr *>(handle);
   op->RegisterOpHook(clbk, monitor_all);
+  API_END();
+}
+
+int MXNDArrayIsDeferredComputeEnabled(int *curr) {
+  API_BEGIN();
+  *curr = Imperative::Get()->is_deferred_compute();
+  API_END();
+}
+
+int MXNDArraySetDeferredComputeEnabled(int deferred_compute, int *prev) {
+  API_BEGIN();
+  *prev = Imperative::Get()->set_is_deferred_compute(static_cast<bool>(deferred_compute));
+  API_END();
+}
+
+int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *input_handles,
+                                      NDArrayHandle *output_handles,
+                                      const char **c_input_names,
+                                      int num_inputs,
+                                      int num_outputs, SymbolHandle *out) {
+  API_BEGIN();
+
+  // Obtain the NDArrays and their names
+  std::vector<std::pair<NDArray*, std::string>> inputs;
+  std::vector<NDArray *> outputs;
+  inputs.reserve(num_inputs);
+  outputs.reserve(num_outputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    NDArray *array = reinterpret_cast<NDArray *>(input_handles[i]);
+    inputs.emplace_back(array, c_input_names[i]);
+  }
+  for (int i = 0; i < num_outputs; ++i) {
+    NDArray *array = reinterpret_cast<NDArray *>(output_handles[i]);
+    outputs.emplace_back(array);
+  }
+
+  // Obtain Symbeol
+  *out = Imperative::Get()->GetDeferredComputeSymbol(inputs, outputs);
+
   API_END();
 }

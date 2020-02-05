@@ -4635,6 +4635,11 @@ def concatenate(arrays, axis=0, always_copy=True):
     NDArray
         An `NDArray` that lives on the same context as `arrays[0].context`.
     """
+    # Unsupported in deferred compute mode due to use of inplace operations.
+    from .._deferred_compute import is_deferred_compute  # pylint: disable=wrong-import-position
+    assert not is_deferred_compute(), 'nd.concatenate is deprecated and ' \
+        'unsupported in deferred compute mode. Use nd.concat instead.'
+
     assert isinstance(arrays, list)
     assert len(arrays) > 0
     assert isinstance(arrays[0], NDArray)

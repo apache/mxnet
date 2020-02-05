@@ -16,19 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <unordered_set>
+#include <algorithm>
 #include <iostream>
-#include "./imperative_utils.h"
+#include <unordered_map>
+#include <unordered_set>
+
 #include "./cached_op.h"
+#include "./imperative_utils.h"
+
+namespace nnvm {
+ObjectPtr CreateVariableNode(const std::string &name);
+}
 
 namespace mxnet {
 #if DMLC_CXX11_THREAD_LOCAL
 thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
+thread_local bool Imperative::is_deferred_compute_ = false;
 thread_local bool Imperative::is_np_shape_thread_local_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
+MX_THREAD_LOCAL bool Imperative::is_deferred_compute_ = false;
 MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
 #endif
 
@@ -120,6 +129,8 @@ OpStatePtr Imperative::Invoke(
   return ret;
 }
 
+// Create nnvm::NodeEntry for variables' and gradients' autograd_entry_
+// attribute and associate AGInfo with it's info attribute
 void Imperative::MarkVariables(
     const std::vector<NDArray*>& variables,
     const std::vector<uint32_t>& grad_reqs,
@@ -127,17 +138,17 @@ void Imperative::MarkVariables(
   for (uint32_t i = 0; i < variables.size(); ++i) {
     std::string str_c(std::to_string(variable_count_++));
 
-    variables[i]->entry_ = nnvm::NodeEntry{
+    variables[i]->autograd_entry_ = nnvm::NodeEntry{
         nnvm::Symbol::CreateVariable("var" + str_c).outputs[0].node, 0, 0};
-    AGInfo& info = AGInfo::Create(variables[i]->entry_.node);
+    AGInfo& info = AGInfo::Create(variables[i]->autograd_entry_.node);
     info.outputs.emplace_back(variables[i]->Detach());
     info.out_grads.emplace_back(gradients[i]->Detach());
     info.grad_req = static_cast<OpReqType>(grad_reqs[i]);
     info.ctx = variables[i]->ctx();
 
-    gradients[i]->entry_ = nnvm::NodeEntry{
+    gradients[i]->autograd_entry_ = nnvm::NodeEntry{
         nnvm::Symbol::CreateVariable("grad" + str_c).outputs[0].node, 0, 0};
-    AGInfo& grad_info = AGInfo::Create(gradients[i]->entry_.node);
+    AGInfo& grad_info = AGInfo::Create(gradients[i]->autograd_entry_.node);
     grad_info.outputs.emplace_back(gradients[i]->Detach());
     grad_info.ctx = gradients[i]->ctx();
   }
@@ -199,6 +210,9 @@ void Imperative::RecordOp(
     std::vector<bool>* p_save_outputs) {
   MXAPIThreadLocalEntry<> *local_buff = MXAPIThreadLocalStore<>::Get();
 
+  CHECK(!is_deferred_compute())
+      << "Autograd recording is not supported during deferred compute mode.";
+
   for (auto output : outputs) {
     CHECK(AGInfo::IsNone(*output))
       << "Assigning to NDArrays that are already in a computational graph "
@@ -250,11 +264,11 @@ void Imperative::RecordOp(
         input_info.outputs.back().dtype_ = inputs[i]->dtype();
         input_info.outputs.back().storage_type_ = inputs[i]->storage_type();
       }
-      inputs[i]->entry_ = std::move(entry);  // assign last to prevent cyclic reference
+      inputs[i]->autograd_entry_ = std::move(entry);  // assign last to prevent cyclic reference
     } else if (save_inputs[i]) {
-      AGInfo::Get(inputs[i]->entry_.node).outputs[inputs[i]->entry_.index] = inputs[i]->Detach();
+      AGInfo::Get(inputs[i]->autograd_entry_.node).outputs[inputs[i]->autograd_entry_.index] = inputs[i]->Detach();
     }
-    node->inputs[i] = inputs[i]->entry_;
+    node->inputs[i] = inputs[i]->autograd_entry_;
   }
 
   for (auto output : outputs) {
@@ -273,8 +287,130 @@ void Imperative::RecordOp(
       info.outputs.back().dtype_ = outputs[i]->dtype();
       info.outputs.back().storage_type_ = outputs[i]->storage_type();
     }
-    outputs[i]->entry_ = nnvm::NodeEntry{node, i, 0};
+    outputs[i]->autograd_entry_ = nnvm::NodeEntry{node, i, 0};
   }
+}
+
+void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
+                                       std::vector<NDArray *> &inputs,
+                                       std::vector<NDArray *> &outputs) {
+  CHECK(!is_recording())
+      << "Autograd recording is not supported during deferred compute mode.";
+
+  for (const NDArray *output : outputs) {
+    CHECK(DCInfo::IsNone(*output))
+        << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
+        << "recording in deferred compute mode.";
+    // However, an inplace operation on a non-deferred compute array inside
+    // deferred compute scope will work. For example:
+    // a = mx.nd.arange(10)
+    // with dc.context():
+    //     a[:5] = 0
+  }
+  DispatchMode dispatch_mode = DispatchMode::kUndefined;
+  Context default_ctx = Context::CPU();
+  Context ctx = imperative::GetContext(attrs, inputs, outputs, default_ctx);
+  imperative::SetShapeType(ctx, attrs, inputs, outputs, &dispatch_mode);
+
+  nnvm::ObjectPtr node = nnvm::Node::Create();
+  node->inputs.reserve(inputs.size());
+  // Get NodeEntries for inputs
+  for (const NDArray *array : inputs) {
+    // For non-deferred compute arrays, array->deferredcompute_entry_ will be
+    // nullptr. We handle this in in GetDeferredComputeSymbol
+    node->inputs.emplace_back(array->deferredcompute_entry_);
+  }
+  node->attrs = std::move(attrs);
+  // Need to support NameManager in imperative API to better name node->attrs.name
+  node->attrs.name = "node_" + std::to_string(node_count_++);
+  DCInfo::Create(node, inputs, outputs);
+
+  for (uint32_t i = 0; i < outputs.size(); ++i) {
+    outputs[i]->deferredcompute_entry_ = nnvm::NodeEntry{node, i, 0};
+  }
+}
+
+nnvm::Symbol *Imperative::GetDeferredComputeSymbol(
+    const std::vector<std::pair<NDArray *, std::string>> &inputs,
+    const std::vector<NDArray *> &outputs
+    ) {
+  Symbol s;
+  s.outputs.reserve(outputs.size());
+  for (NDArray * ndoutput : outputs) {
+    CHECK(!Imperative::DCInfo::IsNone(*ndoutput))
+        << "ValueError: output_arrays for GetDeferredComputeSymbol "
+        << "must have a deferred compute history associated with them.";
+    s.outputs.emplace_back(ndoutput->deferredcompute_entry_);
+  }
+  std::unordered_map<NDArray *, nnvm::ObjectPtr> ndinput_to_variable;
+  std::unordered_set<const NDArray *> missing_inputs;
+  auto add_symbol_variables = [&inputs, &ndinput_to_variable,
+                               &missing_inputs](const nnvm::ObjectPtr &node) {
+    if(node == nullptr) {
+      // This (nonexistant) "Node" belongs to an array created outside of deferred compute scope.
+      return;
+    }
+
+    // Check if node has any non-deferred compute inputs
+    for (uint32_t i = 0; i < node->inputs.size(); i++) {
+      nnvm::NodeEntry &node_entry = node->inputs[i];
+      if (node_entry.node == nullptr || node_entry.node->is_variable()) {
+        // Node has non-deferred compute input (nullptr). Find the corresponding
+        // NDArray and create a variable for it. If GetDeferredComputeSymbol has
+        // been called before, a variable already exists and only the name needs
+        // to be updated.
+        Imperative::DCInfo &dcinfo = Imperative::DCInfo::Get(node);
+        const NDArray *array = dcinfo.input_handles_.at(i);
+
+        // Make sure this array is part of GetDeferredComputeSymbol inputs
+        auto is_equal = [array](const std::pair<NDArray *, std::string> &input) {
+          return array == std::get<0>(input);
+        };
+
+        // std::vector<std::pair<NDArray *, std::string>>::iterator input_search =
+        auto input_search = std::find_if(inputs.begin(), inputs.end(), is_equal);
+        // Create symbol variable
+        if (input_search != inputs.end()) {
+          NDArray *ndinput;
+          std::string input_name;
+          std::tie(ndinput, input_name) = *input_search;
+
+          nnvm::ObjectPtr input_variable;
+
+          auto variable_search = ndinput_to_variable.find(ndinput);
+          if (variable_search == ndinput_to_variable.end()) {
+            // No variable for this ndarray yet
+            input_variable = nnvm::CreateVariableNode(input_name);
+            ndinput_to_variable.insert({ndinput, input_variable});
+          } else {
+            input_variable = variable_search->second;
+          }
+
+          node_entry.node = input_variable;
+        } else {
+          missing_inputs.insert(array);
+        }
+      }
+    }
+  };
+  nnvm::DFSVisit(s.outputs, add_symbol_variables);
+
+  CHECK_EQ(ndinput_to_variable.size(), inputs.size())
+      << "ValueError: Invalid input to GetDeferredComputeSymbol. "
+      << ndinput_to_variable.size() << " inputs are required, but "
+      << inputs.size() << " were specified.";
+
+  CHECK_EQ(missing_inputs.size(), 0)
+      << "ValueError: Invalid input to GetDeferredComputeSymbol. "
+      << missing_inputs.size() << " required inputs unspecified.";
+
+  // Deep copy of symbol as subsequent calls to this function may change the
+  // name of input variables.
+  s = s.Copy();
+  Symbol *out = new Symbol();
+  out->outputs = s.outputs;
+
+  return out;
 }
 
 std::vector<NDArray*> Imperative::Backward(
@@ -297,7 +433,7 @@ std::vector<NDArray*> Imperative::Backward(
       << "You need to set is_recording to true or use autograd.record() to save "
       << "computational graphs for backward. If you want to differentiate the same "
       << "graph twice, you need to pass retain_graph=True to backward.";
-    graph.outputs.emplace_back(i->entry_);
+    graph.outputs.emplace_back(i->autograd_entry_);
   }
   size_t num_forward_outputs = graph.outputs.size();
 
@@ -333,10 +469,10 @@ std::vector<NDArray*> Imperative::Backward(
     x_reqs.reserve(variables.size());
     for (size_t i = 0; i < variables.size(); ++i) {
       CHECK(!AGInfo::IsNone(*variables[i]) &&
-            AGInfo::IsVariable(variables[i]->entry_.node))
+            AGInfo::IsVariable(variables[i]->autograd_entry_.node))
           << "Cannot differentiate with respect to the " << i+1 << "-th variable"
           << " because it does not require gradient.";
-      xs.emplace_back(variables[i]->entry_);
+      xs.emplace_back(variables[i]->autograd_entry_);
       x_grads.push_back(new NDArray());
       x_reqs.push_back(kWriteTo);
     }
@@ -402,7 +538,7 @@ std::vector<NDArray*> Imperative::Backward(
         size_t nid = idx.node_id(n.get());
         size_t eid = idx.entry_id(nid, i);
         buff[eid] = info.outputs[i];
-        buff[eid].entry_ = NodeEntry{n, i, 0};
+        buff[eid].autograd_entry_ = NodeEntry{n, i, 0};
         ref_count[eid] = 1;
       }
     });
@@ -411,7 +547,7 @@ std::vector<NDArray*> Imperative::Backward(
       if (!idx.exist(ograd_entry.node.get())) continue;
       size_t eid = idx.entry_id(ograd_entry);
       buff[eid] = info.outputs[0];
-      buff[eid].entry_ = ograd_entry;
+      buff[eid].autograd_entry_ = ograd_entry;
     }
   } else {
     states.reserve(num_forward_nodes);
@@ -542,6 +678,62 @@ std::vector<NDArray*> Imperative::Backward(
     return x_grads;
   }
   return {};
+}
+
+Imperative::DCInfo::DCInfo(const std::vector<NDArray *> &inputs,
+                           const std::vector<NDArray *> &outputs) {
+  this->inputs_.reserve(inputs.size());
+  this->input_handles_.reserve(inputs.size());
+  for (const NDArray *arr : inputs) {
+    CHECK(!arr->is_none());
+    this->inputs_.push_back(*arr);
+    this->input_handles_.push_back(arr);
+  }
+
+  this->outputs_.reserve(outputs.size());
+  for (const NDArray *arr : outputs) {
+    CHECK(!arr->is_none());
+    this->outputs_.push_back(*arr);
+  }
+}
+
+Imperative::DCInfo &
+Imperative::DCInfo::Create(const nnvm::ObjectPtr &node,
+                           const std::vector<NDArray *> &inputs,
+                           const std::vector<NDArray *> &outputs) {
+  node->info.construct<DCInfo>(inputs, outputs);
+  return Imperative::DCInfo::Get(node);
+}
+
+void Imperative::DCInfo::Compute(const NDArray &arr) {
+  if (Imperative::DCInfo::IsComputed(arr))
+    return;
+
+  DCInfo &info = Imperative::DCInfo::Get(arr.deferredcompute_entry_.node);
+  info.is_computed_ = true;  // We will Invoke at the end of this function.
+
+  // Recursively compute input arrays
+  for (NDArray &input : info.inputs_) {
+    Compute(input);
+  }
+
+  // Prepare pointers
+  std::vector<NDArray *> ndinputs, ndoutputs;
+  ndinputs.reserve(info.inputs_.size());
+  ndoutputs.reserve(info.outputs_.size());
+  for (NDArray &input : info.inputs_)
+    ndinputs.push_back(&input);
+  for (NDArray &output : info.outputs_)
+    ndoutputs.push_back(&output);
+
+  // Compute this array
+  Imperative::Get()->Invoke(Context::CPU(),
+                            arr.deferredcompute_entry_.node->attrs, ndinputs,
+                            ndoutputs);
+
+  // Deallocate copies
+  info.inputs_.clear();
+  info.outputs_.clear();
 }
 
 }  // namespace mxnet

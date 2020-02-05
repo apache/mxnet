@@ -96,7 +96,12 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
   return ctx;
 }
 
-// Set the shape, dtype, storage type and dispatch mode via the attribute inference functions
+/*! \brief Set the shape, dtype, storage type and dispatch mode via the
+ * attribute inference functions
+ *
+ * Inferred information is stored in MXAPIThreadLocalEntry. Existing information
+ * is overwritten.
+ */
 inline void SetShapeType(const Context& ctx,
                          const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray*>& inputs,
@@ -227,6 +232,10 @@ inline void SetShapeType(const Context& ctx,
   }
 }
 
+/*! \brief Set read and write vars, resource requests and mutate_idx
+ *
+ * For inputs and outputs arguments only NDArray::var() is accessed.
+ */
 inline void SetDependency(const nnvm::NodeAttrs& attrs,
                    const Context& ctx,
                    const std::vector<NDArray*>& inputs,
@@ -300,6 +309,11 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
 }
 
+/*! \brief Reset vector of OpReqType *req based on input and output NDArrays.
+ *
+ * Set to kWriteInplace if corresponding output shares variable with any input
+ * NDArray. Set to kWriteTo otherwise.
+ */
 inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
                         const std::vector<NDArray*>& outputs,
                         std::vector<OpReqType> *req) {
@@ -385,6 +399,9 @@ inline void SetNumOutputs(const nnvm::Op *op,
   }
 }
 
+/*!
+ * \brief Copy-construct NDArrays referenced by inputs and outputs to p_inputs and p_outputs
+ */
 inline void DerefInputOutput(const std::vector<NDArray*>& inputs,
                              const std::vector<NDArray*>& outputs,
                              std::vector<NDArray>* p_inputs,

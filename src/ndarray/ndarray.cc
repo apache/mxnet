@@ -51,7 +51,7 @@ namespace mxnet {
 NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
     bool delay_alloc, int dtype, std::vector<int> aux_types,
     mxnet::ShapeVector aux_shapes, mxnet::TShape storage_shape) : shape_(shape),
-  dtype_(dtype), storage_type_(stype), entry_(nullptr) {
+  dtype_(dtype), storage_type_(stype), autograd_entry_(nullptr) {
   // Assign default aux types if not given
   if (aux_types.size() == 0
       && stype != kDefaultStorage) {
@@ -182,7 +182,7 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
 
 NDArray NDArray::grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return NDArray();
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(autograd_entry_.node);
   if (info.out_grads.size()) {
     CHECK_EQ(info.out_grads.size(), 1);
     return info.out_grads[0];
@@ -194,14 +194,14 @@ nnvm::Symbol NDArray::get_autograd_symbol() const {
   CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray is not part of a computation graph. Did you forget to turn on recording?";
   nnvm::Symbol ret;
-  ret.outputs.emplace_back(entry_);
+  ret.outputs.emplace_back(autograd_entry_);
   return ret;
 }
 
 #if MXNET_USE_MKLDNN == 1
 
 NDArray::NDArray(const mkldnn::memory::desc &md)
-    : storage_type_(kDefaultStorage), entry_(nullptr) {
+    : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
   shape_ = mxnet::TShape(md.data.dims, md.data.dims + md.data.ndims);
   dtype_ = get_mxnet_type(md.data.data_type);
   ptr_ = std::make_shared<Chunk>(shape_, Context::CPU(), true, dtype_);
@@ -210,7 +210,7 @@ NDArray::NDArray(const mkldnn::memory::desc &md)
 }
 
 NDArray::NDArray(const std::shared_ptr<mkldnn::memory> &mkldnn_mem)
-    : storage_type_(kDefaultStorage), entry_(nullptr) {
+    : storage_type_(kDefaultStorage), autograd_entry_(nullptr) {
   auto mem_desc = mkldnn_mem->get_desc();
   shape_ = mxnet::TShape(mem_desc.data.dims, mem_desc.data.dims + mem_desc.data.ndims);
   dtype_ = get_mxnet_type(mem_desc.data.data_type);
@@ -285,11 +285,22 @@ NDArray NDArray::Reshape(const mxnet::TShape &shape) const {
 
 NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
   NDArray ret = this->Reshape(shape);
-  if (!Imperative::Get()->is_recording()) return ret;
+  bool is_recording = Imperative::Get()->is_recording();
+  bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+  if (!is_deferred_compute) {
+    // The new array shares memory with this array, thus make sure this array
+    // has been computed already computed. (noop if this array is not deferred)
+    Imperative::DCInfo::Compute(*this);
+    if (!is_recording) {
+      return ret;
+    }
+  }
 
   CHECK_EQ(shape_.Size(), shape.Size())
     << "NDArray.Reshape: target shape must have the same size as "
-    << "current shape when recording with autograd.";
+    << "current shape when recording with autograd "
+    << "or in deferred compute mode.";
+
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("Reshape");;
   std::ostringstream os;
@@ -297,7 +308,12 @@ NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
   attrs.dict.insert({"shape", os.str()});
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
-  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+
+  if (is_recording) {
+    Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  } else if (is_deferred_compute) {
+    Imperative::Get()->RecordDeferredCompute(std::move(attrs), inputs, outputs);
+  }
   return ret;
 }
 
@@ -319,7 +335,17 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   NDArray ret = this->Slice(begin, end);
-  if (!Imperative::Get()->is_recording()) return ret;
+  bool is_recording = Imperative::Get()->is_recording();
+  bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+  if (!is_deferred_compute) {
+    // The new array shares memory with this array, thus make sure this array
+    // has been computed already computed. (noop if this array is not deferred)
+    Imperative::DCInfo::Compute(*this);
+    if (!is_recording) {
+      return ret;
+    }
+  }
+
   // fake a slice op
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("slice");
@@ -327,7 +353,13 @@ NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   attrs.dict.insert({"end", std::to_string(end)});
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
-  Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+
+  if (is_recording) {
+    Imperative::Get()->RecordOp(std::move(attrs), inputs, outputs);
+  } else if (is_deferred_compute) {
+    Imperative::Get()->RecordDeferredCompute(std::move(attrs), inputs, outputs);
+  }
+
   return ret;
 }
 
@@ -406,7 +438,7 @@ NDArray NDArray::FromDLPack(const DLManagedTensor* tensor, bool transient_handle
 
 bool NDArray::fresh_out_grad() const {
   if (Imperative::AGInfo::IsNone(*this)) return false;
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(autograd_entry_.node);
   return info.fresh_out_grad;
 }
 
@@ -414,7 +446,7 @@ bool NDArray::fresh_out_grad() const {
 void NDArray::set_fresh_out_grad(bool state) const {
   CHECK(!Imperative::AGInfo::IsNone(*this))
     << "NDArray has not been marked as a variable and does not have gradient state";
-  Imperative::AGInfo& info = Imperative::AGInfo::Get(entry_.node);
+  Imperative::AGInfo& info = Imperative::AGInfo::Get(autograd_entry_.node);
   info.fresh_out_grad = state;
 }
 
@@ -2057,8 +2089,9 @@ void NDArray::SyncCopyToCPU(void *data, size_t size) const {
   }
   TBlob dst(data, dshape, cpu::kDevMask, this->dtype_, 0); // NOLINT(*)
 
+  this->WaitToRead();
+
   if (this->ctx().dev_mask() == cpu::kDevMask) {
-    this->WaitToRead();
     RunContext rctx{this->ctx(), nullptr, nullptr, false};
     NDArray src = *this;
 #if MXNET_USE_MKLDNN == 1
@@ -2119,6 +2152,25 @@ void NDArray::SyncCheckFormat(const bool full_check) const {
   CHECK_EQ(err, kNormalErr) << "Check the validity of this sparse NDArray";
 }
 
+void NDArray::WaitToRead() const {
+  if (is_none()) return;
+  Imperative::DCInfo::Compute(*this);
+  Engine::Get()->WaitForVar(ptr_->var);
+}
+
+void NDArray::WaitToWrite() const {
+  if (is_none()) return;
+  Imperative::DCInfo::Compute(*this);
+  /*!
+   * Push an empty mutable function to flush all preceding reads to the
+   * variable.
+   */
+  Engine::Get()->PushAsync(
+      [](RunContext, Engine::CallbackOnComplete on_complete) { on_complete(); },
+      Context{}, {}, {ptr_->var});
+  Engine::Get()->WaitForVar(ptr_->var);
+}
+
 #if MXNET_PREDICT_ONLY == 0
 // register API function
 // those with underscore will be registered at NDArray
@@ -2148,6 +2200,16 @@ void CopyFromToSimple(
   CopyFromTo(inputs[0], outputs[0], 0, true);
 }
 
+bool CopyToType(const nnvm::NodeAttrs &attrs, std::vector<int> *in_attrs,
+                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  int in_type = in_attrs->at(0);
+  int out_type = in_type;
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, out_type);
+  return out_attrs->at(0) != -1;
+}
+
 // copy function is special
 // that we need to remove kAcceptEmptyMutateTarget from it
 NNVM_REGISTER_OP(_copyto)
@@ -2155,10 +2217,7 @@ NNVM_REGISTER_OP(_copyto)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", op::ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType",
-  [](const NodeAttrs& attrs, std::vector<int> *in_type, std::vector<int> *out_type) {
-    return !op::type_is_none((*in_type)[0]) && !op::type_is_none((*out_type)[0]);
-  })
+.set_attr<nnvm::FInferType>("FInferType", CopyToType)
 .set_attr<FInferStorageType>("FInferStorageType",
   [](const NodeAttrs& attrs,
      const int dev_mask,
