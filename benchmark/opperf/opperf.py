@@ -40,6 +40,7 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
     run_convolution_operators_benchmarks, run_transpose_convolution_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_optimizer_operators import run_optimizer_operators_benchmarks
+from benchmark.opperf.nd_operations.indexing_routines import run_indexing_routines_benchmarks
 from benchmark.opperf.nd_operations.nn_loss_operators import run_loss_operators_benchmarks
 from benchmark.opperf.nd_operations.array_manipulation_operators import run_rearrange_operators_benchmarks, \
     run_shape_operators_benchmarks, run_expanding_operators_benchmarks, run_rounding_operators_benchmarks
@@ -93,6 +94,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all Array Rounding operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_rounding_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
+
+    # Run all Indexing routines benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_indexing_routines_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 

@@ -58,7 +58,7 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     # Filter out deprecated operators
     filters += ("normal", "uniform", "BatchNorm_v1", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
                 "Pooling_v1", "Concat", "Reshape", "Convolution_v1", "SliceChannel", "Crop",
-                "crop", "onehot_encode")
+                "crop", "onehot_encode", "batch_take")
 
     if merge_op_forward_backward:
         filters += ("_backward",)
@@ -130,7 +130,9 @@ def prepare_op_inputs(op, arg_params):
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type:
-            if arg_name + "_nd" in DEFAULTS_INPUTS:
+            if op == "ravel_multi_index":
+                arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
+            elif arg_name + "_nd" in DEFAULTS_INPUTS:
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
             elif op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
@@ -140,6 +142,7 @@ def prepare_op_inputs(op, arg_params):
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
             elif op in ops_dim1 and arg_name + "_dim1" in DEFAULTS_INPUTS:
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_dim1"]
+            # default case
             elif arg_name in DEFAULTS_INPUTS:
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
         else:
@@ -250,7 +253,7 @@ def get_all_random_sampling_operators():
 
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
@@ -292,9 +295,9 @@ def get_all_optimizer_operators():
 
     # Filter for Optimizer operators
     optimizer_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
-         if op_name in optimizer_ops and op_name not in unique_ops:
-             optimizer_mx_operators[op_name] = mx_operators[op_name]
+    for op_name, _ in mx_operators.items():
+        if op_name in optimizer_ops and op_name not in unique_ops:
+            optimizer_mx_operators[op_name] = mx_operators[op_name]
     return optimizer_mx_operators
 
 def get_all_sorting_searching_operators():
@@ -311,7 +314,7 @@ def get_all_sorting_searching_operators():
 
     # Filter for Sort and search operators
     sort_search_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in sort_search_ops and op_name not in unique_ops:
             sort_search_mx_operators[op_name] = mx_operators[op_name]
     return sort_search_mx_operators
@@ -332,10 +335,35 @@ def get_all_rearrange_operators():
 
     # Filter for Array Rearrange operators
     rearrange_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in rearrange_ops and op_name not in unique_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
+
+
+def get_all_indexing_routines():
+    """Gets all indexing routines registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    # @ChaiBapchya unravel_index errors out on certain inputs
+    # tracked here https://github.com/apache/incubator-mxnet/issues/16771
+    # @ChaiBapchya scatter_nd errors with core dump
+    # tracked here https://github.com/apache/incubator-mxnet/issues/17480
+    indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
+                         'where', 'ravel_multi_index', 'gather_nd', 'pick']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Indexing routines
+    indexing_mx_routines = {}
+    for op_name, _ in mx_operators.items():
+        if op_name in indexing_routines and op_name not in unique_ops:
+            indexing_mx_routines[op_name] = mx_operators[op_name]
+    return indexing_mx_routines
 
 
 def get_all_loss_operators():
