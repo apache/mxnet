@@ -63,11 +63,11 @@ def run_linalg_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nat
                                                   dtype=dtype,
                                                   ctx=ctx,
                                                   profiler=profiler,
-                                                  inputs=[{"A": mx.nd.array([[1, 0],
-                                                                             [0, 1]])},
-                                                          {"A": mx.nd.array([[2, -1, 0],
-                                                                             [-1, 2, -1],
-                                                                             [0, -1, 2]])}],
+                                                  inputs=[{"A": [[1, 0],
+                                                                 [0, 1]]},
+                                                          {"A": [[2, -1, 0],
+                                                                 [-1, 2, -1],
+                                                                 [0, -1, 2]]}],
                                                   warmup=warmup,
                                                   runs=runs)
 
