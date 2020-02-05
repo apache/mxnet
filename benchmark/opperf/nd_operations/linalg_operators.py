@@ -57,7 +57,7 @@ def run_linalg_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nat
 
     """
     # Individual tests for ops with specific requirements on input data
-    # linalg_potrf requires a positive definite as input
+    # linalg_potrf requires a positive definite matrix as input
     linalg_potrf_benchmark = run_performance_test(getattr(MX_OP_MODULE, "linalg_potrf"),
                                                   run_backward=False,
                                                   dtype=dtype,

@@ -119,6 +119,8 @@ def prepare_op_inputs(op, arg_params):
     ops_3d = ['CTCLoss', 'ctc_loss']
     custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial']
 
+    custom_data = ['linalg_maketrian']
+
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
@@ -282,7 +284,8 @@ def get_all_linalg_operators():
     # Filter for Linear Algebra operators
     linalg_mx_operators = {}
     for op_name, _ in mx_operators.items():
-        if op_name.startswith("linalg_") or op_name in other_linalg_ops:
+        # Already tested linalg_potrf independently
+        if (op_name.startswith("linalg_") and op_name != 'linalg_potrf') or op_name in other_linalg_ops:
             linalg_mx_operators[op_name] = mx_operators[op_name]
     return linalg_mx_operators
 
