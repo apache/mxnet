@@ -3652,6 +3652,41 @@ def test_np_random_beta():
 
 @with_seed()
 @use_np
+def test_np_random_chisquare():
+    class TestRandomChisquare(HybridBlock):
+        def __init__(self, size=None, dtype=None, ctx=None):
+            super(TestRandomChisquare, self).__init__()
+            self._size = size
+            self._dtype = dtype
+            self._ctx = ctx
+
+        def hybrid_forward(self, F, df):
+            return F.np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
+
+    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+
+    dtype_list = [np.float16, np.float32, np.float64]
+    hybridize_list = [False, True]
+    df = np.array([1])
+    for [param_shape, in_dtype, out_dtype, hybridize] in itertools.product(shape_list,
+            dtype_list, dtype_list, hybridize_list):
+        if sys.version_info.major < 3 and param_shape == ():
+            continue
+        mx_df = df.astype(in_dtype)
+        np_df = mx_df.asnumpy()
+        test_random_chisquare = TestRandomChisquare(size=param_shape, dtype=out_dtype)
+        if hybridize:
+            test_random_chisquare.hybridize()
+        np_out = _np.random.chisquare(np_df, size=param_shape)
+        mx_out = test_random_chisquare(mx_df)
+        mx_out_imperative = mx.np.random.chisquare(mx_df, size=param_shape, dtype=out_dtype)
+
+        assert_almost_equal(np_out.shape, mx_out.shape)
+        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+
+
+@with_seed()
+@use_np
 def test_np_exponential():
     class TestRandomExp(HybridBlock):
         def __init__(self, shape):
