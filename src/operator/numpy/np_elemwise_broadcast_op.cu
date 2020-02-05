@@ -66,7 +66,6 @@ NNVM_REGISTER_OP(_npi_subtract)
   NumpyBinaryBroadcastCompute<gpu, op::mshadow_op::minus>);
 #endif
 
-<<<<<<< HEAD
 NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::right,
                                                               mshadow_op::left>);
@@ -90,8 +89,6 @@ NNVM_REGISTER_OP(_backward_npi_broadcast_power)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::power_grad,
                                                               mshadow_op::power_rgrad>);
 
-=======
->>>>>>> bin forward
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::plus>);
 

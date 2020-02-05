@@ -56,52 +56,6 @@ bool NumpyBinaryLogicOpType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-TBlob PrependAxes(const TBlob& src, const int dst_ndim) {
-  CHECK_LE(src.shape_.ndim(), dst_ndim);
-  const int src_ndim = src.shape_.ndim();
-  if (src_ndim == dst_ndim) return src;
-  mxnet::TShape dst_shape(dst_ndim, 1);
-  for (int i = dst_ndim - src_ndim; i < dst_ndim; ++i) {
-    dst_shape[i] = src.shape_[i - dst_ndim + src_ndim];
-  }
-  return src.reshape(dst_shape);
-}
-
-struct TVMBinaryBroadcastCompute {
-  const char* func;
-  void operator()(const nnvm::NodeAttrs& attrs,
-                  const mxnet::OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
-#if MXNET_USE_TVM_OP
-    CHECK_EQ(inputs.size(), 2U);
-    CHECK_EQ(outputs.size(), 1U);
-    if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
-
-    // prepare tblobs and TVMArgs
-    std::vector<TBlob> tblobs = {inputs[0], inputs[1], outputs[0]};
-    std::vector<int> type_codes;
-    std::vector<TVMValue> values;
-
-    const int ondim = outputs[0].shape_.ndim();
-    const size_t num_args = inputs.size() + outputs.size();
-    type_codes.resize(num_args);
-    values.resize(num_args);
-    for (size_t i = 0; i < num_args; ++i) {
-      tblobs[i] = PrependAxes(tblobs[i], ondim);
-      type_codes[i] = kTVMDLTensorHandle;
-      values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
-    }
-    tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], tblobs.size());
-    tvm::runtime::TVMOpModule::Get()->CallEx(func, ctx, tblobs, tvm_args);
-#else
-    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
-                  "to enable TVM-generated kernels for operator " << func;
-#endif  // MXNET_USE_TVM_OP
-  }
-};
-
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(name)                                 \
   NNVM_REGISTER_OP(_npi_##name)                                                       \
   .set_num_inputs(2)                                                                  \
@@ -172,48 +126,6 @@ bool NumpyBinaryScalarLogicOpType(const nnvm::NodeAttrs& attrs,
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kBool);
   return true;
 }
-
-struct TVMBinaryBroadcastScalarCompute {
-  const char* func;
-  void operator()(const nnvm::NodeAttrs& attrs,
-                  const mxnet::OpContext& ctx,
-                  const std::vector<TBlob>& inputs,
-                  const std::vector<OpReqType>& req,
-                  const std::vector<TBlob>& outputs) {
-#if MXNET_USE_TVM_OP
-    CHECK_EQ(inputs.size(), 1U);
-    CHECK_EQ(outputs.size(), 1U);
-    if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
-
-    // prepare tblobs and TVMArgs
-    std::vector<TBlob> tblobs = {inputs[0], outputs[0]};
-    std::vector<int> type_codes;
-    std::vector<TVMValue> values;
-
-    const size_t num_args = 3;  // one input tensor, one scalar param, and one output
-    type_codes.resize(num_args);
-    values.resize(num_args);
-
-    // input tensor setup
-    type_codes[0] = kTVMDLTensorHandle;
-    values[0].v_handle = const_cast<DLTensor*>(&(tblobs[0].dltensor()));
-
-    // scalar param
-    type_codes[1] = kDLFloat;
-    values[1].v_float64 = nnvm::get<double>(attrs.parsed);
-
-    // output tensor
-    type_codes[2] = kTVMDLTensorHandle;
-    values[2].v_handle = const_cast<DLTensor*>(&(tblobs[1].dltensor()));
-
-    tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], 3);
-    tvm::runtime::TVMOpModule::Get()->CallEx(func, ctx, tblobs, tvm_args);
-#else
-    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
-                  "to enable TVM-generated kernels for operator " << func;
-#endif  // MXNET_USE_TVM_OP
-  }
-};
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(name)                                \
   NNVM_REGISTER_OP(_npi_##name##_scalar)                                                    \

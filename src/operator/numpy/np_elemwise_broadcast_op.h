@@ -567,7 +567,7 @@ struct TVMBinaryBroadcastCompute {
     values.resize(num_args);
     for (size_t i = 0; i < num_args; ++i) {
       tblobs[i] = PrependAxes(tblobs[i], ondim);
-      type_codes[i] = kArrayHandle;
+      type_codes[i] = kTVMDLTensorHandle;
       values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
     }
     std::string funcname = std::string(func);
@@ -605,7 +605,7 @@ struct TVMBinaryBroadcastScalarCompute {
     values.resize(num_args);
 
     // input tensor setup
-    type_codes[0] = kArrayHandle;
+    type_codes[0] = kTVMDLTensorHandle;
     values[0].v_handle = const_cast<DLTensor*>(&(tblobs[0].dltensor()));
 
     // scalar param
@@ -613,11 +613,11 @@ struct TVMBinaryBroadcastScalarCompute {
     values[1].v_float64 = nnvm::get<double>(attrs.parsed);
 
     // output tensor
-    type_codes[2] = kArrayHandle;
+    type_codes[2] = kTVMDLTensorHandle;
     values[2].v_handle = const_cast<DLTensor*>(&(tblobs[1].dltensor()));
 
     // output tensor
-    type_codes[3] = kArrayHandle;
+    type_codes[3] = kTVMDLTensorHandle;
     values[3].v_handle = const_cast<DLTensor*>(&(tblobs[1].dltensor()));
 
     std::string funcname = std::string(func);
@@ -765,7 +765,7 @@ struct TVMBinaryBroadcastBackwardUseIn {
       type_codes.resize(num_args);
       values.resize(num_args);
       for (size_t i = 0; i < num_args; ++i) {
-        type_codes[i] = kArrayHandle;
+        type_codes[i] = kTVMDLTensorHandle;
         values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
       }
 
@@ -852,7 +852,7 @@ struct TVMBinaryBroadcastBackwardUseNone{
       type_codes.resize(num_args);
       values.resize(num_args);
       for (size_t i = 0; i < num_args; ++i) {
-        type_codes[i] = kArrayHandle;
+        type_codes[i] = kTVMDLTensorHandle;
         values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
       }
 
