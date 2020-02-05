@@ -267,6 +267,26 @@ def get_all_random_sampling_operators():
     return random_sampling_mx_operators
 
 
+def get_all_linalg_operators():
+    """Gets all Linear Algebra operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    other_linalg_ops = ['moments']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Linear Algebra operators
+    linalg_mx_operators = {}
+    for op_name, _ in mx_operators.items():
+        if op_name.startswith("linalg_") or op_name in other_linalg_ops:
+            linalg_mx_operators[op_name] = mx_operators[op_name]
+    return linalg_mx_operators
+
+
 def get_all_reduction_operators():
     """Gets all Reduction operators registered with MXNet.
 
