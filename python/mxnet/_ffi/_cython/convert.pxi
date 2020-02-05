@@ -18,6 +18,7 @@
 """ Adapted from incubator-tvm/python/tvm/_ffi/_cython/convert.pxi """
 
 from libc.stdint cimport *
+from numbers import Integral
 
 cdef extern from "mxnet/runtime/object.h" namespace "mxnet::runtime":
     cdef cppclass Object:
@@ -93,7 +94,7 @@ cdef inline ADT convert_list(list src) except *:
 
 
 cdef inline ObjectRef convert_object(object src_obj) except *:
-    if isinstance(src_obj, int):
+    if isinstance(src_obj, Integral):
         return Integer(<int>src_obj)
     elif isinstance(src_obj, tuple):
         return convert_tuple(src_obj)
