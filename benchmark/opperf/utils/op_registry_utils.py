@@ -278,14 +278,16 @@ def get_all_linalg_operators():
     """
     other_linalg_ops = ['moments']
 
+    # Already tested linalg_potrf independently
+    independently_tested = ['linalg_potrf']
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
     # Filter for Linear Algebra operators
     linalg_mx_operators = {}
     for op_name, _ in mx_operators.items():
-        # Already tested linalg_potrf independently
-        if (op_name.startswith("linalg_") and op_name != 'linalg_potrf') or op_name in other_linalg_ops:
+        if (op_name.startswith("linalg_") and op_name not in independently_tested) or op_name in other_linalg_ops:
             linalg_mx_operators[op_name] = mx_operators[op_name]
     return linalg_mx_operators
 
