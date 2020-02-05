@@ -26,6 +26,7 @@ from ...base import c_str
 from ...base import py_str
 from ...util import check_call, set_module, _sanity_check_params
 from ...util import wrap_np_unary_func, wrap_np_binary_func
+from ...util import is_np_default_dtype
 from ...context import current_context
 from ..symbol import Symbol, Group
 from .._internal import _set_np_symbol_class

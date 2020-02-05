@@ -23,9 +23,6 @@ from mxnet import numpy as np
 from mxnet.test_utils import use_np, use_np_default_dtype
 from common import with_seed
 
-#from multiprocessing import Process, Pool
-#import os
-
 
 class DtypeOpArgMngr(object):
     """Operator argument manager for storing operator workloads."""
@@ -56,7 +53,7 @@ _NUMPY_DTYPE_DEFAULT_FUNC_LIST = [
     'hanning',
     'hamming',
     'blackman',
-    'gamma',
+    'random.gamma',
     'random.uniform',
     'random.normal',
     'true_divide'
@@ -120,10 +117,6 @@ def _add_dtype_workload_hamming():
     DtypeOpArgMngr.add_workload('hamming', 3)
 
 
-def _add_dtype_workload_gamma():
-    DtypeOpArgMngr.add_workload('gamma', 3)
-
-
 def _add_dtype_workload_blackman():
     DtypeOpArgMngr.add_workload('blackman', 3)
 
@@ -134,6 +127,10 @@ def _add_dtype_workload_random_uniform():
 
 def _add_dtype_workload_random_normal():
     DtypeOpArgMngr.add_workload('random.normal', 0, 0.1, 3)
+
+
+def _add_dtype_workload_random_gamma():
+    DtypeOpArgMngr.add_workload('random.gamma', 3)
 
 
 def _add_dtype_workload_true_divide():
@@ -156,7 +153,7 @@ def _prepare_workloads():
     _add_dtype_workload_hanning()
     _add_dtype_workload_hamming()
     _add_dtype_workload_blackman()
-    _add_dtype_workload_gamma()
+    _add_dtype_workload_random_gamma()
     _add_dtype_workload_random_uniform()
     _add_dtype_workload_random_normal()
     _add_dtype_workload_true_divide()
@@ -199,6 +196,7 @@ def check_default_dtype(op_list):
 def test_default_float_dtype():
     check_default_dtype(_NUMPY_DTYPE_DEFAULT_FUNC_LIST)
 
+
 @use_np
 def test_np_indices_default_dtype():
     
@@ -207,7 +205,7 @@ def test_np_indices_default_dtype():
         assert np.indices((3,)).dtype == 'int64'
 
     def check_deepnp_indices_default_dtype():
-        assert np.indices((3,)).dtype == 'int32'
+        assert np.indices((3,)).dtype == 'int64'
     
     check_deepnp_indices_default_dtype()
     check_np_indices_default_dtype()

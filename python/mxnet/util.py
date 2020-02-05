@@ -1107,6 +1107,6 @@ def set_np_default_dtype(is_np_default_dtype=True):  # pylint: disable=redefined
             import logging
             logging.info('NumPy array default dtype has been changed from flaot32 to float64 in your code.')
             _set_np_default_dtype_logged = True
-    prev = ctypes.c_int()
-    check_call(_LIB.MXSetIsNumpyDefaultDtype(ctypes.c_int(is_np_default_dtype), ctypes.byref(prev)))
-    return bool(prev.value)
+    prev = ctypes.c_bool()
+    check_call(_LIB.MXSetIsNumpyDefaultDtype(ctypes.c_bool(is_np_default_dtype), ctypes.byref(prev)))
+    return prev.value

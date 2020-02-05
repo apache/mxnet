@@ -63,11 +63,7 @@ inline bool NumpyIndicesType(const nnvm::NodeAttrs& attrs,
   const IndicesOpParam& param = nnvm::get<IndicesOpParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 0U);
   CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype == -1 ?
-                                   (Imperative::Get()->is_np_default_dtype() ?
-                                    mshadow::kInt64 :
-                                    mshadow::kInt32) :
-                                   param.dtype);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype == -1 ? mshadow::kInt64 : param.dtype);
   return true;
 }
 

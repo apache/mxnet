@@ -215,33 +215,21 @@ class Imperative {
     }
     return old;
   }
-  /*! \brief return current numpy default dtype compatibility status,
-   *  GlobalOn(2), ThreadLocalOn(1), Off(0).
+  /*! \brief return current numpy default dtype compatibility status.
    * */
-  int is_np_default_dtype() const {
+  bool is_np_default_dtype() const {
     if (is_np_default_dtype_global_) {
-      return NumpyDefaultDtype::GlobalOn;
+      return true;
     }
-    return is_np_default_dtype_thread_local_ ?
-           NumpyDefaultDtype::ThreadLocalOn :
-           NumpyDefaultDtype::Off;
+    return false;
   }
-  /*! \brief specify numpy default dtype off, thread local on or global on. */
-  bool set_is_np_default_dtype(int is_np_default_dtype) {
-    NumpyDefaultDtype flag = static_cast<NumpyDefaultDtype>(is_np_default_dtype);
+  /*! \brief specify numpy default dtype off or global on. */
+  bool set_is_np_default_dtype(bool is_np_default_dtype) {
     bool old = this->is_np_default_dtype();
-    switch (flag) {
-      case GlobalOn:
-        is_np_default_dtype_global_ = true;
-        is_np_default_dtype_thread_local_ = true;
-        break;
-      case ThreadLocalOn:
-        is_np_default_dtype_thread_local_ = true;
-        break;
-      case Off:
-        is_np_default_dtype_global_ = false;
-        is_np_default_dtype_thread_local_ = false;
-        break;
+    if (is_np_default_dtype) {
+      is_np_default_dtype_global_ = true;
+    } else {
+      is_np_default_dtype_global_ = false;
     }
     return old;
   }
@@ -325,7 +313,6 @@ class Imperative {
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static thread_local bool is_np_shape_thread_local_;
-  static thread_local bool is_np_default_dtype_thread_local_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
@@ -333,7 +320,6 @@ class Imperative {
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
-  static MX_THREAD_LOCAL bool is_np_default_dtype_thread_local_;
 #endif
   bool is_np_shape_global_{false};
   bool is_np_default_dtype_global_{false};
