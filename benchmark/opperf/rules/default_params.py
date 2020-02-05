@@ -119,6 +119,9 @@ DEFAULT_OUTPUT_SIZE = [(64, 16, 1), (32, 8, 1)]
 DEFAULT_KERNEL = [(1, 1, 1), (1, 1, 1)]
 DEFAULT_STRIDE = [(2, 2, 2), (1, 1, 1)]
 
+# BatchNorm
+DEFAULT_AXIS_BN = [1]
+
 # LayerNorm
 DEFAULT_GAMMA_LN = [(32,), (32,)]
 DEFAULT_BETA_LN = [(32,), (32,)]
@@ -377,26 +380,36 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p_dropout": DEFAULT_P,
                    "data_nn_basic": DEFAULT_DATA_NN_BASIC,
                    "num_hidden": DEFAULT_NUM_HIDDEN,
+                   "data_fullyconnected": DEFAULT_DATA_NN_BASIC,
                    "weight_fullyconnected": DEFAULT_WEIGHT_FC,
                    "weight_embedding": DEFAULT_WEIGHT_EMBEDDING,
                    "bias": DEFAULT_BIAS,
                    "flatten": DEFAULT_FLATTEN,
+                   "data_batchnorm": DEFAULT_DATA_NN_BASIC,
                    "gamma_batchnorm": DEFAULT_GAMMA,
                    "beta_batchnorm": DEFAULT_BETA,
-                   "moving_mean": DEFAULT_MOVING_MEAN,
-                   "moving_var": DEFAULT_MOVING_VAR,
+                   "moving_mean_batchnorm": DEFAULT_MOVING_MEAN,
+                   "moving_var_batchnorm": DEFAULT_MOVING_VAR,
+                   "axis_batchnorm": DEFAULT_AXIS_BN,
+                   "data_softmaxoutput": DEFAULT_DATA_NN_BASIC,
                    "label_softmaxoutput": DEFAULT_LABEL_SM,
+                   "data_maeregressionoutput": DEFAULT_DATA_NN_BASIC,
                    "label_maeregressionoutput": DEFAULT_LABEL_REG,
+                   "data_logisticregressionoutput": DEFAULT_DATA_NN_BASIC,
                    "label_logisticregressionoutput": DEFAULT_LABEL_REG,
+                   "data_linearregressionoutput": DEFAULT_DATA_NN_BASIC,
                    "label_linearregressionoutput": DEFAULT_LABEL_REG,
+                   "data_svmoutput": DEFAULT_DATA_NN_BASIC,
                    "label_svmoutput": DEFAULT_LABEL_SVM,
                    "grad_scale": DEFAULT_GRAD_SCALE,
                    "normalization": DEFAULT_NORMALIZATION,
                    "margin": DEFAULT_MARGIN,
                    "regularization_coefficient": DEFAULT_REG_COEFF,
+                   "data_l2normalization": DEFAULT_DATA_NN_BASIC,
                    "mode_l2normalization": DEFAULT_MODE_L2,
                    "gamma_layernorm": DEFAULT_GAMMA_LN,
                    "beta_layernorm": DEFAULT_BETA_LN,
+                   "data_instancenorm": DEFAULT_DATA_NN_BASIC,
                    "gamma_instancenorm": DEFAULT_GAMMA,
                    "beta_instancenorm": DEFAULT_BETA,
                    "input_dim": DEFAULT_INPUT_DIM,
@@ -408,13 +421,16 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "max_displacement": DEFAULT_MAX_DISPLACEMENT,
                    "stride1": DEFAULT_STRIDE_1,
                    "stride2": DEFAULT_STRIDE_2,
+                   "data_im2col": DEFAULT_DATA_NN_BASIC,
                    "kernel_im2col": DEFAULT_KERNEL_I2C,
                    "stride_im2col": DEFAULT_STRIDE_I2C,
                    "dilate_im2col": DEFAULT_DILATE,
                    "pad_im2col": DEFAULT_PAD,
+                   "data_lrn": DEFAULT_DATA_NN_BASIC,
                    "alpha_lrn": DEFAULT_ALPHA,
                    "beta_lrn": DEFAULT_BETA_LRN,
                    "nsize": DEFAULT_NSIZE,
+                   "data_layernorm": DEFAULT_DATA_NN_BASIC,
                    "axis_layernorm": DEFAULT_AXIS}
 
 
