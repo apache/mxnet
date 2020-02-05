@@ -41,6 +41,7 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_optimizer_operators import run_optimizer_operators_benchmarks
 from benchmark.opperf.nd_operations.array_rearrange import run_rearrange_operators_benchmarks
+from benchmark.opperf.nd_operations.indexing_routines import run_indexing_routines_benchmarks
 from benchmark.opperf.nd_operations.nn_loss_operators import run_loss_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
@@ -83,6 +84,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all Array Rearrange operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_rearrange_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
+
+    # Run all Indexing routines benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_indexing_routines_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 
