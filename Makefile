@@ -94,6 +94,9 @@ WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
+# disable stack trace in exception by default.
+CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
+CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
