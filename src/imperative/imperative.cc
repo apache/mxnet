@@ -34,13 +34,11 @@ thread_local bool Imperative::is_train_ = false;
 thread_local bool Imperative::is_recording_ = false;
 thread_local bool Imperative::is_deferred_compute_ = false;
 thread_local bool Imperative::is_np_shape_thread_local_ = false;
-thread_local bool Imperative::is_np_default_dtype_thread_local_ = false;
 #else
 MX_THREAD_LOCAL bool Imperative::is_train_ = false;
 MX_THREAD_LOCAL bool Imperative::is_recording_ = false;
 MX_THREAD_LOCAL bool Imperative::is_deferred_compute_ = false;
 MX_THREAD_LOCAL bool Imperative::is_np_shape_thread_local_ = false;
-MX_THREAD_LOCAL bool Imperative::is_np_default_dtype_thread_local_ = false;
 #endif
 
 Imperative* Imperative::Get() {
