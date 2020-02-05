@@ -6486,7 +6486,7 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.symbol.numpy')
-def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"):
+def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"): # pylint: disable=too-many-arguments
     """
     Pad an array.
 
@@ -6549,13 +6549,14 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
     """
+    # pylint: disable = too-many-return-statements, inconsistent-return-statements
     if not isinstance(pad_width, tuple):
         raise TypeError("Input pad_width data-type only supports tuple")
     if mode == "linear_ramp":
         raise ValueError("Pad doesn't support linear_ramp mode")
     if mode == "wrap":
         raise ValueError("Pad doesn't support wrap mode")
-    if stat_length != None:
+    if stat_length is not None:
         raise ValueError("Pad doesn't support stat_length")
     if not isinstance(constant_values, int):
         raise TypeError("Constant doesn't support sequence data-type")
@@ -6571,11 +6572,10 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
         return _npi.pad(x, pad_width, 3, constant_values, reflect_type)
     elif mode == "reflect" and reflect_type == "even":
         return _npi.pad(x, pad_width, 4, constant_values, "even")
-    elif mode == "empty":
-        pass
     elif mode == "maximum":
         return _npi.pad(x, pad_width, 5, constant_values, "even")
     elif mode == "minimum":
         return _npi.pad(x, pad_width, 6, constant_values, "even")
+    return _npi.pad(x, pad_width, 1, constant_values, reflect_type)
 
 _set_np_symbol_class(_Symbol)

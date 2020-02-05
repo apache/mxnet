@@ -9454,7 +9454,7 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.numpy')
-def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"):
+def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"): # pylint: disable=too-many-arguments
     """
     Pad an array.
 
