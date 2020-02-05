@@ -469,7 +469,7 @@ def exponential(scale=1.0, size=None):
         return _npi.exponential(scale=scale, size=size)
 
 
-def weibull(a, size):
+def weibull(a, size=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
 
@@ -524,7 +524,7 @@ def weibull(a, size):
         return _npi.weibull(a=a, size=size)
 
 
-def pareto(a, size):
+def pareto(a, size=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
 
     Parameters
@@ -567,7 +567,7 @@ def pareto(a, size):
         return _npi.pareto(a=a, size=size)
 
 
-def power(a, size):
+def power(a, size=None):
     r"""Draw samples in [0, 1] from a power distribution with given parameter a.
 
     Parameters
