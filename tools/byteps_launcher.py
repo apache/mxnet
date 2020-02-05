@@ -51,7 +51,6 @@ def get_hosts_from_file(filename):
             hosts.append((h, p))
     return hosts
 
-
 def start_ssh(prog, node, port, username, fname):
     def run(prog):
         subprocess.check_call(prog, shell=True)
@@ -73,7 +72,6 @@ def start_ssh(prog, node, port, username, fname):
     thread.setDaemon(True)
     thread.start()
     return thread
-
 
 def submit(args):
     if args.server_hostfile is not None:
@@ -106,7 +104,7 @@ def submit(args):
     pass_envs['DMLC_PS_ROOT_URI'] = str(args.scheduler_ip) # This ip is localhost
     pass_envs['DMLC_PS_ROOT_PORT'] = str(args.scheduler_port) # This port is allocated automatically.
     curr_path = os.path.abspath(os.path.dirname(__file__))
-    args.command = ['python3 ' + curr_path + '/byteps_launch.py '] + args.command # add launche.py as launcher.
+    args.command = ['python3 ' + curr_path + '/byteps_tmplauncher.py '] + args.command # add launche.py as launcher.
     pass_envs['PS_VERBOSE'] = str(2)
     pass_envs['BYTEPS_LOG_LEVEL'] = 'TRACE'
     pass_envs["BYTEPS_TRACE_ON"] = "1"
