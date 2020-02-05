@@ -130,7 +130,8 @@ MXNET_REGISTER_API("_npi.tensordot")
   if (isscalar) {
     mxnet::op::TensordotIntAxesParam param;
     param.axes = args[2].operator int();
-    attrs.parsed = std::move(param);
+    // we directly copy TensordotIntAxesParam, which is trivially-copyable
+    attrs.parsed = param;
   } else {
     mxnet::op::TensordotParam param;
     const runtime::ObjectRef ref = args[2].operator runtime::ObjectRef();

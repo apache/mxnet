@@ -53,7 +53,7 @@ MXNET_REGISTER_GLOBAL("_Array")
       if (args[i].type_code() != kNull) {
         data.push_back(args[i].operator ObjectRef());
       } else {
-        data.push_back(ObjectRef(nullptr));
+        data.emplace_back(nullptr);
       }
     }
     auto node = make_object<ArrayNode>();
