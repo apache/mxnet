@@ -6878,14 +6878,14 @@ def test_np_diagflat():
 @use_np
 def test_np_pad():
     class TestPad(HybridBlock):
-        def __init__(self, pad_width = (), mode="constant", reflect_type="even", constant_values=0):
+        def __init__(self, pad_width = (), mode="constant", constant_values=0, reflect_type="even"):
             super(TestPad,self).__init__()
             self._pad_width = pad_width
             self._mode = mode
             self._reflect_type =reflect_type
             self._constant_values = constant_values
         def hybrid_forward(self,F,A):
-            return F.np.pad(A, self._pad_width, mode=self._mode, reflect_type=self._reflect_type, constant_values=self._constant_values)
+            return F.np.pad(A, self._pad_width, mode=self._mode, stat_length=None, constant_values=self._constant_values, end_values=0, reflect_type=self._reflect_type)
     shapes = [(1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum', 'maximum']
@@ -6901,7 +6901,7 @@ def test_np_pad():
             else:
                 for i in range(len(shape)):
                     pw += ((2,3),)
-            test_pad = TestPad(pw, m, "even", 0)
+            test_pad = TestPad(pw, m, 0, "even")
             if hybridize:
                 test_pad.hybridize()
             x.attach_grad()
@@ -6923,12 +6923,12 @@ def test_np_pad():
             assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
             # test imperative once again
-            mx_out = np.pad(x, pw, m, reflect_type="even", constant_values=0)
+            mx_out = np.pad(x, pw, m, constant_values=0, reflect_type="even")
 
             if(m != 'constant'):
                 np_out = _np.pad(x.asnumpy(), pw, mode=m)
             else:
-                np_out = _np.pad(x.asnumpy(), pw, mode=m, constant_values=0)
+                np_out = _np.pad(x.asnumpy(), pw, constant_values=0, mode=m)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 

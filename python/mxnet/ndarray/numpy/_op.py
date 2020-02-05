@@ -7359,7 +7359,7 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.ndarray.numpy')
-def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_values=0):
+def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"):
     """
     Pad an array.
 
@@ -7455,19 +7455,33 @@ def pad(array, pad_width=None, mode="constant", reflect_type="even", constant_va
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10]])
     """
-        if mode == "constant":
-            return _npi.pad(array, pad_width, 1, reflect_type, constant_values)
-        elif mode == "symmetric" and reflect_type == "even":
-            return _npi.pad(array, pad_width, 2, "even", constant_values)
-        elif mode == "edge":
-            return _npi.pad(array, pad_width, 3, reflect_type, constant_values)
-        elif mode == "reflect" and reflect_type == "even":
-            return _npi.pad(array, pad_width, 4, "even", constant_values)
-        elif mode == "empty":
-            pass
-        elif mode == "maximum":
-            return _npi.pad(array, pad_width, 5, "even", constant_values)
-        elif mode == "minimum":
-            return _npi.pad(array, pad_width, 6, "even", constant_values)
-        else:
-            raise ValueError("didn't support these modes and reflect_types.")
+    if not isinstance(x, NDArray):
+        raise TypeError("Input data should be NDarray")
+    if not isinstance(pad_width, tuple):
+        raise TypeError("Input pad_width data-type only supports tuple")
+    if mode == "linear_ramp":
+        raise ValueError("Pad doesn't support linear_ramp mode")
+    if mode == "wrap":
+        raise ValueError("Pad doesn't support wrap mode")
+    if stat_length != None:
+        raise ValueError("Pad doesn't support stat_length")
+    if not isinstance(constant_values, int):
+        raise TypeError("Constant doesn't support sequence data-type")
+    if end_values != 0:
+        raise ValueError("Pad doesn't support end_values")
+    if reflect_type != "even":
+        raise ValueError("reflect_type only supports even")
+    if mode == "constant":
+        return _npi.pad(x, pad_width, 1, constant_values, reflect_type)
+    elif mode == "symmetric" and reflect_type == "even":
+        return _npi.pad(x, pad_width, 2, constant_values, "even")
+    elif mode == "edge":
+        return _npi.pad(x, pad_width, 3, constant_values, reflect_type)
+    elif mode == "reflect" and reflect_type == "even":
+        return _npi.pad(x, pad_width, 4, constant_values, "even")
+    elif mode == "empty":
+        pass
+    elif mode == "maximum":
+        return _npi.pad(x, pad_width, 5, constant_values, "even")
+    elif mode == "minimum":
+        return _npi.pad(x, pad_width, 6, constant_values, "even")

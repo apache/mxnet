@@ -69,8 +69,8 @@ MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(index_t idx,
 struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   mxnet::Tuple<mxnet::Tuple<int>> pad_width;
   int mode;
-  std::string reflect_type;
   double constant_value;
+  std::string reflect_type;
   DMLC_DECLARE_PARAMETER(NumpyPadParam) {
     DMLC_DECLARE_FIELD(pad_width)
     .set_default(mxnet::Tuple<mxnet::Tuple<int>>())
@@ -84,13 +84,6 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
     DMLC_DECLARE_FIELD(mode)
     .set_default(1)
     .describe("str or function, optional");
-    DMLC_DECLARE_FIELD(reflect_type)
-    .set_default("even")
-    .describe("Used in ‘reflect’, and ‘symmetric’. "
-              "The ‘even’ style is the default with an unaltered reflection around "
-              "the edge value. For the ‘odd’ style,"
-              "the extended part of the array is created by subtracting the "
-              "reflected values from two times the edge value.");
     DMLC_DECLARE_FIELD(constant_value)
     .set_default(0.0)
     .describe("Used in ‘constant’. The values to set the padded values for each axis."
@@ -100,6 +93,13 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
               "(constant,) or constant is a shortcut for before = after = constant for all"
               "axes."
               "Default is 0.");
+    DMLC_DECLARE_FIELD(reflect_type)
+    .set_default("even")
+    .describe("Used in ‘reflect’, and ‘symmetric’. "
+              "The ‘even’ style is the default with an unaltered reflection around "
+              "the edge value. For the ‘odd’ style,"
+              "the extended part of the array is created by subtracting the "
+              "reflected values from two times the edge value.");
   }
 };
 
