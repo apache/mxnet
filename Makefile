@@ -673,10 +673,13 @@ endif
 extension_libs: $(EXT_LIBS)
 
 custom_op_lib:
+	@mkdir -p build
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o build/libcustomop_lib.so -I include/mxnet
 custom_op_gpu_lib:
+	@mkdir -p build
 	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o build/libcustomop_gpu_lib.so -I include/mxnet
 subgraph_lib:
+	@mkdir -p build
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o build/libsubgraph_lib.so -I include/mxnet
 
 # Cython build
