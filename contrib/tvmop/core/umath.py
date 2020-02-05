@@ -31,9 +31,9 @@ _bin_logic_op_map = {
 
 
 def _compute_binary_logic(op, dtype, ndim):
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='a')
-    b = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='b')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='a')
+    b = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='b')
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: _bin_logic_op_map[op](a, b, *idx), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c
@@ -103,9 +103,9 @@ _bin_scalar_logic_op_map = {
 
 
 def _compute_binary_scalar_logic(op, dtype, ndim):
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], name='a', dtype=dtype)
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='a', dtype=dtype)
     b = tvm.var('b', dtype='float64')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: _bin_scalar_logic_op_map[op](a, b, *idx), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c
@@ -285,9 +285,9 @@ def _binary_gpu(compute_func, op, dtype, ndim, req):
 
 def _compute_binary(op, dtype, ndim):
     op = _bin_op_map[op]
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='a')
-    b = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='b')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='a')
+    b = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='b')
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: op(a[idx], b[idx]), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c
@@ -312,9 +312,9 @@ for op_name in _bin_op_map.keys():
 
 def _compute_binary_scalar(op, dtype, ndim):
     op = _bin_scalar_op_map[op]
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], name='a', dtype=dtype)
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='a', dtype=dtype)
     b = tvm.var('b', dtype='float64')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: op(a[idx], b), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c
@@ -384,7 +384,7 @@ def _binary_backward_gpu(compute_func, op, dtype, ndim, output, reduce1st_dim, r
 def _compute_binary_backward_use_none(op, dtype, ndim, output, reduce1st_dim, req):
     op = _bin_backward_use_none_op_map[op][output]
     axes = ([reduce1st_dim, 1 - reduce1st_dim] * ndim)[:ndim]
-    oshape = [tvm.var() for _ in range(ndim)]
+    oshape = [tvm.size_var() for _ in range(ndim)]
     ograd = tvm.placeholder(oshape, name='X', dtype=dtype)
     grad = tvm.compute(oshape, lambda *idx: op(ograd[idx]))
     ret = reduce_axes(grad, axes, tvm.sum)
@@ -414,10 +414,10 @@ for op_name in _bin_backward_use_none_op_map.keys():
 def _compute_binary_backward(op, dtype, ndim, output, reduce1st_dim, req):
     op = _bin_backward_op_map[op][output]
     axes = ([reduce1st_dim, 1 - reduce1st_dim] * ndim)[:ndim]
-    oshape = [tvm.var() for _ in range(ndim)]
+    oshape = [tvm.size_var() for _ in range(ndim)]
     ograd = tvm.placeholder(oshape, name='X', dtype=dtype)
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='a')
-    b = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='b')
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='a')
+    b = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='b')
     grad = tvm.compute(oshape, lambda *idx: op(ograd[idx], a[idx], b[idx]))
     ret = reduce_axes(grad, axes, tvm.sum)
     old, new = assign_by_req(ret, req)
@@ -485,7 +485,7 @@ def _binary_scalar_backward_gpu(compute_func, op, dtype, ndim, req):
 
 def _compute_binary_scalar_backward_use_none(op, dtype, ndim, req):
     op = _bin_scalar_backward_use_none_op_map[op]
-    oshape = [tvm.var() for _ in range(ndim)]
+    oshape = [tvm.size_var() for _ in range(ndim)]
     scalar = tvm.var('scalar', dtype='float64')
     ograd = tvm.placeholder(oshape, name='ograd', dtype=dtype)
     ret = tvm.compute(oshape,
@@ -514,7 +514,7 @@ for op_name in _bin_scalar_backward_use_none_op_map.keys():
 
 def _compute_binary_scalar_backward(op, dtype, ndim, req):
     op = _bin_scalar_backward_op_map[op]
-    oshape = [tvm.var() for _ in range(ndim)]
+    oshape = [tvm.size_var() for _ in range(ndim)]
     data = tvm.placeholder(oshape, name='data', dtype=dtype)
     scalar = tvm.var('scalar', dtype='float64')
     ograd = tvm.placeholder(oshape, name='ograd', dtype=dtype)
