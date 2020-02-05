@@ -52,7 +52,7 @@ net(x)
 
 This generates a network with a hidden layer of $256$ units, followed by a ReLU
 activation and another $10$ units governing the output. In particular, we used
-the [`nn.Sequential`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential)
+the [nn.Sequential](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential)
 constructor to generate an empty network into which we then inserted both
 layers. What exactly happens inside `nn.Sequential`
 has remained rather mysterious so far. In the following we will see that this
@@ -81,7 +81,7 @@ layers to defining blocks (of one or more layers):
 
 ## A Sequential Block
 
-The [`Block`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block) class is a generic component
+The [Block](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block) class is a generic component
 describing data flow. When the data flows through a sequence of blocks, each
 block applied to the output of the one before with the first block being
 applied on the input data itself, we have a special kind of block, namely the
@@ -173,7 +173,7 @@ requisite layers. This attaches the coresponding layers and the required
 parameters to the class. Note that there is no need to define a backpropagation
 method in the class. The system automatically generates the `backward` method
 needed for back propagation by automatically finding the gradient (see the tutorial on [autograd](/api/python/docs/tutorials/packages/autograd/index.html)). The same
-applies to the [`initialize`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block.initialize) method, which is generated automatically. Let's try
+applies to the [initialize](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block.initialize) method, which is generated automatically. Let's try
 this out:
 
 ```{.python .input  n=2}
@@ -193,10 +193,10 @@ great flexibility.
 ## Coding with `Blocks`
 
 ### Blocks
-The [`Sequential`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential) class
+The [Sequential](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Sequential) class
 can make model construction easier and does not require you to define the
 `forward` method; however, directly inheriting from
-its parent class, [`Block`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block), can greatly
+its parent class, [Block](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block), can greatly
 expand the flexibility of model construction. For example, implementing the
 `forward` method means you can introduce control flow in the network.
 

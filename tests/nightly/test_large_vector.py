@@ -23,8 +23,9 @@ import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
+from tests.python.unittest.common import with_seed, teardown
 from nose.tools import with_setup
+import unittest
 
 # dimension constants
 LARGE_X = 4300000000
@@ -147,6 +148,7 @@ def test_nn():
         # check if it takes 2nd sequence from the first batch
         assert b[0] == a[1][0]
 
+    check_sequence_last()
     check_dense()
     check_regression()
     check_sign()
@@ -154,7 +156,6 @@ def test_nn():
     check_batchnorm()
     check_sequence_mask()
     check_sequence_reverse()
-    check_sequence_last()
 
 
 def test_tensor():
@@ -178,6 +179,7 @@ def test_tensor():
         a = nd.random.uniform(shape=LARGE_X)
         assert a[-1] != 0
 
+    @unittest.skip("Randint flaky, tracked at https://github.com/apache/incubator-mxnet/issues/16172")
     @with_seed()
     def check_ndarray_random_randint():
         # check if randint can generate value greater than 2**32 (large)

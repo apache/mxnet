@@ -94,7 +94,7 @@ void TVMOpModule::Call(const std::string &func_name,
   type_codes.resize(args.size());
   values.resize(args.size());
   for (size_t i = 0; i < args.size(); ++i) {
-    type_codes[i] = kArrayHandle;
+    type_codes[i] = kTVMDLTensorHandle;
     values[i].v_handle = const_cast<DLTensor *>(&(args[i].dltensor()));
   }
 

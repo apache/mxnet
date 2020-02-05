@@ -49,7 +49,7 @@ Tutorials
 
    .. card::
       :title: Gluon Guide
-      :link: ../../guide/packages/gluon/
+      :link: ../tutorials/packages/gluon/index.html
 
       The Gluon guide. Start here!
 
@@ -99,13 +99,13 @@ Training
 
    .. card::
       :title: gluon.Parameter
-      :link: mxnet.gluon.Parameter.html
+      :link: parameter.html
 
       Parameter getting and setting functions.
 
    .. card::
       :title: gluon.Trainer
-      :link: mxnet.gluon.Trainer.html
+      :link: trainer.html
 
       Functions for applying an optimizer on a set of parameters.
 
@@ -128,7 +128,7 @@ Data
 
    .. card::
       :title: gluon.model_zoo.vision
-      :link: model_zoo/index.vision.html
+      :link: model_zoo/index.html
 
       A module for loading pre-trained neural network models.
 

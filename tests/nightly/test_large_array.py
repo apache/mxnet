@@ -23,8 +23,9 @@ import mxnet as mx
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed, with_post_test_cleanup
+from tests.python.unittest.common import with_seed, with_post_test_cleanup, teardown
 from nose.tools import with_setup
+import unittest
 
 # dimension constants
 MEDIUM_X = 10000
@@ -128,6 +129,7 @@ def test_nn():
         x /= np.sum(x, axis=axis, keepdims=True)
         return x
 
+    @unittest.skip("log_softmax flaky, tracked at https://github.com/apache/incubator-mxnet/issues/17397")
     def check_log_softmax():
         ndim = 2
         shape = (SMALL_Y, LARGE_X)
@@ -474,6 +476,7 @@ def test_tensor():
         a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
         assert a[-1][0] != 0
 
+    @unittest.skip("Randint flaky, tracked at https://github.com/apache/incubator-mxnet/issues/16172")
     @with_seed()
     def check_ndarray_random_randint():
         a = nd.random.randint(100, 10000, shape=(LARGE_X, SMALL_Y))
@@ -1089,6 +1092,7 @@ def test_basic():
         s = nd.sort(b, is_ascend=False)
         assert np.sum(s[0].asnumpy() == 0).all()
 
+    @unittest.skip("Topk takes lot of memory!, tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_topk():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         k = nd.topk(b, k=10, axis=0, dtype=np.int64)
@@ -1656,6 +1660,15 @@ def test_basic():
     check_modulo()
     check_maximum()
     check_minimum()
+
+
+def test_sparse_dot():
+    shape = (2, VLARGE_X)
+    sp_mat1 = nd.sparse.csr_matrix(([2], [6], [0, 1, 1]), shape=shape)
+    mat2 = nd.ones((VLARGE_X, 2))
+    out = nd.dot(sp_mat1, mat2)
+    assert out.asnumpy()[0][0] == 2
+    assert out.shape == (2, 2)
 
 
 if __name__ == '__main__':
