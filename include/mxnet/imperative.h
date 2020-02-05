@@ -92,11 +92,11 @@ class Imperative {
 
   /*! \brief DCInfo datastructure to enable deferred computation */
   class DCInfo {
-  public:
-    explicit DCInfo() {
+   public:
+    DCInfo() {
       // Default constructor provided for the sake of any.h. Should not be used.
       throw std::invalid_argument("Unsupported default constructor");
-    };
+    }
     explicit DCInfo(const std::vector<NDArray *> &inputs,
                     const std::vector<NDArray *> &outputs);
 
@@ -121,7 +121,7 @@ class Imperative {
                           const std::vector<NDArray *> &inputs,
                           const std::vector<NDArray *> &outputs);
 
-  private:
+   private:
     friend class Imperative;
 
     /*! \brief Copies of input NDArrays
@@ -225,8 +225,8 @@ class Imperative {
                 std::vector<bool>* p_save_outputs = nullptr);
   /*! \brief to record operator, return corresponding node. */
   void RecordDeferredCompute(nnvm::NodeAttrs&& attrs,
-                             std::vector<NDArray*>& inputs,
-                             std::vector<NDArray*>& outputs);
+                             const std::vector<NDArray*>& inputs,
+                             const std::vector<NDArray*>& outputs);
   /*! \brief obtain symbol representation of deferred compute session. */
   nnvm::Symbol *GetDeferredComputeSymbol(
       const std::vector<std::pair<NDArray *, std::string>> &inputs,

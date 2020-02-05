@@ -266,7 +266,8 @@ void Imperative::RecordOp(
       }
       inputs[i]->autograd_entry_ = std::move(entry);  // assign last to prevent cyclic reference
     } else if (save_inputs[i]) {
-      AGInfo::Get(inputs[i]->autograd_entry_.node).outputs[inputs[i]->autograd_entry_.index] = inputs[i]->Detach();
+      nnvm::NodeEntry& entry = inputs[i]->autograd_entry_;
+      AGInfo::Get(entry.node).outputs[entry.index] = inputs[i]->Detach();
     }
     node->inputs[i] = inputs[i]->autograd_entry_;
   }
@@ -292,8 +293,8 @@ void Imperative::RecordOp(
 }
 
 void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
-                                       std::vector<NDArray *> &inputs,
-                                       std::vector<NDArray *> &outputs) {
+                                       const std::vector<NDArray *> &inputs,
+                                       const std::vector<NDArray *> &outputs) {
   CHECK(!is_recording())
       << "Autograd recording is not supported during deferred compute mode.";
 
@@ -346,7 +347,7 @@ nnvm::Symbol *Imperative::GetDeferredComputeSymbol(
   std::unordered_set<const NDArray *> missing_inputs;
   auto add_symbol_variables = [&inputs, &ndinput_to_variable,
                                &missing_inputs](const nnvm::ObjectPtr &node) {
-    if(node == nullptr) {
+    if (node == nullptr) {
       // This (nonexistant) "Node" belongs to an array created outside of deferred compute scope.
       return;
     }
