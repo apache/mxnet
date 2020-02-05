@@ -117,16 +117,10 @@ def _assert_raise_cuxx_version_not_satisfied(min_version, cfg):
 
         # compare each of the version components
         for l, r in zip(left, right):
-            if int(r) < int(l):
-                return False
-
-            # keep track of how many are the same
-            if int(r) == int(l):
-                longest = longest - 1
-
-        # longest = 0 mean version_left == version_right -> False
-        # longest > 0 version_left < version_right -> True
-        return longest > 0
+            if l == r:
+                continue
+            return int(l) < int(r)
+        return False
 
     def test_helper(orig_test):
         @make_decorator(orig_test)

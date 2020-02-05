@@ -453,6 +453,11 @@ For each window ``X``, the mathematical expression for Lp pooling is:
 .add_arguments(PoolingParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Pooling)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const PoolingParam &param = nnvm::get<PoolingParam>(attrs.parsed);
+  // 1 input to fwd op and 2 * outputs from fwd op (fwd outputs and gradient inputs)
+  return 1 + 2 * GetNumOutputs(param);
+})
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>(

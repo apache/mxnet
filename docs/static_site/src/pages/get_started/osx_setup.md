@@ -202,7 +202,7 @@ Run the following commands to install the MXNet dependencies and build the MXNet
     cd R-package
     Rscript -e "library(devtools); library(methods); options(repos=c(CRAN='https://cran.rstudio.com')); install_deps(dependencies = TRUE)"
     cd ..
-    make rpkg
+    make -f R-package/Makefile rpkg
 ```
 
 ## Install the MXNet Package for Julia

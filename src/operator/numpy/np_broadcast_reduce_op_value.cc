@@ -238,7 +238,7 @@ NNVM_REGISTER_OP(_np_prod)
 .set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
 
 NNVM_REGISTER_OP(_backward_np_prod)
-.set_num_inputs(1)
+.set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -467,17 +467,21 @@ bool NumpyBroadcastToShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& ishape = (*in_attrs)[0];
   if (!mxnet::shape_is_known(ishape)) return false;
   const BroadcastToParam& param = nnvm::get<BroadcastToParam>(attrs.parsed);
-  CHECK(mxnet::shape_is_known(param.shape))
-      << "the objective shape for broadcasting array must be known";
   CHECK_LE(ishape.ndim(), param.shape.ndim())
       << "shape " << ishape << " is not broadcastable to " << param.shape;
+  TShape pshape = param.shape;
   for (int i = param.shape.ndim() - 1; i >= 0; --i) {
     int j = i - param.shape.ndim() + ishape.ndim();
     if (j < 0) break;
-    CHECK(ishape[j] == param.shape[i] || ishape[j] == 1)
-        << "shape " << ishape << " is not broadcastable to " << param.shape;
+    if (pshape[i] == -2) {
+      pshape[i] = ishape[j];
+    }
+    CHECK(ishape[j] == pshape[i] || ishape[j] == 1)
+        << "shape " << ishape << " is not broadcastable to " << pshape;
   }
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, param.shape);
+  CHECK(mxnet::shape_is_known(pshape))
+      << "the objective shape for broadcasting array must be known";
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, pshape);
   return true;
 }
 
@@ -490,7 +494,7 @@ NNVM_REGISTER_OP(_npi_broadcast_to)
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
+  [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
   })

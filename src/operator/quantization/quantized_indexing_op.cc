@@ -167,7 +167,7 @@ NNVM_REGISTER_OP(Embedding)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
     EmbeddingParam param;
     param.Init(attrs.dict);
-    nnvm::NodePtr node = nnvm::Node::Create();
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     if (param.dtype == mshadow::kFloat32) {
       node->attrs.op = Op::Get("_contrib_quantized_embedding");
       node->attrs.name = "quantized_" + attrs.name;
