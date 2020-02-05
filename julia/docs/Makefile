@@ -21,7 +21,11 @@ all:
 	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
 	julia --color=yes --project=./ ./make.jl
 	pip install --user pygments mkdocs mkdocs-material python-markdown-math
-	~/.local/bin/mkdocs build
+	export LC_ALL="C.UTF-8"
+	export LANG="C.UTF-8"
+	echo $(LC_ALL)
+	echo $(LANG)
+	LC_ALL="C.UTF-8" ~/.local/bin/mkdocs build
 
 clean:
 	rm -rvf venv

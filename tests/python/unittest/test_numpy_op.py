@@ -3381,6 +3381,56 @@ def test_np_normal_grad():
 
 @with_seed()
 @use_np
+def test_np_lognormal_grad():
+    class TestLognormalGrad(HybridBlock):
+        def __init__(self, shape):
+            super(TestLognormalGrad, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, mean, sigma):
+            return F.np.random.lognormal(mean, sigma, self._shape)
+
+    param_shape = [
+        [(3, 2), (3, 2)],
+        [(3, 2, 2), (3, 2, 2)],
+        [(3, 4, 5), (4, 1)],
+    ]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
+    for hybridize in [False, True]:
+        for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+            test_lognormal_grad = TestLognormalGrad(out_shape)
+            if hybridize:
+                test_lognormal_grad.hybridize()
+            mean = np.zeros(shape1)
+            mean.attach_grad()
+            sigma = np.ones(shape2)
+            sigma.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_lognormal_grad(mean, sigma)
+            np_out = _np.random.lognormal(mean = mean.asnumpy(), 
+                                            sigma = sigma.asnumpy(), size = out_shape)
+            assert np_out.shape == mx_out.shape
+            mx_out.backward()
+            assert mean.grad.shape == shape1
+            assert sigma.grad.shape == shape2
+            assert_almost_equal(mean.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
+
+    for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+        mx_out = np.random.lognormal(np.zeros(shape1), np.ones(shape2), out_shape)
+        np_out = _np.random.lognormal(np.zeros(shape1).asnumpy(), np.ones(shape2).asnumpy(), out_shape)
+        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
+    def _test_lognormal_exception(sigma):
+        output = np.random.lognormal(sigma=sigma).asnumpy()
+    assertRaises(ValueError, _test_lognormal_exception, -1)
+
+
+@with_seed()
+@use_np
 def test_npx_sample_n():
     def shape_formatter(s):
         if s is None:
@@ -3468,6 +3518,52 @@ def test_np_random():
                 if not isinstance(shape, tuple):
                     expected_shape = () if shape is None else (shape,)
                 assert out.shape == expected_shape
+
+
+@with_seed()
+@use_np
+def test_np_random_beta():
+    class TestRandomBeta(HybridBlock):
+        def __init__(self, size=None, dtype=None, ctx=None):
+            super(TestRandomBeta, self).__init__()
+            self._size = size
+            self._dtype = dtype
+            self._ctx = ctx
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
+
+    def _test_random_beta_range(output):
+        bigger_than_zero = _np.all(output > 0)
+        smaller_than_one = _np.all(output < 1)
+        return bigger_than_zero and smaller_than_one
+
+    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # since fp16 might incur precision issue, the corresponding test is skipped
+    dtype_list = [np.float32, np.float64]
+    hybridize_list = [False, True]
+    data = np.array([1])
+    for [param_shape, in_dtype, out_dtype, hybridize] in itertools.product(shape_list,
+            dtype_list, dtype_list, hybridize_list):
+        if sys.version_info.major < 3 and param_shape == ():
+            continue
+        mx_data = data.astype(in_dtype)
+        np_data = mx_data.asnumpy()
+        test_random_beta = TestRandomBeta(size=param_shape, dtype=out_dtype)
+        if hybridize:
+            test_random_beta.hybridize()
+        np_out = _np.random.beta(np_data, np_data, size=param_shape)
+        mx_out = test_random_beta(mx_data, mx_data)
+        mx_out_imperative = mx.np.random.beta(mx_data, mx_data, size=param_shape, dtype=out_dtype)
+
+        assert_almost_equal(np_out.shape, mx_out.shape)
+        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert _test_random_beta_range(mx_out.asnumpy()) == True
+        assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
+
+        # test scalar
+        mx_out_imperative = mx.np.random.beta(1, 1, size=param_shape, dtype=out_dtype)
+        assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
 
 
 @with_seed()
