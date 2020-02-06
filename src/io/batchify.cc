@@ -135,6 +135,7 @@ class StackBatchify : public BatchifyFunction {
           MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
             DType *ptr = ret[i].dptr<DType>();
             for (size_t j = 0; j < bs; ++j) {
+              inputs[j][i].WaitToRead();
               std::memcpy(ptr, inputs[j][i].data().dptr<DType>(), ashape.Size() * sizeof(DType));
               ptr += ashape.Size();
             }

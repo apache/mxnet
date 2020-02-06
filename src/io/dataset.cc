@@ -65,6 +65,10 @@ DMLC_REGISTER_PARAMETER(ImageSequenceDatasetParam);
 
 class ImageSequenceDataset : public Dataset {
   public:
+    ImageSequenceDataset* Clone(void) const {
+      return new ImageSequenceDataset(*this);
+    }
+
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
@@ -162,6 +166,10 @@ DMLC_REGISTER_PARAMETER(NDArrayDatasetParam);
 
 class NDArrayDataset : public Dataset {
   public:
+    NDArrayDataset* Clone(void) const {
+      return new NDArrayDataset(*this);
+    }
+
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       // std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
@@ -225,6 +233,10 @@ DMLC_REGISTER_PARAMETER(GroupDatasetParam);
 
 class GroupDataset : public Dataset {
   public:
+    GroupDataset* Clone(void) const {
+      return new GroupDataset(*this);
+    }
+
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
@@ -299,6 +311,10 @@ DMLC_REGISTER_PARAMETER(IndexedDatasetParam);
 
 class IndexedDataset : public Dataset {
   public:
+    IndexedDataset* Clone(void) const {
+      return new IndexedDataset(*this);
+    }
+
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
       base_data_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.base));
@@ -356,14 +372,25 @@ struct LazyTransformDatasetParam : public dmlc::Parameter<LazyTransformDatasetPa
 
 DMLC_REGISTER_PARAMETER(LazyTransformDatasetParam);
 
+typedef dmlc::ThreadLocalStore<CachedOpPtr> CachedOpStore;
+
 class LazyTransformDataset : public Dataset {
   public:
     LazyTransformDataset() {
-      var_ = Engine::Get()->NewVariable();
     }
 
+    // LazyTransformDataset(const LazyTransformDataset& other) {
+      // this->param_ = other.param_;
+      // this->cached_op_ = CachedOpPtr(new CachedOp(*other.cached_op_));
+      // LOG(INFO) << "Create new cachedop" << this->cached_op_->num_inputs() << " " << this->cached_op_->num_outputs();
+      // this->base_data_ = other.base_data_;
+    // }
+
     virtual ~LazyTransformDataset(void) {
-      Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), var_);
+    }
+
+    LazyTransformDataset* Clone(void) const {
+      return new LazyTransformDataset(*this);
     }
 
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -435,7 +462,19 @@ class LazyTransformDataset : public Dataset {
       for (size_t i = 0; i < inputs.size(); ++i) {
         inputs[i].WaitToRead();
       }
+
+      // LOG(INFO) << "before get op";
+      // auto op = CachedOpStore::Get();
+      // // auto mutex = CachedOpMutexStore::Get();
+      // if (!(*op)) {
+      //   LOG(INFO) << "not op";
+      //   *op = CachedOpPtr(new CachedOp(*cached_op_));
+      //   LOG(INFO) << "create threaded cachedop";
+      // }
+      // CachedOpPtr op = CachedOpPtr(new CachedOp(cached_op_->sym_, cached_op_->flags_));  
+      // LOG(INFO) << op->num_inputs() << " o: " << op->num_outputs();
       cached_op_->Forward(cached_op_, ndinputs, ndoutputs);
+      // (*op)->Forward(*op, ndinputs, ndoutputs);
 
       // const auto engine = Engine::Get();
       // engine->PushSync(
@@ -476,7 +515,7 @@ class LazyTransformDataset : public Dataset {
     /*! \brief internal dataset */
     DatasetPtr base_data_;
     /*! \brief engine variable */
-    Engine::VarHandle var_;
+    // Engine::VarHandle var_;
 };   // class LazyTransformDataset
 
 MXNET_REGISTER_IO_DATASET(LazyTransformDataset)

@@ -354,7 +354,6 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  CachedOp(const CachedOp& op);
   ~CachedOp();
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
@@ -550,8 +549,6 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
-  nnvm::Symbol sym_;
-  std::vector<std::pair<std::string, std::string> > flags_;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

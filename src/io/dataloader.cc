@@ -83,8 +83,14 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     {
       threadget = omp_get_num_threads();
     }
-    param_.num_workers = threadget;
+    param_.num_workers = std::max(1, threadget);
     dataset_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
+    // datasets_.clear();
+    // datasets_.reserve(param_.num_workers);
+    // datasets_.emplace_back(dataset);
+    // for (int i = 1; i < param_.num_workers; ++i) {
+    //   datasets_.emplace_back(DatasetPtr(dataset->Clone()));
+    // }
     dataset_len_ = dataset_->GetLen();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
     batchify_fn_ = *static_cast<BatchifyFunctionPtr*>(reinterpret_cast<void*>(param_.batchify_fn));
@@ -111,15 +117,17 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
     std::vector<int> is_scalars;
+    // #pragma omp parallel for num_threads(param_.num_workers)
     for (size_t i = 0; i < real_batch_size; ++i) {
-      omp_exc_.Run([&] {
+      // omp_exc_.Run([&] {
         std::vector<int> is_temp;
         inputs[i] = dataset_->GetItem(idx_ptr[i], is_temp);
         if (i == 0) {
           is_scalars = is_temp;
         }
-      });
+      // });
     }
+    // omp_exc_.Rethrow();
 
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
