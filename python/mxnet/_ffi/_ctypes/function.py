@@ -28,6 +28,7 @@ from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
 from .object import ObjectBase
 from ..node_generic import convert_to_node
+from ..._ctypes.ndarray import NDArrayBase
 
 ObjectHandle = ctypes.c_void_p
 
@@ -58,6 +59,9 @@ def _make_mxnet_args(args, temp_args):
             values[i].v_handle = arg.handle
             type_codes[i] = TypeCode.OBJECT_HANDLE
             temp_args.append(arg)
+        elif isinstance(arg, NDArrayBase):
+            values[i].v_handle = arg.handle
+            type_codes[i] = TypeCode.NDARRAYHANDLE
         elif isinstance(arg, ctypes.c_void_p):
             values[i].v_handle = arg
             type_codes[i] = TypeCode.HANDLE
