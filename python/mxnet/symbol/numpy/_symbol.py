@@ -1629,6 +1629,7 @@ def argsort(a, axis=-1, kind=None, order=None):
 def sort(a, axis=-1, kind=None, order=None):
     """
     Return a sorted copy of an array.
+
     Parameters
     ----------
     a : _Symbol
@@ -1641,6 +1642,7 @@ def sort(a, axis=-1, kind=None, order=None):
         final result.
     order : str or list of str, optional
         Not supported yet, will raise NotImplementedError if not None.
+
     Returns
     -------
     sorted_array : ndarray
