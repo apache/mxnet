@@ -86,6 +86,9 @@ CachedOp::CachedOp(
   SetRefCounts(&fwd_graph_, full_graph_);
 }
 
+CachedOp::CachedOp(const CachedOp& op) : CachedOp(op.sym_, op.flags_) {
+}
+
 CachedOp::~CachedOp() {
 }
 

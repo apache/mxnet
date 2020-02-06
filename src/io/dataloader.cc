@@ -62,8 +62,12 @@ DMLC_REGISTER_PARAMETER(ThreadedDataLoaderParam);
 template<typename DType = real_t>
 class ThreadedDataLoader : public IIterator<TBlobBatch> {
  public:
+  ThreadedDataLoader() {
+    var_ = Engine::Get()->NewVariable();
+  }
   // destructor
   virtual ~ThreadedDataLoader(void) {
+    Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), var_);
   }
   // constructor
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -107,7 +111,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
     std::vector<int> is_scalars;
-    #pragma omp parallel for num_threads(param_.num_workers)
     for (size_t i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
         std::vector<int> is_temp;
@@ -117,7 +120,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
         }
       });
     }
-    omp_exc_.Rethrow();
 
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
@@ -157,6 +159,8 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     IIterator<DataBatch> *sampler_;
     /*! \brief pointer to batchify function */
     BatchifyFunctionPtr batchify_fn_;
+    /*! \brief engine variable */
+    Engine::VarHandle var_;
     /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
     dmlc::OMPException omp_exc_;
 };  // class ThreadedDataLoader

@@ -107,7 +107,7 @@ class StackBatchify : public BatchifyFunction {
       auto bs = inputs.size();
       std::vector<TBlob> ret(out_size);
 
-      #pragma omp parallel num_threads(out_size)
+      #pragma omp parallel for num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {
         omp_exc_.Run([&] {
           // Process i-th output
