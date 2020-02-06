@@ -17,10 +17,10 @@
 
 """Performance benchmark tests for MXNet NDArray Linear Algebra Operations.
 
-Below 18 Linear Algebra Operators are covered:
+Below 17 Linear Algebra Operators are covered:
 
 ['linalg_potri', 'linalg_gemm2', 'linalg_extractdiag', 'linalg_trsm', 'linalg_gelqf', 'linalg_gemm', 'linalg_sumlogdiag',
-'linalg_potrf', 'linalg_makediag', 'linalg_syrk', 'linalg_maketrian', 'linalg_trmm', 'linalg_extracttrian', 'lingalg_makediag',
+'linalg_potrf', 'linalg_makediag', 'linalg_syrk', 'linalg_maketrian', 'linalg_trmm', 'linalg_extracttrian',
 'linalg_slogdet', 'linalg_det', 'linalg_inverse', 'moments']
 
 """
