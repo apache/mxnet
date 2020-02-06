@@ -22,10 +22,6 @@ import mxnet as mx
 
 from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
 
-# Operators where parameter have special criteria that cannot be cleanly automated.
-# Example: sample_multinomial operator has a parameter 'data'. It expects values to sum up to 1.
-unique_ops = ("sample_multinomial",)
-
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
     """From a given list of operators, filter out all operator names starting with given filters and prepares
@@ -121,6 +117,7 @@ def prepare_op_inputs(op, arg_params):
 
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
+    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial']
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -128,6 +125,8 @@ def prepare_op_inputs(op, arg_params):
                                   arg_params["params"]["arg_types"]):
         if "NDArray" in arg_type and op == "ravel_multi_index":
             arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
+        elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
+            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
         elif "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
         elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
@@ -254,13 +253,16 @@ def get_all_random_sampling_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
+    # Additional Random Sampling ops which do not start with "random_" or "sample_"
+    additional_random_sampling_ops = ['GridGenerator', 'BilinearSampler']
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
     # Filter for Random Sampling operators
     random_sampling_mx_operators = {}
     for op_name, _ in mx_operators.items():
-        if op_name.startswith(("random_", "sample_")) and op_name not in unique_ops:
+        if op_name.startswith(("random_", "sample_")) or op_name in additional_random_sampling_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
 
@@ -279,8 +281,7 @@ def get_all_reduction_operators():
     reduction_mx_operators = {}
     for op_name, op_params in mx_operators.items():
         if op_params["params"]["narg"] == 4 and \
-                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])) \
-                and op_name not in unique_ops:
+                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])):
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
 
@@ -301,8 +302,8 @@ def get_all_optimizer_operators():
 
     # Filter for Optimizer operators
     optimizer_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in optimizer_ops and op_name not in unique_ops:
+    for op_name, op_params in mx_operators.items():
+        if op_name in optimizer_ops:
             optimizer_mx_operators[op_name] = mx_operators[op_name]
     return optimizer_mx_operators
 
@@ -320,8 +321,8 @@ def get_all_sorting_searching_operators():
 
     # Filter for Sort and search operators
     sort_search_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in sort_search_ops and op_name not in unique_ops:
+    for op_name, op_params in mx_operators.items():
+        if op_name in sort_search_ops:
             sort_search_mx_operators[op_name] = mx_operators[op_name]
     return sort_search_mx_operators
 
@@ -340,8 +341,8 @@ def get_all_rearrange_operators():
 
     # Filter for Array Rearrange operators
     rearrange_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in rearrange_ops and op_name not in unique_ops:
+    for op_name, op_params in mx_operators.items():
+        if op_name in rearrange_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
 
@@ -366,7 +367,7 @@ def get_all_indexing_routines():
     # Filter for Indexing routines
     indexing_mx_routines = {}
     for op_name, _ in mx_operators.items():
-        if op_name in indexing_routines and op_name not in unique_ops:
+        if op_name in indexing_routines:
             indexing_mx_routines[op_name] = mx_operators[op_name]
     return indexing_mx_routines
 
@@ -386,7 +387,7 @@ def get_all_loss_operators():
     # Filter for NN Loss operators
     loss_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_name in loss_ops and op_name not in unique_ops:
+        if op_name in loss_ops:
             loss_mx_operators[op_name] = mx_operators[op_name]
     return loss_mx_operators
 
