@@ -1652,6 +1652,9 @@ def sort(a, axis=-1, kind=None, order=None):
     -----
     This operator does not support different sorting algorithms.
     """
+    if order is not None:
+        raise NotImplementedError("order is not supported yet...")
+
     return _npi.sort(data=a, axis=axis, is_ascend=True)
 
 
