@@ -100,6 +100,7 @@ inline std::vector<NDArray*> Invoke(const nnvm::Op* op,
 
 MXNET_REGISTER_API("_npi.zeros")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_zeros");
   nnvm::NodeAttrs attrs;
   op::InitOpParam param;
@@ -107,7 +108,7 @@ MXNET_REGISTER_API("_npi.zeros")
   if (args[1].type_code() == kNull) {
     param.dtype = mshadow::kFloat32;
   } else {
-    param.dtype = runtime::String2MXNetTypeWithBool(args[1].operator std::string());
+    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
@@ -121,6 +122,7 @@ MXNET_REGISTER_API("_npi.zeros")
 
 MXNET_REGISTER_API("_npi.tensordot")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
   bool isscalar = args[2].type_code() == kDLInt;
   const nnvm::Op* op = Op::Get(isscalar ?
                                "_npi_tensordot_int_axes" :
@@ -134,23 +136,23 @@ MXNET_REGISTER_API("_npi.tensordot")
     attrs.parsed = param;
   } else {
     mxnet::op::TensordotParam param;
-    const runtime::ObjectRef ref = args[2].operator runtime::ObjectRef();
-    const runtime::ADTObj* obj = ref.as<runtime::ADTObj>();
-    if (obj->operator[](0).get()->IsInstance<::mxnet::runtime::IntegerObj>()) {
+    const ObjectRef ref = args[2].operator ObjectRef();
+    const ADTObj* obj = ref.as<ADTObj>();
+    if (obj->operator[](0).get()->IsInstance<IntegerObj>()) {
       param.a_axes_summed = Tuple<int>(1,
-        obj->operator[](0).as<::mxnet::runtime::IntegerObj>()->value);
+        obj->operator[](0).as<IntegerObj>()->value);
       param.b_axes_summed = Tuple<int>(1,
-        obj->operator[](1).as<::mxnet::runtime::IntegerObj>()->value);
+        obj->operator[](1).as<IntegerObj>()->value);
     } else {
-      const runtime::ADTObj* a_axes_summed = obj->operator[](0).as<runtime::ADTObj>();
-      const runtime::ADTObj* b_axes_summed = obj->operator[](1).as<runtime::ADTObj>();
+      const ADTObj* a_axes_summed = obj->operator[](0).as<ADTObj>();
+      const ADTObj* b_axes_summed = obj->operator[](1).as<ADTObj>();
       param.a_axes_summed = Tuple<int>(a_axes_summed->size, 0);
       param.b_axes_summed = Tuple<int>(b_axes_summed->size, 0);
       for (uint32_t i = 0; i < a_axes_summed->size; ++i) {
         param.a_axes_summed[i] =
-          a_axes_summed->operator[](i).as<::mxnet::runtime::IntegerObj>()->value;
+          a_axes_summed->operator[](i).as<IntegerObj>()->value;
         param.b_axes_summed[i] =
-          b_axes_summed->operator[](i).as<::mxnet::runtime::IntegerObj>()->value;
+          b_axes_summed->operator[](i).as<IntegerObj>()->value;
       }
     }
     attrs.parsed = std::move(param);
