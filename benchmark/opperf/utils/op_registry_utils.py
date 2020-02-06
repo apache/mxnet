@@ -304,8 +304,9 @@ def get_all_reduction_operators():
     # Filter for Reduction operators
     reduction_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_params["params"]["narg"] == 4 and \
-                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])):
+        if (op_params["params"]["narg"] == 4 and \
+                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])) \
+                or op_name == 'norm'):
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
 
