@@ -205,6 +205,26 @@ def get_all_broadcast_binary_operators():
     return binary_broadcast_mx_operators
 
 
+def get_all_misc_binary_operators():
+    """Gets all miscellaneous binary operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for miscellaneous binary operators
+    binary_misc_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if "choose_element_0index" == op_name:
+            binary_misc_mx_operators[op_name] = mx_operators[op_name]
+        elif "reshape_like" == op_name:
+            binary_misc_mx_operators[op_name] = mx_operators[op_name]
+    return binary_misc_mx_operators
+
+
 def get_all_elemen_wise_binary_operators():
     """Gets all binary elemen_wise operators registered with MXNet.
 
@@ -221,6 +241,8 @@ def get_all_elemen_wise_binary_operators():
         if op_name.startswith("elemwise_") and op_params["params"]["narg"] == 2 and \
                 "lhs" in op_params["params"]["arg_names"] and \
                 "rhs" in op_params["params"]["arg_names"]:
+            binary_elemen_wise_mx_operators[op_name] = mx_operators[op_name]
+        elif "ElementWiseSum" == op_name:
             binary_elemen_wise_mx_operators[op_name] = mx_operators[op_name]
     return binary_elemen_wise_mx_operators
 

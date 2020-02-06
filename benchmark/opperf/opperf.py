@@ -30,7 +30,7 @@ import mxnet as mx
 
 from benchmark.opperf.nd_operations.unary_operators import run_mx_unary_operators_benchmarks
 from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks, \
-    run_mx_binary_element_wise_operators_benchmarks
+    run_mx_binary_element_wise_operators_benchmarks, run_mx_binary_misc_operators_benchmarks
 from benchmark.opperf.nd_operations.gemm_operators import run_gemm_operators_benchmarks
 from benchmark.opperf.nd_operations.random_sampling_operators import run_mx_random_sampling_operators_benchmarks
 from benchmark.opperf.nd_operations.reduction_operators import run_mx_reduction_operators_benchmarks
@@ -63,11 +63,14 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     # Run all Unary operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_unary_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
-    # Run all Binary Broadcast, element_wise operations benchmarks with default input values
+    # Run all Binary Broadcast, element_wise, and miscellaneous operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_binary_broadcast_operators_benchmarks(ctx=ctx,
                                                                                          dtype=dtype, profiler=profiler))
     mxnet_operator_benchmark_results.append(run_mx_binary_element_wise_operators_benchmarks(ctx=ctx,
                                                                                             dtype=dtype, profiler=profiler))
+
+    mxnet_operator_benchmark_results.append(run_mx_binary_misc_operators_benchmarks(ctx=ctx,
+                                                                                         dtype=dtype, profiler=profiler))
 
     # Run all GEMM operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_gemm_operators_benchmarks(ctx=ctx,
