@@ -23,17 +23,16 @@
  * \brief Operator for numpy sampling from rayleigh distributions
  */
 
- #include "./np_rayleigh_op.h"
+#include "./np_rayleigh_op.h"
 
- namespace mxnet {
- namespace op {
- 
- NNVM_REGISTER_OP(_npi_rayleigh)
- .set_attr<FCompute>("FCompute<gpu>", NumpyRayleighForward<gpu>);
- 
- NNVM_REGISTER_OP(_backward_broadcast_rayleigh)
- .set_attr<FCompute>("FCompute<gpu>", RayleighReparamBackward<gpu>);
- 
- }  // namespace op
- }  // namespace mxnet
- 
+namespace mxnet {
+namespace op {
+
+NNVM_REGISTER_OP(_npi_rayleigh)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRayleighForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_broadcast_rayleigh)
+.set_attr<FCompute>("FCompute<gpu>", RayleighReparamBackward<gpu>);
+
+}  // namespace op
+}  // namespace mxnet

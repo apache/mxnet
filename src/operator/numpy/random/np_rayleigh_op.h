@@ -63,7 +63,8 @@ template <typename DType>
 struct scalar_rayleigh_kernel {
   MSHADOW_XINLINE static void Map(index_t i, float scale, float *threshold,
                                   DType *out) {
-    out[i] = -scale * log(threshold[i]);
+    threshold[i] = sqrt(-2 * log(threshold[i]));
+    out[i] =  scale * threshold[i];
   }
 };
 
@@ -87,8 +88,8 @@ struct rayleigh_kernel {
                                   IType *scales, float* threshold, OType *out) {
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
-    threshold[i] = -log(threshold[i]);
-    out[i] =  scales[idx] * threshold[i];
+    threshold[i] = sqrt(-2 * log(threshold[i]));
+    out[i] = scales[idx] * threshold[i];
   }
 };
 
@@ -96,10 +97,10 @@ struct rayleigh_kernel {
 
 template <typename xpu>
 void NumpyRayleighForward(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs) {
+                          const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
   const NumpyRayleighParam &param = nnvm::get<NumpyRayleighParam>(attrs.parsed);
@@ -146,11 +147,11 @@ void NumpyRayleighForward(const nnvm::NodeAttrs &attrs,
 
 template<typename xpu, int ndim, typename DType>
 inline void ScalarRayleighReparamBackwardImpl(const OpContext& ctx,
-                                                 const std::vector<TBlob>& inputs,
-                                                 const std::vector<OpReqType>& req,
-                                                 const std::vector<TBlob>& outputs,
-                                                 const mxnet::TShape& new_ishape,
-                                                 const mxnet::TShape& new_oshape) {
+                                              const std::vector<TBlob>& inputs,
+                                              const std::vector<OpReqType>& req,
+                                              const std::vector<TBlob>& outputs,
+                                              const mxnet::TShape& new_ishape,
+                                              const mxnet::TShape& new_oshape) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace broadcast;
@@ -172,10 +173,10 @@ inline void ScalarRayleighReparamBackwardImpl(const OpContext& ctx,
 
 template<typename xpu>
 void RayleighReparamBackward(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   // skip kernel launch for zero-size tensors
   if (inputs[0].shape_.Size() == 0U) {
     return;

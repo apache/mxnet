@@ -41,7 +41,7 @@ NNVM_REGISTER_OP(_npi_rayleigh)
       num_inputs -= 1;
     }
     return num_inputs;
-  })
+})
 .set_num_outputs(2)
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
     [](const NodeAttrs& attrs) {
@@ -55,7 +55,7 @@ NNVM_REGISTER_OP(_npi_rayleigh)
       num_inputs -= 1;
     }
     return (num_inputs == 0) ? std::vector<std::string>() : std::vector<std::string>{"input1"};
-  })
+})
 .set_attr_parser(ParamParser<NumpyRayleighParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyRayleighParam>)
 .set_attr<nnvm::FInferType>("FInferType",
@@ -63,12 +63,12 @@ NNVM_REGISTER_OP(_npi_rayleigh)
     (*out_attrs)[0] = mshadow::kFloat32;
     (*out_attrs)[1] = mshadow::kFloat32;
     return true;
-  })
+})
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const nnvm::NodeAttrs& attrs) {
       return std::vector<ResourceRequest>{
         ResourceRequest::kRandom, ResourceRequest::kTempSpace};
-  })
+})
 .set_attr<FCompute>("FCompute<cpu>", NumpyRayleighForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_rayleigh"})
 .add_argument("input1", "NDArray-or-Symbol", "Source input")
