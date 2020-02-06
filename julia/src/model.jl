@@ -647,7 +647,7 @@ end
 
 Load a mx.FeedForward model from the checkpoint *prefix*, *epoch* and optionally provide a context.
 """
-function load_checkpoint(prefix::AbstractString, epoch::Int, ::Type{FeedForward}; context = nothing)
+function load_checkpoint(prefix::AbstractString, epoch::Int, ::Type{FeedForward}; context = cpu())
   arch, arg_params, aux_params = load_checkpoint(prefix, epoch)
   model = FeedForward(arch, context = context)
   model.arg_params = arg_params
