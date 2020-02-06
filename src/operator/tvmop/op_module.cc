@@ -82,7 +82,11 @@ PackedFunc GetFunction(const std::shared_ptr<Module> &module,
     }
     func_name << "_" << arg.shape_.ndim();
   }
-  return module->GetFunction(func_name.str(), false);
+  PackedFunc ret = module->GetFunction(func_name.str(), false);
+  if (ret == nullptr) {
+    LOG(FATAL) << "Unknown function " << func_name.str();
+  }
+  return ret;
 }
 
 void TVMOpModule::Call(const std::string &func_name,

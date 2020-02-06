@@ -40,6 +40,7 @@ from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
 from mxnet.operator import get_all_registered_operators
+from mxnet.runtime import Features
 
 
 @with_seed()
@@ -974,6 +975,8 @@ def test_np_shape():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_linspace uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_linspace():
     configs = [
         (0.0, 1.0, 10),
@@ -985,7 +988,11 @@ def test_np_linspace():
         (0, 10, -1),
         (0, 1, 2.5)
     ]
-    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = ['int32', 'float32', 'float64', None]
+    else:
+        dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
         for dtype in dtypes:
             for endpoint in [False, True]:
@@ -1044,6 +1051,8 @@ def test_np_linspace():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_logspace uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_logspace():
     class TestLogspace(HybridBlock):
         def __init__(self, start, stop, num=50, endpoint=None, base=50.0, dtype=None, axis=0):
@@ -1988,7 +1997,11 @@ def test_np_binary_funcs():
 
         np_func = getattr(_np, func)
         mx_func = TestBinary(func)
-        alltypes = alltypes if alltypes else [[_np.float16, _np.float32, _np.float64]]
+        if Features().is_enabled("TVM_OP"):
+            # TODO: add fp16 back
+            alltypes = alltypes if alltypes else [[_np.float32, _np.float64]]
+        else:
+            alltypes = alltypes if alltypes else [[_np.float16, _np.float32, _np.float64]]
         for dtypes, lgrad, rgrad in zip(alltypes, lgrads, rgrads if rgrads else lgrads):
             for dtype in dtypes:
                 ldtype = rdtype = dtype
@@ -2042,12 +2055,6 @@ def test_np_binary_funcs():
                 assertRaises(NotImplementedError, getattr(np, func), mx_test_x1, mx_test_x2,  order='mxnet')
 
     funcs = {
-        'add': (-1.0, 1.0, [lambda y, x1, x2: _np.ones(y.shape)], None),
-        'subtract':
-        (-1.0, 1.0, [lambda y, x1, x2: _np.ones(y.shape)],
-                    [lambda y, x1, x2: -_np.ones(y.shape)]),
-        'multiply': (-1.0, 1.0, [lambda y, x1, x2: _np.broadcast_to(x2, y.shape)],
-                                [lambda y, x1, x2: _np.broadcast_to(x1, y.shape)]),
         'divide': (0.1, 1.0, [lambda y, x1, x2: _np.ones(y.shape) / x2],
                    [lambda y, x1, x2: -x1 / (x2 * x2)]),
         'mod': (1.0, 10.0,
@@ -2081,6 +2088,14 @@ def test_np_binary_funcs():
                          [lambda y, x1, x2: x2 / y]),
         'ldexp': (-3, 3, [None], None, [[_np.int32]]),
     }
+    if is_op_runnable():
+        funcs.update({
+            'add': (-1.0, 1.0, [lambda y, x1, x2: _np.ones(y.shape)], None),
+            'multiply': (-1.0, 1.0, [lambda y, x1, x2: _np.broadcast_to(x2, y.shape)],
+                                    [lambda y, x1, x2: _np.broadcast_to(x1, y.shape)]),
+            'subtract': (-1.0, 1.0, [lambda y, x1, x2: _np.ones(y.shape)],
+                                    [lambda y, x1, x2: -_np.ones(y.shape)]),
+        })
     shape_pairs = [((3, 2), (3, 2)),
                    ((3, 2), (3, 1)),
                    ((3, 1), (3, 0)),
@@ -2101,6 +2116,8 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
+@unittest.skipIf(Features().is_enabled("TVM_OP"),
+                 'TVM binary ops do not support mixed precision')
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
@@ -2192,6 +2209,8 @@ def test_np_mixed_precision_binary_funcs():
 
 @with_seed()
 @use_np
+@unittest.skipIf(Features().is_enabled("TVM_OP"),
+                 'TVM binary ops do not support boolean type')
 def test_np_boolean_binary_funcs():
     def check_boolean_binary_func(func, mx_x1, mx_x2):
         class TestBooleanBinary(HybridBlock):
@@ -2374,6 +2393,8 @@ def test_np_atleast_nd():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_arange uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_arange():
     configs = [
         (1, 10, 2),
@@ -2397,7 +2418,11 @@ def test_np_arange():
         0,
         6,
     ]
-    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = ['int32', 'float32', 'float64', None]
+    else:
+        dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
         for dtype in dtypes:
             if isinstance(config, tuple):
@@ -3214,6 +3239,8 @@ def test_np_clip():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_npx_random_bernoulli uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_npx_random_bernoulli():
     def _test_bernoulli_exception(prob, logit):
         output = npx.random.bernoulli(prob=prob, logit=logit).asnumpy()
@@ -3381,6 +3408,8 @@ def test_np_normal_grad():
                 assert_almost_equal(loc.grad.asnumpy().sum(), _np.ones(out_shape).sum(), rtol=1e-3, atol=1e-5)
 
 
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_random uses op add, whose tvm implementation must be run with compute capability >= 53.')
 @with_seed()
 @use_np
 def test_np_lognormal_grad():
@@ -3915,6 +3944,8 @@ def test_np_choice():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_eye uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_eye():
     configs = [
         4,
@@ -3937,7 +3968,11 @@ def test_np_eye():
         (-2, None),
         (1, -1)
     ]
-    dtypes = ['int32', 'float16', 'float32', 'float64', None]
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = ['int32', 'float32', 'float64', None]
+    else:
+        dtypes = ['int32', 'float16', 'float32', 'float64', None]
     for config in configs:
         for dtype in dtypes:
             if isinstance(config, tuple):
@@ -3983,8 +4018,14 @@ def test_np_eye():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_indices uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_indices():
-    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
+    if Features().is_enabled("TVM_OP"):
+        # TODO: add fp16 back
+        dtypes = ['int32', 'int64', 'float32', 'float64']
+    else:
+        dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     shapes = [
         (0,),
         (3,),
@@ -3992,7 +4033,8 @@ def test_np_indices():
         (2, 0, 4),
         (1, 1, 1, 1),
         (1, 0, 0, 1),
-        (2, 3, 4, 5, 6, 7)
+        # TODO: support dim > 5 for tvm ops
+        # (2, 3, 4, 5, 6, 7)
     ]
     if platform.system() == 'Windows':
         shapes = shapes[1:]  # beacuse in numpy windows version, indces not support dimensions is empty tuple.
@@ -4064,6 +4106,8 @@ def test_np_repeat():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_linalg_norm uses op multiply, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_linalg_norm():
     class TestLinalgNorm(HybridBlock):
         def __init__(self, ord=None, axis=None, keepdims=False):
@@ -5655,6 +5699,8 @@ def test_np_trace():
 
 @with_seed()
 @use_np
+@unittest.skipUnless(is_op_runnable(),
+                     'test_np_windows uses op add, whose tvm implementation must be run with compute capability >= 53.')
 def test_np_windows():
     class TestWindows(HybridBlock):
         def __init__(self, func, M, dtype):
@@ -6258,6 +6304,8 @@ def test_np_einsum():
         # ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
         #                                                                            _np.matmul(_np.ones((64, 8, 128, 128)), args[0]))),
     ]
+    # issue #16616
+    # temporarily disable the flaky float16 tests 
     dtypes = ['float32', 'float64', 'int32']
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int32': 'int64'}
@@ -7357,6 +7405,141 @@ def test_np_empty_like():
         # check imperative again
         ret = np.empty_like(prototype, dtype, order, subok)
         assert ret.asnumpy().shape == expected_ret.shape
+
+
+def mathematical_core_binary(name,
+                             hybrid_block,
+                             imperative_call,
+                             forward_numpy_call,
+                             backward_numpy_call):
+    def reduce_to(x_grad, x):
+        idx = len(x_grad.shape) - len(x.shape)
+        axes = []
+        for (i, size) in enumerate(x_grad.shape):
+            if i < idx or x.shape[i - idx] == 1:
+                axes.append(i)
+        x_grad = _np.apply_over_axes(_np.sum, x_grad, axes)
+        return _np.reshape(x_grad, x.shape)
+
+
+    def get_grad(a, b):
+        c = forward_numpy_call(a, b)
+        a_bc = _np.broadcast_to(a, c.shape)
+        b_bc = _np.broadcast_to(b, c.shape)
+        a_grad, b_grad = backward_numpy_call(a_bc, b_bc)
+        if hasattr(a, 'shape') and hasattr(b, 'shape'):
+            return reduce_to(a_grad, a), reduce_to(b_grad, b)
+        elif hasattr(a, 'shape'):
+            return reduce_to(a_grad, a)
+        elif hasattr(b, 'shape'):
+            return reduce_to(b_grad, b)
+
+
+    configs = [
+        [[], []],
+        [[0], [0]],
+        [[3, 4], []],
+        [[5, 6, 7, 8, 9], [1]],
+        [[6, 4, 5, 2, 1], [6, 1, 5, 1, 1]],
+        [[3, 5, 6], [1, 6]],
+        [[3, 5, 6], [5, 1]],
+        [[3, 5, 6], [5, 6]],
+        [[4, 3, 2, 1], [2, 1]],
+        [[4, 3, 2, 2], [4, 1, 1, 2]],
+        [[6, 6], [6, 6]],
+    ]
+    types = ['float32', 'float64', 'int32', 'int64']  # 'int8' incurs overflow
+    for hybridize in [True, False]:
+        for dtype in types:
+            for config in configs:
+                test = hybrid_block()
+                if hybridize:
+                    test.hybridize()
+                rtol, atol = 1e-3, 1e-5
+                a_shape = config[0]
+                b_shape = config[1]
+                a_np = _np.array(_np.random.uniform(-2.0, 2.0, a_shape), dtype=dtype)
+                b_np = _np.array(_np.random.uniform(-2.0, 2.0, b_shape), dtype=dtype)
+                a = np.array(a_np, dtype=dtype)
+                b = np.array(b_np, dtype=dtype)
+                a.attach_grad()
+                b.attach_grad()
+                with mx.autograd.record():
+                    c = test(a, b)
+                c_np = forward_numpy_call(a_np, b_np)
+                # Test forward
+                assert c.shape == c_np.shape
+                assert_almost_equal(c.asnumpy(), c_np, rtol=rtol, atol=atol)
+                # Test backward
+                c.backward()
+                a_grad_np, b_grad_np = get_grad(a_np, b_np)
+                assert_almost_equal(a.grad.asnumpy(), a_grad_np, rtol=rtol, atol=atol)
+                assert_almost_equal(b.grad.asnumpy(), b_grad_np, rtol=rtol, atol=atol)
+                # Test imperative
+                c = imperative_call(a, b)
+                c_np = forward_numpy_call(a_np, b_np)
+                assert_almost_equal(c.asnumpy(), c_np, rtol=rtol, atol=atol)
+    # test scalar
+    types = ['float32', 'float64']  # integer tyeps incur casting problem
+    for dtype in types:
+        for config in configs:
+            for shape in config:
+                X_np = _np.array(_np.random.uniform(-2.0, 2.0, shape), dtype=dtype)
+                scalar = _np.random.uniform(-2.0, 2.0)
+                X = np.array(X_np, dtype=dtype)
+                X.attach_grad()
+                # Test forward
+                with mx.autograd.record():
+                    out = imperative_call(X, scalar)
+                out_np = forward_numpy_call(X_np, scalar)
+                assert out.shape == out_np.shape
+                assert_almost_equal(out.asnumpy(), out_np, rtol=rtol, atol=atol)
+                # Test backward
+                out.backward()
+                X_grad_np = get_grad(X_np, scalar)
+                assert_almost_equal(X.grad.asnumpy(), X_grad_np, rtol=rtol, atol=atol)
+                # Test forward
+                with mx.autograd.record():
+                    out = imperative_call(scalar, X)
+                out_np = forward_numpy_call(scalar, X_np)
+                assert out.shape == out_np.shape
+                assert_almost_equal(out.asnumpy(), out_np, rtol=rtol, atol=atol)
+                # Test backward
+                out.backward()
+                X_grad_np = get_grad(scalar, X_np)
+                assert_almost_equal(X.grad.asnumpy(), X_grad_np, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_mathematical():
+    # multiply
+    class TestMultiply(HybridBlock):
+        def __init__(self):
+            super(TestMultiply, self).__init__()
+        def hybrid_forward(self, F, a, b):
+            return F.np.multiply(a, b)
+    # add
+    class TestAdd(HybridBlock):
+        def __init__(self):
+            super(TestAdd, self).__init__()
+        def hybrid_forward(self, F, a, b):
+            return F.np.add(a, b)
+
+    # subtract
+    class TestSubtract(HybridBlock):
+        def __init__(self):
+            super(TestSubtract, self).__init__()
+        def hybrid_forward(self, F, a, b):
+            return F.np.subtract(a, b)
+    
+    if is_op_runnable():
+        mathematical_core_binary("multiply", TestMultiply, np.multiply,
+                                 _np.multiply, lambda a, b: (b, a))
+        mathematical_core_binary("add", TestAdd, np.add, _np.add,
+                                 lambda a, b: (_np.ones_like(a), _np.ones_like(b)))
+        mathematical_core_binary("subtract", TestSubtract, np.subtract, _np.subtract,
+                                 lambda a, b: (_np.ones_like(a), -_np.ones_like(b)))
 
 
 if __name__ == '__main__':

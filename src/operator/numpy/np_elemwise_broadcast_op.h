@@ -19,11 +19,17 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_elemwise_binary_op.h
+ * \file np_elemwise_broadcast_op.h
  * \brief Function definition of elemwise and broadcast operators
  */
 #ifndef MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
 #define MXNET_OPERATOR_NUMPY_NP_ELEMWISE_BROADCAST_OP_H_
+
+#if MXNET_USE_TVM_OP
+#include <tvm/runtime/c_runtime_api.h>
+#include <tvm/runtime/packed_func.h>
+#include "../tvmop/op_module.h"
+#endif  // MXNET_USE_TVM_OP
 
 #include <algorithm>
 #include <vector>
@@ -513,6 +519,359 @@ void NumpyBinaryBackwardUseIn(const nnvm::NodeAttrs& attrs,
     PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
   }
 }
+
+inline TBlob PrependAxes(const TBlob& src, const int dst_ndim) {
+  CHECK_LE(src.shape_.ndim(), dst_ndim);
+  const int src_ndim = src.shape_.ndim();
+  if (src_ndim == dst_ndim) return src;
+  mxnet::TShape dst_shape(dst_ndim, 1);
+  for (int i = dst_ndim - src_ndim; i < dst_ndim; ++i) {
+    dst_shape[i] = src.shape_[i - dst_ndim + src_ndim];
+  }
+  return src.reshape(dst_shape);
+}
+
+inline std::string SetAttr(const std::string& name,
+                           const std::string& val) {
+  return name + '_' + val;
+}
+
+inline std::string SetReq(OpReqType req) {
+  if (req == kWriteTo)
+    return "req_kWriteTo";
+  return "req_kAddTo";
+}
+
+static constexpr int maxdim = 5;
+
+struct TVMBinaryBroadcastCompute {
+  const char* func;
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const mxnet::OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+#if MXNET_USE_TVM_OP
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
+
+    // prepare tblobs and TVMArgs
+    std::vector<TBlob> tblobs = {inputs[0], inputs[1], outputs[0], outputs[0]};
+    std::vector<int> type_codes;
+    std::vector<TVMValue> values;
+
+    const int ondim = outputs[0].shape_.ndim();
+    const size_t num_args = 4;
+    type_codes.resize(num_args);
+    values.resize(num_args);
+    for (size_t i = 0; i < num_args; ++i) {
+      tblobs[i] = PrependAxes(tblobs[i], ondim);
+      type_codes[i] = kTVMDLTensorHandle;
+      values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
+    }
+    std::string funcname = std::string(func);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      funcname += SetReq(req_type);
+    });
+    tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], tblobs.size());
+    tvm::runtime::TVMOpModule::Get()->CallEx(funcname, ctx, tblobs, tvm_args);
+#else
+    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
+                  "to enable TVM-generated kernels for operator " << func;
+#endif  // MXNET_USE_TVM_OP
+  }
+};
+
+struct TVMBinaryBroadcastScalarCompute {
+  const char* func;
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const mxnet::OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+#if MXNET_USE_TVM_OP
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
+    if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor
+
+    // prepare tblobs and TVMArgs
+    std::vector<TBlob> tblobs = {inputs[0], outputs[0], outputs[0]};
+    std::vector<int> type_codes;
+    std::vector<TVMValue> values;
+
+    const size_t num_args = 4;  // one input tensor, one scalar param, and one output
+    type_codes.resize(num_args);
+    values.resize(num_args);
+
+    // input tensor setup
+    type_codes[0] = kTVMDLTensorHandle;
+    values[0].v_handle = const_cast<DLTensor*>(&(tblobs[0].dltensor()));
+
+    // scalar param
+    type_codes[1] = kDLFloat;
+    values[1].v_float64 = nnvm::get<double>(attrs.parsed);
+
+    // output tensor
+    type_codes[2] = kTVMDLTensorHandle;
+    values[2].v_handle = const_cast<DLTensor*>(&(tblobs[1].dltensor()));
+
+    // output tensor
+    type_codes[3] = kTVMDLTensorHandle;
+    values[3].v_handle = const_cast<DLTensor*>(&(tblobs[1].dltensor()));
+
+    std::string funcname = std::string(func);
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      funcname += SetReq(req_type);
+    });
+
+    tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], num_args);
+    tvm::runtime::TVMOpModule::Get()->CallEx(funcname, ctx, tblobs, tvm_args);
+#else
+    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
+                  "to enable TVM-generated kernels for operator " << func;
+#endif  // MXNET_USE_TVM_OP
+  }
+};
+
+enum AxisType {
+  XReduce,     // operand X's broadcast axis
+  YReduce,     // operand Y's broadcast axis
+  XYIter       // other axis
+};
+
+enum ReductionType {
+  ReduceAxis,      // broadcast axis
+  IterAxis         // iter axis
+};
+
+struct TVMBinaryBroadcastBackwardUseIn {
+  const char* func;
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const mxnet::OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+    /* Suppose that the two operands are operand X and operand Y, and we are
+    * calculating the gradient of operand X. Each axis is labeled as X if
+    * it's X’s broadcast axis, Y if its Y’s broadcast axis, and 0 is it’s
+    * not a broadcast axis. Also note that no axis can be X and Y’s broadcast
+    * axis at the same time. We may compress consecutive X axes and consecutive
+    * non-X axes, but this results in the mix of axes labeled as Y and 0. To handle
+    * this, for each pair of adjacent axes labeled as Y and 0, a dummy axis (of size 1)
+    * with label X is inserted in the middle. After that all consecutive X axes and
+    * non-X axes are compressed, with the cost of at most `n - 1` dummy axes,
+    * where `n` denotes the maximum dimension of input operands.
+    */
+#if MXNET_USE_TVM_OP
+    CHECK_EQ(inputs.size(), 3U);
+    CHECK_EQ(outputs.size(), 2U);
+    const int ndim = inputs[0].shape_.ndim();
+    const TShape& oshape = inputs[0].shape_;
+    TShape ishape[2];
+    for (int k = 0; k < 2; ++k) {
+      ishape[k] = PrependAxes(inputs[1 + k], ndim).shape_;
+    }
+    for (int k = 0; k < 2; ++k) {
+      // dispatch by broadcast dims
+      // seperate outputs[k] iter dim from outputs[1 - k] reduce dim
+      const TShape& xs = ishape[k], ys = ishape[1 - k];
+      if (xs.Size() == 0U) continue;  // skip zero-size tensor
+      // get axis type
+      std::vector<AxisType> axis_type(ndim);
+      for (int i = 0; i < ndim; ++i) {
+        if (oshape[i] != xs[i]) {
+          axis_type[i] = XReduce;
+        } else if (oshape[i] != ys[i]) {
+          axis_type[i] = YReduce;
+        } else {
+          axis_type[i] = XYIter;
+        }
+      }
+      // get reduction type of x with seperation dims inserted
+      std::vector<ReductionType> seperated_type;
+      std::vector<AxisType> seperated_axis_type;
+      std::vector<int> seperated_shape;
+      for (int i = 0; i < ndim; ++i) {
+        ReductionType val;
+        if (i > 0 && axis_type[i - 1] != XReduce && axis_type[i] != XReduce
+            && axis_type[i - 1] != axis_type[i]) {
+          seperated_type.push_back(ReduceAxis);
+          seperated_axis_type.push_back(XReduce);
+          seperated_shape.push_back(1);
+        }
+        if (axis_type[i] == XReduce) {
+          val = ReduceAxis;
+        } else {
+          val = IterAxis;
+        }
+        seperated_type.push_back(val);
+        seperated_shape.push_back(oshape[i]);
+        seperated_axis_type.push_back(axis_type[i]);
+      }
+      // Sequeeze continuous dims of the same type
+      std::vector<AxisType> otype;
+      std::vector<int> ov;
+      int size = seperated_type.size();
+      for (int i = 0; i < size; ++i) {
+        if (i > 0 && seperated_type[i] == seperated_type[i - 1]) {
+          ov.back() *= seperated_shape[i];
+          CHECK_EQ(otype.back(), seperated_axis_type[i]);
+        } else {
+          ov.push_back(seperated_shape[i]);
+          otype.push_back(seperated_axis_type[i]);
+        }
+      }
+      // Padding to maxdim
+      for (int i = ov.size(); i < 2 * maxdim - 1; ++i) {
+        ov.push_back(1);
+        otype.push_back(XReduce);
+      }
+      // Calculate reduce1st_dim
+      int reduce1st_dim = otype[0] == XReduce;
+      // Calculate iv, xy, and yv
+      std::vector<int> iv, xv, yv;
+      for (int i = reduce1st_dim; i < 2 * maxdim - 1; i += 2) {
+        iv.push_back(ov[i]);
+      }
+      for (int i = 0; i < 2 * maxdim - 1; ++i) {
+        if (otype[i] == XReduce) {
+          xv.push_back(1);
+        } else {
+          xv.push_back(ov[i]);
+        }
+      }
+      for (int i = 0; i < 2 * maxdim - 1; ++i) {
+        if (otype[i] == YReduce) {
+          yv.push_back(1);
+        } else {
+          yv.push_back(ov[i]);
+        }
+      }
+
+      // Prepare tblobs and TVMArgs
+      TShape oshape_tvm(ov.begin(), ov.end());
+      TShape xshape_tvm(xv.begin(), xv.end());
+      TShape yshape_tvm(yv.begin(), yv.end());
+      TShape ishape_tvm(iv.begin(), iv.end());
+      std::vector<TBlob> tblobs = {inputs[0].reshape(oshape_tvm),
+                                  inputs[1 + k].reshape(xshape_tvm),
+                                  inputs[2 - k].reshape(yshape_tvm),
+                                  outputs[k].reshape(ishape_tvm),
+                                  outputs[k].reshape(ishape_tvm)};
+      std::vector<int> type_codes;
+      std::vector<TVMValue> values;
+      const int num_args = 5;
+      type_codes.resize(num_args);
+      values.resize(num_args);
+      for (size_t i = 0; i < num_args; ++i) {
+        type_codes[i] = kTVMDLTensorHandle;
+        values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
+      }
+
+      // Set attrs
+      std::string funcname = std::string(func);
+      funcname += SetAttr("output", std::to_string(k));
+      funcname += SetAttr("reduce1st_dim", std::to_string(reduce1st_dim));
+      MXNET_ASSIGN_REQ_SWITCH(req[k], req_type, {
+        funcname += SetReq(req_type);
+      });
+      tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], num_args);
+      tvm::runtime::TVMOpModule::Get()->CallEx(funcname, ctx, tblobs, tvm_args);
+    }
+#else
+    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
+                  "to enable TVM-generated kernels for operator " << func;
+#endif  // MXNET_USE_TVM_OP
+  }
+};
+
+struct TVMBinaryBroadcastBackwardUseNone{
+  const char* func;
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const mxnet::OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+    /* The backward of broadcast op is basically a reduction on broadcast axes.
+    * We label the reduce axes as 1 and other axes as 0, and they form a bit string.
+    * Each bit string correponds to a kernel, so the number of kernels is as many as `2^n`
+    * To reduce it, the bit string is compressed by combining consecutive 0s or 1s.
+    * In this way, the number of bit string (the number of kernels) is reduced to `2 * n`
+    * They compressed bit string is stored in `axes`. And `reduce1st_dim` represents the first bit
+    * of the compressed bit string. Credit to @junrushao1994 and @yzhliu.
+    */
+#if MXNET_USE_TVM_OP
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 2U);
+    const TShape& oshape = PrependAxes(inputs[0], maxdim).shape_;
+    for (int k = 0; k < 2; ++k) {
+      // dispatch by backward
+      TShape ishape = PrependAxes(outputs[k], maxdim).shape_;
+      if (ishape.Size() == 0U) continue;  // skip zero-size tensor
+      std::vector<ReductionType> reduction_type;
+      for (int i = 0; i < maxdim; ++i) {
+        if (oshape[i] != ishape[i]) {
+          reduction_type.push_back(ReduceAxis);
+        } else {
+          reduction_type.push_back(IterAxis);
+        }
+      }
+      // Calculate ov
+      std::vector<int> tv;
+      for (int i = 0; i < maxdim; ++i) {
+        if (i > 0 && reduction_type[i] == reduction_type[i - 1]) {
+          tv.back() *= oshape[i];
+        } else {
+          tv.push_back(oshape[i]);
+        }
+      }
+      // Prepend to maxdim
+      std::vector<int> ov(maxdim - tv.size(), 1), iv;
+      for (auto const& i : tv) {
+        ov.push_back(i);
+      }
+      // Calculate reduce1st_dim
+      int reduce1st_dim = reduction_type[0] == ReduceAxis;
+      reduce1st_dim = (reduce1st_dim + maxdim - tv.size()) % 2;
+
+      // Calculate iv
+      for (uint32_t i = reduce1st_dim; i < ov.size(); i += 2) {
+        iv.push_back(ov[i]);
+      }
+
+      // Prepare tblobs and TVMArgs
+      TShape oshape_tvm(ov.begin(), ov.end());
+      TShape ishape_tvm(iv.begin(), iv.end());
+      std::vector<TBlob> tblobs = {inputs[0].reshape(oshape_tvm),
+                                  outputs[k].reshape(ishape_tvm),
+                                  outputs[k].reshape(ishape_tvm)};
+      std::vector<int> type_codes;
+      std::vector<TVMValue> values;
+      const size_t num_args = 3;
+      type_codes.resize(num_args);
+      values.resize(num_args);
+      for (size_t i = 0; i < num_args; ++i) {
+        type_codes[i] = kTVMDLTensorHandle;
+        values[i].v_handle = const_cast<DLTensor*>(&(tblobs[i].dltensor()));
+      }
+
+      std::string funcname = std::string(func);
+      funcname += SetAttr("output", std::to_string(k));
+      funcname += SetAttr("reduce1st_dim", std::to_string(reduce1st_dim));
+      MXNET_ASSIGN_REQ_SWITCH(req[k], req_type, {
+        funcname += SetReq(req_type);
+      });
+
+      tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], num_args);
+      tvm::runtime::TVMOpModule::Get()->CallEx(funcname, ctx, tblobs, tvm_args);
+    }
+#else
+    LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag for compiling MXNet source code "
+                  "to enable TVM-generated kernels for operator " << func;
+#endif  // MXNET_USE_TVM_OP
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet
