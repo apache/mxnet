@@ -263,9 +263,9 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     numtodel = inputs[delete_::kObj].shape().Size();
   }
 
-  char* out_pos_ptr = NULL;
-  char* indices_ptr = NULL;
-  char* is_delete_ptr = NULL;
+  char* out_pos_ptr = nullptr;
+  char* indices_ptr = nullptr;
+  char* is_delete_ptr = nullptr;
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
                       inputs[delete_::kObj].dtype() :
                       mshadow::DataType<int64_t>::kFlag), IType, {
