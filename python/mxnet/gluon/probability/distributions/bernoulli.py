@@ -51,8 +51,10 @@ class Bernoulli(ExponentialFamily):
                 "Either `prob` or `logit` must be specified, but not both. " +
                 "Received prob={}, logit={}".format(prob, logit))
 
-        self.prob = prob
-        self.logit = logit
+        if prob is not None:
+            self.prob = prob
+        else:
+            self.logit = logit
 
         super(Bernoulli, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
@@ -65,7 +67,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """
-        return self.prob if self.prob is not None else logit2prob(self.logit, True, self.F)
+        return logit2prob(self.logit, True, self.F)
 
     @cached_property
     def logit(self):
@@ -76,7 +78,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """
-        return self.logit if self.logit is not None else prob2logit(self.prob, True, self.F)
+        return prob2logit(self.prob, True, self.F)
 
     @property
     def mean(self):
@@ -85,6 +87,19 @@ class Bernoulli(ExponentialFamily):
     @property
     def variance(self):
         return self.prob * (1 - self.prob)
+
+    def broadcast_to(self, batch_shape):
+        new_instance = self.__new__(type(self))
+        F = self.F
+        if 'prob' in self.__dict__:
+            new_instance.prob = F.np.broadcast_to(self.prob, batch_shape)
+        else:
+            new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
+        super(Bernoulli, new_instance).__init__(F=F,
+                                                event_dim=self.event_dim,
+                                                validate_args=False)
+        new_instance._validate_args = self._validate_args
+        return new_instance
 
     def log_prob(self, value):
         value = self.support.check(value)
