@@ -800,7 +800,7 @@ class Registry {
 /*!
  * \brief Macros to help with string concat
  * Annoyingly, the concat_ and concat macros are necessary to
- * be able to use __COUNTER__ in an identifier name 
+ * be able to use __COUNTER__ in an identifier name
  */
 #define MX_STR_CONCAT_(__a, __b) __a ## __b
 #define MX_STR_CONCAT(__a, __b) MX_STR_CONCAT_(__a, __b)
