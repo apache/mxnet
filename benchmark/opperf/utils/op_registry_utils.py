@@ -303,8 +303,8 @@ def get_all_optimizer_operators():
     # Filter for Optimizer operators
     optimizer_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-         if op_name in optimizer_ops:
-             optimizer_mx_operators[op_name] = mx_operators[op_name]
+        if op_name in optimizer_ops:
+            optimizer_mx_operators[op_name] = mx_operators[op_name]
     return optimizer_mx_operators
 
 def get_all_sorting_searching_operators():
