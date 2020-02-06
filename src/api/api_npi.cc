@@ -76,6 +76,7 @@ inline void SetInOut(std::vector<NDArray*>* ndinputs,
   }
 }
 
+template<typename T>
 inline std::vector<NDArray*> Invoke(const nnvm::Op* op,
                                     nnvm::NodeAttrs* attrs,
                                     int num_inputs,
@@ -92,6 +93,7 @@ inline std::vector<NDArray*> Invoke(const nnvm::Op* op,
 
   auto state = Imperative::Get()->Invoke(Context::CPU(), *attrs, ndinputs, ndoutputs);
   if (Imperative::Get()->is_recording()) {
+    ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
     Imperative::Get()->RecordOp(std::move(*attrs), ndinputs, ndoutputs, state);
   }
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
@@ -120,51 +122,66 @@ MXNET_REGISTER_API("_npi.zeros")
     attrs.dict["ctx"] = args[2].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
-MXNET_REGISTER_API("_npi.tensordot")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args,
+                                           runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  bool isscalar = args[2].type_code() == kDLInt;
-  const nnvm::Op* op = Op::Get(isscalar ?
-                               "_npi_tensordot_int_axes" :
-                               "_npi_tensordot");
+  const nnvm::Op* op = Op::Get("_npi_tensordot_int_axes");
+  op::TensordotIntAxesParam param;
   nnvm::NodeAttrs attrs;
   attrs.op = op;
-  if (isscalar) {
-    mxnet::op::TensordotIntAxesParam param;
-    param.axes = args[2].operator int();
-    // we directly copy TensordotIntAxesParam, which is trivially-copyable
-    attrs.parsed = param;
-  } else {
-    mxnet::op::TensordotParam param;
-    const ObjectRef ref = args[2].operator ObjectRef();
-    if (const ADTObj* obj = ref.as<ADTObj>()) {
-      if (const IntegerObj* lop = (*obj)[0].as<IntegerObj>()) {
-        param.a_axes_summed = Tuple<int>(1, lop->value);
-        param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>((*obj)[1])->value);
-      } else {
-        param.a_axes_summed = Tuple<int>((*obj)[0]);
-        param.b_axes_summed = Tuple<int>((*obj)[1]);
-      }
-    } else {
-      Array<ObjectRef> arr = Downcast<Array<ObjectRef>, ObjectRef>(ref);
-      if (const IntegerObj* lop = arr[0].as<IntegerObj>()) {
-        param.a_axes_summed = Tuple<int>(1, lop->value);
-        param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>(arr[1])->value);
-      } else {
-        param.a_axes_summed = Tuple<int>(arr[0]);
-        param.b_axes_summed = Tuple<int>(arr[1]);
-      }
-    }
-    attrs.parsed = std::move(param);
-  }
+  param.axes = args[2].operator int();
+  // we directly copy TensordotIntAxesParam, which is trivially-copyable
+  attrs.parsed = param;
   int num_outputs = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke<op::TensordotIntAxesParam>(op, &attrs, 2, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+}
+
+inline static void _npi_tensordot(runtime::MXNetArgs args,
+                                  runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_tensordot");
+  op::TensordotParam param;
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  const ObjectRef ref = args[2].operator ObjectRef();
+  if (const ADTObj* obj = ref.as<ADTObj>()) {
+    if (const IntegerObj* lop = (*obj)[0].as<IntegerObj>()) {
+      param.a_axes_summed = Tuple<int>(1, lop->value);
+      param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>((*obj)[1])->value);
+    } else {
+      param.a_axes_summed = Tuple<int>((*obj)[0]);
+      param.b_axes_summed = Tuple<int>((*obj)[1]);
+    }
+  } else {
+    Array<ObjectRef> arr = Downcast<Array<ObjectRef>, ObjectRef>(ref);
+    if (const IntImmNode* lop = arr[0].as<IntImmNode>()) {
+      param.a_axes_summed = Tuple<int>(1, lop->value);
+      param.b_axes_summed = Tuple<int>(1, Downcast<IntImm, ObjectRef>(arr[1])->value);
+    } else {
+      param.a_axes_summed = Tuple<int>(arr[0]);
+      param.b_axes_summed = Tuple<int>(arr[1]);
+    }
+  }
+  attrs.parsed = std::move(param);
+  int num_outputs = 0;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke<op::TensordotParam>(op, &attrs, 2, inputs, &num_outputs, nullptr);
+  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+}
+
+MXNET_REGISTER_API("_npi.tensordot")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  if (args[2].type_code() == kDLInt) {
+    _npi_tensordot_int_axes(args, ret);
+  } else {
+    _npi_tensordot(args, ret);
+  }
 });
 
 MXNET_REGISTER_API("_npi.nop")
