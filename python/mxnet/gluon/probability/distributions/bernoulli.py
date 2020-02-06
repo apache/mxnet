@@ -21,8 +21,8 @@
 __all__ = ['Bernoulli']
 
 from .exp_family import ExponentialFamily
-from .utils import prob2logit, logit2prob, getF
-from .constraint import Boolean
+from .utils import prob2logit, logit2prob, getF, cached_property
+from .constraint import Boolean, Interval, Real
 
 
 class Bernoulli(ExponentialFamily):
@@ -39,19 +39,24 @@ class Bernoulli(ExponentialFamily):
         inferred from parameters if declared None.
     """
 
-    def __init__(self, prob=None, logit=None, F=None):
+    support = Boolean()
+    arg_constraints = {'prob': Interval(0, 1),
+                       'logit': Real()}
+
+    def __init__(self, prob=None, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF(prob, logit)
-        super(Bernoulli, self).__init__(F=_F)
 
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
                 "Received prob={}, logit={}".format(prob, logit))
 
-        self._prob = prob
-        self._logit = logit
+        self.prob = prob
+        self.logit = logit
 
-    @property
+        super(Bernoulli, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+
+    @cached_property
     def prob(self):
         """Get the probability of sampling `1`.
         
@@ -60,9 +65,9 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """
-        return self._prob if self._prob is not None else logit2prob(self._logit, True, self.F)
+        return self.prob if self.prob is not None else logit2prob(self.logit, True, self.F)
 
-    @property
+    @cached_property
     def logit(self):
         """Get the log-odds of sampling `1`.
         
@@ -71,7 +76,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """
-        return self._logit if self._logit is not None else prob2logit(self._prob, True, self.F)
+        return self.logit if self.logit is not None else prob2logit(self.prob, True, self.F)
 
     @property
     def mean(self):
@@ -84,21 +89,17 @@ class Bernoulli(ExponentialFamily):
     def log_prob(self, value):
         value = self.support.check(value)
         F = self.F
-        if self._prob is None:
+        if self.prob is None:
             logit = self.logit
             return logit * (value - 1) - F.np.log(F.np.exp(-logit) + 1)
         else:
             # Parameterized by probability
             eps = 1e-12
-            return (self.F.np.log(self._prob + eps) * value
-                    + self.F.np.log1p(-self._prob + eps) * (1 - value))
+            return (self.F.np.log(self.prob + eps) * value
+                    + self.F.np.log1p(-self.prob + eps) * (1 - value))
 
     def sample(self, size=None):
-        return self.F.npx.random.bernoulli(self._prob, self._logit, size)
-
-    @property
-    def support(self):
-        return Boolean(self.F)
+        return self.F.npx.random.bernoulli(self.prob, self.logit, size)
 
     @property
     def _natural_params(self):

@@ -57,8 +57,6 @@ class Distribution(object):
             self._validate_args = validate_args
         if self._validate_args:
             for param, constraint in self.arg_constraints.items():
-                if constraint.F is None:
-                    constraint.F = F
                 if param not in self.__dict__ and isinstance(getattr(type(self), param),
                                                              cached_property):
                     # skip param that is decorated by cached_property

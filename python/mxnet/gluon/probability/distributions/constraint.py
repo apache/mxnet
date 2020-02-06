@@ -20,21 +20,15 @@
 """Base class and implementations of constraint"""
 __all__ = ["Constraint", "Real", "Boolean", "Interval", "GreaterThan", "Positive"]
 
+from .utils import getF
+
 
 class Constraint(object):
     """Base class for constraints.
 
     A constraint object represents a region over which a variable
     is valid.
-    
-    Parameters
-    ----------
-    F : ndarry or symbol
-        Running mode parameter.
     """
-
-    def __init__(self, F=None):
-        self.F = F
 
     def check(self, value):
         """Check if `value` satisfies the constraint,
@@ -48,27 +42,16 @@ class Constraint(object):
         """
         raise NotImplementedError
 
-    @property
-    def _check_func(self):
-        return self.F.npx.constraint_check
-
-    @property
-    def F(self):
-        return self.F
-
-    @F.setter
-    def F(self, F):
-        self.F = F
-
 
 class Real(Constraint):
     """
     Constrain to be a real number. (exclude `np.nan`)
     """
     def check(self, value):
+        F = getF(value)
         err_msg = "Constraint violated: {} should be a real tensor".format(value)
         condition = (value == value)
-        _value = self._check_func(condition, err_msg) * value
+        _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
 
@@ -77,10 +60,11 @@ class Boolean(Constraint):
     Constrain to `{0, 1}`.
     """
     def check(self, value):
+        F = getF(value)
         err_msg = "Constraint violated: {} should be either 0 or 1.".format(value)
         # FIXME: replace bitwise_or with logical_or instead
-        condition = self.F.np.bitwise_or(value == 0, value == 1)
-        _value = self._check_func(condition, err_msg) * value
+        condition = F.np.bitwise_or(value == 0, value == 1)
+        _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
 
@@ -88,17 +72,18 @@ class Interval(Constraint):
     """
     Constrain to a real interval `[lower_bound, upper_bound]`
     """
-    def __init__(self, lower_bound, upper_bound, F=None):
-        super(Interval, self).__init__(F)
+    def __init__(self, lower_bound, upper_bound):
+        super(Interval, self).__init__()
         self._low = lower_bound
         self._up = upper_bound
 
     def check(self, value):
+        F = getF(value)
         err_msg = "Constraint violated: {} should be between {} and {}.".format(
                     value, self._low, self._up)
         # FIXME: replace bitwise_and with logical_and
-        condition = self.F.np.bitwise_and(value > self._low, value < self._up)
-        _value = self._check_func(condition, err_msg) * value
+        condition = F.np.bitwise_and(value > self._low, value < self._up)
+        _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
 
@@ -106,15 +91,16 @@ class GreaterThan(Constraint):
     """
     Constrain to be greater than `lower_bound`.
     """
-    def __init__(self, lower_bound, F=None):
-        super(GreaterThan, self).__init__(F)
+    def __init__(self, lower_bound):
+        super(GreaterThan, self).__init__()
         self._low = lower_bound
     
     def check(self, value):
+        F = getF(value)
         err_msg = "Constraint violated: {} should be greater than {}".format(
                     value, self._low)
         condition = value > self._low
-        _value = self._check_func(condition, err_msg) * value
+        _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
 
@@ -122,5 +108,5 @@ class Positive(GreaterThan):
     """
     Constrain to be greater than zero.
     """
-    def __init__(self, F=None):
-        super(Positive, self).__init__(F, 0)
+    def __init__(self):
+        super(Positive, self).__init__(0)

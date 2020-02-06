@@ -119,9 +119,6 @@ class Normal(ExponentialFamily):
         new_instance._validate_args = self._validate_args
         return new_instance
 
-    def support(self):
-        return Normal.support
-
     def cdf(self, value):
         erf_func = self.F.npx.erf
         standarized_samples = ((value - self.loc) /

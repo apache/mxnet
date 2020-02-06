@@ -29,7 +29,9 @@ import math
 
 
 class HalfNormal(TransformedDistribution):
+
     has_grad = True
+    support = Positive()
 
     def __init__(self, scale=1.0, F=None):
         base_dist = Normal(0, scale, F)
@@ -47,10 +49,6 @@ class HalfNormal(TransformedDistribution):
     def icdf(self, value):
         # FIXME
         pass
-
-    @property
-    def support(self):
-        return Positive(self.F)
 
     @property
     def scale(self):
