@@ -141,22 +141,22 @@ MXNET_REGISTER_API("_npi.tensordot")
   } else {
     mxnet::op::TensordotParam param;
     const ObjectRef ref = args[2].operator ObjectRef();
-    const ADTObj* obj = ref.as<ADTObj>();
-    if (obj->operator[](0).get()->IsInstance<IntegerObj>()) {
-      param.a_axes_summed = Tuple<int>(1,
-        obj->operator[](0).as<IntegerObj>()->value);
-      param.b_axes_summed = Tuple<int>(1,
-        obj->operator[](1).as<IntegerObj>()->value);
+    if (const ADTObj* obj = ref.as<ADTObj>()) {
+      if (const IntegerObj* lop = (*obj)[0].as<IntegerObj>()) {
+        param.a_axes_summed = Tuple<int>(1, lop->value);
+        param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>((*obj)[1])->value);
+      } else {
+        param.a_axes_summed = Tuple<int>((*obj)[0]);
+        param.b_axes_summed = Tuple<int>((*obj)[1]);
+      }
     } else {
-      const ADTObj* a_axes_summed = obj->operator[](0).as<ADTObj>();
-      const ADTObj* b_axes_summed = obj->operator[](1).as<ADTObj>();
-      param.a_axes_summed = Tuple<int>(a_axes_summed->size, 0);
-      param.b_axes_summed = Tuple<int>(b_axes_summed->size, 0);
-      for (uint32_t i = 0; i < a_axes_summed->size; ++i) {
-        param.a_axes_summed[i] =
-          a_axes_summed->operator[](i).as<IntegerObj>()->value;
-        param.b_axes_summed[i] =
-          b_axes_summed->operator[](i).as<IntegerObj>()->value;
+      Array<ObjectRef> arr = Downcast<Array<ObjectRef>, ObjectRef>(ref);
+      if (const IntegerObj* lop = arr[0].as<IntegerObj>()) {
+        param.a_axes_summed = Tuple<int>(1, lop->value);
+        param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>(arr[1])->value);
+      } else {
+        param.a_axes_summed = Tuple<int>(arr[0]);
+        param.b_axes_summed = Tuple<int>(arr[1]);
       }
     }
     attrs.parsed = std::move(param);
