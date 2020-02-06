@@ -25,7 +25,7 @@ set(USE_MKL_IF_AVAILABLE OFF CACHE BOOL "Use Intel MKL if found")
 set(USE_MKLDNN ON CACHE BOOL "Build with MKL-DNN support")
 set(USE_LAPACK ON CACHE BOOL "Build with lapack support")
 set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
-set(USE_SSE OFF CACHE BOOL "Build with x86 SSE instruction support")
+set(USE_SSE ON CACHE BOOL "Build with x86 SSE instruction support")
 set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")
 
 set(CUDACXX "/usr/local/cuda-8.0/bin/nvcc" CACHE STRING "Cuda compiler")
