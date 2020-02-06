@@ -367,7 +367,7 @@ def get_all_indexing_routines():
     # Filter for Indexing routines
     indexing_mx_routines = {}
     for op_name, _ in mx_operators.items():
-        if op_name in indexing_routines and op_name not in unique_ops:
+        if op_name in indexing_routines:
             indexing_mx_routines[op_name] = mx_operators[op_name]
     return indexing_mx_routines
 
