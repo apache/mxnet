@@ -256,9 +256,12 @@ class DropoutOp {
 
       // set dropout state.
       Random<xpu, unsigned> *prnd = ctx.requested[1].get_random<xpu, unsigned>(s);
-      unsigned seed = prnd->GetSeed();
+      uint64_t rng_seed = (uint64_t) prnd->GetSeed();
+      // reset dropout descriptor if rng seed changed.
+      bool reset = seed_ == rng_seed;
+      seed_ = rng_seed;
       ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_,
-          static_cast<uint64_t>(seed));
+          seed_, reset);
       // describe input/output tensor
       int dim[4], stride[4];
       dim[0] = 1;
@@ -494,6 +497,7 @@ class DropoutOp {
   Context ctx_;
   cudnnDataType_t dtype_;
   cudnnDropoutDescriptor_t dropout_desc_;
+  uint64_t seed_;
   size_t dropout_reserve_byte_;
   cudnnTensorDescriptor_t x_desc_, y_desc_, dx_desc_, dy_desc_;
 #endif  // MXNET_USE_CUDNN_DROPOUT

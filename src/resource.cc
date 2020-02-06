@@ -96,7 +96,7 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_PARALLEL_RAND_COPY", 1);
-    gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_PARALLEL_RAND_COPY", 1);
+    gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_PARALLEL_RAND_COPY", 4);
 #if MXNET_USE_CUDNN == 1
     gpu_cudnn_dropout_state_copy_ = dmlc::GetEnv("MXNET_GPU_CUDNN_DROPOUT_STATE_COPY", 4);
 #endif  // MXNET_USE_CUDNN == 1
@@ -429,13 +429,14 @@ void Resource::get_cudnn_dropout_desc(
     cudnnDropoutDescriptor_t *dropout_desc,
     mshadow::Stream<gpu> *stream,
     const float dropout, uint64_t seed,
-    const std::string &name) const {
+    const std::string &name,
+    bool reset) const {
 
   CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
   CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
     << "The device id of cuDNN dropout state space doesn't match that from stream.";
-  if (!state_space->handle.size) {
+  if (!state_space->handle.size || reset) {
     // not initialized yet.
     size_t dropout_state_size;
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));

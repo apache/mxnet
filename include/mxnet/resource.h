@@ -203,7 +203,8 @@ struct Resource {
       cudnnDropoutDescriptor_t *dropout_desc,
       mshadow::Stream<gpu> *stream,
       const float dropout, uint64_t seed,
-      const std::string &name = MXNET_RESOURCE_DEFAULT_NAME_FARG("cudnn_dropout_state")) const;
+      const std::string &name = MXNET_RESOURCE_DEFAULT_NAME_FARG("cudnn_dropout_state"),
+      bool reset) const;
 #endif  // MXNET_USE_CUDNN == 1
 
   /*!

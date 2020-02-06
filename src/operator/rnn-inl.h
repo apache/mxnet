@@ -1337,7 +1337,7 @@ class RNNOp {
       // Create Dropout descriptors
       if (param_.p > 0) {
          ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
-            (&dropout_desc_, s, 1.0f - param_.p, seed_);
+            (&dropout_desc_, s, 1.0f - param_.p, seed_, false);
       }
       // Only update the probability by passing in a null dropout_states ptr
       DType* dropout_states = nullptr;
