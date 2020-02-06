@@ -146,11 +146,11 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
 
 template<typename xpu, int ndim, typename DType>
 inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
-                                            const std::vector<TBlob>& inputs,
-                                            const std::vector<OpReqType>& req,
-                                            const std::vector<TBlob>& outputs,
-                                            const mxnet::TShape& new_ishape,
-                                            const mxnet::TShape& new_oshape) {
+                                                 const std::vector<TBlob>& inputs,
+                                                 const std::vector<OpReqType>& req,
+                                                 const std::vector<TBlob>& outputs,
+                                                 const mxnet::TShape& new_ishape,
+                                                 const mxnet::TShape& new_oshape) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace broadcast;
@@ -172,10 +172,10 @@ inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
 
 template<typename xpu>
 void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
-                           const OpContext& ctx,
-                           const std::vector<TBlob>& inputs,
-                           const std::vector<OpReqType>& req,
-                           const std::vector<TBlob>& outputs) {
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
   // skip kernel launch for zero-size tensors
   if (inputs[0].shape_.Size() == 0U) {
     return;
