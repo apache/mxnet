@@ -258,7 +258,7 @@ class DropoutOp {
       Random<xpu, unsigned> *prnd = ctx.requested[1].get_random<xpu, unsigned>(s);
       uint64_t rng_seed = (uint64_t) prnd->GetSeed();
       // reset dropout descriptor if rng seed changed.
-      bool reset = seed_ == rng_seed;
+      bool reset = seed_ != rng_seed;
       seed_ = rng_seed;
       ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_,
           seed_, reset);
