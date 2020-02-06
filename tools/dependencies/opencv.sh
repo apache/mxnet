@@ -46,7 +46,7 @@ if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopenc
     mkdir -p $DEPS_PATH/opencv-$OPENCV_VERSION/build
     pushd .
     cd $DEPS_PATH/opencv-$OPENCV_VERSION/build
-    cmake \
+    CXX="g++ -fPIC" CC="gcc -fPIC" cmake \
           -D OPENCV_ENABLE_NONFREE=OFF \
           -D WITH_1394=OFF \
           -D WITH_ARAVIS=OFF \

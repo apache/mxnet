@@ -33,7 +33,7 @@ if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
     cd $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION
 
     # Adding NO_DYNAMIC=1 flag causes make install to fail
-    $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
+    CXX="g++ -fPIC" CC="gcc -fPIC" $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
 
     if [[ -v CMAKE_STATICBUILD ]]; then
         # We link and redistribute libopenblas.so for cmake staticbuild
