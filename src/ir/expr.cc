@@ -34,7 +34,7 @@ IntImm::IntImm(MXNetDataType dtype, int64_t value) {
   if (dtype.is_uint()) {
     CHECK_GE(value, 0U);
   }
-  ObjectPtr<IntImmNode> node = make_object<IntImmNode>();
+  runtime::ObjectPtr<IntImmNode> node = make_object<IntImmNode>();
   node->dtype = dtype;
   node->value = value;
   data_ = std::move(node);
@@ -43,7 +43,7 @@ IntImm::IntImm(MXNetDataType dtype, int64_t value) {
 FloatImm::FloatImm(MXNetDataType dtype, double value) {
   CHECK_EQ(dtype.lanes(), 1)
       << "ValueError: FloatImm can only take scalar.";
-  ObjectPtr<FloatImmNode> node = make_object<FloatImmNode>();
+  runtime::ObjectPtr<FloatImmNode> node = make_object<FloatImmNode>();
   node->dtype = dtype;
   node->value = value;
   data_ = std::move(node);

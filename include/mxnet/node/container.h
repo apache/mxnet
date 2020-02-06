@@ -129,7 +129,7 @@ class Array : public ObjectRef {
    * \brief constructor from pointer
    * \param n the container pointer
    */
-  explicit Array(ObjectPtr<Object> n) : ObjectRef(n) {}
+  explicit Array(runtime::ObjectPtr<Object> n) : ObjectRef(n) {}
   /*!
    * \brief constructor from iterator
    * \param begin begin of iterator
@@ -222,9 +222,9 @@ class Array : public ObjectRef {
    */
   inline ArrayNode* CopyOnWrite() {
     if (data_.get() == nullptr || !data_.unique())  {
-      ObjectPtr<ArrayNode> n = make_object<ArrayNode>();
+      runtime::ObjectPtr<ArrayNode> n = make_object<ArrayNode>();
       n->data = static_cast<ArrayNode*>(data_.get())->data;
-      ObjectPtr<Object>(std::move(n)).swap(data_);
+      runtime::ObjectPtr<Object>(std::move(n)).swap(data_);
     }
     return static_cast<ArrayNode*>(data_.get());
   }
@@ -280,7 +280,7 @@ class Array : public ObjectRef {
       }
     } else {
       // lazily trigger copy if there is element change.
-      ObjectPtr<ArrayNode> copy;
+      runtime::ObjectPtr<ArrayNode> copy;
       for (size_t i = 0; i < ptr->data.size(); ++i) {
         T old_elem = DowncastNoCheck<T>(ptr->data[i]);
         T new_elem = fmutate(old_elem);

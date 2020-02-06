@@ -34,6 +34,10 @@
 #include "nnvm/graph_attr_types.h"
 #include "nnvm/graph.h"
 #include "nnvm/pass.h"
+#include "runtime/object.h"
+#include "runtime/ffi_helper.h"
+#include "node/container.h"
+#include "ir/expr.h"
 
 namespace mxnet {
 
@@ -114,6 +118,23 @@ class Tuple {
                RandomAccessIterator end) {
     this->assign(begin, end);
   }
+
+  inline explicit Tuple(const runtime::ObjectRef& src) {
+    using namespace runtime;
+    if (const ADTObj* obj = src.as<ADTObj>()) {
+      this->SetDim(obj->size);
+      for (uint32_t i = 0; i < obj->size; ++i) {
+        this->begin()[i] = Downcast<Integer, ObjectRef>(obj->operator[](i))->value;
+      }
+    } else {
+      Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(src);
+      this->SetDim(arr.size());
+      for (size_t i = 0; i < arr.size(); ++i) {
+        this->begin()[i] = arr[i]->value;
+      }
+    }
+  }
+
   /*!
    * \brief Assign content to tuple from iterator.
    * \param begin the beginning of iterator
@@ -479,6 +500,8 @@ class TShape : public Tuple<dim_t> {
                 RandomAccessIterator end) {
     this->assign(begin, end);
   }
+
+  inline explicit TShape(const ObjectRef& src): Tuple(src) {}
   /*!
    * \brief assignment function from tshape
    * \param src source shape.

@@ -63,7 +63,7 @@ MXNET_REGISTER_GLOBAL("_Array")
 
 MXNET_REGISTER_GLOBAL("_Test")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  TShape shape = args[0].operator TShape();
+  TShape shape{args[0].operator runtime::ObjectRef()};
   std::cout << shape << std::endl;
   // Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(args[0].operator ObjectRef());
   // std::cout << arr.size() << std::endl;

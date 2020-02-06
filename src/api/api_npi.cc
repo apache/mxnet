@@ -104,7 +104,11 @@ MXNET_REGISTER_API("_npi.zeros")
   const nnvm::Op* op = Op::Get("_npi_zeros");
   nnvm::NodeAttrs attrs;
   op::InitOpParam param;
-  param.shape = args[0].operator TShape();
+  if (args[0].type_code() == kDLInt) {
+    param.shape = TShape(1, args[0].operator int64_t());
+  } else {
+    param.shape = TShape(args[0].operator ObjectRef());
+  }
   if (args[1].type_code() == kNull) {
     param.dtype = mshadow::kFloat32;
   } else {

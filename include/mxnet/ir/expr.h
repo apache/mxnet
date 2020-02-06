@@ -54,7 +54,7 @@ class BaseExpr : public ObjectRef {
    * \brief Cosntructor from object ptr.
    * \param ptr The object pointer.
    */
-  explicit BaseExpr(ObjectPtr<Object> ptr) : ObjectRef(ptr) {}
+  explicit BaseExpr(runtime::ObjectPtr<Object> ptr) : ObjectRef(ptr) {}
   /*! \brief The container type. */
   using ContainerType = BaseExprNode;
 };
@@ -105,7 +105,7 @@ class PrimExpr : public BaseExpr {
    * \brief Cosntructor from object ptr.
    * \param ptr The object pointer.
    */
-  explicit PrimExpr(ObjectPtr<Object> ptr) : BaseExpr(ptr) {}
+  explicit PrimExpr(runtime::ObjectPtr<Object> ptr) : BaseExpr(ptr) {}
   /*!
    * \brief construct from integer.
    * \param value The value to be constructed.
@@ -163,7 +163,7 @@ class IntImm : public PrimExpr {
   /*!
    * \brief constructor from node.
    */
-  explicit IntImm(ObjectPtr<Object> node) : PrimExpr(node) {}
+  explicit IntImm(runtime::ObjectPtr<Object> node) : PrimExpr(node) {}
   /*!
    * \brief Constructor.
    * \param dtype The data type of the value.
@@ -214,7 +214,7 @@ class FloatImm : public PrimExpr {
   /*!
    * \brief constructor from node.
    */
-  explicit FloatImm(ObjectPtr<Object> node) : PrimExpr(node) {}
+  explicit FloatImm(runtime::ObjectPtr<Object> node) : PrimExpr(node) {}
   /*!
    * \brief Constructor.
    * \param dtype The data type of the value.
