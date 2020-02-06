@@ -189,7 +189,7 @@ extern "C" {
     int64_t* shape;
     /*!
      * \brief strides of the tensor (in number of elements, not bytes)
-     *  can be NULL, indicating tensor is compact and row-majored.
+     *  can be nullptr, indicating tensor is compact and row-majored.
      */
     int64_t* strides;
     /*! \brief The offset in bytes to the beginning pointer to data */
@@ -233,7 +233,7 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
+  MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
 
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
@@ -255,7 +255,7 @@ struct MXTensor {
     dltensor.data = data_ptr;
     dltensor.ndim = shape.size();
     dltensor.shape = const_cast<int64_t*>(shape.data());
-    dltensor.strides = NULL;
+    dltensor.strides = nullptr;
     dltensor.byte_offset = 0;
     dltensor.dtype.lanes = 1;
     dltensor.ctx.device_id = ctx.dev_id;
@@ -628,7 +628,7 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
-    parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
+    parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
     if (forward_ctx_map.count(ctx) > 0)
       raiseDuplicateContextError();

@@ -1541,7 +1541,7 @@ int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out) {
   NDArray *arr = static_cast<NDArray*>(handle);
   NDArray ret = arr->grad();
   if (ret.is_none()) {
-    *out = NULL;
+    *out = nullptr;
   } else {
     *out = new NDArray(ret);
   }
@@ -1623,8 +1623,8 @@ int MXFuncInvoke(FunctionHandle fun,
           scalar_args,
           (NDArray**)(mutate_vars),  //  NOLINT(*)
           0,
-          NULL,
-          NULL);
+          nullptr,
+          nullptr);
   API_END();
 }
 
@@ -1668,7 +1668,7 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
@@ -2195,9 +2195,9 @@ int MXRecordIOWriterCreate(const char *uri,
   dmlc::Stream *stream = dmlc::Stream::Create(uri, "w");
   MXRecordIOContext *context = new MXRecordIOContext;
   context->writer = new dmlc::RecordIOWriter(stream);
-  context->reader = NULL;
+  context->reader = nullptr;
   context->stream = stream;
-  context->read_buff = NULL;
+  context->read_buff = nullptr;
   *out = reinterpret_cast<RecordIOHandle>(context);
   API_END();
 }
@@ -2235,7 +2235,7 @@ int MXRecordIOReaderCreate(const char *uri,
   dmlc::Stream *stream = dmlc::Stream::Create(uri, "r");
   MXRecordIOContext *context = new MXRecordIOContext;
   context->reader = new dmlc::RecordIOReader(stream);
-  context->writer = NULL;
+  context->writer = nullptr;
   context->stream = stream;
   context->read_buff = new std::string();
   *out = reinterpret_cast<RecordIOHandle>(context);
@@ -2262,7 +2262,7 @@ int MXRecordIOReaderReadRecord(RecordIOHandle handle,
     *buf = context->read_buff->c_str();
     *size = context->read_buff->size();
   } else {
-    *buf = NULL;
+    *buf = nullptr;
     *size = 0;
   }
   API_END();

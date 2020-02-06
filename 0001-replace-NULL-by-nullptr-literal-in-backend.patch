@@ -1,0 +1,2259 @@
+From aeadca6453d5e21fc2265c0be90d5ec1457c02aa Mon Sep 17 00:00:00 2001
+From: Oliver Kowalke <oliver.kowalke@gmail.com>
+Date: Thu, 6 Feb 2020 06:28:32 +0100
+Subject: [PATCH 1/1] replace NULL by nullptr literal in  backend
+
+- MXNET-1445
+- using nullptr is mor explicit
+- because NULL can be an integer literal with value zero (since C++11)
+- nullptr literal is of type nullptr_t
+- NULL and `0` evaluate to integer if passed as template arg
+---
+ CONTRIBUTORS.md                               |  1 +
+ include/mxnet/base.h                          |  4 +-
+ include/mxnet/c_api.h                         | 44 +++++++++----------
+ include/mxnet/executor.h                      |  2 +-
+ include/mxnet/lib_api.h                       |  8 ++--
+ include/mxnet/operator_util.h                 |  2 +-
+ include/mxnet/resource.h                      |  2 +-
+ include/mxnet/tensor_blob.h                   | 16 +++----
+ src/c_api/c_api.cc                            | 16 +++----
+ src/common/object_pool.h                      |  2 +-
+ src/common/rtc.cc                             |  2 +-
+ src/initialize.cc                             |  4 +-
+ src/io/image_recordio.h                       |  4 +-
+ src/io/inst_vector.h                          |  2 +-
+ src/kvstore/kvstore_nccl.h                    |  2 +-
+ src/kvstore/kvstore_utils.cu                  |  4 +-
+ src/ndarray/ndarray_function.cu               |  6 +--
+ src/operator/batch_norm_v1-inl.h              |  2 +-
+ src/operator/bilinear_sampler-inl.h           |  2 +-
+ src/operator/bilinear_sampler.cu              |  2 +-
+ src/operator/contrib/count_sketch-inl.h       |  2 +-
+ src/operator/contrib/count_sketch.cu          |  2 +-
+ .../contrib/deformable_convolution-inl.h      |  2 +-
+ .../contrib/deformable_convolution.cu         |  2 +-
+ .../contrib/deformable_psroi_pooling-inl.h    |  2 +-
+ .../contrib/deformable_psroi_pooling.cu       |  6 +--
+ src/operator/contrib/fft-inl.h                |  2 +-
+ src/operator/contrib/fft.cu                   |  2 +-
+ src/operator/contrib/ifft-inl.h               |  2 +-
+ src/operator/contrib/ifft.cu                  |  2 +-
+ .../modulated_deformable_convolution-inl.h    |  2 +-
+ .../modulated_deformable_convolution.cu       |  2 +-
+ src/operator/contrib/multi_proposal.cu        | 10 ++---
+ src/operator/contrib/multi_sum_sq-inl.h       |  2 +-
+ src/operator/contrib/multi_sum_sq.cu          |  2 +-
+ src/operator/contrib/multibox_detection-inl.h |  2 +-
+ src/operator/contrib/multibox_detection.cu    |  2 +-
+ src/operator/contrib/multibox_prior-inl.h     |  2 +-
+ src/operator/contrib/multibox_prior.cu        |  2 +-
+ src/operator/contrib/multibox_target-inl.h    |  2 +-
+ src/operator/contrib/multibox_target.cu       |  2 +-
+ src/operator/contrib/proposal.cu              | 10 ++---
+ src/operator/contrib/psroi_pooling-inl.h      |  2 +-
+ src/operator/contrib/sync_batch_norm-inl.h    |  2 +-
+ src/operator/convolution_v1-inl.h             |  2 +-
+ src/operator/convolution_v1.cu                |  2 +-
+ src/operator/correlation-inl.h                |  2 +-
+ src/operator/custom/native_op-inl.h           |  8 ++--
+ src/operator/custom/ndarray_op-inl.h          |  8 ++--
+ src/operator/fusion/fused_op.cu               |  8 ++--
+ src/operator/grid_generator-inl.h             |  2 +-
+ src/operator/grid_generator.cu                |  2 +-
+ src/operator/instance_norm-inl.h              |  2 +-
+ src/operator/l2_normalization-inl.h           |  2 +-
+ src/operator/make_loss-inl.h                  |  2 +-
+ src/operator/make_loss.cu                     |  2 +-
+ src/operator/nn/cudnn/cudnn_convolution-inl.h |  2 +-
+ .../nn/cudnn/cudnn_deconvolution-inl.h        |  2 +-
+ src/operator/nn/layer_norm.cu                 |  6 +--
+ .../broadcast_reduce_customized-inl.cuh       |  4 +-
+ src/operator/numpy/np_delete_op-inl.h         |  6 +--
+ src/operator/numpy/np_einsum_op-inl.h         |  8 ++--
+ src/operator/numpy/np_einsum_path_op-inl.h    |  2 +-
+ src/operator/optimizer_op.cu                  |  8 ++--
+ src/operator/pad-inl.h                        |  2 +-
+ src/operator/pad.cu                           |  2 +-
+ src/operator/pooling_v1-inl.h                 |  2 +-
+ src/operator/pooling_v1.cu                    |  4 +-
+ src/operator/rnn-inl.h                        | 32 +++++++-------
+ src/operator/rnn_impl.h                       | 36 +++++++--------
+ src/operator/roi_pooling-inl.h                |  2 +-
+ src/operator/sequence_last-inl.h              |  2 +-
+ src/operator/sequence_last.cu                 |  2 +-
+ src/operator/sequence_mask-inl.h              |  2 +-
+ src/operator/sequence_mask.cu                 |  2 +-
+ src/operator/sequence_reverse-inl.h           |  2 +-
+ src/operator/softmax_output-inl.h             |  2 +-
+ src/operator/spatial_transformer-inl.h        |  2 +-
+ src/operator/spatial_transformer.cu           |  2 +-
+ .../partitioner/custom_subgraph_property.h    |  2 +-
+ src/operator/svm_output-inl.h                 |  2 +-
+ src/operator/svm_output.cu                    |  2 +-
+ src/operator/swapaxis-inl.h                   |  2 +-
+ src/operator/swapaxis.cu                      |  2 +-
+ src/operator/tensor/broadcast_reduce-inl.cuh  | 10 ++---
+ src/operator/tensor/cast_storage-inl.cuh      |  6 +--
+ src/operator/tensor/dot-inl.cuh               |  6 +--
+ .../tensor/elemwise_binary_op_basic.cu        |  4 +-
+ src/operator/tensor/indexing_op-inl.cuh       | 26 +++++------
+ src/operator/tensor/indexing_op.cu            | 14 +++---
+ src/operator/tensor/indexing_op.h             |  2 +-
+ src/operator/tensor/matrix_op.cu              |  2 +-
+ src/operator/tensor/sort_op-inl.cuh           | 18 ++++----
+ src/operator/tensor/sort_op.h                 |  4 +-
+ src/operator/tvmop/op_module.cc               |  2 +-
+ src/storage/cpu_shared_storage_manager.h      |  4 +-
+ 96 files changed, 240 insertions(+), 239 deletions(-)
+
+diff --git a/CONTRIBUTORS.md b/CONTRIBUTORS.md
+index aa024e3a5..65ca481e6 100644
+--- a/CONTRIBUTORS.md
++++ b/CONTRIBUTORS.md
+@@ -249,6 +249,7 @@ List of Contributors
+ * [Guanxin Qiao](https://github.com/guanxinq)
+ * [dithyrambe](https://github.com/dithyrambe)
+ * [Piljae Chae](https://github.com/IHateMint)
++* [Oliver Kowalke](https://github.com/olk)
+ 
+ Label Bot
+ ---------
+diff --git a/include/mxnet/base.h b/include/mxnet/base.h
+index 90b36ab2d..4e47e03c6 100644
+--- a/include/mxnet/base.h
++++ b/include/mxnet/base.h
+@@ -351,11 +351,11 @@ struct RunContext {
+   /*! \brief base Context */
+   Context ctx;
+   /*!
+-   * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
++   * \brief the stream of the device, can be nullptr or Stream<gpu>* in GPU mode
+    */
+   void *stream;
+   /*!
+-   * \brief the auxiliary stream of the device, can be NULL or Stream<gpu>* in GPU mode
++   * \brief the auxiliary stream of the device, can be nullptr or Stream<gpu>* in GPU mode
+    */
+   void *aux_stream;
+   /*!
+diff --git a/include/mxnet/c_api.h b/include/mxnet/c_api.h
+index 6b6ae8645..914309895 100644
+--- a/include/mxnet/c_api.h
++++ b/include/mxnet/c_api.h
+@@ -716,7 +716,7 @@ MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
+  * \param fname name of the file.
+  * \param num_args number of arguments to save.
+  * \param args the array of NDArrayHandles to be saved.
+- * \param keys the name of the NDArray, optional, can be NULL
++ * \param keys the name of the NDArray, optional, can be nullptr
+  * \return 0 when success, -1 when failure happens
+  */
+ MXNET_DLL int MXNDArraySave(const char* fname,
+@@ -729,7 +729,7 @@ MXNET_DLL int MXNDArraySave(const char* fname,
+  * \param out_size number of narray loaded.
+  * \param out_arr head of the returning narray handles.
+  * \param out_name_size size of output name arrray.
+- * \param out_names the names of returning NDArrays, can be NULL
++ * \param out_names the names of returning NDArrays, can be nullptr
+  * \return 0 when success, -1 when failure happens
+  */
+ MXNET_DLL int MXNDArrayLoad(const char* fname,
+@@ -749,7 +749,7 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
+  * \param out_size number of narray loaded.
+  * \param out_arr head of the returning narray handles.
+  * \param out_name_size size of output name arrray.
+- * \param out_names the names of returning NDArrays, can be NULL
++ * \param out_names the names of returning NDArrays, can be nullptr
+  * \return 0 when success, -1 when failure happens
+  */
+ MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
+@@ -1165,7 +1165,7 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
+                             const char ***arg_names,
+                             const char ***arg_type_infos,
+                             const char ***arg_descriptions,
+-                            const char **return_type DEFAULT(NULL));
++                            const char **return_type DEFAULT(nullptr));
+ /*!
+  * \brief get the argument requirements of the function
+  * \param fun input function handle
+@@ -1491,7 +1491,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
+                                           const char ***arg_type_infos,
+                                           const char ***arg_descriptions,
+                                           const char **key_var_num_args,
+-                                          const char **return_type DEFAULT(NULL));
++                                          const char **return_type DEFAULT(nullptr));
+ /*!
+  * \brief Create an AtomicSymbol.
+  * \param creator the AtomicSymbolCreator
+@@ -1592,7 +1592,7 @@ MXNET_DLL int MXSymbolGetName(SymbolHandle symbol,
+  * \brief Get string attribute from symbol
+  * \param symbol the source symbol
+  * \param key The key of the symbol.
+- * \param out The result attribute, can be NULL if the attribute do not exist.
++ * \param out The result attribute, can be nullptr if the attribute do not exist.
+  * \param success Whether the result is contained in out.
+  * \return 0 when success, -1 when failure happens
+  */
+@@ -3304,8 +3304,8 @@ MXNET_DLL int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, cons
+   * \brief Push an asynchronous operation to the engine.
+   * \param async_func Execution function whici takes a parameter on_complete
+   *                   that must be called when the execution ompletes.
+-  * \param func_param The parameter set on calling async_func, can be NULL.
+-  * \param deleter The callback to free func_param, can be NULL.
++  * \param func_param The parameter set on calling async_func, can be nullptr.
++  * \param deleter The callback to free func_param, can be nullptr.
+   * \param ctx_handle Execution context.
+   * \param const_vars_handle The variables that current operation will use
+   *                          but not mutate.
+@@ -3321,15 +3321,15 @@ MXNET_DLL int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
+                                 EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                 EngineVarHandle const_vars_handle, int num_const_vars,
+                                 EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+-                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+-                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
++                                EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
++                                int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr),
+                                 bool wait DEFAULT(false));
+ 
+ /*!
+   * \brief Push a synchronous operation to the engine.
+   * \param sync_func Execution function that executes the operation.
+-  * \param func_param The parameter set on calling sync_func, can be NULL.
+-  * \param deleter The callback to free func_param, can be NULL.
++  * \param func_param The parameter set on calling sync_func, can be nullptr.
++  * \param deleter The callback to free func_param, can be nullptr.
+   * \param ctx_handle Execution context.
+   * \param const_vars_handle The variables that current operation will use
+   *                          but not mutate.
+@@ -3344,8 +3344,8 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
+                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                EngineVarHandle const_vars_handle, int num_const_vars,
+                                EngineVarHandle mutable_vars_handle, int num_mutable_vars,
+-                               EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+-                               int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
++                               EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
++                               int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr));
+ /*!
+  * \brief Create an NDArray from source sharing the same data chunk.
+  * \param src source NDArray
+@@ -3363,8 +3363,8 @@ MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
+   * \brief Push an asynchronous operation to the engine.
+   * \param async_func Execution function whici takes a parameter on_complete
+   *                   that must be called when the execution ompletes.
+-  * \param func_param The parameter set on calling async_func, can be NULL.
+-  * \param deleter The callback to free func_param, can be NULL.
++  * \param func_param The parameter set on calling async_func, can be nullptr.
++  * \param deleter The callback to free func_param, can be nullptr.
+   * \param ctx_handle Execution context.
+   * \param const_nds_handle The NDArrays that current operation will use
+   *                          but not mutate.
+@@ -3380,15 +3380,15 @@ MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
+                                   EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                   NDArrayHandle* const_nds_handle, int num_const_nds,
+                                   NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+-                                  EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+-                                  int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
++                                  EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
++                                  int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr),
+                                   bool wait DEFAULT(false));
+ 
+ /*!
+   * \brief Push a synchronous operation to the engine.
+   * \param sync_func Execution function that executes the operation.
+-  * \param func_param The parameter set on calling sync_func, can be NULL.
+-  * \param deleter The callback to free func_param, can be NULL.
++  * \param func_param The parameter set on calling sync_func, can be nullptr.
++  * \param deleter The callback to free func_param, can be nullptr.
+   * \param ctx_handle Execution context.
+   * \param const_nds_handle The NDArrays that current operation will use
+   *                          but not mutate.
+@@ -3403,8 +3403,8 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
+                                  EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
+                                  NDArrayHandle* const_nds_handle, int num_const_nds,
+                                  NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
+-                                 EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+-                                 int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
++                                 EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
++                                 int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr));
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/include/mxnet/executor.h b/include/mxnet/executor.h
+index 24b23ed78..843de6d8b 100644
+--- a/include/mxnet/executor.h
++++ b/include/mxnet/executor.h
+@@ -147,7 +147,7 @@ class Executor {
+                         const std::vector<NDArray> &arg_grad_store,
+                         const std::vector<OpReqType> &grad_req_type,
+                         const std::vector<NDArray> &aux_states,
+-                        Executor* shared_exec = NULL);
++                        Executor* shared_exec = nullptr);
+ 
+   static Executor* SimpleBind(nnvm::Symbol symbol,
+                               const Context& default_ctx,
+diff --git a/include/mxnet/lib_api.h b/include/mxnet/lib_api.h
+index 21f5cea12..20e8f5536 100644
+--- a/include/mxnet/lib_api.h
++++ b/include/mxnet/lib_api.h
+@@ -189,7 +189,7 @@ extern "C" {
+     int64_t* shape;
+     /*!
+      * \brief strides of the tensor (in number of elements, not bytes)
+-     *  can be NULL, indicating tensor is compact and row-majored.
++     *  can be nullptr, indicating tensor is compact and row-majored.
+      */
+     int64_t* strides;
+     /*! \brief The offset in bytes to the beginning pointer to data */
+@@ -233,7 +233,7 @@ enum MXReturnValue {
+  * \brief Tensor data structure used by custom operator
+  */
+ struct MXTensor {
+-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
++  MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
+ 
+   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
+            size_t vID, MXContext mx_ctx)
+@@ -255,7 +255,7 @@ struct MXTensor {
+     dltensor.data = data_ptr;
+     dltensor.ndim = shape.size();
+     dltensor.shape = const_cast<int64_t*>(shape.data());
+-    dltensor.strides = NULL;
++    dltensor.strides = nullptr;
+     dltensor.byte_offset = 0;
+     dltensor.dtype.lanes = 1;
+     dltensor.ctx.device_id = ctx.dev_id;
+@@ -628,7 +628,7 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
+ class CustomOp {
+  public:
+   explicit CustomOp(const char* op_name) : name(op_name),
+-    parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
++    parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
+   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
+     if (forward_ctx_map.count(ctx) > 0)
+       raiseDuplicateContextError();
+diff --git a/include/mxnet/operator_util.h b/include/mxnet/operator_util.h
+index 941e76e6d..34de2066e 100644
+--- a/include/mxnet/operator_util.h
++++ b/include/mxnet/operator_util.h
+@@ -429,7 +429,7 @@ class SimpleOpRegistry {
+   /*!
+    * \brief Find the entry with corresponding name.
+    * \param name name of the function
+-   * \return the corresponding function, can be NULL
++   * \return the corresponding function, can be nullptr
+    */
+   inline static const SimpleOpRegEntry *Find(const std::string &name) {
+     return Get()->fmap_.at(name);
+diff --git a/include/mxnet/resource.h b/include/mxnet/resource.h
+index f8ee63648..0114c3bb9 100644
+--- a/include/mxnet/resource.h
++++ b/include/mxnet/resource.h
+@@ -191,7 +191,7 @@ struct Resource {
+     mshadow::Shape<ndim> shape) const {
+       return mshadow::Tensor<cpu, ndim, DType>(
+         reinterpret_cast<DType*>(get_host_space_internal(shape.Size() * sizeof(DType))),
+-        shape, shape[ndim - 1], NULL);
++        shape, shape[ndim - 1], nullptr);
+   }
+   /*!
+    * \brief internal function to get space from resources.
+diff --git a/include/mxnet/tensor_blob.h b/include/mxnet/tensor_blob.h
+index 970fffe38..8a5e37176 100755
+--- a/include/mxnet/tensor_blob.h
++++ b/include/mxnet/tensor_blob.h
+@@ -75,7 +75,7 @@ class TBlob {
+ 
+   /*! \brief default constructor, default copy assign will work */
+   TBlob(void)
+-      : dptr_(NULL),
++      : dptr_(nullptr),
+         type_flag_(mshadow::DataType<real_t>::kFlag) {
+     SetDLTensor(cpu::kDevMask, 0);
+   }
+@@ -209,7 +209,7 @@ class TBlob {
+    */
+   template<typename Device, typename DType>
+   inline mshadow::Tensor<Device, 2, DType> FlatTo2D(
+-    mshadow::Stream<Device> *stream = NULL) const {
++    mshadow::Stream<Device> *stream = nullptr) const {
+     CHECK(Device::kDevMask == this->dev_mask())
+       << "TBlob.get: device type do not match specified type";
+     CHECK(mshadow::DataType<DType>::kFlag == type_flag_)
+@@ -229,7 +229,7 @@ class TBlob {
+    */
+   template<typename Device, typename DType>
+   inline mshadow::Tensor<Device, 1, DType> FlatTo1D(
+-      mshadow::Stream<Device> *stream = NULL) const {
++      mshadow::Stream<Device> *stream = nullptr) const {
+     return this->get_with_shape<Device, 1, DType>(
+         mshadow::Shape1(shape_.Size()), stream);
+   }
+@@ -285,7 +285,7 @@ class TBlob {
+    * \tparam DType the type of elements in the tensor
+    */
+   template<typename Device, int dim, typename DType>
+-  inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = NULL) const {
++  inline mshadow::Tensor<Device, dim, DType> get(mshadow::Stream<Device> *stream = nullptr) const {
+     CHECK(Device::kDevMask == this->dev_mask())
+       << "TBlob.get: device type do not match specified type";
+     return mshadow::Tensor<Device, dim, DType>(dptr<DType>(),
+@@ -304,7 +304,7 @@ class TBlob {
+   template<typename Device, int dim, typename DType>
+   inline mshadow::Tensor<Device, dim, DType> get_with_shape(
+       const mshadow::Shape<dim> &shape,
+-      mshadow::Stream<Device> *stream = NULL) const {
++      mshadow::Stream<Device> *stream = nullptr) const {
+     CHECK(Device::kDevMask == this->dev_mask())
+       << "TBlob.get: device type do not match specified type";
+     CHECK_EQ(this->CheckContiguous(), true) << "TBlob.get_reshape: must be contiguous";
+@@ -324,7 +324,7 @@ class TBlob {
+    */
+   template<typename Device, typename DType>
+   inline mshadow::Tensor<Device, 3, DType> FlatTo3D(
+-      int axis, mshadow::Stream<Device> *stream = NULL) const {
++      int axis, mshadow::Stream<Device> *stream = nullptr) const {
+     return this->get_with_shape<Device, 3, DType>(
+         this->shape_.FlatTo3D(axis), stream);
+   }
+@@ -341,7 +341,7 @@ class TBlob {
+   template<typename Device, typename DType>
+   inline mshadow::Tensor<Device, 3, DType> FlatTo3D(
+       int axis_begin, int axis_end,
+-      mshadow::Stream<Device> *stream = NULL) const {
++      mshadow::Stream<Device> *stream = nullptr) const {
+     return this->get_with_shape<Device, 3, DType>(
+         this->shape_.FlatTo3D(axis_begin, axis_end), stream);
+   }
+@@ -356,7 +356,7 @@ class TBlob {
+    */
+   template<typename Device, int dim, typename DType>
+   inline mshadow::Tensor<Device, dim, DType> FlatToKD(
+-     mshadow::Stream<Device> *stream = NULL) const {
++     mshadow::Stream<Device> *stream = nullptr) const {
+     mshadow::Shape<dim> shape;
+     shape[0] = 1;
+     // Pad higher dimensions in case dim > ndim()
+diff --git a/src/c_api/c_api.cc b/src/c_api/c_api.cc
+index f140b58d7..962bb3b6c 100644
+--- a/src/c_api/c_api.cc
++++ b/src/c_api/c_api.cc
+@@ -1541,7 +1541,7 @@ int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out) {
+   NDArray *arr = static_cast<NDArray*>(handle);
+   NDArray ret = arr->grad();
+   if (ret.is_none()) {
+-    *out = NULL;
++    *out = nullptr;
+   } else {
+     *out = new NDArray(ret);
+   }
+@@ -1623,8 +1623,8 @@ int MXFuncInvoke(FunctionHandle fun,
+           scalar_args,
+           (NDArray**)(mutate_vars),  //  NOLINT(*)
+           0,
+-          NULL,
+-          NULL);
++          nullptr,
++          nullptr);
+   API_END();
+ }
+ 
+@@ -1668,7 +1668,7 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
+   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
+   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                  arg_names, arg_type_infos, arg_descriptions,
+-                                 NULL);
++                                 nullptr);
+ }
+ 
+ int MXDataIterCreateIter(DataIterCreator creator,
+@@ -2195,9 +2195,9 @@ int MXRecordIOWriterCreate(const char *uri,
+   dmlc::Stream *stream = dmlc::Stream::Create(uri, "w");
+   MXRecordIOContext *context = new MXRecordIOContext;
+   context->writer = new dmlc::RecordIOWriter(stream);
+-  context->reader = NULL;
++  context->reader = nullptr;
+   context->stream = stream;
+-  context->read_buff = NULL;
++  context->read_buff = nullptr;
+   *out = reinterpret_cast<RecordIOHandle>(context);
+   API_END();
+ }
+@@ -2235,7 +2235,7 @@ int MXRecordIOReaderCreate(const char *uri,
+   dmlc::Stream *stream = dmlc::Stream::Create(uri, "r");
+   MXRecordIOContext *context = new MXRecordIOContext;
+   context->reader = new dmlc::RecordIOReader(stream);
+-  context->writer = NULL;
++  context->writer = nullptr;
+   context->stream = stream;
+   context->read_buff = new std::string();
+   *out = reinterpret_cast<RecordIOHandle>(context);
+@@ -2262,7 +2262,7 @@ int MXRecordIOReaderReadRecord(RecordIOHandle handle,
+     *buf = context->read_buff->c_str();
+     *size = context->read_buff->size();
+   } else {
+-    *buf = NULL;
++    *buf = nullptr;
+     *size = 0;
+   }
+   API_END();
+diff --git a/src/common/object_pool.h b/src/common/object_pool.h
+index b43a0cf25..f0a651182 100644
+--- a/src/common/object_pool.h
++++ b/src/common/object_pool.h
+@@ -192,7 +192,7 @@ void ObjectPool<T>::AllocateChunk() {
+   void* new_chunk_ptr;
+ #ifdef _MSC_VER
+   new_chunk_ptr = _aligned_malloc(kPageSize, kPageSize);
+-  CHECK(new_chunk_ptr != NULL) << "Allocation failed";
++  CHECK(new_chunk_ptr != nullptr) << "Allocation failed";
+ #else
+   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
+   CHECK_EQ(ret, 0) << "Allocation failed";
+diff --git a/src/common/rtc.cc b/src/common/rtc.cc
+index ea20a6094..df79ff69e 100644
+--- a/src/common/rtc.cc
++++ b/src/common/rtc.cc
+@@ -32,7 +32,7 @@ CudaModule::Chunk::Chunk(
+     const char* source,
+     const std::vector<std::string>& options,
+     const std::vector<std::string>& exports) {
+-  NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, NULL, NULL));
++  NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, nullptr, nullptr));
+   for (const auto& i : exports) exports_.insert(i);
+ #if CUDA_VERSION >= 8000
+   for (const auto& func : exports) {
+diff --git a/src/initialize.cc b/src/initialize.cc
+index a3dbce22a..3c98e26c7 100644
+--- a/src/initialize.cc
++++ b/src/initialize.cc
+@@ -47,11 +47,11 @@ void win_err(char **err) {
+         FORMAT_MESSAGE_ALLOCATE_BUFFER |
+         FORMAT_MESSAGE_FROM_SYSTEM |
+         FORMAT_MESSAGE_IGNORE_INSERTS,
+-        NULL,
++        nullptr,
+         dw,
+         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+         reinterpret_cast<char*>(err),
+-        0, NULL);
++        0, nullptr);
+ }
+ #else
+ #include <dlfcn.h>
+diff --git a/src/io/image_recordio.h b/src/io/image_recordio.h
+index 24951803f..131bfda90 100644
+--- a/src/io/image_recordio.h
++++ b/src/io/image_recordio.h
+@@ -69,7 +69,7 @@ struct ImageRecordIO {
+   size_t content_size;
+   /*! \brief constructor */
+   ImageRecordIO(void)
+-      : label(NULL), num_label(0), content(NULL), content_size(0) {
++      : label(nullptr), num_label(0), content(nullptr), content_size(0) {
+     memset(&header, 0, sizeof(header));
+   }
+   /*! \brief get image id from record */
+@@ -93,7 +93,7 @@ struct ImageRecordIO {
+       content = reinterpret_cast<uint8_t*>(label + header.flag);
+       content_size -= sizeof(float)*header.flag;
+     } else {
+-      label = NULL;
++      label = nullptr;
+       num_label = 0;
+     }
+   }
+diff --git a/src/io/inst_vector.h b/src/io/inst_vector.h
+index 91106e788..78630f395 100644
+--- a/src/io/inst_vector.h
++++ b/src/io/inst_vector.h
+@@ -169,7 +169,7 @@ struct TBlobBatch {
+   std::string extra_data;
+   /*! \brief constructor */
+   TBlobBatch(void) {
+-    inst_index = NULL;
++    inst_index = nullptr;
+     batch_size = 0; num_batch_padd = 0;
+   }
+   /*! \brief destructor */
+diff --git a/src/kvstore/kvstore_nccl.h b/src/kvstore/kvstore_nccl.h
+index 0c1411002..e35f3a3da 100644
+--- a/src/kvstore/kvstore_nccl.h
++++ b/src/kvstore/kvstore_nccl.h
+@@ -293,7 +293,7 @@ class KVStoreNCCL : public KVStoreLocal {
+             } else {
+             MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
+             ncclReduce(src[i].data().dptr<DType>(),
+-                              NULL,
++                              nullptr,
+                               src[i].shape().Size(),
+                               GetNCCLType(src[i].dtype()),
+                               ncclSum,
+diff --git a/src/kvstore/kvstore_utils.cu b/src/kvstore/kvstore_utils.cu
+index 92b203ca1..bcecaea75 100644
+--- a/src/kvstore/kvstore_utils.cu
++++ b/src/kvstore/kvstore_utils.cu
+@@ -50,7 +50,7 @@ size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
+   size_t *null_ptr = nullptr;
+   size_t *null_dptr = nullptr;
+   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+-  cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
++  cub::DeviceSelect::Unique(nullptr, unique_temp_bytes, null_dptr, null_dptr,
+                             null_ptr, size, stream);
+   // estimate sort temp space
+   const size_t sort_output_bytes = size * sizeof(IType);
+@@ -60,7 +60,7 @@ size_t UniqueImplGPU(NDArray *workspace, mshadow::Stream<gpu> *s,
+   const int begin_bit = 0;
+   // The most-significant bit index (exclusive) needed for key comparison
+   const int end_bit = sizeof(IType) * 8;
+-  cub::DeviceRadixSort::SortKeys(NULL, sort_temp_bytes, null_dptr, null_dptr,
++  cub::DeviceRadixSort::SortKeys(nullptr, sort_temp_bytes, null_dptr, null_dptr,
+                                  size, begin_bit, end_bit, stream);
+ #else
+   // sort_temp_bytes remains 0 because thrust request memory by itself
+diff --git a/src/ndarray/ndarray_function.cu b/src/ndarray/ndarray_function.cu
+index 9f83ff681..a3f99c1af 100644
+--- a/src/ndarray/ndarray_function.cu
++++ b/src/ndarray/ndarray_function.cu
+@@ -88,7 +88,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
+     CHECK_EQ(to->type_flag_, from.type_flag_)
+       << "Source and target must have the same data type when copying across devices.";
+     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+-    CHECK(s != NULL) << "need stream in GPU context";
++    CHECK(s != nullptr) << "need stream in GPU context";
+     cudaMemcpyPeerAsync(to->dptr_,
+                         to_ctx.dev_id,
+                         from.dptr_,
+@@ -126,8 +126,8 @@ void ElementwiseSumRspImpl(mshadow::Stream<gpu>* s,
+   MSHADOW_TYPE_SWITCH(out->dtype(), DType, {  // data type
+     MSHADOW_IDX_TYPE_SWITCH(out->aux_type(kIdx), IType, {  // row_idx type
+       // Allocate temporary storage for row_flg array and cub's prefix sum operation
+-      IType* row_flg = NULL;
+-      void* d_temp_storage = NULL;
++      IType* row_flg = nullptr;
++      void* d_temp_storage = nullptr;
+       size_t temp_storage_bytes = 0;
+       cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+       cub::DeviceScan::InclusiveSum(d_temp_storage,
+diff --git a/src/operator/batch_norm_v1-inl.h b/src/operator/batch_norm_v1-inl.h
+index 89412357a..1520df93c 100644
+--- a/src/operator/batch_norm_v1-inl.h
++++ b/src/operator/batch_norm_v1-inl.h
+@@ -360,7 +360,7 @@ class BatchNormV1Prop : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+       LOG(FATAL) << "Not Implemented.";
+-      return NULL;
++      return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/bilinear_sampler-inl.h b/src/operator/bilinear_sampler-inl.h
+index abb4a61dc..cec27faa1 100644
+--- a/src/operator/bilinear_sampler-inl.h
++++ b/src/operator/bilinear_sampler-inl.h
+@@ -223,7 +223,7 @@ class BilinearSamplerProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/bilinear_sampler.cu b/src/operator/bilinear_sampler.cu
+index fab143353..42262e19a 100644
+--- a/src/operator/bilinear_sampler.cu
++++ b/src/operator/bilinear_sampler.cu
+@@ -227,7 +227,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator* CreateOp<gpu>(BilinearSamplerParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+ #if MXNET_USE_CUDNN == 1
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     if (param.cudnn_off.has_value() && param.cudnn_off.value()) {
+diff --git a/src/operator/contrib/count_sketch-inl.h b/src/operator/contrib/count_sketch-inl.h
+index 3ea93e63d..f67856a39 100644
+--- a/src/operator/contrib/count_sketch-inl.h
++++ b/src/operator/contrib/count_sketch-inl.h
+@@ -226,7 +226,7 @@ class CountSketchProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/count_sketch.cu b/src/operator/contrib/count_sketch.cu
+index b7113aed1..c6370c09d 100644
+--- a/src/operator/contrib/count_sketch.cu
++++ b/src/operator/contrib/count_sketch.cu
+@@ -171,7 +171,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator* CreateOp<gpu>(CountSketchParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   switch (dtype) {
+       case mshadow::kFloat32:
+           op = new CountSketchOp<gpu, float>(param);
+diff --git a/src/operator/contrib/deformable_convolution-inl.h b/src/operator/contrib/deformable_convolution-inl.h
+index eb23d99bb..ca453e3da 100644
+--- a/src/operator/contrib/deformable_convolution-inl.h
++++ b/src/operator/contrib/deformable_convolution-inl.h
+@@ -496,7 +496,7 @@ class DeformableConvolutionProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/deformable_convolution.cu b/src/operator/contrib/deformable_convolution.cu
+index 0e8151229..cf13bfabd 100644
+--- a/src/operator/contrib/deformable_convolution.cu
++++ b/src/operator/contrib/deformable_convolution.cu
+@@ -36,7 +36,7 @@ namespace op {
+     mxnet::ShapeVector *in_shape,
+     mxnet::ShapeVector *out_shape,
+     Context ctx) {
+-    Operator *op = NULL;
++    Operator *op = nullptr;
+     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+       op = new DeformableConvolutionOp<gpu, DType>(param);
+     })
+diff --git a/src/operator/contrib/deformable_psroi_pooling-inl.h b/src/operator/contrib/deformable_psroi_pooling-inl.h
+index 78124d2a2..e7e108a67 100644
+--- a/src/operator/contrib/deformable_psroi_pooling-inl.h
++++ b/src/operator/contrib/deformable_psroi_pooling-inl.h
+@@ -288,7 +288,7 @@ class DeformablePSROIPoolingProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx,
+diff --git a/src/operator/contrib/deformable_psroi_pooling.cu b/src/operator/contrib/deformable_psroi_pooling.cu
+index ba8cfc865..50ad178e6 100644
+--- a/src/operator/contrib/deformable_psroi_pooling.cu
++++ b/src/operator/contrib/deformable_psroi_pooling.cu
+@@ -163,7 +163,7 @@ namespace cuda {
+                                          const index_t sample_per_part, const float trans_std) {
+     const DType *bottom_data = data.dptr_;
+     const DType *bottom_rois = bbox.dptr_;
+-    const DType *bottom_trans = no_trans ? NULL : trans.dptr_;
++    const DType *bottom_trans = no_trans ? nullptr : trans.dptr_;
+     DType *top_data = out.dptr_;
+     DType *top_count_data = top_count.dptr_;
+     const index_t count = out.shape_.Size();
+@@ -331,9 +331,9 @@ namespace cuda {
+     const DType *top_diff = out_grad.dptr_;
+     const DType *bottom_data = data.dptr_;
+     const DType *bottom_rois = bbox.dptr_;
+-    const DType *bottom_trans = no_trans ? NULL : trans.dptr_;
++    const DType *bottom_trans = no_trans ? nullptr : trans.dptr_;
+     DType *bottom_data_diff = in_grad.dptr_;
+-    DType *bottom_trans_diff = no_trans ? NULL : trans_grad.dptr_;
++    DType *bottom_trans_diff = no_trans ? nullptr : trans_grad.dptr_;
+     const DType *top_count_data = top_count.dptr_;
+     const index_t count = out_grad.shape_.Size();
+     const index_t num_rois = bbox.size(0);
+diff --git a/src/operator/contrib/fft-inl.h b/src/operator/contrib/fft-inl.h
+index a5471b4ba..6b32abca9 100644
+--- a/src/operator/contrib/fft-inl.h
++++ b/src/operator/contrib/fft-inl.h
+@@ -308,7 +308,7 @@ class FFTProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/fft.cu b/src/operator/contrib/fft.cu
+index ce25faebf..8cc56ade8 100644
+--- a/src/operator/contrib/fft.cu
++++ b/src/operator/contrib/fft.cu
+@@ -30,7 +30,7 @@ namespace op {
+ 
+ template<>
+ Operator* CreateOp<gpu>(FFTParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+       op = new FFTOp<gpu, DType>(param);
+   })
+diff --git a/src/operator/contrib/ifft-inl.h b/src/operator/contrib/ifft-inl.h
+index 7d8422e83..037fdf2d4 100644
+--- a/src/operator/contrib/ifft-inl.h
++++ b/src/operator/contrib/ifft-inl.h
+@@ -299,7 +299,7 @@ class IFFTProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/ifft.cu b/src/operator/contrib/ifft.cu
+index 738ad639c..7f8516250 100644
+--- a/src/operator/contrib/ifft.cu
++++ b/src/operator/contrib/ifft.cu
+@@ -30,7 +30,7 @@ namespace op {
+ 
+ template<>
+ Operator* CreateOp<gpu>(IFFTParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+       op = new IFFTOp<gpu, DType>(param);
+   })
+diff --git a/src/operator/contrib/modulated_deformable_convolution-inl.h b/src/operator/contrib/modulated_deformable_convolution-inl.h
+index 07e8e29fe..ace11b048 100644
+--- a/src/operator/contrib/modulated_deformable_convolution-inl.h
++++ b/src/operator/contrib/modulated_deformable_convolution-inl.h
+@@ -561,7 +561,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, std::vector<mxnet::TShape> *in_shape,
+diff --git a/src/operator/contrib/modulated_deformable_convolution.cu b/src/operator/contrib/modulated_deformable_convolution.cu
+index fce73dd49..470d2c01b 100644
+--- a/src/operator/contrib/modulated_deformable_convolution.cu
++++ b/src/operator/contrib/modulated_deformable_convolution.cu
+@@ -36,7 +36,7 @@ namespace op {
+     std::vector<TShape> *in_shape,
+     std::vector<TShape> *out_shape,
+     Context ctx) {
+-    Operator *op = NULL;
++    Operator *op = nullptr;
+     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+       op = new ModulatedDeformableConvolutionOp<gpu, DType>(param);
+     })
+diff --git a/src/operator/contrib/multi_proposal.cu b/src/operator/contrib/multi_proposal.cu
+index 1aa852af8..6ae886160 100644
+--- a/src/operator/contrib/multi_proposal.cu
++++ b/src/operator/contrib/multi_proposal.cu
+@@ -335,7 +335,7 @@ void _nms(mshadow::Stream<gpu> *s,
+   const int boxes_dim = boxes.size(1);
+ 
+   float* boxes_dev = boxes.dptr_;
+-  uint64_t* mask_dev = NULL;
++  uint64_t* mask_dev = nullptr;
+ 
+   const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
+   FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev,
+@@ -475,7 +475,7 @@ class MultiProposalGPUOp : public Operator{
+                            &anchors);
+ 
+     // Copy generated anchors to GPU
+-    float* workspace_proposals_ptr = NULL;
++    float* workspace_proposals_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr,
+                                 sizeof(float) * num_images * count_anchors * 5));
+     Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr,
+@@ -520,14 +520,14 @@ class MultiProposalGPUOp : public Operator{
+     dimGrid = dim3((count_anchors + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
+     dimBlock = dim3(kMaxThreadsPerBlock);
+     // Copy score to a continuous memory
+-    float* score_ptr = NULL;
++    float* score_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&score_ptr, sizeof(float) * count_anchors));
+     Tensor<xpu, 1> score(score_ptr, Shape1(count_anchors));
+-    int* order_ptr = NULL;
++    int* order_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&order_ptr, sizeof(int) * count_anchors));
+     Tensor<xpu, 1, int> order(order_ptr, Shape1(count_anchors));
+ 
+-    float* workspace_ordered_proposals_ptr = NULL;
++    float* workspace_ordered_proposals_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_ordered_proposals_ptr,
+         sizeof(float) * rpn_pre_nms_top_n * 5));
+     Tensor<xpu, 2> workspace_ordered_proposals(workspace_ordered_proposals_ptr,
+diff --git a/src/operator/contrib/multi_sum_sq-inl.h b/src/operator/contrib/multi_sum_sq-inl.h
+index 051c573af..f4aabc97b 100644
+--- a/src/operator/contrib/multi_sum_sq-inl.h
++++ b/src/operator/contrib/multi_sum_sq-inl.h
+@@ -84,7 +84,7 @@ inline bool MultiSumSqType(const NodeAttrs& attrs,
+ 
+ template<typename xpu>
+ size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs,
+-                                    int* param_max_chunks_per_tensor = NULL);
++                                    int* param_max_chunks_per_tensor = nullptr);
+ 
+ template<typename xpu>
+ void MultiSumSqRun(const std::vector<TBlob> &inputs, int nInputs,
+diff --git a/src/operator/contrib/multi_sum_sq.cu b/src/operator/contrib/multi_sum_sq.cu
+index ec2c76484..8d9a26676 100644
+--- a/src/operator/contrib/multi_sum_sq.cu
++++ b/src/operator/contrib/multi_sum_sq.cu
+@@ -139,7 +139,7 @@ size_t GetRequiredStorageMultiSumSq<gpu>(const std::vector<TBlob> &inputs,
+     if (chunks_this_tensor > max_chunks_per_tensor)
+       max_chunks_per_tensor = chunks_this_tensor;
+   }
+-  if (param_max_chunks_per_tensor != NULL)
++  if (param_max_chunks_per_tensor != nullptr)
+     *param_max_chunks_per_tensor = max_chunks_per_tensor;
+   return inputs.size() * max_chunks_per_tensor * sizeof(float);
+ }
+diff --git a/src/operator/contrib/multibox_detection-inl.h b/src/operator/contrib/multibox_detection-inl.h
+index 34ad4471d..cf42cdc26 100644
+--- a/src/operator/contrib/multibox_detection-inl.h
++++ b/src/operator/contrib/multibox_detection-inl.h
+@@ -187,7 +187,7 @@ class MultiBoxDetectionProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not implemented";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/multibox_detection.cu b/src/operator/contrib/multibox_detection.cu
+index 51b2aa7cd..bc02834b4 100644
+--- a/src/operator/contrib/multibox_detection.cu
++++ b/src/operator/contrib/multibox_detection.cu
+@@ -238,7 +238,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator *CreateOp<gpu>(MultiBoxDetectionParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new MultiBoxDetectionOp<gpu, DType>(param);
+   });
+diff --git a/src/operator/contrib/multibox_prior-inl.h b/src/operator/contrib/multibox_prior-inl.h
+index bfc244f77..571765a8b 100644
+--- a/src/operator/contrib/multibox_prior-inl.h
++++ b/src/operator/contrib/multibox_prior-inl.h
+@@ -204,7 +204,7 @@ class MultiBoxPriorProp: public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not implemented";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/multibox_prior.cu b/src/operator/contrib/multibox_prior.cu
+index 54e93adba..f2b60a3b6 100644
+--- a/src/operator/contrib/multibox_prior.cu
++++ b/src/operator/contrib/multibox_prior.cu
+@@ -107,7 +107,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator* CreateOp<gpu>(MultiBoxPriorParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new MultiBoxPriorOp<gpu, DType>(param);
+   });
+diff --git a/src/operator/contrib/multibox_target-inl.h b/src/operator/contrib/multibox_target-inl.h
+index 6034f13ef..f7564440b 100644
+--- a/src/operator/contrib/multibox_target-inl.h
++++ b/src/operator/contrib/multibox_target-inl.h
+@@ -262,7 +262,7 @@ class MultiBoxTargetProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not implemented";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/multibox_target.cu b/src/operator/contrib/multibox_target.cu
+index a44c08b08..adec904e1 100644
+--- a/src/operator/contrib/multibox_target.cu
++++ b/src/operator/contrib/multibox_target.cu
+@@ -419,7 +419,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator *CreateOp<gpu>(MultiBoxTargetParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new MultiBoxTargetOp<gpu, DType>(param);
+   });
+diff --git a/src/operator/contrib/proposal.cu b/src/operator/contrib/proposal.cu
+index b107dfaae..9d90398db 100644
+--- a/src/operator/contrib/proposal.cu
++++ b/src/operator/contrib/proposal.cu
+@@ -316,7 +316,7 @@ void _nms(mshadow::Stream<gpu> *s,
+   const int boxes_dim = boxes.size(1);
+ 
+   float* boxes_dev = boxes.dptr_;
+-  uint64_t* mask_dev = NULL;
++  uint64_t* mask_dev = nullptr;
+ 
+   const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
+   FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev,
+@@ -456,7 +456,7 @@ class ProposalGPUOp : public Operator{
+                            &anchors);
+ 
+     // Copy generated anchors to GPU
+-    float* workspace_proposals_ptr = NULL;
++    float* workspace_proposals_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr, sizeof(float) * count * 5));
+     Tensor<xpu, 2> workspace_proposals(workspace_proposals_ptr, Shape2(count, 5));
+     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+@@ -508,10 +508,10 @@ class ProposalGPUOp : public Operator{
+     FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+ 
+     // Copy score to a continuous memory
+-    float* score_ptr = NULL;
++    float* score_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&score_ptr, sizeof(float) * count));
+     Tensor<xpu, 1> score(score_ptr, Shape1(count));
+-    int* order_ptr = NULL;
++    int* order_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&order_ptr, sizeof(int) * count));
+     Tensor<xpu, 1, int> order(order_ptr, Shape1(count));
+ 
+@@ -529,7 +529,7 @@ class ProposalGPUOp : public Operator{
+     FRCNN_CUDA_CHECK(cudaPeekAtLastError());
+ 
+     // Reorder proposals according to order
+-    float* workspace_ordered_proposals_ptr = NULL;
++    float* workspace_ordered_proposals_ptr = nullptr;
+     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_ordered_proposals_ptr,
+                                 sizeof(float) * rpn_pre_nms_top_n * 5));
+     Tensor<xpu, 2> workspace_ordered_proposals(workspace_ordered_proposals_ptr,
+diff --git a/src/operator/contrib/psroi_pooling-inl.h b/src/operator/contrib/psroi_pooling-inl.h
+index 50d812882..2a32b76dc 100644
+--- a/src/operator/contrib/psroi_pooling-inl.h
++++ b/src/operator/contrib/psroi_pooling-inl.h
+@@ -224,7 +224,7 @@ class PSROIPoolingProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/contrib/sync_batch_norm-inl.h b/src/operator/contrib/sync_batch_norm-inl.h
+index cd1a3285f..f9b00ffef 100644
+--- a/src/operator/contrib/sync_batch_norm-inl.h
++++ b/src/operator/contrib/sync_batch_norm-inl.h
+@@ -581,7 +581,7 @@ class SyncBatchNormProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+       LOG(FATAL) << "Not Implemented.";
+-      return NULL;
++      return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/convolution_v1-inl.h b/src/operator/convolution_v1-inl.h
+index d2126bd29..9b6ab96ae 100644
+--- a/src/operator/convolution_v1-inl.h
++++ b/src/operator/convolution_v1-inl.h
+@@ -541,7 +541,7 @@ class ConvolutionV1Prop : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/convolution_v1.cu b/src/operator/convolution_v1.cu
+index 81cf7f5b9..0f40c30ee 100644
+--- a/src/operator/convolution_v1.cu
++++ b/src/operator/convolution_v1.cu
+@@ -37,7 +37,7 @@ Operator* CreateOp<gpu>(ConvolutionV1Param param, int dtype,
+                         mxnet::ShapeVector *in_shape,
+                         mxnet::ShapeVector *out_shape,
+                         Context ctx) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new ConvolutionV1Op<gpu, DType>(param);
+   })
+diff --git a/src/operator/correlation-inl.h b/src/operator/correlation-inl.h
+index 3c7422365..3b6eaca77 100644
+--- a/src/operator/correlation-inl.h
++++ b/src/operator/correlation-inl.h
+@@ -263,7 +263,7 @@ void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) overr
+ }
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/custom/native_op-inl.h b/src/operator/custom/native_op-inl.h
+index 6fbbae18a..56afef698 100644
+--- a/src/operator/custom/native_op-inl.h
++++ b/src/operator/custom/native_op-inl.h
+@@ -181,20 +181,20 @@ Operator* CreateOp(NativeOpParam param);
+ class NativeOpProp : public OperatorProperty {
+  public:
+   std::vector<std::string> ListArguments() const override {
+-    char ** args = NULL;
++    char ** args = nullptr;
+     param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments);
+     std::vector<std::string> ret;
+-    for (int i = 0; args[i] != NULL; ++i) {
++    for (int i = 0; args[i] != nullptr; ++i) {
+       ret.emplace_back(args[i]);
+     }
+     return ret;
+   }
+ 
+   std::vector<std::string> ListOutputs() const override {
+-    char ** args = NULL;
++    char ** args = nullptr;
+     param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs);
+     std::vector<std::string> ret;
+-    for (int i = 0; args[i] != NULL; ++i) {
++    for (int i = 0; args[i] != nullptr; ++i) {
+       ret.emplace_back(args[i]);
+     }
+     return ret;
+diff --git a/src/operator/custom/ndarray_op-inl.h b/src/operator/custom/ndarray_op-inl.h
+index 4973be9a1..a1a138ff1 100644
+--- a/src/operator/custom/ndarray_op-inl.h
++++ b/src/operator/custom/ndarray_op-inl.h
+@@ -83,20 +83,20 @@ Operator* CreateOp(NDArrayOpParam param);
+ class NDArrayOpProp : public OperatorProperty {
+  public:
+   std::vector<std::string> ListArguments() const override {
+-    char ** args = NULL;
++    char ** args = nullptr;
+     CHECK(param_.pinfo->list_arguments(&args, param_.pinfo->p_list_arguments));
+     std::vector<std::string> ret;
+-    for (int i = 0; args[i] != NULL; ++i) {
++    for (int i = 0; args[i] != nullptr; ++i) {
+       ret.emplace_back(args[i]);
+     }
+     return ret;
+   }
+ 
+   std::vector<std::string> ListOutputs() const override {
+-    char ** args = NULL;
++    char ** args = nullptr;
+     CHECK(param_.pinfo->list_outputs(&args, param_.pinfo->p_list_outputs));
+     std::vector<std::string> ret;
+-    for (int i = 0; args[i] != NULL; ++i) {
++    for (int i = 0; args[i] != nullptr; ++i) {
+       ret.emplace_back(args[i]);
+     }
+     return ret;
+diff --git a/src/operator/fusion/fused_op.cu b/src/operator/fusion/fused_op.cu
+index c8a888301..544dd0221 100644
+--- a/src/operator/fusion/fused_op.cu
++++ b/src/operator/fusion/fused_op.cu
+@@ -483,7 +483,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
+       code += "op::store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
+               var_name + "_shape);\n";
+     } else if (req[counter] == kNullOp) {
+-      // NULL req, do not do anything
++      // nullptr req, do not do anything
+     } else {
+       LOG(FATAL) << "Encountered unexpected req.";
+     }
+@@ -589,8 +589,8 @@ CUfunction FusedOp::CompileCode(const std::string &code,
+                                   &code_with_header[0],                      // buffer
+                                   (kernel_name + "_kernel.cu").c_str(),      // name
+                                   0,                                         // num headers
+-                                  NULL,                                      // headers
+-                                  NULL));                                    // include names
++                                  nullptr,                                      // headers
++                                  nullptr));                                    // include names
+ 
+     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
+     const char *opts[] = {gpu_arch_arg.c_str(),
+@@ -723,7 +723,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
+     kernel_functions_[fusion::kGeneral] = CompileCode(code, attrs.name, dev_id);
+     if (check_shape_args_.size() > 0) {
+       const auto& code = GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
+-                           node_shapes, node_dtypes, nvec, attrs.name, NULL);
++                           node_shapes, node_dtypes, nvec, attrs.name, nullptr);
+       kernel_functions_[fusion::kShapeOptimized] = CompileCode(code, attrs.name, dev_id);
+     }
+     initialized_ = true;
+diff --git a/src/operator/grid_generator-inl.h b/src/operator/grid_generator-inl.h
+index 9083ae100..31b5ba555 100644
+--- a/src/operator/grid_generator-inl.h
++++ b/src/operator/grid_generator-inl.h
+@@ -327,7 +327,7 @@ class GridGeneratorProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/grid_generator.cu b/src/operator/grid_generator.cu
+index b363bea0a..e21745b36 100644
+--- a/src/operator/grid_generator.cu
++++ b/src/operator/grid_generator.cu
+@@ -30,7 +30,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator* CreateOp<gpu>(GridGeneratorParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new GridGeneratorOp<gpu, DType>(param);
+   })
+diff --git a/src/operator/instance_norm-inl.h b/src/operator/instance_norm-inl.h
+index c71cbe043..989f95c3c 100644
+--- a/src/operator/instance_norm-inl.h
++++ b/src/operator/instance_norm-inl.h
+@@ -254,7 +254,7 @@ class InstanceNormProp : public OperatorProperty {
+ 
+   Operator *CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/l2_normalization-inl.h b/src/operator/l2_normalization-inl.h
+index 210d91823..ab60bdcc2 100644
+--- a/src/operator/l2_normalization-inl.h
++++ b/src/operator/l2_normalization-inl.h
+@@ -321,7 +321,7 @@ class L2NormalizationProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/make_loss-inl.h b/src/operator/make_loss-inl.h
+index d6f14b1f2..12969d324 100644
+--- a/src/operator/make_loss-inl.h
++++ b/src/operator/make_loss-inl.h
+@@ -195,7 +195,7 @@ class MakeLossProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/make_loss.cu b/src/operator/make_loss.cu
+index e1e217e36..de7ba6d9f 100644
+--- a/src/operator/make_loss.cu
++++ b/src/operator/make_loss.cu
+@@ -28,7 +28,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator *CreateOp<gpu>(MakeLossParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new MakeLossOp<gpu, DType>(param);
+   });
+diff --git a/src/operator/nn/cudnn/cudnn_convolution-inl.h b/src/operator/nn/cudnn/cudnn_convolution-inl.h
+index d35e41701..ddd0729ae 100644
+--- a/src/operator/nn/cudnn/cudnn_convolution-inl.h
++++ b/src/operator/nn/cudnn/cudnn_convolution-inl.h
+@@ -686,7 +686,7 @@ class CuDNNConvolutionOp {
+ 
+   // Converts a TBlob to a dptr, checking for the expected dim and that it's contiguous.
+   DType *GetNdPtr(const TBlob& tb, int dim, Stream<gpu> *s) {
+-    DType *data_ptr = NULL;
++    DType *data_ptr = nullptr;
+     if (dim == 3) {
+       Tensor<gpu, 3, DType> data = tb.get<gpu, 3, DType>(s);
+       CHECK_EQ(data.CheckContiguous(), true);
+diff --git a/src/operator/nn/cudnn/cudnn_deconvolution-inl.h b/src/operator/nn/cudnn/cudnn_deconvolution-inl.h
+index ec7eec32b..9783adc40 100644
+--- a/src/operator/nn/cudnn/cudnn_deconvolution-inl.h
++++ b/src/operator/nn/cudnn/cudnn_deconvolution-inl.h
+@@ -696,7 +696,7 @@ class CuDNNDeconvolutionOp {
+ 
+   // Converts a TBlob to a dptr, checking for the expected dim and that it's contiguous.
+   DType *GetNdPtr(const TBlob& tb, int dim, Stream<gpu> *s) {
+-    DType *data_ptr = NULL;
++    DType *data_ptr = nullptr;
+     if (dim == 3) {
+       Tensor<gpu, 3, DType> data = tb.get<gpu, 3, DType>(s);
+       CHECK_EQ(data.CheckContiguous(), true);
+diff --git a/src/operator/nn/layer_norm.cu b/src/operator/nn/layer_norm.cu
+index 39936a565..4056bd298 100644
+--- a/src/operator/nn/layer_norm.cu
++++ b/src/operator/nn/layer_norm.cu
+@@ -238,18 +238,18 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
+     AType invstd_eps = DType(1.0) / std_eps;
+     DType* out_col_val = out_data + bid * nchannel;
+ 
+-    if (gamma != NULL && beta != NULL) {
++    if (gamma != nullptr && beta != nullptr) {
+       for (int i = tid; i < nchannel; i += nthread) {
+         out_col_val[i] = gamma[i] * static_cast<DType>(invstd_eps *
+                                                        (static_cast<AType>(col_vals[i]) - mean))
+                                                          + beta[i];
+       }
+-    } else if (gamma == NULL && beta != NULL) {
++    } else if (gamma == nullptr && beta != nullptr) {
+       for (int i = tid; i < nchannel; i += nthread) {
+         out_col_val[i] = static_cast<DType>(invstd_eps * (static_cast<AType>(col_vals[i]) - mean))
+                                                        + beta[i];
+       }
+-    } else if (gamma != NULL && beta == NULL) {
++    } else if (gamma != nullptr && beta == nullptr) {
+       for (int i = tid; i < nchannel; i += nthread) {
+         out_col_val[i] = gamma[i] * static_cast<DType>(invstd_eps *
+                                                        (static_cast<AType>(col_vals[i]) - mean));
+diff --git a/src/operator/numpy/linalg/broadcast_reduce_customized-inl.cuh b/src/operator/numpy/linalg/broadcast_reduce_customized-inl.cuh
+index d5258819a..357ce6cd3 100644
+--- a/src/operator/numpy/linalg/broadcast_reduce_customized-inl.cuh
++++ b/src/operator/numpy/linalg/broadcast_reduce_customized-inl.cuh
+@@ -394,13 +394,13 @@ void ReduceWithReducer(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+   bool need_clean = !reducer;
+   reducer = reducer ? reducer : new Reducer();
+   ReduceImplConfig<ndim> config =
+-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
++    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+   if (safe_acc) {
+     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
+       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
+       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
++        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
+         ReduceImplWithReducer<Reducer, ndim, AccType, DataType, OutType, OP>(
+           stream, small, req, big, workspace, config, reducer);
+       });
+diff --git a/src/operator/numpy/np_delete_op-inl.h b/src/operator/numpy/np_delete_op-inl.h
+index a144833f3..b759afe89 100644
+--- a/src/operator/numpy/np_delete_op-inl.h
++++ b/src/operator/numpy/np_delete_op-inl.h
+@@ -263,9 +263,9 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
+     numtodel = inputs[delete_::kObj].shape().Size();
+   }
+ 
+-  char* out_pos_ptr = NULL;
+-  char* indices_ptr = NULL;
+-  char* is_delete_ptr = NULL;
++  char* out_pos_ptr = nullptr;
++  char* indices_ptr = nullptr;
++  char* is_delete_ptr = nullptr;
+   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
+                       inputs[delete_::kObj].dtype() :
+                       mshadow::DataType<int64_t>::kFlag), IType, {
+diff --git a/src/operator/numpy/np_einsum_op-inl.h b/src/operator/numpy/np_einsum_op-inl.h
+index 551b71898..b89e576bb 100644
+--- a/src/operator/numpy/np_einsum_op-inl.h
++++ b/src/operator/numpy/np_einsum_op-inl.h
+@@ -173,7 +173,7 @@ inline int parse_operand_subscripts(const char *subscripts, int length,
+       /* Search for the next matching label. */
+       char *next = reinterpret_cast<char*>(memchr(op_labels + idim + 1, label, ndim - idim - 1));
+ 
+-      while (next != NULL) {
++      while (next != nullptr) {
+         /* The offset from next to op_labels[idim] (negative). */
+         *next = static_cast<char>((op_labels + idim) - next);
+         /* Search for the next matching label. */
+@@ -208,7 +208,7 @@ inline int parse_output_subscripts(const char *subscripts, int length,
+     /* A proper label for an axis. */
+     if (label > 0 && isalpha(label)) {
+       /* Check that it doesn't occur again. */
+-      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == NULL)
++      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == nullptr)
+         << "einstein sum subscripts string includes "
+         << "output subscript '" << static_cast<char>(label)
+         << "' multiple times";
+@@ -356,7 +356,7 @@ inline static int prepare_op_axes(int ndim, int iop, char *labels,
+       /* It's a labeled dimension, find the matching one */
+       char *match = reinterpret_cast<char*>(memchr(labels, label, ndim));
+       /* If the op doesn't have the label, broadcast it */
+-      if (match == NULL) {
++      if (match == nullptr) {
+         axes[i] = -1;
+       } else {
+         /* Otherwise use it */
+@@ -585,7 +585,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
+   int ndim_iter = ndim_output;
+   for (label = min_label; label <= max_label; ++label) {
+     if (label_counts[label] > 0 &&
+-        memchr(output_labels, label, ndim_output) == NULL) {
++        memchr(output_labels, label, ndim_output) == nullptr) {
+       CHECK(ndim_iter < NPY_MAXDIMS)
+         << "too many subscripts in einsum";
+       iter_labels[ndim_iter++] = label;
+diff --git a/src/operator/numpy/np_einsum_path_op-inl.h b/src/operator/numpy/np_einsum_path_op-inl.h
+index 968d52106..5f6f11adb 100644
+--- a/src/operator/numpy/np_einsum_path_op-inl.h
++++ b/src/operator/numpy/np_einsum_path_op-inl.h
+@@ -914,7 +914,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
+     ret[i].do_blas = do_blas;
+   }
+ 
+-  if (ret_path == NULL || ret_string_repr == NULL) {
++  if (ret_path == nullptr || ret_string_repr == nullptr) {
+     return ret;
+   }
+ 
+diff --git a/src/operator/optimizer_op.cu b/src/operator/optimizer_op.cu
+index 6920cb06e..fe724ffbe 100644
+--- a/src/operator/optimizer_op.cu
++++ b/src/operator/optimizer_op.cu
+@@ -86,8 +86,8 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
+         nnvm::dim_t num_rows = weight.shape_[0];
+         nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
+ 
+-        nnvm::dim_t* prefix_sum = NULL;
+-        void* d_temp_storage = NULL;
++        nnvm::dim_t* prefix_sum = nullptr;
++        void* d_temp_storage = nullptr;
+         size_t temp_storage_bytes = 0;
+         cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                       temp_storage_bytes,
+@@ -183,8 +183,8 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
+         DType* out_data = out->dptr<DType>();
+         const nnvm::dim_t num_rows = weight.shape_[0];
+         const nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
+-        nnvm::dim_t* prefix_sum = NULL;
+-        void* d_temp_storage = NULL;
++        nnvm::dim_t* prefix_sum = nullptr;
++        void* d_temp_storage = nullptr;
+         size_t temp_storage_bytes = 0;
+         cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                       temp_storage_bytes,
+diff --git a/src/operator/pad-inl.h b/src/operator/pad-inl.h
+index 89b0ab778..9699c19ae 100644
+--- a/src/operator/pad-inl.h
++++ b/src/operator/pad-inl.h
+@@ -255,7 +255,7 @@ class PadProp : public OperatorProperty {
+ 
+   Operator *CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/pad.cu b/src/operator/pad.cu
+index 1aab12a3a..643e62db7 100644
+--- a/src/operator/pad.cu
++++ b/src/operator/pad.cu
+@@ -728,7 +728,7 @@ namespace mxnet {
+ namespace op {
+ template <>
+ Operator *CreateOp<gpu>(PadParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new PadOp<gpu, DType>(param); })
+   return op;
+ }
+diff --git a/src/operator/pooling_v1-inl.h b/src/operator/pooling_v1-inl.h
+index efd211312..6c7845d9d 100644
+--- a/src/operator/pooling_v1-inl.h
++++ b/src/operator/pooling_v1-inl.h
+@@ -362,7 +362,7 @@ class PoolingV1Prop : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/pooling_v1.cu b/src/operator/pooling_v1.cu
+index fccda4051..f648a7c1f 100644
+--- a/src/operator/pooling_v1.cu
++++ b/src/operator/pooling_v1.cu
+@@ -30,7 +30,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator *CreateOp<gpu>(PoolingV1Param param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     switch (param.pool_type) {
+       case pool_v1_enum::kMaxPooling:
+@@ -44,7 +44,7 @@ Operator *CreateOp<gpu>(PoolingV1Param param, int dtype) {
+         break;
+       default:
+         LOG(FATAL) << "unknown pooling type";
+-        return NULL;
++        return nullptr;
+     }
+   });
+   return op;
+diff --git a/src/operator/rnn-inl.h b/src/operator/rnn-inl.h
+index db2360313..3d47f8c0d 100644
+--- a/src/operator/rnn-inl.h
++++ b/src/operator/rnn-inl.h
+@@ -595,7 +595,7 @@ class RNNOp {
+     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
+     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
+ 
+-    DType* hy_ptr = NULL;
++    DType* hy_ptr = nullptr;
+     if (param_.state_outputs) {
+       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
+     }
+@@ -603,8 +603,8 @@ class RNNOp {
+ 
+ #if MXNET_USE_CUDNN_GE_7200
+     Tensor<cpu, 1, char> host_workspace;
+-    int *sequence_length_cpu_int = NULL;
+-    IType *sequence_length_cpu_itype = NULL;
++    int *sequence_length_cpu_int = nullptr;
++    IType *sequence_length_cpu_itype = nullptr;
+ 
+     if (ctx_.dev_type == kGPU) {
+       int host_workspace_bytes =
+@@ -648,8 +648,8 @@ class RNNOp {
+       LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
+ #endif
+     }
+-    DType* cx_ptr = NULL;
+-    DType* cy_ptr = NULL;
++    DType* cx_ptr = nullptr;
++    DType* cy_ptr = nullptr;
+     if (param_.mode == rnn_enum::kLstm) {
+       cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
+     }
+@@ -969,14 +969,14 @@ class RNNOp {
+ 
+     DType* db_ptr = dw.dptr_ + w.shape_[0] - bsize;
+ 
+-    DType * dhy_ptr = NULL;
++    DType * dhy_ptr = nullptr;
+     if (param_.state_outputs) {
+       dhy_ptr = out_grad[rnn_enum::kStateOut].dptr<DType>();
+     }
+ 
+-    DType* dcx_ptr = NULL;
+-    DType* dcy_ptr = NULL;
+-    DType* cx_ptr = NULL;
++    DType* dcx_ptr = nullptr;
++    DType* dcy_ptr = nullptr;
++    DType* cx_ptr = nullptr;
+ 
+     if (param_.mode == rnn_enum::kLstm) {
+       CHECK_NE(req[rnn_enum::kStateCell], kAddTo) << "AddTo is not supported for state cell";
+@@ -1324,7 +1324,7 @@ class RNNOp {
+             (&dropout_desc_, s, 1.0f - param_.p, seed_);
+       }
+       // Only update the probability by passing in a null dropout_states ptr
+-      DType* dropout_states = NULL;
++      DType* dropout_states = nullptr;
+       size_t dropout_bytes = 0;
+       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
+                                            param_.p,  // discard probability
+@@ -1420,15 +1420,15 @@ class RNNOp {
+       //   for (int j = 0; j < n; ++j) {
+       //     CHECK_EQ(cudnnGetRNNLinLayerMatrixParams(s->dnn_handle_, rnn_desc_,
+       //       i, x_desc_vec_[0], w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
+-      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
+-      //     last = ((int64_t)(p - NULL))/sizeof(DType);
++      //     LOG(INFO) << ((int64_t)(p - nullptr))/sizeof(DType) - last;
++      //     last = ((int64_t)(p - nullptr))/sizeof(DType);
+       //     cudnnDataType_t t;
+       //     cudnnTensorFormat_t f;
+       //     int ndim = 5;
+       //     int dims[5] = {0, 0, 0, 0, 0};
+       //     CHECK_EQ(cudnnGetFilterNdDescriptor(m_desc, ndim, &t, &f, &ndim, &dims[0]),
+       //       CUDNN_STATUS_SUCCESS);
+-      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
++      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - nullptr))/sizeof(DType);
+       //     for (int i = 0; i < ndim; ++i) LOG(INFO) << dims[i];
+       //   }
+       // }
+@@ -1437,9 +1437,9 @@ class RNNOp {
+       //   for (int j = 0; j < n; ++j) {
+       //     CHECK_EQ(cudnnGetRNNLinLayerBiasParams(s->dnn_handle_, rnn_desc_, i, x_desc_vec_[0],
+       //       w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
+-      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
+-      //     last = ((int64_t)(p - NULL))/sizeof(DType);
+-      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
++      //     LOG(INFO) << ((int64_t)(p - nullptr))/sizeof(DType) - last;
++      //     last = ((int64_t)(p - nullptr))/sizeof(DType);
++      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - nullptr))/sizeof(DType);
+       //   }
+       // }
+     }
+diff --git a/src/operator/rnn_impl.h b/src/operator/rnn_impl.h
+index e1b4a2b79..3aa643421 100644
+--- a/src/operator/rnn_impl.h
++++ b/src/operator/rnn_impl.h
+@@ -382,7 +382,7 @@ void LstmBackwardSingleLayer(DType* ws,
+   const DType beta1 = 1.0;
+   const DType beta2 = 2.0;
+   const int cell_size = N * H;
+-  if (dhy_ptr != NULL) {
++  if (dhy_ptr != nullptr) {
+     #pragma omp parallel for num_threads(omp_threads)
+     for (int i = 0; i < cell_size; ++i) {
+       dh.dptr_[i] = dhy_ptr[i];
+@@ -393,7 +393,7 @@ void LstmBackwardSingleLayer(DType* ws,
+       dh.dptr_[i] = 0;
+     }
+   }
+-  if (dcy_ptr != NULL) {
++  if (dcy_ptr != nullptr) {
+     #pragma omp parallel for num_threads(omp_threads)
+     for (int i = 0; i < cell_size; ++i) {
+       dc.dptr_[i] = dcy_ptr[i];
+@@ -546,8 +546,8 @@ void LstmBackward(DType* ws,
+     DType* dw_cur_ptr = i ? dw_ptr + (w_size1 + (i - 1) * w_size2) * D : dw_ptr;
+     DType* db_cur_ptr = db_ptr + i * b_size * D;
+     DType* rs_cur_ptr = rs2 + i * r_size;
+-    DType* dhy_cur_ptr = dhy_ptr ? dhy_ptr + i * cell_size * D : NULL;
+-    DType* dcy_cur_ptr = dcy_ptr ? dcy_ptr + i * cell_size * D : NULL;
++    DType* dhy_cur_ptr = dhy_ptr ? dhy_ptr + i * cell_size * D : nullptr;
++    DType* dcy_cur_ptr = dcy_ptr ? dcy_ptr + i * cell_size * D : nullptr;
+     Tensor<cpu, 3, DType> y(rs_cur_ptr + y_offset, Shape3(T, N, H * D));
+     Tensor<cpu, 3, DType> dy(dy_ptr, Shape3(T, N, H * D));
+     Tensor<cpu, 2, DType> x(i ? y.dptr_ - r_size : x_ptr, Shape2(T * N, input_size));
+@@ -561,8 +561,8 @@ void LstmBackward(DType* ws,
+       dw_cur_ptr += w_size;
+       db_cur_ptr += b_size;
+       ++idx;
+-      dhy_cur_ptr = dhy_ptr ? dhy_cur_ptr + cell_size : NULL;
+-      dcy_cur_ptr = dcy_ptr ? dcy_cur_ptr + cell_size : NULL;
++      dhy_cur_ptr = dhy_ptr ? dhy_cur_ptr + cell_size : nullptr;
++      dcy_cur_ptr = dcy_ptr ? dcy_cur_ptr + cell_size : nullptr;
+       LstmBackwardSingleLayer<DType>(ws2, rs_cur_ptr, tmp_buf, true, T, N, input_size, H,
+                                      x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
+                                      dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
+@@ -612,8 +612,8 @@ void GruForwardInferenceSingleLayer(DType* ws,
+   DType* nt = zt + N * H;
+   DType* back_wx_ptr = wx_ptr + I * 3 * H + H * 3 * H;
+   DType* back_wh_ptr = wh_ptr + I * 3 * H + H * 3 * H;
+-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + 3 * H * 2 : NULL;
+-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + 3 * H * 2: NULL;
++  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + 3 * H * 2 : nullptr;
++  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + 3 * H * 2: nullptr;
+   DType* back_gemmC1 = gemmC1 + T * N * 3 * H;
+   DType* gemmC1_t = gemmC1;
+ 
+@@ -820,8 +820,8 @@ void GruForwardTrainingSingleLayer(DType* ws,
+   DType* nt = gateN;
+   DType* back_wx_ptr = wx_ptr + I * 3 * H + H * 3 * H;
+   DType* back_wh_ptr = wh_ptr + I * 3 * H + H * 3 * H;
+-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + 3 * H * 2 : NULL;
+-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + 3 * H * 2 : NULL;
++  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + 3 * H * 2 : nullptr;
++  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + 3 * H * 2 : nullptr;
+   DType* back_gateR = gateR + T * N * H;
+   DType* back_gateZ = gateZ + T * N * H;
+   DType* back_gateN = gateN + T * N * H;
+@@ -1426,12 +1426,12 @@ void GruBackward(DType* ws,
+   } else {
+     wh_l = wh_l + (D * H) * H * 3;
+   }
+-  DType* dhy_l = NULL;
++  DType* dhy_l = nullptr;
+   if (dhy_ptr)
+     dhy_l = dhy_ptr + (L - 1) * D * N * H;
+   DType* dwx_l = (L == 1)? dwx : dwx + (L - 2) * D * (D + 1) * H * 3 * H
+       + D * I * 3 * H + D * H * 3 * H;
+-  DType* dwh_l = NULL;
++  DType* dwh_l = nullptr;
+   if (L == 1) {
+     dwh_l = dwx_l + I * H * 3;
+   } else {
+@@ -1526,8 +1526,8 @@ void VanillaRNNForwardInferenceSingleLayer(DType* ws,
+   DType* gemmC2  = gemmC1 + D * T * N * H;  // N * H
+   DType* back_wx_ptr = wx_ptr + I * H + H * H;
+   DType* back_wh_ptr = wh_ptr + I * H + H * H;
+-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + H * 2 : NULL;
+-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + H * 2: NULL;
++  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + H * 2 : nullptr;
++  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + H * 2: nullptr;
+   DType* back_gemmC1 = gemmC1 + T * N * H;
+   DType* gemmC1_t = gemmC1;
+ 
+@@ -1726,8 +1726,8 @@ void VanillaRNNForwardTrainingSingleLayer(DType* ws,
+   DType* nt = gateN;
+   DType* back_wx_ptr = wx_ptr + I * H + H * H;
+   DType* back_wh_ptr = wh_ptr + I * H + H * H;
+-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + H * 2 : NULL;
+-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + H * 2 : NULL;
++  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + H * 2 : nullptr;
++  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + H * 2 : nullptr;
+   DType* back_gateN = gateN + T * N * H;
+   DType* back_gemmC1 = gemmC1 + T * N * H;
+   DType* gemmC1_t = gemmC1;
+@@ -2281,12 +2281,12 @@ void VanillaRNNBackward(DType* ws,
+   } else {
+     wh_l = wh_l + (D * H) * H;
+   }
+-  DType* dhy_l = NULL;
++  DType* dhy_l = nullptr;
+   if (dhy_ptr)
+     dhy_l = dhy_ptr + (L - 1) * D * N * H;
+   DType* dwx_l = (L == 1)? dwx : dwx + (L - 2) * D * (D + 1) * H * H
+       + D * I * H + D * H * H;
+-  DType* dwh_l = NULL;
++  DType* dwh_l = nullptr;
+   if (L == 1) {
+     dwh_l = dwx_l + I * H;
+   } else {
+diff --git a/src/operator/roi_pooling-inl.h b/src/operator/roi_pooling-inl.h
+index a189fe231..438d1e8cb 100644
+--- a/src/operator/roi_pooling-inl.h
++++ b/src/operator/roi_pooling-inl.h
+@@ -231,7 +231,7 @@ class ROIPoolingProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/sequence_last-inl.h b/src/operator/sequence_last-inl.h
+index 78ade5e9d..167f04c81 100644
+--- a/src/operator/sequence_last-inl.h
++++ b/src/operator/sequence_last-inl.h
+@@ -317,7 +317,7 @@ class SequenceLastProp : public OperatorProperty {
+ 
+   Operator *CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/sequence_last.cu b/src/operator/sequence_last.cu
+index fb5ae8471..1829d3f3b 100644
+--- a/src/operator/sequence_last.cu
++++ b/src/operator/sequence_last.cu
+@@ -29,7 +29,7 @@
+ namespace mxnet {
+ namespace op {
+ template <> Operator *CreateOp<gpu>(SequenceLastParam param, int dtype, int itype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_TYPE_SWITCH(dtype, DType, {
+       MSHADOW_TYPE_SWITCH(itype, IType, {
+           op = new SequenceLastOp<gpu, DType, IType>(param);
+diff --git a/src/operator/sequence_mask-inl.h b/src/operator/sequence_mask-inl.h
+index 05a9424fd..0934036f2 100644
+--- a/src/operator/sequence_mask-inl.h
++++ b/src/operator/sequence_mask-inl.h
+@@ -269,7 +269,7 @@ class SequenceMaskProp : public OperatorProperty {
+ 
+   Operator *CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/sequence_mask.cu b/src/operator/sequence_mask.cu
+index 8f196b4d6..d5c778992 100644
+--- a/src/operator/sequence_mask.cu
++++ b/src/operator/sequence_mask.cu
+@@ -89,7 +89,7 @@ void SequenceMaskExec(
+ }
+ 
+ template <> Operator *CreateOp<gpu>(SequenceMaskParam param, int dtype, int itype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_TYPE_SWITCH(dtype, DType, {
+       MSHADOW_TYPE_SWITCH(itype, IType, {
+           op = new SequenceMaskOp<gpu, DType, IType>(param);
+diff --git a/src/operator/sequence_reverse-inl.h b/src/operator/sequence_reverse-inl.h
+index e857c6ab9..68d596778 100644
+--- a/src/operator/sequence_reverse-inl.h
++++ b/src/operator/sequence_reverse-inl.h
+@@ -280,7 +280,7 @@ class SequenceReverseProp : public OperatorProperty {
+ 
+   Operator *CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator *CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/softmax_output-inl.h b/src/operator/softmax_output-inl.h
+index db8676c02..22a1e5ff0 100644
+--- a/src/operator/softmax_output-inl.h
++++ b/src/operator/softmax_output-inl.h
+@@ -428,7 +428,7 @@ class SoftmaxOutputProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/spatial_transformer-inl.h b/src/operator/spatial_transformer-inl.h
+index 1a684a899..ddc3ec6bc 100644
+--- a/src/operator/spatial_transformer-inl.h
++++ b/src/operator/spatial_transformer-inl.h
+@@ -276,7 +276,7 @@ class SpatialTransformerProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/spatial_transformer.cu b/src/operator/spatial_transformer.cu
+index 4067714d4..3481a1c0e 100644
+--- a/src/operator/spatial_transformer.cu
++++ b/src/operator/spatial_transformer.cu
+@@ -213,7 +213,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator* CreateOp<gpu>(SpatialTransformerParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+ #if MXNET_USE_CUDNN == 1
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     if (param.cudnn_off.has_value() && param.cudnn_off.value()) {
+diff --git a/src/operator/subgraph/partitioner/custom_subgraph_property.h b/src/operator/subgraph/partitioner/custom_subgraph_property.h
+index 6f382d442..5d0629c25 100644
+--- a/src/operator/subgraph/partitioner/custom_subgraph_property.h
++++ b/src/operator/subgraph/partitioner/custom_subgraph_property.h
+@@ -210,7 +210,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
+       call_free_(attr_keys);
+       return n;
+     } else {
+-      return NULL;
++      return nullptr;
+     }
+   }
+   // override CreateSubgraphSelector
+diff --git a/src/operator/svm_output-inl.h b/src/operator/svm_output-inl.h
+index dfe9fa606..71fb91175 100644
+--- a/src/operator/svm_output-inl.h
++++ b/src/operator/svm_output-inl.h
+@@ -209,7 +209,7 @@ class SVMOutputProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented.";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/svm_output.cu b/src/operator/svm_output.cu
+index fa11a6cfb..081433df3 100644
+--- a/src/operator/svm_output.cu
++++ b/src/operator/svm_output.cu
+@@ -107,7 +107,7 @@ namespace mxnet {
+ namespace op {
+ template<>
+ Operator *CreateOp<gpu>(SVMOutputParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
+     op = new SVMOutputOp<gpu, DType>(param);
+   })
+diff --git a/src/operator/swapaxis-inl.h b/src/operator/swapaxis-inl.h
+index 319fd508c..b8affdc61 100644
+--- a/src/operator/swapaxis-inl.h
++++ b/src/operator/swapaxis-inl.h
+@@ -266,7 +266,7 @@ class SwapAxisProp : public OperatorProperty {
+ 
+   Operator* CreateOperator(Context ctx) const override {
+     LOG(FATAL) << "Not Implemented";
+-    return NULL;
++    return nullptr;
+   }
+ 
+   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,
+diff --git a/src/operator/swapaxis.cu b/src/operator/swapaxis.cu
+index 90dcefd96..c9ede887e 100644
+--- a/src/operator/swapaxis.cu
++++ b/src/operator/swapaxis.cu
+@@ -31,7 +31,7 @@ namespace op {
+ 
+ template<>
+ Operator *CreateOp<gpu>(SwapAxisParam param, int dtype) {
+-  Operator *op = NULL;
++  Operator *op = nullptr;
+   MSHADOW_TYPE_SWITCH(dtype, DType, {
+     op =  new SwapAxisOp<gpu, DType>(param);
+   });
+diff --git a/src/operator/tensor/broadcast_reduce-inl.cuh b/src/operator/tensor/broadcast_reduce-inl.cuh
+index 6cd7dd506..379443dc1 100644
+--- a/src/operator/tensor/broadcast_reduce-inl.cuh
++++ b/src/operator/tensor/broadcast_reduce-inl.cuh
+@@ -379,7 +379,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
+   config.M = config.rshape.Size();
+ 
+   bool multiOp = false;
+-  if (lhs != NULL) {
++  if (lhs != nullptr) {
+     CHECK_NOTNULL(rhs);
+     diff(small.get<ndim>(), lhs->get<ndim>(), &config.lhs_shape,
+       &config.lhs_stride);
+@@ -618,13 +618,13 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+   if (req == kNullOp) return;
+   cudaStream_t stream = Stream<gpu>::GetStream(s);
+   ReduceImplConfig<ndim> config =
+-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
++    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+   if (safe_acc) {
+     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
+       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
+       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
+         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
+-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
++        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
+         ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
+           stream, small, req, big, workspace, config);
+       });
+@@ -640,7 +640,7 @@ void ReduceBool(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+   if (req == kNullOp) return;
+   cudaStream_t stream = Stream<gpu>::GetStream(s);
+   ReduceImplConfig<ndim> config =
+-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
++    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+   ReduceImpl<Reducer, ndim, bool, DType, bool, OP>(stream, small, req, big, workspace, config);
+ }
+ 
+@@ -663,7 +663,7 @@ template<int ndim, typename DType>
+ size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                            const mxnet::TShape& big) {
+   if (req == kNullOp) return 0;
+-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
++  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, nullptr, nullptr);
+   return config.workspace_size;
+ }
+ 
+diff --git a/src/operator/tensor/cast_storage-inl.cuh b/src/operator/tensor/cast_storage-inl.cuh
+index 4c5d0d857..b1d23d1f4 100644
+--- a/src/operator/tensor/cast_storage-inl.cuh
++++ b/src/operator/tensor/cast_storage-inl.cuh
+@@ -93,8 +93,8 @@ void CastStorageDnsRspGPUImpl_(const OpContext& ctx,
+     LOG(FATAL) << "CastStorageDnsRspImpl GPU kernels expect warpSize=32";
+   }
+   // Determine temporary device storage requirements
+-  dim_t *row_flg = NULL;
+-  void *d_temp_storage = NULL;
++  dim_t *row_flg = nullptr;
++  void *d_temp_storage = nullptr;
+   size_t temp_storage_bytes = 0;
+   cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                 temp_storage_bytes,
+@@ -531,7 +531,7 @@ inline void CastStorageDnsCsrImpl(const OpContext& ctx,
+         }
+ 
+         // Determine temporary device storage requirements
+-        void *d_temp_storage = NULL;
++        void *d_temp_storage = nullptr;
+         size_t temp_storage_bytes = 0;
+         cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                       temp_storage_bytes,
+diff --git a/src/operator/tensor/dot-inl.cuh b/src/operator/tensor/dot-inl.cuh
+index b8244d3c4..50b8164ca 100644
+--- a/src/operator/tensor/dot-inl.cuh
++++ b/src/operator/tensor/dot-inl.cuh
+@@ -649,7 +649,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
+           size_t *null_ptr = nullptr;
+           size_t *null_dptr = nullptr;
+           cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
+-          cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
++          cub::DeviceSelect::Unique(nullptr, unique_temp_bytes, null_dptr, null_dptr,
+                                     null_ptr, nnz, stream);
+           // the temp storage for sort and unique
+           size_t original_idx_bytes = nnz * sizeof(IType);
+@@ -791,8 +791,8 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
+             // - mark non-zero columns of csr matrix in row_flg
+             // - compute inclusive prefix sum over marked array
+             // - copy last value (nnr_out) from device to host
+-            dim_t* row_flg_out = NULL;
+-            void* d_temp_storage = NULL;
++            dim_t* row_flg_out = nullptr;
++            void* d_temp_storage = nullptr;
+             size_t temp_storage_bytes = 0;
+             cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                           temp_storage_bytes,
+diff --git a/src/operator/tensor/elemwise_binary_op_basic.cu b/src/operator/tensor/elemwise_binary_op_basic.cu
+index e39f7e92c..16d7fc1ad 100644
+--- a/src/operator/tensor/elemwise_binary_op_basic.cu
++++ b/src/operator/tensor/elemwise_binary_op_basic.cu
+@@ -89,8 +89,8 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<gpu> *s,
+         const TBlob& lhs_indices = lhs.aux_data(kIdx);
+         const TBlob& rhs_indices = rhs.aux_data(kIdx);
+         size_t common_row_table_bytes = num_rows * sizeof(IType);
+-        IType* common_row_table = NULL;
+-        void* temp_storage_ptr = NULL;
++        IType* common_row_table = nullptr;
++        void* temp_storage_ptr = nullptr;
+         size_t temp_storage_bytes = 0;
+         cub::DeviceScan::InclusiveSum(temp_storage_ptr,
+                                       temp_storage_bytes,
+diff --git a/src/operator/tensor/indexing_op-inl.cuh b/src/operator/tensor/indexing_op-inl.cuh
+index 5c5236363..cc0694bf1 100644
+--- a/src/operator/tensor/indexing_op-inl.cuh
++++ b/src/operator/tensor/indexing_op-inl.cuh
+@@ -43,10 +43,10 @@ const int kWarpSize = 32;
+ 
+ template<int SZ, typename DType, typename IdxType>
+ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
+-                                           // If idx_start == NULL, then in-kernel edge
++                                           // If idx_start == nullptr, then in-kernel edge
+                                            // detection is used
+                                            const IdxType *idx_start,
+-                                           // idx_start_size_ptr ignored if idx_start == NULL
++                                           // idx_start_size_ptr ignored if idx_start == nullptr
+                                            const int* idx_start_size_ptr,
+                                            const IdxType *sorted, const IdxType *index,
+                                            const DType *src,
+@@ -55,14 +55,14 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
+   extern __shared__ char sh_grad_weight_char[];
+   DType* sh_grad_weight = (DType*)sh_grad_weight_char;
+ 
+-  int iidx_end = (idx_start == NULL) ? ymax : *idx_start_size_ptr;
++  int iidx_end = (idx_start == nullptr) ? ymax : *idx_start_size_ptr;
+ 
+   for (int iidx = blockIdx.y;iidx < iidx_end;iidx += gridDim.y) {
+ 
+     // Thread block sums up elements in the range [idx_begin, idx_end-1]
+     int idx_begin, idx_end;
+     int sorted_value;
+-    if (idx_start == NULL) {
++    if (idx_start == nullptr) {
+       idx_begin = iidx;
+       sorted_value = static_cast<int>(sorted[idx_begin]);
+       if (idx_begin > 0 && sorted_value == static_cast<int>(sorted[idx_begin - 1])) continue;
+@@ -191,10 +191,10 @@ inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
+ AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
+   size_t encode_bytes = 0;
+   cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
+-    (NULL, encode_bytes, NULL, NULL, NULL, NULL, num_keys);
++    (nullptr, encode_bytes, nullptr, nullptr, nullptr, nullptr, num_keys);
+   size_t exclusivesum_bytes = 0;
+-  cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>(NULL, exclusivesum_bytes,
+-    NULL, NULL, num_keys);
++  cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>(nullptr, exclusivesum_bytes,
++    nullptr, nullptr, num_keys);
+   size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
+   size_t unique_bytes = num_keys*sizeof(IndexType);
+   size_t counts_bytes = num_keys*sizeof(IndexType);
+@@ -274,16 +274,16 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
+                                   const mshadow::Tensor<gpu, 1, IndexType>& sorted,
+                                   const mshadow::Tensor<gpu, 1, IndexType>& index,
+                                   const mshadow::Tensor<gpu, 2, DType> &src,
+-                                  mshadow::Tensor<gpu, 1, char>* workspace = NULL) {
++                                  mshadow::Tensor<gpu, 1, char>* workspace = nullptr) {
+   CHECK_EQ(dst.CheckContiguous(), true);
+   CHECK_EQ(sorted.CheckContiguous(), true);
+   CHECK_EQ(index.CheckContiguous(), true);
+   CHECK_EQ(src.CheckContiguous(), true);
+   // const int kWarpBits = kMemUnitBits;
+   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
+-  IndexType* sum_counts_ptr = NULL;
+-  int* num_runs_ptr = NULL;
+-  if (dst.size(0)*4 < src.size(0) && workspace != NULL) {
++  IndexType* sum_counts_ptr = nullptr;
++  int* num_runs_ptr = nullptr;
++  if (dst.size(0)*4 < src.size(0) && workspace != nullptr) {
+     // Workspace given and potentially loops at least 4 times, use CUB to create sum_counts
+     CHECK_EQ(workspace->CheckContiguous(), true);
+     // workspace = [unique_out, counts_out, temporary_storage]
+@@ -293,10 +293,10 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
+ 
+     size_t encode_bytes = 0;
+     cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
+-      (NULL, encode_bytes, NULL, NULL, NULL, NULL, sorted.size(0), stream);
++      (nullptr, encode_bytes, nullptr, nullptr, nullptr, nullptr, sorted.size(0), stream);
+     size_t exclusivesum_bytes = 0;
+     cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
+-      (NULL, exclusivesum_bytes, NULL, NULL, sorted.size(0), stream);
++      (nullptr, exclusivesum_bytes, nullptr, nullptr, sorted.size(0), stream);
+     size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
+ 
+     // Check that we have enough storage
+diff --git a/src/operator/tensor/indexing_op.cu b/src/operator/tensor/indexing_op.cu
+index 2bace3678..a58039c82 100644
+--- a/src/operator/tensor/indexing_op.cu
++++ b/src/operator/tensor/indexing_op.cu
+@@ -238,10 +238,10 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
+   const dim_t row_length = output.shape()[1];
+   const dim_t data_size = static_cast<dim_t>(data.shape_.Size());
+   // temp resource declarations
+-  dim_t* lookup_table = NULL;
+-  void* temp_storage = NULL;
+-  dim_t* sorted_data = NULL;
+-  dim_t* original_idx = NULL;
++  dim_t* lookup_table = nullptr;
++  void* temp_storage = nullptr;
++  dim_t* sorted_data = nullptr;
++  dim_t* original_idx = nullptr;
+   // calculate number of bytes for temp resources
+   size_t lookup_table_bytes = num_rows * sizeof(dim_t);
+   size_t sorted_data_storage_bytes = data_size * sizeof(dim_t);
+@@ -252,7 +252,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
+   IType* data_ptr = data.dptr<IType>();
+   size_t *null_ptr = nullptr;
+   // unique operations will be applied on sorted data
+-  cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, sorted_data, sorted_data,
++  cub::DeviceSelect::Unique(nullptr, unique_workspace_bytes, sorted_data, sorted_data,
+     null_ptr, data_size, Stream<gpu>::GetStream(s));
+   // One more space reserved for unique count
+   size_t temp_workspace_bytes = std::max(unique_workspace_bytes,
+@@ -386,8 +386,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
+   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
+     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
+       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
+-        dim_t* prefix_sum = NULL;
+-        void* d_temp_storage = NULL;
++        dim_t* prefix_sum = nullptr;
++        void* d_temp_storage = nullptr;
+         size_t temp_storage_bytes = 0;
+         cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                       temp_storage_bytes,
+diff --git a/src/operator/tensor/indexing_op.h b/src/operator/tensor/indexing_op.h
+index 2378a7435..7b6c16a07 100644
+--- a/src/operator/tensor/indexing_op.h
++++ b/src/operator/tensor/indexing_op.h
+@@ -140,7 +140,7 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<cpu, 2, DType> dst,
+                                   const mshadow::Tensor<cpu, 1, IndexType>& sorted,
+                                   const mshadow::Tensor<cpu, 1, IndexType>& index,
+                                   const mshadow::Tensor<cpu, 2, DType> &src,
+-                                  mshadow::Tensor<cpu, 1, char>* workspace = NULL) {
++                                  mshadow::Tensor<cpu, 1, char>* workspace = nullptr) {
+   for (index_t y = 0; y < sorted.size(0); ++y) {
+     dst[sorted[y]] += src[index[y]];
+   }
+diff --git a/src/operator/tensor/matrix_op.cu b/src/operator/tensor/matrix_op.cu
+index 239e42c14..17076933a 100644
+--- a/src/operator/tensor/matrix_op.cu
++++ b/src/operator/tensor/matrix_op.cu
+@@ -94,7 +94,7 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
+                                                 in_idx,
+                                                 in_indptr + begin_row,
+                                                 begin_col, end_col);
+-        void* d_temp_storage = NULL;
++        void* d_temp_storage = nullptr;
+         size_t temp_storage_bytes = 0;
+         cub::DeviceScan::InclusiveSum(d_temp_storage,
+                                       temp_storage_bytes,
+diff --git a/src/operator/tensor/sort_op-inl.cuh b/src/operator/tensor/sort_op-inl.cuh
+index c157de99a..a4754ef4a 100644
+--- a/src/operator/tensor/sort_op-inl.cuh
++++ b/src/operator/tensor/sort_op-inl.cuh
+@@ -78,8 +78,8 @@ template <typename KDType, typename VDType>
+ inline typename std::enable_if<!std::is_same<KDType, mshadow::half::half_t>::value, size_t>::type
+ SortPairsWorkspaceSize(const size_t num_keys) {
+   size_t sortpairs_bytes = 0;
+-  cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
+-    NULL, NULL, NULL, NULL, num_keys);
++  cub::DeviceRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
++    nullptr, nullptr, nullptr, nullptr, num_keys);
+   return sortpairs_bytes;
+ }
+ 
+@@ -87,8 +87,8 @@ template <typename KDType, typename VDType>
+ inline typename std::enable_if<std::is_same<KDType, mshadow::half::half_t>::value, size_t>::type
+ SortPairsWorkspaceSize(const size_t num_keys) {
+   size_t sortpairs_bytes = 0;
+-  cub::DeviceRadixSort::SortPairs<__half, VDType>(NULL, sortpairs_bytes,
+-    NULL, NULL, NULL, NULL, num_keys);
++  cub::DeviceRadixSort::SortPairs<__half, VDType>(nullptr, sortpairs_bytes,
++    nullptr, nullptr, nullptr, nullptr, num_keys);
+   return sortpairs_bytes;
+ }
+ #endif
+@@ -128,7 +128,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
+ #if CUDA_VERSION >= 7000
+   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
+ #ifndef SORT_WITH_THRUST
+-  if (workspace != NULL) {
++  if (workspace != nullptr) {
+     // Workspace given, sort using CUB
+     CHECK_EQ(workspace->CheckContiguous(), true);
+     // workspace = [keys_out, values_out, temporary_storage]
+@@ -138,12 +138,12 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
+     // Get the size of internal storage (for checking purposes only)
+     size_t sortpairs_bytes = 0;
+     if (is_ascend) {
+-      cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
+-          NULL, NULL, NULL, NULL,
++      cub::DeviceRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
++          nullptr, nullptr, nullptr, nullptr,
+           keys.size(0), begin_bit, end_bit, stream);
+     } else {
+-      cub::DeviceRadixSort::SortPairsDescending<KDType, VDType>(NULL, sortpairs_bytes,
+-          NULL, NULL, NULL, NULL,
++      cub::DeviceRadixSort::SortPairsDescending<KDType, VDType>(nullptr, sortpairs_bytes,
++          nullptr, nullptr, nullptr, nullptr,
+           keys.size(0), begin_bit, end_bit, stream);
+     }
+ 
+diff --git a/src/operator/tensor/sort_op.h b/src/operator/tensor/sort_op.h
+index 11aea9db0..9d5ad84ef 100644
+--- a/src/operator/tensor/sort_op.h
++++ b/src/operator/tensor/sort_op.h
+@@ -56,7 +56,7 @@ namespace op {
+  */
+ template<typename KDType, typename VDType>
+ inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu, 1, VDType> values,
+-                      bool is_ascend = true, mshadow::Tensor<cpu, 1, char>* workspace = NULL,
++                      bool is_ascend = true, mshadow::Tensor<cpu, 1, char>* workspace = nullptr,
+                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                       mshadow::Tensor<cpu, 1, KDType>* sorted_keys = nullptr,
+                       mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr) {
+@@ -126,7 +126,7 @@ SortByKeyWorkspaceSize(const size_t num_keys,
+  */
+ template<typename KDType, typename VDType>
+ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
+-                      bool is_ascend = true, mshadow::Tensor<gpu, 1, char>* workspace = NULL,
++                      bool is_ascend = true, mshadow::Tensor<gpu, 1, char>* workspace = nullptr,
+                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                       mshadow::Tensor<gpu, 1, KDType>* sorted_keys = nullptr,
+                       mshadow::Tensor<gpu, 1, VDType>* sorted_values = nullptr);
+diff --git a/src/operator/tvmop/op_module.cc b/src/operator/tvmop/op_module.cc
+index cdd7321c4..c75e5a990 100644
+--- a/src/operator/tvmop/op_module.cc
++++ b/src/operator/tvmop/op_module.cc
+@@ -141,7 +141,7 @@ void TVMOpModule::CallEx(const std::string &func_name,
+ 
+ const TVMOpConfig& GetOpConfig(const std::string& name) {
+   const TVMOpConfig* ret = ::dmlc::Registry<TVMOpConfig>::Get()->Find(name);
+-  CHECK(ret != NULL)
++  CHECK(ret != nullptr)
+     << "op " << name << "does not exist.";
+   return *ret;
+ }
+diff --git a/src/storage/cpu_shared_storage_manager.h b/src/storage/cpu_shared_storage_manager.h
+index 9c57a4b61..b30150320 100644
+--- a/src/storage/cpu_shared_storage_manager.h
++++ b/src/storage/cpu_shared_storage_manager.h
+@@ -138,7 +138,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
+       handle->shared_id = dis(rand_gen_);
+       filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
+       map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
+-                                     NULL, PAGE_READWRITE, 0, size, filename.c_str());
++                                     nullptr, PAGE_READWRITE, 0, size, filename.c_str());
+       if ((error = GetLastError()) == ERROR_SUCCESS) {
+         break;;
+       }
+@@ -189,7 +189,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
+ 
+   if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
+ 
+-  ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
++  ptr = mmap(nullptr, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
+   CHECK_NE(ptr, MAP_FAILED)
+       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
+ #ifdef __linux__
+-- 
+2.21.0
+

@@ -379,7 +379,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
   config.M = config.rshape.Size();
 
   bool multiOp = false;
-  if (lhs != NULL) {
+  if (lhs != nullptr) {
     CHECK_NOTNULL(rhs);
     diff(small.get<ndim>(), lhs->get<ndim>(), &config.lhs_shape,
       &config.lhs_stride);
@@ -618,13 +618,13 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
   if (safe_acc) {
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
+        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
         ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
           stream, small, req, big, workspace, config);
       });
@@ -640,7 +640,7 @@ void ReduceBool(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
   ReduceImpl<Reducer, ndim, bool, DType, bool, OP>(stream, small, req, big, workspace, config);
 }
 
@@ -663,7 +663,7 @@ template<int ndim, typename DType>
 size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
                            const mxnet::TShape& big) {
   if (req == kNullOp) return 0;
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
+  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, nullptr, nullptr);
   return config.workspace_size;
 }
 

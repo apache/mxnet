@@ -78,8 +78,8 @@ template <typename KDType, typename VDType>
 inline typename std::enable_if<!std::is_same<KDType, mshadow::half::half_t>::value, size_t>::type
 SortPairsWorkspaceSize(const size_t num_keys) {
   size_t sortpairs_bytes = 0;
-  cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
-    NULL, NULL, NULL, NULL, num_keys);
+  cub::DeviceRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
+    nullptr, nullptr, nullptr, nullptr, num_keys);
   return sortpairs_bytes;
 }
 
@@ -87,8 +87,8 @@ template <typename KDType, typename VDType>
 inline typename std::enable_if<std::is_same<KDType, mshadow::half::half_t>::value, size_t>::type
 SortPairsWorkspaceSize(const size_t num_keys) {
   size_t sortpairs_bytes = 0;
-  cub::DeviceRadixSort::SortPairs<__half, VDType>(NULL, sortpairs_bytes,
-    NULL, NULL, NULL, NULL, num_keys);
+  cub::DeviceRadixSort::SortPairs<__half, VDType>(nullptr, sortpairs_bytes,
+    nullptr, nullptr, nullptr, nullptr, num_keys);
   return sortpairs_bytes;
 }
 #endif
@@ -128,7 +128,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
 #if CUDA_VERSION >= 7000
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys.stream_);
 #ifndef SORT_WITH_THRUST
-  if (workspace != NULL) {
+  if (workspace != nullptr) {
     // Workspace given, sort using CUB
     CHECK_EQ(workspace->CheckContiguous(), true);
     // workspace = [keys_out, values_out, temporary_storage]
@@ -138,12 +138,12 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType> keys,
     // Get the size of internal storage (for checking purposes only)
     size_t sortpairs_bytes = 0;
     if (is_ascend) {
-      cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
-          NULL, NULL, NULL, NULL,
+      cub::DeviceRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
+          nullptr, nullptr, nullptr, nullptr,
           keys.size(0), begin_bit, end_bit, stream);
     } else {
-      cub::DeviceRadixSort::SortPairsDescending<KDType, VDType>(NULL, sortpairs_bytes,
-          NULL, NULL, NULL, NULL,
+      cub::DeviceRadixSort::SortPairsDescending<KDType, VDType>(nullptr, sortpairs_bytes,
+          nullptr, nullptr, nullptr, nullptr,
           keys.size(0), begin_bit, end_bit, stream);
     }
 
