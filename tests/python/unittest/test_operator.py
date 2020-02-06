@@ -7133,6 +7133,36 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
+@with_seed()
+def test_dropout():
+    info = np.iinfo(np.int32)
+    seed1 = np.random.randint(info.min, info.max)
+    seed2 = np.random.randint(info.min, info.max)
+    data = mx.nd.ones((100, 100), ctx=default_context())
+    dropout = mx.gluon.nn.Dropout(0.5)
+    mx.random.seed(seed1)
+    with mx.autograd.record():
+        result1 = dropout(data)
+        result2 = dropout(result1)
+
+    mx.random.seed(seed2)
+    with mx.autograd.record():
+        result3 = dropout(data)
+        result4 = dropout(result3)
+
+    mx.random.seed(seed1)
+    with mx.autograd.record():
+        result5 = dropout(data)
+        result6 = dropout(result5)
+
+    assert_almost_equal(result1.asnumpy(), result5.asnumpy())
+    assert_almost_equal(result2.asnumpy(), result6.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result1.asnumpy(), result2.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result1.asnumpy(), result3.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result2.asnumpy(), result4.asnumpy())
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
 @with_seed()
