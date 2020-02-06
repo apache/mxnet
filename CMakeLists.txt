@@ -129,6 +129,7 @@ endif()
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 # disable stack trace in exception by default.
 add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
+add_definitions(-DDMLC_LOG_FATAL_THROW=1)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -312,6 +313,10 @@ if(USE_MKLDNN)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set(INSTALL_MKLDNN ON)
+endif()
+
+if(USE_CPP_PACKAGE)
+    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -685,10 +690,6 @@ if(MSVC)
 
 endif()
 
-add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
-add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
-target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
-target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS "${CUDA_ARCH_FLAGS_SPACES}")
@@ -701,15 +702,8 @@ if(UNIX)
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
   target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
-  target_compile_options(sample_lib PUBLIC -shared)
-  target_compile_options(subgraph_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 elseif(MSVC)
-  target_compile_options(sample_lib PUBLIC /LD)
-  target_compile_options(subgraph_lib PUBLIC /LD)
-  set_target_properties(sample_lib PROPERTIES PREFIX "lib")
-  set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
-
   if(USE_CUDA)
     if(MSVC)
       if(USE_SPLIT_ARCH_DLL)
@@ -760,6 +754,31 @@ elseif(MSVC)
     add_library(mxnet SHARED ${SOURCE})
   endif()
 
+endif()
+
+add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
+add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
+target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+if (USE_CUDA)
+  add_library(customop_gpu_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cu)
+  target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+endif()
+if(UNIX)
+  target_compile_options(customop_lib PUBLIC -shared)
+  target_compile_options(subgraph_lib PUBLIC -shared)
+  if (USE_CUDA)
+    target_compile_options(customop_gpu_lib PUBLIC -shared)
+  endif()
+elseif(MSVC)
+  target_compile_options(customop_lib PUBLIC /LD)
+  target_compile_options(subgraph_lib PUBLIC /LD)
+  set_target_properties(customop_lib PROPERTIES PREFIX "lib")
+  set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
+  if (USE_CUDA)
+    target_compile_options(customop_gpu_lib PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fPIC>")
+    set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
+  endif()
 endif()
 
 if(USE_DIST_KVSTORE)
@@ -839,7 +858,6 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
-add_subdirectory(tests)
 
 include(GNUInstallDirs)
 install(TARGETS ${MXNET_INSTALL_TARGETS}
@@ -901,6 +919,7 @@ endif()
 if(BUILD_CPP_EXAMPLES)
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
+add_subdirectory(tests)
 
 # ---[ Linter target
 if(MSVC)
@@ -913,7 +932,6 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
-  add_cython_modules(2) # Build cython module for python2 if python2 is found
   add_cython_modules(3) # Build cython module for python3 if python3 is found
   if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
     message(FATAL_ERROR "No python interpreter found to build cython modules")

@@ -44,7 +44,7 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
     """
     for _ in range(runs):
         with mx.autograd.record():
-            if not isinstance(args[0],nd.NDArray):
+            if not isinstance(args[0], nd.NDArray):
                 res = op(**kwargs)
             else:
                 res = op(*args, **kwargs)
@@ -75,7 +75,7 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
     any results from NDArray operation execution
     """
     for _ in range(runs):
-        if not isinstance(args[0],nd.NDArray):
+        if not isinstance(args[0], nd.NDArray):
             res = op(**kwargs)
         else:
             res = op(*args, **kwargs)
@@ -116,8 +116,8 @@ def get_mx_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
     elif isinstance(in_tensor, np.ndarray):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
-    elif isinstance(in_tensor, mx.ndarray):
-        tensor = in_tensor.as_in_context(ctx=ctx).astype(dtype=dtype)
+    elif isinstance(in_tensor, nd.NDArray):
+        tensor = in_tensor.as_in_context(ctx).astype(dtype=dtype)
     else:
         raise ValueError("Invalid input type for creating input tensor. Input can be tuple() of shape or Numpy Array or"
                          " MXNet NDArray. Given - ", in_tensor)

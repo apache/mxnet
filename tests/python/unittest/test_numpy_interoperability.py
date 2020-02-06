@@ -580,6 +580,30 @@ def _add_workload_linalg_pinv():
             OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), np.array(rcond_np, dtype=dtype), hermitian)
 
 
+def _add_workload_linalg_eigvals():
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eig():
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eigvalsh():
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eigh():
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
 def _add_workload_linalg_slogdet():
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1229,6 +1253,18 @@ def _add_workload_bitwise_or():
         OpArgMngr.add_workload('bitwise_or', ones, ones)
 
 
+def _add_workload_bitwise_and():
+    OpArgMngr.add_workload('bitwise_and', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_and', zeros, zeros)
+        OpArgMngr.add_workload('bitwise_and', ones, zeros)
+        OpArgMngr.add_workload('bitwise_and', zeros, ones)
+        OpArgMngr.add_workload('bitwise_and', ones, ones)
+
+
 def _add_workload_bitwise_xor():
     OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=np.bool),
                            np.array([False, True, False, True], dtype=np.bool))
@@ -1800,6 +1836,10 @@ def _prepare_workloads():
     _add_workload_linalg_tensorinv()
     _add_workload_linalg_tensorsolve()
     _add_workload_linalg_pinv()
+    _add_workload_linalg_eigvals()
+    _add_workload_linalg_eig()
+    _add_workload_linalg_eigvalsh()
+    _add_workload_linalg_eigh()
     _add_workload_linalg_slogdet()
     _add_workload_linalg_cond()
     _add_workload_trace()
@@ -1816,6 +1856,7 @@ def _prepare_workloads():
     _add_workload_inner()
     _add_workload_hypot()
     _add_workload_lcm()
+    _add_workload_bitwise_and()
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
     _add_workload_ldexp()

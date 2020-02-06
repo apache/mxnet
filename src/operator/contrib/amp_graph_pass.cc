@@ -31,7 +31,7 @@ namespace mxnet {
 namespace op {
 
 using nnvm::Node;
-using nnvm::NodePtr;
+using nnvm::ObjectPtr;
 using nnvm::Graph;
 
 
@@ -39,7 +39,7 @@ using nnvm::Graph;
  * \brief Remove amp_cast and amp_multicast and replug the fp32 weights
  */
 Graph RemoveAmpCast(Graph&& g) {
-  DFSVisit(g.outputs, [](const NodePtr& n) {
+  DFSVisit(g.outputs, [](const ObjectPtr& n) {
     for (size_t i = 0; i < n->inputs.size(); ++i) {
       auto e = n->inputs[i];
       if (e.node->op() == Op::Get("amp_cast")) {

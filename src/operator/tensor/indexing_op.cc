@@ -614,7 +614,7 @@ The storage type of weight can be either row_sparse or default.
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
@@ -690,7 +690,7 @@ Examples::
 .set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
@@ -793,7 +793,7 @@ The storage type of ``take`` output depends upon the input storage type:
 .set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TakeOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_take", n, ograds,
                                {n->inputs[1]}, n->attrs.dict);
   })
@@ -938,7 +938,7 @@ Examples::
   })
 .set_attr<FCompute>("FCompute<cpu>", GatherNDForwardCPU)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
     p->attrs.op = nnvm::Op::Get("_backward_gather_nd");
     p->attrs.name = n->attrs.name + "_backward";
@@ -1013,7 +1013,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
 .set_attr<FCompute>("FCompute<cpu>", ScatterNDForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
     p->attrs.op = nnvm::Op::Get("gather_nd");
     p->attrs.name = n->attrs.name + "_backward";
@@ -1076,7 +1076,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
 .set_attr<FCompute>("FCompute<cpu>", GatherNDBackward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
     p->attrs.op = nnvm::Op::Get("gather_nd");
     p->attrs.name = n->attrs.name + "_backward";

@@ -127,7 +127,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 
 NNVM_REGISTER_OP(elemwise_add)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_contrib_quantized_elemwise_add");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;

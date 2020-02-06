@@ -46,14 +46,24 @@ bool NumpyReduceAxisShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
+bool ArgMinMaxType(const nnvm::NodeAttrs& attrs,
+                   std::vector<int> *in_attrs,
+                   std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+  CHECK_NE(in_attrs->at(0), -1);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
+  return out_attrs->at(0) != -1;
+}
+
 NNVM_REGISTER_OP(_npi_argmax)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReduceAxisParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxisShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ArgMinMaxType)
 .add_argument("data", "NDArray-or-Symbol", "The input")
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::maximum>)
+.set_attr<FCompute>("FCompute<cpu>", NumpySearchAxisCompute<cpu, mshadow::red::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_arguments(ReduceAxisParam::__FIELDS__());
 
@@ -62,9 +72,9 @@ NNVM_REGISTER_OP(_npi_argmin)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<ReduceAxisParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyReduceAxisShape)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ArgMinMaxType)
 .add_argument("data", "NDArray-or-Symbol", "The input")
-.set_attr<FCompute>("FCompute<cpu>", SearchAxisCompute<cpu, mshadow::red::minimum>)
+.set_attr<FCompute>("FCompute<cpu>", NumpySearchAxisCompute<cpu, mshadow::red::minimum>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_arguments(ReduceAxisParam::__FIELDS__());
 
