@@ -32,5 +32,4 @@ apt-get -y install time
 apt-get install -y subversion maven -y #>/dev/null
 
 # Packages needed for the Straight Dope Nightly tests.
-pip2 install pandas scikit-image prompt_toolkit
 pip3 install pandas scikit-image prompt_toolkit

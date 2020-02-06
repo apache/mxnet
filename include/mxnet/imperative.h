@@ -62,18 +62,18 @@ class Imperative {
     AGInfo() :
       grad_req(kNullOp), fresh_out_grad(false) {}
 
-    static void Clear(const nnvm::NodePtr& node) {
+    static void Clear(const nnvm::ObjectPtr& node) {
       if (node == nullptr || node->info.empty()) return;
       AGInfo& info = Get(node);
       if (info.grad_req != kNullOp) return;
       node->info.clear();
     }
 
-    static AGInfo& Get(const nnvm::NodePtr& node) {
+    static AGInfo& Get(const nnvm::ObjectPtr& node) {
       return dmlc::get<AGInfo>(node->info);
     }
 
-    static AGInfo& Create(const nnvm::NodePtr& node) {
+    static AGInfo& Create(const nnvm::ObjectPtr& node) {
       node->info.construct<AGInfo>();
       return Get(node);
     }
@@ -82,7 +82,7 @@ class Imperative {
       return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
     }
 
-    static bool IsVariable(const nnvm::NodePtr& node) {
+    static bool IsVariable(const nnvm::ObjectPtr& node) {
       AGInfo& info = Get(node);
       return info.grad_req != kNullOp && info.outputs.size() == 1
              && info.out_grads.size() == 1;
@@ -196,7 +196,7 @@ class Imperative {
   }
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
-      const nnvm::NodePtr& node,
+      const nnvm::ObjectPtr& node,
       uint32_t num_inputs, uint32_t num_outputs,
       std::vector<bool> *p_save_inputs,
       std::vector<bool> *p_save_outputs);

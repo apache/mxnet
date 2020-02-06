@@ -199,6 +199,34 @@ class KVStore {
                     int priority = 0, bool ignore_sparse = true) = 0;
 
   /*!
+   * \brief broadcast a list of key-value pairs from the store
+   * \param vkeys the list of keys to be pushed
+   * \param okeys the list of keys to be pulled. Should be the same set of keys in vkeys.
+   * \param values the list of values to be pushed
+   * \param outs the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
+   */
+  virtual void Broadcast(const std::vector<int>& vkeys,
+                         const std::vector<int>& okeys,
+                         const std::vector<NDArray>& values,
+                         const std::vector<NDArray*>& outs,
+                         int priority = 0) = 0;
+
+  /*!
+   * \brief broadcast a list of key-value pairs from the store
+   * \param vkeys the list of keys to be pushed in string format
+   * \param okeys the list of keys to be pulled in string format. Should be the same set of keys in vkeys.
+   * \param values the list of values to be pushed
+   * \param outs the list of buffers for the pulled data, they should be preallocated
+   * \param priority Priority of the action.
+   */
+  virtual void Broadcast(const std::vector<std::string>& str_vkeys,
+                         const std::vector<std::string>& str_okeys,
+                         const std::vector<NDArray>& values,
+                         const std::vector<NDArray*>& outs,
+                         int priority = 0) = 0;
+
+  /*!
    * \brief push and pull a list of key-value pairs from the store
    * \param vkeys the list of keys to be pushed
    * \param okeys the list of keys to be pulled. Should be the same set of keys in vkeys.
