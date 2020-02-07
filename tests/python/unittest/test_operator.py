@@ -7134,7 +7134,7 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 @with_seed()
-def test_dropout():
+def test_dropout_reproducibility():
     info = np.iinfo(np.int32)
     seed1 = np.random.randint(info.min, info.max)
     seed2 = np.random.randint(info.min, info.max)
