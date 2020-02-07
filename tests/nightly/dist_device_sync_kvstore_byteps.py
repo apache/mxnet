@@ -56,7 +56,7 @@ my_num_workers = kv.num_workers
 has_gpu = mx.context.num_gpus() > 0
 
 def current_context(device=False):
-    if has_gpu and device:
+    if has_gpu and device==True:
         return mx.gpu(kv.local_rank)
     else:
         return mx.current_context()
@@ -87,8 +87,7 @@ def test_pushpull():
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
         logger.debug("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
-        # ctx = mx.gpu(0) if device else mx.cpu(0)
-        ctx = current_context(device)
+        ctx = current_context(device=device)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
             expected = i
@@ -96,8 +95,8 @@ def test_broadcast():
             kv.broadcast(cur_keys[i], tmpNDarray, out=val[i])
             check_diff_to_scalar(val[i], expected, my_rank)
         logger.debug("check_broadcast passed: ", val)
-    check_broadcast(kv, init_test_keys, shape)
-    check_broadcast(kv, init_test_keys_big, big_shape)
+    #check_broadcast(kv, init_test_keys, shape) #Byteps doesn't support pure CPU training
+    #check_broadcast(kv, init_test_keys_big, big_shape) #Byteps doesn't support pure CPU training
     check_broadcast(kv, init_test_keys_device, shape, device=True)
     check_broadcast(kv, init_test_keys_device_big, big_shape, device=True)
     logger.debug('worker ' + str(my_rank) + ' is initialized')

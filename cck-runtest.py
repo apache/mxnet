@@ -14,6 +14,6 @@
 # export BYTEPS_TRACE_START_STEP=1
 # export BYTEPS_TRACE_DIR="/home/ubuntu/byteps_traces"
 
-export NVIDIA_VISIBLE_DEVICES=0
+export NVIDIA_VISIBLE_DEVICES=0,1
 python3 ./tools/launch.py -n 1 -s 1 -H ./hostfile --byteps-launch \
     "python3 ./tests/nightly/dist_device_sync_kvstore_byteps.py"
