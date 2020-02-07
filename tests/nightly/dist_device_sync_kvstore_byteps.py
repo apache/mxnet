@@ -53,27 +53,33 @@ time.sleep(1)
 my_rank = kv.rank
 my_num_workers = kv.num_workers
 
+has_gpu = mx.context.num_gpus() > 0
+
+def current_context(device=False):
+    if has_gpu and device:
+        return mx.gpu(kv.local_rank)
+    else:
+        return mx.current_context()
+
 def test_pushpull():
     num_gpus = 2
     def check_default_keys(nrepeat=3):
         # init kv dns keys
-        kv.broadcast('3', mx.nd.ones(shape, ctx=mx.gpu()), mx.nd.ones(shape, ctx=mx.gpu()))
-        kv.broadcast('99', mx.nd.ones(big_shape, ctx=mx.gpu()), mx.nd.ones(big_shape, ctx=mx.gpu()))
+        kv.broadcast('3', mx.nd.ones(shape, ctx=current_context(device=True)), mx.nd.ones(shape, ctx=current_context(device=True)))
+        kv.broadcast('99', mx.nd.ones(big_shape, ctx=current_context(device=True)), mx.nd.ones(big_shape, ctx=current_context(device=True)))
         for i in range(nrepeat):
             scale = my_rank + 1
             num = (my_num_workers + 1) * my_num_workers * num_gpus / 2
 
-            arrs = [mx.nd.ones(shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
+            arr = mx.nd.ones(shape, ctx=current_context(device=True)) * scale
             # inplace
-            kv.pushpull('3', arrs)
-            for arr in arrs:
-                check_diff_to_scalar(arr, num)
+            kv.pushpull('3', arr)
+            check_diff_to_scalar(arr, num)
 
-            big_arrs = [mx.nd.ones(big_shape, ctx=mx.gpu(j)) * scale for j in range(num_gpus)]
+            big_arr = mx.nd.ones(big_shape, ctx=current_context(device=True)) * scale
             # inplace
-            kv.pushpull('99', big_arrs)
-            for big_arr in big_arrs:
-                check_diff_to_scalar(big_arr, num)
+            kv.pushpull('99', big_arr)
+            check_diff_to_scalar(big_arr, num)
 
     check_default_keys(nrepeat=3)
     logger.debug('worker ' + str(my_rank) + ' is done')
@@ -81,12 +87,12 @@ def test_pushpull():
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
         logger.debug("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
-        ctx = mx.gpu(0) if device else mx.cpu(0)
+        # ctx = mx.gpu(0) if device else mx.cpu(0)
+        ctx = current_context(device)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
             expected = i
             tmpNDarray = [mx.nd.ones(cur_shape, ctx) * i]
-            # logger.debug("tmpNDarray: ",len(tmpNDarray))
             kv.broadcast(cur_keys[i], tmpNDarray, out=val[i])
             check_diff_to_scalar(val[i], expected, my_rank)
         logger.debug("check_broadcast passed: ", val)
