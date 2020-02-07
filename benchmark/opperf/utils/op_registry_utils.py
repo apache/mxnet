@@ -326,7 +326,7 @@ def get_all_nn_activation_operators():
     # Filter for NN Activation operators
     nn_activation_mx_operators = {}
     for op_name, _ in mx_operators.items():
-         if op_name in nn_activation_ops and op_name not in unique_ops:
+         if op_name in nn_activation_ops:
              nn_activation_mx_operators[op_name] = mx_operators[op_name]
     return nn_activation_mx_operators
 
