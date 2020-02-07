@@ -290,7 +290,7 @@ Also, `in_data` and `out_data` are pointers to the tensor data allocated on the 
 At this point all the attribute functions for each operator (`parseAttrs`, `inferShape`, etc.) run on the CPU, including the `forwardGPU` function. The only part that will actually run on the GPU is the launched CUDA kernel function.
 
 ```c++
-    __global__ void my_op_forward(float *out, float *in) {
+    __global__ void my_op_forward(float* out, float* in) {
         // code your CUDA kernel here
     }
 ```
