@@ -32,6 +32,11 @@ DEFAULT_ARGS = [(1024, 1024)]
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
 
+# For Binary miscellaneous operators like choose_element0_index
+# argument data must be indexed via an NDArray.
+# NOTE: Data used is DEFAULT_DATA
+DEFAULT_INDEX = [(1, 1024), (1, 1), (1, 100)]
+
 # For Binary broadcast operators like - broadcast_add/sub/mod/logical_and etc..
 DEFAULT_LHS = [(1024, 1024), (10000, 10), (10000, 1)]
 DEFAULT_RHS = [(1024, 1024), (10000, 10), (10000, 1)]
@@ -58,6 +63,12 @@ DEFAULT_BETA_ND = [[1.0, 0.7]]
 DEFAULT_LAM = [[1.0, 8.5]]
 DEFAULT_K_ND = [[20, 49]]
 DEFAULT_P_ND = [[0.4, 0.77]]
+DEFAULT_GRID = [(32, 2, 256, 256)]
+DEFAULT_DATA_BILINEAR = [(32, 2, 256, 256)]
+DEFAULT_TRANSFORM_TYPE = ['warp', 'affine']
+DEFAULT_DATA_GRIDGEN = [(32, 2, 256, 256), (256, 6)]
+DEFAULT_TARGET_SHAPE = [(256, 6)]
+DEFAULT_DATA_SM = [(32, 32), (64, 64)]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
@@ -188,7 +199,14 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "data_smce": DEFAULT_DATA_SMCE,
                    "data_3d": DEFAULT_DATA_3d,
                    "label_smce": DEFAULT_LABEL_SMCE,
-                   "label": DEFAULT_LABEL}
+                   "label": DEFAULT_LABEL,
+                   "index": DEFAULT_INDEX,
+                   "grid": DEFAULT_GRID,
+                   "data_bilinearsampler": DEFAULT_DATA_BILINEAR,
+                   "transform_type": DEFAULT_TRANSFORM_TYPE,
+                   "data_gridgenerator": DEFAULT_DATA_GRIDGEN,
+                   "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE,
+                   "data_sample_multinomial": DEFAULT_DATA_SM}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -201,4 +219,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
-                          "x", "condition", "a", "index", "raveL_data", "label"]
+                          "x", "condition", "a", "index", "raveL_data", "label", "grid"]
