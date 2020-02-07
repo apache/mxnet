@@ -60,4 +60,5 @@ fi
 
 tar -xf "$DST/${LLVM_PKG}.tar.xz" -C $DST
 mv $DST/${LLVM_PKG} $DST/llvm
+cp ${TVM_PATH}/../../contrib/tvmop/space.py ${TVM_PATH}/../../python/mxnet/space.py
 echo "Downloaded and unpacked LLVM libraries to $DST"

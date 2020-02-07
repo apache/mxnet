@@ -144,7 +144,9 @@ if(MSVC)
   if(USE_F16C)
     message("F16C instruction set is not yet supported for MSVC")
   endif()
-  set(CMAKE_C_FLAGS "/MP")
+  if(NOT CMAKE_C_COMPILER MATCHES "clang-cl")
+    set(CMAKE_C_FLAGS "/MP")
+  endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
 else()
   include(CheckCXXCompilerFlag)
@@ -436,11 +438,8 @@ if(USE_OPENMP)
   endfunction()
 
   find_package(OpenMP REQUIRED)
-  # This should build on Windows, but there's some problem and I don't have a Windows box, so
-  # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
-     AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
     list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
@@ -794,7 +793,11 @@ function(BuildTVMOP)
 endfunction()
 
 if(USE_TVM_OP)
-  list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  if(MSVC)
+    list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/tvm_runtime.lib)
+  else()
+    list(APPEND mxnet_LINKER_LIBS ${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm/libtvm_runtime.so)
+  endif()
   BuildTVMOP()
   if(NOT Python3_EXECUTABLE)
     find_package(PythonInterp 3 REQUIRED)
@@ -804,17 +807,25 @@ if(USE_TVM_OP)
     endif()
   endif()
 
-  set(TVM_OP_COMPILE_OPTIONS "-o${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")
+  set(TVM_OP_COMPILE_OPTIONS "-o" "${CMAKE_CURRENT_BINARY_DIR}" "--config" "${CMAKE_CURRENT_BINARY_DIR}/tvmop.conf" "-L" "${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm")
   if(USE_CUDA)
     set(TVM_OP_COMPILE_OPTIONS "${TVM_OP_COMPILE_OPTIONS}" "--cuda-arch" "\"${CUDA_ARCH_FLAGS}\"")
   endif()
 
-  add_custom_command(TARGET mxnet POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E env
-    PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
-    LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
-    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
-  )
+  message(STATUS "Installing for python versions: ${INSTALL_PYTHON_VERSIONS}")
+  if(MSVC)
+    add_custom_command(TARGET mxnet POST_BUILD
+      COMMAND set PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python$<SEMICOLON>${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python$<SEMICOLON>${CMAKE_CURRENT_SOURCE_DIR}/contrib
+      COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
+    )
+  else()
+    add_custom_command(TARGET mxnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E env
+      PYTHONPATH="${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/python:${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/topi/python:${CMAKE_CURRENT_SOURCE_DIR}/contrib"
+      LD_LIBRARY_PATH=${CMAKE_CURRENT_BINARY_DIR}:${CMAKE_CURRENT_BINARY_DIR}/3rdparty/tvm:$ENV{LD_LIBRARY_PATH}
+      ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/contrib/tvmop/compile.py ${TVM_OP_COMPILE_OPTIONS}
+    )
+  endif()
 endif()
 
 if(USE_PLUGINS_WARPCTC)
