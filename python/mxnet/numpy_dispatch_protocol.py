@@ -171,6 +171,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'bincount',
     'empty_like',
     'nan_to_num',
+    'isnan',
+    'isinf',
 ]
 
 

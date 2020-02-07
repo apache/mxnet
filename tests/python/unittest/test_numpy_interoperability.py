@@ -1753,6 +1753,24 @@ def _add_workload_nan_to_num():
     OpArgMngr.add_workload('nan_to_num', array3, True)
 
 
+def _add_workload_isnan():
+    array1 = np.array([[-_np.nan, 0, 456, _np.inf], [-1, -_np.inf, 0, _np.nan]])
+    array2 = np.array([_np.inf/_np.inf, _np.inf, _np.nan, -574, 0, 23425, _np.nan,-5])
+    array3 = np.array(_np.nan)
+    OpArgMngr.add_workload('isnan', array1,)
+    OpArgMngr.add_workload('isnan', array2)
+    OpArgMngr.add_workload('isnan', array3)
+
+
+def _add_workload_isinf():
+    array1 = np.array([[-433, float('inf'), 456, _np.inf], [-1, -_np.inf, 0, 1]])
+    array2 = np.array([_np.inf/_np.inf, _np.inf, -_np.inf, -574, 0, 23425, _np.inf,-5])
+    array3 = np.array(_np.inf)
+    OpArgMngr.add_workload('isinf', array1)
+    OpArgMngr.add_workload('isinf', array2)
+    OpArgMngr.add_workload('isinf', array3)
+
+
 def _add_workload_linalg_cond():
     A = np.array([[1., 0, 1], [0, -2., 0], [0, 0, 3.]])
     OpArgMngr.add_workload('linalg.cond', A, np.inf)
@@ -1933,6 +1951,8 @@ def _prepare_workloads():
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
     _add_workload_nan_to_num()
+    _add_workload_isnan()
+    _add_workload_isinf()
     _add_workload_heaviside()
     _add_workload_spacing()
 
