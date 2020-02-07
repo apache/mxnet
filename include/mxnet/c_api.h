@@ -716,7 +716,7 @@ MXNET_DLL int MXNDArraySaveRawBytes(NDArrayHandle handle,
  * \param fname name of the file.
  * \param num_args number of arguments to save.
  * \param args the array of NDArrayHandles to be saved.
- * \param keys the name of the NDArray, optional, can be nullptr
+ * \param keys the name of the NDArray, optional, can be NULL
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArraySave(const char* fname,
@@ -729,7 +729,7 @@ MXNET_DLL int MXNDArraySave(const char* fname,
  * \param out_size number of narray loaded.
  * \param out_arr head of the returning narray handles.
  * \param out_name_size size of output name arrray.
- * \param out_names the names of returning NDArrays, can be nullptr
+ * \param out_names the names of returning NDArrays, can be NULL
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayLoad(const char* fname,
@@ -749,7 +749,7 @@ MXNET_DLL int MXNDArrayLoad(const char* fname,
  * \param out_size number of narray loaded.
  * \param out_arr head of the returning narray handles.
  * \param out_name_size size of output name arrray.
- * \param out_names the names of returning NDArrays, can be nullptr
+ * \param out_names the names of returning NDArrays, can be NULL
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayLoadFromBuffer(const void *ndarray_buffer,
@@ -1165,7 +1165,7 @@ MXNET_DLL int MXFuncGetInfo(FunctionHandle fun,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions,
-                            const char **return_type DEFAULT(nullptr));
+                            const char **return_type DEFAULT(NULL));
 /*!
  * \brief get the argument requirements of the function
  * \param fun input function handle
@@ -1491,7 +1491,7 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
                                           const char **key_var_num_args,
-                                          const char **return_type DEFAULT(nullptr));
+                                          const char **return_type DEFAULT(NULL));
 /*!
  * \brief Create an AtomicSymbol.
  * \param creator the AtomicSymbolCreator
@@ -1592,7 +1592,7 @@ MXNET_DLL int MXSymbolGetName(SymbolHandle symbol,
  * \brief Get string attribute from symbol
  * \param symbol the source symbol
  * \param key The key of the symbol.
- * \param out The result attribute, can be nullptr if the attribute do not exist.
+ * \param out The result attribute, can be NULL if the attribute do not exist.
  * \param success Whether the result is contained in out.
  * \return 0 when success, -1 when failure happens
  */
@@ -1744,7 +1744,7 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
  * \brief DEPRECATED. Use MXSymbolInferShapeEx instead.
  * infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1782,7 +1782,7 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
@@ -1821,7 +1821,7 @@ MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  * \param sym symbol handle
@@ -1863,7 +1863,7 @@ MXNET_DLL int MXSymbolInferShapeEx64(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1903,7 +1903,7 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  *
@@ -1945,7 +1945,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  *
@@ -1985,7 +1985,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx64(SymbolHandle sym,
 /*!
  * \brief infer type of unknown input types given the known one.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -2017,7 +2017,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  *
  *  Return partially inferred results if not all types could be inferred.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -3304,8 +3304,8 @@ MXNET_DLL int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, cons
   * \brief Push an asynchronous operation to the engine.
   * \param async_func Execution function whici takes a parameter on_complete
   *                   that must be called when the execution ompletes.
-  * \param func_param The parameter set on calling async_func, can be nullptr.
-  * \param deleter The callback to free func_param, can be nullptr.
+  * \param func_param The parameter set on calling async_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
   * \param ctx_handle Execution context.
   * \param const_vars_handle The variables that current operation will use
   *                          but not mutate.
@@ -3321,15 +3321,15 @@ MXNET_DLL int MXEnginePushAsync(EngineAsyncFunc async_func, void* func_param,
                                 EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
                                 EngineVarHandle const_vars_handle, int num_const_vars,
                                 EngineVarHandle mutable_vars_handle, int num_mutable_vars,
-                                EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
-                                int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr),
+                                EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                                int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
                                 bool wait DEFAULT(false));
 
 /*!
   * \brief Push a synchronous operation to the engine.
   * \param sync_func Execution function that executes the operation.
-  * \param func_param The parameter set on calling sync_func, can be nullptr.
-  * \param deleter The callback to free func_param, can be nullptr.
+  * \param func_param The parameter set on calling sync_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
   * \param ctx_handle Execution context.
   * \param const_vars_handle The variables that current operation will use
   *                          but not mutate.
@@ -3344,8 +3344,8 @@ MXNET_DLL int MXEnginePushSync(EngineSyncFunc sync_func, void* func_param,
                                EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
                                EngineVarHandle const_vars_handle, int num_const_vars,
                                EngineVarHandle mutable_vars_handle, int num_mutable_vars,
-                               EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
-                               int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr));
+                               EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                               int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 /*!
  * \brief Create an NDArray from source sharing the same data chunk.
  * \param src source NDArray
@@ -3363,8 +3363,8 @@ MXNET_DLL int MXShallowCopySymbol(SymbolHandle src, SymbolHandle * out);
   * \brief Push an asynchronous operation to the engine.
   * \param async_func Execution function whici takes a parameter on_complete
   *                   that must be called when the execution ompletes.
-  * \param func_param The parameter set on calling async_func, can be nullptr.
-  * \param deleter The callback to free func_param, can be nullptr.
+  * \param func_param The parameter set on calling async_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
   * \param ctx_handle Execution context.
   * \param const_nds_handle The NDArrays that current operation will use
   *                          but not mutate.
@@ -3380,15 +3380,15 @@ MXNET_DLL int MXEnginePushAsyncND(EngineAsyncFunc async_func, void* func_param,
                                   EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
                                   NDArrayHandle* const_nds_handle, int num_const_nds,
                                   NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
-                                  EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
-                                  int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr),
+                                  EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                                  int priority DEFAULT(0), const char* opr_name DEFAULT(NULL),
                                   bool wait DEFAULT(false));
 
 /*!
   * \brief Push a synchronous operation to the engine.
   * \param sync_func Execution function that executes the operation.
-  * \param func_param The parameter set on calling sync_func, can be nullptr.
-  * \param deleter The callback to free func_param, can be nullptr.
+  * \param func_param The parameter set on calling sync_func, can be NULL.
+  * \param deleter The callback to free func_param, can be NULL.
   * \param ctx_handle Execution context.
   * \param const_nds_handle The NDArrays that current operation will use
   *                          but not mutate.
@@ -3403,8 +3403,8 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
                                  EngineFuncParamDeleter deleter, ContextHandle ctx_handle,
                                  NDArrayHandle* const_nds_handle, int num_const_nds,
                                  NDArrayHandle* mutable_nds_handle, int num_mutable_nds,
-                                 EngineFnPropertyHandle prop_handle DEFAULT(nullptr),
-                                 int priority DEFAULT(0), const char* opr_name DEFAULT(nullptr));
+                                 EngineFnPropertyHandle prop_handle DEFAULT(NULL),
+                                 int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 
 #ifdef __cplusplus
 }
