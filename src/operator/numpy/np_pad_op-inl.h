@@ -639,9 +639,9 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
     }
     index_t* wcp = tsp.dptr_;
     wcp += ts;
-    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_), 
+    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_),
                                Shape1(ts), ctx.get_stream<cpu>());
-    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts), 
+    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts),
                                ctx.get_stream<xpu>());
     mshadow::Copy(to, tb, ctx.get_stream<xpu>());
     const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
@@ -685,9 +685,9 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
     }
     index_t* wcp = tsp.dptr_;
     wcp += ts;
-    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_), 
+    Tensor<cpu, 1, index_t> tb(reinterpret_cast<index_t*>(outshape.shape_),
                                Shape1(ts), ctx.get_stream<cpu>());
-    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts), 
+    Tensor<xpu, 1, index_t> to(reinterpret_cast<index_t*>(wcp), Shape1(ts),
                                ctx.get_stream<xpu>());
     mshadow::Copy(to, tb, ctx.get_stream<xpu>());
     const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
