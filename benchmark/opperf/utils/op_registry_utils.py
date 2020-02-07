@@ -117,9 +117,8 @@ def prepare_op_inputs(op, arg_params):
 
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
-    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial']
-
-    custom_data = ['linalg_maketrian']
+    
+    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
 
     # Prepare op to default input mapping
     arg_values = {}
