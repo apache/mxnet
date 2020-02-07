@@ -175,6 +175,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'nan_to_num',
     'isnan',
     'isinf',
+    'cross',
 ]
 
 

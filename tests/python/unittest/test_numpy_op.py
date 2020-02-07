@@ -7524,6 +7524,127 @@ def test_np_empty_like():
         assert ret.asnumpy().shape == expected_ret.shape
 
 
+@with_seed()
+@use_np
+def test_np_cross():
+    class TestNumpyCross(HybridBlock):
+        def __init__(self, axisa=-1, axisb=-1, axisc=-1, axis=None):
+            super(TestNumpyCross, self).__init__()
+            self._axisa = axisa
+            self._axisb = axisb
+            self._axisc = axisc
+            self._axis = axis
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.cross(a, b, self._axisa, self._axisb, self._axisc, self._axis)
+
+    def check_np_cross(x, a_np, b_np, axises):
+        try:
+            if axises is None:
+                x_expected = _np.cross(a_np, b_np)
+            elif len(axises) == 4:
+                (a_axis, b_axis, c_axis, axis,) = axises
+                x_expected = _np.cross(a_np, b_np, axisa=a_axis, axisb=b_axis, axisc=c_axis, axis=axis)
+            else:
+                (a_axis, b_axis, c_axis,) = axises
+                x_expected = _np.cross(a_np, b_np, axisa=a_axis, axisb=b_axis, axisc=c_axis)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print("b:", b_np)
+            print("b shape:", b_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+
+    # a_shape.ndim <= 6 and b_shape.ndim <= 6
+    shapes = [
+        # (a_shape, b_shape, (a_axis, b_axis, c_axis))
+        ((2,), (2,), (-1, -1, -1)),
+        ((1, 2), (1, 2), (-1, -1, -1)),
+        ((1, 2), (2, 2), (-1, -1, -1)),
+        ((2, 2), (1, 2), (-1, -1, -1)),
+        ((2, 2), (2, 2), (-1, -1, -1)),
+        ((1, 2), (2, 2), (-1, 0, -1)),
+        ((2, 2), (1, 2), (0, -1, -1)),
+        ((2, 2), (2, 2), (0, 0, -1)),
+        ((2, 2), (2, 2), (0, 0, 0)),
+        ((5, 4, 3, 2), (5, 4, 3, 2), (-1, -1, -1)),
+        ((1, 4, 3, 2), (5, 1, 3, 2), (-1, -1, -1)),
+        ((5, 4, 3, 2), (5, 4, 3, 2), (-1, -1, 0)),
+        ((2, 5, 4, 3), (5, 2, 4, 3), (0, 1, 2)),
+        ((2, 5, 1, 3), (1, 2, 4, 3), (0, 1, 2)),
+
+        ((2,), (3,), (-1, -1, -1)),
+        ((1, 2,), (1, 3,), (-1, -1, -1)),
+        ((2, 2,), (2, 3,), (0, -1, 0)),
+        ((6, 5, 4, 2), (6, 5, 4, 3), (-1, -1, -1)),
+        ((2, 6, 5, 4), (6, 5, 4, 3), (0, -1, 2)),
+        ((2, 6, 5, 4), (6, 3, 5, 4), (0, 1, 2)),
+        ((6, 2, 5, 4), (6, 5, 3, 4), (1, 2, 0)),
+        ((6, 2, 1, 4), (1, 5, 3, 4), (1, 2, 0)),
+
+        ((3,), (2,), (-1, -1, -1)),
+        ((1, 3,), (1, 2,), (-1, -1, -1)),
+        ((2, 3,), (2, 2,), (-1, 0, 0)),
+        ((6, 5, 4, 3), (6, 5, 4, 2), (-1, -1, -1)),
+        ((3, 6, 5, 4), (6, 5, 4, 2), (0, -1, 2)),
+        ((3, 6, 5, 4), (6, 2, 5, 4), (0, 1, 2)),
+        ((6, 3, 5, 4), (6, 5, 2, 4), (1, 2, 0)),
+        ((6, 3, 1, 4), (1, 5, 2, 4), (1, 2, 0)),
+
+        ((3,), (3,), (-1, -1, -1)),
+        ((1, 3,), (1, 3,), (-1, -1, -1)),
+        ((2, 3,), (3, 2,), (-1, 0, 0)),
+        ((6, 5, 4, 3), (6, 5, 4, 3), (-1, -1, -1)),
+        ((3, 6, 5, 4), (6, 5, 4, 3), (0, -1, 2)),
+        ((3, 6, 5, 4), (6, 3, 5, 4), (0, 1, 2)),
+        ((6, 3, 5, 4), (6, 5, 3, 4), (1, 2, 0)),
+        ((6, 3, 1, 4), (1, 5, 3, 4), (1, 2, 0)),
+
+        ((5, 4, 3, 2), (5, 4, 3, 2), None),
+        ((6, 5, 4, 2), (6, 5, 4, 3), None),
+        ((6, 5, 4, 3), (6, 5, 4, 2), None),
+        ((6, 5, 4, 3), (6, 5, 4, 3), None),
+
+        # (a_shape, b_shape, (a_axis, b_axis, c_axis, axis))
+        ((2, 5, 4, 3), (2, 5, 4, 3), (-1, -1, -1, 0,)),
+        ((6, 2, 5, 4), (6, 3, 5, 4), (-1, -1, -1, 1,)),
+        ((6, 5, 3, 4), (6, 5, 2, 4), (-1, -1, -1, 2,)),
+        ((6, 5, 4, 3), (6, 5, 4, 3), (-1, -1, -1, 3,)),
+    ]
+    dtypes = [np.float32, np.float64]
+
+    for hybridize in [True, False]:
+        for shape, dtype in itertools.product(shapes, dtypes):
+            rtol = 1e-3
+            atol = 1e-5
+            a_shape, b_shape, axises = shape
+            if axises is None:
+                test_numpy_cross = TestNumpyCross()
+            elif len(axises) == 4:
+                (a_axis, b_axis, c_axis, axis,) = axises
+                test_numpy_cross = TestNumpyCross(axisa=a_axis, axisb=b_axis, axisc=c_axis, axis=axis)
+            else:
+                (a_axis, b_axis, c_axis,) = axises
+                test_numpy_cross = TestNumpyCross(axisa=a_axis, axisb=b_axis, axisc=c_axis)
+            if hybridize:
+                test_numpy_cross.hybridize()
+            a_np = _np.random.uniform(-10., 10., size=a_shape)
+            b_np = _np.random.uniform(-10., 10., size=b_shape)
+            a = np.array(a_np, dtype=dtype)
+            b = np.array(b_np, dtype=dtype)
+
+            # check cross validity
+            mx_out = test_numpy_cross(a, b)
+            check_np_cross(mx_out, a.asnumpy(), b.asnumpy(), axises)
+
+            # check cross validity
+            mx_out = test_numpy_cross(a, b)
+            check_np_cross(mx_out, a.asnumpy(), b.asnumpy(), axises)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

@@ -119,6 +119,39 @@ def _add_workload_bincount():
     OpArgMngr.add_workload('bincount', y2, minlength=5)
 
 
+def _add_workload_cross():
+    shapes = [
+        # (a_shape, b_shape, (a_axis, b_axis, c_axis))
+        ((2,), (2,), (-1, -1, -1)),
+        ((1, 2), (1, 2), (-1, -1, -1)),
+        ((2, 5, 4, 3), (5, 2, 4, 3), (0, 1, 2)),
+        ((2, 5, 1, 3), (1, 2, 4, 3), (0, 1, 2)),
+
+        ((2,), (3,), (-1, -1, -1)),
+        ((1, 2,), (1, 3,), (-1, -1, -1)),
+        ((6, 2, 5, 4), (6, 5, 3, 4), (1, 2, 0)),
+        ((6, 2, 1, 4), (1, 5, 3, 4), (1, 2, 0)),
+
+        ((3,), (2,), (-1, -1, -1)),
+        ((1, 3,), (1, 2,), (-1, -1, -1)),
+        ((6, 3, 5, 4), (6, 5, 2, 4), (1, 2, 0)),
+        ((6, 3, 1, 4), (1, 5, 2, 4), (1, 2, 0)),
+
+        ((3,), (3,), (-1, -1, -1)),
+        ((1, 3,), (1, 3,), (-1, -1, -1)),
+        ((6, 3, 5, 4), (6, 5, 3, 4), (1, 2, 0)),
+        ((6, 3, 1, 4), (1, 5, 3, 4), (1, 2, 0)),
+    ]
+    dtypes = [np.float32, np.float64]
+    for shape, dtype in itertools.product(shapes, dtypes):
+        a_shape, b_shape, (a_axis, b_axis, c_axis) = shape
+        a_np = _np.random.uniform(-10., 10., size=a_shape)
+        b_np = _np.random.uniform(-10., 10., size=b_shape)
+        a = np.array(a_np, dtype=dtype)
+        b = np.array(b_np, dtype=dtype)
+        OpArgMngr.add_workload('cross', a, b, axisa=a_axis, axisb=b_axis, axisc=c_axis)
+
+
 def _add_workload_diag():
     def get_mat(n):
         data = _np.arange(n)
@@ -1838,6 +1871,7 @@ def _prepare_workloads():
     _add_workload_clip()
     _add_workload_concatenate(array_pool)
     _add_workload_copy()
+    _add_workload_cross()
     _add_workload_cumsum()
     _add_workload_ravel()
     _add_workload_unravel_index()
