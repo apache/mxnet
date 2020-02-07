@@ -627,8 +627,9 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) : name(op_name),
-    parse_attrs(nullptr), infer_type(nullptr), infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
+  explicit CustomOp(const char* op_name) :
+      name(op_name), parse_attrs(nullptr), infer_type(nullptr),
+      infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
     if (forward_ctx_map.count(ctx) > 0)
       raiseDuplicateContextError();
@@ -1227,7 +1228,7 @@ extern "C" {
     return Registry<CustomPartitioner>::get()->size();
   }
 
-  /* returns number of strategies registered for partitioner 
+  /* returns number of strategies registered for partitioner
    * at specified index */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
