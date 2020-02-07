@@ -1,0 +1,38 @@
+version: 0.2
+
+env:
+  variables:
+    mxnet_variant: "cpu"
+
+phases:
+  install:
+    #If you use the Ubuntu standard image 2.0 or later, you must specify runtime-versions.
+    #If you specify runtime-versions and use an image other than Ubuntu standard image 2.0, the build fails.
+    commands:
+        - apt-get update 
+        - pip --version
+        - pip install pypandoc 
+        - pip install awscli --upgrade --ignore-installed six
+        - python3 --version
+  build:
+    commands:
+       - mkdir -p ~/pip_build/mxnet-build
+       - cp -r * ~/pip_build/mxnet-build
+       - export CODE_DIR=$(pwd)
+       - cd ~/pip_build/mxnet-build
+       - ./tools/staticbuild/build.sh $mxnet_variant pip
+       - cd ..
+       - cp -r mxnet-build/tools/pip/. .
+       - aws s3 cp $S3_SETUP_PY .
+       - python3 setup.py bdist_wheel 
+       - cp -r dist $CODE_DIR/dist
+       - cd $CODE_DIR
+artifacts:
+  files:
+     - "dist/*.whl"
+  name: $(date +%Y-%m-%d)
+  #discard-paths: yes
+  #base-directory: location
+#cache:
+  #paths:
+    # - paths
