@@ -34,10 +34,12 @@
 #include <string>
 #include <utility>
 #include <algorithm>
+#include <bitset>
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../random/sampler.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../../common/tensor_inspector.h"
 
 #if (MSHADOW_USE_MKL == 1) && defined(_OPENMP) && !defined(__CUDACC__)
 #define MXNET_USE_MKL_DROPOUT 1
@@ -124,25 +126,32 @@ class DropoutOp {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
     CHECK_NOTNULL(pgen);
-    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, uint8_t> mask = out_data[dropout::kMask].FlatTo1D<xpu, uint8_t>(s);
     Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
     DType *outptr = out.dptr_;
     DType *dataptr = data.dptr_;
-    auto maskptr = reinterpret_cast<int *>(mask.dptr_);
-    int count = mask.shape_[0] * mask.shape_[1];
-    if (sizeof(DType) > sizeof(int)) {
-      // allocating new buffer to avoiding memory overlapping between `mask.dptr_` and `maskptr`
-      Tensor<xpu, 1, int> temp = ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
-      maskptr = temp.dptr_;
-    }
-    BernoulliGenerate(*pgen, count, this->pkeep_, maskptr);
+
+    index_t count = data.shape_[0] * data.shape_[1];
+    // allocating buffer for MKL routine to calculate int32 based maskptr
+    Tensor<xpu, 1, int> temp_space = ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
+    auto mkl_mask = temp_space.dptr_;
+
+    BernoulliGenerate(*pgen, count, this->pkeep_, mkl_mask);
     const float pk_1 = 1.0f / this->pkeep_;
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int i = 0; i < count; ++i) {
-      const DType maskVal = static_cast<DType>(maskptr[i]) * pk_1;
-      outptr[i] = dataptr[i] * maskVal;
-      mask.dptr_[i] = maskVal;
+    const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma omp parallel for num_threads(nthr) schedule(dynamic, 8)
+    for (index_t i = 0; i < count; ++i) {
+      outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+      auto mask_idx = i >> 3;  // div 8
+      auto mask_offset = i & 7;  // mod 8
+      if (mkl_mask[i]) {
+        // set bit
+        mask.dptr_[mask_idx] |= 1U << mask_offset;
+      } else {
+        // clear bit
+        mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+      }
     }
   }
 
@@ -153,15 +162,20 @@ class DropoutOp {
                           const std::vector<TBlob> &out_grad) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, uint8_t> mask = out_data[dropout::kMask].FlatTo1D<xpu, uint8_t>(s);
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
     DType *ingradptr = gdata.dptr_;
     const DType *outgradptr = grad.dptr_;
-    const DType *maskptr = mask.dptr_;
-    const int count = mask.shape_[0] * mask.shape_[1];
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int i = 0; i < count; ++i) {
-      ingradptr[i] = outgradptr[i] * maskptr[i];
+    const uint8_t *maskptr = mask.dptr_;
+    const index_t count = grad.shape_[0] * grad.shape_[1];
+    const float pk_1 = 1.0f / this->pkeep_;
+    const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+#pragma omp parallel for num_threads(nthr) schedule(dynamic, 8)
+    for (index_t i = 0; i < count; ++i) {
+      auto mask_idx = i >> 3;  // div 8;
+      uint8_t mask_offset = i & 7;  // mod 8
+      bool mask_val = maskptr[mask_idx] & (1U << mask_offset);
+      ingradptr[i] = outgradptr[i] * mask_val * pk_1;
     }
   }
 
