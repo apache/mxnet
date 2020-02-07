@@ -29,9 +29,9 @@ _bin_logic_op_map = {
 
 
 def _compute_binary_logic(op, dtype, ndim):
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='a')
-    b = tvm.placeholder([tvm.var() for _ in range(ndim)], dtype=dtype, name='b')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='a')
+    b = tvm.placeholder([tvm.size_var() for _ in range(ndim)], dtype=dtype, name='b')
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: _bin_logic_op_map[op](a, b, *idx), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c
@@ -91,9 +91,9 @@ _bin_scalar_logic_op_map = {
 
 
 def _compute_binary_scalar_logic(op, dtype, ndim):
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], name='a', dtype=dtype)
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='a', dtype=dtype)
     b = tvm.var('b', dtype='float64')
-    c = tvm.compute([tvm.var() for _ in range(ndim)],
+    c = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *idx: _bin_scalar_logic_op_map[op](a, b, *idx), name='c')
     s = tvm.create_schedule(c.op)
     return s, a, b, c

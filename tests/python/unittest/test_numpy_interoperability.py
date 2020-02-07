@@ -580,6 +580,30 @@ def _add_workload_linalg_pinv():
             OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), np.array(rcond_np, dtype=dtype), hermitian)
 
 
+def _add_workload_linalg_eigvals():
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eig():
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eigvalsh():
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eigh():
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
 def _add_workload_linalg_slogdet():
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.slogdet', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1812,6 +1836,10 @@ def _prepare_workloads():
     _add_workload_linalg_tensorinv()
     _add_workload_linalg_tensorsolve()
     _add_workload_linalg_pinv()
+    _add_workload_linalg_eigvals()
+    _add_workload_linalg_eig()
+    _add_workload_linalg_eigvalsh()
+    _add_workload_linalg_eigh()
     _add_workload_linalg_slogdet()
     _add_workload_linalg_cond()
     _add_workload_trace()

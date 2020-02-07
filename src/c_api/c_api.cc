@@ -580,7 +580,7 @@ int MXLoadLib(const char *path) {
     };
 
     // FGradient register lambda
-    auto grad_reg = [=](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto grad_reg = [=](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
         // copy gradients first
         std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
         // copy inputs second

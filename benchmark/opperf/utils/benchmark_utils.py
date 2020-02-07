@@ -24,10 +24,9 @@ from .ndarray_utils import get_mx_ndarray, nd_forward_and_profile, nd_forward_ba
 from .common_utils import merge_map_list
 from .op_registry_utils import prepare_op_inputs
 from benchmark.opperf.rules.default_params import PARAMS_OF_TYPE_NDARRAY
-from .profiler_utils import cpp_profile,python_profile
+from .profiler_utils import cpp_profile, python_profile
 
-
-no_backward = ['softmax_cross_entropy']
+no_backward = ['gather_nd', 'softmax_cross_entropy']
 
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     mx.random.seed(41)
@@ -70,7 +69,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
     # Warm up, ignore the profiler output
     if not args_list:
         _, _ = benchmark_helper_func(op, warmup, [], **kwargs_list[0])
-    else:    
+    else:
         _, _ = benchmark_helper_func(op, warmup, args_list[0], **kwargs_list[0])
 
     # Run Benchmarks
@@ -84,7 +83,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
             profiler_output["inputs"] = inputs[idx]
             op_benchmark_result[op.__name__].append(profiler_output)
     else:
-        for idx, (args,kwargs) in enumerate(zip(args_list,kwargs_list)):
+        for idx, (args, kwargs) in enumerate(zip(args_list, kwargs_list)):
             _, profiler_output = benchmark_helper_func(op, runs, args, **kwargs)
 
             # Add inputs used for profiling this operator into result
@@ -153,7 +152,7 @@ def run_op_benchmarks(ops, dtype, ctx, profiler, warmup, runs):
 
         # setting backward false for ops with known issue
         if op in no_backward:
-             op_params["has_backward"] = False
+            op_params["has_backward"] = False
 
         # Run benchmarks
         cur_op_res = run_performance_test(op_params["nd_op_handle"],

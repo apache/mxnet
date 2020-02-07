@@ -74,7 +74,7 @@ Examples::
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", TopKNumVisibleOutputs)
 .set_attr<FCompute>("FCompute<cpu>", TopK<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TopKParam& param = nnvm::get<TopKParam>(n->attrs.parsed);
     if (param.ret_typ == topk_enum::kReturnValue || param.ret_typ == topk_enum::kReturnBoth) {
       std::vector<nnvm::NodeEntry> inputs;
@@ -138,7 +138,7 @@ Examples::
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs", [](const NodeAttrs& attrs) { return 1; })
 .set_attr<FCompute>("FCompute<cpu>", Sort<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const SortParam& param = nnvm::get<SortParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> inputs;
     uint32_t n_out = n->num_outputs();

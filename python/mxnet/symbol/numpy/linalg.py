@@ -22,7 +22,9 @@ from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv']
+__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
+           'eigvals', 'eig', 'eigvalsh', 'eigh']
+
 
 def pinv(a, rcond=1e-15, hermitian=False):
     r"""
@@ -687,3 +689,205 @@ def tensorsolve(a, b, axes=None):
     True
     """
     return _npi.tensorsolve(a, b, axes)
+
+
+def eigvals(a):
+    r"""
+    Compute the eigenvalues of a general matrix.
+
+    Main difference between `eigvals` and `eig`: the eigenvectors aren't
+    returned.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        A real-valued matrix whose eigenvalues will be computed.
+
+    Returns
+    -------
+    w : (..., M,) ndarray
+        The eigenvalues, each repeated according to its multiplicity.
+        They are not necessarily ordered.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eig : eigenvalues and right eigenvectors of general arrays
+    eigh : eigenvalues and eigenvectors of a real symmetric array.
+    eigvalsh : eigenvalues of a real symmetric.
+
+    Notes
+    -----
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    This is implemented using the ``_geev`` LAPACK routines which compute
+    the eigenvalues and eigenvectors of general square arrays.
+
+    This function differs from the original `numpy.linalg.eigvals
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvals.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+    """
+    return _npi.eigvals(a)
+
+
+def eigvalsh(a, UPLO='L'):
+    r"""
+    Compute the eigenvalues real symmetric matrix.
+
+    Main difference from eigh: the eigenvectors are not computed.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        A real-valued matrix whose eigenvalues are to be computed.
+    UPLO : {'L', 'U'}, optional
+        Specifies whether the calculation is done with the lower triangular
+        part of `a` ('L', default) or the upper triangular part ('U').
+        Irrespective of this value only the real parts of the diagonal will
+        be considered in the computation to preserve the notion of a Hermitian
+        matrix. It therefore follows that the imaginary part of the diagonal
+        will always be treated as zero.
+
+    Returns
+    -------
+    w : (..., M,) ndarray
+        The eigenvalues in ascending order, each repeated according to
+        its multiplicity.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eig : eigenvalues and right eigenvectors of general arrays
+    eigvals : eigenvalues of a non-symmetric array.
+    eigh : eigenvalues and eigenvectors of a real symmetric array.
+
+    Notes
+    -----
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    The eigenvalues are computed using LAPACK routines ``_syevd``.
+
+    This function differs from the original `numpy.linalg.eigvalsh
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvalsh.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+    """
+    return _npi.eigvalsh(a, UPLO)
+
+
+def eig(a):
+    r"""
+    Compute the eigenvalues and right eigenvectors of a square array.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Matrices for which the eigenvalues and right eigenvectors will
+        be computed
+
+    Returns
+    -------
+    w : (..., M) ndarray
+        The eigenvalues, each repeated according to its multiplicity.
+        The eigenvalues are not necessarily ordered.
+    v : (..., M, M) ndarray
+        The normalized (unit "length") eigenvectors, such that the
+        column ``v[:,i]`` is the eigenvector corresponding to the
+        eigenvalue ``w[i]``.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eigvals : eigenvalues of a non-symmetric array.
+    eigh : eigenvalues and eigenvectors of a real symmetric array.
+    eigvalsh : eigenvalues of a real symmetric.
+
+    Notes
+    -----
+    This is implemented using the ``_geev`` LAPACK routines which compute
+    the eigenvalues and eigenvectors of general square arrays.
+
+    The number `w` is an eigenvalue of `a` if there exists a vector
+    `v` such that ``dot(a,v) = w * v``. Thus, the arrays `a`, `w`, and
+    `v` satisfy the equations ``dot(a[:,:], v[:,i]) = w[i] * v[:,i]``
+    for :math:`i \\in \\{0,...,M-1\\}`.
+
+    The array `v` of eigenvectors may not be of maximum rank, that is, some
+    of the columns may be linearly dependent, although round-off error may
+    obscure that fact. If the eigenvalues are all different, then theoretically
+    the eigenvectors are linearly independent.
+
+    This function differs from the original `numpy.linalg.eig
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eig.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+    """
+    return _npi.eig(a)
+
+
+def eigh(a, UPLO='L'):
+    r"""
+    Return the eigenvalues and eigenvectors real symmetric matrix.
+
+    Returns two objects, a 1-D array containing the eigenvalues of `a`, and
+    a 2-D square array or matrix (depending on the input type) of the
+    corresponding eigenvectors (in columns).
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        real symmetric matrices whose eigenvalues and eigenvectors are to be computed.
+    UPLO : {'L', 'U'}, optional
+        Specifies whether the calculation is done with the lower triangular
+        part of `a` ('L', default) or the upper triangular part ('U').
+        Irrespective of this value only the real parts of the diagonal will
+        be considered in the computation to preserve the notion of a Hermitian
+        matrix. It therefore follows that the imaginary part of the diagonal
+        will always be treated as zero.
+
+    Returns
+    -------
+    w : (..., M) ndarray
+        The eigenvalues in ascending order, each repeated according to
+        its multiplicity.
+    v : {(..., M, M) ndarray, (..., M, M) matrix}
+        The column ``v[:, i]`` is the normalized eigenvector corresponding
+        to the eigenvalue ``w[i]``.  Will return a matrix object if `a` is
+        a matrix object.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eig : eigenvalues and right eigenvectors of general arrays
+    eigvals : eigenvalues of a non-symmetric array.
+    eigvalsh : eigenvalues of a real symmetric.
+
+    Notes
+    -----
+    The eigenvalues/eigenvectors are computed using LAPACK routines ``_syevd``.
+
+    This function differs from the original `numpy.linalg.eigh
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigh.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+    """
+    return _npi.eigh(a, UPLO)
