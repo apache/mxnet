@@ -114,7 +114,7 @@ class DropoutOp {
     }
   }
   static inline bool MKLAvailable() {
-    // TODO (lnyuan): how to let user enable/disable MKL Dropout
+    // TODO(lnyuan): how to let user enable/disable MKL Dropout
     return true;
   }
 
@@ -133,7 +133,8 @@ class DropoutOp {
 
     index_t count = data.shape_[0] * data.shape_[1];
     // allocating buffer for MKL routine to calculate int32 based maskptr
-    Tensor<xpu, 1, int> temp_space = ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
+    Tensor<xpu, 1, int> temp_space =
+      ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
     auto mkl_mask = temp_space.dptr_;
 
     BernoulliGenerate(*pgen, count, this->pkeep_, mkl_mask);
