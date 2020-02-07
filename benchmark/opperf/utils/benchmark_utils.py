@@ -36,7 +36,7 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key in PARAMS_OF_TYPE_NDARRAY and key=='args':
+            if key.startswith('args'):
                 args_list.append(get_mx_ndarray(ctx=ctx, in_tensor=value,
                                                 dtype=dtype,
                                                 initializer=nd.normal,
@@ -70,7 +70,7 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
     if not args_list:
         _, _ = benchmark_helper_func(op, warmup, [], **kwargs_list[0])
     else:
-        _, _ = benchmark_helper_func(op, warmup, args_list[0], **kwargs_list[0])
+        _, _ = benchmark_helper_func(op, warmup, *args_list, **kwargs_list[0])
 
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
@@ -83,8 +83,8 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
             profiler_output["inputs"] = inputs[idx]
             op_benchmark_result[op.__name__].append(profiler_output)
     else:
-        for idx, (args, kwargs) in enumerate(zip(args_list, kwargs_list)):
-            _, profiler_output = benchmark_helper_func(op, runs, args, **kwargs)
+        for idx, (args, kwargs) in enumerate(zip([args_list], kwargs_list)):
+            _, profiler_output = benchmark_helper_func(op, runs, *args, **kwargs)
 
             # Add inputs used for profiling this operator into result
             profiler_output["inputs"] = inputs[idx]
