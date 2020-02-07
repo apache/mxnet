@@ -52,7 +52,6 @@ from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np  # pylint: disable=unused-import
 from .runtime import Features
-from .numpy_extension import get_cuda_compute_capability
 
 
 def default_context():

@@ -35,6 +35,9 @@ from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARR
 _INT_DTYPES = [np.int8, np.int32, np.int64, np.uint8]
 _FLOAT_DTYPES = [np.float16, np.float32, np.float64]
 _DTYPES = _INT_DTYPES + _FLOAT_DTYPES
+_SKIP_ASSERT_EQUAL_LIST = [
+    'empty_like',
+]
 
 
 class OpArgMngr(object):
@@ -1941,11 +1944,17 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
         assert type(out) == type(expected_out)
         for arr, expected_arr in zip(out, expected_out):
             if isinstance(arr, np.ndarray):
-                assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+                if op_name in _SKIP_ASSERT_EQUAL_LIST:
+                    assert arr.shape == expected_arr.shape
+                else:
+                    assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
             else:
                 _np.testing.assert_equal(arr, expected_arr)
     elif isinstance(out, np.ndarray):
-        assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+        if op_name in _SKIP_ASSERT_EQUAL_LIST:
+            assert out.shape == expected_out.shape
+        else:
+            assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
     else:
         _np.testing.assert_almost_equal(out, expected_out)
 
