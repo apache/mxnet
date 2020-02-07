@@ -335,31 +335,6 @@ def test_rnnrelu_dropout():
     out = exe.forward(is_train=True)
     out[0].wait_to_read()
 
-@with_seed()
-def test_rnn_dropout_reproducibility():
-    info = np.iinfo(np.int32)
-    seed1 = np.random.randint(info.min, info.max)
-    seed2 = np.random.randint(info.min, info.max)
-    data = mx.nd.ones((5, 3, 10), ctx=default_context())
-    rnn = mx.gluon.rnn.RNN(100, 3, dropout=0.5)
-    rnn.initialize(ctx=default_context())
-    mx.random.seed(seed1)
-    with mx.autograd.record():
-        result1 = rnn(data)
-
-    mx.random.seed(seed2)
-    with mx.autograd.record():
-        result2 = rnn(data)
-
-    mx.random.seed(seed1)
-    with mx.autograd.record():
-        result3 = rnn(data)
-    # dropout on gpu should return same result with fixed seed
-    assert_almost_equal(result1.asnumpy(), result3.asnumpy())
-    with assert_raises(AssertionError):
-        assert_almost_equal(result1.asnumpy(), result2.asnumpy())
-
-
 def test_RNN_float64():
     if default_context().device_type == 'gpu':
         return
