@@ -140,7 +140,7 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<cpu, 2, DType> dst,
                                   const mshadow::Tensor<cpu, 1, IndexType>& sorted,
                                   const mshadow::Tensor<cpu, 1, IndexType>& index,
                                   const mshadow::Tensor<cpu, 2, DType> &src,
-                                  mshadow::Tensor<cpu, 1, char>* workspace = NULL) {
+                                  mshadow::Tensor<cpu, 1, char>* workspace = nullptr) {
   for (index_t y = 0; y < sorted.size(0); ++y) {
     dst[sorted[y]] += src[index[y]];
   }

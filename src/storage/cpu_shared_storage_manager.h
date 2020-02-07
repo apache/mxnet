@@ -138,7 +138,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
       handle->shared_id = dis(rand_gen_);
       filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
       map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                     NULL, PAGE_READWRITE, 0, size, filename.c_str());
+                                     nullptr, PAGE_READWRITE, 0, size, filename.c_str());
       if ((error = GetLastError()) == ERROR_SUCCESS) {
         break;;
       }
@@ -189,7 +189,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
 
   if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
 
-  ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
+  ptr = mmap(nullptr, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
 #ifdef __linux__

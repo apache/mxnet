@@ -327,7 +327,7 @@ class GridGeneratorProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,

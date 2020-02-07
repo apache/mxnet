@@ -382,7 +382,7 @@ void LstmBackwardSingleLayer(DType* ws,
   const DType beta1 = 1.0;
   const DType beta2 = 2.0;
   const int cell_size = N * H;
-  if (dhy_ptr != NULL) {
+  if (dhy_ptr != nullptr) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < cell_size; ++i) {
       dh.dptr_[i] = dhy_ptr[i];
@@ -393,7 +393,7 @@ void LstmBackwardSingleLayer(DType* ws,
       dh.dptr_[i] = 0;
     }
   }
-  if (dcy_ptr != NULL) {
+  if (dcy_ptr != nullptr) {
     #pragma omp parallel for num_threads(omp_threads)
     for (int i = 0; i < cell_size; ++i) {
       dc.dptr_[i] = dcy_ptr[i];
@@ -546,8 +546,8 @@ void LstmBackward(DType* ws,
     DType* dw_cur_ptr = i ? dw_ptr + (w_size1 + (i - 1) * w_size2) * D : dw_ptr;
     DType* db_cur_ptr = db_ptr + i * b_size * D;
     DType* rs_cur_ptr = rs2 + i * r_size;
-    DType* dhy_cur_ptr = dhy_ptr ? dhy_ptr + i * cell_size * D : NULL;
-    DType* dcy_cur_ptr = dcy_ptr ? dcy_ptr + i * cell_size * D : NULL;
+    DType* dhy_cur_ptr = dhy_ptr ? dhy_ptr + i * cell_size * D : nullptr;
+    DType* dcy_cur_ptr = dcy_ptr ? dcy_ptr + i * cell_size * D : nullptr;
     Tensor<cpu, 3, DType> y(rs_cur_ptr + y_offset, Shape3(T, N, H * D));
     Tensor<cpu, 3, DType> dy(dy_ptr, Shape3(T, N, H * D));
     Tensor<cpu, 2, DType> x(i ? y.dptr_ - r_size : x_ptr, Shape2(T * N, input_size));
@@ -561,8 +561,8 @@ void LstmBackward(DType* ws,
       dw_cur_ptr += w_size;
       db_cur_ptr += b_size;
       ++idx;
-      dhy_cur_ptr = dhy_ptr ? dhy_cur_ptr + cell_size : NULL;
-      dcy_cur_ptr = dcy_ptr ? dcy_cur_ptr + cell_size : NULL;
+      dhy_cur_ptr = dhy_ptr ? dhy_cur_ptr + cell_size : nullptr;
+      dcy_cur_ptr = dcy_ptr ? dcy_cur_ptr + cell_size : nullptr;
       LstmBackwardSingleLayer<DType>(ws2, rs_cur_ptr, tmp_buf, true, T, N, input_size, H,
                                      x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
                                      dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
@@ -612,8 +612,8 @@ void GruForwardInferenceSingleLayer(DType* ws,
   DType* nt = zt + N * H;
   DType* back_wx_ptr = wx_ptr + I * 3 * H + H * 3 * H;
   DType* back_wh_ptr = wh_ptr + I * 3 * H + H * 3 * H;
-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + 3 * H * 2 : NULL;
-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + 3 * H * 2: NULL;
+  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + 3 * H * 2 : nullptr;
+  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + 3 * H * 2: nullptr;
   DType* back_gemmC1 = gemmC1 + T * N * 3 * H;
   DType* gemmC1_t = gemmC1;
 
@@ -820,8 +820,8 @@ void GruForwardTrainingSingleLayer(DType* ws,
   DType* nt = gateN;
   DType* back_wx_ptr = wx_ptr + I * 3 * H + H * 3 * H;
   DType* back_wh_ptr = wh_ptr + I * 3 * H + H * 3 * H;
-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + 3 * H * 2 : NULL;
-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + 3 * H * 2 : NULL;
+  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + 3 * H * 2 : nullptr;
+  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + 3 * H * 2 : nullptr;
   DType* back_gateR = gateR + T * N * H;
   DType* back_gateZ = gateZ + T * N * H;
   DType* back_gateN = gateN + T * N * H;
@@ -1426,12 +1426,12 @@ void GruBackward(DType* ws,
   } else {
     wh_l = wh_l + (D * H) * H * 3;
   }
-  DType* dhy_l = NULL;
+  DType* dhy_l = nullptr;
   if (dhy_ptr)
     dhy_l = dhy_ptr + (L - 1) * D * N * H;
   DType* dwx_l = (L == 1)? dwx : dwx + (L - 2) * D * (D + 1) * H * 3 * H
       + D * I * 3 * H + D * H * 3 * H;
-  DType* dwh_l = NULL;
+  DType* dwh_l = nullptr;
   if (L == 1) {
     dwh_l = dwx_l + I * H * 3;
   } else {
@@ -1526,8 +1526,8 @@ void VanillaRNNForwardInferenceSingleLayer(DType* ws,
   DType* gemmC2  = gemmC1 + D * T * N * H;  // N * H
   DType* back_wx_ptr = wx_ptr + I * H + H * H;
   DType* back_wh_ptr = wh_ptr + I * H + H * H;
-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + H * 2 : NULL;
-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + H * 2: NULL;
+  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + H * 2 : nullptr;
+  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + H * 2: nullptr;
   DType* back_gemmC1 = gemmC1 + T * N * H;
   DType* gemmC1_t = gemmC1;
 
@@ -1726,8 +1726,8 @@ void VanillaRNNForwardTrainingSingleLayer(DType* ws,
   DType* nt = gateN;
   DType* back_wx_ptr = wx_ptr + I * H + H * H;
   DType* back_wh_ptr = wh_ptr + I * H + H * H;
-  DType* back_bx_ptr = (bx_ptr != NULL)? bx_ptr + H * 2 : NULL;
-  DType* back_bh_ptr = (bh_ptr != NULL)? bh_ptr + H * 2 : NULL;
+  DType* back_bx_ptr = (bx_ptr != nullptr)? bx_ptr + H * 2 : nullptr;
+  DType* back_bh_ptr = (bh_ptr != nullptr)? bh_ptr + H * 2 : nullptr;
   DType* back_gateN = gateN + T * N * H;
   DType* back_gemmC1 = gemmC1 + T * N * H;
   DType* gemmC1_t = gemmC1;
@@ -2281,12 +2281,12 @@ void VanillaRNNBackward(DType* ws,
   } else {
     wh_l = wh_l + (D * H) * H;
   }
-  DType* dhy_l = NULL;
+  DType* dhy_l = nullptr;
   if (dhy_ptr)
     dhy_l = dhy_ptr + (L - 1) * D * N * H;
   DType* dwx_l = (L == 1)? dwx : dwx + (L - 2) * D * (D + 1) * H * H
       + D * I * H + D * H * H;
-  DType* dwh_l = NULL;
+  DType* dwh_l = nullptr;
   if (L == 1) {
     dwh_l = dwx_l + I * H;
   } else {
