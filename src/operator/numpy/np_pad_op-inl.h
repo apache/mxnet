@@ -60,7 +60,6 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   std::string reflect_type;
   DMLC_DECLARE_PARAMETER(NumpyPadParam) {
     DMLC_DECLARE_FIELD(pad_width)
-    .set_default(mxnet::Tuple<mxnet::Tuple<int>>())
     .describe("Number of values padded to the edges of each axis. "
               "((before_1, after_1), … (before_N,"
               "after_N)) unique pad widths for each axis. ((before, after),) "

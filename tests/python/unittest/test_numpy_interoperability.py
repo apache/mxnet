@@ -1809,8 +1809,8 @@ def _add_workload_where():
 
 
 def _add_workload_pad():
-    array = _np.array([1, 2, 3])
-    pad_width = (5, 5)
+    array = _np.array([[1, 2, 3], [1, 2, 3]])
+    pad_width = ((5, 5), (5,5))
     array = np.array(array)
     OpArgMngr.add_workload('pad', array, pad_width, mode="constant", constant_values=0)
     OpArgMngr.add_workload('pad', array, pad_width, mode="edge")
