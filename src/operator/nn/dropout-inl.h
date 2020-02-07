@@ -114,9 +114,8 @@ class DropoutOp {
     }
   }
   static inline bool MKLAvailable() {
-    // BernoulliGenerate expects an array int, so for types smaller than int, the mask buffer
-    // will be too small, so we can;t use MKL in those cases
-    return sizeof(DType) >= sizeof(int);
+    // TODO (lnyuan): how to let user enable/disable MKL Dropout
+    return true;
   }
 
   // MKL forward pass
