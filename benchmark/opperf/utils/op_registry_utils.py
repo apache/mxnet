@@ -173,14 +173,18 @@ def get_all_unary_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
+    # Cast operators (cast & amp_cast are unary)
+    cast_ops = ['cast', 'amp_cast']
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
     # Filter for unary broadcast operators
     unary_broadcast_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_params["params"]["narg"] == 1 and \
-                "data" in op_params["params"]["arg_names"]:
+        if (op_params["params"]["narg"] == 1 and \
+                "data" in op_params["params"]["arg_names"]) or \
+                op_name in cast_ops:
             unary_broadcast_mx_operators[op_name] = mx_operators[op_name]
     return unary_broadcast_mx_operators
 

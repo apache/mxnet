@@ -34,6 +34,9 @@ import mxnet as mx
 from benchmark.opperf.utils.op_registry_utils import get_all_unary_operators
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
+from benchmark.opperf.utils.benchmark_utils import run_performance_test
+from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
 def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype)for all the unary
@@ -57,8 +60,22 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
+    # Run amp_multicast as it needs data as positional argument
+    amp_multicast_benchmark = run_performance_test([getattr(MX_OP_MODULE, "amp_multicast")],
+                                                   run_backward=True,
+                                                   dtype=dtype,
+                                                   ctx=ctx,
+                                                   profiler=profiler,
+                                                   inputs=[{"args": [(1024, 1024)],
+                                                            "num_outputs":1},
+                                                            "args": [(10000, 1)],
+                                                            "num_outputs":1}],
+                                                   warmup=warmup,
+                                                   runs=runs)
+
     # Fetch all Unary Operators
     mx_unary_broadcast_ops = get_all_unary_operators()
+
     # Run benchmarks
     mx_unary_op_results = run_op_benchmarks(mx_unary_broadcast_ops, dtype, ctx, profiler, warmup, runs)
-    return mx_unary_op_results
+    return merge_map_list(amp_multicast_benchmark + [mx_unary_op_results])
