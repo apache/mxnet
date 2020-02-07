@@ -490,9 +490,14 @@ void NumpyPadOpImpl(const TBlob& in_data,
     for (dimcounter = 0; dimcounter < NDim; dimcounter++) {
       urshape[dimcounter] = oshape[dimcounter];
     }
-    for (dimcounter = 0; dimcounter < NDim; dimcounter++) {
-      width[dimcounter*2] = param.pad_width[dimcounter][0];
-      width[dimcounter*2 + 1] = param.pad_width[dimcounter][1];
+    if (ndim == 1) {
+      width[0] = param.pad_width[0][0];
+      width[1] = param.pad_width[1][0];
+    } else {
+      for (dimcounter = 0; dimcounter < NDim; dimcounter++) {
+        width[dimcounter*2] = param.pad_width[dimcounter][0];
+        width[dimcounter*2 + 1] = param.pad_width[dimcounter][1];
+      }
     }
     if (!back) {
       if (mode == 1) {
