@@ -33,8 +33,10 @@ from .base import KVStoreBase
 __all__ = ['BytePS']
 
 from mxnet.log import get_logger
-import logging,os
+import logging
+import os
 logger = get_logger("Byteps-Backend-Test", level=logging.DEBUG)
+
 
 @KVStoreBase.register
 class BytePS(KVStoreBase):
@@ -49,7 +51,6 @@ class BytePS(KVStoreBase):
             print('Did not find BytePS library. Please install BytePS first')
             raise err
         self.handle.init()
-        logger.debug("Byteps- localrank={}, size={}, rank={}".format(self.local_rank, self.num_workers, self.rank))
 
     def broadcast(self, key, value, out, priority=0):
         """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
@@ -75,20 +76,20 @@ class BytePS(KVStoreBase):
         """
 
         # do not accept list or tuple for key/value
-        assert isinstance(key, (str, int))	
+        assert isinstance(key, (str, int))
 
         # unpack the list if it contains just one NDArray
-        value = value[0] if isinstance(value, list) and len(value) == 1 else value
-        assert isinstance(value, NDArray) \
-                "The type of value can only be NDArray or list of NDArray which has only one element."
+        value = value[0] if isinstance(
+            value, list) and len(value) == 1 else value
+        assert isinstance(value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
 
-        # for non-root-rank, assign value with 0, thus the result of pushpull will be 
+        # for non-root-rank, assign value with 0, thus the result of pushpull will be
         # equal to the value of root-rank, thus implementing broadcast.
         root_rank = 0
         if self.rank != root_rank:
             value.__imul__(0)
         self.handle.byteps_push_pull(value, version=0, priority=priority,
-                                name=str(key), is_average=False)
+                                     name=str(key), is_average=False)
         # Make sure tensors pushed to MXNet engine get processed such that all
         # workers are synced before starting training.
         value.wait_to_read()
@@ -128,11 +129,12 @@ class BytePS(KVStoreBase):
         assert isinstance(key, (str, int))
 
         # unpack the list if it contains just one NDArray
-        value = value[0] if isinstance(value, list) and len(value) == 1 else value
+        value = value[0] if isinstance(
+            value, list) and len(value) == 1 else value
         assert isinstance(value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
-        
+
         self.handle.byteps_push_pull(value, version=0, priority=priority,
-                                name=str(key), is_average=False)
+                                     name=str(key), is_average=False)
 
         if out is not None:
             out = out if isinstance(out, list) else [out]
@@ -157,46 +159,46 @@ class BytePS(KVStoreBase):
         else:
             raise ValueError('Unknown capability: {}'.format(capability))
 
-    @property		
-    def type(self):		
+    @property
+    def type(self):
         """ Returns the type of this kvstore.		
-        
+
         Returns		
         -------		
         type : str		
             the string type		
-        """		
-        return 'byteps'		
+        """
+        return 'byteps'
 
-    @property		
-    def local_rank(self):		
+    @property
+    def local_rank(self):
         """ Returns the local rank of this worker on the node.		
-        
+
         Returns		
         -------		
         rank : int		
             The local rank of this node, which is in range [0, num_workers_on_current_node())		
-        """		
-        return self.handle.local_rank()		
+        """
+        return self.handle.local_rank()
 
-    @property		
-    def rank(self):		
+    @property
+    def rank(self):
         """ Returns the rank of this worker node.		
-        
+
         Returns		
         -------		
         rank : int		
             The rank of this node, which is in range [0, num_workers())		
-        """		
-        return self.handle.rank()		
+        """
+        return self.handle.rank()
 
-    @property		
-    def num_workers(self):		
+    @property
+    def num_workers(self):
         """Returns the number of worker nodes.		
-        
+
         Returns		
         -------		
         size :int		
             The number of worker nodes.		
-        """		
+        """
         return self.handle.size()
