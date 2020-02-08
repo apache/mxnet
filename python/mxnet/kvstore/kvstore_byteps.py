@@ -32,6 +32,7 @@ from .base import KVStoreBase
 
 __all__ = ['BytePS']
 
+
 @KVStoreBase.register
 class BytePS(KVStoreBase):
     """BytePS backend for MXNet KVStore interface."""
@@ -75,7 +76,8 @@ class BytePS(KVStoreBase):
         # unpack the list if it contains just one NDArray
         value = value[0] if isinstance(
             value, list) and len(value) == 1 else value
-        assert isinstance(value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
+        assert isinstance(
+            value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
 
         # for non-root-rank, assign value with 0, thus the result of pushpull will be
         # equal to the value of root-rank, thus implementing broadcast.
@@ -125,7 +127,8 @@ class BytePS(KVStoreBase):
         # unpack the list if it contains just one NDArray
         value = value[0] if isinstance(
             value, list) and len(value) == 1 else value
-        assert isinstance(value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
+        assert isinstance(
+            value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
 
         self.handle.byteps_push_pull(value, version=0, priority=priority,
                                      name=str(key), is_average=False)
@@ -156,7 +159,6 @@ class BytePS(KVStoreBase):
     @property
     def type(self):
         """ Returns the type of this kvstore.		
-
         Returns		
         -------		
         type : str		
@@ -178,7 +180,6 @@ class BytePS(KVStoreBase):
     @property
     def rank(self):
         """ Returns the rank of this worker node.		
-
         Returns		
         -------		
         rank : int		
@@ -189,10 +190,18 @@ class BytePS(KVStoreBase):
     @property
     def num_workers(self):
         """Returns the number of worker nodes.		
-
         Returns		
         -------		
         size :int		
             The number of worker nodes.		
         """
         return self.handle.size()
+
+    def set_optimizer(self, optimizer):
+        raise NotImplementedError()
+    
+    def save_optimizer_states(self, fname, dump_optimizer=False):
+        raise NotImplementedError()
+
+    def load_optimizer_states(self, fname):
+        raise NotImplementedError()
