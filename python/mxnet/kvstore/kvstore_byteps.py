@@ -19,15 +19,7 @@
 """ BytePS backend for MXNet KVStore"""
 from __future__ import absolute_import
 
-from array import array
-import ctypes
-import pickle
 from ..ndarray import NDArray
-from ..ndarray import _ndarray_cls
-from ..base import _LIB, c_str_array, c_handle_array, c_array, c_array_buf, c_str
-from ..base import check_call, string_types, mx_uint, py_str
-from ..base import NDArrayHandle
-from .. import optimizer as opt
 from .base import KVStoreBase
 
 __all__ = ['BytePS']
@@ -158,48 +150,51 @@ class BytePS(KVStoreBase):
 
     @property
     def type(self):
-        """ Returns the type of this kvstore.		
-        Returns		
-        -------		
-        type : str		
-            the string type		
+        """ Returns the type of this kvstore.
+
+        Returns
+        -------
+        type : str
+            the string type
         """
         return 'byteps'
 
     @property
     def local_rank(self):
-        """ Returns the local rank of this worker on the node.		
+        """ Returns the local rank of this worker on the node.
 
-        Returns		
-        -------		
-        rank : int		
-            The local rank of this node, which is in range [0, num_workers_on_current_node())		
+        Returns
+        -------
+        rank : int
+            The local rank of this node, which is in range [0, num_workers_on_current_node())
         """
         return self.handle.local_rank()
 
     @property
     def rank(self):
-        """ Returns the rank of this worker node.		
-        Returns		
-        -------		
-        rank : int		
-            The rank of this node, which is in range [0, num_workers())		
+        """ Returns the rank of this worker node.
+
+        Returns
+        -------
+        rank : int
+            The rank of this node, which is in range [0, num_workers())
         """
         return self.handle.rank()
 
     @property
     def num_workers(self):
-        """Returns the number of worker nodes.		
-        Returns		
-        -------		
-        size :int		
-            The number of worker nodes.		
+        """Returns the number of worker nodes.
+
+        Returns
+        -------
+        size :int
+            The number of worker nodes.
         """
         return self.handle.size()
 
     def set_optimizer(self, optimizer):
         raise NotImplementedError()
-    
+
     def save_optimizer_states(self, fname, dump_optimizer=False):
         raise NotImplementedError()
 
