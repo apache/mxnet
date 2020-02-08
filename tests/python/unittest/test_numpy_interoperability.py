@@ -112,7 +112,7 @@ def _add_workload_bincount():
     OpArgMngr.add_workload('bincount', y, minlength=8)
     OpArgMngr.add_workload('bincount', y2, minlength=0)
     OpArgMngr.add_workload('bincount', y2, minlength=5)
-    
+
 
 def _add_workload_diag():
     def get_mat(n):
@@ -167,7 +167,7 @@ def _add_workload_quantile():
     q2 = np.array(1)
     q3 = np.array(0.5)
     q4 = np.array([0, 0.75, 0.25, 0.5, 1.0])
-    
+
     OpArgMngr.add_workload('quantile', x1, q1)
     OpArgMngr.add_workload('quantile', x1, q2)
     OpArgMngr.add_workload('quantile', x1, q3)
@@ -189,7 +189,7 @@ def _add_workload_percentile():
     q3 = np.array([25, 50, 100])
     x4 = np.arange(11 * 2).reshape(11, 1, 2, 1)
     x5 = np.array([0, np.nan])
-    
+
     OpArgMngr.add_workload('percentile', x1, q1, None, None, None)
     OpArgMngr.add_workload('percentile', x1, q1, None, None, None, 'linear')
     OpArgMngr.add_workload('percentile', x2, q2, axis=0)
@@ -292,7 +292,7 @@ def _add_workload_array_split():
     OpArgMngr.add_workload('array_split', b, 3, axis=-1)
     OpArgMngr.add_workload('array_split', b, 3)
 
-    
+
 def _add_workload_squeeze():
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)))
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)))
@@ -921,6 +921,20 @@ def _add_workload_amax(array_pool):
 
 def _add_workload_min(array_pool):
     OpArgMngr.add_workload('min', array_pool['4x1'])
+
+
+def _add_workload_amin(array_pool):
+    a = np.array([3, 4, 5, 10, -3, -5, 6.0])
+    b = np.array([[3, 6.0, 9.0],
+                  [4, 10.0, 5.0],
+                  [8, 3.0, 2.0]])
+    c = np.array(1)
+    OpArgMngr.add_workload('amin', array_pool['4x1'])
+    OpArgMngr.add_workload('amin', a)
+    OpArgMngr.add_workload('amin', b, axis=0)
+    OpArgMngr.add_workload('amin', b, axis=1)
+    OpArgMngr.add_workload('amin', c)
+    OpArgMngr.add_workload('amin', c, axis=None)
 
 
 def _add_workload_mean(array_pool):
@@ -1661,7 +1675,7 @@ def _add_workload_diagflat():
     vals_c = (100 * np.array(get_mat(5)) + 1).astype('l')
     vals_f = _np.array((100 * get_mat(5) + 1), order='F', dtype='l')
     vals_f = np.array(vals_f)
-    
+
     OpArgMngr.add_workload('diagflat', A, k=2)
     OpArgMngr.add_workload('diagflat', A, k=1)
     OpArgMngr.add_workload('diagflat', A, k=0)
@@ -1804,6 +1818,7 @@ def _prepare_workloads():
     _add_workload_max(array_pool)
     _add_workload_amax(array_pool)
     _add_workload_min(array_pool)
+    _add_workload_amin(array_pool)
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
