@@ -32,12 +32,6 @@ from .base import KVStoreBase
 
 __all__ = ['BytePS']
 
-from mxnet.log import get_logger
-import logging
-import os
-logger = get_logger("Byteps-Backend-Test", level=logging.DEBUG)
-
-
 @KVStoreBase.register
 class BytePS(KVStoreBase):
     """BytePS backend for MXNet KVStore interface."""
