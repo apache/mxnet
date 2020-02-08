@@ -346,6 +346,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   }
 };
 
+namespace io {
+  class LazyTransformDataset;
+}
+
 class CachedOp {
   using CachedOpMonCallback =
       std::function<void(const char *, const char *, void *)>;
@@ -549,6 +553,10 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
+
+  friend class ::mxnet::io::LazyTransformDataset;
+  nnvm::Symbol sym_;
+  std::vector<std::pair<std::string, std::string> > flags_;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

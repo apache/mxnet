@@ -101,13 +101,21 @@ Example:
 .set_attr<mxnet::FInferShape>("FInferShape", RandomCropShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 2>)
 .set_attr<FCompute>("FCompute<cpu>", RandomCropOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
-.set_attr<FResourceRequest>("FResourceRequest",                           \
-    [](const NodeAttrs& attrs) {                                            \
-      return std::vector<ResourceRequest>{ResourceRequest::kRandom};        \
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_backward_random_image_crop" })
+.set_attr<FResourceRequest>("FResourceRequest",                           
+    [](const NodeAttrs& attrs) {                                            
+      return std::vector<ResourceRequest>{                            
+        ResourceRequest::kRandom, ResourceRequest::kTempSpace};        
     })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(RandomCropParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_random_image_crop)
+.set_attr_parser(ParamParser<RandomCropParam>)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", RandomCropOpBackward<cpu>);
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet

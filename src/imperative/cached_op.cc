@@ -40,7 +40,7 @@ struct CachedOp::DynamicRuntime {
 
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
-    const std::vector<std::pair<std::string, std::string> >& flags) {
+    const std::vector<std::pair<std::string, std::string> >& flags) : sym_(sym), flags_(flags) {
   config_.Init(flags);
   this->dynamic_shape_checked_ = false;
 

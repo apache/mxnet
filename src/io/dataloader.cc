@@ -63,11 +63,12 @@ template<typename DType = real_t>
 class ThreadedDataLoader : public IIterator<TBlobBatch> {
  public:
   ThreadedDataLoader() {
-    var_ = Engine::Get()->NewVariable();
   }
   // destructor
   virtual ~ThreadedDataLoader(void) {
-    Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), var_);
+    for (size_t i = 0; i < vars_.size(); ++i) {
+      Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), vars_[i]);
+    }
   }
   // constructor
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -118,17 +119,37 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     std::vector<std::vector<NDArray> > inputs(batch_size);
     std::vector<int> is_scalars;
     // #pragma omp parallel for num_threads(param_.num_workers)
+    // const auto engine = Engine::Get();
     for (size_t i = 0; i < real_batch_size; ++i) {
       // omp_exc_.Run([&] {
-        std::vector<int> is_temp;
-        inputs[i] = dataset_->GetItem(idx_ptr[i], is_temp);
-        if (i == 0) {
-          is_scalars = is_temp;
-        }
+      auto idx = idx_ptr[i];
+      std::vector<int> is_temp;
+      inputs[i] = dataset_->GetItem(idx, is_temp);
+      if (i == 0) {
+        is_scalars = is_temp;
+      }
+      // if (vars_.size() <= i) {
+      //   vars_.emplace_back(engine->NewVariable());
+      // }
+      // engine->PushSync(
+      //   [this, &inputs, &is_scalars, &idx, &i](RunContext ctx) {
+      //     std::vector<int> is_temp;
+      //     LOG(INFO) << "before get";
+      //     inputs[i] = dataset_->GetItem(idx, is_temp);
+      //     LOG(INFO) << "after get";
+      //     if (i == 0) {
+      //       is_scalars = is_temp;
+      //     }
+      //   },
+      //   Context::CPU(), {}, {vars_[i]}, FnProperty::kNormal, 0, "DataLoaderGetPerItem");
+        
       // });
     }
     // omp_exc_.Rethrow();
 
+    // for (size_t i = 0; i < real_batch_size; ++i) {
+    //   engine->WaitForVar(vars_[i]);
+    // }
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
       inputs[i] = inputs[0];
@@ -168,7 +189,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     /*! \brief pointer to batchify function */
     BatchifyFunctionPtr batchify_fn_;
     /*! \brief engine variable */
-    Engine::VarHandle var_;
+    std::vector<Engine::VarHandle> vars_;
     /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
     dmlc::OMPException omp_exc_;
 };  // class ThreadedDataLoader

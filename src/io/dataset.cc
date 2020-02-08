@@ -28,6 +28,7 @@
 #include <mxnet/tensor_blob.h>
 
 #include "../imperative/cached_op.h"
+#include "../imperative/cached_op_threadsafe.h"
 
 #include <string>
 #include <vector>
@@ -395,8 +396,44 @@ class LazyTransformDataset : public Dataset {
 
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
-      cached_op_ = *static_cast<CachedOpPtr*>(reinterpret_cast<void*>(param_.cached_op));
+      auto op = *static_cast<CachedOpPtr*>(reinterpret_cast<void*>(param_.cached_op));
+      cached_op_ = CachedOpThreadSafePtr(new CachedOpThreadSafe(op->sym_, op->flags_));
       base_data_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
+
+      // use first item to calculate size info
+      CHECK_GT(GetLen(), 0) << "LazyTransformDataset expect the base dataset to have at least 1 item";
+      std::vector<int> is_scalar;
+      auto inputs = base_data_->GetItem(0, is_scalar);
+      // check output size
+      CHECK_EQ(param_.scalar_outputs.ndim(), cached_op_->num_outputs())
+        << "Output scalar info size: " << param_.scalar_outputs.ndim() << " vs. output size: "
+        << cached_op_->num_outputs() << " mismatch!";
+      // check input size
+      if (param_.transform_indices.ndim() == 0) {
+        std::vector<int> default_indices;
+        default_indices.reserve(cached_op_->num_inputs());
+        for (size_t i = 0; i < cached_op_->num_inputs(); ++i) {
+          default_indices.emplace_back(static_cast<int>(i));
+        }
+        use_input_indices_ = default_indices;
+      } else {
+        use_input_indices_ = std::vector<int>(param_.transform_indices.begin(), param_.transform_indices.end());
+      }
+      CHECK_EQ(use_input_indices_.size(), cached_op_->num_inputs())
+        << "Mismatched transform indices and transform inputs: " << use_input_indices_.size()
+        << " vs. " << cached_op_->num_inputs();
+      auto num_inputs = use_input_indices_.size();
+      CHECK_GE(inputs.size(), num_inputs)
+        << "LazyTransformDataset input size " << inputs.size() << " smaller than transform input size: "
+        << num_inputs;
+      pass_through_indices_.clear();
+      for (size_t i = 0; i < inputs.size(); ++i) {
+        // filling output ndarray from unaltered inputs, transformed outputs are already inserted
+        if (std::find(use_input_indices_.begin(), use_input_indices_.end(), i) == use_input_indices_.end()) {
+          pass_through_indices_.emplace_back(i);
+        }
+      }
+      num_outputs_ = inputs.size() + cached_op_->num_outputs() - cached_op_->num_inputs();
     }
 
     uint64_t GetLen() const {
@@ -404,59 +441,34 @@ class LazyTransformDataset : public Dataset {
     }
 
     std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+      // std::vector<NDArray> inputs;
+      // const auto engine = Engine::Get();
+      // auto var = engine->NewVariable();
+      // engine->PushSync([this, &idx, &inputs, &is_scalar](RunContext ctx) {
+      //     inputs = base_data_->GetItem(idx, is_scalar);
+      //   },
+      //   Context::CPU(), {}, {var}, FnProperty::kNormal, 0, "LazyTransformDatasetBaseGetItem");
+      // engine->WaitForVar(var);
       auto inputs = base_data_->GetItem(idx, is_scalar);
+      // LOG(INFO) << "Get internal data";
       std::vector<NDArray> outputs;
-      // check output size
-      CHECK_EQ(param_.scalar_outputs.ndim(), cached_op_->num_outputs())
-        << "Output scalar info size: " << param_.scalar_outputs.ndim() << " vs. output size: "
-        << cached_op_->num_outputs() << " mismatch!";
-      // check input size
-      std::vector<int> tindices;
-      if (param_.transform_indices.ndim() == 0) {
-        std::vector<int> default_indices;
-        default_indices.reserve(cached_op_->num_inputs());
-        for (size_t i = 0; i < cached_op_->num_inputs(); ++i) {
-          default_indices.emplace_back(static_cast<int>(i));
-        }
-        tindices = default_indices;
-      } else {
-        tindices = std::vector<int>(param_.transform_indices.begin(), param_.transform_indices.end());
-      }
-      CHECK_EQ(tindices.size(), cached_op_->num_inputs())
-        << "Mismatched transform indices and transform inputs: " << tindices.size()
-        << " vs. " << cached_op_->num_inputs();
-      auto num_inputs = tindices.size();
-      CHECK_GE(inputs.size(), num_inputs)
-        << "LazyTransformDataset input size " << inputs.size() << " smaller than transform input size: "
-        << num_inputs;
-      // reserve output ndarray
-      size_t num_outputs = inputs.size() + cached_op_->num_outputs() - cached_op_->num_inputs();
+      outputs.reserve(num_outputs_);
       outputs.resize(cached_op_->num_outputs());
-      outputs.reserve(num_outputs);
-      for (size_t i = 0; i < inputs.size(); ++i) {
-        // filling output ndarray from unaltered inputs, transformed outputs are already inserted
-        if (std::find(tindices.begin(), tindices.end(), i) == tindices.end()) {
-          outputs.emplace_back(inputs[i]);
-        }
+      for (auto i : pass_through_indices_) {
+        outputs.emplace_back(inputs[i]);
       }
-      CHECK_EQ(outputs.size(), num_outputs);
+      CHECK_EQ(outputs.size(), num_outputs_);
       // workspace for cached op
       std::vector<NDArray*> ndinputs;
-      std::vector<Engine::VarHandle> invars;
       std::vector<NDArray*> ndoutputs;
-      std::vector<Engine::VarHandle> outvars;
       ndinputs.reserve(inputs.size());
-      invars.reserve(inputs.size());
-      for (size_t i = 0; i < tindices.size(); ++i) {
-        ndinputs.emplace_back(&(inputs[tindices[i]]));
-        invars.emplace_back(ndinputs[i]->var());
+      for (size_t i = 0; i < use_input_indices_.size(); ++i) {
+        ndinputs.emplace_back(&(inputs[use_input_indices_[i]]));
       }
       ndoutputs.reserve(cached_op_->num_outputs());
-      outvars.reserve(cached_op_->num_outputs());
       CHECK_LE(cached_op_->num_outputs(), outputs.size());
       for (size_t i = 0; i < cached_op_->num_outputs(); ++i) {
         ndoutputs.emplace_back(&(outputs[i]));
-        // outvars.emplace_back(outputs[i].var());
       }
 
       for (size_t i = 0; i < inputs.size(); ++i) {
@@ -511,11 +523,17 @@ class LazyTransformDataset : public Dataset {
     /*! \brief parameters */
     LazyTransformDatasetParam param_;
     /*! \brief stored cached op */
-    CachedOpPtr cached_op_;
+    // CachedOpPtr cached_op_;
+    CachedOpThreadSafePtr cached_op_;
     /*! \brief internal dataset */
     DatasetPtr base_data_;
     /*! \brief engine variable */
     // Engine::VarHandle var_;
+    std::vector<int> use_input_indices_;
+    std::vector<int> pass_through_indices_;
+    size_t num_outputs_;
+    
+
 };   // class LazyTransformDataset
 
 MXNET_REGISTER_IO_DATASET(LazyTransformDataset)

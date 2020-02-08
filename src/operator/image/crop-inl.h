@@ -301,13 +301,13 @@ inline void RandomCropOpForward(const nnvm::NodeAttrs &attrs,
                    const std::vector<TBlob> &inputs,
                    const std::vector<OpReqType> &req,
                    const std::vector<TBlob> &outputs) {
-  CHECK_EQ(outputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 2U) << "out, temp";
   CHECK_EQ(inputs.size(), 1U);
   const RandomCropParam& param = nnvm::get<RandomCropParam>(attrs.parsed);
   
   const TShape& dshape = inputs[0].shape_;
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  Random<xpu> *prnd = ctx.requested[0].get_random<xpu, real_t>(s);
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
   auto src_size = GetSourceSize(dshape);
   auto resize_size = GetSourceSize(outputs[1].shape_);
   // random left/top position
@@ -315,6 +315,13 @@ inline void RandomCropOpForward(const nnvm::NodeAttrs &attrs,
     param.xrange[0], param.xrange[1])(prnd->GetRndEngine()) * (src_size[0] - resize_size[0]);
   float y = std::uniform_real_distribution<float>(
     param.yrange[0], param.yrange[1])(prnd->GetRndEngine()) * (src_size[1] - resize_size[1]);
+  // write x, y, w, h to temp workspace
+  Tensor<cpu, 1> workspace = ctx.requested[1].get_space<cpu>(
+    mshadow::Shape1(4), s);
+  workspace.dptr_[0] = x;
+  workspace.dptr_[1] = y;
+  workspace.dptr_[2] = resize_size[0];
+  workspace.dptr_[3] = resize_size[1];
   if (resize_size[0] == src_size[0] && resize_size[1] == src_size[1]) {
     // no need to resize
     CropImpl<xpu>(x, y, resize_size[0], resize_size[1], inputs, outputs, ctx, req);
@@ -327,6 +334,20 @@ inline void RandomCropOpForward(const nnvm::NodeAttrs &attrs,
     rparam.size = Tuple<int>({param.width, param.height});
     ResizeImplWrapper<xpu>(rparam, ctx, hidden_outputs, outputs);
   }
+}
+
+template<typename xpu>
+inline void RandomCropOpBackward(const nnvm::NodeAttrs &attrs,
+                   const OpContext &ctx,
+                   const std::vector<TBlob> &inputs,
+                   const std::vector<OpReqType> &req,
+                   const std::vector<TBlob> &outputs) {
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs.size(), 2U);
+  Tensor<cpu, 1> workspace = ctx.requested[1].get_space<cpu>(
+    mshadow::Shape1(4), ctx.get_stream<cpu>());
+  auto ptr = workspace.dptr_;
+  CropBackwardImpl<xpu>(ptr[0], ptr[1], ptr[2], ptr[3], inputs, outputs, ctx, req);
 }
 }  // namespace image
 }  // namespace op
