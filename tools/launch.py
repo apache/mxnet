@@ -107,9 +107,8 @@ def main():
             args.scheduler_ip = '127.0.0.1'
         if args.scheduler_port is None:
             args.scheduler_port = 2333
-        print(args)
         import byteps_launcher as bpsl
-        bpsl.combined_submit(args)
+        bpsl.submit(args)
         return
     
     if args.num_servers is None:

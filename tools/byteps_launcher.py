@@ -1,7 +1,11 @@
 #!/usr/bin/python
 """
 Launch a distributed job for BytePS
+Combining the byteps/launcher/dist_launcher.py and byteps/launcher/launch.py of 
+https://github.com/bytedance/byteps.git @ 2152d88
 """
+
+
 import argparse
 import os, sys
 import signal
@@ -100,79 +104,9 @@ def submit(args):
     pass_envs = preprocess_envs(args.env)
     pass_envs['DMLC_NUM_WORKER'] = str(num_worker)
     pass_envs['DMLC_NUM_SERVER'] = str(num_server)
-    #! pass_envs['DMLC_INTERFACE'] = str(args.interface) # TODO: It seems that we need to add this argument in launch.py
     pass_envs['DMLC_PS_ROOT_URI'] = str(args.scheduler_ip) # This ip is localhost
     pass_envs['DMLC_PS_ROOT_PORT'] = str(args.scheduler_port) # This port is allocated automatically.
-    curr_path = os.path.abspath(os.path.dirname(__file__))
-    args.command = ['python3 ' + curr_path + '/byteps_tmplauncher.py '] + args.command # add launche.py as launcher.
-    pass_envs['PS_VERBOSE'] = str(2)
-    pass_envs['BYTEPS_LOG_LEVEL'] = 'TRACE'
-    pass_envs["BYTEPS_TRACE_ON"] = "1"
-    pass_envs["BYTEPS_TRACE_END_STEP"] = "20"
-    pass_envs["BYTEPS_TRACE_START_STEP"]="1"
-    pass_envs["BYTEPS_TRACE_DIR"]= "/home/ubuntu/byteps_traces"
-    print("Env: ", pass_envs)
-    username = None
-    threads = []
-    for (node, port) in [(args.scheduler_ip, "")]:
-        name = 'scheduler'
-        pass_envs['DMLC_ROLE'] = name
-        prog = get_env(pass_envs) + (' '.join(args.command))
-        threads.append(start_ssh(prog, node, port, username, name))
-    for i, (node, port) in enumerate(worker_hosts):
-        name = 'worker'
-        pass_envs['DMLC_ROLE'] = name
-        pass_envs['DMLC_WORKER_ID'] = str(i)
-        prog = get_env(pass_envs) + (' '.join(args.command))
-        threads.append(start_ssh(prog, node, port, username, name + str(i)))
-    for i, (node, port) in enumerate(server_hosts):
-        name = 'server'
-        pass_envs['DMLC_ROLE'] = name
-        prog = get_env(pass_envs) + (' '.join(args.command))
-        threads.append(start_ssh(prog, node, port, username, name + str(i)))
-
-    for t in threads:
-        t.join()
-
-def combined_submit(args):
-    if args.server_hostfile is not None:
-        server_hosts = get_hosts_from_file(args.server_hostfile)
-        worker_hosts = get_hosts_from_file(args.hostfile)
-        args.num_workers = len(worker_hosts)
-        args.num_servers = len(server_hosts)
-    else:
-        assert (args.num_servers is not None and args.num_workers is not None), \
-                "For BytePS backend, you must specify num_servers and num_workers"
-        all_hosts = get_hosts_from_file(args.hostfile)
-        assert(len(all_hosts) == args.num_workers + args.num_servers ), \
-        "The sum of the number of workers and servers must be equal to \
-        the number of hosts in the hostfile"
-        server_hosts = all_hosts[:args.num_servers]
-        worker_hosts = all_hosts[args.num_servers:]
     
-    num_server = args.num_servers
-    num_worker = args.num_workers
-    assert num_server >= 1, "There must be at least one server."
-    assert num_worker >= 1, "There must be at least one worker."
-
-    print('Launch %d workers and %d servers' % (num_worker, num_server))
-
-    # common env
-    pass_envs = preprocess_envs(args.env)
-    pass_envs['DMLC_NUM_WORKER'] = str(num_worker)
-    pass_envs['DMLC_NUM_SERVER'] = str(num_server)
-    #! pass_envs['DMLC_INTERFACE'] = str(args.interface) # TODO: It seems that we need to add this argument in launch.py
-    pass_envs['DMLC_PS_ROOT_URI'] = str(args.scheduler_ip) # This ip is localhost
-    pass_envs['DMLC_PS_ROOT_PORT'] = str(args.scheduler_port) # This port is allocated automatically.
-    pass_envs['PS_VERBOSE'] = str(2)
-    pass_envs['BYTEPS_LOG_LEVEL'] = 'TRACE'
-    pass_envs["BYTEPS_TRACE_ON"] = str(1)
-    pass_envs["BYTEPS_TRACE_END_STEP"] = str(5)
-    pass_envs["BYTEPS_TRACE_START_STEP"]= str(1)
-    pass_envs["BYTEPS_TRACE_DIR"]= "/home/ubuntu/byteps_traces"
-    pass_envs['BYTEPS_FORCE_DISTRIBUTED']=str(1)
-    pass_envs['PS_KEY_LOG'] = str(1)
-    print("Env: ", pass_envs)
     username = None
     threads = []
     for (node, port) in [(args.scheduler_ip, str(22))]:
@@ -181,6 +115,7 @@ def combined_submit(args):
         print('Laucnhing Scheduler...')
         prog = get_env(pass_envs) + (" python3 -c " + "\"" + "import byteps.server" + "\"")
         threads.append(start_ssh(prog, node, port, username, name))
+    
     for i, (node, port) in enumerate(worker_hosts):
         name = 'worker'
         pass_envs['DMLC_ROLE'] = name
@@ -194,14 +129,12 @@ def combined_submit(args):
             pass_envs["BYTEPS_LOCAL_RANK"] = str(local_rank)
             pass_envs["BYTEPS_LOCAL_SIZE"] = str(local_size)
             command = args.command
-            print("TEST PRINT:",args.command, command)
-            # pass_envs['BYTEPS_ENABLE_GDB'] = str(1)
-            # if int(os.getenv("BYTEPS_ENABLE_GDB", 0)):
-            #     if command.find("python3") != 0:
-            #         command = "python3 " + command
-            #     command = ["gdb -ex 'run' -ex 'bt' -batch --args "] + command
+            if int(os.getenv("BYTEPS_ENABLE_GDB", 0)):
+                if command.find("python3") != 0:
+                    command = "python3 " + command
+                command = ["gdb -ex 'run' -ex 'bt' -batch --args "] + command
             prog = get_env(pass_envs) + (' '.join(command))
-            print("Start in {}/{}, with prog {}".format(local_rank+1, local_size, str(prog)))
+
             if pass_envs["BYTEPS_TRACE_ON"] == "1":
                 print("\n!!!Enable profiling for WORKER_ID: %s and local_rank: %d!!!" % (pass_envs["DMLC_WORKER_ID"], local_rank))
                 print("BYTEPS_TRACE_START_STEP: %s\tBYTEPS_TRACE_END_STEP: %s\t BYTEPS_TRACE_DIR: %s" % (pass_envs["BYTEPS_TRACE_START_STEP"], os.environ.get("BYTEPS_TRACE_END_STEP", ""), os.environ.get("BYTEPS_TRACE_DIR", "")))
@@ -211,6 +144,7 @@ def combined_submit(args):
                 if not os.path.exists(trace_path):
                     os.makedirs(trace_path)
             threads.append(start_ssh(prog, node, port, username, name + str(i)))
+    
     for i, (node, port) in enumerate(server_hosts):
         name = 'server'
         pass_envs['DMLC_ROLE'] = name

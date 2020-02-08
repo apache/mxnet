@@ -48,12 +48,6 @@ class BytePS(KVStoreBase):
         except ImportError as err:
             print('Did not find BytePS library. Please install BytePS first')
             raise err
-        # import os
-        # logger.debug("totoal workers: {}".format(self.handle.local_size()))
-        # logger.debug("Begin init byteps.mxnet for rank {0}".format(self.local_rank))
-        logger.debug("BytePS-KVStore ENV:  ",os.environ)
-        # os.environ['BYTEPS_LOCAL_RANK'] = str(self.local_rank)
-        # os.environ['BYTEPS_LOCAL_SIZE'] = str(self.handle.local_size())
         self.handle.init()
         logger.debug("Byteps- localrank={}, size={}, rank={}".format(self.local_rank, self.num_workers, self.rank))
 
@@ -79,30 +73,25 @@ class BytePS(KVStoreBase):
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         """
-        logger.debug("kv.broad_cast is called with key={}, value={}, out={}. ".format(key,value,out))
 
         # do not accept list or tuple for key/value
-        assert isinstance(key, (str, int))		
-        # assert isinstance(value, NDArray), type(value)
+        assert isinstance(key, (str, int))	
 
-        # unpack the list if it contains just one NDArray
+        # unpack the list if it contains just one element
         value = value[0] if isinstance(value, list) and len(value) == 1 else value
-        logger.debug("call byteps_declare_tensor.")
-        self.handle.byteps_declare_tensor(str(key))
-        logger.debug("call byteps_declare_tensor done.")
-        # import time
-        # time.sleep(3)
+        assert isinstance(value, NDArray) \
+                "The type of value can only be NDArray or list of NDArray which has only one element."
+
+        # for non-root-rank, assign value with 0, thus the result of pushpull will be 
+        # equal to the value of root-rank, thus implementing broadcast.
         root_rank = 0
         if self.rank != root_rank:
             value.__imul__(0)
-        logger.debug("call byteps_push_pull.")
         self.handle.byteps_push_pull(value, version=0, priority=priority,
                                 name=str(key), is_average=False)
-        value.wait_to_read()
-        
-        logger.debug("call byteps_push_pull done.")
         # Make sure tensors pushed to MXNet engine get processed such that all
         # workers are synced before starting training.
+        value.wait_to_read()
 
         out = out if isinstance(out, list) else [out]
         for o in out:
@@ -132,32 +121,23 @@ class BytePS(KVStoreBase):
         >>> print a.asnumpy()
         [[ 8.  8.  8.]
         [ 8.  8.  8.]]
-        >>> # pushpull a list of keys.
-        >>> # single device
-        >>> keys = ['4', '5', '6']
-        >>> b = [mx.nd.zeros(shape)]*len(keys)
-        >>> kv.pushpull(keys, [mx.nd.ones(shape)]*len(keys), out=b)
-        >>> print b[1].asnumpy()
-        [[ 1.  1.  1.]
-        [ 1.  1.  1.]]
         """
         # the most common operation operates on one NDArray as `value`, and
         # `out` is set to None, for inplace pushpull.
+
+        assert isinstance(key, (str, int))
+
         # unpack the list if it contains just one NDArray
         value = value[0] if isinstance(value, list) and len(value) == 1 else value
-        if isinstance(value, list):
-            ctx = value[0].context
-            reduced_value = sum([v.as_in_context(ctx) for v in value])
-        else:
-            assert isinstance(value, NDArray)
-            reduced_value = value
+        assert isinstance(value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
         
-        self.handle.byteps_push_pull(reduced_value, version=0, priority=priority,
+        self.handle.byteps_push_pull(value, version=0, priority=priority,
                                 name=str(key), is_average=False)
+
         if out is not None:
             out = out if isinstance(out, list) else [out]
             for o in out:
-                reduced_value.copyto(o)
+                value.copyto(o)
 
     @staticmethod
     def is_capable(capability):
