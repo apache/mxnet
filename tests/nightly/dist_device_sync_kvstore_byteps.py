@@ -25,7 +25,7 @@ import numpy.random as rnd
 import time
 import argparse
 from mxnet.log import get_logger
-import logging,time
+import logging
 from mxnet.kvstore import BytePS
 logger = get_logger("Byteps-Backend-Test", level=logging.DEBUG)
 
@@ -49,7 +49,6 @@ shape = (2, 3)
 big_shape = (1200, 1200)        # bigger than MXNET_KVSTORE_BIGARRAY_BOUND
 
 kv = mx.kv.create(args.name)
-time.sleep(1)
 my_rank = kv.rank
 my_num_workers = kv.num_workers
 
