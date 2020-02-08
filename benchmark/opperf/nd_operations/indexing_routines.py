@@ -15,28 +15,29 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Performance benchmark tests for MXNet NDArray Random Sampling Operations.
-1. Operators are automatically fetched from MXNet operator registry.
-2. Default Inputs are generated. See rules/default_params.py. You can override the default values.
+import mxnet as mx
+from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
+from benchmark.opperf.utils.op_registry_utils import get_all_indexing_routines
 
-Below 18 random sampling Operators are covered:
+"""Performance benchmark tests for MXNet Indexing routines.
 
-['random_exponential', 'random_gamma', 'random_generalized_negative_binomial', 'random_negative_binomial',
-'random_normal', 'random_poisson', 'random_randint', 'random_uniform', 'sample_exponential', 'sample_gamma',
-'sample_generalized_negative_binomial', 'sample_multinomial', 'sample_negative_binomial', 'sample_normal',
-'sample_poisson', 'sample_uniform', 'GridGenerator', 'BilinearSampler']
-
+1. slice
+2. slice_axis
+3. slice_like
+4. take
+5. pick
+6. where
+7. ravel_multi_index
+8. unravel_index [to do]
+9. gather_nd
+10. scatter_nd [to do]
+11. one_hot
 """
 
-import mxnet as mx
 
-from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
-from benchmark.opperf.utils.op_registry_utils import get_all_random_sampling_operators
-
-
-def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype)for all the random sampling
-    operators in MXNet.
+def run_indexing_routines_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+    """Runs benchmarks with the given context and precision (dtype) for all the indexing routines
+    in MXNet.
 
     Parameters
     ----------
@@ -56,8 +57,9 @@ def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', p
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Fetch all Random Sampling Operators
-    mx_random_sample_ops = get_all_random_sampling_operators()
+    # Fetch all indexing routines
+    mx_indexing_ops = get_all_indexing_routines()
+
     # Run benchmarks
-    mx_random_sample_op_results = run_op_benchmarks(mx_random_sample_ops, dtype, ctx, profiler, warmup, runs)
-    return mx_random_sample_op_results
+    mx_indexing_op_results = run_op_benchmarks(mx_indexing_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_indexing_op_results
