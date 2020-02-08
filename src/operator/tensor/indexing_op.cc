@@ -898,6 +898,7 @@ Examples::
 
 NNVM_REGISTER_OP(gather_nd)
 .add_alias("_npi_gather_nd")
+.add_alias("_npx_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 

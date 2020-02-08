@@ -111,6 +111,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'amax',
     'mean',
     'min',
+    'amin',
     'nonzero',
     'ones_like',
     'atleast_1d',
