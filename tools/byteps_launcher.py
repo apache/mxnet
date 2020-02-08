@@ -25,12 +25,14 @@ https://github.com/bytedance/byteps.git @ 2152d88
 
 
 import argparse
-import os, sys
+import os
+import sys
 import signal
 import logging
 import subprocess
 from multiprocessing import Pool, Process
 from threading import Thread
+
 
 def preprocess_envs(args_envs):
     envs_map = {}
@@ -41,6 +43,7 @@ def preprocess_envs(args_envs):
             val = item[i+1:]
         envs_map[key] = val
     return envs_map
+
 
 def get_env(envs_map):
     envs = []
@@ -54,6 +57,7 @@ def get_env(envs_map):
     for k, v in envs_map.items():
         envs.append('export ' + str(k) + '=' + str(v) + ';')
     return (' '.join(envs))
+
 
 def get_hosts_from_file(filename):
     with open(filename) as f:
@@ -72,6 +76,7 @@ def get_hosts_from_file(filename):
             # hosts now contain the pair ip, port
             hosts.append((h, p))
     return hosts
+
 
 def start_ssh(prog, node, port, username, fname):
     def run(prog):
@@ -95,22 +100,34 @@ def start_ssh(prog, node, port, username, fname):
     thread.start()
     return thread
 
+
 def submit(args):
+    if args.num_servers is None:
+        args.num_servers = args.num_workers
     if args.server_hostfile is not None:
         server_hosts = get_hosts_from_file(args.server_hostfile)
         worker_hosts = get_hosts_from_file(args.hostfile)
         args.num_workers = len(worker_hosts)
         args.num_servers = len(server_hosts)
-    else:
+    else if args.hostfile is not None:
         assert (args.num_servers is not None and args.num_workers is not None), \
-                "For BytePS backend, you must specify num_servers and num_workers"
+            "For BytePS backend, you must specify num_servers and num_workers"
         all_hosts = get_hosts_from_file(args.hostfile)
-        assert(len(all_hosts) == args.num_workers + args.num_servers ), \
-        "The sum of the number of workers and servers must be equal to \
+        assert(len(all_hosts) == args.num_workers + args.num_servers), \
+            "The sum of the number of workers and servers must be equal to \
         the number of hosts in the hostfile"
         server_hosts = all_hosts[:args.num_servers]
         worker_hosts = all_hosts[args.num_servers:]
-    
+    else:
+        print("Warning: no hostfile was specified, {} servers and {} workers will be launched in localhost".format(
+            args.num_servers, args.num_workers))
+        server_hosts = []
+        worker_hosts = []
+        for i in range(args.num_servers):
+            server_hosts.append(('localhost', '22'))
+        for i in range(args.num_workers):
+            worker_hosts.append(('localhost', '22'))
+
     num_server = args.num_servers
     num_worker = args.num_workers
     assert num_server >= 1, "There must be at least one server."
@@ -122,18 +139,21 @@ def submit(args):
     pass_envs = preprocess_envs(args.env)
     pass_envs['DMLC_NUM_WORKER'] = str(num_worker)
     pass_envs['DMLC_NUM_SERVER'] = str(num_server)
-    pass_envs['DMLC_PS_ROOT_URI'] = str(args.scheduler_ip) # This ip is localhost
-    pass_envs['DMLC_PS_ROOT_PORT'] = str(args.scheduler_port) # This port is allocated automatically.
-    
+    pass_envs['DMLC_PS_ROOT_URI'] = str(
+        args.scheduler_ip)  # This ip is localhost
+    # This port is allocated automatically.
+    pass_envs['DMLC_PS_ROOT_PORT'] = str(args.scheduler_port)
+
     username = None
     threads = []
     for (node, port) in [(args.scheduler_ip, str(22))]:
         name = 'scheduler'
         pass_envs['DMLC_ROLE'] = name
         print('Laucnhing Scheduler...')
-        prog = get_env(pass_envs) + (" python3 -c " + "\"" + "import byteps.server" + "\"")
+        prog = get_env(pass_envs) + (" python3 -c " +
+                                     "\"" + "import byteps.server" + "\"")
         threads.append(start_ssh(prog, node, port, username, name))
-    
+
     for i, (node, port) in enumerate(worker_hosts):
         name = 'worker'
         pass_envs['DMLC_ROLE'] = name
@@ -154,20 +174,25 @@ def submit(args):
             prog = get_env(pass_envs) + (' '.join(command))
 
             if pass_envs["BYTEPS_TRACE_ON"] == "1":
-                print("\n!!!Enable profiling for WORKER_ID: %s and local_rank: %d!!!" % (pass_envs["DMLC_WORKER_ID"], local_rank))
-                print("BYTEPS_TRACE_START_STEP: %s\tBYTEPS_TRACE_END_STEP: %s\t BYTEPS_TRACE_DIR: %s" % (pass_envs["BYTEPS_TRACE_START_STEP"], os.environ.get("BYTEPS_TRACE_END_STEP", ""), os.environ.get("BYTEPS_TRACE_DIR", "")))
+                print("\n!!!Enable profiling for WORKER_ID: %s and local_rank: %d!!!" % (
+                    pass_envs["DMLC_WORKER_ID"], local_rank))
+                print("BYTEPS_TRACE_START_STEP: %s\tBYTEPS_TRACE_END_STEP: %s\t BYTEPS_TRACE_DIR: %s" % (
+                    pass_envs["BYTEPS_TRACE_START_STEP"], os.environ.get("BYTEPS_TRACE_END_STEP", ""), os.environ.get("BYTEPS_TRACE_DIR", "")))
                 print("Command: %s\n" % command)
                 sys.stdout.flush()
-                trace_path = os.path.join(pass_envs["BYTEPS_TRACE_DIR"], str(local_rank))
+                trace_path = os.path.join(
+                    pass_envs["BYTEPS_TRACE_DIR"], str(local_rank))
                 if not os.path.exists(trace_path):
                     os.makedirs(trace_path)
-            threads.append(start_ssh(prog, node, port, username, name + str(i)))
-    
+            threads.append(
+                start_ssh(prog, node, port, username, name + str(i)))
+
     for i, (node, port) in enumerate(server_hosts):
         name = 'server'
         pass_envs['DMLC_ROLE'] = name
         print('Laucnhing Server{} ...'.format(i))
-        prog = get_env(pass_envs) + (" python3 -c " + "\"" + "import byteps.server" + "\"")
+        prog = get_env(pass_envs) + (" python3 -c " +
+                                     "\"" + "import byteps.server" + "\"")
         threads.append(start_ssh(prog, node, port, username, name + str(i)))
 
     for t in threads:
