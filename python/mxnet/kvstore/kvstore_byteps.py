@@ -77,7 +77,7 @@ class BytePS(KVStoreBase):
         # do not accept list or tuple for key/value
         assert isinstance(key, (str, int))	
 
-        # unpack the list if it contains just one element
+        # unpack the list if it contains just one NDArray
         value = value[0] if isinstance(value, list) and len(value) == 1 else value
         assert isinstance(value, NDArray) \
                 "The type of value can only be NDArray or list of NDArray which has only one element."
