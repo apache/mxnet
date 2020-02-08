@@ -1009,10 +1009,6 @@ cd_unittest_ubuntu() {
 
     local nose_cmd="nosetests-3.4"
 
-    if [[ ${python_cmd} = "python" ]]; then
-        nose_cmd="nosetests-2.7"
-    fi
-
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
@@ -1965,15 +1961,11 @@ cd_integration_test_pypi() {
     local test_conv_params=''
     local mnist_params=''
 
-    local pip_cmd='pip'
+    local pip_cmd='pip3'
 
     if [ "${gpu_enabled}" = "true" ]; then
         mnist_params="--gpu 0"
         test_conv_params="--gpu"
-    fi
-
-    if [ "${python_cmd}" = "python3" ]; then
-        pip_cmd='pip3'
     fi
 
     # install mxnet wheel package
