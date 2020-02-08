@@ -889,6 +889,30 @@ build_ubuntu_gpu_cmake() {
     ninja -v
 }
 
+build_ubuntu_gpu_cmake_no_rtc() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=ON                         \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=ON                         \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DBUILD_CYTHON_MODULES=1                \
+        -DENABLE_CUDA_RTC=OFF                   \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja -v
+}
+
 build_ubuntu_gpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
