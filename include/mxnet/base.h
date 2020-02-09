@@ -351,11 +351,11 @@ struct RunContext {
   /*! \brief base Context */
   Context ctx;
   /*!
-   * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   * \brief the stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *stream;
   /*!
-   * \brief the auxiliary stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   * \brief the auxiliary stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *aux_stream;
   /*!

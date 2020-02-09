@@ -51,7 +51,7 @@ double ms_now() {
   ret = std::chrono::duration<double, std::milli>(timePoint).count();
 #else
   struct timeval time;
-  gettimeofday(&time, NULL);
+  gettimeofday(&time, nullptr);
   ret = 1e+3 * time.tv_sec + 1e-3 * time.tv_usec;
 #endif
   return ret;

@@ -210,7 +210,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       call_free_(attr_keys);
       return n;
     } else {
-      return NULL;
+      return nullptr;
     }
   }
   // override CreateSubgraphSelector
