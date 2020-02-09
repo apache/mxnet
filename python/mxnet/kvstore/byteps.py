@@ -134,6 +134,8 @@ class BytePS(KVStoreBase):
     def is_capable(capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
+        As byteps server does not store weight, this function will return false for any capabilities.
+        
         Parameters
         ----------
         capability: str
@@ -143,10 +145,7 @@ class BytePS(KVStoreBase):
         result : bool
             Whether the capability is supported or not.
         """
-        if capability == KVStoreBase.OPTIMIZER:
-            return True
-        else:
-            raise ValueError('Unknown capability: {}'.format(capability))
+        return False
 
     @property
     def type(self):

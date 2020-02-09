@@ -314,6 +314,8 @@ class TestStore(KVStoreBase):
     def is_capable(capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
+        If the kvstore does not store weights in server part, then no optimizer is supported,
+        this function will return False.
 
         Parameters
         ----------
