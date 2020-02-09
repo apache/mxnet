@@ -109,7 +109,7 @@ def submit(args):
         worker_hosts = get_hosts_from_file(args.hostfile)
         args.num_workers = len(worker_hosts)
         args.num_servers = len(server_hosts)
-    else if args.hostfile is not None:
+    elif args.hostfile is not None:
         assert (args.num_servers is not None and args.num_workers is not None), \
             "For BytePS backend, you must specify num_servers and num_workers"
         all_hosts = get_hosts_from_file(args.hostfile)
@@ -159,25 +159,23 @@ def submit(args):
         pass_envs['DMLC_ROLE'] = name
         pass_envs['DMLC_WORKER_ID'] = str(i)
         print('Laucnhing Worker{} ...'.format(i))
-        if "NVIDIA_VISIBLE_DEVICES" in os.environ:
-            local_size = len(os.environ["NVIDIA_VISIBLE_DEVICES"].split(","))
-        else:
-            local_size = 1
+        local_size = max(int(os.getenv("NVIDIA_VISIBLE_DEVICES", "1")), int(pass_envs.get("NVIDIA_VISIBLE_DEVICES", "1")))
+
         for local_rank in range(local_size):
             pass_envs["BYTEPS_LOCAL_RANK"] = str(local_rank)
             pass_envs["BYTEPS_LOCAL_SIZE"] = str(local_size)
             command = args.command
-            if int(os.getenv("BYTEPS_ENABLE_GDB", 0)):
+            if int(os.getenv("BYTEPS_ENABLE_GDB", 0)) or pass_envs.get("BYTEPS_ENABLE_GDB", 0) == "1":
                 if command.find("python3") != 0:
                     command = "python3 " + command
                 command = ["gdb -ex 'run' -ex 'bt' -batch --args "] + command
             prog = get_env(pass_envs) + (' '.join(command))
 
-            if pass_envs["BYTEPS_TRACE_ON"] == "1":
+            if pass_envs.get("BYTEPS_TRACE_ON", 0) == "1":
                 print("\n!!!Enable profiling for WORKER_ID: %s and local_rank: %d!!!" % (
                     pass_envs["DMLC_WORKER_ID"], local_rank))
                 print("BYTEPS_TRACE_START_STEP: %s\tBYTEPS_TRACE_END_STEP: %s\t BYTEPS_TRACE_DIR: %s" % (
-                    pass_envs["BYTEPS_TRACE_START_STEP"], os.environ.get("BYTEPS_TRACE_END_STEP", ""), os.environ.get("BYTEPS_TRACE_DIR", "")))
+                    pass_envs["BYTEPS_TRACE_START_STEP"], pass_envs["BYTEPS_TRACE_END_STEP"], pass_envs["BYTEPS_TRACE_DIR"]))
                 print("Command: %s\n" % command)
                 sys.stdout.flush()
                 trace_path = os.path.join(

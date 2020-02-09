@@ -1354,8 +1354,7 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
     ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
     ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
-    export NVIDIA_VISIBLE_DEVICES=0,1 
-    ../../tools/launch.py -n 1 -s 1 --byteps python3 dist_device_sync_kvstore_byteps.py
+    ../../tools/launch.py -n 1 -s 1 --byteps --env NVIDIA_VISIBLE_DEVICES:0,1 python3 dist_device_sync_kvstore_byteps.py
     popd
 }
 
