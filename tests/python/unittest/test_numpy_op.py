@@ -7101,6 +7101,72 @@ def test_np_nan_to_num():
 
 @with_seed()
 @use_np
+def test_np_isnan_isinf():
+    def check_unary_func(func):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a):
+                return getattr(F.np, self._func)(a)
+
+        src_list = [
+            _np.nan,
+            _np.inf,
+            -_np.inf,
+            _np.array(0)/0,
+            _np.inf/_np.inf,
+            1,
+            [_np.nan],
+            [_np.inf],
+            [-_np.inf],
+            [_np.array(0)/0],
+            [1],
+            [1,2,3,4,-1,-2,-3,-4,0],
+            [_np.nan, _np.inf, -_np.inf],
+            [_np.nan, _np.inf, -_np.inf, -574, 0, 23425, 24234,-5],
+            [_np.nan, -1, 0, 1],
+            [[-433, 0, 456, _np.inf], [-1, -_np.inf, 0, 1]]
+        ]
+
+        np_func = getattr(_np, func)
+        mx_func = TestUnary(func)
+        dtype_list = ['float16', 'float32', 'float64']
+        hybridize_list = [True, False]
+        atol, rtol = 1e-5, 1e-3
+
+        for [hybridize, dtype, src] in itertools.product(hybridize_list, dtype_list, src_list):
+            mx_data = mx.np.array(src, dtype=dtype)
+            np_data = mx_data.asnumpy()
+
+            if hybridize:
+                mx_func.hybridize()
+            with mx.autograd.record():
+                mx_out= mx_func(mx_data)
+
+            assert mx_out.dtype == np.bool_
+
+            np_out = np_func(np_data)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+            mx_out_imperative = getattr(mx.np, func)(mx_data)
+            assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
+
+            assertRaises(NotImplementedError, getattr(np, func), mx_data, where=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  subok=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  dtype=_np.int8)
+            assertRaises(TypeError, getattr(np, func), mx_data,  dtype="abcdefg")
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  casting='safe')
+            assertRaises(TypeError, getattr(np, func), mx_data,  casting='mxnet')
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='C')
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='mxnet')
+
+    check_unary_func("isnan")
+    check_unary_func("isinf")
+
+
+@with_seed()
+@use_np
 def test_np_where():
     class TestWhere(HybridBlock):
         def __init__(self):
