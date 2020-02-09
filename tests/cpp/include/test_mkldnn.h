@@ -68,6 +68,8 @@ inline static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   int size = blob.Size();
 
+  std::srand(123);
+
   for (int i = 0; i < size; i++)
     if (is_rand) {
       data[i] = (std::rand() % 100) - 50;
