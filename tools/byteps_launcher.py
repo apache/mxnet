@@ -159,7 +159,7 @@ def submit(args):
         pass_envs['DMLC_ROLE'] = name
         pass_envs['DMLC_WORKER_ID'] = str(i)
         print('Laucnhing Worker{} ...'.format(i))
-        local_size = max(int(os.getenv("NVIDIA_VISIBLE_DEVICES", "1")), int(pass_envs.get("NVIDIA_VISIBLE_DEVICES", "1")))
+        local_size = max(len(os.getenv("NVIDIA_VISIBLE_DEVICES", "1").split(",")), len(pass_envs.get("NVIDIA_VISIBLE_DEVICES", "1").split(",")))
 
         for local_rank in range(local_size):
             pass_envs["BYTEPS_LOCAL_RANK"] = str(local_rank)
