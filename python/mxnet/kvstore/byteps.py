@@ -135,7 +135,7 @@ class BytePS(KVStoreBase):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
         As byteps server does not store weight, this function will return false for any capabilities.
-        
+
         Parameters
         ----------
         capability: str

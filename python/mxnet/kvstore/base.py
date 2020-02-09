@@ -430,7 +430,7 @@ def create(name='local'):
     No two updates happen on the same weight at the same time. However, the order is not
     guaranteed.
 
-    ``byteps``: Use byteps as broadcast/pushpull backend. 
+    ``byteps``: Use byteps as broadcast/pushpull backend.
     This kind of kvstore doesn't store weights, thus there won't be optimizer in this kvstore server.
     Byteps doesn't support pure cpu training, so be sure to enable gpu training when using this kvstore.
 
