@@ -683,9 +683,9 @@ void TestOpEx(const OpAttrs &forward_attrs, const OpAttrs &backwards_attrs) {
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, false, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(in_arr.arr.shape(), mds, {1}, false, forward_attrs.output_types);
       }
 
       for (int i = 0; i < forward_attrs.num_inputs; i++)
@@ -932,9 +932,9 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
 
       for (int i = 0; i < forward_attrs.num_outputs; i++) {
         out_arrs[i] =
-            GetTestOutputArrays(out_shape, mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(out_shape, mds, {1}, false, forward_attrs.output_types);
         ex_out_arrs[i] =
-            GetTestOutputArrays(out_shape, mds, {1}, forward_attrs.output_types);
+            GetTestOutputArrays(out_shape, mds, {1}, false, forward_attrs.output_types);
       }
 
       for (size_t output_i = 0; output_i < out_arrs[0].size(); output_i++) {
