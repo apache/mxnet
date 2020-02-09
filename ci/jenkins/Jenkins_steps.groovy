@@ -311,6 +311,19 @@ def compile_unix_cmake_gpu_no_tvm_op() {
     }]
 }
 
+def compile_unix_cmake_gpu_no_rtc() {
+    return ['GPU: CMake CUDA RTC OFF': {
+        node(NODE_LINUX_CPU) {
+            ws('workspace/build-cmake-gpu-no-rtc') {
+                timeout(time: max_time, unit: 'MINUTES') {
+                    utils.init_git()
+                    utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_rtc', false)
+                }
+            }
+        }
+    }]
+}
+
 def compile_unix_tensorrt_gpu() {
     return ['TensorRT': {
       node(NODE_LINUX_CPU) {
