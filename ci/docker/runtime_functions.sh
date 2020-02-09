@@ -1353,8 +1353,9 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
     ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
     ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    export NVIDIA_VISIBLE_DEVICES=0,1 ../../tools/launch.py -n 1 -s 1 --byteps-launch python3 dist_device_sync_kvstore_byteps.py
     ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
+    export NVIDIA_VISIBLE_DEVICES=0,1 
+    ../../tools/launch.py -n 1 -s 1 --byteps python3 dist_device_sync_kvstore_byteps.py
     popd
 }
 
@@ -1782,7 +1783,7 @@ build_julia_docs() {
    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-   julia_doc_path='julia/docs/site/'
+   julia_doc_path='julia/docs/site/'f
    julia_doc_artifact='docs/_build/julia-artifacts.tgz'
 
    echo "Julia will check for MXNet in $MXNET_HOME/lib"

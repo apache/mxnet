@@ -63,10 +63,13 @@ def main():
                         in default it is equal to NUM_WORKERS')
     parser.add_argument('-H', '--hostfile', type=str,
                         help = 'the hostfile of slave machines which will run \
-                        the job. Required for ssh and mpi launcher')
+                        the job. Required for ssh and mpi launcher.\
+                        When -SH is set, the file provided by -H will \
+                        be used to recognize worker machines only. Otherwise, \
+                        -H is used for both server and worker machines.')
     parser.add_argument('-SH', '--server-hostfile', type=str,
                         help = 'the hostfile of server machines which will run \
-                        the job. Required for byteps launcher')
+                        the job. Required for byteps multi-machine launching.')
     parser.add_argument('--sync-dst-dir', type=str,
                         help = 'if specificed, it will sync the current \
                         directory into slave machines\'s SYNC_DST_DIR if ssh \
@@ -75,7 +78,7 @@ def main():
                         choices = ['local', 'ssh', 'mpi', 'sge', 'yarn'],
                         help = 'the launcher to use')
     bps_group = parser.add_argument_group('byteps-backend')
-    bps_group.add_argument('--byteps-launch', action='store_true',
+    bps_group.add_argument('--byteps', action='store_true',
                         help = 'Whether use byteps launcher to launch')
     bps_group.add_argument('--scheduler-ip', type=str, 
                         help = 'the ip address of the scheduler for BytePS')

@@ -193,10 +193,19 @@ class BytePS(KVStoreBase):
         return self.handle.size()
 
     def set_optimizer(self, optimizer):
+        """
+        Not Implement yet.
+        """
         raise NotImplementedError()
 
     def save_optimizer_states(self, fname, dump_optimizer=False):
+        """
+        Not Implement yet.
+        """
         raise NotImplementedError()
 
     def load_optimizer_states(self, fname):
+        """
+        Not Implement yet.
+        """
         raise NotImplementedError()
