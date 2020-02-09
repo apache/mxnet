@@ -595,7 +595,7 @@ class RNNOp {
     const int bsize = GetRnnBiasSize(param_.num_layers, param_.state_size, direction, param_.mode);
     DType* b_ptr = w.dptr_ + w.shape_[0] - bsize;
 
-    DType* hy_ptr = NULL;
+    DType* hy_ptr = nullptr;
     if (param_.state_outputs) {
       hy_ptr = out_data[rnn_enum::kStateOut].dptr<DType>();
     }
@@ -603,8 +603,8 @@ class RNNOp {
 
 #if MXNET_USE_CUDNN_GE_7200
     Tensor<cpu, 1, char> host_workspace;
-    int *sequence_length_cpu_int = NULL;
-    IType *sequence_length_cpu_itype = NULL;
+    int *sequence_length_cpu_int = nullptr;
+    IType *sequence_length_cpu_itype = nullptr;
 
     if (ctx_.dev_type == kGPU) {
       int host_workspace_bytes =
@@ -648,8 +648,8 @@ class RNNOp {
       LOG(FATAL) << "RNN use_sequence_length option is only available for cuDNN version >= 7.2";
 #endif
     }
-    DType* cx_ptr = NULL;
-    DType* cy_ptr = NULL;
+    DType* cx_ptr = nullptr;
+    DType* cy_ptr = nullptr;
     if (param_.mode == rnn_enum::kLstm) {
       cx_ptr = (in_data[rnn_enum::kStateCell].get<xpu, 3, DType>(s)).dptr_;
     }
@@ -969,14 +969,14 @@ class RNNOp {
 
     DType* db_ptr = dw.dptr_ + w.shape_[0] - bsize;
 
-    DType * dhy_ptr = NULL;
+    DType * dhy_ptr = nullptr;
     if (param_.state_outputs) {
       dhy_ptr = out_grad[rnn_enum::kStateOut].dptr<DType>();
     }
 
-    DType* dcx_ptr = NULL;
-    DType* dcy_ptr = NULL;
-    DType* cx_ptr = NULL;
+    DType* dcx_ptr = nullptr;
+    DType* dcy_ptr = nullptr;
+    DType* cx_ptr = nullptr;
 
     if (param_.mode == rnn_enum::kLstm) {
       CHECK_NE(req[rnn_enum::kStateCell], kAddTo) << "AddTo is not supported for state cell";
@@ -1324,7 +1324,7 @@ class RNNOp {
             (&dropout_desc_, s, 1.0f - param_.p, seed_);
       }
       // Only update the probability by passing in a null dropout_states ptr
-      DType* dropout_states = NULL;
+      DType* dropout_states = nullptr;
       size_t dropout_bytes = 0;
       CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
                                            param_.p,  // discard probability
@@ -1420,15 +1420,15 @@ class RNNOp {
       //   for (int j = 0; j < n; ++j) {
       //     CHECK_EQ(cudnnGetRNNLinLayerMatrixParams(s->dnn_handle_, rnn_desc_,
       //       i, x_desc_vec_[0], w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
-      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
-      //     last = ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << ((int64_t)(p - nullptr))/sizeof(DType) - last;
+      //     last = ((int64_t)(p - nullptr))/sizeof(DType);
       //     cudnnDataType_t t;
       //     cudnnTensorFormat_t f;
       //     int ndim = 5;
       //     int dims[5] = {0, 0, 0, 0, 0};
       //     CHECK_EQ(cudnnGetFilterNdDescriptor(m_desc, ndim, &t, &f, &ndim, &dims[0]),
       //       CUDNN_STATUS_SUCCESS);
-      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << "w: " <<  i << " " << j << " " << ((int64_t)(p - nullptr))/sizeof(DType);
       //     for (int i = 0; i < ndim; ++i) LOG(INFO) << dims[i];
       //   }
       // }
@@ -1437,9 +1437,9 @@ class RNNOp {
       //   for (int j = 0; j < n; ++j) {
       //     CHECK_EQ(cudnnGetRNNLinLayerBiasParams(s->dnn_handle_, rnn_desc_, i, x_desc_vec_[0],
       //       w_desc_, 0, j, m_desc, (void**)&p), CUDNN_STATUS_SUCCESS);
-      //     LOG(INFO) << ((int64_t)(p - NULL))/sizeof(DType) - last;
-      //     last = ((int64_t)(p - NULL))/sizeof(DType);
-      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - NULL))/sizeof(DType);
+      //     LOG(INFO) << ((int64_t)(p - nullptr))/sizeof(DType) - last;
+      //     last = ((int64_t)(p - nullptr))/sizeof(DType);
+      //     LOG(INFO) << "b: " << i << " " << j << " " << ((int64_t)(p - nullptr))/sizeof(DType);
       //   }
       // }
     }

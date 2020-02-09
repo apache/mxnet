@@ -561,7 +561,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx, std::vector<mxnet::TShape> *in_shape,

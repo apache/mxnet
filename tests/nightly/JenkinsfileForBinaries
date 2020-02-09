@@ -95,15 +95,15 @@ core_logic: {
         }
       }
     },*/
-    // https://github.com/apache/incubator-mxnet/issues/14981
-    /*'Test Large Tensor Size: GPU': {
+    'Test Large Tensor Size: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/large_tensor-gpu') {
             utils.unpack_and_init('gpu_int64', mx_cmake_lib)
             utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_tensor', true)
+            utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_large_vector', true)
         }
       }
-    },*/
+    },
     'Gluon estimator: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {

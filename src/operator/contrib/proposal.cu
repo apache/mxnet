@@ -316,7 +316,7 @@ void _nms(mshadow::Stream<gpu> *s,
   const int boxes_dim = boxes.size(1);
 
   float* boxes_dev = boxes.dptr_;
-  uint64_t* mask_dev = NULL;
+  uint64_t* mask_dev = nullptr;
 
   const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
   FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev,
@@ -456,7 +456,7 @@ class ProposalGPUOp : public Operator{
                            &anchors);
 
     // Copy generated anchors to GPU
-    float* workspace_proposals_ptr = NULL;
+    float* workspace_proposals_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr, sizeof(float) * count * 5));
     Tensor<xpu, 2> workspace_proposals(workspace_proposals_ptr, Shape2(count, 5));
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
@@ -508,10 +508,10 @@ class ProposalGPUOp : public Operator{
     FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
     // Copy score to a continuous memory
-    float* score_ptr = NULL;
+    float* score_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&score_ptr, sizeof(float) * count));
     Tensor<xpu, 1> score(score_ptr, Shape1(count));
-    int* order_ptr = NULL;
+    int* order_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&order_ptr, sizeof(int) * count));
     Tensor<xpu, 1, int> order(order_ptr, Shape1(count));
 
@@ -529,7 +529,7 @@ class ProposalGPUOp : public Operator{
     FRCNN_CUDA_CHECK(cudaPeekAtLastError());
 
     // Reorder proposals according to order
-    float* workspace_ordered_proposals_ptr = NULL;
+    float* workspace_ordered_proposals_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_ordered_proposals_ptr,
                                 sizeof(float) * rpn_pre_nms_top_n * 5));
     Tensor<xpu, 2> workspace_ordered_proposals(workspace_ordered_proposals_ptr,

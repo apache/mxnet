@@ -2005,6 +2005,24 @@ build_static_python_cu101mkl() {
     popd
 }
 
+build_static_python_cpu_cmake() {
+    set -ex
+    pushd .
+    export mxnet_variant=cpu
+    export CMAKE_STATICBUILD=1
+    ./ci/publish/python/build.sh
+    popd
+}
+
+build_static_python_cu101_cmake() {
+    set -ex
+    pushd .
+    export mxnet_variant=cu101
+    export CMAKE_STATICBUILD=1
+    ./ci/publish/python/build.sh
+    popd
+}
+
 publish_scala_build() {
     set -ex
     pushd .
