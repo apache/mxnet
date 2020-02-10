@@ -159,6 +159,114 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(newshape);
 }
 
+template<>
+void InsertOneIndicesImpl<cpu>(const OpContext &ctx,
+                               const TShape& outshape, const TShape& old_valshape,
+                               const NumpyInsertParam& param,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<TBlob>& outputs,
+                               const TBlob& arr, const TBlob& values,
+                               const int& dtype, const int& vtype,
+                               const std::vector<OpReqType>& req,
+                               const int& axis, const int& start,
+                               const int& out_pos, const int& obj_pos,
+                               const int& numnew, const int& N){
+  using namespace mshadow;
+  using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+    if (param.step.has_value()) {
+      InsertScalerObj<cpu, ndim>(s, outputs[out_pos], arr, values,
+                                  mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                  mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                  mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                  mxnet_op::calc_stride(outshape.get<ndim>()),
+                                  outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                  dtype, vtype, req[out_pos], axis, start, numnew,
+                                  outshape.Size(), false);
+    } else {
+      InsertSizeOneTensorObj<cpu, ndim>(s, outputs[out_pos], arr, values,
+                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                        mxnet_op::calc_stride(outshape.get<ndim>()),
+                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                        numnew, N, outshape.Size(), false);
+    }
+  });
+}
+
+template<>
+void InsertTensorIndicesImpl<cpu>(const OpContext &ctx,
+                                  const TShape& outshape,
+                                  const NumpyInsertParam& param,
+                                  const std::vector<TBlob>& inputs,
+                                  const std::vector<TBlob>& outputs,
+                                  const TBlob& arr, const TBlob& values,
+                                  const int& dtype, const int& vtype,
+                                  const std::vector<OpReqType>& req,
+                                  const int& axis, const int& start,
+                                  const int& step, const int&indices_len,
+                                  const int& out_pos, const int& obj_pos,
+                                  const int& numnew, const int& N){
+  using namespace mshadow;
+  using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+
+  for (int i = outshape.ndim() - 1; i >= 0; --i) {
+    int sz = outshape[i];
+    if (i == axis) {
+      sz = numnew;
+    }
+    CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
+  }
+  size_t temp_storage_bytes, temp_mem_size;
+  temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, int, cpu>(indices_len, false, true);
+  temp_mem_size = indices_len * sizeof(int64_t) * 2 +
+                  indices_len * sizeof(int) +
+                  outshape[axis] * sizeof(int) * 2 +
+                  temp_storage_bytes;
+  Tensor<cpu, 1, char> temp_mem =
+    ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(temp_mem_size), s);
+  int64_t* indices_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
+  int64_t* sorted_indices_ptr = reinterpret_cast<int64_t*>(indices_ptr + indices_len);
+  int* order_ptr = reinterpret_cast<int*>(sorted_indices_ptr + indices_len);
+  int* is_insert = reinterpret_cast<int*>(order_ptr + indices_len);
+  int* origin_idx = reinterpret_cast<int*>(is_insert + outshape[axis]);
+  Tensor<cpu, 1, char> temp_storage(reinterpret_cast<char*>(origin_idx + outshape[axis]),
+                                    Shape1(temp_storage_bytes), s);
+  Tensor<cpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
+  Tensor<cpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
+  Tensor<cpu, 1, int> order(order_ptr, Shape1(indices_len), s);
+  int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
+  if (param.step.has_value()) {
+    Kernel<SliceToIndices, cpu>::Launch(s, indices_len, indices_ptr, start, step);
+  } else {
+    Kernel<ObjToIndices, cpu>::Launch(s, indices_len, indices_ptr, N,
+                                      inputs[obj_pos].dptr<int64_t>());
+  }
+  Kernel<range_fwd, cpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
+  mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
+  Kernel<IndicesModify, cpu>::Launch(s, indices_len, indices_ptr, order_ptr);
+
+  mxnet_op::Kernel<mxnet_op::set_zero, cpu>::Launch(s, outshape[axis], is_insert);
+  Kernel<SetIsInsert, cpu>::Launch(s, indices_len, indices_ptr, is_insert);
+
+  Kernel<SetOriginValuesIdx, cpu>::Launch(s, indices_len, indices_ptr, origin_idx);
+  Kernel<SetOriginArrIdx, cpu>::Launch(s, outshape[axis], is_insert, origin_idx);
+  MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+    InsertSequenceObj<cpu, ndim>(s, outputs[out_pos], arr, values,
+                                  mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                  mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                  mxnet_op::calc_stride(outshape.get<ndim>()),
+                                  outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                  is_insert, origin_idx, dtype, vtype, req[out_pos],
+                                  axis, outshape.Size());
+    
+  });
+}
+
 NNVM_REGISTER_OP(_npi_insert)
 .describe(R"code(Insert values along the given axis before the given indices.)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<NumpyInsertParam>)
