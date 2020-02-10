@@ -63,7 +63,6 @@ class BytePS(KVStoreBase):
         [[ 2.  2.  2.]
         [ 2.  2.  2.]]
         """
-
         # do not accept list or tuple for key/value
         assert isinstance(key, (str, int))
 

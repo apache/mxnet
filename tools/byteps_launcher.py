@@ -141,14 +141,12 @@ def submit(args):
     pass_envs = preprocess_envs(args.env)
     pass_envs['DMLC_NUM_WORKER'] = str(num_worker)
     pass_envs['DMLC_NUM_SERVER'] = str(num_server)
-    pass_envs['DMLC_PS_ROOT_URI'] = str(
-        args.scheduler_ip)  # This ip is localhost
-    # This port is allocated automatically.
-    pass_envs['DMLC_PS_ROOT_PORT'] = str(args.scheduler_port)
+    pass_envs['DMLC_PS_ROOT_URI'] = '127.0.0.1'
+    pass_envs['DMLC_PS_ROOT_PORT'] = str(22)
 
     username = None
     threads = []
-    for (node, port) in [(args.scheduler_ip, str(22))]:
+    for (node, port) in [('127.0.0.1', str(22))]:
         name = 'scheduler'
         pass_envs['DMLC_ROLE'] = name
         print('Laucnhing Scheduler...')

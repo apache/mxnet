@@ -80,10 +80,6 @@ def main():
     bps_group = parser.add_argument_group('byteps-backend')
     bps_group.add_argument('--byteps', action='store_true',
                         help = 'Whether use byteps launcher to launch')
-    bps_group.add_argument('--scheduler-ip', type=str, 
-                        help = 'the ip address of the scheduler for BytePS')
-    bps_group.add_argument('--scheduler-port', type=int,
-                        help = 'the port of the scheduler for BytePS')
     parser.add_argument('--env-server', action='append', default=[],
                         help = 'Given a pair of environment_variable:value, sets this value of \
                         environment variable for the server processes. This overrides values of \
@@ -105,11 +101,8 @@ def main():
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
     args.command += unknown
+    
     if args.byteps:
-        if args.scheduler_ip is None:
-            args.scheduler_ip = '127.0.0.1'
-        if args.scheduler_port is None:
-            args.scheduler_port = 2333
         import byteps_launcher as bpsl
         bpsl.submit(args)
         return
