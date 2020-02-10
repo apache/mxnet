@@ -1419,6 +1419,62 @@ def test_np_argsort():
 
 @with_seed()
 @use_np
+def test_np_sort():
+    class TestSort(HybridBlock):
+        def __init__(self, axis, kind):
+            super(TestSort, self).__init__()
+            self._axis = axis
+            self._kind = kind
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.np.sort(x, self._axis, self._kind)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float32, np.float64]
+    shapes = [
+        (),
+        (1,),
+        (5,),
+        (4, 3),
+        (3, 5),
+        (4, 4),
+        (4, 5),
+        (5, 5),
+        (5, 6),
+        (6, 6),
+        (0, 1),
+        (6, 5, 6),
+        (2, 3, 3, 4),
+        (4, 2, 1, 2),
+        (0, 5, 3, 3),
+        (5, 0, 3, 3),
+        (3, 3, 0, 0),
+    ]
+    flags = [True, False]
+    # Not include 'stable' as some old numpy versions do not support it
+    kind_list = ['quicksort', 'mergesort', 'heapsort']
+
+    for dtype, shape, hybridize, kind in itertools.product(dtypes, shapes, flags, kind_list):
+        a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
+        axis_list = list(range(len(shape)))
+        axis_list.append(None)
+        axis_list.append(-1)
+        for axis in axis_list:
+            test = TestSort(axis, kind)
+            if hybridize:
+                test.hybridize()
+            if axis == -1 and len(shape)==0:
+                continue
+            ret = test(a)
+            expected_ret = _np.sort(a.asnumpy(), axis, kind)
+            assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+            # check imperative again
+            ret = np.sort(a, axis, kind)
+            assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_np_squeeze():
     config = [((), None),
               ((), -1),
@@ -7097,6 +7153,72 @@ def test_np_nan_to_num():
             np_out = _np.nan_to_num(x1)
             mx_out = np.nan_to_num(x3)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_isnan_isinf():
+    def check_unary_func(func):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a):
+                return getattr(F.np, self._func)(a)
+
+        src_list = [
+            _np.nan,
+            _np.inf,
+            -_np.inf,
+            _np.array(0)/0,
+            _np.inf/_np.inf,
+            1,
+            [_np.nan],
+            [_np.inf],
+            [-_np.inf],
+            [_np.array(0)/0],
+            [1],
+            [1,2,3,4,-1,-2,-3,-4,0],
+            [_np.nan, _np.inf, -_np.inf],
+            [_np.nan, _np.inf, -_np.inf, -574, 0, 23425, 24234,-5],
+            [_np.nan, -1, 0, 1],
+            [[-433, 0, 456, _np.inf], [-1, -_np.inf, 0, 1]]
+        ]
+
+        np_func = getattr(_np, func)
+        mx_func = TestUnary(func)
+        dtype_list = ['float16', 'float32', 'float64']
+        hybridize_list = [True, False]
+        atol, rtol = 1e-5, 1e-3
+
+        for [hybridize, dtype, src] in itertools.product(hybridize_list, dtype_list, src_list):
+            mx_data = mx.np.array(src, dtype=dtype)
+            np_data = mx_data.asnumpy()
+
+            if hybridize:
+                mx_func.hybridize()
+            with mx.autograd.record():
+                mx_out= mx_func(mx_data)
+
+            assert mx_out.dtype == np.bool_
+
+            np_out = np_func(np_data)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+            mx_out_imperative = getattr(mx.np, func)(mx_data)
+            assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
+
+            assertRaises(NotImplementedError, getattr(np, func), mx_data, where=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  subok=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  dtype=_np.int8)
+            assertRaises(TypeError, getattr(np, func), mx_data,  dtype="abcdefg")
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  casting='safe')
+            assertRaises(TypeError, getattr(np, func), mx_data,  casting='mxnet')
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='C')
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='mxnet')
+
+    check_unary_func("isnan")
+    check_unary_func("isinf")
 
 
 @with_seed()

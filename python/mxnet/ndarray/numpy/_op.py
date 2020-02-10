@@ -33,7 +33,8 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'eye', 'linspace',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort',
+           'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
@@ -43,7 +44,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
-           'diff', 'resize', 'nan_to_num', 'where', 'bincount']
+           'diff', 'resize', 'nan_to_num', 'isnan', 'isinf', 'where', 'bincount']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1222,6 +1223,50 @@ def argsort(a, axis=-1, kind=None, order=None):
         raise NotImplementedError("order not supported here")
 
     return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
+
+
+@set_module('mxnet.ndarray.numpy')
+def sort(a, axis=-1, kind=None, order=None):
+    """
+    Return a sorted copy of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be sorted.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    sorted_array : ndarray
+        Array of the same type and shape as `a`.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+
+    Examples
+    --------
+    >>> a = np.array([[1,4],[3,1]])
+    >>> np.sort(a)                # sort along the last axis
+    array([[1, 4],
+           [1, 3]])
+    >>> np.sort(a, axis=None)     # sort the flattened array
+    array([1, 1, 3, 4])
+    >>> np.sort(a, axis=0)        # sort along the first axis
+    array([[1, 1],
+           [3, 4]])
+    """
+    if order is not None:
+        raise NotImplementedError("order not supported here")
+    return _npi.sort(data=a, axis=axis, is_ascend=True)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6541,6 +6586,106 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
         return _npi.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf, out=None)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_unary_func
+def isnan(x, out=None, **kwargs):
+    """
+    Test element-wise for NaN and return result as a boolean array.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or bool
+        True where x is NaN, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+
+    This function differs from the original `numpy.isnan
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> np.isnan(np.nan)
+    True
+    >>> np.isnan(np.inf)
+    False
+    >>> np.isnan(np.array([np.log(-1.),1.,np.log(0)]))
+    array([ True, False, False])
+    """
+    return _unary_func_helper(x, _npi.isnan, _np.isnan, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_unary_func
+def isinf(x, out=None, **kwargs):
+    """
+    Test element-wise for positive or negative infinity.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or bool
+        True where x is positive or negative infinity, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+
+    This function differs from the original `numpy.isnan
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> np.isinf(np.inf)
+    True
+    >>> np.isinf(np.nan)
+    False
+    >>> np.isinf(np.array([np.inf, -np.inf, 1.0, np.nan]))
+    array([ True,  True, False, False])
+    >>> x = np.array([-np.inf, 0., np.inf])
+    >>> y = np.array([True, True, True], dtype=np.bool_)
+    >>> np.isinf(x, y)
+    array([ True, False,  True])
+    >>> y
+    array([ True, False,  True])
+    """
+    return _unary_func_helper(x, _npi.isinf, _np.isinf, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
