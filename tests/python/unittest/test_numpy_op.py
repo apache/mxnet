@@ -7425,6 +7425,73 @@ def test_np_isnan_isinf():
 
 @with_seed()
 @use_np
+def test_np_polyval():
+    class TestPolyval(HybridBlock):
+        def __init__(self):
+            super(TestPolyval, self).__init__()
+
+        def hybrid_forward(self, F, p, x, *args, **kwargs):
+            return F.np.polyval(p, x)
+
+    def polyval_grad(p, x):
+        x_shape = x.shape
+        x = x.reshape((x.size, 1))
+        x = _np.broadcast_to(x, (x.size, p.size))
+        exp = _np.arange(p.size-1, -1, -1)
+        p_grad = _np.power(x, exp)
+        coeff = exp-1
+        coeff[-1] = 0
+        x_grad = _np.power(x, coeff) * p * exp
+        p_grad = _np.sum(p_grad, axis=0)
+        x_grad = _np.sum(x_grad, axis=-1).reshape(x_shape)
+        return (p_grad, x_grad)
+
+    dtypes = ['float32', 'float64', 'int32', 'int64']
+    x_shapes = [
+        (5,),
+        (10),
+        (3, 3),
+        (3, 4),
+        (3, 3, 3),
+        (2, 2, 4, 3),
+        (2, 0, 2, 3)
+    ]
+    flags = [True, False]
+    for dtype, x_shape, hybridize in itertools.product(dtypes, x_shapes, flags):
+        p_shape = (random.randint(1, 8),)
+        test_polyval = TestPolyval()
+        if hybridize:
+            test_polyval.hybridize()
+        rtol = 1e-2
+        atol = 1e-4
+        if dtype in ['int32', 'int64']:
+            p = np.random.randint(-16, 16, p_shape, dtype=dtype)
+            x = np.random.randint(-5, 5, x_shape, dtype=dtype)
+        else:
+            p = np.random.uniform(-1.0, 1.0, size=p_shape, dtype=dtype)
+            x = np.random.uniform(-1.0, 1.0, size=x_shape, dtype=dtype)
+
+        p.attach_grad()
+        x.attach_grad()
+        np_out = _np.polyval(p.asnumpy(), x.asnumpy())
+        with mx.autograd.record():
+            mx_out = test_polyval(p, x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out.backward()
+        if dtype in ['float16', 'float32', 'float64']:
+            p_grad, x_grad = polyval_grad(p.asnumpy(), x.asnumpy())
+            assert_almost_equal(p.grad.asnumpy(), p_grad, atol=atol, rtol=rtol)
+            assert_almost_equal(x.grad.asnumpy(), x_grad, atol=atol, rtol=rtol)
+
+        mx_out = np.polyval(p, x)
+        np_out = _np.polyval(p.asnumpy(), x.asnumpy())
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+
+@with_seed()
+@use_np
 def test_np_where():
     class TestWhere(HybridBlock):
         def __init__(self):
