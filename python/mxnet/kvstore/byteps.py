@@ -70,6 +70,7 @@ class BytePS(KVStoreBase):
             value, list) and len(value) == 1 else value
         assert isinstance(
             value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
+        assert value.context.device_type == 'gpu', "Byteps KVStore only support GPU context for broadcast value."
 
         # for non-root-rank, assign value with 0, thus the result of pushpull will be
         # equal to the value of root-rank, thus implementing broadcast.
@@ -121,6 +122,7 @@ class BytePS(KVStoreBase):
             value, list) and len(value) == 1 else value
         assert isinstance(
             value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
+        assert value.context.device_type == 'gpu', "Byteps KVStore only support GPU context for pushpull value"
 
         self.handle.byteps_push_pull(value, version=0, priority=priority,
                                      name=str(key), is_average=False)
