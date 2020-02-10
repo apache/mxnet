@@ -105,7 +105,7 @@ def main():
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
     args.command += unknown
-    if args.byteps == True:
+    if args.byteps:
         if args.scheduler_ip is None:
             args.scheduler_ip = '127.0.0.1'
         if args.scheduler_port is None:

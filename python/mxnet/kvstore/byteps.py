@@ -42,6 +42,7 @@ class BytePS(KVStoreBase):
     def broadcast(self, key, value, out, priority=0):
         """ Broadcast the value NDArray at rank 0 to all ranks' out. If out is None,
         the result is stored in `value`.
+
         Parameters
         ----------
         key : str, or int
@@ -50,6 +51,7 @@ class BytePS(KVStoreBase):
             Values corresponding to the key.
         out : NDArray, or lise of NDArray
             Values corresponding to the keys.
+
         Examples
         --------
         >>> # broadcast a single key-value pair
@@ -93,6 +95,7 @@ class BytePS(KVStoreBase):
         `value` is pushed to the kvstore server for the specified keys and the aggregated
         values are pulled from the server to `out`. If `out` is not specified the pulled
         values are written to `value`.
+
         Parameters
         ----------
         key : str, or int
@@ -104,6 +107,7 @@ class BytePS(KVStoreBase):
         priority : int, optional
             The priority of the operation.
             Higher priority operations are likely to be executed before other actions.
+
         Examples
         --------
         >>> # pushpull a single key-value pair
@@ -142,6 +146,7 @@ class BytePS(KVStoreBase):
         ----------
         capability: str
             The capability to query
+
         Returns
         -------
         result : bool

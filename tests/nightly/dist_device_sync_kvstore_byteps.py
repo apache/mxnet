@@ -61,14 +61,13 @@ def current_context(device=False):
         return mx.current_context()
 
 def test_pushpull():
-    num_gpus = 2
     def check_default_keys(nrepeat=3):
         # init kv dns keys
         kv.broadcast('3', mx.nd.ones(shape, ctx=current_context(device=True)), mx.nd.ones(shape, ctx=current_context(device=True)))
         kv.broadcast('99', mx.nd.ones(big_shape, ctx=current_context(device=True)), mx.nd.ones(big_shape, ctx=current_context(device=True)))
         for i in range(nrepeat):
             scale = my_rank + 1
-            num = (my_num_workers + 1) * my_num_workers * num_gpus / 2
+            num = (my_num_workers + 1) * my_num_workers / 2
 
             arr = mx.nd.ones(shape, ctx=current_context(device=True)) * scale
             # inplace
