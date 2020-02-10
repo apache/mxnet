@@ -120,8 +120,10 @@ struct constant_pad {
     auto j = unravel(i, urshape);
     size_t m;
     bool origin = true;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] && indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -130,7 +132,7 @@ struct constant_pad {
     }
     if (origin) {
       for (m = 0; m < ndim; m++) {
-        j[m] = j[m] - width[m * 2];
+        indexshape[m] = indexshape[m] - indexwidth[m * 2];
       }
       index_t l = rravel<ndim>(j, ishape);
       KERNEL_ASSIGN(out[i], req, a[l]);
@@ -150,9 +152,11 @@ struct pad_copy {
     auto j = unravel(i, urshape);
     size_t m;
     bool origin = true;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     // if is origin
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] && indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -161,7 +165,7 @@ struct pad_copy {
     }
     if (origin) {
       for (m = 0; m < ndim; m++) {
-        j[m] = j[m] - width[m * 2];
+        indexshape[m] = indexshape[m] - indexwidth[m * 2];
       }
       int l = rravel<ndim>(j, ishape);
       KERNEL_ASSIGN(out[i], req, a[l]);
@@ -184,16 +188,17 @@ struct symmetric_pad {
     auto j = unravel<ndim>(i, urshape);
     size_t m;
     bool origin = true;
-
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     for (m = 0; m < index; m++) {
-      if (j[m] < width[m * 2] || j[m] >= width[m * 2] + ishape[m]) {
+      if (indexshape[m] < indexwidth[m * 2] || indexshape[m] >= indexwidth[m * 2] + ishape[m]) {
         // we can not do this now
         return;
       }
     }
 
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] && indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -204,9 +209,9 @@ struct symmetric_pad {
       // this thread is in the origin position, then return
       return;
     }
-    if (j[index] < width[index * 2]) {
+    if (indexshape[index] < indexwidth[index * 2]) {
     // we need to do the assignment
-      int distance = width[index * 2] - j[index];
+      int distance = indexwidth[index * 2] - indexshape[index];
       int total = ishape[index];
       // the round of this element
       int round = (distance - 1) / total;
@@ -215,14 +220,14 @@ struct symmetric_pad {
         position = ishape[index];
       }
       if (round % 2 == 0) {
-        j[index] = width[index * 2] + position - 1;
+        indexshape[index] = indexwidth[index * 2] + position - 1;
       } else {
-        j[index] = width[index * 2] + ishape[index] - 1 - (position - 1);
+        indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position - 1);
       }
       int l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
-    } else if (j[index] >= (width[index * 2]+ishape[index])) {
-      int distance = (j[index]+1) - (width[index * 2]+ishape[index]);
+    } else if (indexshape[index] >= (indexwidth[index * 2]+ishape[index])) {
+      int distance = (indexshape[index]+1) - (indexwidth[index * 2]+ishape[index]);
       int total = ishape[index];
       int position = distance % total;
       int round = (distance - 1) / total;
@@ -230,9 +235,9 @@ struct symmetric_pad {
         position = ishape[index];
       }
       if (round % 2 == 0) {
-        j[index] =  width[index * 2] + ishape[index] - 1 - (position - 1);
+        indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position - 1);
       } else {
-        j[index] = width[index * 2] + position - 1;
+        indexshape[index] = indexwidth[index * 2] + position - 1;
       }
       int l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
@@ -253,14 +258,18 @@ struct edge_pad {
     auto j = unravel<ndim>(i, urshape);
     size_t m;
     bool origin = true;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     for (m = 0; m < index; m++) {
-      if (j[m] < width[m * 2] || j[m] >= width[m * 2] + ishape[m]) {
+      if (indexshape[m] < indexwidth[m * 2] ||
+          indexshape[m] >= indexwidth[m * 2] + ishape[m]) {
       // we can not do this now, since this is a former axis
         return;
       }
     }
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] &&
+          indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -271,13 +280,13 @@ struct edge_pad {
     // this thread is in the origin position, then return
       return;
     }
-    if (j[index] < width[index * 2]) {
+    if (indexshape[index] < indexwidth[index * 2]) {
     // we need to do the assignment
-      j[index] = width[index * 2];
+      indexshape[index] = indexwidth[index * 2];
       int l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
-    } else if (j[index] >= (width[index * 2]+ishape[index])) {
-      j[index] =  width[index * 2] + ishape[index] - 1;
+    } else if (indexshape[index] >= (indexwidth[index * 2]+ishape[index])) {
+      indexshape[index] = indexwidth[index * 2] + ishape[index] - 1;
       int l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     }
@@ -297,14 +306,18 @@ struct reflect_pad {
     auto j = unravel(i, urshape);
     size_t m;
     bool origin = true;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     for (m = 0; m < index; m++) {
-      if (j[m] < width[m * 2] || j[m] >= width[m * 2] + ishape[m]) {
+      if (indexshape[m] < indexwidth[m * 2] ||
+          indexshape[m] >= indexwidth[m * 2] + ishape[m]) {
         // we can not do this now
         return;
       }
     }
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] &&
+          indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -315,12 +328,12 @@ struct reflect_pad {
       // this thread is in the origin position, then return
       return;
     }
-    if (j[index] < width[index * 2]) {
+    if (indexshape[index] < indexwidth[index * 2]) {
       // we need to do the assignment
-      int distance = width[index * 2] - j[index];
+      int distance = indexwidth[index * 2] - indexshape[index];
       int total = ishape[index];
       if (total == 1) {
-        j[index] = width[index * 2];
+        indexshape[index] = indexwidth[index * 2];
         int l = rravel<ndim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
         return;
@@ -328,18 +341,18 @@ struct reflect_pad {
       int round = (distance - 1) / (total - 1);
       if (round % 2 == 0) {
         int position = (distance + round) % total;
-        j[index] = width[index * 2] + position;
+        indexshape[index] = indexwidth[index * 2] + position;
       } else {
         int position = (distance + round) % total;
-        j[index] =  width[index * 2] + ishape[index] - 1 - (position);
+        indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position);
       }
       int l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
-    } else if (j[index] >= (width[index * 2] + ishape[index])) {
-      int distance = (j[index]+1) - (width[index * 2] + ishape[index]);
+    } else if (indexshape[index] >= (indexwidth[index * 2] + ishape[index])) {
+      int distance = (indexshape[index]+1) - (indexwidth[index * 2] + ishape[index]);
       int total = ishape[index];
       if (total == 1) {
-        j[index] = width[index * 2];
+        indexshape[index] = indexwidth[index * 2];
         int l = rravel<ndim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
         return;
@@ -347,10 +360,10 @@ struct reflect_pad {
       int round = (distance - 1) / (total - 1);
       if (round % 2 == 0) {
         int position = (distance + round) % total;
-        j[index] =  width[index * 2] + ishape[index] - 1 - (position);
+        indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position);
       } else {
         int position = (distance + round) % total;
-        j[index] = width[index * 2] + position;
+        indexshape[index] = indexwidth[index * 2] + position;
       }
       int l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
@@ -371,14 +384,18 @@ struct max_pad {
     auto j = unravel(i, urshape);
     size_t m;
     bool origin = true;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     for (m = 0; m < index; m++) {
-      if (j[m] < width[m * 2] || j[m] >= width[m * 2] + ishape[m]) {
+      if (indexshape[m] < indexwidth[m * 2] ||
+          indexshape[m] >= indexwidth[m * 2] + ishape[m]) {
         // we can not do this now
         return;
       }
     }
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] &&
+          indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -390,13 +407,14 @@ struct max_pad {
       return;
     }
 
-    if (j[index] < width[index * 2] || j[index] >= width[index * 2] + ishape[index]) {
-      j[index] = width[index * 2];
+    if (indexshape[index] < indexwidth[index * 2] ||
+        indexshape[index] >= indexwidth[index * 2] + ishape[index]) {
+      indexshape[index] = indexwidth[index * 2];
       int l = rravel<ndim>(j, oshape);
       int max_count = 0;
       auto max_value = out[l];
       for (max_count = 0; max_count < ishape[index]; max_count++) {
-        j[index] = width[index * 2] + max_count;
+        indexshape[index] = indexwidth[index * 2] + max_count;
         l = rravel<ndim>(j, oshape);
         if (out[l] > max_value) {
             max_value = out[l];
@@ -420,14 +438,18 @@ struct min_pad {
     auto j = unravel(i, urshape);
     size_t m;
     bool origin = true;
+    index_t* indexwidth = width.shape_;
+    index_t* indexshape = j.shape_;
     for (m = 0; m < index; m++) {
-      if (j[m] < width[m * 2] || j[m] >= width[m * 2] + ishape[m]) {
+      if (indexshape[m] < indexwidth[m * 2] ||
+          indexshape[m] >= indexwidth[m * 2] + ishape[m]) {
         // we can not do this now
         return;
       }
     }
     for (m = 0; m < ndim; m++) {
-      if (j[m] >= width[m * 2] && j[m] < width[m * 2] + ishape[m]) {
+      if (indexshape[m] >= indexwidth[m * 2] &&
+          indexshape[m] < indexwidth[m * 2] + ishape[m]) {
         continue;
       } else {
         origin = false;
@@ -438,13 +460,14 @@ struct min_pad {
       // this thread is in the origin position, then return
       return;
     }
-    if (j[index] < width[index * 2] || j[index] >= (width[index * 2] + ishape[index])) {
-      j[index] = width[index * 2];
+    if (indexshape[index] < indexwidth[index * 2] ||
+        indexshape[index] >= (indexwidth[index * 2] + ishape[index])) {
+      indexshape[index] = indexwidth[index * 2];
       int l = rravel<ndim>(j, oshape);
       int min_count = 0;
       auto min_value = out[l];
       for (min_count = 0; min_count < ishape[index]; min_count++) {
-        j[index] = width[index * 2] + min_count;
+        indexshape[index] = indexwidth[index * 2] + min_count;
         l = rravel<ndim>(j, oshape);
         if (out[l] < min_value) {
             min_value = out[l];
