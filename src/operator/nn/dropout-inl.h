@@ -430,7 +430,7 @@ class DropoutOp {
       const TBlob &in = in_data[dropout::kData];
       const TBlob &out = out_data[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
-      CHECK_EQ(mask.type_flag_, kUint8);
+      CHECK_EQ(mask.type_flag_, mshadow::kUint8);
 
       if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
@@ -522,7 +522,7 @@ class DropoutOp {
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
-      CHECK_EQ(mask.type_flag_, kUint8);
+      CHECK_EQ(mask.type_flag_, mshadow::kUint8);
       CHECK_EQ((grad.Size() + 7) / 8, mask.Size());
 
       if (this->axes_.ndim() == 0) {
