@@ -41,9 +41,9 @@
 namespace mxnet {
 namespace op {
 
-template <int ndim, typename xpu>
+template <int ndim, typename DTypeShape>
 MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
-                               const mshadow::Tensor<xpu, 1, index_t>& shape) {
+                               const DTypeShape* shape) {
   index_t ret = 0;
   int nndim = ndim;
   #pragma unroll
@@ -109,10 +109,10 @@ inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,
 
 template <typename xpu, int req, bool back, int ndim>
 struct constant_pad {
-  template <typename DType>
+  template <typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   double constant_value,
                                   mshadow::Shape<ndim> urshape) {
@@ -140,10 +140,10 @@ struct constant_pad {
 
 template <typename xpu, int req, bool back, int ndim>
 struct pad_copy {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   mshadow::Shape<ndim> urshape){
     using namespace mxnet_op;
@@ -173,10 +173,10 @@ struct pad_copy {
 
 template <typename xpu, int req, bool bac, int ndim>
 struct symmetric_pad {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
                                   mshadow::Shape<ndim> urshape){
@@ -242,10 +242,10 @@ struct symmetric_pad {
 
 template <typename xpu, int req, bool back, int ndim>
 struct edge_pad {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
                                   mshadow::Shape<ndim> urshape){
@@ -286,10 +286,10 @@ struct edge_pad {
 
 template <typename xpu, int req, bool back, int ndim>
 struct reflect_pad {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
                                   mshadow::Shape<ndim> urshape){
@@ -360,10 +360,10 @@ struct reflect_pad {
 
 template <typename xpu, int req, bool back, int ndim>
 struct max_pad {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
                                   mshadow::Shape<ndim> urshape){
@@ -409,10 +409,10 @@ struct max_pad {
 
 template <typename xpu, int req, bool back, int ndim>
 struct min_pad {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                                  const DTypeShape* ishape,
+                                  const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
                                   mshadow::Shape<ndim> urshape){
@@ -461,10 +461,10 @@ struct min_pad {
 
 template <typename xpu, int req, bool back>
 struct pad_grad {
-  template<typename DType>
+  template<typename DType, typename DTypeShape>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                                  const mshadow::Tensor<xpu, 1, index_t>& oshape){
+                                  const DTypeShape *ishape,
+                                  const DTypeShape *oshape){
     using namespace mxnet_op;
     KERNEL_ASSIGN(out[i], req, 1);
   }
@@ -487,9 +487,12 @@ void NumpyPadOpImpl(const TBlob& in_data,
     mshadow::Shape<NDim*2> width;
     int dimcounter = 0;
     mshadow::Shape<NDim> urshape;
-    for (dimcounter = 0; dimcounter < NDim; dimcounter++) {
-      urshape[dimcounter] = oshape[dimcounter];
-    }
+    index_t* odptr = reinterpret_cast<index_t*>(oshape.dptr_);
+    index_t* urshapedptr = urshape.shape_;
+    mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
+          s, ndim,
+          urshapedptr,
+          odptr);
     if (ndim == 1) {
       width[0] = param.pad_width[0][0];
       width[1] = param.pad_width[1][0];
@@ -500,13 +503,14 @@ void NumpyPadOpImpl(const TBlob& in_data,
       }
     }
     if (!back) {
+      index_t* idptr = reinterpret_cast<index_t*>(ishape.dptr_);
       if (mode == 1) {
       // constant padding start
         MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
           MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
             Kernel<constant_pad<xpu, req_type, back, NDim>, xpu>::Launch(
               s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              ishape, oshape, width, param.constant_value, urshape);
+              idptr, odptr, width, param.constant_value, urshape);
           });
         });
       // constant padding end
@@ -515,7 +519,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
           MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
             Kernel<pad_copy<xpu, req_type, back, NDim>, xpu>::Launch(
               s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              ishape, oshape, width, urshape);
+              idptr, odptr, width, urshape);
           });
         });
         index_t index;
@@ -527,7 +531,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<symmetric_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  ishape, oshape, width, index, urshape);
+                  idptr, odptr, width, index, urshape);
               });
             });
           }
@@ -538,7 +542,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<edge_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  ishape, oshape, width, index, urshape);
+                  idptr, odptr, width, index, urshape);
               });
             });
           }
@@ -549,7 +553,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<reflect_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  ishape, oshape, width, index, urshape);
+                  idptr, odptr, width, index, urshape);
               });
             });
           }
@@ -559,7 +563,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<max_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  ishape, oshape, width, index, urshape);
+                  idptr, odptr, width, index, urshape);
               });
             });
           }
@@ -569,7 +573,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<min_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  ishape, oshape, width, index, urshape);
+                  idptr, odptr, width, index, urshape);
               });
             });
           }
@@ -578,11 +582,12 @@ void NumpyPadOpImpl(const TBlob& in_data,
         }
       }
     } else {
+      index_t* idptr = reinterpret_cast<index_t*>(ishape.dptr_);
       MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
           Kernel<pad_grad<xpu, req_type, back>, xpu>::Launch(
             s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-            ishape, oshape);
+            idptr, odptr);
         });
       });
     }
