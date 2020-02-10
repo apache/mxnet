@@ -115,7 +115,7 @@ struct constant_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   double constant_value,
-                                  mshadow::Shape<ndim>& urshape) {
+                                  const mshadow::Shape<ndim>& urshape) {
     using namespace mxnet_op;
     auto j = unravel(i, urshape);
     size_t m;
@@ -147,7 +147,7 @@ struct pad_copy {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  mshadow::Shape<ndim>& urshape){
+                                  const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
     auto j = unravel(i, urshape);
     size_t m;
@@ -183,7 +183,7 @@ struct symmetric_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
-                                  mshadow::Shape<ndim>& urshape){
+                                  const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
     auto j = unravel<ndim>(i, urshape);
     size_t m;
@@ -253,7 +253,7 @@ struct edge_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
-                                  mshadow::Shape<ndim>& urshape){
+                                  const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
     auto j = unravel<ndim>(i, urshape);
     size_t m;
@@ -301,7 +301,7 @@ struct reflect_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
-                                  mshadow::Shape<ndim>& urshape){
+                                  const  mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
     auto j = unravel(i, urshape);
     size_t m;
@@ -379,7 +379,7 @@ struct max_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
-                                  mshadow::Shape<ndim>& urshape){
+                                  const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
     auto j = unravel(i, urshape);
     size_t m;
@@ -433,7 +433,7 @@ struct min_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   size_t index,
-                                  mshadow::Shape<ndim>& urshape){
+                                  const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
     auto j = unravel(i, urshape);
     size_t m;
