@@ -20,7 +20,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 
 
-def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
+def nd_forward_backward_and_profile(op, runs, **kwargs):
     """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes both forward and backward pass.
 
@@ -32,8 +32,6 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
         NDArray operator (Function reference) to execute. Example: mx.nd.add
     runs: int
         Number of times to execute the operation
-    args:
-        Arguments for the NDArray operator (op) being executed.
     kwargs:
         Key value arguments for the NDArray operator (op) being executed.
 
@@ -44,10 +42,14 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
     """
     for _ in range(runs):
         with mx.autograd.record():
-            if not isinstance(args[0], nd.NDArray):
-                res = op(**kwargs)
-            else:
+            args = []
+            for key in kwargs:
+                if key.startswith("args"):
+                    args.append(kwargs.pop(key))
+            if len(args):
                 res = op(*args, **kwargs)
+            else:
+                res = op(**kwargs)
         res.backward()
         nd.waitall()
     return res
@@ -65,8 +67,6 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
         NDArray operator (Function reference) to execute. Example: mx.nd.add
     runs: int
         Number of time to execute the operation
-    args:
-        Arguments for the NDArray operator (op) being executed.
     kwargs:
         Key value arguments for the NDArray operator (op) being executed.
 
@@ -75,10 +75,14 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
     any results from NDArray operation execution
     """
     for _ in range(runs):
-        if not isinstance(args[0], nd.NDArray):
-            res = op(**kwargs)
-        else:
+        args = []
+        for key in kwargs:
+            if key.startswith("args"):
+                args.append(kwargs.pop(key))
+        if len(args):
             res = op(*args, **kwargs)
+        else:
+            res = op(**kwargs)
         nd.waitall()
     return res
 

@@ -31,17 +31,11 @@ no_backward = ['gather_nd', 'softmax_cross_entropy', 'linalg_gelqf', 'linalg_slo
 def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     mx.random.seed(41)
     kwargs_list = []
-    args_list = []
 
     for inp in inputs:
         kwargs = {}
         for key, value in inp.items():
-            if key.startswith('args'):
-                args_list.append(get_mx_ndarray(ctx=ctx, in_tensor=value,
-                                                dtype=dtype,
-                                                initializer=nd.normal,
-                                                attach_grad=run_backward))
-            elif key in PARAMS_OF_TYPE_NDARRAY:
+            if key in PARAMS_OF_TYPE_NDARRAY:
                 kwargs[key] = get_mx_ndarray(ctx=ctx, in_tensor=value,
                                              dtype=dtype,
                                              initializer=nd.normal,
@@ -49,10 +43,10 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
             else:
                 kwargs[key] = value
         kwargs_list.append(kwargs)
-    return args_list, kwargs_list
+    return kwargs_list
 
 
-def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list, profiler):
+def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler):
     if profiler == 'native':
         if run_backward:
             benchmark_helper_func = cpp_profile(nd_forward_backward_and_profile)
@@ -67,28 +61,17 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, ar
         raise ValueError("Incorrect input for profiler. Valid input - 'python' or 'native'")
 
     # Warm up, ignore the profiler output
-    if not args_list:
-        _, _ = benchmark_helper_func(op, warmup, [], **kwargs_list[0])
-    else:
-        _, _ = benchmark_helper_func(op, warmup, *args_list, **kwargs_list[0])
+    _, _ = benchmark_helper_func(op, warmup, **kwargs_list[0])
 
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
     logging.info("Begin Benchmark - {name}".format(name=op.__name__))
-    if not args_list:
-        for idx, kwargs in enumerate(kwargs_list):
-            _, profiler_output = benchmark_helper_func(op, runs, [], **kwargs)
+    for idx, kwargs in enumerate(kwargs_list):
+        _, profiler_output = benchmark_helper_func(op, runs, [], **kwargs)
 
-            # Add inputs used for profiling this operator into result
-            profiler_output["inputs"] = inputs[idx]
-            op_benchmark_result[op.__name__].append(profiler_output)
-    else:
-        for idx, (args, kwargs) in enumerate(zip([args_list], kwargs_list)):
-            _, profiler_output = benchmark_helper_func(op, runs, *args, **kwargs)
-
-            # Add inputs used for profiling this operator into result
-            profiler_output["inputs"] = inputs[idx]
-            op_benchmark_result[op.__name__].append(profiler_output)
+        # Add inputs used for profiling this operator into result
+        profiler_output["inputs"] = inputs[idx]
+        op_benchmark_result[op.__name__].append(profiler_output)
     logging.info("Complete Benchmark - {name}".format(name=op.__name__))
     return op_benchmark_result
 
@@ -128,7 +111,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     List of dictionary of benchmark results. key -> name of the operator, Value is benchmark results.
 
     """
-    args_list, kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
+    kwargs_list = _prepare_op_inputs(inputs, run_backward, dtype, ctx)
 
     if not isinstance(ops, list):
         ops = [ops]
@@ -136,7 +119,7 @@ def run_performance_test(ops, inputs, run_backward=True,
     op_benchmark_result = []
     for op in ops:
         if hasattr(mx.nd, op.__name__):
-            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, args_list, kwargs_list, profiler)
+            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler)
         else:
             raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
         op_benchmark_result.append(benchmark_result)
