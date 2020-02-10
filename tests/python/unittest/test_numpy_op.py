@@ -3635,19 +3635,25 @@ def test_np_exponential():
         def hybrid_forward(self, F, scale):
             return F.np.random.exponential(scale, self._shape)
 
-    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
     for hybridize in [False, True]:
-        for shape in shapes:
-            test_exponential = TestRandomExp(shape)
+        for out_shape in output_shapes:
+            test_exponential_grad = TestRandomExp(out_shape)
             if hybridize:
-                test_exponential.hybridize()
-            np_out = _np.random.exponential(size = shape)
-            mx_out = test_exponential(np.array([1]))
-    
-    for shape in shapes:
-        mx_out = np.random.exponential(np.array([1]), shape)
-        np_out = _np.random.exponential(np.array([1]).asnumpy(), shape)
-        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+                test_exponential_grad.hybridize()
+            scale = np.ones(out_shape)
+            scale.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_exponential_grad(scale)
+            np_out = _np.random.exponential(scale = scale.asnumpy(), size = out_shape)
+            assert_almost_equal(np_out.shape, mx_out.shape)
+            mx_out.backward()
+            assert scale.grad.shape == out_shape
+            assert_almost_equal(scale.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
 
     def _test_exponential_exception(scale):
         output = np.random.exponential(scale=scale).asnumpy()
