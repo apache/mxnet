@@ -162,7 +162,7 @@ NNVM_REGISTER_OP(_npi_where_lscalar)
   // Use the following lambda function instead of ElemwiseGradUseIn
   // for best efficiency. grad[condition] = 0; to calculate grad[x] or grad[y]
   // we need only condition from input.
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> ret;
     // make zero grad node for grad[condition]
     auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
@@ -207,7 +207,7 @@ NNVM_REGISTER_OP(_npi_where_rscalar)
   // Use the following lambda function instead of ElemwiseGradUseIn
   // for best efficiency. grad[condition] = 0; to calculate grad[x] or grad[y]
   // we need only condition from input.
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> ret;
     // make zero grad node for grad[condition]
     auto p = MakeNode("zeros_like", n->attrs.name + "_cond_backward",
