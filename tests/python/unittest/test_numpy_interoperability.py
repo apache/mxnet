@@ -797,6 +797,17 @@ def _add_workload_argsort():
         OpArgMngr.add_workload('argsort', a, axis)
 
 
+def _add_workload_sort():
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=()), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(2, 3, 4)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=-1)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(4, 3, 5)), axis=-1, kind='mergesort')
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=None, kind='quicksort')
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)))
+
+
 def _add_workload_broadcast_arrays(array_pool):
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
 
@@ -1814,6 +1825,7 @@ def _prepare_workloads():
     _add_workload_around()
     _add_workload_round()
     _add_workload_argsort()
+    _add_workload_sort()
     _add_workload_append()
     _add_workload_bincount()
     _add_workload_broadcast_arrays(array_pool)

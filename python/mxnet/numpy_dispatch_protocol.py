@@ -90,6 +90,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'around',
     'round',
     'argsort',
+    'sort',
     'append',
     'broadcast_arrays',
     'broadcast_to',
