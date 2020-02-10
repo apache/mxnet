@@ -175,6 +175,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'empty_like',
     'nan_to_num',
     'isnan',
+    'isfinite',
+    'isposinf',
+    'isneginf',
     'isinf',
 ]
 

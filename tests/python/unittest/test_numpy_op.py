@@ -7361,7 +7361,7 @@ def test_np_nan_to_num():
 
 @with_seed()
 @use_np
-def test_np_isnan_isinf():
+def test_np_unary_bool_funcs():
     def check_unary_func(func):
         class TestUnary(HybridBlock):
             def __init__(self, func):
@@ -7375,18 +7375,27 @@ def test_np_isnan_isinf():
             _np.nan,
             _np.inf,
             -_np.inf,
-            _np.array(0)/0,
-            _np.inf/_np.inf,
+            float('inf'),
+            float('-inf'),
+            float("nan"),
+            _np.array(0)/0,  # nan
+            0.0 * _np.inf,  # nan
+            _np.inf/_np.inf,  # nan
+            _np.inf - _np.inf,  # nan
+            _np.array(1)/0,  # inf
+            0 + np.inf,  # inf
             1,
             [_np.nan],
             [_np.inf],
             [-_np.inf],
             [_np.array(0)/0],
+            [-_np.array(0)/0],
+            [_np.inf - _np.inf],  # nan
             [1],
             [1,2,3,4,-1,-2,-3,-4,0],
             [_np.nan, _np.inf, -_np.inf],
             [_np.nan, _np.inf, -_np.inf, -574, 0, 23425, 24234,-5],
-            [_np.nan, -1, 0, 1],
+            [_np.nan, -1, 0, 1, float('inf'), float('-inf'), float('nan')],
             [[-433, 0, 456, _np.inf], [-1, -_np.inf, 0, 1]]
         ]
 
@@ -7409,8 +7418,18 @@ def test_np_isnan_isinf():
 
             np_out = np_func(np_data)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+            # test imperative
             mx_out_imperative = getattr(mx.np, func)(mx_data)
+            assert_almost_equal(mx_out_imperative.asnumpy(), np_out, rtol, atol)
+            # if `out` is given and dtype == np.bool
+            mx_x = np.empty_like(mx_data).astype(np.bool)
+            np_x = mx_x.asnumpy()
+            getattr(mx.np, func)(mx_data, mx_x)
+            np_func(np_data, np_x)
             assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
+            # if `out` is given but dtype mismatches
+            mx_y = np.empty_like(mx_data)
+            assertRaises(TypeError, getattr(np, func), mx_data, out=mx_y)
 
             assertRaises(NotImplementedError, getattr(np, func), mx_data, where=False)
             assertRaises(NotImplementedError, getattr(np, func), mx_data,  subok=False)
@@ -7421,8 +7440,30 @@ def test_np_isnan_isinf():
             assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='C')
             assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='mxnet')
 
+        # test special shape and dtype
+        shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+        dtype_list = ['int32', 'int64', 'float16', 'float32', 'float64']
+        for [hybridize, dtype, shape] in itertools.product(hybridize_list, dtype_list, shape_list):
+            mx_data = mx.np.random.randint(low=-1, high=1, size=shape).astype(dtype)
+            np_data = mx_data.asnumpy()
+
+            if hybridize:
+                mx_func.hybridize()
+            with mx.autograd.record():
+                mx_out= mx_func(mx_data)
+
+            assert mx_out.dtype == np.bool_
+
+            np_out = np_func(np_data)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+            mx_out_imperative = getattr(mx.np, func)(mx_data)
+            assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
+
     check_unary_func("isnan")
     check_unary_func("isinf")
+    check_unary_func("isposinf")
+    check_unary_func("isneginf")
+    check_unary_func("isfinite")
 
 
 @with_seed()
