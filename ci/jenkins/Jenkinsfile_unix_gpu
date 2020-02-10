@@ -43,6 +43,7 @@ core_logic: {
     custom_steps.compile_unix_int64_gpu(),
     custom_steps.compile_unix_full_gpu_no_tvm_op(),
     custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
+    custom_steps.compile_unix_cmake_gpu_no_rtc(),
     custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
   ])
 

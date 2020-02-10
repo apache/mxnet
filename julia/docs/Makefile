@@ -20,7 +20,12 @@ all:
 	  'using Pkg; \
 	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(pwd(), "..")))'
 	julia --color=yes --project=./ ./make.jl
-	pip install --user Markdown==3.1 pygments mkdocs mkdocs-material python-markdown-math
+	pip install --user Markdown==3.1 \
+          mkdocs==1.0.4 \
+	  mkdocs-material==4.6.0 \
+	  pygments==2.5.2 \
+	  pymdown-extensions==6.2.1 \
+	  python-markdown-math==0.6
 	export LC_ALL="C.UTF-8"
 	export LANG="C.UTF-8"
 	echo $(LC_ALL)
