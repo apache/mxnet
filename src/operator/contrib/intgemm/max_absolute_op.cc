@@ -82,7 +82,8 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(in.CheckContiguous());
   CHECK(out.CheckContiguous());
   size_t size = in.shape_.Size();
-  CHECK_EQ(size % (512 / 8 / sizeof(float)), 0) << "The total size of the input must be a multiple of 16.";
+  CHECK_EQ(size % (512 / 8 / sizeof(float)), 0) <<
+    "The total size of the input must be a multiple of 16.";
 
   const float *data = in.dptr<float>();
   KERNEL_ASSIGN(*out.dptr<float>(), req[0], ::intgemm::MaxAbsolute(data, data + size));
@@ -92,7 +93,6 @@ NNVM_REGISTER_OP(_contrib_intgemm_maxabsolute)
 .describe(R"code(Compute the maximum absolute value in a tensor of float32 fast on a CPU.  The tensor's total size must be a multiple of 16 and aligned to a multiple of 64 bytes.
 mxnet.nd.contrib.intgemm_maxabsolute(arr) == arr.abs().max()
 )code" ADD_FILELINE)
-//.set_attr_parser(ParamParser<MaxAbsoluteParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",

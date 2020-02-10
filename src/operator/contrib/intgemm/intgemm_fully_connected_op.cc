@@ -66,7 +66,7 @@ template<class T> void IntgemmFullyConnectedSanity(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in->size(), param.no_bias ? 3U : 4U);
   CHECK_EQ(out->size(), 1U);
 }
-} // namespace
+}  // namespace
 
 inline bool IntgemmFullyConnectedOpShape(const nnvm::NodeAttrs& attrs,
                              mxnet::ShapeVector* in_shape,
@@ -143,20 +143,20 @@ bool IntgemmFullyConnectedOpType(const nnvm::NodeAttrs& attrs,
 
 namespace {
 
-// TODO: amend AlignedVector to allow a reset.
+// This is used to free because AlignedVector does not have Reset.
 class FreeMe {
-  public:
-    FreeMe() : mem_(nullptr) {}
-    ~FreeMe() { std::free(mem_); }
-    void Reset(int8_t *with) {
-      std::free(mem_);
-      mem_ = with;
-    }
-  private:
-    int8_t *mem_;
+ public:
+  FreeMe() : mem_(nullptr) {}
+  ~FreeMe() { std::free(mem_); }
+  void Reset(int8_t *with) {
+    std::free(mem_);
+    mem_ = with;
+  }
+ private:
+  int8_t *mem_;
 };
 
-} // namespace
+}  // namespace
 
 void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -166,7 +166,7 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
   IntgemmFullyConnectedSanity(attrs, &inputs, &outputs);
   const IntgemmFullyConnectedParam& param = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
   CHECK_EQ(req.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "TODO: doing more than overwriting for intgemm.  Note: kWriteInplace = " << kWriteInplace << " kWriteTo = " << kWriteTo;
+  CHECK_EQ(req[0], kWriteTo) << "TODO: doing more than overwriting for intgemm.";
 
   const TBlob &A = inputs[0], &B = inputs[1], &C = outputs[0];
 
@@ -191,21 +191,24 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(C.type_flag_, mshadow::kFloat32);
     CHECK_EQ(inputs[3].shape_.Size(), param.num_hidden);
   }
-  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
-  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) << "intgemm requires B have a multiple of " << ::intgemm::Int8::tile_info.b_cols << " columns inthe equation C = AB.";
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) <<
+    "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) <<
+    "intgemm requires B have a multiple of " << ::intgemm::Int8::tile_info.b_cols <<
+    " columns inthe equation C = AB.";
 
   float out_float_multiplier = *inputs[2].dptr<float>();
 
   int8_t *A_quant;
-  // TODO report this memory consumption?
+  // TODO(kpuatamazon) report this memory consumption?
   FreeMe A_quant_store;
   if (A.type_flag_ == mshadow::kFloat32) {
     const float *A_raw = A.dptr<float>();
-    // Quantize A for the user.  TODO: allow scale to be passed in.  Should the induced scale be an output?
+    // Quantize A for the user.
+    // Future: allow scale to be passed in? Should the induced scale be an output?
     float scale = 127.0 / ::intgemm::MaxAbsolute(A_raw, A_raw + A.shape_.Size());
     out_float_multiplier /= scale;
-    // TODO report this memory consumption to mxnet?
-    A_quant = (int8_t*)aligned_alloc(64, A.shape_.Size());
+    A_quant = static_cast<int8_t*>(aligned_alloc(64, A.shape_.Size()));
     CHECK(A_quant);
     A_quant_store.Reset(A_quant);
     ::intgemm::Int8::PrepareA(A_raw, A_quant, scale, A_rows, inner);
@@ -217,7 +220,10 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   if (bias) {
     if (C.type_flag_ == mshadow::kFloat32) {
-      ::intgemm::callbacks::UnquantizeAndAddBiasAndWrite cb(out_float_multiplier, inputs[3].dptr<float>(), C.dptr<float>());
+      ::intgemm::callbacks::UnquantizeAndAddBiasAndWrite cb(
+          out_float_multiplier,
+          inputs[3].dptr<float>(),
+          C.dptr<float>());
       ::intgemm::Int8::Multiply(A_quant, B_quant, A_rows, inner, B_cols, cb);
     } else {
       // int32
@@ -256,13 +262,25 @@ The out_type can be int32 or float32.  Bias must have the same type.
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const IntgemmFullyConnectedParam& params = nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed);
-    return params.no_bias ? std::vector<std::string>{"data", "weight", "scaling"} : std::vector<std::string>{"data", "weight", "scaling", "bias"};
+    return params.no_bias ?
+      std::vector<std::string>{"data", "weight", "scaling"} :
+      std::vector<std::string>{"data", "weight", "scaling", "bias"};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
 .set_attr<FCompute>("FCompute<cpu>", IntgemmFullyConnectedOpForwardCPU)
-.add_argument("data", "NDArray-or-Symbol", "First argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from intgemm_prepare_data. If you use a different quantizer, be sure to ban -128. The last dimension must be a multiple of 64.")
-.add_argument("weight", "NDArray-or-Symbol", "Second argument to multiplication. Tensor of int8 from intgemm_prepare_weight. The last dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple of 8.")
+.add_argument(
+    "data",
+    "NDArray-or-Symbol",
+    "First argument to multiplication. Tensor of float32 (quantized on the fly) or int8 from "
+      "intgemm_prepare_data. If you use a different quantizer, be sure to ban -128. The last "
+      "dimension must be a multiple of 64.")
+.add_argument(
+    "weight",
+    "NDArray-or-Symbol",
+    "Second argument to multiplication. Tensor of int8 from intgemm_prepare_weight. The last "
+      "dimension must be a multiple of 64.  The product of non-last dimensions must be a multiple "
+      "of 8.")
 .add_argument("scaling", "NDArray-or-Symbol", "Scaling factor to apply if output type is float32.")
 .add_argument("bias", "NDArray-or-Symbol", "Bias term.")
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,

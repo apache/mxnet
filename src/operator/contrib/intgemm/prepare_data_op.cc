@@ -120,7 +120,11 @@ The float32 values are scaled such that maxabs maps to 127. Typically maxabs = m
 .set_attr<FInferStorageType>("FInferStorageType", PrepareDataOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", PrepareDataOpForwardCPU)
 .add_argument("data", "NDArray-or-Symbol", "Activation matrix to be prepared for multiplication.")
-.add_argument("maxabs", "NDArray-or-Symbol", "Maximum absolute value to be used for scaling.  (The values will be multiplied by 127.0 / maxabs.")
+.add_argument(
+    "maxabs",
+    "NDArray-or-Symbol",
+    "Maximum absolute value to be used for scaling.  (The values will be multiplied by 127.0 / "
+      "maxabs.")
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);

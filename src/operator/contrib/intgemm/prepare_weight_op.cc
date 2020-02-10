@@ -111,24 +111,33 @@ void PrepareWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(out.CheckContiguous());
   size_t B_cols = in.shape_.ProdShape(0, in.shape_.ndim() - 1);
   size_t inner = in.shape_[in.shape_.ndim() - 1];
-  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
-  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) << "intgemm requires the output dimension (the product of all but the last dimension of the weight matrix) to be a multiple of " << ::intgemm::Int8::tile_info.b_cols << ".";
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) <<
+    "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) <<
+    "intgemm requires the output dimension (the product of all but the last dimension of the "
+    "weight matrix) to be a multiple of " << ::intgemm::Int8::tile_info.b_cols << ".";
 
   int8_t *quantB = out.dptr<int8_t>();
-  CHECK(in.type_flag_ == mshadow::kFloat32 || in.type_flag_ == mshadow::kInt8) << "Expected either 32-bit values to be quantized or 8-bit values to rearrange.";
+  CHECK(in.type_flag_ == mshadow::kFloat32 || in.type_flag_ == mshadow::kInt8) <<
+    "Expected either 32-bit values to be quantized or 8-bit values to rearrange.";
   if (in.type_flag_ == mshadow::kInt8) {
     const int8_t *B = in.dptr<int8_t>();
     ::intgemm::Int8::PrepareBQuantizedTransposed(B, quantB, inner, B_cols);
   } else if (in.type_flag_ == mshadow::kFloat32) {
     const float *B = in.dptr<float>();
-    // TODO: eliminate transpose here with https://github.com/kpu/intgemm/pull/56
+    // TODO(kpuatamazon): eliminate transpose here with https://github.com/kpu/intgemm/pull/56
     intgemm::AlignedVector<float> B_transpose(inner * B_cols);
     for (size_t i = 0; i < inner; ++i) {
       for (size_t j = 0; j < B_cols; ++j) {
         B_transpose[i * B_cols + j] = B[i + inner * j];
       }
     }
-    ::intgemm::Int8::PrepareB(B_transpose.begin(), quantB, 127.0 / *inputs[1].dptr<float>(), inner, B_cols);
+    ::intgemm::Int8::PrepareB(
+        B_transpose.begin(),
+        quantB,
+        127.0 / *inputs[1].dptr<float>(),
+        inner,
+        B_cols);
   }
 }
 
@@ -151,14 +160,18 @@ The internal representation depends on register length.  So AVX512, AVX2, and SS
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
   const PrepareWeightParam& params = nnvm::get<PrepareWeightParam>(attrs.parsed);
-  return params.already_quantized ? std::vector<std::string>{"weight"} : std::vector<std::string>{"weight", "maxabs"};
+  return params.already_quantized ?
+    std::vector<std::string>{"weight"} : std::vector<std::string>{"weight", "maxabs"};
 })
 .set_attr<mxnet::FInferShape>("FInferShape", PrepareWeightOpShape)
 .set_attr<nnvm::FInferType>("FInferType", PrepareWeightOpType)
 .set_attr<FInferStorageType>("FInferStorageType", PrepareWeightOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", PrepareWeightOpForwardCPU)
 .add_argument("weight", "NDArray-or-Symbol", "Parameter matrix to be prepared for multiplication.")
-.add_argument("maxabs", "NDArray-or-Symbol", "Maximum absolute value for scaling. The weights will be multipled by 127.0 / maxabs.")
+.add_argument(
+    "maxabs",
+    "NDArray-or-Symbol",
+    "Maximum absolute value for scaling. The weights will be multipled by 127.0 / maxabs.")
 // TODO(Xinyu): a temp solution to enable GluonCV INT8 flow,
 // will be reverted after the improvement of CachedOP is done.
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)

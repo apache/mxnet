@@ -68,7 +68,6 @@ inline bool TakeWeightOpType(const nnvm::NodeAttrs& attrs,
 
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
   TYPE_ASSIGN_CHECK(*in_attrs, 0, mshadow::kInt8);
-  // TODO 64-bit index support.  Though if you're going that far, you're probably overflowing matrix multiply.
   TYPE_ASSIGN_CHECK(*in_attrs, 1, mshadow::kInt32);
   return true;
 }
@@ -103,13 +102,23 @@ void TakeWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK(out.CheckContiguous());
   size_t B_cols = indices.shape_[0];
   size_t inner = weight.shape_[weight.shape_.ndim() - 1];
-  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) << "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
-  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) << "For efficiency, intgemm requires there to be a multiple of " << ::intgemm::Int8::tile_info.b_cols << " indices.";
-  // mxnet doesn't have a uint32_t type so we'll just pointer cast.  But check the sizes are the same.  TODO statically.
+  CHECK_EQ(inner % ::intgemm::Int8::tile_info.b_rows, 0) <<
+    "intgemm requires the inner dimension be a multiple of " << ::intgemm::Int8::tile_info.b_rows;
+  CHECK_EQ(B_cols % ::intgemm::Int8::tile_info.b_cols, 0) <<
+    "For efficiency, intgemm requires there to be a multiple of " <<
+    ::intgemm::Int8::tile_info.b_cols << " indices.";
+  // mxnet doesn't have a uint32_t type so we'll just pointer cast. But check the sizes are the
+  // same.  Ideally this should be static.
   assert(sizeof(int32_t) == sizeof(::intgemm::Index));
-  const ::intgemm::Index *index = reinterpret_cast<const ::intgemm::Index*>(indices.dptr<int32_t>());
+  const ::intgemm::Index *index =
+    reinterpret_cast<const ::intgemm::Index*>(indices.dptr<int32_t>());
 
-  ::intgemm::Int8::SelectColumnsB(weight.dptr<int8_t>(), out.dptr<int8_t>(), inner, index, index + B_cols);
+  ::intgemm::Int8::SelectColumnsB(
+      weight.dptr<int8_t>(),
+      out.dptr<int8_t>(),
+      inner,
+      index,
+      index + B_cols);
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_take_weight)
@@ -126,7 +135,10 @@ The indices select the outputs of matrix multiplication, not the inner dot produ
 .set_attr<nnvm::FInferType>("FInferType", TakeWeightOpType)
 .set_attr<FInferStorageType>("FInferStorageType", TakeWeightOpStorageType)
 .set_attr<FCompute>("FCompute<cpu>", TakeWeightOpForwardCPU)
-.add_argument("weight", "NDArray-or-Symbol", "Tensor already in intgemm weight format to select from")
+.add_argument(
+    "weight",
+    "NDArray-or-Symbol",
+    "Tensor already in intgemm weight format to select from")
 .add_argument("indices", "NDArray-or-Symbol", "indices to select on the 0th dimension of weight");
 
 }  // namespace op
