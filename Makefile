@@ -461,8 +461,27 @@ endif
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
-OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
+
+#intgemm compiler tests for AVX512BW and AVX512VNNI
+ifeq ($(USE_INTGEMM), 1)
+  $(shell mkdir -p build/3rdparty/intgemm/)
+  $(shell echo '#pragma once' >build/3rdparty/intgemm/intgemm_config.h)
+  ifneq ($(shell $(CXX) $(CFLAGS) -mavx512f -mavx512bw -mavx512dq $(ROOTDIR)/3rdparty/intgemm/compile_test_avx512.cc 2>/dev/null && echo \\\#define INTGEMM_COMPILER_SUPPORTS_AVX512 >>build/3rdparty/intgemm/intgemm_config.h; echo $$?), 0)
+    $(warning WARNING: The compiler is too old for AVX512BW; so these instructions will not be used.)
+  endif
+  ifneq ($(shell $(CXX) $(CFLAGS) $(ROOTDIR)/3rdparty/intgemm/compile_test_avx512vnni.cc 2>/dev/null && echo \\\#define INTGEMM_COMPILER_SUPPORTS_AVX512VNNI >>build/3rdparty/intgemm/intgemm_config.h; echo $$?), 0)
+    $(warning WARNING: The compiler is too old for AVX512VNNI, so these instructions will not be used.)
+  endif
+  CFLAGS += -Ibuild/3rdparty/intgemm
+  SRC += 3rdparty/intgemm/intgemm.cc
+else
+  #If we're not using intgemm, remove the operators from src.
+  INTGEMM_OPS := $(wildcard src/operator/contrib/intgemm/*.cc)
+  SRC := $(filter-out $(SRC),$(INTGEMM_OPS))
+endif
+
+OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
 
 ifeq ($(USE_TVM_OP), 1)
@@ -478,6 +497,7 @@ ifeq ($(USE_CUDA), 1)
 	endif
 endif
 endif
+
 
 # extra operators
 ifneq ($(EXTRA_OPERATORS),)
@@ -608,6 +628,11 @@ $(DMLC_CORE)/libdmlc.a: DMLCCORE
 
 DMLCCORE:
 	+ cd $(DMLC_CORE); $(MAKE) libdmlc.a USE_SSE=$(USE_SSE) config=$(ROOTDIR)/$(config); cd $(ROOTDIR)
+
+ifeq ($(USE_INTGEMM), 1)
+build/3rdparty/intgemm/intgemm.o: 3rdparty/intgemm/intgemm.cc $(wildcard 3rdparty/intgemm/*.h) $(wildcard 3rdparty/intgemm/*/*.h)
+	$(CXX) $(CFLAGS) -std=c++11 -c 3rdparty/intgemm/intgemm.cc -o $@
+endif
 
 lib/libtvm_runtime.so:
 	echo "Compile TVM"
