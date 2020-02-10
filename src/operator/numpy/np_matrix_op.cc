@@ -111,7 +111,7 @@ NNVM_REGISTER_OP(_np_transpose)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyTransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(n->attrs.parsed);
     if (ndim_is_known(param.axes)) {
       mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
@@ -664,7 +664,7 @@ bool NumpyConcatenateShape(const nnvm::NodeAttrs& attrs,
 
 struct NumpyConcatGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     CHECK_EQ(ograds.size(), 1);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -1167,7 +1167,7 @@ NNVM_REGISTER_OP(_np_roll)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyRollCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyRollParam& param = nnvm::get<NumpyRollParam>(n->attrs.parsed);
      if (!param.shift.has_value()) {
        LOG(FATAL) << "roll missing 1 required positional argument: 'shift'.";
@@ -1268,7 +1268,7 @@ Other axes remain in their original order.
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyMoveaxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyMoveaxisParam& param = nnvm::get<NumpyMoveaxisParam>(n->attrs.parsed);
      std::ostringstream os1;
      os1 << param.source;
@@ -1341,7 +1341,7 @@ NNVM_REGISTER_OP(_npi_rot90)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyRot90Compute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyRot90Param& param = nnvm::get<NumpyRot90Param>(n->attrs.parsed);
      std::ostringstream os1;
      os1 << param.k;

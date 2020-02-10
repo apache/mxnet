@@ -253,7 +253,7 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_mul)
 
 NNVM_REGISTER_OP(elemwise_mul)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_contrib_quantized_elemwise_mul");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;

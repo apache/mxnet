@@ -32,6 +32,8 @@ from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
+from mxnet.test_utils import new_matrix_with_real_eigvals_nd
+from mxnet.test_utils import new_sym_matrix_with_real_eigvals_nd
 from common import assertRaises, with_seed
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
@@ -509,8 +511,8 @@ def test_np_any():
     axes = [True, False]
     shapes = [(), (5, ), (10, ),
               (2, 5), (5, 5), (10, 10),
-              (4, 4, 4), (4, 6, 9), (6, 6, 6),
-              (7, 8, 9, 10), (7, 9, 11, 13)]
+              (4, 4, 4), (4, 6, 9), (6, 6, 6), (6, 0, 5),
+              (7, 8, 9, 10), (7, 9, 11, 13), (0, 7, 7, 5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
 
     combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
@@ -518,7 +520,7 @@ def test_np_any():
         ndim = len(shape)
         samples = random.randint(0, ndim)
         axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
-        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        x = np.random.normal(0, 5.0, size=shape).astype(dtype)
         test_any = TestAny(axis=axis, keepdims=keepdim)
         if hybridize:
             test_any.hybridize()
@@ -548,8 +550,8 @@ def test_np_all():
     axes = [True, False]
     shapes = [(), (5, ), (10, ),
               (2, 5), (5, 5), (10, 10),
-              (4, 4, 4), (4, 6, 9), (6, 6, 6),
-              (7, 8, 9, 10), (7, 9, 11, 13)]
+              (4, 4, 4), (4, 6, 9), (6, 6, 6), (6, 0, 5),
+              (7, 8, 9, 10), (7, 9, 11, 13), (0, 7, 7, 5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64, np.bool]
 
     combinations = itertools.product([False, True], shapes, dtypes, axes, keepdims)
@@ -557,7 +559,7 @@ def test_np_all():
         ndim = len(shape)
         samples = random.randint(0, ndim)
         axis = None if not axis else tuple(random.sample([i for i in range(0, ndim)], samples))
-        x = np.random.normal(0, 1.0, size=shape).astype(dtype)
+        x = np.random.normal(0, 5.0, size=shape).astype(dtype)
         test_all = TestAll(axis=axis, keepdims=keepdim)
         if hybridize:
             test_all.hybridize()
@@ -1417,6 +1419,62 @@ def test_np_argsort():
 
 @with_seed()
 @use_np
+def test_np_sort():
+    class TestSort(HybridBlock):
+        def __init__(self, axis, kind):
+            super(TestSort, self).__init__()
+            self._axis = axis
+            self._kind = kind
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.np.sort(x, self._axis, self._kind)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float32, np.float64]
+    shapes = [
+        (),
+        (1,),
+        (5,),
+        (4, 3),
+        (3, 5),
+        (4, 4),
+        (4, 5),
+        (5, 5),
+        (5, 6),
+        (6, 6),
+        (0, 1),
+        (6, 5, 6),
+        (2, 3, 3, 4),
+        (4, 2, 1, 2),
+        (0, 5, 3, 3),
+        (5, 0, 3, 3),
+        (3, 3, 0, 0),
+    ]
+    flags = [True, False]
+    # Not include 'stable' as some old numpy versions do not support it
+    kind_list = ['quicksort', 'mergesort', 'heapsort']
+
+    for dtype, shape, hybridize, kind in itertools.product(dtypes, shapes, flags, kind_list):
+        a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
+        axis_list = list(range(len(shape)))
+        axis_list.append(None)
+        axis_list.append(-1)
+        for axis in axis_list:
+            test = TestSort(axis, kind)
+            if hybridize:
+                test.hybridize()
+            if axis == -1 and len(shape)==0:
+                continue
+            ret = test(a)
+            expected_ret = _np.sort(a.asnumpy(), axis, kind)
+            assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+            # check imperative again
+            ret = np.sort(a, axis, kind)
+            assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_np_squeeze():
     config = [((), None),
               ((), -1),
@@ -1559,6 +1617,7 @@ def test_np_broadcast_to():
         ((4, 1), (1, 2, 3, 4, 5)),
         ((4, 1), (1, 0, 3, 4, 5))
     ]
+
     for src_shape, dst_shape in shapes:
         for hybridize in [True, False]:
             test_broadcast_to = TestBroadcastTo(dst_shape)
@@ -1586,6 +1645,32 @@ def test_np_broadcast_to():
                 # `np.empty(())` serves as a dummpy input
                 ret = test_scalar_broadcast_to(np.empty(()))
             assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+    # Test npx functionality
+    shapes = [
+        ((5,), (3, 4, -2), (3, 4, 5)),
+        ((5,), (0, -2), (0, 5)),
+        ((1, 0), (2, -2, -2), (2, 1, 0)),
+        ((3, 4), (1, 2, 3, -2), (1, 2, 3, 4)),
+        ((3, 4), (1, 0, -2, 4), (1, 0, 3, 4))
+    ]
+
+    for src_shape, npx_dst_shape, np_dst_shape in shapes:
+        for hybridize in [True, False]:
+            test_broadcast_to = TestBroadcastTo(npx_dst_shape)
+            if hybridize:
+                test_broadcast_to.hybridize()
+
+            a = _np.random.uniform(size=src_shape).astype(np.float32)
+            expected_ret = _np.broadcast_to(a, np_dst_shape)
+            a_mx = np.array(a, dtype=a.dtype)
+            a_mx.attach_grad()
+            with mx.autograd.record():
+                ret = test_broadcast_to(a_mx)
+            assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
+            ret.backward()
+            expected_grad = collapse_sum_like(_np.ones_like(expected_ret), src_shape)
+            assert_almost_equal(a_mx.grad.asnumpy(), expected_grad, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
 @with_seed()
@@ -2036,6 +2121,7 @@ def test_np_binary_funcs():
         'power': (1.0, 3.0, [lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2],
                              [lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)]),
         'lcm': (-100, 100, [None], None, [[_np.int32]]),
+        'bitwise_and': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_xor': (-100, 100, [None], None, [[_np.int32]]),
         'bitwise_or': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
@@ -3100,6 +3186,7 @@ def test_np_argmin_argmax():
                 else:
                     mx_ret = getattr(np, op_name)(a, axis=axis)
                     np_ret = getattr(_np, op_name)(a.asnumpy(), axis=axis)
+                    assert mx_ret.dtype == np_ret.dtype
                     assert same(mx_ret.asnumpy(), np_ret)
 
                 for hybridize in [False, True]:
@@ -3115,6 +3202,7 @@ def test_np_argmin_argmax():
                             pass
                     else:
                         mx_ret = net(a)
+                        assert mx_ret.dtype == np_ret.dtype
                         assert same(mx_ret.asnumpy(), np_ret)
 
 
@@ -3351,6 +3439,56 @@ def test_np_normal_grad():
 
 @with_seed()
 @use_np
+def test_np_lognormal_grad():
+    class TestLognormalGrad(HybridBlock):
+        def __init__(self, shape):
+            super(TestLognormalGrad, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, mean, sigma):
+            return F.np.random.lognormal(mean, sigma, self._shape)
+
+    param_shape = [
+        [(3, 2), (3, 2)],
+        [(3, 2, 2), (3, 2, 2)],
+        [(3, 4, 5), (4, 1)],
+    ]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
+    for hybridize in [False, True]:
+        for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+            test_lognormal_grad = TestLognormalGrad(out_shape)
+            if hybridize:
+                test_lognormal_grad.hybridize()
+            mean = np.zeros(shape1)
+            mean.attach_grad()
+            sigma = np.ones(shape2)
+            sigma.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_lognormal_grad(mean, sigma)
+            np_out = _np.random.lognormal(mean = mean.asnumpy(), 
+                                            sigma = sigma.asnumpy(), size = out_shape)
+            assert np_out.shape == mx_out.shape
+            mx_out.backward()
+            assert mean.grad.shape == shape1
+            assert sigma.grad.shape == shape2
+            assert_almost_equal(mean.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
+
+    for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
+        mx_out = np.random.lognormal(np.zeros(shape1), np.ones(shape2), out_shape)
+        np_out = _np.random.lognormal(np.zeros(shape1).asnumpy(), np.ones(shape2).asnumpy(), out_shape)
+        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
+    def _test_lognormal_exception(sigma):
+        output = np.random.lognormal(sigma=sigma).asnumpy()
+    assertRaises(ValueError, _test_lognormal_exception, -1)
+
+
+@with_seed()
+@use_np
 def test_npx_sample_n():
     def shape_formatter(s):
         if s is None:
@@ -3442,6 +3580,52 @@ def test_np_random():
 
 @with_seed()
 @use_np
+def test_np_random_beta():
+    class TestRandomBeta(HybridBlock):
+        def __init__(self, size=None, dtype=None, ctx=None):
+            super(TestRandomBeta, self).__init__()
+            self._size = size
+            self._dtype = dtype
+            self._ctx = ctx
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.random.beta(a, b, size=self._size, dtype=self._dtype, ctx=self._ctx)
+
+    def _test_random_beta_range(output):
+        bigger_than_zero = _np.all(output > 0)
+        smaller_than_one = _np.all(output < 1)
+        return bigger_than_zero and smaller_than_one
+
+    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # since fp16 might incur precision issue, the corresponding test is skipped
+    dtype_list = [np.float32, np.float64]
+    hybridize_list = [False, True]
+    data = np.array([1])
+    for [param_shape, in_dtype, out_dtype, hybridize] in itertools.product(shape_list,
+            dtype_list, dtype_list, hybridize_list):
+        if sys.version_info.major < 3 and param_shape == ():
+            continue
+        mx_data = data.astype(in_dtype)
+        np_data = mx_data.asnumpy()
+        test_random_beta = TestRandomBeta(size=param_shape, dtype=out_dtype)
+        if hybridize:
+            test_random_beta.hybridize()
+        np_out = _np.random.beta(np_data, np_data, size=param_shape)
+        mx_out = test_random_beta(mx_data, mx_data)
+        mx_out_imperative = mx.np.random.beta(mx_data, mx_data, size=param_shape, dtype=out_dtype)
+
+        assert_almost_equal(np_out.shape, mx_out.shape)
+        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert _test_random_beta_range(mx_out.asnumpy()) == True
+        assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
+
+        # test scalar
+        mx_out_imperative = mx.np.random.beta(1, 1, size=param_shape, dtype=out_dtype)
+        assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
+
+
+@with_seed()
+@use_np
 def test_np_exponential():
     class TestRandomExp(HybridBlock):
         def __init__(self, shape):
@@ -3472,6 +3656,76 @@ def test_np_exponential():
 
 @with_seed()
 @use_np
+def test_np_random_a():
+    op_names = ['pareto', 'power', 'weibull']
+    # these distributions have one required parameter a
+    shapes = [(1,), (2, 3), (4, 0, 5), 6, (7, 8), (), None]
+
+    def _test_random_x_range(output):
+        ge_zero = _np.all(output >= 0)
+        smaller_equal_one = _np.all(output <= 1)
+        return ge_zero and smaller_equal_one
+
+    # test imperative size shapes
+    for [shape, op_name] in itertools.product(shapes, op_names):
+        op = getattr(np.random, op_name, None)
+        assert op is not None
+        out = op(1.0, size=shape)
+        expected_shape = shape
+        if not isinstance(shape, tuple):
+            expected_shape = () if shape is None else (shape,)
+        assert out.shape == expected_shape
+        # test range of generated values for power distribution
+        if op_name == 'power':
+            assert _test_random_x_range(out.asnumpy()) == True
+
+    # test symbolic/hybridized size shapes
+    class TestRandomA(HybridBlock):
+        def __init__(self, shape, op_name):
+            super(TestRandomA, self).__init__()
+            self._shape = shape
+            self._op_name = op_name
+
+        def hybrid_forward(self, F, a):
+            op = getattr(F.np.random, self._op_name, None)
+            assert op is not None
+            return op(a, size=self._shape)
+
+    hybridize = [False, True]
+    for [op_name, shape, hybridize] in itertools.product(op_names, shapes, hybridize):
+        test_op = TestRandomA(shape, op_name)
+        if hybridize:
+            test_op.hybridize()
+        mx_out = test_op(np.array(1.0))
+        expected_shape = shape
+        if not isinstance(shape, tuple):
+            expected_shape = () if shape is None else (shape,)
+        assert mx_out.shape == expected_shape
+
+    # test broadcasting of required parameter a shape when a is array-like
+    ashapes = [(1,), (2, 3), (4, 0, 5), 6, (7, 8)]
+    for shape in ashapes:
+        a = np.ones(shape)
+        for op_name in op_names:
+            op = getattr(np.random, op_name, None)
+            assert op is not None
+            mx_out = op(a, size=None)
+            expected_shape = a.shape
+            assert mx_out.shape == expected_shape
+
+    # test illegal parameter values (as numpy produces)
+    def _test_exception(a):
+        output = op(a=a).asnumpy()
+    for op in op_names:
+        op = getattr(np.random, op_name, None)
+        if op is not None:
+            assertRaises(ValueError, _test_exception, -1)
+        if op in ['pareto', 'power']:
+            assertRaises(ValueError, _test_exception, 0)
+
+
+@with_seed()
+@use_np
 def test_np_randn():
     # Test shapes.
     shapes = [
@@ -3490,6 +3744,52 @@ def test_np_randn():
         for shape in shapes:
             data_mx = np.random.randn(*shape, dtype=dtype)
             assert data_mx.shape == shape
+
+
+@with_seed()
+@use_np
+def test_np_multivariate_normal():
+    class TestMultivariateNormal(HybridBlock):
+        def __init__(self, size=None):
+            super(TestMultivariateNormal, self).__init__()
+            self.size = size
+
+        def hybrid_forward(self, F, mean, cov):
+            return F.np.random.multivariate_normal(mean, cov, self.size)
+
+    hybridize_list = [True, False]
+    dtypes = ['float16', 'float32', 'float64']
+    size_list = [None, 1, (), (2, 3), (2, 0)]
+    # [mean_shape, cov_shape]: _np.broadcast(mean_shape, cov_shape[:-1]) should not raise error
+    batch_shape_list = [[(2,), (2, 2)], [(3, 2), (2, 2)], [(2,), (3, 2, 2)], [(3, 2), (4, 3, 2, 2)]]
+    # most basic case for mean and cov
+    mean = np.array([0.123456789, 10])
+    cov = np.array([[1, 0], [0, 10]])
+
+    for [hybridize, dtype, size, batch_shape] in itertools.product(hybridize_list,\
+                dtypes, size_list, batch_shape_list):
+        # simplest case: 1-d, 0 batch
+        # compared with official numpy
+        mean_shape = batch_shape[0]
+        cov_shape = batch_shape[1]
+        new_mean = np.broadcast_to(mean, mean_shape).astype(dtype)
+        new_cov = np.broadcast_to(cov, cov_shape).astype(dtype)
+
+        test_multivariate_normal = TestMultivariateNormal(size)
+        if hybridize:
+            test_multivariate_normal.hybridize()
+
+        test_shape = test_multivariate_normal(new_mean, new_cov).shape
+        actual_shape = np.random.multivariate_normal(new_mean, new_cov, size).shape
+
+        desired_shape = np.broadcast_arrays(np.empty(mean_shape), np.empty(cov_shape[:-1]))[0].shape
+
+        if size is not None:
+            size = [size] if isinstance(size, int) else list(size)
+            desired_shape = size + list(desired_shape)
+
+        assert list(desired_shape) == list(test_shape)
+        assert list(desired_shape) == list(actual_shape)
 
 
 @with_seed()
@@ -3821,7 +4121,6 @@ def test_np_repeat():
 @with_seed()
 @use_np
 def test_np_linalg_norm():
-    @use_np
     class TestLinalgNorm(HybridBlock):
         def __init__(self, ord=None, axis=None, keepdims=False):
             super(TestLinalgNorm, self).__init__()
@@ -3832,21 +4131,110 @@ def test_np_linalg_norm():
         def hybrid_forward(self, F, x):
             return F.np.linalg.norm(x, ord=self._ord, axis=self._axis, keepdims=self._keepdims)
 
-    a = np.arange(5 * 6 * 7 * 8).reshape((5, 6, 7, 8))
-    ords = [None, 'fro']
-    axes = [None, (0, 2), (1, 0), (1, 2)]
-    for ord in ords:
-        for axis in axes:
-            if ord == 'fro' and axis is None and a.ndim > 2:
-                continue
-            for keepdims in [False, True]:
-                for hybridize in [False, True]:
-                    net = TestLinalgNorm(ord, axis, keepdims)
-                    if hybridize:
-                        net.hybridize()
-                    mx_ret = net(a)
-                    np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
-                    assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-5, rtol=1e-4)
+    configs = [
+        ((2, 3, 4), 1, (2, 1)),
+        ((2, 3, 4), 2, (1, 2)),
+        ((2, 3, 4), None, None),
+        ((3,), None, None),
+        ((2, 3), 2, 1),
+        ((2, 3, 4), 1, 1),
+        ((2, 3, 4), -1, 2),
+        ((2, 3, 4), 2, 1),
+        ((2, 3, 4), 4, 1),
+        ((2, 3, 0, 4), -2, 1),
+        ((2, 3, 4, 5), 2, (2, 3)),
+        ((2, 3), -1, None),
+        ((2, 3, 4), 'inf', 1),
+        ((2, 3, 4), '-inf', (1, 0)),
+        ((2, 3), None, (0, 1)),
+        ((3, 2, 3), None, (1, 2)),
+        ((2, 3), None, None),
+        ((2, 3, 4), 'fro', (0, 2)),
+        ((2, 0, 4), 'fro', (0, 2)),
+        ((2, 3, 4), None, (0, 2)),
+        ((2, 3, 4), -3.2, 2),
+        ((2, 3, 4), -1, (0, 1)),
+        ((2, 3, 4), 'inf', (0, 2)),
+        ((2, 3, 4), '-inf', (0, 2)),
+        ((4, 4, 4, 4), -2, (0, 2)),
+        ((2, 3, 4), 'nuc', (0, 2)),
+        ((2, 2), 'nuc', None),
+    ]
+
+    def spectral_norm_grad(data):
+        with mx.autograd.record():
+            UT, S, V = np.linalg.svd(data)
+            norm = np.max(np.abs(S), axis=-1)
+        norm.backward()
+        return data.grad.asnumpy()
+
+    # numpy is flaky under float16, also gesvd does not support fp16
+    dtypes = [np.float32, np.float64]
+    for hybridize, itype, (shape, ord, axis), keepdims in \
+        itertools.product([True, False], dtypes, configs, [True, False]):
+        net = TestLinalgNorm(ord, axis, keepdims)
+        rtol = 1e-2
+        atol = 1e-2
+        if hybridize:
+            net.hybridize()
+        a = mx.nd.random.uniform(-10.0, 10.0, shape=shape, dtype=itype).as_np_ndarray()
+        a.attach_grad()
+        with mx.autograd.record():
+            mx_ret = net(a)
+        if ord == 'inf':
+            np_ret = _np.linalg.norm(a.asnumpy(), ord=_np.inf, axis=axis, keepdims=keepdims)
+        elif ord == '-inf':
+            np_ret = _np.linalg.norm(a.asnumpy(), ord=-_np.inf, axis=axis, keepdims=keepdims)
+        else:
+            np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+
+        assert np_ret.shape == mx_ret.shape
+        assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
+        
+        mx_ret.backward()
+
+        grad_axis = axis
+        if axis is None and len(shape) >= 2 and ord is not None:
+            grad_axis = (len(shape) - 2, len(shape) - 1)
+        elif axis is None and ord is None:
+            grad_axis = tuple([i for i in range(len(shape))])
+        elif axis is None:
+            grad_axis = len(shape) - 1
+
+        if not keepdims and isinstance(grad_axis, tuple):
+            if len(grad_axis) == 2 and grad_axis[0] > grad_axis[1] and grad_axis[0] > len(np_ret.shape):
+                grad_axis = (grad_axis[1], grad_axis[0])
+            for i in grad_axis:
+                np_ret = _np.expand_dims(np_ret, axis=i)
+        elif not keepdims:
+            np_ret = _np.expand_dims(np_ret, axis=grad_axis)
+
+        if ord == 4:
+            backward_expected = _np.sign(a.asnumpy()) * _np.power(_np.abs(a.asnumpy()) / np_ret, ord - 1)
+            assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+        if ord == 2 and not isinstance(grad_axis, tuple):
+            backward_expected = _np.divide(a.asnumpy(), np_ret)
+            assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+        elif ord == 2 and isinstance(grad_axis, tuple):
+            backward_expected = spectral_norm_grad(a)
+            assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+        if ord == 'fro':
+            backward_expected = _np.divide(a.asnumpy(), np_ret)
+            assert_almost_equal(a.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+
+        assert a.grad.shape == a.shape
+
+        # Test imperative once again
+        if ord == 'inf':
+            np_ret = _np.linalg.norm(a.asnumpy(), ord=_np.inf, axis=axis, keepdims=keepdims)
+        elif ord == '-inf':
+            np_ret = _np.linalg.norm(a.asnumpy(), ord=-_np.inf, axis=axis, keepdims=keepdims)
+        else:
+            np_ret = _np.linalg.norm(a.asnumpy(), ord=ord, axis=axis, keepdims=keepdims)
+        mx_ret = np.linalg.norm(a, ord=ord, axis=axis, keepdims=keepdims)
+        assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -4596,6 +4984,337 @@ def test_np_linalg_pinv():
 
                 # check tensorsolve validity
                 check_pinv(mx_out, a.asnumpy(), rcond.asnumpy(), hermitian, use_rcond)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eigvals():
+    class TestEigvals(HybridBlock):
+        def __init__(self):
+            super(TestEigvals, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eigvals(a)
+
+    def check_eigvals(x, a_np):
+        try:
+            x_expected = _np.linalg.eigvals(a_np)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            if 0 not in x.shape:
+                n = int(_np.prod(x.shape[:-1])) if len(shape) > 1 else 1
+                x = x.reshape(n, -1)
+                x_expected = x_expected.reshape(n, -1)
+                for i in range(n):
+                    x1 = _np.sort(x[i].asnumpy())
+                    x2 = _np.sort(x_expected[i])
+                    assert_almost_equal(x1, x2, rtol=rtol, atol=atol)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
+    UPLOs = ['L', 'U']
+    for hybridize in [True, False]:
+        for shape, dtype in itertools.product(shapes, dtypes):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eigvals = TestEigvals()
+            if hybridize:
+                test_eigvals.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                if dtype == 'uint8' or dtype == 'int8' or dtype == 'int32' or dtype == 'int64':
+                    n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+                    a_np = _np.array([_np.diag(_np.random.randint(1, 10, size=shape[-1])) for i in range(n)]).reshape(shape)
+                else:
+                    a_np = new_matrix_with_real_eigvals_nd(shape)
+            a = np.array(a_np, dtype=dtype)
+            # check eigvals validity
+            mx_out = test_eigvals(a)
+            check_eigvals(mx_out, a.asnumpy())
+
+            # check imperative once again
+            mx_out = test_eigvals(a)
+            check_eigvals(mx_out, a.asnumpy())
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eigvalsh():
+    class TestEigvalsh(HybridBlock):
+        def __init__(self, UPLO):
+            super(TestEigvalsh, self).__init__()
+            self._UPLO = UPLO
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eigvalsh(a, UPLO=self._UPLO)
+
+    def check_eigvalsh(w, a_np, UPLO):
+        try:
+            w_expected = _np.linalg.eigvalsh(a_np, UPLO)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert w.shape == w_expected.shape
+            assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
+
+    def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
+        shape = sym_a.shape
+        if 0 in shape:
+            return sym_a
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        a = sym_a.reshape(n, shape[-2], shape[-1])
+        for idx in range(n):
+            for i in range(shape[-2]):
+                for j in range(shape[-1]):
+                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                        a[idx][i][j] = _np.random.uniform(-10., 10.)
+        return a.reshape(shape)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (2, 2),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
+    UPLOs = ['L', 'U']
+    for hybridize in [True, False]:
+        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eigvalsh = TestEigvalsh(UPLO)
+            if hybridize:
+                test_eigvalsh.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                if dtype == 'uint8' or dtype == 'int8' or dtype == 'int32' or dtype == 'int64':
+                    n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+                    a_np = _np.array([_np.diag(_np.random.randint(1, 10, size=shape[-1])) for i in range(n)], dtype=dtype).reshape(shape)
+                else:
+                    a_np = new_sym_matrix_with_real_eigvals_nd(shape)
+                    a_np = new_matrix_from_sym_matrix_nd(a_np, UPLO)
+            a = np.array(a_np, dtype=dtype)
+            # check eigvalsh validity
+            mx_out = test_eigvalsh(a)
+            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+
+            # check imperative once again
+            mx_out = test_eigvalsh(a)
+            check_eigvalsh(mx_out, a.asnumpy(), UPLO)
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eig():
+    class TestEig(HybridBlock):
+        def __init__(self):
+            super(TestEig, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eig(a)
+
+    def check_eig(w, v, a_np):
+        try:
+            w_expected, v_expected = _np.linalg.eig(a_np)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert w.shape == w_expected.shape
+            assert v.shape == v_expected.shape
+            if 0 not in a_np.shape:
+                n = int(_np.prod(w.shape[:-1])) if len(shape) > 1 else 1
+                N = a_np.shape[-1]
+                w = w.reshape(n, N)
+                w_expected = w_expected.reshape(n, N)
+                v = v.reshape(n, N, N)
+                v_expected = v_expected.reshape(n, N, N)
+                a_np = a_np.reshape(n, N, N)
+                for i in range(n):
+                    # check eigenvector
+                    ai = a_np[i]
+                    vi = (v[i].asnumpy()).T
+                    wi = w[i].asnumpy()
+                    for j in range(N):
+                        assert_almost_equal(wi[j] * vi[j], _np.matmul(ai, vi[j]), rtol=rtol, atol=atol)
+
+                    # check eigenvalues
+                    w1 = _np.sort(w[i].asnumpy())
+                    w2 = _np.sort(w_expected[i])
+                    assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
+    for hybridize in [True, False]:
+        for shape, dtype in itertools.product(shapes, dtypes):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eig = TestEig()
+            if hybridize:
+                test_eig.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                if dtype == 'uint8' or dtype == 'int8' or dtype == 'int32' or dtype == 'int64':
+                    n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+                    a_np = _np.array([_np.diag(_np.random.randint(1, 10, size=shape[-1])) for i in range(n)]).reshape(shape)
+                else:
+                    a_np = new_matrix_with_real_eigvals_nd(shape)
+            a = np.array(a_np, dtype=dtype)
+            # check eig validity
+            mx_w, mx_v = test_eig(a)
+            check_eig(mx_w, mx_v, a.asnumpy())
+
+            # check imperative once again
+            mx_w, mx_v = test_eig(a)
+            check_eig(mx_w, mx_v, a.asnumpy())
+
+
+@with_seed()
+@use_np
+def test_np_linalg_eigh():
+    class TestEigh(HybridBlock):
+        def __init__(self, UPLO):
+            super(TestEigh, self).__init__()
+            self._UPLO = UPLO
+
+        def hybrid_forward(self, F, a):
+            return F.np.linalg.eigh(a, UPLO=self._UPLO)
+
+    def check_eigh(w, v, a_np, UPLO):
+        try:
+            w_expected, v_expected = _np.linalg.eigh(a_np, UPLO)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert w.shape == w_expected.shape
+            assert v.shape == v_expected.shape
+            # check eigenvalues.
+            assert_almost_equal(w, w_expected, rtol=rtol, atol=atol)
+            # check eigenvectors.
+            w_shape, v_shape, a_sym_np = get_sym_matrix_nd(a_np, UPLO)
+            w_np = w.asnumpy()
+            v_np = v.asnumpy()
+            if 0 not in a_np.shape:
+                w_np = w_np.reshape(w_shape)
+                v_np = v_np.reshape(v_shape)
+                a_sym_np = a_sym_np.reshape(v_shape)
+                for i in range(w_shape[0]):
+                    for j in range(w_shape[1]):
+                        assert_almost_equal(_np.dot(a_sym_np[i], v_np[i][:, j]), w_np[i][j] * v_np[i][:, j], rtol=rtol, atol=atol)
+
+    def get_sym_matrix_nd(a_np, UPLO):
+        a_res_np = a_np
+        shape = a_np.shape
+        if 0 not in a_np.shape:
+            n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+            nrow, ncol = shape[-2], shape[-1]
+            a_np = a_np.reshape(n, nrow, ncol)
+            a_res_np = a_np
+            for idx in range(n):
+                for i in range(nrow):
+                    for j in range(ncol):
+                        if ((UPLO == 'L' and i < j) or (UPLO == 'U' and i > j)):
+                            a_res_np[idx][i][j] = a_np[idx][j][i]
+            return (n, nrow), (n, nrow, ncol), a_res_np.reshape(shape)
+        else :
+            return (0, 0), (0, 0, 0), a_res_np.reshape(shape)
+
+    def new_matrix_from_sym_matrix_nd(sym_a, UPLO):
+        shape = sym_a.shape
+        if 0 in shape:
+            return sym_a
+        n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        a = sym_a.reshape(n, shape[-2], shape[-1])
+        for idx in range(n):
+            for i in range(shape[-2]):
+                for j in range(shape[-1]):
+                    if ((UPLO == 'U' and i > j) or (UPLO == 'L' and i < j)):
+                        a[idx][i][j] = _np.random.uniform(-10., 10.)
+        return a.reshape(shape)
+
+    shapes = [
+        (0, 0),
+        (1, 1),
+        (3, 3),
+        (5, 5),
+        (1, 0, 0),
+        (0, 4, 4),
+        (1, 4, 4),
+        (2, 4, 4),
+        (5, 5, 5),
+        (1, 1, 4, 4),
+        (2, 3, 4, 4)
+    ]
+    dtypes = ['float32', 'float64', 'uint8', 'int8', 'int32', 'int64']
+    UPLOs = ['L', 'U']
+    for hybridize in [True, False]:
+        for shape, dtype, UPLO in itertools.product(shapes, dtypes, UPLOs):
+            rtol = 1e-2 if dtype == 'float32' else 1e-3
+            atol = 1e-4 if dtype == 'float32' else 1e-5
+            test_eigh = TestEigh(UPLO)
+            if hybridize:
+                test_eigh.hybridize()
+            if 0 in shape:
+                a_np = _np.ones(shape)
+            else:
+                if dtype == 'uint8' or dtype == 'int8' or dtype == 'int32' or dtype == 'int64':
+                    n = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+                    a_np = _np.array([_np.diag(_np.random.randint(1, 10, size=shape[-1])) for i in range(n)], dtype=dtype).reshape(shape)
+                else:
+                    a_np = new_sym_matrix_with_real_eigvals_nd(shape)
+                    a_np = new_matrix_from_sym_matrix_nd(a_np, UPLO)
+            a = np.array(a_np, dtype=dtype)
+            # check eigh validity
+            w, v = test_eigh(a)
+            check_eigh(w, v, a.asnumpy(), UPLO)
+
+            # check imperative once again
+            w, v = test_eigh(a)
+            check_eigh(w, v, a.asnumpy(), UPLO)
 
 
 @with_seed()
@@ -5964,6 +6683,97 @@ def test_np_share_memory():
 
 @with_seed()
 @use_np
+def test_np_quantile():
+    class TestQuantile(HybridBlock):
+        def __init__(self, axis=None, interpolation='linear', keepdims=False):
+            super(TestQuantile, self).__init__()
+            self._axis = axis
+            self._interpolation = interpolation
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, q):
+            return F.np.quantile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+
+    flags = [True, False]
+    interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
+    dtypes = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    qtypes = [np.float32, np.float64]
+    tensor_shapes = [
+        ((2, 3), (), None),
+        ((2, 3, 4, 5), (), 3),
+        ((2, 3, 4), (3,), (0, 2)),
+        ((2, 3, 4), (3,), 1)
+    ]
+    for hybridize, keepdims, (a_shape, q_shape, axis), interpolation, dtype in \
+        itertools.product(flags, flags, tensor_shapes, interpolation_options, dtypes):
+        if dtype == np.float16 and interpolation == 'linear': continue
+        atol = 3e-4 if dtype == np.float16 else 1e-4
+        rtol = 3e-2 if dtype == np.float16 else 1e-2
+        test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+        if hybridize:
+            test_quantile.hybridize()
+        a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
+        qtype = random.choice(qtypes)
+        q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
+        np_out = _np.quantile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        mx_out = test_quantile(a, q)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        np_out = _np.quantile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+
+@with_seed()
+@use_np
+def test_np_percentile():
+    class TestPercentile(HybridBlock):
+        def __init__(self, axis=None, interpolation='linear', keepdims=False):
+            super(TestPercentile, self).__init__()
+            self._axis = axis
+            self._interpolation = interpolation
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, q):
+            return F.np.percentile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+
+
+    flags = [True, False]
+    interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
+    dtypes = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    qtypes = [np.float32, np.float64]
+    tensor_shapes = [
+        ((2, 3), (), None),
+        ((2, 3, 4, 5), (), 3),
+        ((2, 3, 4, 5), (), (0, 1, 2)),
+        ((2, 3, 4, 5), (), (-1, -2)),
+        ((2, 3, 4), (3,), (0, 2)),
+        ((2, 3, 4), (3,), 1)
+    ]
+    for hybridize, keepdims, (a_shape, q_shape, axis), interpolation, dtype in \
+        itertools.product(flags, flags, tensor_shapes, interpolation_options, dtypes):
+        if dtype == np.float16 and interpolation == 'linear': continue
+        atol = 3e-4 if dtype == np.float16 else 1e-4
+        rtol = 3e-2 if dtype == np.float16 else 1e-2
+        test_percentile = TestPercentile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+        if hybridize:
+            test_percentile.hybridize()
+        a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
+        qtype = random.choice(qtypes)
+        q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype) * 100
+        np_out = _np.percentile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        mx_out = test_percentile(a, q)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.percentile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        np_out = _np.percentile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+
+@with_seed()
+@use_np
 def test_np_diff():
     def np_diff_backward(ograd, n, axis):
         res = ograd
@@ -6343,6 +7153,72 @@ def test_np_nan_to_num():
             np_out = _np.nan_to_num(x1)
             mx_out = np.nan_to_num(x3)
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_np_isnan_isinf():
+    def check_unary_func(func):
+        class TestUnary(HybridBlock):
+            def __init__(self, func):
+                super(TestUnary, self).__init__()
+                self._func = func
+
+            def hybrid_forward(self, F, a):
+                return getattr(F.np, self._func)(a)
+
+        src_list = [
+            _np.nan,
+            _np.inf,
+            -_np.inf,
+            _np.array(0)/0,
+            _np.inf/_np.inf,
+            1,
+            [_np.nan],
+            [_np.inf],
+            [-_np.inf],
+            [_np.array(0)/0],
+            [1],
+            [1,2,3,4,-1,-2,-3,-4,0],
+            [_np.nan, _np.inf, -_np.inf],
+            [_np.nan, _np.inf, -_np.inf, -574, 0, 23425, 24234,-5],
+            [_np.nan, -1, 0, 1],
+            [[-433, 0, 456, _np.inf], [-1, -_np.inf, 0, 1]]
+        ]
+
+        np_func = getattr(_np, func)
+        mx_func = TestUnary(func)
+        dtype_list = ['float16', 'float32', 'float64']
+        hybridize_list = [True, False]
+        atol, rtol = 1e-5, 1e-3
+
+        for [hybridize, dtype, src] in itertools.product(hybridize_list, dtype_list, src_list):
+            mx_data = mx.np.array(src, dtype=dtype)
+            np_data = mx_data.asnumpy()
+
+            if hybridize:
+                mx_func.hybridize()
+            with mx.autograd.record():
+                mx_out= mx_func(mx_data)
+
+            assert mx_out.dtype == np.bool_
+
+            np_out = np_func(np_data)
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
+            mx_out_imperative = getattr(mx.np, func)(mx_data)
+            assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
+
+            assertRaises(NotImplementedError, getattr(np, func), mx_data, where=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  subok=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  dtype=_np.int8)
+            assertRaises(TypeError, getattr(np, func), mx_data,  dtype="abcdefg")
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  casting='safe')
+            assertRaises(TypeError, getattr(np, func), mx_data,  casting='mxnet')
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='C')
+            assertRaises(NotImplementedError, getattr(np, func), mx_data,  order='mxnet')
+
+    check_unary_func("isnan")
+    check_unary_func("isinf")
 
 
 @with_seed()

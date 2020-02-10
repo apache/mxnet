@@ -30,7 +30,7 @@ import mxnet as mx
 
 from benchmark.opperf.nd_operations.unary_operators import run_mx_unary_operators_benchmarks
 from benchmark.opperf.nd_operations.binary_operators import run_mx_binary_broadcast_operators_benchmarks, \
-    run_mx_binary_element_wise_operators_benchmarks
+    run_mx_binary_element_wise_operators_benchmarks, run_mx_binary_misc_operators_benchmarks
 from benchmark.opperf.nd_operations.gemm_operators import run_gemm_operators_benchmarks
 from benchmark.opperf.nd_operations.random_sampling_operators import run_mx_random_sampling_operators_benchmarks
 from benchmark.opperf.nd_operations.reduction_operators import run_mx_reduction_operators_benchmarks
@@ -41,6 +41,8 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_optimizer_operators import run_optimizer_operators_benchmarks
 from benchmark.opperf.nd_operations.array_rearrange import run_rearrange_operators_benchmarks
+from benchmark.opperf.nd_operations.indexing_routines import run_indexing_routines_benchmarks
+from benchmark.opperf.nd_operations.nn_loss_operators import run_loss_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark, \
@@ -61,11 +63,14 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     # Run all Unary operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_unary_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
-    # Run all Binary Broadcast, element_wise operations benchmarks with default input values
+    # Run all Binary Broadcast, element_wise, and miscellaneous operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_binary_broadcast_operators_benchmarks(ctx=ctx,
                                                                                          dtype=dtype, profiler=profiler))
     mxnet_operator_benchmark_results.append(run_mx_binary_element_wise_operators_benchmarks(ctx=ctx,
                                                                                             dtype=dtype, profiler=profiler))
+
+    mxnet_operator_benchmark_results.append(run_mx_binary_misc_operators_benchmarks(ctx=ctx,
+                                                                                         dtype=dtype, profiler=profiler))
 
     # Run all GEMM operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_gemm_operators_benchmarks(ctx=ctx,
@@ -83,6 +88,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     # Run all Array Rearrange operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_rearrange_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
+    # Run all Indexing routines benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_indexing_routines_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
+
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 
     # Run all basic NN operations benchmarks with default input values
@@ -99,8 +107,12 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all Optimizer operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_optimizer_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
+
     # Run all Transpose Convolution operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_transpose_convolution_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
+
+    # Run all NN loss operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_loss_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler))
 
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)

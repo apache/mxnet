@@ -12,10 +12,6 @@ if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
 endif()
 
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-  include(${CMAKE_CURRENT_SOURCE_DIR}/build/private/local_config.cmake)
-endif()
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
@@ -33,6 +29,7 @@ option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
+cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
@@ -119,6 +116,14 @@ else()
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+  set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
+  # Enforce DT_PATH instead of DT_RUNPATH
+  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+endif()
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
@@ -132,6 +137,7 @@ endif()
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 # disable stack trace in exception by default.
 add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
+add_definitions(-DDMLC_LOG_FATAL_THROW=1)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -206,12 +212,15 @@ else()
   if(SUPPORT_CXX14)
     add_definitions(-DDMLC_USE_CXX11=1)
     add_definitions(-DDMLC_USE_CXX14=1)
+    add_definitions(-DMSHADOW_IN_CXX11)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
   elseif(SUPPORT_CXX11)
     add_definitions(-DDMLC_USE_CXX11=1)
+    add_definitions(-DMSHADOW_IN_CXX11)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   elseif(SUPPORT_CXX0X)
     add_definitions(-DDMLC_USE_CXX11=1)
+    add_definitions(-DMSHADOW_IN_CXX11)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
   endif()
 endif(MSVC)
@@ -312,6 +321,10 @@ if(USE_MKLDNN)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set(INSTALL_MKLDNN ON)
+endif()
+
+if(USE_CPP_PACKAGE)
+    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -430,11 +443,11 @@ if(USE_OPENMP)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
   endfunction()
 
-  find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
+     AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
      AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
@@ -447,6 +460,7 @@ if(USE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     add_definitions(-DMXNET_USE_OPENMP=1)
   else()
+    find_package(OpenMP REQUIRED)
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -464,7 +478,9 @@ endif()
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
-  if (NOT MSVC)
+  # In the CMAKE_BUILD_TYPE="Distribution" case, we link against Blas libraries
+  # that already provide lapack symbols. Thus -llapack would be wrong.
+  if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
     list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
 endif()
@@ -653,7 +669,7 @@ if(USE_CUDA)
     endif()
   endif()
   if(UNIX)
-    if(CUDA_nvToolsExt_LIBRARY)
+    if(USE_NVTX AND CUDA_nvToolsExt_LIBRARY)
       list(APPEND mxnet_LINKER_LIBS CUDA::nvToolsExt)
       add_definitions(-DMXNET_USE_NVTX=1)
     else()
@@ -674,13 +690,7 @@ if(USE_PLUGIN_CAFFE)
   endif()
 endif()
 
-if(NOT MSVC)
-  # Only add c++11 flags and definitions after cuda compiling
-  add_definitions(-DDMLC_USE_CXX11)
-  add_definitions(-DMSHADOW_IN_CXX11)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-else()
+if(MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy")
   set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /EHsc /Gy")
@@ -691,10 +701,6 @@ else()
 
 endif()
 
-add_library(sample_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
-add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
-target_include_directories(sample_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
-target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS "${CUDA_ARCH_FLAGS_SPACES}")
@@ -707,15 +713,8 @@ if(UNIX)
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
   target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
-  target_compile_options(sample_lib PUBLIC -shared)
-  target_compile_options(subgraph_lib PUBLIC -shared)
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
 elseif(MSVC)
-  target_compile_options(sample_lib PUBLIC /LD)
-  target_compile_options(subgraph_lib PUBLIC /LD)
-  set_target_properties(sample_lib PROPERTIES PREFIX "lib")
-  set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
-
   if(USE_CUDA)
     if(MSVC)
       if(USE_SPLIT_ARCH_DLL)
@@ -768,16 +767,35 @@ elseif(MSVC)
 
 endif()
 
-if(USE_DIST_KVSTORE)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ps-lite/CMakeLists.txt)
-    add_subdirectory("3rdparty/ps-lite")
-    list(APPEND pslite_LINKER_LIBS pslite protobuf)
-  else()
-    set(pslite_LINKER_LIBS protobuf zmq-static)
+add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
+add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
+target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+if (USE_CUDA)
+  add_library(customop_gpu_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cu)
+  target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+endif()
+if(UNIX)
+  target_compile_options(customop_lib PUBLIC -shared)
+  target_compile_options(subgraph_lib PUBLIC -shared)
+  if (USE_CUDA)
+    target_compile_options(customop_gpu_lib PUBLIC -shared)
   endif()
+elseif(MSVC)
+  target_compile_options(customop_lib PUBLIC /LD)
+  target_compile_options(subgraph_lib PUBLIC /LD)
+  set_target_properties(customop_lib PROPERTIES PREFIX "lib")
+  set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
+  if (USE_CUDA)
+    target_compile_options(customop_gpu_lib PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fPIC>")
+    set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
+  endif()
+endif()
+
+if(USE_DIST_KVSTORE)
+  add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
-  include_directories(SYSTEM ${pslite_INCLUDE_DIR})
-  list(APPEND mxnet_LINKER_LIBS ${pslite_LINKER_LIBS})
+  list(APPEND mxnet_LINKER_LIBS pslite)
 endif()
 
 function(BuildTVMOP)
@@ -825,7 +843,7 @@ if(MSVC)
     target_link_libraries(mxnet PUBLIC dmlc)
   endif()
 else()
-  target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+  target_link_libraries(mxnet_static PUBLIC ${mxnet_LINKER_LIBS})
   target_link_libraries(mxnet PUBLIC dmlc)
 endif()
 
@@ -840,7 +858,6 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
     dmlc
-    ${pslite_LINKER_LIBS}
     )
 else()
     message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
@@ -852,7 +869,6 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
-add_subdirectory(tests)
 
 include(GNUInstallDirs)
 install(TARGETS ${MXNET_INSTALL_TARGETS}
@@ -914,6 +930,7 @@ endif()
 if(BUILD_CPP_EXAMPLES)
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
+add_subdirectory(tests)
 
 # ---[ Linter target
 if(MSVC)
@@ -926,7 +943,6 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
-  add_cython_modules(2) # Build cython module for python2 if python2 is found
   add_cython_modules(3) # Build cython module for python3 if python3 is found
   if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
     message(FATAL_ERROR "No python interpreter found to build cython modules")

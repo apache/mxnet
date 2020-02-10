@@ -39,7 +39,6 @@ core_logic: {
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_windows_python2_gpu(),
     custom_steps.test_windows_python3_gpu(),
     custom_steps.test_windows_python3_gpu_mkldnn()
   ])

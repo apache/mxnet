@@ -94,7 +94,7 @@ Both ``gamma`` and ``beta`` are learnable parameters.
 .set_attr<mxnet::FInferShape>("FInferShape", GroupNormShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<3, 3>)
 .set_attr<FCompute>("FCompute<cpu>", GroupNormCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n,
+.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::ObjectPtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads;
   heads.push_back(ograds[0]);  // ograd
