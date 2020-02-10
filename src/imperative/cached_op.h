@@ -110,7 +110,7 @@ void CreateForwardGraph(const nnvm::Symbol &sym, nnvm::Graph *fwd_graph) {
   // symbol by just copying the outputs
   for (const NodeEntry &nodeEntry : sym.outputs) {
     if (dedup_out.find(nodeEntry) != dedup_out.end()) {
-      NodePtr copy_node = Node::Create();
+      ObjectPtr copy_node = Node::Create();
       copy_node->attrs.op = _copy_op;
       copy_node->attrs.name = nodeEntry.node->attrs.name + "_copy" +
                               std::to_string(dedup_out[nodeEntry]++);
@@ -135,7 +135,7 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
   static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
   ograd_entries->reserve(fwd_graph->outputs.size());
   for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
-    nnvm::NodePtr np = Node::Create();
+    nnvm::ObjectPtr np = Node::Create();
     np->attrs.name = "_head_grad_" + std::to_string(i);
     ograd_entries->emplace_back(np);
   }
@@ -230,7 +230,7 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
 
 void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Graph * grad_graph,
                    const Context& context, size_t num_forward_outputs, const bool inlining) {
-#if MXNET_USE_CUDA && !defined(_WIN32)
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
   if (context.dev_mask() == kGPU &&
       !inlining &&
       dmlc::GetEnv("MXNET_USE_FUSION", true)) {
@@ -265,7 +265,13 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
         << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
      }
   }
-#endif  // MXNET_USE_CUDA
+#else
+  // Only warn user if MXNET_USE_FUSION env var is explicitly set
+  if (context.dev_mask() == kGPU && !inlining &&
+      dmlc::GetEnv("MXNET_USE_FUSION", false)) {
+    exec::WarnFusionNotSupported();
+  }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
 
   *fwd_graph = nnvm::Graph();
   fwd_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin(),
@@ -378,7 +384,7 @@ class CachedOp {
     return fwd_graph_.indexed_graph().mutable_input_nodes();
   }
   virtual std::vector<nnvm::NodeEntry> Gradient(
-      const nnvm::NodePtr& node,
+      const nnvm::ObjectPtr& node,
       const std::vector<nnvm::NodeEntry>& ograds) const;
   virtual OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,

@@ -46,7 +46,7 @@ struct Shape {
   Shape()
     : ndim_(0),
     num_heap_allocated_(0),
-    data_heap_(NULL) {}
+    data_heap_(nullptr) {}
   /*!
   * \brief constructor from a vector of index_t
   * \param v the vector
@@ -54,7 +54,7 @@ struct Shape {
   explicit Shape(const std::vector<index_t> &v)
     : ndim_(v.size()) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       std::copy(v.begin(), v.end(), data_stack_);
     } else {
@@ -70,7 +70,7 @@ struct Shape {
   explicit Shape(index_t s1)
     : ndim_(1) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       data_stack_[0] = s1;
     } else {
@@ -87,7 +87,7 @@ struct Shape {
   Shape(index_t s1, index_t s2)
     : ndim_(2) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       data_stack_[0] = s1;
       data_stack_[1] = s2;
@@ -107,7 +107,7 @@ struct Shape {
   Shape(index_t s1, index_t s2, index_t s3)
     : ndim_(3) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       data_stack_[0] = s1;
       data_stack_[1] = s2;
@@ -130,7 +130,7 @@ struct Shape {
   Shape(index_t s1, index_t s2, index_t s3, index_t s4)
     : ndim_(4) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       data_stack_[0] = s1;
       data_stack_[1] = s2;
@@ -156,7 +156,7 @@ struct Shape {
   Shape(index_t s1, index_t s2, index_t s3, index_t s4, index_t s5)
     : ndim_(5) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       data_stack_[0] = s1;
       data_stack_[1] = s2;
@@ -180,7 +180,7 @@ struct Shape {
   Shape(const Shape &s)
     : ndim_(s.ndim_) {
     if (ndim_ <= kStackCache) {
-      data_heap_ = NULL;
+      data_heap_ = nullptr;
       num_heap_allocated_ = 0;
       std::copy(s.data_stack_, s.data_stack_ + ndim_, data_stack_);
     } else {
@@ -202,12 +202,12 @@ struct Shape {
       std::copy(s.data_stack_, s.data_stack_ + ndim_, data_stack_);
     }
     // remove data heap space from s
-    s.data_heap_ = NULL;
+    s.data_heap_ = nullptr;
   }
 #endif
   /*! \brief destructor */
   ~Shape() {
-    // data_heap_ can be NULL
+    // data_heap_ can be nullptr
     delete[] data_heap_;
   }
   /*!
@@ -328,7 +328,7 @@ struct Shape {
   inline void SetDim(index_t dim) {
     if (dim > kStackCache &&
       dim > num_heap_allocated_) {
-      // data_heap_ can be NULL
+      // data_heap_ can be nullptr
       delete[] data_heap_;
       data_heap_ = new index_t[dim];
       num_heap_allocated_ = dim;

@@ -23,7 +23,7 @@ from ..utils import reduce_axes, assign_by_req
 
 def _compute_sum(itype, otype, ndim, reduce1st_dim, req):
     axes = ([reduce1st_dim, 1 - reduce1st_dim] * ndim)[:ndim]
-    a = tvm.placeholder([tvm.var() for _ in range(ndim)], name='a', dtype=itype)
+    a = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='a', dtype=itype)
     reduce_output = reduce_axes(a, axes, tvm.sum, otype)
     output_placeholder, final_output = assign_by_req(reduce_output, req)
     s = tvm.create_schedule(final_output.op)

@@ -90,6 +90,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'around',
     'round',
     'argsort',
+    'sort',
     'append',
     'broadcast_arrays',
     'broadcast_to',
@@ -111,6 +112,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'amax',
     'mean',
     'min',
+    'amin',
     'nonzero',
     'ones_like',
     'atleast_1d',
@@ -149,6 +151,10 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.tensorinv',
     'linalg.tensorsolve',
     'linalg.pinv',
+    'linalg.eigvals',
+    'linalg.eig',
+    'linalg.eigvalsh',
+    'linalg.eigh',
     'shape',
     'trace',
     'tril',
@@ -166,6 +172,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'bincount',
     'empty_like',
     'nan_to_num',
+    'isnan',
+    'isinf',
 ]
 
 

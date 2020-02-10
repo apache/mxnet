@@ -141,10 +141,11 @@ def _prepare_markdown(results, runtime_features=None, profiler='native'):
         results_markdown.append(
             "| Operator | Avg Forward Time (ms) | Avg. Backward Time (ms) | Max Mem Usage (Storage) (Bytes)"
             " | Inputs |")
+        results_markdown.append("| :---: | :---: | :---: | :---: | :---: |")
     elif profiler == 'python':
         results_markdown.append(
             "| Operator | Avg Time (ms) | P50 Time (ms) | P90 Time (ms) | P99 Time (ms) | Inputs |")
-    results_markdown.append("| :---: | :---: | :---: | :---: | :---: | :---: |")
+        results_markdown.append("| :---: | :---: | :---: | :---: | :---: | :---: |")
 
     for op, op_bench_results in sorted(results.items(), key=itemgetter(0)):
         for op_bench_result in op_bench_results:

@@ -335,7 +335,7 @@ void _nms(mshadow::Stream<gpu> *s,
   const int boxes_dim = boxes.size(1);
 
   float* boxes_dev = boxes.dptr_;
-  uint64_t* mask_dev = NULL;
+  uint64_t* mask_dev = nullptr;
 
   const int col_blocks = DIVUP(boxes_num, threadsPerBlock);
   FRCNN_CUDA_CHECK(cudaMalloc(&mask_dev,
@@ -475,7 +475,7 @@ class MultiProposalGPUOp : public Operator{
                            &anchors);
 
     // Copy generated anchors to GPU
-    float* workspace_proposals_ptr = NULL;
+    float* workspace_proposals_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_proposals_ptr,
                                 sizeof(float) * num_images * count_anchors * 5));
     Tensor<xpu, 3> workspace_proposals(workspace_proposals_ptr,
@@ -520,14 +520,14 @@ class MultiProposalGPUOp : public Operator{
     dimGrid = dim3((count_anchors + kMaxThreadsPerBlock - 1) / kMaxThreadsPerBlock);
     dimBlock = dim3(kMaxThreadsPerBlock);
     // Copy score to a continuous memory
-    float* score_ptr = NULL;
+    float* score_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&score_ptr, sizeof(float) * count_anchors));
     Tensor<xpu, 1> score(score_ptr, Shape1(count_anchors));
-    int* order_ptr = NULL;
+    int* order_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&order_ptr, sizeof(int) * count_anchors));
     Tensor<xpu, 1, int> order(order_ptr, Shape1(count_anchors));
 
-    float* workspace_ordered_proposals_ptr = NULL;
+    float* workspace_ordered_proposals_ptr = nullptr;
     FRCNN_CUDA_CHECK(cudaMalloc(&workspace_ordered_proposals_ptr,
         sizeof(float) * rpn_pre_nms_top_n * 5));
     Tensor<xpu, 2> workspace_ordered_proposals(workspace_ordered_proposals_ptr,

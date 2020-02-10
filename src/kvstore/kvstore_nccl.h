@@ -293,7 +293,7 @@ class KVStoreNCCL : public KVStoreLocal {
             } else {
             MSHADOW_TYPE_SWITCH(src[i].dtype(), DType,
             ncclReduce(src[i].data().dptr<DType>(),
-                              NULL,
+                              nullptr,
                               src[i].shape().Size(),
                               GetNCCLType(src[i].dtype()),
                               ncclSum,
