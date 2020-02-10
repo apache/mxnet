@@ -213,7 +213,7 @@ Graph ReducePrecision(Graph &&src) {
           new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
         } else if (node_entry.node->is_variable()) {
           // For variable, assume they are already fp32
-          NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
           new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
         } else {
           ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
@@ -256,7 +256,7 @@ Graph ReducePrecision(Graph &&src) {
           // 2. Mutable inputs.
           // 3. Even the input[0] is target dtype, some operations still require float32 for other
           //    inputs. For example, Batchnorm.
-          NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
           const auto mirror_entry = NodeEntry(mirror_node, node_entry.index, node_entry.version);
           new_node->inputs.push_back(mirror_entry);
           if ((cast_optional_params && node_entry.node->is_variable())) {
@@ -313,7 +313,7 @@ Graph ReducePrecision(Graph &&src) {
             if (mirror_target_dtype_map.count(node_entry)) {
               new_node->inputs.emplace_back(mirror_target_dtype_map[node_entry]);
             } else {
-              NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+              ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
               NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
               std::string suffix = GetSuffix(node_entry, mirror_map);
               AddCastNode(node_entry, suffix, mirror_entry, target_dtype_str,
@@ -323,7 +323,7 @@ Graph ReducePrecision(Graph &&src) {
             if (mirror_fp32_map.count(node_entry)) {
               new_node->inputs.emplace_back(mirror_fp32_map[node_entry]);
             } else {
-              NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+              ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
               NodeEntry mirror_entry = NodeEntry{mirror_node, node_entry.index, node_entry.version};
               std::string suffix = GetSuffix(node_entry, mirror_map);
               AddCastNode(node_entry, suffix, mirror_entry, "float32", &mirror_fp32_map, new_node);
@@ -343,7 +343,7 @@ Graph ReducePrecision(Graph &&src) {
         } else if (std::find(mutable_inputs.begin(), mutable_inputs.end(), i) !=
                    mutable_inputs.end()) {
           // Can't insert amp_cast for this inputs. Such op have to handle fp32 inputs itself.
-          NodePtr mirror_node = mirror_map.at(node_entry.node.get());
+          ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
           new_node->inputs.emplace_back(mirror_node, node_entry.index, node_entry.version);
         } else {
           ObjectPtr mirror_node = mirror_map.at(node_entry.node.get());
@@ -389,7 +389,7 @@ Graph ReducePrecision(Graph &&src) {
     if (mirror_fp32_map.count(e)) {
       outputs.emplace_back(mirror_fp32_map[e]);
     } else {
-      NodePtr mirror_node = mirror_map.at(e.node.get());
+      ObjectPtr mirror_node = mirror_map.at(e.node.get());
       NodeEntry mirror_entry = NodeEntry{mirror_node, e.index, e.version};
       std::string suffix = GetSuffix(e, mirror_map);
       AddCastNode(e, suffix, mirror_entry, "float32", &mirror_fp32_map, nullptr);
