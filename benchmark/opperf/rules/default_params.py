@@ -144,6 +144,13 @@ DEFAULT_LABEL = [(100,100)]
 DEFAULT_DATA_SMCE = [(1024, 1024)]
 DEFAULT_LABEL_SMCE = [(1024,)]
 
+# For linalg operators
+DEFAULT_A = [(1024, 1024)]
+DEFAULT_B = [(1024, 1024)]
+DEFAULT_C = [(1024, 1024)]
+DEFAULT_A_MT = [(1024, 1035)]
+DEFAULT_AXES = [[0, 1]]
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "sample": DEFAULT_SAMPLE,
@@ -222,7 +229,12 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "transform_type": DEFAULT_TRANSFORM_TYPE,
                    "data_gridgenerator": DEFAULT_DATA_GRIDGEN,
                    "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE,
-                   "data_sample_multinomial": DEFAULT_DATA_SM}
+                   "data_sample_multinomial": DEFAULT_DATA_SM,
+                   "A": DEFAULT_A,
+                   "B": DEFAULT_B,
+                   "C": DEFAULT_C,
+                   "A_linalg_maketrian": DEFAULT_A_MT,
+                   "axes": DEFAULT_AXES}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -235,4 +247,5 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
-                          "x", "condition", "a", "index", "raveL_data", "label", "grid"]
+                          "x", "condition", "a", "index", "raveL_data", "label", "grid",
+                          "A", "B", "C"]

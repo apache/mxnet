@@ -260,7 +260,7 @@ class Lenet {
 int main(int argc, char const *argv[]) {
   TRY
   Lenet lenet;
-  lenet.Run(argc > 1 ? strtol(argv[1], NULL, 10) : 100000);
+  lenet.Run(argc > 1 ? strtol(argv[1], nullptr, 10) : 100000);
   MXNotifyShutdown();
   CATCH
   return 0;

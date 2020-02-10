@@ -394,13 +394,13 @@ void ReduceWithReducer(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   bool need_clean = !reducer;
   reducer = reducer ? reducer : new Reducer();
   ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
   if (safe_acc) {
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
+        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
         ReduceImplWithReducer<Reducer, ndim, AccType, DataType, OutType, OP>(
           stream, small, req, big, workspace, config, reducer);
       });

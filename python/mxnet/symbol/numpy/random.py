@@ -439,7 +439,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     return out.astype(dtype)
 
 
-def exponential(scale=1.0, size=None):
+def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
 
     Parameters
@@ -460,13 +460,16 @@ def exponential(scale=1.0, size=None):
     """
     from ..numpy import _Symbol as np_symbol
     tensor_type_name = np_symbol
+    if ctx is None:
+        ctx = current_context()
     if size == ():
         size = None
     is_tensor = isinstance(scale, tensor_type_name)
     if is_tensor:
-        return _npi.exponential(scale, scale=None, size=size)
+        return _npi.exponential(scale, scale=None, size=size,
+                                ctx=ctx, out=out)
     else:
-        return _npi.exponential(scale=scale, size=size)
+        return _npi.exponential(scale=scale, size=size, ctx=ctx, out=out)
 
 
 def weibull(a, size=None):

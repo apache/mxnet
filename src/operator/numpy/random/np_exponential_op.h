@@ -44,6 +44,7 @@ namespace op {
 struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
   dmlc::optional<float> scale;
   dmlc::optional<mxnet::Tuple<int>> size;
+  std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyExponentialParam) {
       DMLC_DECLARE_FIELD(scale)
       .set_default(dmlc::optional<float>(1.0));
@@ -52,6 +53,9 @@ struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
+      DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
+        "Context of output, in format [cpu|gpu|cpu_pinned](n)."
+        " Only used for imperative calls.");
   }
 };
 
@@ -83,7 +87,8 @@ struct exponential_kernel {
                                   IType *scales, float* threshold, OType *out) {
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
-    out[i] =  -scales[idx] * log(threshold[i]);
+    threshold[i] = -log(threshold[i]);
+    out[i] =  scales[idx] * threshold[i];
   }
 };
 
@@ -99,16 +104,15 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
   using namespace mxnet_op;
   const NumpyExponentialParam &param = nnvm::get<NumpyExponentialParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  index_t output_len = outputs[0].Size();
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
   Tensor<xpu, 1, float> workspace =
-      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(output_len + 1), s);
-  Tensor<xpu, 1, float> uniform_tensor = workspace.Slice(0, output_len);
-  Tensor<xpu, 1, float> indicator_device = workspace.Slice(output_len, output_len + 1);
+      ctx.requested[1].get_space_typed<xpu, 1, float>(Shape1(1), s);
+  Tensor<xpu, 1, float> uniform_tensor = outputs[1].FlatTo1D<xpu, float>(s);
+  Tensor<xpu, 1, float> indicator_device = workspace;
   float indicator_host = 1.0;
   float *indicator_device_ptr = indicator_device.dptr_;
   Kernel<set_zero, xpu>::Launch(s, 1, indicator_device_ptr);
-  prnd->SampleUniform(&workspace, 0.0, 1.0);
+  prnd->SampleUniform(&uniform_tensor, 0.0, 1.0);
   if (param.scale.has_value()) {
     CHECK_GE(param.scale.value(), 0.0) << "ValueError: expect scale >= 0";
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -135,6 +139,60 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
               s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
               uniform_tensor.dptr_, outputs[0].dptr<OType>());
         });
+      });
+    });
+  }
+}
+
+template<typename xpu, int ndim, typename DType>
+inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
+                                                 const std::vector<TBlob>& inputs,
+                                                 const std::vector<OpReqType>& req,
+                                                 const std::vector<TBlob>& outputs,
+                                                 const mxnet::TShape& new_ishape,
+                                                 const mxnet::TShape& new_oshape) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob igrad = outputs[0].reshape(new_ishape);
+  // inputs: [grad_from_samples, grad_from_noise(invisible), input_tensor,
+  //          samples, noise]
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  const TBlob itensor = inputs[2].reshape(new_ishape);
+  const TBlob samples = inputs[3].reshape(new_oshape);
+  const TBlob noise = inputs[4].reshape(new_oshape);
+  size_t workspace_size =
+      ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::left>(
+      s, igrad, req[0], workspace, ograd, noise, noise);
+}
+
+template<typename xpu>
+void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<TBlob>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<TBlob>& outputs) {
+  // skip kernel launch for zero-size tensors
+  if (inputs[0].shape_.Size() == 0U) {
+    return;
+  }
+  // [scalar] case
+  if (outputs.size() == 0U) {
+    return;
+  }
+  // [tensor] case
+  if (inputs.size() == 5U) {
+    mxnet::TShape new_ishape, new_oshape;
+    int ndim = FillShape(outputs[0].shape_, outputs[0].shape_, inputs[0].shape_,
+                         &new_ishape, &new_ishape, &new_oshape);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        ScalarExponentialReparamBackwardImpl<xpu, NDim, DType>(
+          ctx, inputs, req, outputs, new_ishape, new_oshape);
       });
     });
   }
