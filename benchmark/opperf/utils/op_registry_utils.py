@@ -117,7 +117,8 @@ def prepare_op_inputs(op, arg_params):
 
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
-    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial']
+    
+    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -265,6 +266,29 @@ def get_all_random_sampling_operators():
         if op_name.startswith(("random_", "sample_")) or op_name in additional_random_sampling_ops:
             random_sampling_mx_operators[op_name] = mx_operators[op_name]
     return random_sampling_mx_operators
+
+
+def get_all_linalg_operators():
+    """Gets all Linear Algebra operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    other_linalg_ops = ['moments']
+
+    # Already tested linalg_potrf independently
+    independently_tested = ['linalg_potrf']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Linear Algebra operators
+    linalg_mx_operators = {}
+    for op_name, _ in mx_operators.items():
+        if (op_name.startswith("linalg_") and op_name not in independently_tested) or op_name in other_linalg_ops:
+            linalg_mx_operators[op_name] = mx_operators[op_name]
+    return linalg_mx_operators
 
 
 def get_all_reduction_operators():
