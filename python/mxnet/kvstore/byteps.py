@@ -73,20 +73,30 @@ class BytePS(KVStoreBase):
             value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
         assert value.context.device_type == 'gpu', "Byteps KVStore only support GPU context for broadcast value."
 
+        # optimzation when out = value or out = [value]
+        if isinstance(out, (list, tuple)) and len(out) == 1:
+            inplace = value is out[0]
+        else:
+            inplace = value is out
+
+        if inplace:
+            broadcast_value = value
+        else:
+            broadcast_value = value.copy()
         # for non-root-rank, assign value with 0, thus the result of pushpull will be
         # equal to the value of root-rank, thus implementing broadcast.
         root_rank = 0
         if self.rank != root_rank:
-            value.__imul__(0)
-        self.handle.byteps_push_pull(value, version=0, priority=priority,
+            broadcast_value.__imul__(0)
+        self.handle.byteps_push_pull(broadcast_value, version=0, priority=priority,
                                      name=str(key), is_average=False)
         # Make sure tensors pushed to MXNet engine get processed such that all
         # workers are synced before starting training.
-        value.wait_to_read()
+        broadcast_value.wait_to_read()
 
         out = out if isinstance(out, list) else [out]
         for o in out:
-            value.copyto(o)
+            broadcast_value.copyto(o)
 
     def pushpull(self, key, value, out=None, priority=0):
         """ Performs push and pull a single value from the store.
@@ -127,13 +137,24 @@ class BytePS(KVStoreBase):
             value, NDArray), "The type of value can only be NDArray or list of NDArray which has only one element."
         assert value.context.device_type == 'gpu', "Byteps KVStore only support GPU context for pushpull value"
 
-        self.handle.byteps_push_pull(value, version=0, priority=priority,
+        # optimzation when out = value or out = [value]
+        if isinstance(out, (list, tuple)) and len(out) == 1:
+            inplace = value is out[0]
+        else:
+            inplace = value is out
+
+        if inplace:
+            pushpull_value = value
+        else:
+            pushpull_value = value.copy()
+
+        self.handle.byteps_push_pull(pushpull_value, version=0, priority=priority,
                                      name=str(key), is_average=False)
 
         if out is not None:
             out = out if isinstance(out, list) else [out]
             for o in out:
-                value.copyto(o)
+                pushpull_value.copyto(o)
 
     @staticmethod
     def is_capable(capability):
@@ -200,17 +221,35 @@ class BytePS(KVStoreBase):
     def set_optimizer(self, optimizer):
         """
         Not Implement yet.
+
+        Parameters
+        ----------
+        optimizer : KVStoreBase
+            The new optimizer for the store
         """
         raise NotImplementedError()
 
     def save_optimizer_states(self, fname, dump_optimizer=False):
         """
         Not Implement yet.
+
+        Parameters
+        ----------
+        fname : str
+            Path to the output states file.
+        dump_optimizer : bool, default False
+            Whether to also save the optimizer itself. This would also save optimizer
+            information such as learning rate and weight decay schedules.
         """
         raise NotImplementedError()
 
     def load_optimizer_states(self, fname):
         """
         Not Implement yet.
+
+        Parameters
+        ----------
+        fname : str
+            Path to input states file.
         """
         raise NotImplementedError()

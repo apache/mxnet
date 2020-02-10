@@ -24,8 +24,6 @@ Launch a distributed job for BytePS
 Combining the byteps/launcher/dist_launcher.py and byteps/launcher/launch.py of 
 https://github.com/bytedance/byteps.git @ 2152d88
 """
-
-
 import argparse
 import os
 import sys
