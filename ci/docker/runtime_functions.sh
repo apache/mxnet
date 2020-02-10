@@ -1782,7 +1782,7 @@ build_julia_docs() {
    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
 
-   julia_doc_path='julia/docs/site/'f
+   julia_doc_path='julia/docs/site/'
    julia_doc_artifact='docs/_build/julia-artifacts.tgz'
 
    echo "Julia will check for MXNet in $MXNET_HOME/lib"
