@@ -43,19 +43,25 @@ def nd_forward_backward_and_profile(op, runs, **kwargs):
     for _ in range(runs):
         with mx.autograd.record():
             args = []
+            # need to create a new dictionary because can't update dict while iterating
+            kwargs_new = dict()
             for key in kwargs:
+                # separate positional args from key-worded args
                 if key.startswith("args"):
-                    args.append(kwargs.pop(key))
+                    args.append(kwargs[key])
+                else:
+                    kwargs_new[key]=kwargs[key]
+            # check for positional args
             if len(args):
-                res = op(*args, **kwargs)
+                res = op(*args, **kwargs_new)
             else:
-                res = op(**kwargs)
+                res = op(**kwargs_new)
         res.backward()
         nd.waitall()
     return res
 
 
-def nd_forward_and_profile(op, runs, *args, **kwargs):
+def nd_forward_and_profile(op, runs, **kwargs):
     """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes ONLY forward pass.
 
@@ -76,13 +82,19 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
     """
     for _ in range(runs):
         args = []
+        # need to create a new dictionary because can't update dict while iterating
+        kwargs_new = dict()
         for key in kwargs:
+            # separate positional args from key-worded args
             if key.startswith("args"):
-                args.append(kwargs.pop(key))
+                args.append(kwargs[key])
+            else:
+                kwargs_new[key]=kwargs[key]
+        # check for positional args
         if len(args):
-            res = op(*args, **kwargs)
+            res = op(*args, **kwargs_new)
         else:
-            res = op(**kwargs)
+            res = op(**kwargs_new)
         nd.waitall()
     return res
 

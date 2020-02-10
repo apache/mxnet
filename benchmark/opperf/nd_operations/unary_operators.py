@@ -68,7 +68,7 @@ def run_mx_unary_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
                                                    profiler=profiler,
                                                    inputs=[{"args": [(1024, 1024)],
                                                             "num_outputs":1},
-                                                            "args": [(10000, 1)],
+                                                           {"args": [(10000, 1)],
                                                             "num_outputs":1}],
                                                    warmup=warmup,
                                                    runs=runs)
