@@ -139,11 +139,11 @@ class DropoutOp {
     BernoulliGenerate(*pgen, count, this->pkeep_, mkl_mask);
     const float pk_1 = 1.0f / this->pkeep_;
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(nthr) schedule(dynamic, 8)
+#pragma omp parallel for num_threads(nthr) schedule(static, 8)
     for (index_t i = 0; i < count; ++i) {
       outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
       auto mask_idx = i >> 3;  // div 8
-      auto mask_offset = i & 7;  // mod 8
+      uint8_t mask_offset = i & 7;  // mod 8
       if (mkl_mask[i]) {
         // set bit
         mask.dptr_[mask_idx] |= 1U << mask_offset;
@@ -169,7 +169,7 @@ class DropoutOp {
     const index_t count = grad.shape_[0] * grad.shape_[1];
     const float pk_1 = 1.0f / this->pkeep_;
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(nthr) schedule(dynamic, 8)
+#pragma omp parallel for num_threads(nthr) schedule(static, 8)
     for (index_t i = 0; i < count; ++i) {
       auto mask_idx = i >> 3;  // div 8;
       uint8_t mask_offset = i & 7;  // mod 8
@@ -211,6 +211,7 @@ class DropoutOp {
         auto mask_idx = i >> 3;  // div 8;
         uint8_t mask_offset = i & 7;  // mod 8
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        const float pk_1 = 1.0f / pkeep;
         if (mask_val) {
           // set bit
           mask_out[mask_idx] |= 1U << mask_offset;
@@ -218,7 +219,7 @@ class DropoutOp {
           // clear bit
           mask_out[mask_idx] &= ~(1U << mask_offset);
         }
-        dropout_out[i] = mask_val * input_data[i] * (1.0f / pkeep);
+        dropout_out[i] = mask_val * input_data[i] * pk_1;
       })
     }
   };
@@ -233,7 +234,8 @@ class DropoutOp {
       auto mask_idx = i >> 3;  // div 8;
       uint8_t mask_offset = i & 7;  // mod 8
       bool mask_val = mask[mask_idx] & (1U << mask_offset);
-      KERNEL_ASSIGN(igrad[i], req, mask_val * ograd[i] * (1 / pkeep));
+      const float pk_1 = 1.0f / pkeep;
+      KERNEL_ASSIGN(igrad[i], req, mask_val * ograd[i] * pk_1);
     }
   };
 
@@ -253,6 +255,7 @@ class DropoutOp {
         auto mask_idx = i >> 3;  // div 8;
         uint8_t mask_offset = i & 7;  // mod 8
         bool mask_val = mshadow_op::threshold_eq::Map<real_t>(rand_num, pkeep);
+        const float pk_1 = 1.0f / pkeep;
         if (mask_val) {
           // set bit
           mask_out[mask_idx] |= 1U << mask_offset;
@@ -260,7 +263,7 @@ class DropoutOp {
           // clear bit
           mask_out[mask_idx] &= ~(1U << mask_offset);
         }
-        dropout_out[i] = mask_val * (1.0 / pkeep);
+        dropout_out[i] = mask_val * pk_1;
       })
     }
   };
@@ -283,14 +286,15 @@ class DropoutOp {
       auto mask_idx = ridx >> 3;  // div 8;
       uint8_t mask_offset = ridx & 7;  // mod 8
       bool mask_val = mask[mask_idx] & (1U << mask_offset);
-      KERNEL_ASSIGN(igrad[base], req, mask_val * ograd[lidx] * (1 / pkeep))
+      const float pk_1 = 1.0f / pkeep;
+      KERNEL_ASSIGN(igrad[base], req, mask_val * ograd[lidx] * pk_1);
       // starts from 1 to avoid extra inc at end of loop
       for (index_t i = 1; i < length; ++i) {
         inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
         mask_idx = ridx >> 3;  // div 8
         mask_offset = ridx & 7;  // mod 8
         mask_val = mask[mask_idx] & (1U << mask_offset);
-        KERNEL_ASSIGN(igrad[base + i], req, mask_val * ograd[lidx] * (1 / pkeep))
+        KERNEL_ASSIGN(igrad[base + i], req, mask_val * ograd[lidx] * pk_1);
       }
     }
   };
