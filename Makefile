@@ -478,7 +478,7 @@ ifeq ($(USE_INTGEMM), 1)
 else
   #If we're not using intgemm, remove the operators from src.
   INTGEMM_OPS := $(wildcard src/operator/contrib/intgemm/*.cc)
-  SRC := $(filter-out $(SRC),$(INTGEMM_OPS))
+  SRC := $(filter-out $(INTGEMM_OPS),$(SRC))
 endif
 
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
