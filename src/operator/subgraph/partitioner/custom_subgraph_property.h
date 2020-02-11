@@ -99,7 +99,27 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     const std::vector<std::pair<std::string, std::string>>& options_map) {
     // clear supported_nodes to remove state from previous calls
     supported_nodes.clear();
+    
+    in_args_ptr = g.GetAttr<NDArray**>("args");
+    in_args_names = g.GetAttr<std::vector<std::string>>("arg_names");
 
+    for(std::string s : in_args_names) {
+      in_args_chars.push_back(s.c_str());
+    }
+
+    in_args_data.clear();
+    in_args_shapes.clear();
+    in_args_dims.clear();
+    in_args_types.clear();
+
+    // convert NDarrays to constituent parts
+    for (size_t i = 0; i < in_args_names.size(); i++) {
+      in_args_data.push_back(in_args_ptr[i]->data().dptr_);
+      in_args_shapes.push_back(in_args_ptr[i]->shape().data());
+      in_args_dims.push_back(in_args_ptr[i]->shape().ndim());
+      in_args_types.push_back(in_args_ptr[i]->dtype());
+    }
+    
     // remove all graph attrs, some cannot be saved to json
     nnvm::Graph graph = std::move(g);
     graph.attrs.clear();
@@ -189,9 +209,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
 
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
       CHECK(call_accept_subgraph_(accept_subgraph_, subgraph_json.c_str(),
-                                subgraph_id, &accept, opt_keys_.data(),
-                                opt_vals_.data(), opt_keys_.size(),
-                                &attr_keys, &attr_vals, &num_attr))
+                                  subgraph_id, &accept, opt_keys_.data(),
+                                  opt_vals_.data(), opt_keys_.size(),
+                                  &attr_keys, &attr_vals, &num_attr,
+                                  in_args_chars.data(), in_args_data.data(),
+                                  in_args_shapes.data(), in_args_dims.data(),
+                                  in_args_types.data()))
         << "Error calling accept_subgraph for '" << subgraph_prop << "'";
     }
     if (accept) {
@@ -228,6 +251,13 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
+  NDArray **in_args_ptr;
+  std::vector<std::string> in_args_names;
+  std::vector<const char*> in_args_chars;
+  std::vector<void*> in_args_data;
+  std::vector<const int64_t *> in_args_shapes;
+  std::vector<int> in_args_dims;
+  std::vector<int> in_args_types;
 };
 }  // namespace op
 }  // namespace mxnet

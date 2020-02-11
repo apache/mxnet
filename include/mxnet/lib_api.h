@@ -917,10 +917,15 @@ typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *j
                                       const char* const* opt_vals, int num_opts);
 
 #define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
-typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph, const char *json,
-                                        int subgraph_id, int *accept, const char* const* opt_keys,
+typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph,
+                                        const char *json, int subgraph_id,
+                                        int *accept, const char* const* opt_keys,
                                         const char* const* opt_vals, int num_opts,
-                                        char*** attr_keys, char*** attr_vals, int *num_attrs);
+                                        char*** attr_keys, char*** attr_vals,
+                                        int *num_attrs, const char* const* in_args_chars,
+                                        void* const* in_args_data,
+                                        const int64_t* const *in_args_shapes,
+                                        const int* in_args_dims, const int* in_args_types);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
@@ -1283,7 +1288,10 @@ extern "C" {
   _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
                           int subgraph_id, int *accept, const char* const* opt_keys,
                           const char* const* opt_vals, int num_opts,
-                          char*** attr_keys, char*** attr_vals, int *num_attrs) {
+                          char*** attr_keys, char*** attr_vals, int *num_attrs,
+                          const char* const* in_args_chars, void* const* in_args_data,
+                          const int64_t* const* in_args_shapes, int* in_args_dims,
+                          int* in_args_types) {
     std::string subgraph_json(json);
     bool accept_bool = false;
     // create map of attributes from list

@@ -1351,8 +1351,9 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph g = Symbol2Graph(*s);
+  NDArray **in_args_ptr = nullptr;
   if (len) {
-    NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
     mxnet::ShapeVector arg_shapes(len);
     nnvm::DTypeVector arg_dtypes(len);
@@ -1382,6 +1383,9 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                                           g.GetAttr<StorageTypeVector>("storage_type"));
     }
   }
+  g.attrs["args"] = std::make_shared<nnvm::any>(in_args_ptr);
+  std::vector<std::string> names = sym->ListInputNames(nnvm::Symbol::ListInputOption(1));
+  g.attrs["arg_names"] = std::make_shared<nnvm::any>(names);
   std::vector<std::pair<std::string, std::string>> options_map;
   for (mx_uint i = 0; i < num_options; ++i) {
     options_map.emplace_back(keys[i], vals[i]);
