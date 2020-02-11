@@ -53,6 +53,20 @@ MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
   return ret;
 }
 
+/* Compute coordinates from flattened index given shape */
+template<int ndim, typename DTypeShape>
+MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const int idx,
+                                              const DTypeShape* shape) {
+  mshadow::Shape<ndim> ret;
+  #pragma unroll
+  for (int i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
+    ret[i] = j - tmp*shape[i];
+    j = tmp;
+  }
+  return ret;
+}
+
 struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   mxnet::Tuple<mxnet::Tuple<int>> pad_width;
   int mode;
@@ -115,9 +129,9 @@ struct constant_pad {
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
                                   double constant_value,
-                                  const mshadow::Shape<ndim>& urshape) {
+                                  mshadow::Shape<ndim>& urshape) {
     using namespace mxnet_op;
-    auto j = unravel(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -149,7 +163,7 @@ struct pad_copy {
                                   mshadow::Shape<ndim*2> width,
                                   const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
-    auto j = unravel(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -185,7 +199,7 @@ struct symmetric_pad {
                                   size_t index,
                                   const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
-    auto j = unravel<ndim>(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -255,7 +269,7 @@ struct edge_pad {
                                   size_t index,
                                   const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
-    auto j = unravel<ndim>(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -303,7 +317,7 @@ struct reflect_pad {
                                   size_t index,
                                   const  mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
-    auto j = unravel(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -381,7 +395,7 @@ struct max_pad {
                                   size_t index,
                                   const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
-    auto j = unravel(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -435,7 +449,7 @@ struct min_pad {
                                   size_t index,
                                   const mshadow::Shape<ndim>& urshape){
     using namespace mxnet_op;
-    auto j = unravel(i, urshape);
+    auto j = uunravel<ndim>(i, oshape);
     size_t m;
     bool origin = true;
     index_t* indexwidth = width.shape_;
@@ -473,7 +487,7 @@ struct min_pad {
             min_value = out[l];
         }
       }
-      j = unravel(i, urshape);
+      j = uunravel<ndim>(i, oshape);
       KERNEL_ASSIGN(out[i], req, min_value);
     } else {
       return;
@@ -493,11 +507,11 @@ struct pad_grad {
   }
 };
 
-template<typename xpu, bool back>
+template<typename xpu, bool back, typename ShapeDType>
 void NumpyPadOpImpl(const TBlob& in_data,
                     const TBlob& out_data,
-                    const mshadow::Tensor<xpu, 1, index_t>& ishape,
-                    const mshadow::Tensor<xpu, 1, index_t>& oshape,
+                    ShapeDType* ishape,
+                    ShapeDType* oshape,
                     index_t dsize,
                     const NumpyPadParam& param,
                     const std::vector<OpReqType>& req,
@@ -510,12 +524,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
     mshadow::Shape<NDim*2> width;
     int dimcounter = 0;
     mshadow::Shape<NDim> urshape;
-    index_t* odptr = reinterpret_cast<index_t*>(oshape.dptr_);
-    index_t* urshapedptr = urshape.shape_;
-    mxnet_op::Kernel<mshadow_op::identity_with_cast, xpu>::Launch(
-          s, ndim,
-          urshapedptr,
-          odptr);
+    index_t* odptr = reinterpret_cast<index_t*>(oshape);
     if (ndim == 1) {
       width[0] = param.pad_width[0][0];
       width[1] = param.pad_width[1][0];
@@ -526,7 +535,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
       }
     }
     if (!back) {
-      index_t* idptr = reinterpret_cast<index_t*>(ishape.dptr_);
+      index_t* idptr = reinterpret_cast<index_t*>(ishape);
       if (mode == 1) {
       // constant padding start
         MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
@@ -546,7 +555,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
           });
         });
         index_t index;
-        index_t dim = ishape.shape_[0];
+        index_t dim = ndim;
         if (mode == 2) {
           // symmetric padding start
           for (index = dim-1; index >= 0; index--) {
@@ -605,7 +614,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
         }
       }
     } else {
-      index_t* idptr = reinterpret_cast<index_t*>(ishape.dptr_);
+      index_t* idptr = reinterpret_cast<index_t*>(ishape);
       MSHADOW_TYPE_SWITCH(out_data.type_flag_, DType, {
         MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
           Kernel<pad_grad<xpu, req_type, back>, xpu>::Launch(
@@ -662,8 +671,11 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
     mshadow::Copy(to, tb, ctx.get_stream<xpu>());
     const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
 
-    NumpyPadOpImpl<xpu, false>(in_data, out_data, ti,
-                               to, out_data.Size(), param, req, s);
+    index_t* wt = reinterpret_cast<index_t*>(to.dptr_);
+    index_t* wi = reinterpret_cast<index_t*>(ti.dptr_);
+
+    NumpyPadOpImpl<xpu, false, index_t>(in_data, out_data, wi,
+                               wt, out_data.Size(), param, req, s);
   })
 }
 
@@ -707,9 +719,12 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
                                ctx.get_stream<xpu>());
     mshadow::Copy(to, tb, ctx.get_stream<xpu>());
     const NumpyPadParam& param = nnvm::get<NumpyPadParam>(attrs.parsed);
+    index_t* wt = reinterpret_cast<index_t*>(to.dptr_);
+    index_t* wi = reinterpret_cast<index_t*>(ti.dptr_);
 
-    NumpyPadOpImpl<xpu, true>(in_data, out_data, to,
-                               ti, out_data.Size(), param, req, s);
+
+    NumpyPadOpImpl<xpu, true, index_t>(in_data, out_data, wt,
+                               wi, out_data.Size(), param, req, s);
   })
 }
 
