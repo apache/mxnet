@@ -214,6 +214,18 @@ enum MXDType {
   kUNSET = 100,
 };
 
+/*
+ * MXTensor storage type.
+ */
+enum MXStorageType {
+  // dense
+  kDefaultStorage = 0,
+  // row sparse 
+  kRowSparseStorage = 1,
+  // csr
+  kCSRStorage = 2,
+};
+
 /*!
  * \brief Context info passing from MXNet OpContext
  * dev_type is string repr of supported context, currently only "cpu" and "gpu"
@@ -233,16 +245,18 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0) {}
+  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), stype(kDefaultStorage) {}
 
+  // Construtor for dense.
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
-           size_t vID, MXContext mx_ctx)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
+           size_t vID, MXContext mx_ctx, MXStorageType stype = kDefaultStorage)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx), stype(stype) {}
 
   /*! \brief populate internal tensor fields */
+  // To do: solve for CSR and row sparse.
   void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
-                 size_t vID, MXContext mx_ctx) {
-    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx;
+                 size_t vID, MXContext mx_ctx, MXStorageType stype = kDefaultStorage) {
+    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx; stype = stype;
     shape.clear();
     for (int j = 0; j < ndims; j++) {
       shape.push_back(dims[j]);
@@ -335,11 +349,15 @@ struct MXTensor {
            verID == oth.verID &&
            ctx.dev_type == oth.ctx.dev_type &&
            ctx.dev_id == oth.ctx.dev_id &&
-           shape == oth.shape;
+           shape == oth.shape && 
+	   stype == oth.stype;
   }
 
-  // data is flatten 1D repr of tensor, elements are in continuous memory
-  // user can access each element using the shape of tensor
+  /*! \brief get MXTensors storage type*/
+  inline MXStorageType getStorageType() { return stype; } 
+
+  // For dense, data_ptr points to ChunkDense.
+  // For sparse, data_ptr points to ChunkSparse.
   void *data_ptr;
 
   // shape is in [2,3,4] format to represent high-dim tensor
@@ -357,6 +375,9 @@ struct MXTensor {
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
   DLTensor dltensor;
+
+  // storage type
+  MXStorageType stype;
 };
 
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
