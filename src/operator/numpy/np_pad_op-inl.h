@@ -128,8 +128,7 @@ struct constant_pad {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  double constant_value,
-                                  mshadow::Shape<ndim>& urshape) {
+                                  double constant_value) {
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -160,8 +159,7 @@ struct pad_copy {
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
-                                  mshadow::Shape<ndim*2> width,
-                                  const mshadow::Shape<ndim>& urshape){
+                                  mshadow::Shape<ndim*2> width){
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -196,8 +194,7 @@ struct symmetric_pad {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  size_t index,
-                                  const mshadow::Shape<ndim>& urshape){
+                                  size_t index){
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -266,8 +263,7 @@ struct edge_pad {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  size_t index,
-                                  const mshadow::Shape<ndim>& urshape){
+                                  size_t index){
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -314,8 +310,7 @@ struct reflect_pad {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  size_t index,
-                                  const  mshadow::Shape<ndim>& urshape){
+                                  size_t index){
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -392,8 +387,7 @@ struct max_pad {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  size_t index,
-                                  const mshadow::Shape<ndim>& urshape){
+                                  size_t index){
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -446,8 +440,7 @@ struct min_pad {
                                   const DTypeShape* ishape,
                                   const DTypeShape* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  size_t index,
-                                  const mshadow::Shape<ndim>& urshape){
+                                  size_t index){
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -523,7 +516,6 @@ void NumpyPadOpImpl(const TBlob& in_data,
   MXNET_NDIM_SWITCH(ndim, NDim, {
     mshadow::Shape<NDim*2> width;
     int dimcounter = 0;
-    mshadow::Shape<NDim> urshape;
     index_t* odptr = reinterpret_cast<index_t*>(oshape);
     if (ndim == 1) {
       width[0] = param.pad_width[0][0];
@@ -542,7 +534,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
           MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
             Kernel<constant_pad<xpu, req_type, back, NDim>, xpu>::Launch(
               s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              idptr, odptr, width, param.constant_value, urshape);
+              idptr, odptr, width, param.constant_value);
           });
         });
       // constant padding end
@@ -551,7 +543,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
           MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
             Kernel<pad_copy<xpu, req_type, back, NDim>, xpu>::Launch(
               s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              idptr, odptr, width, urshape);
+              idptr, odptr, width);
           });
         });
         index_t index;
@@ -563,7 +555,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<symmetric_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  idptr, odptr, width, index, urshape);
+                  idptr, odptr, width, index);
               });
             });
           }
@@ -574,7 +566,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<edge_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  idptr, odptr, width, index, urshape);
+                  idptr, odptr, width, index);
               });
             });
           }
@@ -585,7 +577,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<reflect_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  idptr, odptr, width, index, urshape);
+                  idptr, odptr, width, index);
               });
             });
           }
@@ -595,7 +587,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<max_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  idptr, odptr, width, index, urshape);
+                  idptr, odptr, width, index);
               });
             });
           }
@@ -605,7 +597,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
               MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
                 Kernel<min_pad<xpu, req_type, back, NDim>, xpu>::Launch(
                   s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                  idptr, odptr, width, index, urshape);
+                  idptr, odptr, width, index);
               });
             });
           }
