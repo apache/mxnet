@@ -241,11 +241,43 @@ enum MXReturnValue {
   MX_SUCCESS = 1,
 };
 
+struct ChunkDense {
+  // Pointer to data.
+  void *data{nullptr};
+  // Size of data in bytes.
+  size_t dataSize{0};
+  // shape of data.
+  std::vector<int64_t> shape;
+  // Context of data.
+  // MXContext ctx;
+};
+
+struct ChunkSparse {
+  // Pointer to data.
+  void *data{nullptr};
+  // Size of data in bytes.
+  size_t dataSize{0};
+  // length  of data.
+  int64_t data_lens;
+
+  // To store aux data for sparse.
+  // for row_sparse, aux_data[0] = indices
+  // for csr, aux_data[0] = indptr, aux_data[1] = indices
+  std::vector<std::vector<int64_t>> aux_data;
+
+  // Lens of the aux_data.
+  // for row_sparse, aux_lens[0] = len(indices)
+  // for csr, aux_lens[0] = len(indptr), aux_lens[1] = len(indices)
+  std::vector<int64_t> aux_lens;
+  // Context of data.
+  // MXContext ctx;
+};
+
 /*!
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL), dtype(kUNSET), verID(0), stype(kDefaultStorage) {}
+  MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0), stype(kDefaultStorage) {}
 
   // Construtor for dense.
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
@@ -350,7 +382,7 @@ struct MXTensor {
            ctx.dev_type == oth.ctx.dev_type &&
            ctx.dev_id == oth.ctx.dev_id &&
            shape == oth.shape && 
-	   stype == oth.stype;
+           stype == oth.stype;
   }
 
   /*! \brief get MXTensors storage type*/
