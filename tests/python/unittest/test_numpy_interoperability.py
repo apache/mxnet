@@ -96,6 +96,11 @@ def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
 
 
+def _add_workload_diag_indices_from():
+    a = np.random.uniform(-4, 4, size=(4,4))
+    OpArgMngr.add_workload('diag_indices_from', a)
+
+
 def _add_workload_bincount():
     y = np.arange(4).astype(int)
     y1 = np.array([1, 5, 2, 4, 1], dtype=_np.int64)
@@ -1836,6 +1841,7 @@ def _prepare_workloads():
     _add_workload_cumsum()
     _add_workload_ravel()
     _add_workload_unravel_index()
+    _add_workload_diag_indices_from()
     _add_workload_diag()
     _add_workload_diagonal()
     _add_workload_diagflat()

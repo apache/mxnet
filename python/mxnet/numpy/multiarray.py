@@ -59,8 +59,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var',
-           'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud',
-           'fliplr', 'around', 'round', 'arctan2', 'hypot',
+           'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
+           'flip', 'flipud', 'fliplr', 'around', 'round', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
            'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
@@ -6540,6 +6540,45 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     [3, 1, 4, 1]
     """
     return _mx_nd_np.unravel_index(indices, shape, order=order)
+
+
+def diag_indices_from(arr):
+    """
+    This returns a tuple of indices that can be used to access the main diagonal of an array
+    a with a.ndim >= 2 dimensions and shape (n, n, …, n). For a.ndim = 2 this is
+    the usual diagonal, for a.ndim > 2 this is the set of indices to access
+    a[i, i, ..., i] for i = [0..n-1].
+
+    Parameters:
+    -------------
+    arr : ndarray
+        Input array for acessing the main diagonal. All dimensions
+        should have equal length.
+
+    Return:
+    -------------
+    diag: tuple of ndarray
+        indices of the main diagonal.
+
+    Examples:
+    -------------
+    >>> a = np.arange(16).reshape(4, 4)
+    >>> a
+    array([[ 0,  1,  2,  3],
+        [ 4,  5,  6,  7],
+        [ 8,  9, 10, 11],
+        [12, 13, 14, 15]])
+    >>> idx = np.diag_indices_from(a)
+    >>> idx
+    (array([0, 1, 2, 3]), array([0, 1, 2, 3]))
+    >>> a[idx] = 100
+    >>> a
+    array([[100,   1,   2,   3],
+        [  4, 100,   6,   7],
+        [  8,   9, 100,  11],
+        [ 12,  13,  14, 100]])
+    """
+    return _mx_nd_np.diag_indices_from(arr)
 
 
 @set_module('mxnet.numpy')
