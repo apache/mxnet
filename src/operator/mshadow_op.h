@@ -1143,6 +1143,20 @@ struct maximum : public mxnet_op::tunable {
   }
 };
 
+/*! \brief used for computing binary operator fmax */
+struct fmax : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (IsNan(b)) {
+      return a;
+    } else if (IsNan(a)) {
+      return b;
+    } else {
+      return (a > b ? a : b);
+    }
+  }
+};
+
 /*! \brief used for computing binary operator minimum */
 struct minimum : public mxnet_op::tunable {
   template<typename DType>
@@ -1151,6 +1165,20 @@ struct minimum : public mxnet_op::tunable {
       return a;
     } else {
       return DType(a < b ? a : b);
+    }
+  }
+};
+
+/*! \brief used for computing binary operator fmin */
+struct fmin : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (IsNan(b)) {
+      return a;
+    } else if (IsNan(a)) {
+      return b;
+    } else {
+      return (a < b ? a : b);
     }
   }
 };

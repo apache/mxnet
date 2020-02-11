@@ -43,7 +43,8 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum', 'any', 'all', 'around', 'round', 'round_', 'flatnonzero',
+           'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'any', 'all', 'around', 'round', 'round_',
+           'flatnonzero',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
@@ -4129,11 +4130,18 @@ def maximum(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 @wrap_np_binary_func
+def fmax(x1, x2, out=None, **kwargs):
+    return _ufunc_helper(x1, x2, _npi.fmax, _np.fmax, _npi.fmax_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_binary_func
 def minimum(x1, x2, out=None, **kwargs):
     return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')
+<<<<<<< HEAD
 def all(a, axis=None, out=None, keepdims=False):
     """
     Test whether all array elements along a given axis evaluate to True.
@@ -4192,6 +4200,11 @@ def any(a, axis=None, out=None, keepdims=False):
         in which case a reference to out is returned.
     """
     return _npi.any(a, axis=axis, keepdims=keepdims, out=out)
+=======
+@wrap_np_binary_func
+def fmin(x1, x2, out=None, **kwargs):
+    return _ufunc_helper(x1, x2, _npi.fmin, _np.fmin, _npi.fmin_scalar, None, out)
+>>>>>>> [Numpy] Add op fmax, fmin
 
 
 @set_module('mxnet.symbol.numpy')
