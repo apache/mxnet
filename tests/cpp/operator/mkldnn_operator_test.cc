@@ -986,7 +986,7 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
             Context(), backwards_attrs.attrs, backwards_input, backwards_ex_outputs,
             back_req, DispatchMode::kFComputeEx, mxnet::OpStatePtr());
         Engine::Get()->WaitForAll();
-        AssertEqual(backwards_outputs, backwards_ex_outputs, 1e-5, 1e-6);
+        AssertEqual(backwards_outputs, backwards_ex_outputs, 1e-4, 1e-6);
       }
     }
   }
