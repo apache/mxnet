@@ -33,7 +33,7 @@ This would build the mxnet package based on CUDA 10.2. Currently, we support var
 tools/staticbuild/build.sh cpu
 ```
 
-This would build the mxnet package based on MKLDNN.
+This would build the mxnet package based on MKL-DNN.
 
 To use CMake to build the `libmxnet.so` instead of the deprecated Makefile based
 build logic, set the `CMAKE_STATICBUILD` environment variable. For example
@@ -44,7 +44,6 @@ CMAKE_STATICBUILD=1 tools/staticbuild/build.sh cpu
 
 For the CMake build, you need to install `patchelf` first, for example via `apt
 install patchelf` on Ubuntu systems.
->>>>>>> ae145cdb1de95e8275dd087585f4aab69bc94005
 
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 
