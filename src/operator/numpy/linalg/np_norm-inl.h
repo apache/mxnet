@@ -326,35 +326,35 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
+      // refer to NumpyNormType()
+      CHECK_EQ(inputs[0].type_flag_ ,outputs[0].type_flag_);
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, OType, {
-          if (dst_shape.ndim() == 2) {
-            Tensor<xpu, 2, OType> ograd =
-              inputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
-            Tensor<xpu, 2, DType> igrad =
-              outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-            Tensor<xpu, 2, DType> data =
-              inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
-            MXNET_REQ_TYPE_SWITCH(req[0], Req, {
-              Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
-                s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
-                in_shape, out_shape, src_shape.ndim());
-            });
-          } else {
-            const int ndim = MXNET_SPECIAL_MAX_NDIM;
-            Tensor<xpu, ndim, DType> igrad =
-              outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-            Tensor<xpu, ndim, OType> ograd =
-              inputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
-            Tensor<xpu, ndim, DType> data =
-              inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
-            MXNET_REQ_TYPE_SWITCH(req[0], Req, {
-              Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
-                s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
-                in_shape, out_shape, src_shape.ndim());
-            });
-          }
-        });
+        if (dst_shape.ndim() == 2) {
+          Tensor<xpu, 2, DType> ograd =
+            inputs[0].get_with_shape<xpu, 2, DType>(dst_shape.get<2>(), s);
+          Tensor<xpu, 2, DType> igrad =
+            outputs[0].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+          Tensor<xpu, 2, DType> data =
+            inputs[1].get_with_shape<xpu, 2, DType>(src_shape.get<2>(), s);
+          MXNET_REQ_TYPE_SWITCH(req[0], Req, {
+            Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
+              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
+              in_shape, out_shape, src_shape.ndim());
+          });
+        } else {
+          const int ndim = MXNET_SPECIAL_MAX_NDIM;
+          Tensor<xpu, ndim, DType> igrad =
+            outputs[0].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+          Tensor<xpu, ndim, DType> ograd =
+            inputs[0].get_with_shape<xpu, ndim, DType>(dst_shape.get<ndim>(), s);
+          Tensor<xpu, ndim, DType> data =
+            inputs[1].get_with_shape<xpu, ndim, DType>(src_shape.get<ndim>(), s);
+          MXNET_REQ_TYPE_SWITCH(req[0], Req, {
+            Kernel<norm_backward_broadcast<Req>, xpu>::Launch(
+              s, igrad.shape_.Size(), igrad.dptr_, ograd.dptr_, data.dptr_,
+              in_shape, out_shape, src_shape.ndim());
+          });
+        }
       });
     } else {  // Elementwise Lp
       mshadow_op::nrmlp_grad host_mapper(ord);
