@@ -1713,6 +1713,7 @@ def _add_workload_vstack(array_pool):
     OpArgMngr.add_workload('vstack', array_pool['4x1'])
     OpArgMngr.add_workload('vstack', array_pool['1x1x0'])
 
+
 def _add_workload_column_stack():
     OpArgMngr.add_workload('column_stack', (np.array([1, 2, 3]), np.array([2, 3, 4])))
     OpArgMngr.add_workload('column_stack', (np.array([[1], [2], [3]]), np.array([[2], [3], [4]])))
@@ -1815,6 +1816,7 @@ def _add_workload_nonzero():
     OpArgMngr.add_workload('nonzero', np.random.randint(0, 2, size=(2, 3, 4)))
     OpArgMngr.add_workload('nonzero', np.array([False, False, False], dtype=np.bool_))
     OpArgMngr.add_workload('nonzero', np.array([True, False, False], dtype=np.bool_))
+
 
 def _add_workload_diagflat():
     def get_mat(n):
@@ -1965,6 +1967,33 @@ def _add_workload_spacing():
     OpArgMngr.add_workload('spacing', -np.inf)
     OpArgMngr.add_workload('spacing', np.float64(1e30))
     OpArgMngr.add_workload('spacing', np.float32(1e30))
+
+
+def _add_workload_allclose():
+    a = np.random.randn(10)
+    b = a + np.random.rand(10) * 1e-6
+    OpArgMngr.add_workload('allclose', a, b)
+
+
+def _add_workload_alltrue():
+    for i in range(256-7):
+        e = np.array([True] * 256, dtype=bool)[7::]
+        e[i] = False
+        OpArgMngr.add_workload('alltrue', e)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        e = np.array([True] * 100043, dtype=bool)
+        e[i] = False
+        OpArgMngr.add_workload('alltrue', e)
+
+
+def _add_workload_apply_along_axis():
+    def double(row):
+        return row * 2
+
+    m = np.array([[0, 1], [2, 3]], dtype=np.int32)
+    OpArgMngr.add_workload('apply_along_axis', double, 0, m)
+    OpArgMngr.add_workload('apply_along_axis', double, 1, m)
 
 
 @use_np
@@ -2136,6 +2165,9 @@ def _prepare_workloads():
     _add_workload_isfinite(array_pool)
     _add_workload_heaviside()
     _add_workload_spacing()
+    _add_workload_allclose()
+    _add_workload_alltrue()
+    _add_workload_apply_along_axis()
 
 
 _prepare_workloads()
@@ -2174,7 +2206,11 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
     elif isinstance(out, np.ndarray):
         assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
     else:
-        _np.testing.assert_almost_equal(out, expected_out)
+        assert _np.isscalar(out), "{} is not a scalar type".format(str(type(out)))
+        if isinstance(out, _np.float):
+            _np.testing.assert_almost_equal(out, expected_out)
+        else:
+            _np.testing.assert_equal(out, expected_out)
 
 
 def check_interoperability(op_list):

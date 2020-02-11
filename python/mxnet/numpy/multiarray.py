@@ -135,6 +135,8 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
     if isinstance(object, _np.ndarray):
+        if not object.flags['C_CONTIGUOUS']:
+            object = _np.ascontiguousarray(object, dtype=object.dtype)
         ret = from_numpy(object, array_cls=ndarray)
         return ret if ctx is None else ret.as_in_ctx(ctx=ctx)
     elif isinstance(object, (integer_types, numeric_types)):

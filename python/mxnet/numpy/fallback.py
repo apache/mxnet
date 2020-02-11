@@ -23,7 +23,6 @@ import numpy as onp
 __all__ = [
     'allclose',
     'alltrue',
-    'angle',
     'apply_along_axis',
     'apply_over_axes',
     'argpartition',
@@ -136,7 +135,6 @@ __all__ = [
 
 allclose = onp.allclose
 alltrue = onp.alltrue
-angle = onp.angle
 apply_along_axis = onp.apply_along_axis
 apply_over_axes = onp.apply_over_axes
 argpartition = onp.argpartition
