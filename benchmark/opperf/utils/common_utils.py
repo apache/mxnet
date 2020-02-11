@@ -41,7 +41,14 @@ def merge_map_list(map_list):
     map where all individual maps in the into map_list are merged
 
     """
-    return dict(ChainMap(*map_list))
+    # Preserve order of underlying maps and keys when converting to a single map
+    final_map = dict()
+
+    for current_map in map_list:
+        for key in current_map:
+            final_map[key] =  current_map[key]
+
+    return final_map
 
 
 def save_to_file(inp_dict, out_filepath, out_format='json', runtime_features=None, profiler='native'):
@@ -65,7 +72,7 @@ def save_to_file(inp_dict, out_filepath, out_format='json', runtime_features=Non
     if out_format == 'json':
         # Save as JSON
         with open(out_filepath, "w") as result_file:
-            json.dump(inp_dict, result_file, indent=4, sort_keys=True)
+            json.dump(inp_dict, result_file, indent=4, sort_keys=False)
     elif out_format == 'md':
         # Save as md
         with open(out_filepath, "w") as result_file:
