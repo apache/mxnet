@@ -62,8 +62,6 @@ __all__ = [
     'isclose',
     'isfinite',
     'isin',
-    'isinf',
-    'isnan',
     'isposinf',
     'ix_',
     'lexsort',
@@ -177,8 +175,6 @@ intersect1d = onp.intersect1d
 isclose = onp.isclose
 isfinite = onp.isfinite
 isin = onp.isin
-isinf = onp.isinf
-isnan = onp.isnan
 isneginf = onp.isneginf
 isposinf = onp.isposinf
 ix_ = onp.ix_
