@@ -160,6 +160,47 @@ bool NumpyInsertShape(const nnvm::NodeAttrs& attrs,
 }
 
 template<>
+void InsertScalarIndicesImpl<cpu>(const OpContext &ctx,
+                                  const TShape& outshape, const TShape& old_valshape,
+                                  const std::vector<TBlob>& inputs,
+                                  const std::vector<TBlob>& outputs,
+                                  const TBlob& arr, const TBlob& values,
+                                  const int& dtype, const int& vtype,
+                                  const std::vector<OpReqType>& req,
+                                  const int& axis, const int& index,
+                                  const int& out_pos, const int& obj_pos,
+                                  const int& numnew, const int& N,
+                                  const bool& is_tensor){
+  using namespace mshadow;
+  using namespace mxnet_op;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  if (is_tensor) {
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      InsertSizeOneTensorObj<cpu, ndim>(s, outputs[out_pos], arr, values,
+                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                        mxnet_op::calc_stride(outshape.get<ndim>()),
+                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                        numnew, N, outshape.Size(), true);
+      
+    });
+  } else {
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      InsertScalerObj<cpu, ndim>(s, outputs[out_pos], arr, values,
+                                 mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                 mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                 mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                 mxnet_op::calc_stride(outshape.get<ndim>()),
+                                 outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                 dtype, vtype, req[out_pos], axis, index, numnew,
+                                 outshape.Size(), true);
+    });
+  }
+}
+
+template<>
 void InsertOneIndicesImpl<cpu>(const OpContext &ctx,
                                const TShape& outshape, const TShape& old_valshape,
                                const NumpyInsertParam& param,
