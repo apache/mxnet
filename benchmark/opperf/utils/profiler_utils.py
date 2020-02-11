@@ -159,6 +159,7 @@ def parse_profiler_dump(operator_name, profiler_dump):
     # Prepare results
     memory_profile = _get_memory_profile(memory_profile_results)
     operator_profile = _get_operator_profile(operator_name, operator_profile_results)
+
     return merge_map_list([memory_profile, operator_profile])
 
 
