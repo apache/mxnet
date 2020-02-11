@@ -43,6 +43,34 @@ class Constraint(object):
         raise NotImplementedError
 
 
+class _Dependent(Constraint):
+    """
+    Placeholder for variables whose support depends on other variables.
+    """
+    def check(self, value):
+        raise ValueError('Cannot validate dependent constraint')
+
+
+def is_dependent(constraint):
+    return isinstance(constraint, _Dependent)
+
+
+class _DependentProperty(property, _Dependent):
+    """
+    Decorator that extends @property to act like a `_Dependent` constraint when
+    called on a class and act like a property when called on an object.
+    Example::
+        class Uniform(Distribution):
+            def __init__(self, low, high):
+                self.low = low
+                self.high = high
+            @constraint.dependent_property
+            def support(self):
+                return constraint.Interval(self.low, self.high)
+    """
+    pass
+
+
 class Real(Constraint):
     """
     Constrain to be a real number. (exclude `np.nan`)
@@ -110,3 +138,6 @@ class Positive(GreaterThan):
     """
     def __init__(self):
         super(Positive, self).__init__(0)
+
+
+dependent_property = _DependentProperty

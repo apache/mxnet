@@ -21,6 +21,8 @@
 __all__ = ['Independent']
 
 from .distribution import Distribution
+from .constraint import dependent_property
+from .utils import sum_right_most
 
 
 class Independent(Distribution):
@@ -31,27 +33,24 @@ class Independent(Distribution):
     arg_constraints = {}
 
     def __init__(self, base_distribution, reinterpreted_batch_ndims, validate_args=None):
-        if reinterpreted_batch_ndims > len(base_distribution.batch_shape):
-            raise ValueError("Expected reinterpreted_batch_ndims <= len(base_distribution.batch_shape), "
-                             "actual {} vs {}".format(reinterpreted_batch_ndims,
-                                                      len(base_distribution.batch_shape)))
-        shape = base_distribution.batch_shape + base_distribution.event_shape
-        event_dim = reinterpreted_batch_ndims + len(base_distribution.event_shape)
-        batch_shape = shape[:len(shape) - event_dim]
-        event_shape = shape[len(shape) - event_dim:]
+        event_dim = reinterpreted_batch_ndims + base_distribution.event_dim
         self.base_dist = base_distribution
         self.reinterpreted_batch_ndims = reinterpreted_batch_ndims
-        super(Independent, self).__init__(batch_shape, event_shape, validate_args=validate_args)
+        super(Independent, self).__init__(F=base_distribution.F,
+                                          event_dim=event_dim,
+                                          validate_args=validate_args)
 
-    def expand(self, batch_shape, _instance=None):
-        new = self._get_checked_instance(Independent, _instance)
-        batch_shape = torch.Size(batch_shape)
-        new.base_dist = self.base_dist.expand(batch_shape +
-                                              self.event_shape[:self.reinterpreted_batch_ndims])
-        new.reinterpreted_batch_ndims = self.reinterpreted_batch_ndims
-        super(Independent, new).__init__(batch_shape, self.event_shape, validate_args=False)
-        new._validate_args = self._validate_args
-        return new
+    def broadcast_to(self, batch_shape):
+        new_instance = self.__new__(type(self))
+        F = self.F
+        # we use -2 to copy the sizes of reinterpreted batch dimensions
+        reinterpreted_axes = (-2,) * self.reinterpreted_batch_ndims
+        new_instance.base_dist = self.base_dist.broadcast_to(batch_shape + reinterpreted_axes)
+        new_instance.reinterpreted_batch_ndims = self.reinterpreted_batch_ndims
+        super(Independent, new_instance).__init__(F=F, event_dim=self.event_dim,
+                                                  validate_args=False)
+        new_instance._validate_args = self._validate_args
+        return new_instance
 
     @property
     def has_enumerate_support(self):
@@ -59,7 +58,7 @@ class Independent(Distribution):
             return False
         return self.base_dist.has_enumerate_support
 
-    @constraints.dependent_property
+    @dependent_property
     def support(self):
         return self.base_dist.support
 
@@ -71,21 +70,21 @@ class Independent(Distribution):
     def variance(self):
         return self.base_dist.variance
 
-    def sample(self, sample_shape=torch.Size()):
-        return self.base_dist.sample(sample_shape)
+    def sample(self, size=None):
+        return self.base_dist.sample(size)
 
-    def rsample(self, sample_shape=torch.Size()):
-        return self.base_dist.rsample(sample_shape)
+    def sample_n(self, n):
+        return self.base_dist.sample_n(n)
 
     def log_prob(self, value):
         log_prob = self.base_dist.log_prob(value)
-        return _sum_rightmost(log_prob, self.reinterpreted_batch_ndims)
+        return sum_right_most(log_prob, self.reinterpreted_batch_ndims)
 
     def entropy(self):
         entropy = self.base_dist.entropy()
-        return _sum_rightmost(entropy, self.reinterpreted_batch_ndims)
+        return sum_right_most(entropy, self.reinterpreted_batch_ndims)
 
-    def enumerate_support(self, expand=True):
+    def enumerate_support(self):
         if self.reinterpreted_batch_ndims > 0:
             raise NotImplementedError("Enumeration over cartesian product is not implemented")
-        return self.base_dist.enumerate_support(expand=expand)
+        return self.base_dist.enumerate_support()
