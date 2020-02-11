@@ -19,8 +19,6 @@ import os
 import json
 from operator import itemgetter
 
-from collections import ChainMap
-
 import logging
 logging.basicConfig(level=logging.INFO)
 
