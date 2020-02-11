@@ -327,7 +327,7 @@ void NumpyLpNormGradCompute(const nnvm::NodeAttrs& attrs,
         }
       }
       // refer to NumpyNormType()
-      CHECK_EQ(inputs[0].type_flag_ ,outputs[0].type_flag_);
+      CHECK_EQ(inputs[0].type_flag_, outputs[0].type_flag_);
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
         if (dst_shape.ndim() == 2) {
           Tensor<xpu, 2, DType> ograd =
