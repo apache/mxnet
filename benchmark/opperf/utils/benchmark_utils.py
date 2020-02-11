@@ -46,6 +46,56 @@ def _prepare_op_inputs(inputs, run_backward, dtype, ctx):
     return kwargs_list
 
 
+def parse_input_ndarray(input_dict):
+    """Parse input for ndarray and extract array shape for better readability
+
+    Parameters
+    ----------
+    input_dict : dict
+         Dictionary of input
+
+    Input Dictionary
+
+    'inputs': {'weight':
+    [[ 2.2122064   0.7740038   1.0434405   1.1839255   1.8917114 ]
+     [-1.2347414  -1.771029   -0.45138445  0.57938355 -1.856082  ]
+     [-1.9768796  -0.20801921  0.2444218  -0.03716067 -0.48774993]
+     [-0.02261727  0.57461417  1.4661262   0.6862904   0.35496104]
+     [ 1.0731696   0.12017461 -0.9711102  -0.77569664 -0.7882176 ]]
+    <NDArray 5x5 @cpu(0)>, 'grad':
+    [[ 0.7417728  -1.4734439  -1.0730928  -1.0424827  -1.3278849 ]
+     [-1.4749662  -0.52414197  1.2662556   0.8950642  -0.6015945 ]
+     [ 1.2040559  -0.9712193  -0.58256227  0.3717077   0.9300072 ]
+     [-1.4225755  -0.5176199   2.0088325   0.2863085   0.5604595 ]
+     [ 0.96975976 -0.52853745 -1.88909     0.65479124 -0.45481315]]
+    <NDArray 5x5 @cpu(0)>, 'mean':
+    [[ 0.32510808 -1.3002341   0.3679345   1.4534262   0.24154152]
+     [ 0.47898006  0.96885103 -1.0218245  -0.06812762 -0.31868345]
+     [-0.17634277  0.35655284  0.74419165  0.7787424   0.6087823 ]
+     [ 1.0741756   0.06642842  0.8486986  -0.8003802  -0.16882208]
+     [ 0.93632793  0.357444    0.77932847 -1.0103073  -0.39157307]]
+    <NDArray 5x5 @cpu(0)>, 'var':
+    [[ 1.3166187  -0.43292624  0.71535987  0.9254156  -0.90495086]
+     [-0.074684    0.82254    -1.8785107   0.8858836   1.9118724 ]
+     [ 0.33342266  0.11883813 -1.9198899  -0.67558455  1.007749  ]
+     [-0.35391203  1.6323917  -0.33354783 -1.7378405   0.7737382 ]
+     [ 0.89126545  3.2904532  -1.1976235   1.8938874  -0.5669272 ]]
+    <NDArray 5x5 @cpu(0)>, 't': 1, 'wd': 0.1}
+
+    Output
+    {'inputs': {'weight': '<NDArray 5x5 @cpu(0)>', 'grad': '<NDArray 5x5 @cpu(0)>', 'mean': '<NDArray 5x5 @cpu(0)>', 'var': '<NDArray 5x5 @cpu(0)>', 't': 1, 'wd': 0.1}
+    """
+    no_new_line_input_dict=dict()
+    for key,value in input_dict.items():
+        if isinstance(value,nd.NDArray):
+            # if value in input is NDArray then extract last line only
+            val = str(value).split('\n')[-1]
+            no_new_line_input_dict[key]=val
+        else:
+            no_new_line_input_dict[key]=value
+    return no_new_line_input_dict
+
+
 def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler):
     if profiler == 'native':
         if run_backward:
@@ -70,7 +120,9 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kw
         _, profiler_output = benchmark_helper_func(op, runs, **kwargs)
 
         # Add inputs used for profiling this operator into result
-        profiler_output["inputs"] = inputs[idx]
+        # parse input if it contains ndarray, replace with shape info for better markdown readability
+        new_inp=parse_input_ndarray(inputs[idx])
+        profiler_output["inputs"] = new_inp
         op_benchmark_result[op.__name__].append(profiler_output)
     logging.info("Complete Benchmark - {name}".format(name=op.__name__))
     return op_benchmark_result
