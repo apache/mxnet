@@ -73,7 +73,7 @@ class TVMFunctor {
         const NDArray& nd =
             static_cast<NDArray*>(args.values[i].v_handle)[0];
         // We cannot set the value until
-        type_codes_[i] = kArrayHandle;
+        type_codes_[i] = kTVMDLTensorHandle;
         array_data_.push_back(nd);
         array_loc_.push_back(i);
         // check if there is read or mutate
@@ -86,7 +86,7 @@ class TVMFunctor {
           mutate_vars->push_back(nd.var());
         }
       } else {
-        CHECK_LT(args.type_codes[i], kTVMType)
+        CHECK_LT(args.type_codes[i], kTVMDataType)
             << "Only allow POD type in mxnet async call";
       }
     }

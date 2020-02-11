@@ -580,7 +580,7 @@ int MXLoadLib(const char *path) {
     };
 
     // FGradient register lambda
-    auto grad_reg = [=](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto grad_reg = [=](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
         // copy gradients first
         std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
         // copy inputs second
@@ -1541,7 +1541,7 @@ int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out) {
   NDArray *arr = static_cast<NDArray*>(handle);
   NDArray ret = arr->grad();
   if (ret.is_none()) {
-    *out = NULL;
+    *out = nullptr;
   } else {
     *out = new NDArray(ret);
   }
@@ -1623,8 +1623,8 @@ int MXFuncInvoke(FunctionHandle fun,
           scalar_args,
           (NDArray**)(mutate_vars),  //  NOLINT(*)
           0,
-          NULL,
-          NULL);
+          nullptr,
+          nullptr);
   API_END();
 }
 
@@ -1668,7 +1668,7 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
@@ -1865,6 +1865,58 @@ int MXKVStorePullEx(KVStoreHandle handle,
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
   static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority, true);
+  API_END();
+}
+
+int MXKVStoreBroadcast(KVStoreHandle handle,
+                       mx_uint vnum,
+                       const int* vkeys,
+                       mx_uint onum,
+                       const int* okeys,
+                       NDArrayHandle* vals,
+                       NDArrayHandle* outs,
+                       int priority) {
+  API_BEGIN();
+  std::vector<int> v_vkeys(vnum);
+  std::vector<int> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
+  API_END();
+}
+
+int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                         mx_uint vnum,
+                         const char** vkeys,
+                         mx_uint onum,
+                         const char** okeys,
+                         NDArrayHandle* vals,
+                         NDArrayHandle* outs,
+                         int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_vkeys(vnum);
+  std::vector<std::string> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
   API_END();
 }
 
@@ -2143,9 +2195,9 @@ int MXRecordIOWriterCreate(const char *uri,
   dmlc::Stream *stream = dmlc::Stream::Create(uri, "w");
   MXRecordIOContext *context = new MXRecordIOContext;
   context->writer = new dmlc::RecordIOWriter(stream);
-  context->reader = NULL;
+  context->reader = nullptr;
   context->stream = stream;
-  context->read_buff = NULL;
+  context->read_buff = nullptr;
   *out = reinterpret_cast<RecordIOHandle>(context);
   API_END();
 }
@@ -2183,7 +2235,7 @@ int MXRecordIOReaderCreate(const char *uri,
   dmlc::Stream *stream = dmlc::Stream::Create(uri, "r");
   MXRecordIOContext *context = new MXRecordIOContext;
   context->reader = new dmlc::RecordIOReader(stream);
-  context->writer = NULL;
+  context->writer = nullptr;
   context->stream = stream;
   context->read_buff = new std::string();
   *out = reinterpret_cast<RecordIOHandle>(context);
@@ -2210,7 +2262,7 @@ int MXRecordIOReaderReadRecord(RecordIOHandle handle,
     *buf = context->read_buff->c_str();
     *size = context->read_buff->size();
   } else {
-    *buf = NULL;
+    *buf = nullptr;
     *size = 0;
   }
   API_END();

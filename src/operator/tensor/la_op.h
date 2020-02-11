@@ -929,7 +929,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
 template<int onum>
 struct ReduceDetGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[onum - 1]);

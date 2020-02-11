@@ -249,6 +249,7 @@ List of Contributors
 * [Guanxin Qiao](https://github.com/guanxinq)
 * [dithyrambe](https://github.com/dithyrambe)
 * [Piljae Chae](https://github.com/IHateMint)
+* [Oliver Kowalke](https://github.com/olk)
 
 Label Bot
 ---------

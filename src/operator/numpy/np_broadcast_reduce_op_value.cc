@@ -190,6 +190,7 @@ NNVM_REGISTER_OP(_backward_np_max)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesNoDTypeBackward<cpu, mshadow_op::eq>);
 
 NNVM_REGISTER_OP(_np_min)
+.add_alias("_np_amin")
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -494,7 +495,7 @@ NNVM_REGISTER_OP(_npi_broadcast_to)
   })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
+  [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_np_broadcast_to", n, ograds, {}, n->attrs.dict);
   })

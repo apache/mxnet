@@ -179,7 +179,7 @@ NNVM_REGISTER_OP(Pooling)
     // TODO(junwu): Uncomment the following line and remove the above lines
     // after pooling op is refactored
     // const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
-    nnvm::NodePtr node = nnvm::Node::Create();
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     if (param.pool_type == pool_enum::kMaxPooling || param.pool_type == pool_enum::kAvgPooling) {
       node->attrs.op = Op::Get("_contrib_quantized_pooling");
       node->attrs.name = "quantized_" + attrs.name;

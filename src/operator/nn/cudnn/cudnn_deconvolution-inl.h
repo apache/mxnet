@@ -696,7 +696,7 @@ class CuDNNDeconvolutionOp {
 
   // Converts a TBlob to a dptr, checking for the expected dim and that it's contiguous.
   DType *GetNdPtr(const TBlob& tb, int dim, Stream<gpu> *s) {
-    DType *data_ptr = NULL;
+    DType *data_ptr = nullptr;
     if (dim == 3) {
       Tensor<gpu, 3, DType> data = tb.get<gpu, 3, DType>(s);
       CHECK_EQ(data.CheckContiguous(), true);

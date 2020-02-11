@@ -116,6 +116,14 @@ else()
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
 
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+  set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
+  # Enforce DT_PATH instead of DT_RUNPATH
+  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+endif()
+
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
@@ -129,6 +137,7 @@ endif()
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 # disable stack trace in exception by default.
 add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
+add_definitions(-DDMLC_LOG_FATAL_THROW=1)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -315,6 +324,10 @@ if(USE_MKLDNN)
   set(INSTALL_MKLDNN ON)
 endif()
 
+if(USE_CPP_PACKAGE)
+    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
+endif()
+
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -431,11 +444,11 @@ if(USE_OPENMP)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
   endfunction()
 
-  find_package(OpenMP REQUIRED)
   # This should build on Windows, but there's some problem and I don't have a Windows box, so
   # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
+     AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
      AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
@@ -448,6 +461,7 @@ if(USE_OPENMP)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
     add_definitions(-DMXNET_USE_OPENMP=1)
   else()
+    find_package(OpenMP REQUIRED)
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -465,7 +479,9 @@ endif()
 if(USE_LAPACK)
   message("USE_LAPACK is ON")
   add_definitions(-DMXNET_USE_LAPACK=1)
-  if (NOT MSVC)
+  # In the CMAKE_BUILD_TYPE="Distribution" case, we link against Blas libraries
+  # that already provide lapack symbols. Thus -llapack would be wrong.
+  if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
     list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
 endif()
@@ -854,7 +870,6 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
   set_target_properties(mxnet PROPERTIES OUTPUT_NAME "libmxnet")
 endif()
 
-add_subdirectory(tests)
 
 include(GNUInstallDirs)
 install(TARGETS ${MXNET_INSTALL_TARGETS}
@@ -916,6 +931,7 @@ endif()
 if(BUILD_CPP_EXAMPLES)
   add_subdirectory(example/image-classification/predict-cpp)
 endif()
+add_subdirectory(tests)
 
 # ---[ Linter target
 if(MSVC)
@@ -928,7 +944,6 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
-  add_cython_modules(2) # Build cython module for python2 if python2 is found
   add_cython_modules(3) # Build cython module for python3 if python3 is found
   if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
     message(FATAL_ERROR "No python interpreter found to build cython modules")

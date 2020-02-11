@@ -20,7 +20,7 @@
 
 When working on machine learning problems, you may encounter situations where the input data is sparse (i.e. the majority of values are zero). One example of this is in recommendation systems. You could have millions of user and product features, but only a few of these features are present for each sample. Without special treatment, the sheer magnitude of the feature space can lead to out-of-memory situations and cause significant slowdowns when training and making predictions.
 
-MXNet supports a number of sparse storage types (often called 'stype' for short) for these situations. In this tutorial, we'll start by generating some sparse data, write it to disk in the LibSVM format and then read back using the [`LibSVMIter`](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) for training. We use the Gluon API to train the model and leverage sparse storage types such as [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) and [`RowSparseNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.RowSparseNDArray) to maximise performance and memory efficiency.
+MXNet supports a number of sparse storage types (often called `stype` for short) for these situations. In this tutorial, we'll start by generating some sparse data, write it to disk in the LibSVM format and then read back using the [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) for training. We use the Gluon API to train the model and leverage sparse storage types such as [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) and [RowSparseNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.RowSparseNDArray) to maximise performance and memory efficiency.
 
 
 ```python
@@ -63,7 +63,7 @@ print('{:,.0f} non-zero elements'.format(data.data.size))
 10,000 non-zero elements
 ```
 
-Our storage type is CSR (Compressed Sparse Row) which is the ideal type for sparse data along multiple axes. See [this in-depth tutorial](https://mxnet.apache.org/versions/master/tutorials/sparse/csr.html) for more information. Just to confirm the generation process ran correctly, we can see that the vast majority of values are indeed zero. One of the first questions to ask would be how much memory is saved by storing this data in a [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) versus a standard [`NDArray`](/api/python/docs/api/ndarray/ndarray.html#module-mxnet.ndarray). Since sparse arrays are constructed from many components (e.g. `data`, `indices` and `indptr`) we define a function called `get_nbytes` to calculate the number of bytes taken in memory to store an array. We compare the same data stored in a standard [`NDArray`](/api/python/docs/api/ndarray/ndarray.html#module-mxnet.ndarray) (with `data.tostype('default')`) to the [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray).
+Our storage type is CSR (Compressed Sparse Row) which is the ideal type for sparse data along multiple axes. See [this in-depth tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/csr.html) for more information. Just to confirm the generation process ran correctly, we can see that the vast majority of values are indeed zero. One of the first questions to ask would be how much memory is saved by storing this data in a [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) versus a standard [NDArray](/api/python/docs/api/ndarray/ndarray.html#module-mxnet.ndarray). Since sparse arrays are constructed from many components (e.g. `data`, `indices` and `indptr`) we define a function called `get_nbytes` to calculate the number of bytes taken in memory to store an array. We compare the same data stored in a standard [NDArray](/api/python/docs/api/ndarray/ndarray.html#module-mxnet.ndarray) (with `data.tostype('default')`) to the [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray).
 
 
 ```python
@@ -94,9 +94,9 @@ Given the extremely high sparsity of the data, we observe a huge memory saving h
 
 ### Writing Sparse Data
 
-Since there is such a large size difference between dense and sparse storage formats here, we ideally want to store the data on disk in a sparse storage format too. MXNet supports a format called LibSVM and has a data iterator called [`LibSVMIter`](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) specifically for data formatted this way.
+Since there is such a large size difference between dense and sparse storage formats here, we ideally want to store the data on disk in a sparse storage format too. MXNet supports a format called LibSVM and has a data iterator called [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) specifically for data formatted this way.
 
-A LibSVM file has a row for each sample, and each row starts with the label: in this case `0.0` or `1.0` since we have a classification task. After this we have a variable number of `key:value` pairs separated by spaces, where the key is column/feature index and the value is the value of that feature. When working with your own sparse data in a custom format you should try to convert your data into this format. We define a `save_as_libsvm` function to save the `data` ([`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray)) and `label` (`NDArray`) to disk in LibSVM format.
+A LibSVM file has a row for each sample, and each row starts with the label: in this case `0.0` or `1.0` since we have a classification task. After this we have a variable number of `key:value` pairs separated by spaces, where the key is column/feature index and the value is the value of that feature. When working with your own sparse data in a custom format you should try to convert your data into this format. We define a `save_as_libsvm` function to save the `data` ([CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray)) and `label` (`NDArray`) to disk in LibSVM format.
 
 
 ```python
@@ -148,9 +148,9 @@ Some storage overhead is introduced by serializing the data as characters (with 
 
 ### Reading Sparse Data
 
-Using [`LibSVMIter`](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter), we can quickly and easily load data into batches ready for training. Although Gluon [`Dataset`](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset)s can be written to return sparse arrays, Gluon [`DataLoader`](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader)s currently convert each sample to dense before stacking up to create the batch. As a result, [`LibSVMIter`](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) is the recommended method of loading sparse data in batches.
+Using [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter), we can quickly and easily load data into batches ready for training. Although Gluon [Dataset](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset)s can be written to return sparse arrays, Gluon [DataLoader](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader)s currently convert each sample to dense before stacking up to create the batch. As a result, [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) is the recommended method of loading sparse data in batches.
 
-Similar to using a [`DataLoader`](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader), you must specify the required `batch_size`. Since we're dealing with sparse data and the column shape isn't explicitly stored in the LibSVM file, we additionally need to provide the shape of the data and label. Our [`LibSVMIter`](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) returns batches in a slightly different form to a [`DataLoader`](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader). We get `DataBatch` objects instead of `tuple`. 
+Similar to using a [DataLoader](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader), you must specify the required `batch_size`. Since we're dealing with sparse data and the column shape isn't explicitly stored in the LibSVM file, we additionally need to provide the shape of the data and label. Our [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) returns batches in a slightly different form to a [DataLoader](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader). We get `DataBatch` objects instead of `tuple`. 
 
 ```python
 data_iter = mx.io.LibSVMIter(data_libsvm=filepath, data_shape=(num_features,), label_shape=(1,), batch_size=10)
@@ -214,7 +214,7 @@ Although results will change depending on system specifications and degree of sp
 
 Our next step is to define a network. We have an input of 1,000,000 features and we want to make a binary prediction. We don't have any spatial or temporal relationships between features, so we'll use a 3 layer fully-connected network where the last layer has 1 output unit (with sigmoid activation). Since we're working with sparse data, we'd ideally like to use network operators that can exploit this sparsity for improved performance and memory efficiency.
 
-Gluon's [`nn.Dense`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) block can used with [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input arrays but it doesn't exploit the sparsity. Under the hood, [`Dense`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) uses the [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator which isn't optimized for [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) arrays. We'll implement a `Block` that does exploit this sparsity, *but first*, let's just remind ourselves of the [`Dense`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) implementation by creating an equivalent `Block` called `FullyConnected`.
+Gluon's [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) block can used with [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input arrays but it doesn't exploit the sparsity. Under the hood, [Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) uses the [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator which isn't optimized for [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) arrays. We'll implement a `Block` that does exploit this sparsity, *but first*, let's just remind ourselves of the [Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) implementation by creating an equivalent `Block` called `FullyConnected`.
 
 
 ```python
@@ -234,11 +234,11 @@ class FullyConnected(mx.gluon.HybridBlock):
         return F.FullyConnected(x, weight, bias, num_hidden=self._units)
 ```
 
-Our `weight` and `bias` parameters are dense (see `stype='default'`) and so are their gradients (see `grad_stype='default'`). Our `weight` parameter has shape `(units, in_units)` because the [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator performs the following calculation:
+Our `weight` and `bias` parameters are dense (see `stype='default'`) and so are their gradients (see `grad_stype='default'`). Our `weight` parameter has shape `(units, in_units)` because the [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator performs the following calculation:
 
 $$Y = XW^T + b$$
 
-We could instead have created our parameter with shape `(in_units, units)` and avoid the transpose of the weight matrix. We'll see why this is so important later on. And instead of [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) we could have used [`mx.sparse.dot`](/api/python/docs/api/ndarray/sparse/index.html?#mxnet.ndarray.sparse.dot) to fully exploit the sparsity of the [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input arrays. We'll now implement an alternative `Block` called `FullyConnectedSparse` using these ideas. We take `grad_stype` of the `weight` as an argument (called `weight_grad_stype`), since we're going to change this later on.
+We could instead have created our parameter with shape `(in_units, units)` and avoid the transpose of the weight matrix. We'll see why this is so important later on. And instead of [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) we could have used [mx.sparse.dot](/api/python/docs/api/ndarray/sparse/index.html?#mxnet.ndarray.sparse.dot) to fully exploit the sparsity of the [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input arrays. We'll now implement an alternative `Block` called `FullyConnectedSparse` using these ideas. We take `grad_stype` of the `weight` as an argument (called `weight_grad_stype`), since we're going to change this later on.
 
 
 ```python
@@ -260,7 +260,7 @@ class FullyConnectedSparse(mx.gluon.HybridBlock):
 
 Once again, we're using a dense `weight`, so both `FullyConnected` and `FullyConnectedSparse` will return dense array outputs. When constructing a multi-layer network therefore, only the first layer needs to be optimized for sparse inputs. Our first layer is often responsible for reducing the feature dimension dramatically (e.g. 1,000,000 features down to 128 features). We'll set the number of units in our 3 layers to be 128, 8 and 1.
 
-We will use [`timeit`](https://docs.python.org/2/library/timeit.html) to check the performance of these two variants, and analyse some [MXNet Profiler](/api/python/docs/tutorials/performance/backend/profiler.html) traces that have been created from these benchmarks. Additionally, we will inspect the memory usage of the weights (and gradients) using the `print_memory_allocation` function defined below:
+We will use [timeit](https://docs.python.org/2/library/timeit.html) to check the performance of these two variants, and analyse some [MXNet Profiler](/api/python/docs/tutorials/performance/backend/profiler.html) traces that have been created from these benchmarks. Additionally, we will inspect the memory usage of the weights (and gradients) using the `print_memory_allocation` function defined below:
 
 
 ```python
@@ -323,7 +323,7 @@ for batch in data_iter:
 
 ![fully connected](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected.png)
 
-We can see the first [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator takes a significant proportion of time to execute (~25% of the iteration) because there are 1,000,000 input features (to 128). After this, the other [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operators are much faster because they have input features of 128 (to 8) and 8 (to 1). On the backward pass, we see the same pattern (but in reverse). And finally, the parameter update step takes a large amount of time on the weight matrix of the first `FullyConnected` `Block`. When checking the memory allocations below, we can see the weight matrix of the first `FullyConnected` `Block` is responsible for 99.999% of the memory compared to other [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) weight matrices.
+We can see the first [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator takes a significant proportion of time to execute (~25% of the iteration) because there are 1,000,000 input features (to 128). After this, the other [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operators are much faster because they have input features of 128 (to 8) and 8 (to 1). On the backward pass, we see the same pattern (but in reverse). And finally, the parameter update step takes a large amount of time on the weight matrix of the first `FullyConnected` `Block`. When checking the memory allocations below, we can see the weight matrix of the first `FullyConnected` `Block` is responsible for 99.999% of the memory compared to other [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) weight matrices.
 
 
 ```python
@@ -383,7 +383,7 @@ for batch in data_iter:
 
 ![fully connected sparse](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse.png)
 
-We see the forward pass of `dot` and `add` (equivalent to [`FullyConnected`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator) is much faster now: 1.54ms vs 0.26ms. And this explains the reduction in overall time for the epoch. We didn't gain any benefit on the backward pass or parameter updates though.
+We see the forward pass of `dot` and `add` (equivalent to [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator) is much faster now: 1.54ms vs 0.26ms. And this explains the reduction in overall time for the epoch. We didn't gain any benefit on the backward pass or parameter updates though.
 
 ![fully connected sparse backward](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/ndarray/sparse/fully_connected_sparse_backward.png)
 
@@ -407,7 +407,7 @@ Memory Allocation for Weight Gradient:
 
 ### Benchmark: `FullyConnectedSparse` with `grad_stype=row_sparse` 
 
-One useful outcome of sparsity in our [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input is that our gradients will be row sparse. We can exploit this fact to give us potentially huge memory savings and speed improvements. Creating our `weight` parameter with shape `(units, in_units)` and not transposing in the forward pass are important pre-requisite for obtaining row sparse gradients. Using [`nn.Dense`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) would have led to column sparse gradients which are not supported in MXNet. We previously had `grad_stype` of the `weight` parameter in the first layer set to `'default'` so we were handling the gradient as a dense array. Switching this to `'row_sparse'` can give us these potential improvements.
+One useful outcome of sparsity in our [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input is that our gradients will be row sparse. We can exploit this fact to give us potentially huge memory savings and speed improvements. Creating our `weight` parameter with shape `(units, in_units)` and not transposing in the forward pass are important pre-requisite for obtaining row sparse gradients. Using [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) would have led to column sparse gradients which are not supported in MXNet. We previously had `grad_stype` of the `weight` parameter in the first layer set to `'default'` so we were handling the gradient as a dense array. Switching this to `'row_sparse'` can give us these potential improvements.
 
 
 ```python
@@ -467,16 +467,16 @@ Memory Allocation for Weight Gradient:
 
 ### Advanced: Sparse `weight`
 
-You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [`contrib.SparseEmbedding `](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
+You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [contrib.SparseEmbedding](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
 
 ## Conclusion
 
-As part of this tutorial, we learned how to write sparse data to disk in LibSVM format and load it back in sparse batches with the [`LibSVMIter`](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter). We learned how to improve the performance of Gluon's [`nn.Dense`](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) on sparse arrays using `mx.nd.sparse`. And lastly, we set `grad_stype` to `'row_sparse'` to reduce the size of the gradient and speed up the parameter update step.
+As part of this tutorial, we learned how to write sparse data to disk in LibSVM format and load it back in sparse batches with the [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter). We learned how to improve the performance of Gluon's [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) on sparse arrays using `mx.nd.sparse`. And lastly, we set `grad_stype` to `'row_sparse'` to reduce the size of the gradient and speed up the parameter update step.
 
 ## Recommended Next Steps
 
-* More detail on the [`CSRNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) sparse array format can be found in [this tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/csr.html).
-* More detail on the [`RowSparseNDArray`](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.RowSparseNDArray) sparse array format can be found in [this tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/row_sparse.html).
+* More detail on the [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) sparse array format can be found in [this tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/csr.html).
+* More detail on the [RowSparseNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.RowSparseNDArray) sparse array format can be found in [this tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/row_sparse.html).
 * Users of the Module API can see a symbolic only example in [this tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/train.html).
 
 <!-- INSERT SOURCE DOWNLOAD BUTTONS -->

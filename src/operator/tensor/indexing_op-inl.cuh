@@ -43,10 +43,10 @@ const int kWarpSize = 32;
 
 template<int SZ, typename DType, typename IdxType>
 __global__ void AddTakeGradLargeBatchKernel(DType* dst,
-                                           // If idx_start == NULL, then in-kernel edge
+                                           // If idx_start == nullptr, then in-kernel edge
                                            // detection is used
                                            const IdxType *idx_start,
-                                           // idx_start_size_ptr ignored if idx_start == NULL
+                                           // idx_start_size_ptr ignored if idx_start == nullptr
                                            const int* idx_start_size_ptr,
                                            const IdxType *sorted, const IdxType *index,
                                            const DType *src,
@@ -55,14 +55,14 @@ __global__ void AddTakeGradLargeBatchKernel(DType* dst,
   extern __shared__ char sh_grad_weight_char[];
   DType* sh_grad_weight = (DType*)sh_grad_weight_char;
 
-  int iidx_end = (idx_start == NULL) ? ymax : *idx_start_size_ptr;
+  int iidx_end = (idx_start == nullptr) ? ymax : *idx_start_size_ptr;
 
   for (int iidx = blockIdx.y;iidx < iidx_end;iidx += gridDim.y) {
 
     // Thread block sums up elements in the range [idx_begin, idx_end-1]
     int idx_begin, idx_end;
     int sorted_value;
-    if (idx_start == NULL) {
+    if (idx_start == nullptr) {
       idx_begin = iidx;
       sorted_value = static_cast<int>(sorted[idx_begin]);
       if (idx_begin > 0 && sorted_value == static_cast<int>(sorted[idx_begin - 1])) continue;
@@ -191,10 +191,10 @@ inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
 AddTakeGradLargeBatchWorkspaceSize(size_t num_keys) {
   size_t encode_bytes = 0;
   cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
-    (NULL, encode_bytes, NULL, NULL, NULL, NULL, num_keys);
+    (nullptr, encode_bytes, nullptr, nullptr, nullptr, nullptr, num_keys);
   size_t exclusivesum_bytes = 0;
-  cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>(NULL, exclusivesum_bytes,
-    NULL, NULL, num_keys);
+  cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>(nullptr, exclusivesum_bytes,
+    nullptr, nullptr, num_keys);
   size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
   size_t unique_bytes = num_keys*sizeof(IndexType);
   size_t counts_bytes = num_keys*sizeof(IndexType);
@@ -274,16 +274,16 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
                                   const mshadow::Tensor<gpu, 1, IndexType>& sorted,
                                   const mshadow::Tensor<gpu, 1, IndexType>& index,
                                   const mshadow::Tensor<gpu, 2, DType> &src,
-                                  mshadow::Tensor<gpu, 1, char>* workspace = NULL) {
+                                  mshadow::Tensor<gpu, 1, char>* workspace = nullptr) {
   CHECK_EQ(dst.CheckContiguous(), true);
   CHECK_EQ(sorted.CheckContiguous(), true);
   CHECK_EQ(index.CheckContiguous(), true);
   CHECK_EQ(src.CheckContiguous(), true);
   // const int kWarpBits = kMemUnitBits;
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(dst.stream_);
-  IndexType* sum_counts_ptr = NULL;
-  int* num_runs_ptr = NULL;
-  if (dst.size(0)*4 < src.size(0) && workspace != NULL) {
+  IndexType* sum_counts_ptr = nullptr;
+  int* num_runs_ptr = nullptr;
+  if (dst.size(0)*4 < src.size(0) && workspace != nullptr) {
     // Workspace given and potentially loops at least 4 times, use CUB to create sum_counts
     CHECK_EQ(workspace->CheckContiguous(), true);
     // workspace = [unique_out, counts_out, temporary_storage]
@@ -293,10 +293,10 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<gpu, 2, DType> dst,
 
     size_t encode_bytes = 0;
     cub::DeviceRunLengthEncode::Encode<IndexType*, IndexType*, IndexType*, int*>
-      (NULL, encode_bytes, NULL, NULL, NULL, NULL, sorted.size(0), stream);
+      (nullptr, encode_bytes, nullptr, nullptr, nullptr, nullptr, sorted.size(0), stream);
     size_t exclusivesum_bytes = 0;
     cub::DeviceScan::ExclusiveSum<IndexType*, IndexType*>
-      (NULL, exclusivesum_bytes, NULL, NULL, sorted.size(0), stream);
+      (nullptr, exclusivesum_bytes, nullptr, nullptr, sorted.size(0), stream);
     size_t temporary_bytes = std::max(encode_bytes, exclusivesum_bytes);
 
     // Check that we have enough storage

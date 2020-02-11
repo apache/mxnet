@@ -1366,10 +1366,23 @@ MXNET_DLL int MXCreateCachedOpEx(SymbolHandle handle,
                                  const char** keys,
                                  const char** vals,
                                  CachedOpHandle *out);
+
+/*!
+ * \brief create cached operator, allows to choose thread_safe version
+ * of cachedop
+ */
+MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
+                                 int num_flags,
+                                 const char** keys,
+                                 const char** vals,
+                                 CachedOpHandle *out,
+                                 bool thread_safe DEFAULT(false));
+
 /*!
  * \brief free cached operator
  */
 MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
+
 /*!
  * \brief invoke cached operator
  */
@@ -1378,6 +1391,7 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
                                NDArrayHandle *inputs,
                                int *num_outputs,
                                NDArrayHandle **outputs);
+
 /*!
  * \brief invoke a cached op
  * \param handle the handle to the cached op
@@ -1730,7 +1744,7 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
  * \brief DEPRECATED. Use MXSymbolInferShapeEx instead.
  * infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1768,7 +1782,7 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
@@ -1807,7 +1821,7 @@ MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  * \param sym symbol handle
@@ -1849,7 +1863,7 @@ MXNET_DLL int MXSymbolInferShapeEx64(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1889,7 +1903,7 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  *
@@ -1931,7 +1945,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  *
@@ -1971,7 +1985,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx64(SymbolHandle sym,
 /*!
  * \brief infer type of unknown input types given the known one.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -2003,7 +2017,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  *
  *  Return partially inferred results if not all types could be inferred.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -2825,6 +2839,48 @@ MXNET_DLL int MXKVStorePullRowSparseEx(KVStoreHandle handle,
                                        NDArrayHandle* vals,
                                        const NDArrayHandle* row_ids,
                                        int priority);
+
+/*!
+ * \brief broadcast a list of (key, value) pairs from the kvstore
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcast(KVStoreHandle handle,
+                                 mx_uint vnum,
+                                 const int* vkeys,
+                                 mx_uint onum,
+                                 const int* okeys,
+                                 NDArrayHandle* vals,
+                                 NDArrayHandle* outs,
+                                 int priority);
+/*!
+ * \brief broadcast a list of (key, value) pairs from the kvstore,
+ * where each key is a string
+ * \param handle handle to the kvstore
+ * \param vnum the number of key-value pairs corresponding to vkeys
+ * \param vkeys the list of keys for the values to be pushed
+ * \param onum the number of key-value pairs corresponding to okeys
+ * \param okeys the list of keys for the values to be pulled
+ * \param vals the list of values
+ * \param outs the list of outputs
+ * \param priority the priority of the action
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                                   mx_uint vnum,
+                                   const char** vkeys,
+                                   mx_uint onum,
+                                   const char** okeys,
+                                   NDArrayHandle* vals,
+                                   NDArrayHandle* outs,
+                                   int priority);
 
 /*!
  * \brief push and pull a list of (key, value) pairs from the kvstore

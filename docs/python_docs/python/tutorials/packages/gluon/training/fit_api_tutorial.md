@@ -169,7 +169,7 @@ You can create a custom handler by inheriting one or multiple
 
 ### Custom Event Handler
 
-Here we will showcase an example custom event handler the inherits features from a few base handler classes.
+Here we will showcase an example custom event handler that inherits features from a few base handler classes.
 Our custom event handler is a simple one: record the loss values at the end of every epoch in our training phase.
 
 Note: For each of the method, the `Estimator` object is passed along, so you can access training metrics.

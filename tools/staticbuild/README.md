@@ -20,16 +20,31 @@
 This folder contains the core script used to build the static library. This README provides information on how to use the scripts in this folder. Please be aware, all of the scripts are designed to be run under the root folder.
 
 ## `build.sh`
-This script is a wrapper around `build_lib.sh. It simplifies the things by automatically identifing the system version, number of cores, and all environment variable settings. Here are examples you can run with this script:
+This script is a wrapper around `build_lib.sh. It simplifies the build by
+automatically identifing the system version, number of cores, and all
+environment variable settings. Here are examples you can run with this script:
 
 ```
-tools/staticbuild/build.sh cu92
+tools/staticbuild/build.sh cu102
 ```
-This would build the mxnet package based on CUDA9.2.
+
+This would build the mxnet package based on CUDA 10.2.
+
 ```
-tools/staticbuild/build.sh mkl
+tools/staticbuild/build.sh cpu
 ```
-This would build the mxnet package based on MKLDNN and and pypi configuration settings.
+
+This would build the mxnet package based on MKLDNN.
+
+To use CMake to build the `libmxnet.so` instead of the deprecated Makefile based
+build logic, set the `CMAKE_STATICBUILD` environment variable. For example
+
+```
+CMAKE_STATICBUILD=1 tools/staticbuild/build.sh cpu
+```
+
+For the CMake build, you need to install `patchelf` first, for example via `apt
+install patchelf` on Ubuntu systems.
 
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 
