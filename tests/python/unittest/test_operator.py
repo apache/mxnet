@@ -7083,7 +7083,6 @@ def test_dropout():
         assert_almost_equal(a.grad.asnumpy(), mx.nd.ones_like(b).asnumpy())
 
     shape = (100, 100)
-
     check_dropout_ratio(0.5, shape)
     check_dropout_ratio(0.0, shape)
     check_dropout_ratio(1.0, shape)

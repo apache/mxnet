@@ -34,7 +34,6 @@
 #include <string>
 #include <utility>
 #include <algorithm>
-#include <bitset>
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../random/sampler.h"
@@ -139,17 +138,38 @@ class DropoutOp {
     BernoulliGenerate(*pgen, count, this->pkeep_, mkl_mask);
     const float pk_1 = 1.0f / this->pkeep_;
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    const int nblk = count / 64;
+
 #pragma omp parallel for num_threads(nthr) schedule(static, 8)
-    for (index_t i = 0; i < count; ++i) {
-      outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
-      auto mask_idx = i >> 3;  // div 8
-      uint8_t mask_offset = i & 7;  // mod 8
-      if (mkl_mask[i]) {
-        // set bit
-        mask.dptr_[mask_idx] |= 1U << mask_offset;
-      } else {
-        // clear bit
-        mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+    for (index_t nb = 0; nb < nblk; ++nb) {
+      for (index_t k = 0; k < 64; ++k) {
+        const index_t i = nb * 64 + k;
+        outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+        auto mask_idx = i >> 3;  // div 8
+        uint8_t mask_offset = i & 7;  // mod 8
+        if (mkl_mask[i]) {
+          // set bit
+          mask.dptr_[mask_idx] |= 1U << mask_offset;
+        } else {
+          // clear bit
+          mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+        }
+      }
+    }
+
+    // tail
+    if (nblk * 64 < count) {
+      for (index_t i = nblk * 64; i < count; ++i) {
+        outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+        auto mask_idx = i >> 3;  // div 8
+        uint8_t mask_offset = i & 7;  // mod 8
+        if (mkl_mask[i]) {
+          // set bit
+          mask.dptr_[mask_idx] |= 1U << mask_offset;
+        } else {
+          // clear bit
+          mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+        }
       }
     }
   }
