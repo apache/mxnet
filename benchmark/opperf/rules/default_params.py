@@ -31,7 +31,7 @@ DEFAULT_ARGS = [(1024, 1024)]
 
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
-DEFAULT_DTYPE = ['float32']  # required param for amp_cast
+DEFAULT_DTYPE = ['int32'] # required parameter for amp_cast, cast
 
 # For Binary miscellaneous operators like choose_element0_index
 # argument data must be indexed via an NDArray.
@@ -90,6 +90,8 @@ DEFAULT_D = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_V = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Z = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_G = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_R1 = [(1, 1024), (1, 1), (1, 100)]
+DEFAULT_R2 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LRS = [(0.1, 0.1)]
 DEFAULT_LR = [0.1, 0.5, 0.9]
@@ -145,7 +147,8 @@ DEFAULT_AXES = [[0, 1]]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
-                   "dtype": DEFAULT_DTYPE,
+                   "dtype_cast": DEFAULT_DTYPE,
+                   "dtype_amp_cast": DEFAULT_DTYPE,
                    "sample": DEFAULT_SAMPLE,
                    "lhs": DEFAULT_LHS,
                    "rhs": DEFAULT_RHS,
@@ -171,6 +174,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "mean": DEFAULT_MEAN,
                    "var": DEFAULT_VAR,
                    "mom": DEFAULT_MOM,
+                   "r1": DEFAULT_R1,
+                   "r2": DEFAULT_R2,
                    "n": DEFAULT_N,
                    "d": DEFAULT_D,
                    "v": DEFAULT_V,
@@ -235,4 +240,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
-                          "A", "B", "C"]
+                          "A", "B", "C","r1","r2"]

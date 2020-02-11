@@ -117,8 +117,8 @@ def prepare_op_inputs(op, arg_params):
 
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
-    
-    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
+
+    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian', 'amp_cast', 'cast']
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -324,8 +324,8 @@ def get_all_optimizer_operators():
      """
     optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
                      'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
-                     'adam_update', 'mp_nag_mom_update', 'nag_mom_update', 'lamb_update_phase_1',
-                     'lamb_update_phase_2']
+                     'adam_update', 'mp_nag_mom_update', 'nag_mom_update', 'lamb_update_phase1',
+                     'lamb_update_phase2']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
