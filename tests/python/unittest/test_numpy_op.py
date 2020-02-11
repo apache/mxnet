@@ -1419,6 +1419,62 @@ def test_np_argsort():
 
 @with_seed()
 @use_np
+def test_np_sort():
+    class TestSort(HybridBlock):
+        def __init__(self, axis, kind):
+            super(TestSort, self).__init__()
+            self._axis = axis
+            self._kind = kind
+
+        def hybrid_forward(self, F, x, *args, **kwargs):
+            return F.np.sort(x, self._axis, self._kind)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float32, np.float64]
+    shapes = [
+        (),
+        (1,),
+        (5,),
+        (4, 3),
+        (3, 5),
+        (4, 4),
+        (4, 5),
+        (5, 5),
+        (5, 6),
+        (6, 6),
+        (0, 1),
+        (6, 5, 6),
+        (2, 3, 3, 4),
+        (4, 2, 1, 2),
+        (0, 5, 3, 3),
+        (5, 0, 3, 3),
+        (3, 3, 0, 0),
+    ]
+    flags = [True, False]
+    # Not include 'stable' as some old numpy versions do not support it
+    kind_list = ['quicksort', 'mergesort', 'heapsort']
+
+    for dtype, shape, hybridize, kind in itertools.product(dtypes, shapes, flags, kind_list):
+        a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
+        axis_list = list(range(len(shape)))
+        axis_list.append(None)
+        axis_list.append(-1)
+        for axis in axis_list:
+            test = TestSort(axis, kind)
+            if hybridize:
+                test.hybridize()
+            if axis == -1 and len(shape)==0:
+                continue
+            ret = test(a)
+            expected_ret = _np.sort(a.asnumpy(), axis, kind)
+            assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+            # check imperative again
+            ret = np.sort(a, axis, kind)
+            assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_np_squeeze():
     config = [((), None),
               ((), -1),
@@ -3579,19 +3635,25 @@ def test_np_exponential():
         def hybrid_forward(self, F, scale):
             return F.np.random.exponential(scale, self._shape)
 
-    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
     for hybridize in [False, True]:
-        for shape in shapes:
-            test_exponential = TestRandomExp(shape)
+        for out_shape in output_shapes:
+            test_exponential_grad = TestRandomExp(out_shape)
             if hybridize:
-                test_exponential.hybridize()
-            np_out = _np.random.exponential(size = shape)
-            mx_out = test_exponential(np.array([1]))
-    
-    for shape in shapes:
-        mx_out = np.random.exponential(np.array([1]), shape)
-        np_out = _np.random.exponential(np.array([1]).asnumpy(), shape)
-        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+                test_exponential_grad.hybridize()
+            scale = np.ones(out_shape)
+            scale.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_exponential_grad(scale)
+            np_out = _np.random.exponential(scale = scale.asnumpy(), size = out_shape)
+            assert_almost_equal(np_out.shape, mx_out.shape)
+            mx_out.backward()
+            assert scale.grad.shape == out_shape
+            assert_almost_equal(scale.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
 
     def _test_exponential_exception(scale):
         output = np.random.exponential(scale=scale).asnumpy()
