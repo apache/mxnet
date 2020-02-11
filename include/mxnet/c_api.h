@@ -2785,6 +2785,20 @@ MXNET_DLL int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
                                       const char ***arg_type_infos,
                                       const char ***arg_descriptions);
 /*!
+ * \brief Invoke the Batchify Function
+ * \param handle the handle pointer to the batchify function
+ * \param batch_size the batch size
+ * \param num_output the number of ndarrays for output
+ * \param inputs the pointers to input ndarrays
+ * \param inputs the pointers to output ndarrays
+ * \return 0 when success, -1 when failure happens
+ */                                      
+MXNET_DLL int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
+                                       int batch_size,
+                                       int num_output,
+                                       NDArrayHandle **inputs,
+                                       NDArrayHandle **outputs);
+/*!
  * \brief Free the handle to the IO module
  * \param handle the handle pointer to the batchify function
  * \return 0 when success, -1 when failure happens

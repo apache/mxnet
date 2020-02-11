@@ -1917,6 +1917,48 @@ int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
                                  arg_names, arg_type_infos, arg_descriptions,
                                  NULL);
 }
+int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
+                             int batch_size,
+                             int num_output,
+                             NDArrayHandle **inputs,
+                             NDArrayHandle **outputs) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  API_BEGIN();
+  CHECK_GT(batch_size, 0);
+  CHECK_GT(num_output, 0);
+  std::vector<std::vector<NDArray> > ndinputs;
+  ndinputs.reserve(batch_size);
+  for (int i = 0; i < batch_size; ++i) {
+    ndinputs[i].reserve(num_output);
+    for (int j = 0; j < num_output; ++j) {
+      ndinputs[i].emplace_back(*reinterpret_cast<NDArray*>(inputs[i][j]));
+    }
+  }
+  auto res = (*static_cast<BatchifyFunctionPtr*>(handle))->Batchify(ndinputs);
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(res.size());
+  if (*outputs == nullptr) {
+    for (int i = 0; i < num_output; ++i) ndoutputs.push_back(new NDArray(res[i], 0));
+  } else {
+    CHECK_EQ(num_output, res.size())
+        << "MXBatchifyFunctionInvoke expects " << res.size() << " outputs, but "
+        << num_output << " was given.";
+    for (int i = 0; i < num_output; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
+      ndoutputs[i]->SyncCopyFromNDArray(NDArray(res[i], 0));
+    }
+  }
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(num_output);
+    for (int i = 0; i < num_output; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
+  API_END();
+}
 
 int MXBatchifyFunctionFree(BatchifyFunctionHandle handle) {
   API_BEGIN();

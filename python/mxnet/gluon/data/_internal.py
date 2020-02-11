@@ -129,8 +129,34 @@ class MXBatchifyFunction(object):
     def __del__(self):
         check_call(_LIB.MXBatchifyFunctionFree(self.handle))
 
-    def __call__(self, *args):
-        raise NotImplementedError("MXBatchifyFunction not implemented in python")
+    def __call__(self, data):
+        if isinstance(data[0], (nd.NDArray, tuple, list)):
+            create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
+            if isinstance(data[0], nd.NDArray):
+                num_output = ctypes.c_int(1)
+                flat_data = data
+            else:
+                num_output = ctypes.c_int(len(data[0]))
+                flat_data = [e for tupl in data for e in tupl]
+            input_arrs = (NDArrayHandle * len(flat_data))()
+            for i, d in enumerate(flat_data):
+                input_arrs[i] = d.handle
+            input_vars = ctypes.cast(input_arrs, ctypes.POINTER(NDArrayHandle))
+            batch_size = ctypes.c_int(len(data))
+            output_vars = ctypes.POINTER(NDArrayHandle)()
+            check_call(_LIB.MXBatchifyFunctionInvoke(self.handle,
+                                                     batch_size,
+                                                     num_output,
+                                                     ctypes.byref(input_vars)
+                                                     ctypes.byref(output_vars))
+            out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                           False) for i in range(num_output.value)]
+            if len(out) == 1:
+                out = out[0]
+            return out
+        else:
+            data = [np.asarray(i) for i in data]
+            return self.__call__(data)
 
 def _make_internal_datasets(handle):
     """Create an io iterator by handle."""
