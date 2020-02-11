@@ -6051,7 +6051,22 @@ def where(condition, x, y):
         from `y` elsewhere.
 
     """
-    return _npi.where(condition, x, y, out=None)
+    if isinstance(condition, numeric_types):
+        if condition != 0:
+            return x
+        else:
+            return y
+    else:
+        if isinstance(x, numeric_types) and isinstance(y, numeric_types):
+            return _npi.where_scalar2(condition, float(x), float(y), out=None)
+        elif isinstance(x, Symbol) and isinstance(y, Symbol):
+            return _npi.where(condition, x, y, out=None)
+        elif isinstance(y, Symbol):
+            return _npi.where_lscalar(condition, y, float(x), out=None)
+        elif isinstance(x, Symbol):
+            return _npi.where_rscalar(condition, x, float(y), out=None)
+        else:
+            raise TypeError('type {0} and {1} not supported'.format(str(type(x)), str(type(y))))
 
 
 @set_module('mxnet.symbol.numpy')
