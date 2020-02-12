@@ -127,7 +127,7 @@ def _prepare_op_benchmark_result(op, op_bench_result, profiler):
     result = ""
     if profiler == "native":
         result = "| {} | {} | {} | {} | {} |".format(operator_name,
-                 avg_forward_time, avg_backward_time, max_mem_usage, inputs)
+                 inputs, max_mem_usage, avg_forward_time, avg_backward_time)
     elif profiler == "python":
         result = "| {} | {} | {} | {} | {} | {} |".format(operator_name, avg_time, p50_time, p90_time, p99_time, inputs)
     return result
@@ -144,8 +144,8 @@ def _prepare_markdown(results, runtime_features=None, profiler='native'):
     results_markdown.append("# Benchmark Results")
     if profiler == 'native':
         results_markdown.append(
-            "| Operator | Avg Forward Time (ms) | Avg. Backward Time (ms) | Max Mem Usage (Storage) (Bytes)"
-            " | Inputs |")
+            "| Operator | Inputs | Max Mem Usage (Storage) (Bytes) | Avg Forward Time (ms)"
+            " | Avg. Backward Time (ms) |")
         results_markdown.append("| :---: | :---: | :---: | :---: | :---: |")
     elif profiler == 'python':
         results_markdown.append(
