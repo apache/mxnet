@@ -92,7 +92,7 @@ def logit2prob(logit, binary=True, F=None):
     return F.npx.softmax(logit)
 
 
-class _CachedProperty(object):
+class cached_property(object):
     r"""Use as a decorator for loading class attribute, but caches the value."""
     def __init__(self, func):
         self._func = func
@@ -104,6 +104,3 @@ class _CachedProperty(object):
         value = self._func(instance)
         setattr(instance, self._func.__name__, value)
         return value
-
-
-cached_property = _CachedProperty
