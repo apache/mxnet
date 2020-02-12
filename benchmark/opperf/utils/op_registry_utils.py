@@ -118,7 +118,8 @@ def prepare_op_inputs(op, arg_params):
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
 
-    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
+    # For ops with args that need to change shape/value for different ops
+    custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
 
     int_only = ['random_randint']
 
@@ -323,6 +324,26 @@ def get_all_reduction_operators():
                 or op_name == 'norm'):
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
+
+
+def get_all_nn_activation_operators():
+    """Gets all NN Activation operators registered with MXNet.
+
+     Returns
+     -------
+     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+     """
+    nn_activation_ops = ['Softmax', 'SoftmaxActivation', 'softmin', 'Activation', 'LeakyReLU', 'hard_sigmoid', 'softmax', 'log_softmax']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for NN Activation operators
+    nn_activation_mx_operators = {}
+    for op_name, _ in mx_operators.items():
+         if op_name in nn_activation_ops:
+             nn_activation_mx_operators[op_name] = mx_operators[op_name]
+    return nn_activation_mx_operators
 
 
 def get_all_optimizer_operators():

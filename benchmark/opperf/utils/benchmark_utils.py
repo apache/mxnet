@@ -116,13 +116,14 @@ def _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kw
     # Run Benchmarks
     op_benchmark_result = {op.__name__: []}
     logging.info("Begin Benchmark - {name}".format(name=op.__name__))
+
     for idx, kwargs in enumerate(kwargs_list):
         _, profiler_output = benchmark_helper_func(op, runs, **kwargs)
 
         # Add inputs used for profiling this operator into result
         # parse input if it contains ndarray, replace with shape info for better markdown readability
-        new_inp=parse_input_ndarray(inputs[idx])
-        profiler_output["inputs"] = new_inp
+        new_inp = parse_input_ndarray(inputs[idx])
+        profiler_output = merge_map_list([{"inputs": new_inp}] + [profiler_output])
         op_benchmark_result[op.__name__].append(profiler_output)
     logging.info("Complete Benchmark - {name}".format(name=op.__name__))
     return op_benchmark_result

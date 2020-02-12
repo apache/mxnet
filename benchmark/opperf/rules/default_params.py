@@ -139,6 +139,10 @@ DEFAULT_DATA_3d = [(1024, 100, 100)]
 DEFAULT_LABEL = [(100,100)]
 DEFAULT_DATA_SMCE = [(1024, 1024)]
 DEFAULT_LABEL_SMCE = [(1024,)]
+# For NN operators
+DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
+DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'softrelu', 'softsign', 'tanh']
+DEFAULT_LABEL_SOFTMAX = [(1024, 1024), (10000, 1), (10000, 100)]
 
 # For linalg operators
 DEFAULT_A = [(1024, 1024)]
@@ -229,7 +233,10 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "B": DEFAULT_B,
                    "C": DEFAULT_C,
                    "A_linalg_maketrian": DEFAULT_A_MT,
-                   "axes": DEFAULT_AXES}
+                   "axes": DEFAULT_AXES,
+                   "act_type_leakyrelu": DEFAULT_ACT_TYPE_LR,
+                   "label_softmax": DEFAULT_LABEL_SOFTMAX,
+                   "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -243,4 +250,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
-                          "A", "B", "C","r1","r2"]
+                          "A", "B", "C", "r1", "r2", "rois"]
