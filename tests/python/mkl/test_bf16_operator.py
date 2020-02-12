@@ -112,6 +112,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
             exe_bf16.aux_dict[aux_name][:] = mx.nd.amp_cast(aux_params_fp32[aux_name], dtype=bfloat16)
 
     output_bf16 = exe_bf16.forward()[0]
+    output_bf16.wait_to_read()
     output_bf16_2_fp32 = mx.nd.amp_cast(output_bf16, dtype="float32")
     assert_almost_equal_with_err(output_bf16_2_fp32, output_fp32, rtol=rtol, atol=atol, etol=etol)
 
