@@ -316,7 +316,7 @@ void InsertScalerObj(mshadow::Stream<xpu> *s, const TBlob& output,
 }
 
 template<typename xpu, int ndim>
-void InsertSizeOneTensorObj(mshadow::Stream<xpu> *s, const TBlob& output,
+void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
                             const TBlob& arr, const TBlob& values,
                             const mshadow::Shape<ndim>& arr_strides,
                             const mshadow::Shape<ndim>& val_strides,
@@ -342,7 +342,7 @@ void InsertSizeOneTensorObj(mshadow::Stream<xpu> *s, const TBlob& output,
 }
 
 template<typename xpu, int ndim>
-void InsertSequenceObj(mshadow::Stream<xpu> *s, const TBlob& output,
+void InsertSequenceImpl(mshadow::Stream<xpu> *s, const TBlob& output,
                        const TBlob& arr, const TBlob& values,
                        const mshadow::Shape<ndim>& arr_strides,
                        const mshadow::Shape<ndim>& val_strides,
@@ -366,52 +366,12 @@ void InsertSequenceObj(mshadow::Stream<xpu> *s, const TBlob& output,
 }
 
 template<typename xpu>
-void InsertScalarIndicesImpl(const OpContext &ctx,
-                             const TShape& outshape, const TShape& old_valshape,
-                             const std::vector<TBlob>& inputs,
-                             const std::vector<TBlob>& outputs,
-                             const TBlob& arr, const TBlob& values,
-                             const int& dtype, const int& vtype,
-                             const std::vector<OpReqType>& req,
-                             const int& axis, const int& index,
-                             const int& out_pos, const int& obj_pos,
-                             const int& numnew, const int& N,
-                             const bool& is_tensor);
-
-template<typename xpu>
-void InsertOneIndicesImpl(const OpContext &ctx,
-                          const TShape& outshape, const TShape& old_valshape,
-                          const NumpyInsertParam& param,
-                          const std::vector<TBlob>& inputs,
-                          const std::vector<TBlob>& outputs,
-                          const TBlob& arr, const TBlob& values,
-                          const int& dtype, const int& vtype,
-                          const std::vector<OpReqType>& req,
-                          const int& axis, const int& start,
-                          const int& out_pos, const int& obj_pos,
-                          const int& numnew, const int& N);
-
-template<typename xpu>
-void InsertTensorIndicesImpl(const OpContext &ctx,
-                          const TShape& outshape,
-                          const NumpyInsertParam& param,
-                          const std::vector<TBlob>& inputs,
-                          const std::vector<TBlob>& outputs,
-                          const TBlob& arr, const TBlob& values,
-                          const int& dtype, const int& vtype,
-                          const std::vector<OpReqType>& req,
-                          const int& axis, const int& start,
-                          const int& step, const int&indices_len,
-                          const int& out_pos, const int& obj_pos,
-                          const int& numnew, const int& N);
-
-template<typename xpu>
 void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<TBlob>& inputs,
                         const std::vector<OpReqType>& req,
                         const std::vector<TBlob>& outputs) {
-  using namespace mshadow;
+  /*using namespace mshadow;
   using namespace mxnet_op;
 
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
@@ -547,9 +507,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
 
   if (param.int_ind.has_value()) {
     // 'obj' is integer, need to moveaxis
-    InsertScalarIndicesImpl<xpu>(ctx, outshape, old_valshape, inputs, outputs, arr, values,
-                                 dtype, vtype, req, axis, index, out_pos, obj_pos, numnew, N, false);
-    /*MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
                                  mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                  mxnet_op::calc_stride(values.shape_.get<ndim>()),
@@ -558,12 +516,10 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
                                  outshape.get<ndim>(), values.shape_.get<ndim>(),
                                  dtype, vtype, req[out_pos], axis, index, numnew,
                                  outshape.Size(), true);
-    });*/
+    });
   } else if (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0) {
     // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
-    InsertScalarIndicesImpl<xpu>(ctx, outshape, old_valshape, inputs, outputs, arr, values,
-                                 dtype, vtype, req, axis, index, out_pos, obj_pos, numnew, N, true);
-    /*MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertSizeOneTensorObj<xpu, ndim>(s, outputs[out_pos], arr, values,
                                         mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                         mxnet_op::calc_stride(values.shape_.get<ndim>()),
@@ -573,11 +529,9 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
                                         dtype, vtype, req[out_pos], axis, inputs[obj_pos],
                                         numnew, N, outshape.Size(), true);
       
-    });*/
+    });
   } else if (indices_len == 1) {
-    InsertOneIndicesImpl<xpu>(ctx, outshape, old_valshape, param, inputs, outputs, arr, values,
-                              dtype, vtype, req, axis, start, out_pos, obj_pos, numnew, N);
-    /*MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       if (param.step.has_value()) {
         InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
                                    mxnet_op::calc_stride(arr.shape_.get<ndim>()),
@@ -597,12 +551,10 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
                                           dtype, vtype, req[out_pos], axis, inputs[obj_pos],
                                           numnew, N, outshape.Size(), false);
       }
-    });*/
+    });
   } else {
     // broadcast check
-    InsertTensorIndicesImpl<xpu>(ctx, outshape, param, inputs, outputs, arr, values, dtype, vtype,
-                                 req, axis, start, step, indices_len, out_pos, obj_pos, numnew, N);
-    /*for (int i = outshape.ndim() - 1; i >= 0; --i) {
+    for (int i = outshape.ndim() - 1; i >= 0; --i) {
       int sz = outshape[i];
       if (i == axis) {
         sz = numnew;
@@ -644,7 +596,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
     Kernel<SetOriginValuesIdx, xpu>::Launch(s, indices_len, indices_ptr, origin_idx);
     Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertSequenceObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+      InsertSequenceImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
                                    mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                    mxnet_op::calc_stride(values.shape_.get<ndim>()),
                                    mxnet_op::calc_stride(outshape.get<ndim>()),
@@ -652,8 +604,8 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
                                    is_insert, origin_idx, dtype, vtype, req[out_pos],
                                    axis, outshape.Size());
       
-    });*/
-  }
+    });
+  }*/
 }
 
 }  // namespace op
