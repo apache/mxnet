@@ -129,7 +129,11 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
     float_only = {'log_softmax', 'softmax', 'softmin'}
 
     if int64_tensor == 'on':
-        DEFAULTS_INPUTS = DEFAULTS_INPUTS_LARGE_TENSOR
+        default_inputs = DEFAULTS_INPUTS_LARGE_TENSOR
+    else:
+        default_inputs = DEFAULTS_INPUTS
+
+    print(op)
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -154,15 +158,15 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
         elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
         elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
-        elif arg_name in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
-        elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
-        elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = default_inputs[arg_name + "_smce"]
+        elif arg_name in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name]
+        elif "float" in arg_type and arg_name + "_float" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_float"]
+        elif "Shape" in arg_type and arg_name + "_shape" in default_inputs:
             # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
             # Ex: axis in sum is shape, axis in sort is int.
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
+            arg_values[arg_name] = default_inputs[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator
