@@ -6710,8 +6710,8 @@ def test_np_quantile():
         ((2, 3, 4), (3,), (0, 2)),
         ((2, 3, 4), (3,), 1)
     ]
-    for hybridize, keepdims, (a_shape, q_shape, axis), interpolation, dtype in \
-        itertools.product(flags, flags, tensor_shapes, interpolation_options, dtypes):
+    for hybridize, keepdims, q_scalar, (a_shape, q_shape, axis), interpolation, dtype in \
+        itertools.product(flags, flags, flags, tensor_shapes, interpolation_options, dtypes):
         if dtype == np.float16 and interpolation == 'linear': continue
         atol = 3e-4 if dtype == np.float16 else 1e-4
         rtol = 3e-2 if dtype == np.float16 else 1e-2
@@ -6725,9 +6725,13 @@ def test_np_quantile():
         mx_out = test_quantile(a, q)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
-
+        
+        np_q = q.asnumpy()
+        if q_scalar and q_shape == ():
+            q = q.item()
+            np_q = q
         mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        np_out = _np.quantile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        np_out = _np.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
@@ -6757,8 +6761,8 @@ def test_np_percentile():
         ((2, 3, 4), (3,), (0, 2)),
         ((2, 3, 4), (3,), 1)
     ]
-    for hybridize, keepdims, (a_shape, q_shape, axis), interpolation, dtype in \
-        itertools.product(flags, flags, tensor_shapes, interpolation_options, dtypes):
+    for hybridize, keepdims, q_scalar, (a_shape, q_shape, axis), interpolation, dtype in \
+        itertools.product(flags, flags, flags, tensor_shapes, interpolation_options, dtypes):
         if dtype == np.float16 and interpolation == 'linear': continue
         atol = 3e-4 if dtype == np.float16 else 1e-4
         rtol = 3e-2 if dtype == np.float16 else 1e-2
@@ -6773,8 +6777,12 @@ def test_np_percentile():
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
+        np_q = q.asnumpy()
+        if q_scalar and q_shape == ():
+            q = q.item()
+            np_q = q
         mx_out = np.percentile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        np_out = _np.percentile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
+        np_out = _np.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 

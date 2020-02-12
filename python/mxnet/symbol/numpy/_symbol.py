@@ -5690,8 +5690,11 @@ def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='l
     """
     if overwrite_input is not None:
         raise NotImplementedError('overwrite_input is not supported yet')
+    if isinstance(q, numeric_types):
+        return _npi.percentile(a, axis=axis, interpolation=interpolation,
+                               keepdims=keepdims, q_scalar=q, out=out)
     return _npi.percentile(a, q, axis=axis, interpolation=interpolation,
-                           keepdims=keepdims, out=out)
+                           keepdims=keepdims, q_scalar=None, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5748,8 +5751,11 @@ def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='lin
     """
     if overwrite_input is not None:
         raise NotImplementedError('overwrite_input is not supported yet')
+    if isinstance(q, numeric_types):
+        return _npi.percentile(a, axis=axis, interpolation=interpolation,
+                               keepdims=keepdims, q_scalar=q * 100, out=out)
     return _npi.percentile(a, q * 100, axis=axis, interpolation=interpolation,
-                           keepdims=keepdims, out=out)
+                           keepdims=keepdims, q_scalar=None, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
