@@ -1996,6 +1996,21 @@ def _add_workload_apply_along_axis():
     OpArgMngr.add_workload('apply_along_axis', double, 1, m)
 
 
+def _add_workload_apply_over_axes():
+    a = np.arange(24).reshape(2, 3, 4)
+    OpArgMngr.add_workload('apply_over_axes', _np.sum, a, [0, 2])
+
+
+def _add_workload_argpartition():
+    # TODO: move more test cases from numpy to here
+    OpArgMngr.add_workload('argpartition', np.array([]), 0, kind='introselect')
+    OpArgMngr.add_workload('argpartition', np.ones(1), 0, kind='introselect')
+    for r in ([2, 1], [1, 2], [1, 1], [3, 2, 1], [1, 2, 3], [2, 1, 3], [2, 3, 1],
+              [1, 1, 1], [1, 2, 2], [2, 2, 1], [1, 2, 1]):
+        d = np.array(r)
+        OpArgMngr.add_workload('argpartition', d, 0, kind='introselect')
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -2168,6 +2183,8 @@ def _prepare_workloads():
     _add_workload_allclose()
     _add_workload_alltrue()
     _add_workload_apply_along_axis()
+    _add_workload_apply_over_axes()
+    _add_workload_argpartition()
 
 
 _prepare_workloads()
