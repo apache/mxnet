@@ -93,4 +93,4 @@ def test_type():
 if __name__ == "__main__":
     test_type()
     test_broadcast()
-    test_push_pull()
+    test_pushpull()

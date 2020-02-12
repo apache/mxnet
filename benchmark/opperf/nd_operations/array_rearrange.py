@@ -31,7 +31,7 @@ from benchmark.opperf.utils.op_registry_utils import get_all_rearrange_operators
 
 def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
-    rearrange operators  in MXNet.
+    rearrange operators in MXNet.
 
     Parameters
     ----------
@@ -39,6 +39,8 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
+    profiler: str, default 'native'
+        Type of Profiler to use (native/python)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -49,7 +51,7 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Fetch all optimizer operators
+    # Fetch all array rerrange operators
     mx_rearrange_ops = get_all_rearrange_operators()
 
     # Run benchmarks

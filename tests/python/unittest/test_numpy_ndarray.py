@@ -30,7 +30,6 @@ from common import with_seed, TemporaryDirectory
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
-import scipy.stats as ss
 
 
 @with_seed()
@@ -683,6 +682,21 @@ def test_np_ndarray_indexing():
             mx_indexed_array = mx_indexed_array.asnumpy()
             assert same(np_indexed_array, mx_indexed_array), 'Failed with index = {}'.format(index)
 
+    def test_getitem_slice_bound():
+        mx_array = np.arange(10)
+        np_array = mx_array.asnumpy()
+        assert_almost_equal(mx_array[100:], np_array[100:])
+        assert_almost_equal(mx_array[:100], np_array[:100])
+        assert_almost_equal(mx_array[-100:], np_array[-100:])
+        assert_almost_equal(mx_array[:-100], np_array[:-100])
+
+        mx_array = np.arange(81).reshape(3, 3, 3, 3)
+        np_array = mx_array.asnumpy()
+        assert_almost_equal(mx_array[100:], np_array[100:])
+        assert_almost_equal(mx_array[:100], np_array[:100])
+        assert_almost_equal(mx_array[-100:], np_array[-100:])
+        assert_almost_equal(mx_array[:-100], np_array[:-100])
+
     def test_setitem(np_array, index):
         def assert_same(np_array, np_index, mx_array, mx_index, mx_value, np_value=None):
             if np_value is not None:
@@ -798,12 +812,18 @@ def test_np_ndarray_indexing():
         0,
         np.int32(0),
         np.int64(0),
+        np.array(0, dtype='int32'),
+        np.array(0, dtype='int64'),
         5,
         np.int32(5),
         np.int64(5),
+        np.array(5, dtype='int32'),
+        np.array(5, dtype='int64'),
         -1,
         np.int32(-1),
         np.int64(-1),
+        np.array(-1, dtype='int32'),
+        np.array(-1, dtype='int64'),
         # Slicing as index
         slice(5),
         np_int(slice(5), np.int32),
@@ -850,10 +870,14 @@ def test_np_ndarray_indexing():
         np_int((1, 2, 3, 4)),
         np_int((1, 2, 3, 4), np.int64),
         (-4, -3, -2, -1),
+        (-4, mx.np.array(-3, dtype='int32'), -2, -1),
+        (-4, mx.np.array(-3, dtype='int64'), -2, -1),
         np_int((-4, -3, -2, -1)),
         np_int((-4, -3, -2, -1), np.int64),
         # slice(None) as indices
         (slice(None), slice(None), 1, 8),
+        (slice(None), slice(None), np.array(1, dtype='int32'), 8),
+        (slice(None), slice(None), np.array(1, dtype='int64'), 8),
         (slice(None), slice(None), -1, 8),
         (slice(None), slice(None), 1, -8),
         (slice(None), slice(None), -1, -8),
@@ -977,6 +1001,7 @@ def test_np_ndarray_indexing():
             test_setitem(np_array, index)
             test_getitem_autograd(np_array, index)
             test_setitem_autograd(np_array, index)
+    test_getitem_slice_bound()
 
 
 @with_seed()

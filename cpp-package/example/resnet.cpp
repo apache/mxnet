@@ -168,7 +168,7 @@ NDArray ResizeInput(NDArray data, const Shape new_shape) {
 }
 
 int main(int argc, char const *argv[]) {
-  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 100;
+  int max_epoch = argc > 1 ? strtol(argv[1], nullptr, 10) : 100;
   float learning_rate = 1e-4;
   float weight_decay = 1e-4;
 

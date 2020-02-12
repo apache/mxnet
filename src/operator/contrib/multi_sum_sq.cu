@@ -139,7 +139,7 @@ size_t GetRequiredStorageMultiSumSq<gpu>(const std::vector<TBlob> &inputs,
     if (chunks_this_tensor > max_chunks_per_tensor)
       max_chunks_per_tensor = chunks_this_tensor;
   }
-  if (param_max_chunks_per_tensor != NULL)
+  if (param_max_chunks_per_tensor != nullptr)
     *param_max_chunks_per_tensor = max_chunks_per_tensor;
   return inputs.size() * max_chunks_per_tensor * sizeof(float);
 }

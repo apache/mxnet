@@ -3095,9 +3095,9 @@ def _get_index_range(start, stop, length, step=1):
     elif start < 0:
         start += length
         if start < 0:
-            raise IndexError('Slicing start %d exceeds limit of %d' % (start-length, length))
+            start = 0
     elif start >= length:
-        raise IndexError('Slicing start %d exceeds limit of %d' % (start, length))
+        start = length
 
     if stop is None:
         if step > 0:
@@ -3110,9 +3110,9 @@ def _get_index_range(start, stop, length, step=1):
     elif stop < 0:
         stop += length
         if stop < 0:
-            raise IndexError('Slicing stop %d exceeds limit of %d' % (stop-length, length))
+            stop = 0
     elif stop > length:
-        raise IndexError('Slicing stop %d exceeds limit of %d' % (stop, length))
+        stop = length
 
     return start, stop, step
 

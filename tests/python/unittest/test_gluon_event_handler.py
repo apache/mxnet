@@ -26,6 +26,8 @@ from mxnet import nd
 from mxnet.gluon import nn, loss
 from mxnet.gluon.contrib.estimator import estimator, event_handler
 from mxnet.gluon.contrib.estimator.event_handler import LoggingHandler
+from mxnet.gluon.contrib.estimator.event_handler import ValidationHandler
+from mxnet.gluon.contrib.estimator import EpochEnd
 from mxnet.gluon.data.dataset import Dataset
 try:
     from StringIO import StringIO
@@ -47,6 +49,13 @@ class TestAxisArrayDataset(Dataset):
 
     def __len__(self):
         return self._length
+
+class TestHandler(EpochEnd):
+    def __init__(self):
+        pass
+
+    def epoch_end(self, estimator, *args, **kwargs):
+        estimator.run_test_handler = True
 
 def _get_test_network(net=nn.Sequential()):
     net.add(nn.Dense(128, activation='relu', flatten=False),
@@ -301,3 +310,17 @@ def test_validation_handler_batch_axis():
     est.fit(test_data, val_data=val_data,
             epochs=3, batch_axis=1)
 
+def test_validation_handler():
+    test_data = _get_test_data()
+
+    net = _get_test_network()
+    ce_loss = loss.SoftmaxCrossEntropyLoss()
+    acc = mx.metric.Accuracy()
+    est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
+    val_handler = ValidationHandler(val_data=test_data,
+                                    eval_fn=est.evaluate,
+                                    event_handlers=TestHandler())
+
+    est.fit(train_data=test_data, val_data=test_data,
+            event_handlers=[val_handler], epochs=2)
+    assert est.run_test_handler == True

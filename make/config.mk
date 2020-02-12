@@ -18,9 +18,9 @@
 #-------------------------------------------------------------------------------
 #  Template configuration for compiling mxnet
 #
-#  If you want to change the configuration, please use the following
-#  steps. Assume you are on the root directory of mxnet. First copy the this
-#  file so that any local changes will be ignored by git
+#  If you want to change the configuration, please use the following steps.
+#  Assume you are on the root directory of mxnet. First copy this file so that
+#  any local changes will be ignored by git
 #
 #  $ cp make/config.mk .
 #

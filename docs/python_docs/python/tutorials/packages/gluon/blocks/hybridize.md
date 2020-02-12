@@ -219,7 +219,7 @@ We can see that the three lines of print statements defined in the `hybrid_forwa
 
 ## Key differences and limitations of hybridization
 
-The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [`mx.nd`](/api/python/docs/api/ndarray/index.html) or [`mx.sym`](/api/python/docs/api/symbol/index.html)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
+The difference between a purely imperative `Block` and hybridizable `HybridBlock` can superficially appear to be simply the injection of the `F` function space (resolving to [mx.nd](/api/python/docs/api/ndarray/index.html) or [mx.sym](/api/python/docs/api/symbol/index.html)) in the forward function that is renamed from `forward` to `hybrid_forward`. However there are some limitations that apply when using hybrid blocks. In the following section we will review the main differences, giving example of code snippets that generate errors when such blocks get hybridized.
 
 ### Indexing
 
@@ -234,7 +234,7 @@ Would generate the following error:
 
 `TypeError: Symbol only support integer index to fetch i-th output`
 
-There are however several operators that can help you with array manipulations like: [`F.split`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split), [`F.slice`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.slice), [`F.take`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.take),[`F.pick`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pick), [`F.where`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where), [`F.reshape`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) or [`F.reshape_like`](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape_like).
+There are however several operators that can help you with array manipulations like: [F.split](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.split), [F.slice](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.slice), [F.take](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.take),[F.pick](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pick), [F.where](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.where), [F.reshape](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape) or [F.reshape_like](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.reshape_like).
 
 ### Data Type
 

@@ -55,4 +55,4 @@ ln -s /usr/lib/x86_64-linux-gnu/libhdf5_serial_hl.so.10.0.2 /usr/lib/x86_64-linu
 make all pycaffe -j$(nproc)
 
 cd python
-for req in $(cat requirements.txt); do pip2 install $req; done
+for req in $(cat requirements.txt); do pip3 install $req; done

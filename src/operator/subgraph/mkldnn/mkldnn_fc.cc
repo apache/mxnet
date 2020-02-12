@@ -387,7 +387,7 @@ static void SgMKLDNNFCParamParser(nnvm::NodeAttrs *attrs) {
     throw dmlc::ParamError(os.str());
   }
   auto subgraph_sym = attrs->subgraphs[0];
-  DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr &node) {
+  DFSVisit(subgraph_sym->outputs, [&](const nnvm::ObjectPtr &node) {
     if (node->is_variable()) return;
     auto &op_name = node->op()->name;
     if (op_name == "FullyConnected") {
@@ -585,8 +585,8 @@ static void SgMKLDNNFCForward(const OpStatePtr &state_pointer,
   op.Forward(ctx, inputs, req, outputs);
 }
 
-nnvm::NodePtr SgMKLDNNFCQuantizedOp(const NodeAttrs& attrs) {
-  nnvm::NodePtr node = nnvm::Node::Create();
+nnvm::ObjectPtr SgMKLDNNFCQuantizedOp(const NodeAttrs& attrs) {
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_fully_connected");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
