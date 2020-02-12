@@ -27,6 +27,8 @@ from .normal import *
 
 from .half_normal import *
 
+from .independent import *
+
 from .bernoulli import *
 
 from .categorical import *

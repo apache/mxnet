@@ -353,6 +353,34 @@ def test_cached_property():
     assert_almost_equal(x.grad.asnumpy(), scale * np.ones((1,)))
 
 
+@use_np
+def test_independent():
+    class TestIndependent(HybridBlock):
+        def __init__(self, event_dim, func):
+            super(TestIndependent, self).__init__()
+            self._event_dim = event_dim
+            self._func = func
+
+        def hybrid_forward(self, F, logit, *args):
+            base_dist = mgp.Bernoulli(logit=logit)
+            reshaped_dist = mgp.Independent(base_dist, self._event_dim)
+            return getattr(reshaped_dist, self._func)(*args)
+
+    event_shapes = [(1,), (4,), (2, 2)]
+    batch_shapes = [(2, 3), (2,)]
+    for (batch_shape, event_shape) in itertools.product(batch_shapes, event_shapes):
+        for hybridize in [False, True]:
+            for func in ['log_prob']:
+                full_shape = batch_shape + event_shape
+                logit = np.random.normal(0,2, size=full_shape)
+                samples = np.round(np.random.uniform(size=full_shape))
+                net = TestIndependent(len(event_shape), func)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(logit, samples)
+                assert mx_out.shape == batch_shape
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
