@@ -3524,6 +3524,32 @@ def test_np_random():
 
 @with_seed()
 @use_np
+def test_gamma_exception():
+    def _test_gamma_exception(shape, scale):
+        return np.random.gamma(shape, scale).asnumpy()
+
+    shape_list = [
+        1,
+        np.array(1),
+        np.array(1),
+        0,
+        0,
+        np.array(0)
+    ]
+    scale_list = [
+        0,
+        0,
+        np.array(-1.0),
+        1,
+        np.array(1),
+        np.array(1)
+    ]
+    for (shape, scale) in zip(shape_list, scale_list):
+        assertRaises(ValueError, _test_gamma_exception, shape, scale)
+
+
+@with_seed()
+@use_np
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
         def __init__(self, size=None, dtype=None, ctx=None):
