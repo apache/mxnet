@@ -188,23 +188,6 @@ def test_bf16_activation():
         check_operator_accuracy(act_fp32, act_bf16, data_shape, bf16_use_fp32_params=True)
 
 @with_seed()
-def test_bf16_concat():
-    dshape = rand_shape_nd(4)
-    a_shape = tuple(dshape)
-    b_shape = tuple(dshape)
-
-    a_sym_fp32 = mx.sym.Variable("data", shape=a_shape)
-    b_sym_fp32 = mx.sym.Variable("data_1", shape=b_shape)
-
-    a_sym_bf16 = mx.sym.Variable("data", dtype=bfloat16, shape=a_shape)
-    b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16, shape=b_shape)
-    for axis in range(0, 4):
-        concat_sym_fp32 = mx.sym.concat(a_sym_fp32, b_sym_fp32, dim=axis)
-        concat_sym_bf16 = mx.sym.concat(a_sym_bf16, b_sym_bf16, dim=axis)
-
-        check_operator_accuracy(concat_sym_fp32, concat_sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
-
-@with_seed()
 def test_bf16_elemwiseadd():
     dshape = rand_shape_nd(4)
 
@@ -217,6 +200,24 @@ def test_bf16_elemwiseadd():
     sym_bf16 = mx.sym.elemwise_add(a_sym_bf16, b_sym_bf16)
 
     check_operator_accuracy(sym_fp32, sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
+
+@with_seed()
+def test_bf16_concat():
+    dshape = rand_shape_nd(4)
+    a_shape = tuple(dshape)
+    b_shape = tuple(dshape)
+
+    a_sym_fp32 = mx.sym.Variable("data", shape=a_shape)
+    b_sym_fp32 = mx.sym.Variable("data_1", shape=b_shape)
+
+    a_sym_bf16 = mx.sym.Variable("data", dtype=bfloat16, shape=a_shape)
+    b_sym_bf16 = mx.sym.Variable("data_1", dtype=bfloat16, shape=b_shape)
+    for axis in range(0, 4):
+        print(axis, a_shape)
+        concat_sym_fp32 = mx.sym.concat(a_sym_fp32, b_sym_fp32, dim=axis)
+        concat_sym_bf16 = mx.sym.concat(a_sym_bf16, b_sym_bf16, dim=axis)
+
+        check_operator_accuracy(concat_sym_fp32, concat_sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
 
 @with_seed()
 def test_bf16_abs():
@@ -267,7 +268,6 @@ def test_bf16_flatten_slice_after_conv():
     shape = (2, 16, 16, 16)
     check_operator_accuracy(slice_fp32, slice_bf16, shape, bf16_use_fp32_params=False)
 
-@with_seed()
 def test_bf16_fallback():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16=mx.sym.Variable(name='data', dtype=bfloat16)
