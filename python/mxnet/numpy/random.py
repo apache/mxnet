@@ -462,7 +462,7 @@ def rand(*size, **kwargs):
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
 
 
-def exponential(scale=1.0, size=None):
+def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
 
     Parameters
@@ -481,7 +481,7 @@ def exponential(scale=1.0, size=None):
     out : ndarray or scalar
         Drawn samples from the parameterized exponential distribution.
     """
-    return _mx_nd_np.random.exponential(scale, size)
+    return _mx_nd_np.random.exponential(scale, size=size, ctx=ctx, out=out)
 
 
 def weibull(a, size=None):

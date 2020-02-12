@@ -56,16 +56,16 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
-           'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
+           'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
            'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var',
-           'indices', 'copysign', 'ravel', 'unravel_index', 'hanning', 'hamming', 'blackman', 'flip', 'flipud',
-           'fliplr', 'around', 'round', 'arctan2', 'hypot',
+           'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
+           'flip', 'flipud', 'fliplr', 'around', 'round', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
            'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
-           'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num', 'where',
-           'bincount']
+           'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'resize',
+           'nan_to_num', 'isnan', 'isinf', 'where', 'bincount']
 
 __all__ += fallback.__all__
 
@@ -1531,13 +1531,13 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute pick')
 
-    def sort(self, *args, **kwargs):
+    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise sort(self, axis=axis, kind=kind, order=order)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -4645,6 +4645,48 @@ def argsort(a, axis=-1, kind=None, order=None):
 
 
 @set_module('mxnet.numpy')
+def sort(a, axis=-1, kind=None, order=None):
+    """
+    Return a sorted copy of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be sorted.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    sorted_array : ndarray
+        Array of the same type and shape as `a`.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+
+    Examples
+    --------
+    >>> a = np.array([[1,4],[3,1]])
+    >>> np.sort(a)                # sort along the last axis
+    array([[1, 4],
+           [1, 3]])
+    >>> np.sort(a, axis=None)     # sort the flattened array
+    array([1, 1, 3, 4])
+    >>> np.sort(a, axis=0)        # sort along the first axis
+    array([[1, 1],
+           [3, 4]])
+    """
+    return _mx_nd_np.sort(a, axis=axis, kind=kind, order=order)
+
+
+@set_module('mxnet.numpy')
 def tensordot(a, b, axes=2):
     r"""
     tensordot(a, b, axes=2)
@@ -6498,6 +6540,45 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     [3, 1, 4, 1]
     """
     return _mx_nd_np.unravel_index(indices, shape, order=order)
+
+
+def diag_indices_from(arr):
+    """
+    This returns a tuple of indices that can be used to access the main diagonal of an array
+    a with a.ndim >= 2 dimensions and shape (n, n, …, n). For a.ndim = 2 this is
+    the usual diagonal, for a.ndim > 2 this is the set of indices to access
+    a[i, i, ..., i] for i = [0..n-1].
+
+    Parameters:
+    -------------
+    arr : ndarray
+        Input array for acessing the main diagonal. All dimensions
+        should have equal length.
+
+    Return:
+    -------------
+    diag: tuple of ndarray
+        indices of the main diagonal.
+
+    Examples:
+    -------------
+    >>> a = np.arange(16).reshape(4, 4)
+    >>> a
+    array([[ 0,  1,  2,  3],
+        [ 4,  5,  6,  7],
+        [ 8,  9, 10, 11],
+        [12, 13, 14, 15]])
+    >>> idx = np.diag_indices_from(a)
+    >>> idx
+    (array([0, 1, 2, 3]), array([0, 1, 2, 3]))
+    >>> a[idx] = 100
+    >>> a
+    array([[100,   1,   2,   3],
+        [  4, 100,   6,   7],
+        [  8,   9, 100,  11],
+        [ 12,  13,  14, 100]])
+    """
+    return _mx_nd_np.diag_indices_from(arr)
 
 
 @set_module('mxnet.numpy')
@@ -8626,6 +8707,106 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
+@wrap_np_unary_func
+def isnan(x, out=None, **kwargs):
+    """
+    Test element-wise for NaN and return result as a boolean array.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or bool
+        True where x is NaN, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+
+    This function differs from the original `numpy.isnan
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> np.isnan(np.nan)
+    True
+    >>> np.isnan(np.inf)
+    False
+    >>> np.isnan(np.array([np.log(-1.),1.,np.log(0)]))
+    array([ True, False, False])
+    """
+    return _mx_nd_np.isnan(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def isinf(x, out=None, **kwargs):
+    """
+    Test element-wise for positive or negative infinity.
+
+    Parameters
+    ----------
+    x : ndarray
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : ndarray or bool
+        True where x is positive or negative infinity, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+
+    This function differs from the original `numpy.isnan
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+
+    Examples
+    --------
+    >>> np.isinf(np.inf)
+    True
+    >>> np.isinf(np.nan)
+    False
+    >>> np.isinf(np.array([np.inf, -np.inf, 1.0, np.nan]))
+    array([ True,  True, False, False])
+    >>> x = np.array([-np.inf, 0., np.inf])
+    >>> y = np.array([True, True, True], dtype=np.bool_)
+    >>> np.isinf(x, y)
+    array([ True, False,  True])
+    >>> y
+    array([ True, False,  True])
+    """
+    return _mx_nd_np.isinf(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
 def where(condition, x=None, y=None):
     """where(condition, [x, y])
     Return elements chosen from `x` or `y` depending on `condition`.
@@ -8686,7 +8867,7 @@ def where(condition, x=None, y=None):
     >>> a = np.array([[0, 1, 2],
     ...               [0, 2, 4],
     ...               [0, 3, 6]])
-    >>> np.where(a < 4, a, np.array(-1))  # -1 is broadcast
+    >>> np.where(a < 4, a, -1)  # -1 is broadcast
     array([[ 0.,  1.,  2.],
            [ 0.,  2., -1.],
            [ 0.,  3., -1.]])

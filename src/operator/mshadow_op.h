@@ -683,6 +683,22 @@ struct fix : public mxnet_op::tunable {
   }
 };
 
+/*! \brief used to determine whether a number is Not A Number*/
+struct isnan : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsNan(a);
+  }
+};
+
+/*! \brief used to determine whether a number is infinite*/
+struct isinf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a);
+  }
+};
+
 /*! \brief used for generate gradient of MAE loss*/
 MXNET_BINARY_MATH_OP_NC(minus_sign, a - b > DType(0) ? DType(1) : -DType(1));
 

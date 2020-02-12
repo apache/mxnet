@@ -96,6 +96,11 @@ def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
 
 
+def _add_workload_diag_indices_from():
+    a = np.random.uniform(-4, 4, size=(4,4))
+    OpArgMngr.add_workload('diag_indices_from', a)
+
+
 def _add_workload_bincount():
     y = np.arange(4).astype(int)
     y1 = np.array([1, 5, 2, 4, 1], dtype=_np.int64)
@@ -112,7 +117,7 @@ def _add_workload_bincount():
     OpArgMngr.add_workload('bincount', y, minlength=8)
     OpArgMngr.add_workload('bincount', y2, minlength=0)
     OpArgMngr.add_workload('bincount', y2, minlength=5)
-    
+
 
 def _add_workload_diag():
     def get_mat(n):
@@ -167,7 +172,7 @@ def _add_workload_quantile():
     q2 = np.array(1)
     q3 = np.array(0.5)
     q4 = np.array([0, 0.75, 0.25, 0.5, 1.0])
-    
+
     OpArgMngr.add_workload('quantile', x1, q1)
     OpArgMngr.add_workload('quantile', x1, q2)
     OpArgMngr.add_workload('quantile', x1, q3)
@@ -189,7 +194,7 @@ def _add_workload_percentile():
     q3 = np.array([25, 50, 100])
     x4 = np.arange(11 * 2).reshape(11, 1, 2, 1)
     x5 = np.array([0, np.nan])
-    
+
     OpArgMngr.add_workload('percentile', x1, q1, None, None, None)
     OpArgMngr.add_workload('percentile', x1, q1, None, None, None, 'linear')
     OpArgMngr.add_workload('percentile', x2, q2, axis=0)
@@ -292,7 +297,7 @@ def _add_workload_array_split():
     OpArgMngr.add_workload('array_split', b, 3, axis=-1)
     OpArgMngr.add_workload('array_split', b, 3)
 
-    
+
 def _add_workload_squeeze():
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)))
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)))
@@ -797,6 +802,17 @@ def _add_workload_argsort():
         OpArgMngr.add_workload('argsort', a, axis)
 
 
+def _add_workload_sort():
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=()), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(2, 3, 4)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=-1)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(4, 3, 5)), axis=-1, kind='mergesort')
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=None, kind='quicksort')
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)))
+
+
 def _add_workload_broadcast_arrays(array_pool):
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
 
@@ -921,6 +937,20 @@ def _add_workload_amax(array_pool):
 
 def _add_workload_min(array_pool):
     OpArgMngr.add_workload('min', array_pool['4x1'])
+
+
+def _add_workload_amin(array_pool):
+    a = np.array([3, 4, 5, 10, -3, -5, 6.0])
+    b = np.array([[3, 6.0, 9.0],
+                  [4, 10.0, 5.0],
+                  [8, 3.0, 2.0]])
+    c = np.array(1)
+    OpArgMngr.add_workload('amin', array_pool['4x1'])
+    OpArgMngr.add_workload('amin', a)
+    OpArgMngr.add_workload('amin', b, axis=0)
+    OpArgMngr.add_workload('amin', b, axis=1)
+    OpArgMngr.add_workload('amin', c)
+    OpArgMngr.add_workload('amin', c, axis=None)
 
 
 def _add_workload_mean(array_pool):
@@ -1661,7 +1691,7 @@ def _add_workload_diagflat():
     vals_c = (100 * np.array(get_mat(5)) + 1).astype('l')
     vals_f = _np.array((100 * get_mat(5) + 1), order='F', dtype='l')
     vals_f = np.array(vals_f)
-    
+
     OpArgMngr.add_workload('diagflat', A, k=2)
     OpArgMngr.add_workload('diagflat', A, k=1)
     OpArgMngr.add_workload('diagflat', A, k=0)
@@ -1739,6 +1769,24 @@ def _add_workload_nan_to_num():
     OpArgMngr.add_workload('nan_to_num', array3, True)
 
 
+def _add_workload_isnan():
+    array1 = np.array([[-_np.nan, 0, 456, _np.inf], [-1, -_np.inf, 0, _np.nan]])
+    array2 = np.array([_np.inf/_np.inf, _np.inf, _np.nan, -574, 0, 23425, _np.nan,-5])
+    array3 = np.array(_np.nan)
+    OpArgMngr.add_workload('isnan', array1,)
+    OpArgMngr.add_workload('isnan', array2)
+    OpArgMngr.add_workload('isnan', array3)
+
+
+def _add_workload_isinf():
+    array1 = np.array([[-433, float('inf'), 456, _np.inf], [-1, -_np.inf, 0, 1]])
+    array2 = np.array([_np.inf/_np.inf, _np.inf, -_np.inf, -574, 0, 23425, _np.inf,-5])
+    array3 = np.array(_np.inf)
+    OpArgMngr.add_workload('isinf', array1)
+    OpArgMngr.add_workload('isinf', array2)
+    OpArgMngr.add_workload('isinf', array3)
+
+
 def _add_workload_linalg_cond():
     A = np.array([[1., 0, 1], [0, -2., 0], [0, 0, 3.]])
     OpArgMngr.add_workload('linalg.cond', A, np.inf)
@@ -1782,6 +1830,7 @@ def _prepare_workloads():
     _add_workload_around()
     _add_workload_round()
     _add_workload_argsort()
+    _add_workload_sort()
     _add_workload_append()
     _add_workload_bincount()
     _add_workload_broadcast_arrays(array_pool)
@@ -1792,6 +1841,7 @@ def _prepare_workloads():
     _add_workload_cumsum()
     _add_workload_ravel()
     _add_workload_unravel_index()
+    _add_workload_diag_indices_from()
     _add_workload_diag()
     _add_workload_diagonal()
     _add_workload_diagflat()
@@ -1804,6 +1854,7 @@ def _prepare_workloads():
     _add_workload_max(array_pool)
     _add_workload_amax(array_pool)
     _add_workload_min(array_pool)
+    _add_workload_amin(array_pool)
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
@@ -1918,6 +1969,8 @@ def _prepare_workloads():
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
     _add_workload_nan_to_num()
+    _add_workload_isnan()
+    _add_workload_isinf()
     _add_workload_heaviside()
     _add_workload_spacing()
 
