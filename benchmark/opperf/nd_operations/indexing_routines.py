@@ -63,5 +63,5 @@ def run_indexing_routines_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     mx_indexing_ops = get_all_indexing_routines()
 
     # Run benchmarks
-    mx_indexing_op_results = run_op_benchmarks(mx_indexing_ops, dtype, ctx, profiler, warmup, runs)
+    mx_indexing_op_results = run_op_benchmarks(mx_indexing_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_indexing_op_results
