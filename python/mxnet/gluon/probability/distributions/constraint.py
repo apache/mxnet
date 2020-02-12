@@ -18,7 +18,13 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Base class and implementations of constraint"""
-__all__ = ["Constraint", "Real", "Boolean", "Interval", "GreaterThan", "Positive"]
+__all__ = ["Constraint", "Real", "Boolean",
+           "Interval", "OpenInterval", "HalfOpenInterval", "UnitInterval",
+           "IntegerInterval", "IntegerOpenInterval", "IntegerHalfOpenInterval",
+           "GreaterThan", "GreaterThanEq", "IntegerGreaterThan", "IntegerGreaterThanEq",
+           "LessThan", "LessThanEq", "IntegerLessThan", "IntegerLessThanEq",
+           "Positive", "NonNegative", "PositiveInteger", "NonNegativeInteger",
+           "Simplex", "LowerTriangular", "LowerCholesky", "PositiveDefinite"]
 
 from .utils import getF
 
@@ -78,6 +84,7 @@ class Real(Constraint):
     def check(self, value):
         F = getF(value)
         err_msg = "Constraint violated: {} should be a real tensor".format(value)
+        # False when value has NANs
         condition = (value == value)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
@@ -102,15 +109,119 @@ class Interval(Constraint):
     """
     def __init__(self, lower_bound, upper_bound):
         super(Interval, self).__init__()
-        self._low = lower_bound
-        self._up = upper_bound
+        self._lower_bound = lower_bound
+        self._upper_bound = upper_bound
 
     def check(self, value):
         F = getF(value)
-        err_msg = "Constraint violated: {} should be between {} and {}.".format(
-                    value, self._low, self._up)
+        err_msg = "Constraint violated: {} should be >= {} and <= {}.".format(
+            value, self._lower_bound, self._upper_bound)
         # FIXME: replace bitwise_and with logical_and
-        condition = F.np.bitwise_and(value > self._low, value < self._up)
+        condition = F.np.bitwise_and(value >= self._lower_bound, value <= self._upper_bound)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class OpenInterval(Constraint):
+    """
+    Constrain to a real interval `(lower_bound, upper_bound)`
+    """
+    def __init__(self, lower_bound, upper_bound):
+        super(OpenInterval, self).__init__()
+        self._lower_bound = lower_bound
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be > {} and < {}.".format(
+            value, self._lower_bound, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = F.np.bitwise_and(value > self._lower_bound, value < self._upper_bound)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class HalfOpenInterval(Constraint):
+    """
+    Constrain to a real interval `[lower_bound, upper_bound)`
+    """
+    def __init__(self, lower_bound, upper_bound):
+        super(OpenInterval, self).__init__()
+        self._lower_bound = lower_bound
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be >= {} and < {}.".format(
+            value, self._lower_bound, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = F.np.bitwise_and(value >= self._lower_bound, value < self._upper_bound)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerInterval(Constraint):
+    """
+    Constrain to an integer interval `[lower_bound, upper_bound]`
+    """
+    def __init__(self, lower_bound, upper_bound):
+        super(IntegerInterval, self).__init__()
+        self._lower_bound = lower_bound
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and be >= {} and <= {}.".format(
+            value, self._lower_bound, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition,
+                                     F.np.bitwise_and(value >= self._lower_bound,
+                                                      value <= self._upper_bound))
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerOpenInterval(Constraint):
+    """
+    Constrain to an integer interval `(lower_bound, upper_bound)`
+    """
+    def __init__(self, lower_bound, upper_bound):
+        super(IntegerOpenInterval, self).__init__()
+        self._lower_bound = lower_bound
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and be > {} and < {}.".format(
+            value, self._lower_bound, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition,
+                                     F.np.bitwise_and(value > self._lower_bound,
+                                                      value < self._upper_bound))
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerHalfOpenInterval(Constraint):
+    """
+    Constrain to an integer interval `[lower_bound, upper_bound)`
+    """
+    def __init__(self, lower_bound, upper_bound):
+        super(IntegerHalfOpenInterval, self).__init__()
+        self._lower_bound = lower_bound
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and be >= {} and < {}.".format(
+            value, self._lower_bound, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition,
+                                     F.np.bitwise_and(value >= self._lower_bound,
+                                                      value < self._upper_bound))
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -121,13 +232,146 @@ class GreaterThan(Constraint):
     """
     def __init__(self, lower_bound):
         super(GreaterThan, self).__init__()
-        self._low = lower_bound
+        self._lower_bound = lower_bound
     
     def check(self, value):
         F = getF(value)
         err_msg = "Constraint violated: {} should be greater than {}".format(
-                    value, self._low)
-        condition = value > self._low
+                    value, self._lower_bound)
+        condition = value > self._lower_bound
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class UnitInterval(Interval):
+    """
+    Constrain to an unit interval `[0, 1]`
+    """
+    def __init__(self):
+        super(UnitInterval, self).__init__(0, 1)
+
+
+class GreaterThanEq(Constraint):
+    """
+    Constrain to be greater than or equal to `lower_bound`.
+    """
+    def __init__(self, lower_bound):
+        super(GreaterThanEq, self).__init__()
+        self._lower_bound = lower_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be greater than or equal to {}".format(
+            value, self._lower_bound)
+        condition = value >= self._lower_bound
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class LessThan(Constraint):
+    """
+    Constrain to be less than `upper_bound`.
+    """
+    def __init__(self, upper_bound):
+        super(LessThan, self).__init__()
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be less than {}".format(
+            value, self._upper_bound)
+        condition = value < self._upper_bound
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class LessThanEq(Constraint):
+    """
+    Constrain to be less than `upper_bound`.
+    """
+    def __init__(self, upper_bound):
+        super(LessThanEq, self).__init__()
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be less than or equal to {}".format(
+            value, self._upper_bound)
+        condition = value <= self._upper_bound
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerGreaterThan(Constraint):
+    """
+    Constrain to be integer and be greater than `lower_bound`.
+    """
+    def __init__(self, lower_bound):
+        super(IntegerGreaterThan, self).__init__()
+        self._lower_bound = lower_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and be greater than {}".format(
+            value, self._lower_bound)
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition, value > self._lower_bound)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerGreaterThanEq(Constraint):
+    """
+    Constrain to be integer and be greater than or equal to `lower_bound`.
+    """
+    def __init__(self, lower_bound):
+        super(IntegerGreaterThanEq, self).__init__()
+        self._lower_bound = lower_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and" \
+                  " be greater than or equal to {}".format(value, self._lower_bound)
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition, value >= self._lower_bound)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerLessThan(Constraint):
+    """
+    Constrain to be integer and be less than `upper_bound`.
+    """
+    def __init__(self, upper_bound):
+        super(IntegerLessThan, self).__init__()
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and be less than {}".format(
+            value, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition, value < self._upper_bound)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class IntegerLessThanEq(Constraint):
+    """
+    Constrain to be integer and be less than or equal to `upper_bound`.
+    """
+    def __init__(self, upper_bound):
+        super(IntegerLessThanEq, self).__init__()
+        self._upper_bound = upper_bound
+
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be integer and" \
+                  " be less than or equal to {}".format(value, self._upper_bound)
+        # FIXME: replace bitwise_and with logical_and
+        condition = value % 1 == 0
+        condition = F.np.bitwise_and(condition, value <= self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -138,6 +382,88 @@ class Positive(GreaterThan):
     """
     def __init__(self):
         super(Positive, self).__init__(0)
+
+
+class NonNegative(GreaterThanEq):
+    """
+    Constrain to be greater than or equal to zero.
+    """
+    def __init__(self):
+        super(NonNegative, self).__init__(0)
+
+
+class PositiveInteger(IntegerGreaterThan):
+    """
+    Constrain to be positive integer.
+    """
+    def __init__(self):
+        super(PositiveInteger, self).__init__(0)
+
+
+class NonNegativeInteger(IntegerGreaterThanEq):
+    """
+    Constrain to be non-negative integer.
+    """
+    def __init__(self):
+        super(NonNegativeInteger, self).__init__(0)
+
+
+class Simplex(Constraint):
+    """
+    Constraint to the simplex that rightmost dimension lies on a simplex.
+    `x >= 0` and `x.sum(-1) == 1`.
+    """
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be >= 0 and" \
+                  " its rightmost dimension should sum up to 1".format(value)
+        # FIXME: replace bitwise_and with logical_and
+        condition = F.all(value >= 0, axis=-1)
+        condition = F.np.bitwise_and(condition, (value.sum(-1) - 1).abs() < 1e-6)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class LowerTriangular(Constraint):
+    """
+    Constraint to square lower triangular matrices.
+    """
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be" \
+                  " square lower triangular matrices".format(value)
+        condition = F.np.tril(value) == value
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class LowerCholesky(Constraint):
+    """
+    Constraint to square lower triangular matrices with real and positive diagonal entries.
+    """
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be" \
+                  " square lower triangular matrices" \
+                  " with real and positive diagonal entries".format(value)
+        condition = F.all(F.np.tril(value) == value, axis=-1)
+        condition = F.np.bitwise_and(condition, F.np.diagonal(value, axis1=-2, axis2=-1) > 0)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
+
+
+class PositiveDefinite(Constraint):
+    """
+    Constraint to positive-definite matrices.
+    """
+    def check(self, value):
+        F = getF(value)
+        err_msg = "Constraint violated: {} should be" \
+                  " positive definite matrices".format(value)
+        condition = F.all(value == value.T, axis=-1)
+        condition = F.np.bitwise_and(condition, F.linalg.eigvals(value) > 0)
+        _value = F.npx.constraint_check(condition, err_msg) * value
+        return _value
 
 
 dependent_property = _DependentProperty
