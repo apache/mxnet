@@ -2011,6 +2011,106 @@ def _add_workload_argpartition():
         OpArgMngr.add_workload('argpartition', d, 0, kind='introselect')
 
 
+def _add_workload_argwhere():
+    a = np.arange(6).reshape((2, 3))
+    b = np.array([4, 0, 2, 1, 3])
+    OpArgMngr.add_workload('argwhere', a>1)
+    OpArgMngr.add_workload('argwhere', b)
+
+
+def _add_workload_array_equal():
+    a = np.array([1, 2])
+    b = np.array([1, 2, 3])
+    c = np.array([3, 4])
+    d = np.array([1, 3])
+    OpArgMngr.add_workload('array_equal', a, a)
+    OpArgMngr.add_workload('array_equal', a, b)
+    OpArgMngr.add_workload('array_equal', a, c)
+    OpArgMngr.add_workload('array_equal', a, d)
+
+
+def _add_workload_array_equiv():
+    a = np.array([1, 2])
+    b = np.array([1, 2, 3])
+    c = np.array([3, 4])
+    d = np.array([1, 3])
+    e = np.array([2])
+    f = np.array([[1], [2]])
+    g = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]])
+    OpArgMngr.add_workload('array_equiv', a, a)
+    OpArgMngr.add_workload('array_equiv', a, b)
+    OpArgMngr.add_workload('array_equiv', a, c)
+    OpArgMngr.add_workload('array_equiv', a, d)
+    OpArgMngr.add_workload('array_equiv', a, e)
+    OpArgMngr.add_workload('array_equiv', a, f)
+    OpArgMngr.add_workload('array_equiv', a, g)
+
+
+# def _add_workload_choose():
+#     x = 2*np.ones((3,), dtype=int)
+#     y = 3*np.ones((3,), dtype=int)
+#     x2 = 2*np.ones((2, 3), dtype=int)
+#     y2 = 3*np.ones((2, 3), dtype=int)
+#     OpArgMngr.add_workload('choose', x, y)
+#     OpArgMngr.add_workload('choose', x2, y2)
+#     OpArgMngr.add_workload('choose', x, y2)
+
+
+def _add_workload_compress():
+    a = np.array([[1, 2], [3, 4], [5, 6]])
+    b = [0, 1]
+    c = [False, True, True]
+    d = [False, True]
+    OpArgMngr.add_workload('compress', b, a, axis=0)
+    OpArgMngr.add_workload('compress', c, a, axis=0)
+    OpArgMngr.add_workload('compress', d, a, axis=1)
+
+
+def _add_workload_corrcoef():
+    a = np.array([0, 1, 0])
+    b = np.array([1, 0, 1])
+    c = np.array(
+        [[0.15391142, 0.18045767, 0.14197213],
+         [0.70461506, 0.96474128, 0.27906989],
+         [0.9297531, 0.32296769, 0.19267156]])
+    OpArgMngr.add_workload('corrcoef', a, b)
+    OpArgMngr.add_workload('corrcoef', c)
+
+
+def _add_workload_correlate():
+    x = np.array([1, 2, 3, 4, 5])
+    xs = np.arange(1, 20)[::3]
+    y = np.array([-1, -2, -3])
+    OpArgMngr.add_workload('correlate', x, y)
+    OpArgMngr.add_workload('correlate', x, y, 'full')
+    OpArgMngr.add_workload('correlate', x, y[:-1], 'full')
+    OpArgMngr.add_workload('correlate', x[::-1], y, 'full')
+    OpArgMngr.add_workload('correlate', xs, y, 'full')
+    OpArgMngr.add_workload('correlate', x, y,"same")
+
+
+def _add_workload_count_nonzero():
+    m = np.array([[0, 1, 7, 0, 0], [3, 0, 0, 2, 19]])
+    a = np.array([])
+    b = np.eye(3)
+    OpArgMngr.add_workload('count_nonzero', m, axis=0)
+    OpArgMngr.add_workload('count_nonzero', m, axis=1)
+    OpArgMngr.add_workload('count_nonzero', a)
+    OpArgMngr.add_workload('count_nonzero', b)
+
+
+def _add_workload_cov():
+    x = np.array(np.random.rand(12))
+    y = x.reshape(3, 4)
+    OpArgMngr.add_workload('cov', x)
+    OpArgMngr.add_workload('cov', x, rowvar=False)
+    OpArgMngr.add_workload('cov', x, rowvar=False, bias=True)
+    OpArgMngr.add_workload('cov', y)
+    OpArgMngr.add_workload('cov', y, y[::-1])
+    OpArgMngr.add_workload('cov', y, rowvar=False)
+    OpArgMngr.add_workload('cov', y, rowvar=False, bias=True)
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
@@ -2185,6 +2285,15 @@ def _prepare_workloads():
     _add_workload_apply_along_axis()
     _add_workload_apply_over_axes()
     _add_workload_argpartition()
+    _add_workload_argwhere()
+    _add_workload_array_equal()
+    _add_workload_array_equiv()
+    # _add_workload_choose()
+    _add_workload_compress()
+    _add_workload_corrcoef()
+    _add_workload_correlate()
+    _add_workload_count_nonzero()
+    _add_workload_cov()
 
 
 _prepare_workloads()

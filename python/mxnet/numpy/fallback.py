@@ -26,15 +26,15 @@ __all__ = [
     'apply_along_axis',
     'apply_over_axes',
     'argpartition',
-    # 'argwhere',
-    # 'array_equal',
-    # 'array_equiv',
-    # 'choose',
-    # 'compress',
-    # 'corrcoef',
-    # 'correlate',
-    # 'count_nonzero',
-    # 'cov',
+    'argwhere',
+    'array_equal',
+    'array_equiv',
+    # 'choose',    #dtype
+    'compress',
+    'corrcoef',
+    'correlate',
+    'count_nonzero',
+    'cov',
     # 'cross',
     # 'diag_indices_from',
     # 'digitize',
@@ -138,15 +138,15 @@ alltrue = onp.alltrue
 apply_along_axis = onp.apply_along_axis
 apply_over_axes = onp.apply_over_axes
 argpartition = onp.argpartition
-# argwhere = onp.argwhere
-# array_equal = onp.array_equal
-# array_equiv = onp.array_equiv
+argwhere = onp.argwhere
+array_equal = onp.array_equal
+array_equiv = onp.array_equiv
 # choose = onp.choose
-# compress = onp.compress
-# corrcoef = onp.corrcoef
-# correlate = onp.correlate
-# count_nonzero = onp.count_nonzero
-# cov = onp.cov
+compress = onp.compress
+corrcoef = onp.corrcoef
+correlate = onp.correlate
+count_nonzero = onp.count_nonzero
+cov = onp.cov
 # cross = onp.cross
 # diag_indices_from = onp.diag_indices_from
 # digitize = onp.digitize
