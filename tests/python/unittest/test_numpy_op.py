@@ -3635,19 +3635,25 @@ def test_np_exponential():
         def hybrid_forward(self, F, scale):
             return F.np.random.exponential(scale, self._shape)
 
-    shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
     for hybridize in [False, True]:
-        for shape in shapes:
-            test_exponential = TestRandomExp(shape)
+        for out_shape in output_shapes:
+            test_exponential_grad = TestRandomExp(out_shape)
             if hybridize:
-                test_exponential.hybridize()
-            np_out = _np.random.exponential(size = shape)
-            mx_out = test_exponential(np.array([1]))
-    
-    for shape in shapes:
-        mx_out = np.random.exponential(np.array([1]), shape)
-        np_out = _np.random.exponential(np.array([1]).asnumpy(), shape)
-        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+                test_exponential_grad.hybridize()
+            scale = np.ones(out_shape)
+            scale.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_exponential_grad(scale)
+            np_out = _np.random.exponential(scale = scale.asnumpy(), size = out_shape)
+            assert_almost_equal(np_out.shape, mx_out.shape)
+            mx_out.backward()
+            assert scale.grad.shape == out_shape
+            assert_almost_equal(scale.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
 
     def _test_exponential_exception(scale):
         output = np.random.exponential(scale=scale).asnumpy()
@@ -7367,6 +7373,43 @@ def test_np_unravel_index():
         # Test imperative once again
         mx_out = np.unravel_index(x, rshape)
         np_out = _np.unravel_index(x.asnumpy(), rshape)
+        assert len(mx_out) == len(np_out)
+        for elem_mx, elem_np in zip(mx_out, np_out):
+            assert elem_mx.asnumpy().shape == elem_np.shape
+            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
+def test_np_diag_indices_from():
+    class TestDiag_indices_from(HybridBlock):
+        def __init__(self) :
+            super(TestDiag_indices_from, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.diag_indices_from(a)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    shapes = [(2, 2), (4, 4), (5, 5, 5), (6, 6, 6, 6), (8, 8, 8, 8)]
+    combinations = itertools.product([False, True], dtypes, shapes)
+    for hybridize, dtype, shape in combinations:
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        test_diag_indices_from = TestDiag_indices_from()   
+        if hybridize:
+            test_diag_indices_from.hybridize()
+        x = np.random.uniform(-8, 8, size=shape).astype(dtype)
+        mx_out = test_diag_indices_from(x)
+        np_out = _np.diag_indices_from(x.asnumpy())
+        assert len(mx_out) == len(np_out)
+        for elem_mx, elem_np in zip(mx_out, np_out):
+            assert elem_mx.asnumpy().shape == elem_np.shape
+            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+        # no backward function for diag_indices_from operator
+
+        # Test imperative once again
+        mx_out = np.diag_indices_from(x)
+        np_out = _np.diag_indices_from(x.asnumpy())
         assert len(mx_out) == len(np_out)
         for elem_mx, elem_np in zip(mx_out, np_out):
             assert elem_mx.asnumpy().shape == elem_np.shape
