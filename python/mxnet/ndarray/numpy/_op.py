@@ -6728,7 +6728,7 @@ def isinf(x, out=None, **kwargs):
 
 
 @set_module('mxnet.ndarray.numpy')
-def where(condition, x=None, y=None):
+def where(condition, x=None, y=None):  # pylint: disable=too-many-return-statements
     """where(condition, [x, y])
     Return elements chosen from `x` or `y` depending on `condition`.
 
@@ -6757,6 +6757,14 @@ def where(condition, x=None, y=None):
 
         [xv if c else yv
         for c, xv, yv in zip(condition, x, y)]
+
+    This function differs from the original `numpy.where
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.where.html>`_ in
+    the following way(s):
+
+    - If `condition` is a scalar, this operator returns x or y directly without broadcasting.
+    - If `condition` is ndarray, while both `x` and `y` are scalars,
+        the output dtype will be `float32`.
 
     Examples
     --------
@@ -6788,7 +6796,7 @@ def where(condition, x=None, y=None):
     >>> a = np.array([[0, 1, 2],
     ...               [0, 2, 4],
     ...               [0, 3, 6]])
-    >>> np.where(a < 4, a, np.array(-1))  # -1 is broadcast
+    >>> np.where(a < 4, a, -1)  # -1 is broadcast
     array([[ 0.,  1.,  2.],
            [ 0.,  2., -1.],
            [ 0.,  3., -1.]])
@@ -6796,7 +6804,22 @@ def where(condition, x=None, y=None):
     if x is None and y is None:
         return nonzero(condition)
     else:
-        return _npi.where(condition, x, y, out=None)
+        if isinstance(condition, numeric_types):
+            if condition != 0:
+                return x
+            else:
+                return y
+        else:
+            if isinstance(x, numeric_types) and isinstance(y, numeric_types):
+                return _npi.where_scalar2(condition, float(x), float(y), out=None)
+            elif isinstance(x, NDArray) and isinstance(y, NDArray):
+                return _npi.where(condition, x, y, out=None)
+            elif isinstance(y, NDArray):
+                return _npi.where_lscalar(condition, y, float(x), out=None)
+            elif isinstance(x, NDArray):
+                return _npi.where_rscalar(condition, x, float(y), out=None)
+            else:
+                raise TypeError('type {0} and {1} not supported'.format(str(type(x)), str(type(y))))
 
 
 @set_module('mxnet.ndarray.numpy')
