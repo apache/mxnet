@@ -118,13 +118,23 @@ def prepare_op_inputs(op, arg_params):
     # 3d tensor is needed by following ops
     ops_3d = ['CTCLoss', 'ctc_loss']
 
-    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian', 'amp_cast', 'cast']
+    custom_data = ['BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
+
+    int_only = ['random_randint']
 
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
                                   arg_params["params"]["arg_types"]):
-        if "NDArray" in arg_type and op == "ravel_multi_index":
+        # Due to lack of an internal API for fetching permissible dtype
+        # added a logic for using float only dtype as input for ops that take only floats
+        # same for randint (which is the only op that takes only int as input)
+        # rest all operators take int as well as float
+        if op in int_only and arg_name == "dtype":
+            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
+        elif op.startswith(('random','sample')) and arg_name == "dtype":
+            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
+        elif "NDArray" in arg_type and op == "ravel_multi_index":
             arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
         elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]

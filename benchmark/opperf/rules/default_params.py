@@ -31,7 +31,9 @@ DEFAULT_ARGS = [(1024, 1024)]
 
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
-DEFAULT_DTYPE = ['int32'] # required parameter for amp_cast, cast
+DEFAULT_DTYPE = ['float32', 'int32', 'float32']  # required parameter for amp_cast, cast
+DEFAULT_DTYPE_INT = ['int32', 'int64', 'int32']  # randint works for int* types only
+DEFAULT_DTYPE_FLOAT = ['float16', 'float32', 'float64']  # random_exp works for float* types only
 
 # For Binary miscellaneous operators like choose_element0_index
 # argument data must be indexed via an NDArray.
@@ -147,8 +149,9 @@ DEFAULT_AXES = [[0, 1]]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
-                   "dtype_cast": DEFAULT_DTYPE,
-                   "dtype_amp_cast": DEFAULT_DTYPE,
+                   "dtype": DEFAULT_DTYPE,
+                   "dtype_int": DEFAULT_DTYPE_INT,
+                   "dtype_float": DEFAULT_DTYPE_FLOAT,
                    "sample": DEFAULT_SAMPLE,
                    "lhs": DEFAULT_LHS,
                    "rhs": DEFAULT_RHS,
