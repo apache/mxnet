@@ -46,6 +46,7 @@ from ..ndarray.ndarray import _storage_type, from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
+import pdb
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
@@ -134,6 +135,7 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
+    # pdb.set_trace()
     if isinstance(object, _np.ndarray):
         if not object.flags['C_CONTIGUOUS']:
             object = _np.ascontiguousarray(object, dtype=object.dtype)
@@ -148,6 +150,29 @@ def _as_mx_np_array(object, ctx=None):
         return array(object, dtype=_np.bool_, ctx=ctx)
     else:
         raise TypeError('Does not support converting {} to mx.np.ndarray.'.format(str(type(object))))
+
+
+def _as_onp_array(object):
+    """Convert object to mxnet.numpy.ndarray."""
+    cur_ctx = None
+    if isinstance(object, ndarray):
+        return object.asnumpy(), object.ctx
+    elif isinstance(object, (list, tuple)):
+        tmp = []
+        for arr in object:
+            arr, tmp_ctx = _as_onp_array(arr)
+            # if isinstance(arr, (list, tuple)):
+            #     raise TypeError('type {} not supported'.format(str(type(arr))))
+            tmp.append(arr)
+            if cur_ctx is None:
+                cur_ctx = tmp_ctx
+            elif tmp_ctx is not None and cur_ctx != tmp_ctx:
+                raise ValueError('Ambiguous to set the context for the output ndarray since'
+                                 ' input ndarrays are allocated on different devices: {} and {}'
+                                 .format(str(cur_ctx, tmp_ctx)))
+        return object.__class__(tmp), cur_ctx
+    else:
+        return object, cur_ctx
 
 
 # Have to use 0 as default value for stype since pylint does not allow
@@ -232,6 +257,8 @@ class ndarray(NDArray):
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
                 # try to fallback to official NumPy op
+                # print(name)
+                # pdb.set_trace()
                 onp_op = _get_np_op(name)
                 new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
                 out = onp_op(*new_inputs, **kwargs)
@@ -250,14 +277,12 @@ class ndarray(NDArray):
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
         if mx_np_func is None:
             # try to fallback to official NumPy op
-            new_args = []
-            cur_ctx = None
-            for arg in args:
-                if isinstance(arg, ndarray):
-                    cur_ctx = arg.ctx
-                    new_args.append(arg.asnumpy())
-                else:
-                    new_args.append(arg)
+            # print(type(args), args, func)
+            new_args, cur_ctx = _as_onp_array(args)
+            # print(new_args)
+            if cur_ctx is None:
+                raise ValueError('Unknown context for the input ndarrays. It is probably a bug. Please'
+                                 ' create an issue on GitHub.')
             new_kwargs = {}
             for k, v in kwargs.items():
                 new_kwargs[k] = v.asnumpy() if isinstance(v, ndarray) else v
