@@ -149,24 +149,13 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
   op::TensordotParam param;
   nnvm::NodeAttrs attrs;
   attrs.op = op;
-  const ObjectRef ref = args[2].operator ObjectRef();
-  if (const ADTObj* obj = ref.as<ADTObj>()) {
-    if (const IntegerObj* lop = (*obj)[0].as<IntegerObj>()) {
-      param.a_axes_summed = Tuple<int>(1, lop->value);
-      param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>((*obj)[1])->value);
-    } else {
-      param.a_axes_summed = Tuple<int>((*obj)[0]);
-      param.b_axes_summed = Tuple<int>((*obj)[1]);
-    }
+  ADT adt = Downcast<ADT, ObjectRef>(args[2].operator ObjectRef());
+  if (const IntegerObj* lop = adt[0].as<IntegerObj>()) {
+    param.a_axes_summed = Tuple<int>(1, lop->value);
+    param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>(adt[1])->value);
   } else {
-    Array<ObjectRef> arr = Downcast<Array<ObjectRef>, ObjectRef>(ref);
-    if (const IntImmNode* lop = arr[0].as<IntImmNode>()) {
-      param.a_axes_summed = Tuple<int>(1, lop->value);
-      param.b_axes_summed = Tuple<int>(1, Downcast<IntImm, ObjectRef>(arr[1])->value);
-    } else {
-      param.a_axes_summed = Tuple<int>(arr[0]);
-      param.b_axes_summed = Tuple<int>(arr[1]);
-    }
+    param.a_axes_summed = Tuple<int>(adt[0]);
+    param.b_axes_summed = Tuple<int>(adt[1]);
   }
   attrs.parsed = std::move(param);
   int num_outputs = 0;

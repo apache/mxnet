@@ -21,33 +21,59 @@
  *  Implementation of API functions related to Higher DSL build.
  * \file api_lang.cc
  */
-
-#include <mxnet/runtime/packed_func.h>
 #include <mxnet/api_registry.h>
 #include <mxnet/base.h>
-#include <mxnet/ir/expr.h>
-#include <mxnet/node/container.h>
 #include <mxnet/expr_operator.h>
+#include <mxnet/runtime/packed_func.h>
+#include <mxnet/ir/expr.h>
+#include <mxnet/runtime/container.h>
+#include <mxnet/runtime/ffi_helper.h>
 #include <nnvm/c_api.h>
 #include <iostream>
 
 namespace mxnet {
 
-MXNET_REGISTER_GLOBAL("_const")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-    if (args[0].type_code() == kDLInt) {
-      *ret = make_const(args[1].operator MXNetDataType(),
-                        args[0].operator int64_t());
-    } else if (args[0].type_code() == kDLFloat) {
-      *ret = make_const(args[1].operator MXNetDataType(),
-                        args[0].operator double());
-    } else {
-      LOG(FATAL) << "only accept int or float";
-    }
-  });
+// MXNET_REGISTER_GLOBAL("_const")
+// .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+//     if (args[0].type_code() == kDLInt) {
+//       *ret = make_const(args[1].operator MXNetDataType(),
+//                         args[0].operator int64_t());
+//     } else if (args[0].type_code() == kDLFloat) {
+//       *ret = make_const(args[1].operator MXNetDataType(),
+//                         args[0].operator double());
+//     } else {
+//       LOG(FATAL) << "only accept int or float";
+//     }
+// });
 
-MXNET_REGISTER_GLOBAL("_Array")
+MXNET_REGISTER_GLOBAL("_Integer")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+    using namespace runtime;
+    if (args[0].type_code() == kDLInt) {
+      *ret = Integer(args[0].operator int64_t());
+    } else {
+      LOG(FATAL) << "only accept int";
+    }
+});
+
+// MXNET_REGISTER_GLOBAL("_Array")
+// .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+//     std::vector<ObjectRef> data;
+//     for (int i = 0; i < args.size(); ++i) {
+//       if (args[i].type_code() != kNull) {
+//         data.push_back(args[i].operator ObjectRef());
+//       } else {
+//         data.emplace_back(nullptr);
+//       }
+//     }
+//     auto node = make_object<ArrayNode>();
+//     node->data = std::move(data);
+//     *ret = Array<ObjectRef>(node);
+//   });
+
+MXNET_REGISTER_GLOBAL("_ADT")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+    using namespace runtime;
     std::vector<ObjectRef> data;
     for (int i = 0; i < args.size(); ++i) {
       if (args[i].type_code() != kNull) {
@@ -56,10 +82,8 @@ MXNET_REGISTER_GLOBAL("_Array")
         data.emplace_back(nullptr);
       }
     }
-    auto node = make_object<ArrayNode>();
-    node->data = std::move(data);
-    *ret = Array<ObjectRef>(node);
-  });
+    *ret = ADT(0, data.begin(), data.end());
+});
 
 MXNET_REGISTER_GLOBAL("_Test")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {

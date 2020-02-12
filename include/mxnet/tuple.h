@@ -121,17 +121,10 @@ class Tuple {
 
   inline explicit Tuple(const runtime::ObjectRef& src) {
     using namespace runtime;
-    if (const ADTObj* obj = src.as<ADTObj>()) {
-      this->SetDim(obj->size);
-      for (uint32_t i = 0; i < obj->size; ++i) {
-        this->begin()[i] = Downcast<Integer, ObjectRef>(obj->operator[](i))->value;
-      }
-    } else {
-      Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(src);
-      this->SetDim(arr.size());
-      for (size_t i = 0; i < arr.size(); ++i) {
-        this->begin()[i] = arr[i]->value;
-      }
+    ADT adt = Downcast<ADT, ObjectRef>(src);
+    this->SetDim(adt.size());
+    for (int i = 0; i < ndim_; ++i) {
+      this->begin()[i] = Downcast<Integer, ObjectRef>(adt[i])->value;
     }
   }
 
