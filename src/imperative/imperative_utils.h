@@ -225,14 +225,14 @@ inline void SetShapeType(const Context& ctx,
 }
 
 inline void SetDependency(const nnvm::NodeAttrs& attrs,
-                   const Context& ctx,
-                   const std::vector<NDArray*>& inputs,
-                   const std::vector<NDArray*>& outputs,
-                   std::vector<engine::VarHandle> *p_read_vars,
-                   std::vector<engine::VarHandle> *p_write_vars,
-                   std::vector<Resource> *p_requested,
-                   std::vector<uint32_t> *p_mutate_idx,
-                   const DispatchMode dispatch_mode) {
+                          const Context& ctx,
+                          const std::vector<NDArray*>& inputs,
+                          const std::vector<NDArray*>& outputs,
+                          std::vector<engine::VarHandle> *p_read_vars,
+                          std::vector<engine::VarHandle> *p_write_vars,
+                          std::vector<Resource> *p_requested,
+                          std::vector<uint32_t> *p_mutate_idx,
+                          const DispatchMode dispatch_mode) {
   static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
   static auto& ftmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
   static auto& ftmp_resource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
@@ -295,6 +295,56 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
     write_vars.push_back(inputs[i]->var());
   }
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
+}
+
+inline void PrepareResources(const nnvm::NodeAttrs& attrs,
+                             const Context& ctx,
+                             std::vector<Resource> *p_requested,
+                             std::vector<uint32_t> *p_mutate_idx,
+                             const DispatchMode dispatch_mode) {
+  static auto& fmutate = nnvm::Op::GetAttr<nnvm::FMutateInputs>("FMutateInputs");
+  static auto& ftmp_resource = nnvm::Op::GetAttr<FResourceRequest>("FResourceRequest");
+  static auto& ftmp_resource_ex = nnvm::Op::GetAttr<FResourceRequestEx>("FResourceRequestEx");
+
+  std::vector<Resource>& requested = *p_requested;
+  std::vector<uint32_t>& mutate_idx = *p_mutate_idx;
+
+  if (fmutate.count(attrs.op)) {
+    mutate_idx = fmutate[attrs.op](attrs);
+  }
+  const bool rsc_req = (ftmp_resource.count(attrs.op) != 0);
+  const bool rsc_ex_req = (ftmp_resource_ex.count(attrs.op) != 0);
+  if (rsc_req || rsc_ex_req) {
+    int ntmp = 0;
+    auto resource_reqs = rsc_ex_req ? ftmp_resource_ex[attrs.op](attrs,
+                                          static_cast<int>(ctx.dev_mask()), dispatch_mode)
+                                    : ftmp_resource[attrs.op](attrs);
+    for (const auto& req : resource_reqs) {
+      switch (req.type) {
+       case ResourceRequest::kTempSpace:
+        ++ntmp;
+       case ResourceRequest::kRandom:
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        break;
+       case ResourceRequest::kParallelRandom:
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        break;
+#if MXNET_USE_CUDNN == 1
+       case ResourceRequest::kCuDNNDropoutDesc:
+        requested.push_back(ResourceManager::Get()->Request(ctx, req));
+        break;
+#endif  // MXNET_USE_CUDNN == 1
+       default:
+        LOG(FATAL) << "resource type not yet supported";
+      }
+    }
+    CHECK_LE(ntmp, 1) << "Only support 1 temp space request";
+  }
+
+  // append extra resource requests for storage fallback
+  if (dispatch_mode == DispatchMode::kFComputeFallback) {
+    requested.push_back(ResourceManager::Get()->Request(ctx, ResourceRequest::kTempSpace));
+  }
 }
 
 inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,

@@ -144,7 +144,7 @@ class NaiveEngine final : public Engine {
   }
 
 /*!
- * \brief NaiveEngine's PushAsync was intentionally synchronous. 
+ * \brief NaiveEngine's PushAsync was intentionally synchronous.
  * User should not make any assumption about execution order when using async interface of any engine.
  */
   void PushAsync(AsyncFn exec_fun,
@@ -164,11 +164,9 @@ class NaiveEngine final : public Engine {
     };
     std::unique_ptr<NaiveOpr, decltype(opr_deleter)> opr(nullptr, opr_deleter);
     const bool profiling = opr_name && profiler->IsProfiling(profiler::Profiler::kImperative);
-    // GenerateDisplayName() will return a pointer to the correct name of the operator
-    const char* display_name = profiling ?
-                               profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name) :
-                               opr_name;
     if (profiling) {
+      // GenerateDisplayName() will return a pointer to the correct name of the operator
+      const char* display_name = profiler::CustomOpProfiler::Get()->GenerateDisplayName(opr_name);
       opr.reset(NewOperator(exec_fun, const_vars, mutable_vars,
                         prop, display_name)->Cast<NaiveOpr>());
       opr->profiling = profiling;
@@ -229,6 +227,10 @@ class NaiveEngine final : public Engine {
 
   void NotifyShutdown() override {
     shutdown_phase_.store(true);
+  }
+
+  bool IsNaiveEngine() override {
+    return true;
   }
 
  private:
