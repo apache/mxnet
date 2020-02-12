@@ -94,17 +94,13 @@ cdef inline ADT convert_list(list src) except *:
 
 
 cdef inline ObjectRef convert_object(object src_obj) except *:
-    if isinstance(src_obj, Integral):
+    if isinstance(src_obj, int):
         return Integer(<int>src_obj)
     elif isinstance(src_obj, tuple):
         return convert_tuple(src_obj)
     elif isinstance(src_obj, list):
         return convert_list(src_obj)
-    # elif src_obj is Ellipsis:
-    #     return CreateEllipsis()
-    # elif isinstance(src_obj, slice):
-    #     return convert_slice(src_obj)
-    # elif src_obj is None:
-    #     return ObjectRef()
+    if isinstance(src_obj, Integral):
+        return Integer(<int>src_obj)
     else:
         raise TypeError("Don't know how to convert type %s" % type(src_obj))
