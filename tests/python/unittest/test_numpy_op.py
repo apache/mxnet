@@ -7381,6 +7381,43 @@ def test_np_unravel_index():
 
 @with_seed()
 @use_np
+def test_np_diag_indices_from():
+    class TestDiag_indices_from(HybridBlock):
+        def __init__(self) :
+            super(TestDiag_indices_from, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.diag_indices_from(a)
+
+    dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
+    shapes = [(2, 2), (4, 4), (5, 5, 5), (6, 6, 6, 6), (8, 8, 8, 8)]
+    combinations = itertools.product([False, True], dtypes, shapes)
+    for hybridize, dtype, shape in combinations:
+        rtol = 1e-2 if dtype == np.float16 else 1e-3
+        atol = 1e-4 if dtype == np.float16 else 1e-5
+        test_diag_indices_from = TestDiag_indices_from()   
+        if hybridize:
+            test_diag_indices_from.hybridize()
+        x = np.random.uniform(-8, 8, size=shape).astype(dtype)
+        mx_out = test_diag_indices_from(x)
+        np_out = _np.diag_indices_from(x.asnumpy())
+        assert len(mx_out) == len(np_out)
+        for elem_mx, elem_np in zip(mx_out, np_out):
+            assert elem_mx.asnumpy().shape == elem_np.shape
+            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+        # no backward function for diag_indices_from operator
+
+        # Test imperative once again
+        mx_out = np.diag_indices_from(x)
+        np_out = _np.diag_indices_from(x.asnumpy())
+        assert len(mx_out) == len(np_out)
+        for elem_mx, elem_np in zip(mx_out, np_out):
+            assert elem_mx.asnumpy().shape == elem_np.shape
+            assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_bincount():
     class TestBincount(HybridBlock):
         def __init__(self, minlength=0):
