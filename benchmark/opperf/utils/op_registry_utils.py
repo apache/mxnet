@@ -109,7 +109,7 @@ def prepare_op_inputs(arg_params, arg_values):
     return inputs
 
 
-def prepare_op_inputs(op, arg_params, large_tensor):
+def prepare_op_inputs(op, arg_params, int64_tensor):
     inputs = []
 
     # 4d tensor is needed only by following two ops
@@ -128,7 +128,7 @@ def prepare_op_inputs(op, arg_params, large_tensor):
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
 
-    if large_tensor == 'on':
+    if int64_tensor == 'on':
         DEFAULTS_INPUTS = DEFAULTS_INPUTS_LARGE_TENSOR
 
     # Prepare op to default input mapping
