@@ -62,7 +62,7 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
         .add_enum("bool", mshadow::kBool)
-        .set_default(mshadow::int32)
+        .set_default(mshadow::kInt32)
         .describe(
             "DType of the output in case this can't be inferred. "
             "Defaults to float32 if not defined (dtype=None).");
