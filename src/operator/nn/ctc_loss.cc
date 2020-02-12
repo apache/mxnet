@@ -130,7 +130,7 @@ information on the definition and the algorithm.
 
 NNVM_REGISTER_OP(_backward_ctc_loss)
 .set_attr_parser(ParamParser<CTCLossOpParam>)
-.set_num_inputs(1)
+.set_num_inputs(4)
 .set_num_outputs(CTCLossOpNumInputs)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", CTCLossOpBackward<cpu>);

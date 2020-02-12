@@ -55,3 +55,5 @@ class InternalError(MXNetError):
 register_error("ValueError", ValueError)
 register_error("TypeError", TypeError)
 register_error("AttributeError", AttributeError)
+register_error("IndexError", IndexError)
+register_error("NotImplementedError", NotImplementedError)

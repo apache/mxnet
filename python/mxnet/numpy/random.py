@@ -20,8 +20,9 @@
 from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
-__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "shuffle", "randn",
-           "gamma", "laplace"]
+
+__all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
+           "shuffle", "randn", "gamma", 'beta', "exponential", "lognormal", "weibull", "pareto", "power", 'laplace']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -200,6 +201,65 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     return _mx_nd_np.random.normal(loc, scale, size, dtype, ctx, out)
 
 
+def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw samples from a log-normal distribution.
+    Draw samples from a log-normal distribution with specified mean,
+    standard deviation, and array shape.  Note that the mean and standard
+    deviation are not the values for the distribution itself, but of the
+    underlying normal distribution it is derived from.
+    Parameters
+    ----------
+    mean : float or array_like of floats, optional
+        Mean value of the underlying normal distribution. Default is 0.
+    sigma : float or array_like of floats, optional
+        Standard deviation of the underlying normal distribution. Must be
+        non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``mean`` and ``sigma`` are both scalars.
+        Otherwise, ``np.broadcast(mean, sigma).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized log-normal distribution.
+    Notes
+    -----
+    A variable `x` has a log-normal distribution if `log(x)` is normally
+    distributed.  The probability density function for the log-normal
+    distribution is:
+    .. math:: p(x) = \frac{1}{\sigma x \sqrt{2\pi}}
+                    e^{(-\frac{(ln(x)-\mu)^2}{2\sigma^2})}
+    where :math:`\mu` is the mean and :math:`\sigma` is the standard
+    deviation of the normally distributed logarithm of the variable.
+    A log-normal distribution results if a random variable is the *product*
+    of a large number of independent, identically-distributed variables in
+    the same way that a normal distribution results if the variable is the
+    *sum* of a large number of independent, identically-distributed
+    variables.
+    References
+    ----------
+    .. [1] Limpert, E., Stahel, W. A., and Abbt, M., "Log-normal
+        Distributions across the Sciences: Keys and Clues,"
+        BioScience, Vol. 51, No. 5, May, 2001.
+        https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
+    .. [2] Reiss, R.D. and Thomas, M., "Statistical Analysis of Extreme
+        Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
+    Examples
+    --------
+    Draw samples from the distribution:
+    >>> mu, sigma = 3., 1. # mean and standard deviation
+    >>> s = np.random.lognormal(mu, sigma, 1000)
+    """
+    return _mx_nd_np.random.lognormal(mean, sigma, size, dtype, ctx, out)
+
+
 def multinomial(n, pvals, size=None, **kwargs):
     r"""
     Draw samples from a multinomial distribution.
@@ -240,6 +300,84 @@ def multinomial(n, pvals, size=None, **kwargs):
     array([32, 68])
     """
     return _mx_nd_np.random.multinomial(n, pvals, size, **kwargs)
+
+
+# pylint: disable=unused-argument
+def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
+    """
+    multivariate_normal(mean, cov, size=None, check_valid=None, tol=None)
+
+    Draw random samples from a multivariate normal distribution.
+
+    The multivariate normal, multinormal or Gaussian distribution is a
+    generalization of the one-dimensional normal distribution to higher
+    dimensions.  Such a distribution is specified by its mean and
+    covariance matrix.  These parameters are analogous to the mean
+    (average or "center") and variance (standard deviation, or "width,"
+    squared) of the one-dimensional normal distribution.
+
+    This operator is a little different from the one in official NumPy.
+    The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
+    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+
+    Both `mean` and `cov` may have any number of leading dimensions, which correspond
+    to a batch shape. They are not necessarily assumed to have the same batch shape,
+    just ones which can be broadcasted.
+
+    Parameters
+    ----------
+    mean : K-D ndarray, of shape (..., N)
+        Mean of the N-dimensional distribution.
+    cov : (K+1)-D ndarray, of shape (..., N, N)
+        Covariance matrix of the distribution. The last two dimensions must be symmetric and
+        positive-semidefinite for proper sampling.
+    size : int or tuple of ints, optional
+        Given a shape of, for example, ``(m,n,k)``,
+        ``m*n*k`` identically distributed batchs of samples are
+        generated, and packed in an `m`-by-`n`-by-`k` arrangement.
+        If no shape is specified, a batch of (`N`-D) sample is returned.
+    check_valid : { 'warn', 'raise', 'ignore' }, optional
+        Behavior when the covariance matrix is not positive semidefinite.
+        (Not supported)
+    tol : float, optional
+        Tolerance when checking the singular values in covariance matrix.
+        cov is cast to double before the check.
+        (Not supported)
+
+    Returns
+    -------
+    out : ndarray
+        The input shape of `mean` and `cov` should satisfy the requirements of broadcasting.
+        If the parameter `size` is not provided,
+        the output shape is ``np.broadcast(mean.shape, cov.shape[:-1])``.
+        Otherwise, the output shape is ``size + np.broadcast(mean.shape, cov.shape[:-1])``
+
+    Examples
+    --------
+    >>> mean = np.array([1, 2])
+    >>> cov = np.array([[1, 0], [0, 1]])
+    >>> x = np.random.multivariate_normal(mean, cov, (3, 3))
+    >>> x.shape
+    (3, 3, 2)
+
+    The following is probably true, given that 0.6 is roughly twice the
+    standard deviation:
+
+    >>> list((x[0,0,:] - mean) < 0.6)
+    [True, True] # random
+
+    # Performs autobroadcasting when the batch shape of
+    # `mean` and `cov` is different but compatible.
+
+    >>> mean = np.zeros((3,2)) # shape (3, 2)
+    >>> cov = np.array([[1, 0], [0, 100]]) # shape (2, 2)
+    >>> x = np.random.multivariate_normal(mean, cov)
+    >>> x
+    array([[-1.6115597 , -8.726251  ],
+           [ 2.2425299 ,  2.8104177 ],
+           [ 0.36229908, -8.386591  ]])
+    """
+    return _mx_nd_np.random.multivariate_normal(mean, cov, size=size, check_valid=None, tol=None)
 
 
 def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
@@ -324,6 +462,143 @@ def rand(*size, **kwargs):
     return _mx_nd_np.random.uniform(0, 1, size=output_shape, **kwargs)
 
 
+def exponential(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from an exponential distribution.
+
+    Parameters
+    ----------
+    scale : float or array_like of floats
+        The scale parameter, :math:`\beta = 1/\lambda`. Must be
+        non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized exponential distribution.
+    """
+    return _mx_nd_np.random.exponential(scale, size=size, ctx=ctx, out=out)
+
+
+def weibull(a, size=None):
+    r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
+    via inversion.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Shape of the distribution. Must be non-negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` is a scalar. Otherwise,
+        ``np.array(a).size`` samples are drawn.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the 1-parameter Weibull distribution.
+    Examples
+    --------
+    >>> np.random.weibull(a=5)
+    array(0.9553641)
+
+    >>> np.random.weibull(a=5, size=[2,3])
+    array([[1.0466299 , 1.1320982 , 0.98415005],
+          [1.1430776 , 0.9532727 , 1.1344457 ]])
+
+    >>> np.random.weibull(a=np.array([2,3])
+    array([0.98843634, 1.0125613 ])
+
+    The Weibull distribution is one of a class of Generalized Extreme
+    Value (GEV) distributions. This class includes the Gumbel and Frechet
+    distributions.
+
+    The probability density for the Weibull distribution is
+    f(x) = \frac{a}{\lambda}(\frac{x}{\lambda})^{a-1}e^{-(x/\lambda)^a},
+    where a is the shape and \lambda the scale. The generated 1-parameter Weibull
+    sample has the scale parameter \lambda = 1.
+
+    The Weibull distribution is commonly used in reliability engineering to
+    model time to failure, in modeling particle sizes, in information retrieval
+    to model dwell time on pages, in quantitative finance to model risk etc.
+    """
+    return _mx_nd_np.random.weibull(a, size)
+
+
+def pareto(a, size=None):
+    r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+            Shape of the distribution. Must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` is a scalar. Otherwise,
+        ``np.array(a).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the Pareto distribution.
+
+    Examples
+    --------
+    >>> np.random.pareto(a=5)
+    array(0.12749612)
+    >>> mx.numpy.random.pareto(a=5, size=[2,3])
+    array([[0.06933999, 0.0344373 , 0.10654891],
+            [0.0311172 , 0.12911797, 0.03370714]])
+    >>> np.random.pareto(a=np.array([2,3])
+    array([0.26636696, 0.15685666])
+
+    The probability density for the Pareto distribution is f(x) = \frac{am^a}{x^{a+1}}
+    where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution
+    is a power law distribution. Pareto created it to describe the wealth in the economy.
+    """
+    return _mx_nd_np.random.pareto(a, size)
+
+
+def power(a, size=None):
+    r"""Draw samples in [0, 1] from a power distribution with given parameter a.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Shape of the distribution. Must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` is a scalar. Otherwise,
+        ``np.array(a).size`` samples are drawn.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the power distribution.
+
+    Examples
+    --------
+    >>> np.random.power(a=5)
+    array(0.8602478)
+    >>> np.random.power(a=5, size=[2,3])
+    array([[0.988391  , 0.5153122 , 0.9383134 ],
+           [0.9078098 , 0.87819266, 0.730635]])
+    >>> np.random.power(a=np.array([2,3])
+    array([0.7499419 , 0.88894516])
+
+    The probability density function is f(x; a) = ax^{a-1}, 0 \le x \le 1, a>0.
+    The power distribution is just the inverse of the Pareto distribution and
+    a special case of the Beta distribution.
+    """
+    return _mx_nd_np.random.power(a, size)
+
+
 def shuffle(x):
     """
     Modify a sequence in-place by shuffling its contents.
@@ -392,6 +667,53 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     waiting times between Poisson distributed events are relevant.
     """
     return _mx_nd_np.random.gamma(shape, scale, size, dtype, ctx, out)
+
+
+def beta(a, b, size=None, dtype=None, ctx=None):
+    r"""Draw samples from a Beta distribution.
+
+    The Beta distribution is a special case of the Dirichlet distribution,
+    and is related to the Gamma distribution.  It has the probability
+    distribution function
+
+    .. math:: f(x; a,b) = \frac{1}{B(\alpha, \beta)} x^{\alpha - 1}
+                                                     (1 - x)^{\beta - 1},
+
+    where the normalisation, B, is the beta function,
+
+    .. math:: B(\alpha, \beta) = \int_0^1 t^{\alpha - 1}
+                                 (1 - t)^{\beta - 1} dt.
+
+    It is often seen in Bayesian inference and order statistics.
+
+    Parameters
+    ----------
+    a : float or array_like of floats
+        Alpha, positive (>0).
+    b : float or array_like of floats
+        Beta, positive (>0).
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``a`` and ``b`` are both scalars.
+        Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Notes
+    -------
+    To use this  operator with scalars as input, please run ``npx.set_np()`` first.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized beta distribution.
+    """
+    return _mx_nd_np.random.beta(a, b, size=size, dtype=dtype, ctx=ctx)
 
 
 def randn(*size, **kwargs):

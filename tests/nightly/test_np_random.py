@@ -42,6 +42,22 @@ import scipy.stats as ss
 @retry(5)
 @with_seed()
 @use_np
+def test_np_exponential():
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 5
+    for scale in [1.0, 5.0]:
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.expon.ppf(x, scale=scale), num_buckets)
+        buckets = np.array(buckets, dtype="float32").tolist()
+        probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
+        generator_mx_np = lambda x: mx.np.random.exponential(size=x).asnumpy()
+        verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
+
+
+@retry(5)
+@with_seed()
+@use_np
 def test_np_uniform():
     types = [None, "float32", "float64"]
     ctx = mx.context.current_context()

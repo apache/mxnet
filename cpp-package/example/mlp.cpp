@@ -173,7 +173,7 @@ void MLP(int max_epoch) {
 }
 
 int main(int argc, char** argv) {
-  int max_epoch = argc > 1 ? strtol(argv[1], NULL, 10) : 15000;
+  int max_epoch = argc > 1 ? strtol(argv[1], nullptr, 10) : 15000;
   TRY
   MLP(max_epoch);
   MXNotifyShutdown();

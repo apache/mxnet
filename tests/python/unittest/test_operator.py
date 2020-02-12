@@ -29,7 +29,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assertRaises
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import run_in_spawned_process
 from nose.tools import assert_raises, ok_
 import unittest
@@ -2599,6 +2599,10 @@ def test_convolution_dilated_impulse_response():
     # 2D
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 3D
+    for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
+        for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
@@ -5419,7 +5423,8 @@ def test_softmax_with_length():
         atol = 1e-4 if dtype == np.float16 else 1e-5
         check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
         check_symbolic_backward(mx_sym, location, [np.ones(shape, dtype=dtype)],
-                                [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)], rtol=1e-2, atol=1e-3, dtype="asnumpy")
+                                [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)],
+                                rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3, dtype="asnumpy")
 
 
 @with_seed()
@@ -5982,7 +5987,7 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
-
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/17467")
 @with_seed()
 def test_custom_op_fork():
     # test custom operator fork
@@ -6954,8 +6959,9 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
+## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
+## tracked at https://github.com/apache/incubator-mxnet/issues/14288
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14288")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -7082,18 +7088,18 @@ def test_dropout():
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
-    check_dropout_ratio(0.5, shape, cudnn_off=False)
-    check_dropout_ratio(0.0, shape, cudnn_off=False)
-    check_dropout_ratio(1.0, shape, cudnn_off=False)
-    check_dropout_ratio(0.75, shape, cudnn_off=False)
-    check_dropout_ratio(0.25, shape, cudnn_off=False)
+    # check_dropout_ratio(0.5, shape, cudnn_off=False)
+    # check_dropout_ratio(0.0, shape, cudnn_off=False)
+    # check_dropout_ratio(1.0, shape, cudnn_off=False)
+    # check_dropout_ratio(0.75, shape, cudnn_off=False)
+    # check_dropout_ratio(0.25, shape, cudnn_off=False)
 
     check_passthrough(0.5, shape)
     check_passthrough(0.0, shape)
     check_passthrough(1.0, shape)
-    check_passthrough(0.5, shape, cudnn_off=False)
-    check_passthrough(0.0, shape, cudnn_off=False)
-    check_passthrough(1.0, shape, cudnn_off=False)
+    # check_passthrough(0.5, shape, cudnn_off=False)
+    # check_passthrough(0.0, shape, cudnn_off=False)
+    # check_passthrough(1.0, shape, cudnn_off=False)
 
     nshape = (10, 10, 10, 10)
     with mx.autograd.train_mode():
@@ -7110,20 +7116,19 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
-        check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
-
+        # check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
@@ -7165,6 +7170,27 @@ def test_scatter_gather_nd():
                                 -112372937128970, -1378278798172378], dtype=dtype)
             idx = mx.nd.array([[0, 0, 0, 0]], dtype='int32')
             assert (mx.nd._internal._backward_gather_nd(data, idx, shape=(1,)).asscalar() == data.asnumpy().sum())
+
+@with_seed()
+def test_gather_nd_check_bound():
+    def _test_gather_nd_exception(data, indices):
+        output = mx.nd.gather_nd(data, indices).asnumpy()
+    # check if indices is out of bound
+    data = mx.nd.array([[0, 1, 2], [3, 4, 5]])
+    indices1 = mx.nd.array([[0, 1, 0], [0, 1, 3]])
+    indices2 = mx.nd.array([[0, 1, 0], [0, 1, -5]])
+    assertRaises(IndexError, _test_gather_nd_exception, data, indices1)
+    # IndexError: index 3 is out of bounds for axis 1 with size 3
+    assertRaises(IndexError, _test_gather_nd_exception, data, indices2)
+    # IndexError: index -5 is out of bounds for axis 1 with size 3
+
+    # check if the negative indices are wrapped correctly
+    indices1 = mx.nd.array([[0, 1, -1], [0, 1, -2]])
+    indices2 = mx.nd.array([[0, 1, 1], [0, 1, 1]])
+    data1 = mx.nd.gather_nd(data, indices1)
+    data2 = mx.nd.gather_nd(data, indices2)
+    assert_almost_equal(data1, data2, rtol=1e-5, atol=1e-5)
+
 
 def compare_forw_backw_unary_op(
         name, forward_mxnet_call, forward_numpy_call,
@@ -7821,7 +7847,7 @@ def test_bilinear_resize_op():
 
         x = np.array(data, dtype=np.float32).reshape(img_shape)
         x_nd = mx.nd.array(x)
-        
+
         y0 = np.array(expected_data[0]).reshape((1, 1, target_height, target_width))
         y0_nd = mx.nd.contrib.BilinearResize2D(x_nd, height=target_height, width=target_width, mode='size', align_corners=False)
         assert_almost_equal(y0, y0_nd.asnumpy(), atol=1e-3)
@@ -9522,6 +9548,7 @@ def check_multihead_attention_selfatt(dtype):
 
 
 @with_seed()
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_selfatt():
     dtypes = ['float32']
     if default_context().device_type == 'gpu':
@@ -9586,7 +9613,7 @@ def check_multihead_attention_encdec(dtype):
     q_proj = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
                                    num_hidden=qkv_units, no_bias=False)
     att_score = mx.sym.contrib.interleaved_matmul_encdec_qk(
-            q_proj, kv_proj, heads=num_heads) 
+            q_proj, kv_proj, heads=num_heads)
     att_score = att_score + sonde
     weighted_value = mx.sym.contrib.interleaved_matmul_encdec_valatt(
             kv_proj, att_score, heads=num_heads)
@@ -9690,6 +9717,7 @@ def check_multihead_attention_encdec(dtype):
         assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
 
 @with_seed()
+@assert_raises_cuda_not_satisfied(min_version='9.1')
 def test_multihead_attention_encdec():
     dtypes = ['float32']
     if default_context().device_type == 'gpu':

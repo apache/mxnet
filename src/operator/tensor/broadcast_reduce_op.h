@@ -593,7 +593,7 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   }
   if (input.shape_.Size() == 0U) return;  // zero-size tensor
   mxnet::TShape shape = AxisShapeCompact(input.shape_, &axis, false);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
       Shape2(shape[0], shape[2]), s);
     Tensor<xpu, 3, DType> in = input.get_with_shape<xpu, 3, DType>(
@@ -1155,7 +1155,7 @@ inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
 
 struct ReduceGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode(
         op_name, n,
@@ -1670,7 +1670,7 @@ Defined in )code";
   .set_num_outputs(1)                                           \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .set_attr<nnvm::FGradient>("FGradient",                       \
-    [](const nnvm::NodePtr& n,                                  \
+    [](const nnvm::ObjectPtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
       return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
                                  {{"keepdims", "true"}});              \

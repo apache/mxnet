@@ -39,7 +39,7 @@ namespace mxnet {
 using nnvm::Graph;
 using nnvm::Op;
 using nnvm::Node;
-using nnvm::NodePtr;
+using nnvm::ObjectPtr;
 using nnvm::NodeAttrs;
 using nnvm::NodeEntry;
 using nnvm::Symbol;

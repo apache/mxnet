@@ -102,6 +102,18 @@ def random_arrays(*shapes):
     return arrays
 
 
+def random_uniform_arrays(*shapes, **kwargs):
+    """Generate some random numpy arrays."""
+    low = kwargs.pop('low', 0.0)
+    high = kwargs.pop('high', 1.0)
+    dtype = kwargs.pop('dtype', default_dtype())
+    if len(kwargs) > 0:
+        raise TypeError('Got unexpected argument/s : ' + str(kwargs.keys()))
+    arrays = [np.random.uniform(low, high, size=s).astype(dtype)
+              for s in shapes]
+    return arrays
+
+
 def random_sample(population, k):
     """Return a k length list of the elements chosen from the population sequence."""
     assert 0 <= k <= len(population)
@@ -2257,36 +2269,57 @@ def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
 
 
 def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
-                      rtol=1e-4, atol=1e-5, compare_states=True):
+                      rtol=1e-4, atol=1e-5, compare_states=True, ntensors=1):
     """Compare opt1 and opt2."""
-    if w_stype == 'default':
-        w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        w1 = w2.copyto(default_context())
-    elif w_stype in ('row_sparse', 'csr'):
-        w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
-        w1 = w2.copyto(default_context()).tostype('default')
+    if not isinstance(shape, list):
+        assert(ntensors == 1)
+        if w_stype == 'default':
+            w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            w1 = w2.copyto(default_context())
+        elif w_stype in ('row_sparse', 'csr'):
+            w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+            w1 = w2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+        if g_stype == 'default':
+            g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            g1 = g2.copyto(default_context())
+        elif g_stype in ('row_sparse', 'csr'):
+            g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+            g1 = g2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+
+        state1 = opt1.create_state_multi_precision(0, w1)
+        state2 = opt2.create_state_multi_precision(0, w2)
+        if compare_states:
+            compare_ndarray_tuple(state1, state2)
+
+        opt1.update_multi_precision(0, w1, g1, state1)
+        opt2.update_multi_precision(0, w2, g2, state2)
+        if compare_states:
+            compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
+        assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
     else:
-        raise Exception("type not supported yet")
-    if g_stype == 'default':
-        g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
-        g1 = g2.copyto(default_context())
-    elif g_stype in ('row_sparse', 'csr'):
-        g2 = rand_ndarray(shape, g_stype, dtype=dtype)
-        g1 = g2.copyto(default_context()).tostype('default')
-    else:
-        raise Exception("type not supported yet")
+        # test multi-tensor: Opt1 single-tensor reference, Opt2 multi-tensor
+        from copy import deepcopy
+        w1, g1 = [], []
+        for s in shape:
+            w1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
+            g1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
+        w1 = tuple(w1)
+        w2 = deepcopy(w1)
+        g1 = tuple(g1)
+        g2 = deepcopy(g1)
+        state2 = [opt2.create_state_multi_precision(0, w2[i]) for i in range(ntensors)]
 
-    state1 = opt1.create_state_multi_precision(0, w1)
-    state2 = opt2.create_state_multi_precision(0, w2)
-    if compare_states:
-        compare_ndarray_tuple(state1, state2)
-
-    opt1.update_multi_precision(0, w1, g1, state1)
-    opt2.update_multi_precision(0, w2, g2, state2)
-    if compare_states:
-        compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-    assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
-
+        opt2.update_multi_precision(list(range(ntensors)), w2, g2, state2)
+        for i in range(ntensors):
+            state1 = opt1.create_state_multi_precision(i, w1[i])
+            opt1.update_multi_precision(i, w1[i], g1[i], state1)
+            if compare_states:
+                compare_ndarray_tuple(state1, state2[i], rtol, atol)
+            compare_ndarray_tuple(w1[i], w2[i], rtol, atol)
 
 def same_symbol_structure(sym1, sym2):
     """Compare two symbols to check if they have the same computation graph structure.
@@ -2462,3 +2495,49 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
     if numpy_func is not None:
         numpy_out = numpy_func(*[ele.asnumpy() for ele in data_l])
         assert_almost_equal(saved_out_np, numpy_out, rtol=rtol, atol=atol)
+
+
+def new_matrix_with_real_eigvals_2d(n):
+    """Generate a well-conditioned matrix with small real eigenvalues."""
+    shape = (n, n)
+    q = np.ones(shape)
+    while 1:
+        D = np.diag(np.random.uniform(-1.0, 1.0, shape[-1]))
+        I = np.eye(shape[-1]).reshape(shape)
+        v = np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+        v = v / np.linalg.norm(v, axis=-2, keepdims=True)
+        v_T = np.swapaxes(v, -1, -2)
+        U = I - 2 * np.matmul(v, v_T)
+        q = np.matmul(U, D)
+        if (np.linalg.cond(q, 2) < 3):
+            break
+    D = np.diag(np.random.uniform(-10.0, 10.0, n))
+    q_inv = np.linalg.inv(q)
+    return np.matmul(np.matmul(q_inv, D), q)
+
+
+def new_matrix_with_real_eigvals_nd(shape):
+    """Generate well-conditioned matrices with small real eigenvalues."""
+    n = int(np.prod(shape[:-2])) if len(shape) > 2 else 1
+    return np.array([new_matrix_with_real_eigvals_2d(shape[-1]) for i in range(n)]).reshape(shape)
+
+
+def new_orthonormal_matrix_2d(n):
+    """Generate a orthonormal matrix."""
+    x = np.random.randn(n, n)
+    x_trans = x.T
+    sym_mat = np.matmul(x_trans, x)
+    return np.linalg.qr(sym_mat)[0]
+
+
+def new_sym_matrix_with_real_eigvals_2d(n):
+    """Generate a sym matrix with real eigenvalues."""
+    q = new_orthonormal_matrix_2d(n)
+    D = np.diag(np.random.uniform(-10.0, 10.0, n))
+    return np.matmul(np.matmul(q.T, D), q)
+
+
+def new_sym_matrix_with_real_eigvals_nd(shape):
+    """Generate sym matrices with real eigenvalues."""
+    n = int(np.prod(shape[:-2])) if len(shape) > 2 else 1
+    return np.array([new_sym_matrix_with_real_eigvals_2d(shape[-1]) for i in range(n)]).reshape(shape)

@@ -21,4 +21,8 @@ set -ex
 
 apt update || true
 apt install -y \
-    unzip
+    unzip \
+    python3 \
+    python3-pip
+
+pip3 install setuptools

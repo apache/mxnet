@@ -713,6 +713,11 @@ template<>
 MSHADOW_XINLINE bool MinValue<bool>(void) {
   return false;
 }
+/*! \brief minimum value of unsigned int */
+template<>
+MSHADOW_XINLINE unsigned int MinValue<unsigned int>(void) {
+  return 0;
+}
 
 /*!
  * \brief negative infinity of certain types
@@ -784,6 +789,11 @@ MSHADOW_XINLINE int64_t MaxValue<int64_t>(void) {
 template<>
 MSHADOW_XINLINE bool MaxValue<bool>(void) {
   return true;
+}
+/*! \brief maximum value of uint32_t */
+template<>
+MSHADOW_XINLINE uint32_t MaxValue<uint32_t>(void) {
+  return -1;
 }
 
 /*!
@@ -1285,6 +1295,31 @@ inline size_t mshadow_sizeof(int type) {
   int size = 0;
   MSHADOW_TYPE_SWITCH_WITH_BOOL(type, DType, size = sizeof(DType););
   return size;
+}
+
+/*/ \brief get string with the type name from type enum */
+inline std::string dtype_string(const int dtype) {
+  switch (dtype) {
+    case mshadow::kFloat32:
+      return "float";
+    case mshadow::kFloat64:
+      return "double";
+    case mshadow::kFloat16:
+      return "half";
+    case mshadow::kUint8:
+      return "unsigned char";
+    case mshadow::kInt8:
+      return "char";
+    case mshadow::kInt32:
+      return "int";
+    case mshadow::kInt64:
+      return "long long";
+    case mshadow::kBool:
+      return "bool";
+    default:
+      LOG(FATAL) << "Unknown type enum " << dtype;
+  }
+  return "unknown";
 }
 
 }  // namespace mshadow

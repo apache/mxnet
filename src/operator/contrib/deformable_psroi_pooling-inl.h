@@ -288,7 +288,7 @@ class DeformablePSROIPoolingProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx,

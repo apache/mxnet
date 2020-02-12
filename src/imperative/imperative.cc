@@ -145,7 +145,7 @@ void Imperative::MarkVariables(
 
 
 void Imperative::GetBackwardDependency(
-    const nnvm::NodePtr& node,
+    const nnvm::ObjectPtr& node,
     uint32_t num_inputs, uint32_t num_outputs,
     std::vector<bool> *p_save_inputs,
     std::vector<bool> *p_save_outputs) {
@@ -177,7 +177,7 @@ void Imperative::GetBackwardDependency(
         save_outputs[i.index] = true;
       }
     }
-    DFSVisit(igrad_entries, [&](const nnvm::NodePtr& gnode) {
+    DFSVisit(igrad_entries, [&](const nnvm::ObjectPtr& gnode) {
         if (!gnode || gnode == node) return;
         for (const auto& i : gnode->inputs) {
           if (i.node == nullptr && i.version == 0) {
@@ -216,7 +216,7 @@ void Imperative::RecordOp(
   }
   if (!need_grad) return;
 
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs = std::move(attrs);
   node->attrs.name = "node_" + std::to_string(node_count_++);
   AGInfo& info = AGInfo::Create(node);
@@ -305,7 +305,7 @@ std::vector<NDArray*> Imperative::Backward(
   std::vector<NodeEntry> ograd_entries;
   ograd_entries.reserve(ograds.size());
   for (size_t i = 0; i < outputs.size(); ++i) {
-    nnvm::NodePtr np = Node::Create();
+    nnvm::ObjectPtr np = Node::Create();
     np->attrs.name = "_head_grad_" + std::to_string(i);
     ograd_entries.emplace_back(NodeEntry{np, 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
@@ -341,7 +341,7 @@ std::vector<NDArray*> Imperative::Backward(
       x_reqs.push_back(kWriteTo);
     }
   } else {
-    std::vector<NodePtr> args = sym.ListInputs(Symbol::kReadOnlyArgs);
+    std::vector<ObjectPtr> args = sym.ListInputs(Symbol::kReadOnlyArgs);
     xs.reserve(args.size());
     x_grads.reserve(args.size());
     x_reqs.reserve(args.size());
@@ -394,7 +394,7 @@ std::vector<NDArray*> Imperative::Backward(
   }
   if (create_graph) {
     states.resize(num_forward_nodes);
-    nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
+    nnvm::DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& n) {
       AGInfo& info = AGInfo::Get(n);
       states[idx.node_id(n.get())] = info.state;
       for (uint32_t i = 0; i < info.outputs.size(); ++i) {
@@ -532,7 +532,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   // Clear history
   if (!retain_graph) {
-    nnvm::DFSVisit(sym.outputs, [&](const nnvm::NodePtr& n) {
+    nnvm::DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr& n) {
       AGInfo::Clear(n);
       n->inputs.clear();
     });
