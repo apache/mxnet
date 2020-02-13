@@ -250,6 +250,7 @@ List of Contributors
 * [dithyrambe](https://github.com/dithyrambe)
 * [Piljae Chae](https://github.com/IHateMint)
 * [Jonathan Tan](https://github.com/jonatan1626)
+* [Oliver Kowalke](https://github.com/olk)
 
 Label Bot
 ---------

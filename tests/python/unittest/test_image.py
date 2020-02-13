@@ -17,6 +17,7 @@
 
 import mxnet as mx
 import numpy as np
+import scipy.ndimage
 from mxnet.test_utils import *
 from common import assertRaises, with_seed
 import shutil
@@ -368,6 +369,87 @@ class TestImage(unittest.TestCase):
         if (x0, y0, new_w, new_h) != pts:
             assert ratio[0] - epsilon <= float(new_w)/new_h <= ratio[1] + epsilon, \
             'ration of new width and height out of the bound{}/{}={}'.format(new_w, new_h, float(new_w)/new_h)
+
+    @with_seed()
+    def test_imrotate(self):
+        # test correctness
+        xlin = np.expand_dims(np.linspace(0, 0.5, 30), axis=1)
+        ylin = np.expand_dims(np.linspace(0, 0.5, 60), axis=0)
+        np_img = np.expand_dims(xlin + ylin, axis=2)
+        # rotate with imrotate
+        nd_img = mx.nd.array(np_img.transpose((2, 0, 1)))  # convert to CHW
+        rot_angle = 6
+        args = {'src': nd_img, 'rotation_degrees': rot_angle, 'zoom_in': False, 'zoom_out': False}
+        nd_rot = mx.image.imrotate(**args)
+        npnd_rot = nd_rot.asnumpy().transpose((1, 2, 0))
+        # rotate with scipy
+        scipy_rot = scipy.ndimage.rotate(np_img, rot_angle, axes=(1, 0), reshape=False,
+                                         order=1, mode='constant', prefilter=False)
+        # cannot compare the edges (where image ends) because of different behavior
+        assert_almost_equal(scipy_rot[10:20, 20:40, :], npnd_rot[10:20, 20:40, :])
+
+        # test if execution raises exceptions in any allowed mode
+        # batch mode
+        img_in = mx.nd.random.uniform(0, 1, (5, 3, 30, 60), dtype=np.float32)
+        nd_rots = mx.nd.array([1, 2, 3, 4, 5], dtype=np.float32)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': False}
+        _ = mx.image.imrotate(**args)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': True}
+        _ = mx.image.imrotate(**args)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': False}
+        _ = mx.image.imrotate(**args)
+        # single image mode
+        nd_rots = 11
+        img_in = mx.nd.random.uniform(0, 1, (3, 30, 60), dtype=np.float32)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': False}
+        _ = mx.image.imrotate(**args)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': True}
+        _ = mx.image.imrotate(**args)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': False}
+        _ = mx.image.imrotate(**args)
+
+        # test if exceptions are correctly raised
+        # batch exception - zoom_in=zoom_out=True
+        img_in = mx.nd.random.uniform(0, 1, (5, 3, 30, 60), dtype=np.float32)
+        nd_rots = mx.nd.array([1, 2, 3, 4, 5], dtype=np.float32)
+        args={'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': True}
+        self.assertRaises(ValueError, mx.image.imrotate, **args)
+
+        # single image exception - zoom_in=zoom_out=True
+        img_in = mx.nd.random.uniform(0, 1, (3, 30, 60), dtype=np.float32)
+        nd_rots = 11
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': True, 'zoom_out': True}
+        self.assertRaises(ValueError, mx.image.imrotate, **args)
+
+        # batch of images with scalar rotation
+        img_in = mx.nd.stack(nd_img, nd_img, nd_img)
+        nd_rots = 6
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': False}
+        out = mx.image.imrotate(**args)
+        for img in out:
+            img = img.asnumpy().transpose((1, 2, 0))
+            assert_almost_equal(scipy_rot[10:20, 20:40, :], img[10:20, 20:40, :])
+
+        # single image exception - single image with vector rotation
+        img_in = mx.nd.random.uniform(0, 1, (3, 30, 60), dtype=np.float32)
+        nd_rots = mx.nd.array([1, 2, 3, 4, 5], dtype=np.float32)
+        args = {'src': img_in, 'rotation_degrees': nd_rots, 'zoom_in': False, 'zoom_out': False}
+        self.assertRaises(TypeError, mx.image.imrotate, **args)
+
+    @with_seed()
+    def test_random_rotate(self):
+        angle_limits = [-5., 5.]
+        src_single_image = mx.nd.random.uniform(0, 1, (3, 30, 60),
+                                                dtype=np.float32)
+        out_single_image = mx.image.random_rotate(src_single_image,
+                                                  angle_limits)
+        self.assertEqual(out_single_image.shape, (3, 30, 60))
+        src_batch_image = mx.nd.stack(src_single_image,
+                                      src_single_image,
+                                      src_single_image)
+        out_batch_image = mx.image.random_rotate(src_batch_image,
+                                                 angle_limits)
+        self.assertEqual(out_batch_image.shape, (3, 3, 30, 60))
 
 
 if __name__ == '__main__':

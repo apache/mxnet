@@ -177,7 +177,7 @@ axis to be the last item in the input shape.
 #else
 .set_attr<FCompute>("FCompute<cpu>", LayerNormCompute<cpu>)
 #endif
-.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n,
+.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::ObjectPtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads;
   heads.push_back(ograds[0]);  // ograd

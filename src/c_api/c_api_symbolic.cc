@@ -386,7 +386,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
     const std::string &subg_name = it->second;
     std::vector<nnvm::NodeEntry *> input_entries;
     DFSVisit(s->outputs, [&subg_attr, &subg_name, &input_entries]
-             (nnvm::NodePtr n) {
+             (nnvm::ObjectPtr n) {
       // If the node itself isn't in the subgraph, we ignore it.
       auto it = n->attrs.dict.find(subg_attr);
       if (it == n->attrs.dict.end() || it->second != subg_name)
@@ -431,7 +431,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
 void ConvertShapeAttrToNumPyCompatible(nnvm::Graph* g) {
   if (Imperative::Get()->is_np_shape()
     && (!g->HasAttr("is_np_shape") || !g->GetAttr<int>("is_np_shape"))) {
-    DFSVisit(g->outputs, [](nnvm::NodePtr n) {
+    DFSVisit(g->outputs, [](nnvm::ObjectPtr n) {
       if (n->is_variable()) {
         auto it = n->attrs.dict.find("__shape__");
         if (it != n->attrs.dict.end()) {
@@ -1094,13 +1094,13 @@ static void _SetInputDTypes(
 // if model_params is provided the function will dtype of only model params.
 // if model_params is empty, the function will dtype of all nodes which had
 // a prior dtype set.
-// args is a const_reference vector of NodePtrs. NodePtrs are immutable but
+// args is a const_reference vector of ObjectPtrs. ObjectPtrs are immutable but
 // the Nodes they are pointing will be mutated in this function
 static void _UpdateSymDTypeAttrs(
     const std::unordered_map<std::string, int>& node_name_dtype_map,
     const std::unordered_map<std::string, int>& node_without_dtype_map,
     const std::unordered_set<std::string>& model_params,
-    const std::vector<nnvm::NodePtr>& args) {
+    const std::vector<nnvm::ObjectPtr>& args) {
   const std::string dtype_keyword = "__dtype__";
 
   // Update args to have the right dtype attrs
@@ -1250,7 +1250,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   result_sym->outputs = g.outputs;
   *ret_sym_handle = result_sym;
   nnvm::Symbol *ret_sym = static_cast<nnvm::Symbol *>(*ret_sym_handle);
-  const std::vector<nnvm::NodePtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
+  const std::vector<nnvm::ObjectPtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
 
   // update symbol dtype attrs using the node name -> dtype mapping, if dtype is already set
   // in the symbol, else set dtype for the model_params

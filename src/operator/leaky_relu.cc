@@ -199,7 +199,7 @@ The following modified ReLU Activation functions are supported:
 .add_argument("gamma", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(LeakyReLUParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (index == 1 && var->attrs.dict.find("__init__") == var->attrs.dict.end()) {
         var->attrs.dict["__init__"] = "[\"Constant\", {\"value\": 0.25}]";
       }

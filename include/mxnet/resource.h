@@ -191,7 +191,7 @@ struct Resource {
     mshadow::Shape<ndim> shape) const {
       return mshadow::Tensor<cpu, ndim, DType>(
         reinterpret_cast<DType*>(get_host_space_internal(shape.Size() * sizeof(DType))),
-        shape, shape[ndim - 1], NULL);
+        shape, shape[ndim - 1], nullptr);
   }
   /*!
    * \brief internal function to get space from resources.

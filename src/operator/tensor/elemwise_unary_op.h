@@ -495,7 +495,7 @@ struct HardSigmoidParam : public dmlc::Parameter<HardSigmoidParam> {
 template<int req>
 struct hard_sigmoid_forward {
   template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+    MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                     const real_t alpha, const real_t beta) {
       DType result = DType(alpha * in_data[i] + beta);
       result = (DType(1) < result) ? DType(1) : result;
@@ -507,7 +507,7 @@ struct hard_sigmoid_forward {
 template<int req>
 struct hard_sigmoid_backward {
   template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* in_data,
+    MSHADOW_XINLINE static void Map(index_t i, DType* in_grad, const DType* in_data,
                                     const DType* out_grad, const real_t alpha, const real_t beta) {
       DType out_val = DType(alpha) * in_data[i] + DType(beta);
       DType grad = (out_val > DType(0) && out_val < DType(1)) ?

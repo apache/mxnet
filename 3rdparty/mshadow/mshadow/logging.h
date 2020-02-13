@@ -201,7 +201,7 @@ class LogMessageFatal {
                 << line << ": ";
   }
   std::ostringstream &stream() { return log_stream_; }
-  ~LogMessageFatal() DMLC_THROW_EXCEPTION {
+  ~LogMessageFatal() MSHADOW_THROW_EXCEPTION {
     // throwing out of destructor is evil
     // hopefully we can do it here
     throw Error(log_stream_.str());
