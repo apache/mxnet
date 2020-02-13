@@ -39,19 +39,6 @@
 namespace mxnet {
 namespace op {
 
-struct NumpyInsertTensorParam : public dmlc::Parameter<NumpyInsertTensorParam> {
-  dmlc::optional<double> val;
-  dmlc::optional<int> axis;
-  DMLC_DECLARE_PARAMETER(NumpyInsertTensorParam) {
-    DMLC_DECLARE_FIELD(val)
-    .set_default(dmlc::optional<double>())
-    .describe("A scaler to be inserted into 'array'");
-    DMLC_DECLARE_FIELD(axis)
-    .set_default(dmlc::optional<int>())
-    .describe("Axis along which to insert 'values'.");
-  }
-};
-
 /*
  * Only support tensor indices (ndim > 0)
  */
@@ -64,7 +51,7 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   using namespace mxnet_op;
 
-  const NumpyInsertTensorParam& param = nnvm::get<NumpyInsertTensorParam>(attrs.parsed);
+  const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   int input_count = param.val.has_value() ? 1 : 2;
   int insize = input_count + 1;
   CHECK_EQ(inputs.size(), insize);
@@ -173,7 +160,6 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
                                         outshape.get<ndim>(), values.shape_.get<ndim>(),
                                         dtype, vtype, req[out_pos], axis, inputs[obj_pos],
                                         numnew, N, outshape.Size(), true);
-      
     });
   } else if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {

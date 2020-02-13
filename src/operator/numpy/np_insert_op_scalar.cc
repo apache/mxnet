@@ -19,58 +19,50 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_insert_op_tensor.cc
+ * \file np_insert_op.cc
  * \brief CPU Implementation of numpy insert operations
  */
-
-#include <vector>
 #include "./np_insert_op-inl.h"
-#include "./np_insert_op_tensor-inl.h"
+#include "./np_insert_op_scalar-inl.h"
 
 namespace mxnet {
 namespace op {
 
-bool NumpyInsertTensorType(const nnvm::NodeAttrs& attrs,
-                                  std::vector<int> *in_type,
-                                  std::vector<int> *out_type) {
+bool NumpyInsertScalarType(const nnvm::NodeAttrs& attrs,
+                           std::vector<int> *in_type,
+                           std::vector<int> *out_type) {
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   int input_count = param.val.has_value() ? 1 : 2;
-  int insize = input_count + 1;
+  int insize = input_count;
   CHECK_EQ(in_type->size(), insize);
   CHECK_EQ(out_type->size(), 1U);
-  int obj_pos = input_count;
-  CHECK_NE((*in_type)[obj_pos], -1) << "Index type must be set for insert operator\n";
-  CHECK_EQ((*in_type)[obj_pos], mshadow::DataType<int64_t>::kFlag)
-    << "Index type only support int64.\n";
   TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);  // output type equals to input arr's
   TYPE_ASSIGN_CHECK(*in_type, 0, (*out_type)[0]);
   return (*in_type)[0] != -1;
 }
 
-bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
+bool NumpyInsertScalarShape(const nnvm::NodeAttrs& attrs,
                             mxnet::ShapeVector *in_shape,
                             mxnet::ShapeVector *out_shape) {
   using namespace mshadow;
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   int input_count = param.val.has_value() ? 1 : 2;
-  int insize = input_count + 1;
+  int insize = input_count;
   const int arr_pos = 0;
   const int val_pos = param.val.has_value() ? 0 : 1;
-  const int obj_pos = val_pos + 1;
   CHECK_EQ(in_shape->size(), insize);
   mxnet::TShape scale_shape(0, 1);
   mxnet::TShape &arrshape = (*in_shape)[arr_pos];
   mxnet::TShape &valshape = param.val.has_value() ? scale_shape : (*in_shape)[val_pos];
-  mxnet::TShape &objShape = (*in_shape)[obj_pos];
-  CHECK_LE(objShape.ndim(), 1)
-    << "index array argument obj to insert must be one dimensional or scale.\n";
 
   out_shape->clear();
 
+  int ndim = arrshape.ndim();
   int axis = param.axis.has_value() ? param.axis.value() : 0;
   if (!(param.axis.has_value())) {
     arrshape = Shape1(arrshape.Size());
-  } else if (arrshape.ndim() == 0) {
+    ndim = 1;
+  } else if (ndim == 0) {
     if (param.val.has_value()) {
       out_shape->push_back(scale_shape);
     } else {
@@ -85,8 +77,6 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
       << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
     axis += (axis < 0) ? arrshape.ndim() : 0;
   }
-
-  int seq_cnt = objShape.Size();
 
   mxnet::TShape newshape(arrshape);
   mxnet::TShape val_newshape(arrshape.ndim(), -1);
@@ -104,46 +94,41 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
   }
   valshape.assign(val_newshape.begin(), val_newshape.end());
 
-  if (seq_cnt == 1) {
-    numnew = valshape[axis];
-  } else {
-    numnew = seq_cnt;
-  }
+  // because of moveaxis(values, 0, axis)
+  numnew = valshape[0];
 
   newshape[axis] += numnew;
   out_shape->push_back(newshape);
   return shape_is_known(newshape);
 }
 
-NNVM_REGISTER_OP(_npi_insert_tensor)
-.describe(R"code(Insert values along the given axis before the given indices.
-          Indices is tensor and ndim > 0.)code" ADD_FILELINE)
+NNVM_REGISTER_OP(_npi_insert_scalar)
+.describe(R"code(Insert values along the given axis before the given indices.)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<NumpyInsertParam>)
 .set_num_inputs([](const NodeAttrs& attrs) {
     const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
     int input_count = params.val.has_value() ? 1 : 2;
-    return input_count + 1;
+    return input_count;
 })
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyInsertParam& params = nnvm::get<NumpyInsertParam>(attrs.parsed);
     if (params.val.has_value()) {
-      return std::vector<std::string>{"arr", "obj"};
+      return std::vector<std::string>{"arr"};
     } else {
-      return std::vector<std::string>{"arr", "values", "obj"};
+      return std::vector<std::string>{"arr", "values"};
     }
 })
-.set_attr<mxnet::FInferShape>("FInferShape", NumpyInsertTensorShape)
-.set_attr<nnvm::FInferType>("FInferType", NumpyInsertTensorType)
-.set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyInsertTensorCompute<cpu>)
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyInsertScalarShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyInsertScalarType)
+.set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyInsertScalarCompute<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .add_argument("arr", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("values", "NDArray-or-Symbol", "Input ndarray")
-.add_argument("obj", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyInsertParam::__FIELDS__());
 
 }  // namespace op

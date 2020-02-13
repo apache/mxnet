@@ -2718,7 +2718,6 @@ def test_np_insert():
                 obj_mxnp = obj
                 obj_onp = obj
             else:  # integer
-                continue
                 obj_mxnp = obj
                 obj_onp = obj
             test_insert = TestInsert(obj=obj_mxnp, axis=axis)
