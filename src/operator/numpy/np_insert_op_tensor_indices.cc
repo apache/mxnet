@@ -69,11 +69,9 @@ bool NumpyInsertTensorIndicesShape(const nnvm::NodeAttrs& attrs,
 
   out_shape->clear();
 
-  int ndim = arrshape.ndim();
   int axis = param.axis.has_value() ? param.axis.value() : 0;
   if (!(param.axis.has_value())) {
     arrshape = Shape1(arrshape.Size());
-    ndim = 1;
   } else {
     CHECK(axis >= -1 * arrshape.ndim() && axis < arrshape.ndim())
       << "Axis should be in the range of [-r, r-1] where r is the rank of input tensor";
@@ -81,7 +79,6 @@ bool NumpyInsertTensorIndicesShape(const nnvm::NodeAttrs& attrs,
   }
 
   int seq_cnt = -1;
-  int N = arrshape[axis];
   seq_cnt = objShape.Size();
 
   mxnet::TShape newshape(arrshape);

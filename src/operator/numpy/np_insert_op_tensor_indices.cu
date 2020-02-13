@@ -19,17 +19,18 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_insert_op.cu
+ * \file np_insert_op_tensor_indices.cu
  * \brief GPU Implementation of numpy insert operations
  */
 
 #include "./np_insert_op-inl.h"
+#include "./np_insert_op_tensor_indices-inl.h"
 
 namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_insert_tensor_indices)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertCompute<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyInsertTensorIndicesCompute<gpu>);
 
 }
- 
+}

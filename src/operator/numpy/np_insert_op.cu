@@ -28,7 +28,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_insert);
+NNVM_REGISTER_OP(_npi_insert)
 .set_attr<FCompute>("FCompute<gpu>", NumpyInsertCompute<gpu>);
 
 }

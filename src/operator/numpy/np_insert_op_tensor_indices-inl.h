@@ -22,8 +22,8 @@
  * \file np_insert_op-inl.h
  * \brief Function definition of insert operators
  */
-#ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_INDICES_INL_H_
-#define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_INDICES_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INDICES_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INDICES_INL_H_
 
 #include <vector>
 #include <memory>
@@ -67,7 +67,6 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
   const NumpyInsertTensorParam& param = nnvm::get<NumpyInsertTensorParam>(attrs.parsed);
   int input_count = param.val.has_value() ? 1 : 2;
   int insize = input_count + 1;
-  bool obj_is_tensor = true;
   CHECK_EQ(inputs.size(), insize);
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
@@ -98,7 +97,6 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
 
   // get and check indices from tensor
   int numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
-  int index = 0;  // save modified index, because index may be negative integer
   mxnet::TShape val_newshape(arr.shape_.ndim(), -1);
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
@@ -193,7 +191,6 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
                                    outshape.get<ndim>(), values.shape_.get<ndim>(),
                                    is_insert, origin_idx, dtype, vtype, req[out_pos],
                                    axis, outshape.Size());
-      
     });
   }
 }
@@ -201,4 +198,4 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_INDICES_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INDICES_INL_H_
