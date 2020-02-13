@@ -1572,6 +1572,103 @@ def _add_workload_vdot():
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)).astype(np.float64), np.random.normal(size=(2, 4)).astype(np.float64))
 
 
+def _add_workload_matmul():
+    OpArgMngr.add_workload('matmul', np.random.normal(size=(2, 4)), np.random.normal(size=(4, 2)))
+    dtype = [np.float32, np.float64]
+    def test_shapes():
+        dims = [((1, 1), (2, 1, 1)),     # broadcast first argument
+                ((2, 1, 1), (1, 1)),     # broadcast second argument
+                ((2, 1, 1), (2, 1, 1)),  # matrix stack sizes match
+                ]
+        for dt, (dm1, dm2) in itertools.product(dtype, dims):
+            a = np.ones(dm1, dtype=dt)
+            b = np.ones(dm2, dtype=dt)
+            OpArgMngr.add_workload('matmul', a, b)
+        # vector vector returns scalars.
+        for dt in dtype:
+            a = np.ones((2,), dtype=dt)
+            b = np.ones((2,), dtype=dt)
+            OpArgMngr.add_workload('matmul', a, b)
+    
+    def test_result_types():
+        mat = np.ones((1,1))
+        vec = np.ones((1,))
+        for dt in dtype:
+            m = mat.astype(dt)
+            v = vec.astype(dt)
+            for arg in [(m, v), (v, m), (m, m)]:
+                OpArgMngr.add_workload('matmul', *arg)
+    
+    def test_scalar_output():
+        vec1 = np.array([2])
+        vec2 = np.array([3, 4]).reshape(1, -1)
+        for dt in dtype:
+            v1 = vec1.astype(dt)
+            v2 = vec2.astype(dt)
+            OpArgMngr.add_workload('matmul', v1, v2)
+            OpArgMngr.add_workload('matmul', v2.T, v1)
+    
+    def test_vector_vector_values():
+        vec1 = np.array([1, 2])
+        vec2 = np.array([3, 4]).reshape(-1, 1)
+        for dt in dtype:
+            v1 = vec1.astype(dt)
+            v2 = vec2.astype(dt)
+            OpArgMngr.add_workload('matmul', v1, v2)
+            # no broadcast, we must make v1 into a 2d ndarray
+            OpArgMngr.add_workload('matmul', v2, v1.reshape(1, -1))
+
+    def test_vector_matrix_values():
+        vec = np.array([1, 2])
+        mat1 = np.array([[1, 2], [3, 4]])
+        mat2 = np.stack([mat1]*2, axis=0)
+        for dt in dtype:
+            v = vec.astype(dt)
+            m1 = mat1.astype(dt)
+            m2 = mat2.astype(dt)
+            OpArgMngr.add_workload('matmul', v, m1)
+            OpArgMngr.add_workload('matmul', v, m2)
+
+    def test_matrix_vector_values():
+        vec = np.array([1, 2])
+        mat1 = np.array([[1, 2], [3, 4]])
+        mat2 = np.stack([mat1]*2, axis=0)
+        for dt in dtype:
+            v = vec.astype(dt)
+            m1 = mat1.astype(dt)
+            m2 = mat2.astype(dt)
+            OpArgMngr.add_workload('matmul', m1, v)
+            OpArgMngr.add_workload('matmul', m2, v)
+    
+    def test_matrix_matrix_values():
+        mat1 = np.array([[1, 2], [3, 4]])
+        mat2 = np.array([[1, 0], [1, 1]])
+        mat12 = np.stack([mat1, mat2], axis=0)
+        mat21 = np.stack([mat2, mat1], axis=0)
+        for dt in dtype:
+            m1 = mat1.astype(dt)
+            m2 = mat2.astype(dt)
+            m12 = mat12.astype(dt)
+            m21 = mat21.astype(dt)
+            # matrix @ matrix
+            OpArgMngr.add_workload('matmul', m1, m2)
+            OpArgMngr.add_workload('matmul', m2, m1)
+            # stacked @ matrix
+            OpArgMngr.add_workload('matmul', m12, m1)
+            # matrix @ stacked
+            OpArgMngr.add_workload('matmul', m1, m12)
+            # stacked @ stacked
+            OpArgMngr.add_workload('matmul', m12, m21)
+
+    test_shapes()
+    test_result_types()
+    test_scalar_output()
+    test_vector_vector_values()
+    test_vector_matrix_values()
+    test_matrix_vector_values()
+    test_matrix_matrix_values()
+
+
 def _add_workload_vstack(array_pool):
     OpArgMngr.add_workload('vstack', (array_pool['4x1'], np.random.uniform(size=(5, 1))))
     OpArgMngr.add_workload('vstack', array_pool['4x1'])
@@ -1787,6 +1884,20 @@ def _add_workload_isinf():
     OpArgMngr.add_workload('isinf', array3)
 
 
+def _add_workload_polyval():
+    p1 = np.arange(20)
+    p2 = np.arange(1)
+    x1 = np.arange(20)
+    x2 = np.ones((3,3))
+    x3 = np.array(2)
+    OpArgMngr.add_workload('polyval', p1, x1)
+    OpArgMngr.add_workload('polyval', p1, x2)
+    OpArgMngr.add_workload('polyval', p1, x3)
+    OpArgMngr.add_workload('polyval', p2, x1)
+    OpArgMngr.add_workload('polyval', p2, x2)
+    OpArgMngr.add_workload('polyval', p2, x3)
+
+
 def _add_workload_linalg_cond():
     A = np.array([[1., 0, 1], [0, -2., 0], [0, 0, 3.]])
     OpArgMngr.add_workload('linalg.cond', A, np.inf)
@@ -1846,6 +1957,7 @@ def _prepare_workloads():
     _add_workload_diagonal()
     _add_workload_diagflat()
     _add_workload_dot()
+    _add_workload_matmul()
     _add_workload_expand_dims()
     _add_workload_fix()
     _add_workload_flip()
@@ -1971,6 +2083,7 @@ def _prepare_workloads():
     _add_workload_nan_to_num()
     _add_workload_isnan()
     _add_workload_isinf()
+    _add_workload_polyval()
     _add_workload_heaviside()
     _add_workload_spacing()
 

@@ -715,15 +715,15 @@ rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
-build/rat/apache-rat/target/apache-rat-0.13.jar:
-	mkdir -p build
-	svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.13/ build/rat; \
+build/rat/apache-rat-0.13/apache-rat-0.13.jar:
+	mkdir -p build/rat
 	cd build/rat; \
-	mvn -Dmaven.test.skip=true install;
+	wget http://mirror.metrocast.net/apache//creadur/apache-rat-0.13/apache-rat-0.13-bin.zip; \
+	unzip apache-rat-0.13-bin.zip;
 
-ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
+ratcheck: build/rat/apache-rat-0.13/apache-rat-0.13.jar
 	exec 5>&1; \
-	RAT_JAR=build/rat/apache-rat/target/apache-rat-0.13.jar; \
+	RAT_JAR=build/rat/apache-rat-0.13/apache-rat-0.13.jar; \
 	OUTPUT=$(java -jar $(RAT_JAR) -E tests/nightly/apache_rat_license_check/rat-excludes -d .|tee >(cat - >&5)); \
     ERROR_MESSAGE="Printing headers for text files without a valid license header"; \
     echo "-------Process The Output-------"; \

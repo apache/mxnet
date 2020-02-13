@@ -332,7 +332,8 @@
     8. OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
          Copyright (c) 2011, 2012 University of Houston System
     9. CMake FindCUDAToolkit.cmake, FindOpenCL.cmake - For details, see,
-         cmake/Modules/FindCUDAToolkit.cmake
+         cmake/upstream/FindCUDAToolkit.cmake
+         cmake/upstream/select_compute_arch.cmake
          3rdparty/mkldnn/cmake/FindOpenCL.cmake
          Copyright 2000-2019 Kitware, Inc. and Contributors
     10. ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
