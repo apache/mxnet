@@ -422,6 +422,141 @@ def test_np_outer():
 
 @with_seed()
 @use_np
+def test_np_matmul():
+    class TestMatmul(HybridBlock):
+        def __init__(self):
+            super(TestMatmul, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.matmul(a, b)
+
+    def matmul_backward(a, b):
+        def ShapeInfer(mat_a, mat_b):
+            if mat_a.ndim == 1:
+                mat_a = mat_a.reshape((1, mat_a.size))
+            if mat_b.ndim == 1:
+                mat_b = mat_b.reshape((mat_b.size, 1))
+            ndim = max(mat_a.ndim, mat_b.ndim)
+            newshape_a = list(_np.array(mat_a, ndmin=ndim).shape)
+            newshape_b = list(_np.array(mat_b, ndmin=ndim).shape)
+            if ndim >= 3:
+                pre_shape = _np.fmax(newshape_a[ndim - 3::-1], newshape_b[ndim - 3::-1])
+                newshape_a[ndim - 3::-1] = pre_shape
+                newshape_b[ndim - 3::-1] = pre_shape
+            else:
+                pre_shape = _np.array([])
+            out_shape = _np.append(pre_shape[::-1].astype(_np.int64), [newshape_a[ndim - 2], newshape_b[ndim - 1]])
+            return [ndim, newshape_a, newshape_b, out_shape]
+
+        def ShapeReduce(mat, shape, is_b=False):
+            ndim = mat.ndim
+            if is_b and len(shape) == 1:
+                rng = _np.arange(ndim - 2)
+            else:
+                pre_len = ndim - len(shape)
+                in_pre = _np.array(mat.shape[pre_len : ndim - 2])
+                out_pre = _np.array(shape[:len(shape) - 2])
+                diff = _np.nonzero(in_pre != out_pre)[0] + pre_len
+                rng = _np.append(_np.arange(ndim - len(shape)), diff)
+            mat = _np.sum(mat, axis=tuple(rng))
+            return mat.reshape(shape)
+
+        a_shape = a.shape
+        b_shape = b.shape
+        [ndim, newshape_a, newshape_b, out_shape] = ShapeInfer(a, b)
+        new_a = _np.broadcast_to(a, newshape_a)
+        if len(b_shape) == 1:
+            new_b = _np.broadcast_to(b.reshape((b.size, 1)), newshape_b)
+        else:
+            new_b = _np.broadcast_to(b, newshape_b)
+        
+        ad1 = new_a.shape[ndim - 2]
+        ad2 = new_a.shape[ndim - 1]
+        bd1 = new_b.shape[ndim - 2]
+        bd2 = new_b.shape[ndim - 1]
+        a_T = _np.moveaxis(new_a, [ndim - 2, ndim - 1], [ndim - 1, ndim - 2])
+        b_T = _np.moveaxis(new_b, [ndim - 2, ndim - 1], [ndim - 1, ndim - 2])
+        out_grad = _np.ones(out_shape)
+        grad_b = _np.matmul(a_T, out_grad)
+        grad_b = ShapeReduce(grad_b, b_shape, is_b=True)
+        grad_a = _np.matmul(out_grad, b_T)
+        grad_a = ShapeReduce(grad_a, a_shape)
+        return [grad_a, grad_b]
+
+    shapes = [
+        ((3,), (3,)),               # Case 1
+        ((3, 4), (4, 5)),           # Case 2
+        ((3, 0), (0, 4)),           # Case 2
+        ((4, 5), (5,)),             # Case 3
+        ((3, 4, 5), (5,)),          # Case 3
+        ((5,), (5, 2)),             # Case 4
+        ((2,), (4, 2, 3)),          # Case 4
+        ((2, 1, 3, 4, 5), (5, 2)),  # Case 5
+        ((1, 3, 5, 4), (1, 4, 3)),  # Case 5
+        ((3, 5, 4), (2, 1, 4, 3)),  # Case 5
+        ((3, 4), (1, 5, 4, 3)),        # Case 5
+    ]
+
+    dtypes = ['float32', 'float64']
+    req_type = ['write', 'add', 'null']
+    eps = 1E-4
+    for dtype, hybridize, (shape_a, shape_b), grad_req_a, grad_req_b in \
+        itertools.product(dtypes, [True, False], shapes, req_type, req_type):
+        if grad_req_a == 'null' and grad_req_b == 'null':
+            continue
+        test_matmul = TestMatmul()
+        if hybridize:
+            test_matmul.hybridize()
+        np_a = _np.random.uniform(-1.0, 1.0, shape_a).astype(dtype)
+        np_a[abs(np_a) < eps] = 2 * eps
+        np_b = _np.random.uniform(-1.0, 1.0, shape_b).astype(dtype)
+        np_b[abs(np_b) < eps] = 2 * eps
+        a = mx.np.array(np_a, dtype=dtype)
+        a.attach_grad(grad_req=grad_req_a)
+        b = mx.np.array(np_b, dtype=dtype)
+        b.attach_grad(grad_req=grad_req_b)
+
+        np_out = _np.matmul(np_a, np_b)
+        with mx.autograd.record():
+            mx_out = test_matmul(a, b)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(np_out, mx_out.asnumpy(), rtol=eps, atol=eps)
+        mx_out.backward()
+        np_backward = matmul_backward(np_a, np_b)
+        if grad_req_a == 'null':
+            assert a.grad is None
+        else:
+            assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = eps, atol=eps)
+        if grad_req_b == 'null':
+            assert b.grad is None
+        else:
+            assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = eps, atol=eps)
+        
+        # Test imperative once again
+        mx_out = np.matmul(a, b)
+        np_out = _np.matmul(np_a, np_b)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=eps, atol=eps)
+
+    bad_shapes = [
+                ((1,), (2,)),            # mismatched vector vector
+                ((2, 1,), (2,)),         # mismatched matrix vector
+                ((2,), (1, 2)),          # mismatched vector matrix
+                ((1, 2), (3, 1)),        # mismatched matrix matrix
+                ((1,), ()),              # vector scalar
+                ((), (1,)),              # scalar vector
+                ((1, 1), ()),            # matrix scalar
+                ((), (1, 1)),            # scalar matrix
+                ((2, 2, 1), (3, 1, 2)),  # cannot broadcast
+                ]
+
+    for shape_a, shape_b in bad_shapes:
+        a = np.random.uniform(size=shape_a)
+        b = np.random.uniform(size=shape_b)
+        assert_raises(MXNetError, lambda: np.matmul(a, b))
+
+
+@with_seed()
+@use_np
 def test_np_sum():
     class TestSum(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
