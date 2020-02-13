@@ -102,6 +102,18 @@ def random_arrays(*shapes):
     return arrays
 
 
+def random_uniform_arrays(*shapes, **kwargs):
+    """Generate some random numpy arrays."""
+    low = kwargs.pop('low', 0.0)
+    high = kwargs.pop('high', 1.0)
+    dtype = kwargs.pop('dtype', default_dtype())
+    if len(kwargs) > 0:
+        raise TypeError('Got unexpected argument/s : ' + str(kwargs.keys()))
+    arrays = [np.random.uniform(low, high, size=s).astype(dtype)
+              for s in shapes]
+    return arrays
+
+
 def random_sample(population, k):
     """Return a k length list of the elements chosen from the population sequence."""
     assert 0 <= k <= len(population)
@@ -2527,3 +2539,49 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
     if numpy_func is not None:
         numpy_out = numpy_func(*[ele.asnumpy() for ele in data_l])
         assert_almost_equal(saved_out_np, numpy_out, rtol=rtol, atol=atol)
+
+
+def new_matrix_with_real_eigvals_2d(n):
+    """Generate a well-conditioned matrix with small real eigenvalues."""
+    shape = (n, n)
+    q = np.ones(shape)
+    while 1:
+        D = np.diag(np.random.uniform(-1.0, 1.0, shape[-1]))
+        I = np.eye(shape[-1]).reshape(shape)
+        v = np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+        v = v / np.linalg.norm(v, axis=-2, keepdims=True)
+        v_T = np.swapaxes(v, -1, -2)
+        U = I - 2 * np.matmul(v, v_T)
+        q = np.matmul(U, D)
+        if (np.linalg.cond(q, 2) < 3):
+            break
+    D = np.diag(np.random.uniform(-10.0, 10.0, n))
+    q_inv = np.linalg.inv(q)
+    return np.matmul(np.matmul(q_inv, D), q)
+
+
+def new_matrix_with_real_eigvals_nd(shape):
+    """Generate well-conditioned matrices with small real eigenvalues."""
+    n = int(np.prod(shape[:-2])) if len(shape) > 2 else 1
+    return np.array([new_matrix_with_real_eigvals_2d(shape[-1]) for i in range(n)]).reshape(shape)
+
+
+def new_orthonormal_matrix_2d(n):
+    """Generate a orthonormal matrix."""
+    x = np.random.randn(n, n)
+    x_trans = x.T
+    sym_mat = np.matmul(x_trans, x)
+    return np.linalg.qr(sym_mat)[0]
+
+
+def new_sym_matrix_with_real_eigvals_2d(n):
+    """Generate a sym matrix with real eigenvalues."""
+    q = new_orthonormal_matrix_2d(n)
+    D = np.diag(np.random.uniform(-10.0, 10.0, n))
+    return np.matmul(np.matmul(q.T, D), q)
+
+
+def new_sym_matrix_with_real_eigvals_nd(shape):
+    """Generate sym matrices with real eigenvalues."""
+    n = int(np.prod(shape[:-2])) if len(shape) > 2 else 1
+    return np.array([new_sym_matrix_with_real_eigvals_2d(shape[-1]) for i in range(n)]).reshape(shape)

@@ -89,8 +89,8 @@ void ElemwiseBinaryOp::RspRspOp(mshadow::Stream<gpu> *s,
         const TBlob& lhs_indices = lhs.aux_data(kIdx);
         const TBlob& rhs_indices = rhs.aux_data(kIdx);
         size_t common_row_table_bytes = num_rows * sizeof(IType);
-        IType* common_row_table = NULL;
-        void* temp_storage_ptr = NULL;
+        IType* common_row_table = nullptr;
+        void* temp_storage_ptr = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(temp_storage_ptr,
                                       temp_storage_bytes,

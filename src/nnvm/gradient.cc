@@ -39,13 +39,13 @@ NodeEntry DefaultAggregateGradient(std::vector<NodeEntry>&& v) {
   if (v.size() == 1) {
     return std::move(v[0]);
   } else if (v.size() == 0) {
-    NodePtr zero_node = Node::Create();
+    ObjectPtr zero_node = Node::Create();
     zero_node->attrs.op = Op::Get("zeros");
     zero_node->attrs.name = "zero_grad";
     zero_node->attrs.op->attr_parser(&(zero_node->attrs));
     return NodeEntry{zero_node, 0, 0};
   } else {
-    NodePtr sum_node = Node::Create();
+    ObjectPtr sum_node = Node::Create();
     sum_node->attrs.op = Op::Get("elemwise_sum");
     sum_node->inputs = std::move(v);
     sum_node->attrs.name = "grad_sum";
@@ -121,10 +121,10 @@ Graph Gradient(Graph src) {
       nullptr;
 
   // topo sort
-  std::vector<NodePtr> topo_order;
+  std::vector<ObjectPtr> topo_order;
   std::unordered_map<Node*, std::vector<GradEntry> > output_grads;
 
-  DFSVisit(ys, [&](const NodePtr& node) {
+  DFSVisit(ys, [&](const ObjectPtr& node) {
       if (output_grads.count(node.get()) == 0) {
         output_grads[node.get()].resize(node->num_outputs());
       }
@@ -145,11 +145,11 @@ Graph Gradient(Graph src) {
   }
 
   // construct mirror as memory reduction strategy if needed
-  std::unordered_map<Node*, NodePtr> mirror_map;
+  std::unordered_map<Node*, ObjectPtr> mirror_map;
   if (mirror_fun != nullptr) {
-    for (const NodePtr& node_ptr : topo_order) {
+    for (const ObjectPtr& node_ptr : topo_order) {
       if (mirror_fun(*node_ptr)) {
-        NodePtr new_node = Node::Create();
+        ObjectPtr new_node = Node::Create();
         *new_node = *node_ptr;
         new_node->attrs.name += "_mirror";
         for (auto& e : new_node->inputs) {
@@ -171,7 +171,7 @@ Graph Gradient(Graph src) {
 
   std::vector<NodeEntry> out_agg_grads;
   for (auto rit = topo_order.rbegin(); rit != topo_order.rend(); ++rit) {
-    const NodePtr& ptr = *rit;
+    const ObjectPtr& ptr = *rit;
     if (ptr->is_variable()) continue;
     out_agg_grads.clear();
     auto& out_grad_vec = output_grads.at(ptr.get());
@@ -184,7 +184,7 @@ Graph Gradient(Graph src) {
       out_agg_grads.push_back(e.sum);
     }
     if ((*rit)->inputs.size() != 0) {
-      NodePtr fwd_node = (mirror_map.size() == 0 ? ptr : mirror_map.at(ptr.get()));
+      ObjectPtr fwd_node = (mirror_map.size() == 0 ? ptr : mirror_map.at(ptr.get()));
       std::vector<NodeEntry> input_grads;
       // Check for FGradient
       if (grad_fun_map.contains(ptr->op())) {
@@ -246,7 +246,7 @@ Graph Gradient(Graph src) {
       if (kv == unique_grads.end()) {
         unique_grads.emplace(std::move(entry.sum), std::make_pair(1, counter));
       } else {
-        NodePtr copy_node = Node::Create();
+        ObjectPtr copy_node = Node::Create();
         std::ostringstream os;
         os << entry.sum.node->attrs.name << "_" << kv->second.first << "_copy";
         kv->second.first++;

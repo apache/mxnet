@@ -21,9 +21,9 @@ from .. import defop, AllTypes, RealTypes
 from .. import assign_by_req, reduce_axes
 
 def compute_add(dtype, ndim):
-    A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
-    B = tvm.placeholder([tvm.var() for _ in range(ndim)], name='B', dtype=dtype)
-    C = tvm.compute([tvm.var() for _ in range(ndim)],
+    A = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='A', dtype=dtype)
+    B = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='B', dtype=dtype)
+    C = tvm.compute([tvm.size_var() for _ in range(ndim)],
                     lambda *index: A[index] + B[index], name='C')
     s = tvm.create_schedule(C.op)
     return s, A, B, C
@@ -62,7 +62,7 @@ def compute_backward_vadd(dtype, ndim, reduce1st, req):
     # They compressed bit string is stored in `axes`. And `reduce1st` represents the first bit
     # of the compressed bit string. Credit to @junrushao1994 and @yzhliu.
     axes = ([reduce1st, 1 - reduce1st] * ndim)[:ndim]
-    X = tvm.placeholder([tvm.var() for _ in range(ndim)], name='X', dtype=dtype)
+    X = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='X', dtype=dtype)
     reducer = tvm.comm_reducer(lambda x, y: x + y,
         lambda t: tvm.const(0, dtype=t), name="sum")
     ret = reduce_axes(X, axes, reducer)
@@ -101,13 +101,13 @@ def backward_vadd_gpu(dtype, ndim, reduce1st, req):
 
 
 def compute_degandrad(dtype, ndim, n):
-    A = tvm.placeholder([tvm.var() for _ in range(ndim)], name='A', dtype=dtype)
+    A = tvm.placeholder([tvm.size_var() for _ in range(ndim)], name='A', dtype=dtype)
     import math
     if n == 0:
-        B = tvm.compute([tvm.var() for _ in range(ndim)],
+        B = tvm.compute([tvm.size_var() for _ in range(ndim)],
                         lambda *index: A[index] * tvm.const(math.pi, dtype) / tvm.const(180, dtype), name='B')
     else:
-        B = tvm.compute([tvm.var() for _ in range(ndim)],
+        B = tvm.compute([tvm.size_var() for _ in range(ndim)],
                         lambda *index: A[index] / tvm.const(math.pi, dtype) * tvm.const(180, dtype), name='B')
     s = tvm.create_schedule(B.op)
     return s, A, B
@@ -160,7 +160,7 @@ def rad2deg_gpu(dtype, ndim):
 
 
 def compute_backward_degandrad(dtype, ndim, req, n):
-    ishape = [tvm.var() for _ in range(ndim)]
+    ishape = [tvm.size_var() for _ in range(ndim)]
     in_grad_tmp = tvm.placeholder(ishape, name='in_grad_tmp', dtype=dtype)
     in_grad = tvm.placeholder(ishape, name='in_grad', dtype=dtype)
     out_grad = tvm.placeholder(ishape, name='out_grad', dtype=dtype)

@@ -37,6 +37,7 @@
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"
 #include "../imperative/cached_op.h"
+#include "../imperative/cached_op_threadsafe.h"
 
 using namespace mxnet;
 
@@ -188,6 +189,26 @@ int MXCreateCachedOpEx(SymbolHandle handle,
   API_END();
 }
 
+int MXCreateCachedOpEX(SymbolHandle handle,
+                       int num_flags,
+                       const char** keys,
+                       const char** vals,
+                       CachedOpHandle *out,
+                       bool thread_safe) {
+  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
+  API_BEGIN();
+  std::vector<std::pair<std::string, std::string> > flags;
+  for (int i = 0; i < num_flags; ++i) {
+    flags.emplace_back(keys[i], vals[i]);
+  }
+  if (!thread_safe) {
+    *out = new CachedOpPtr(new CachedOp(*sym, flags));
+  } else {
+    *out = new CachedOpPtr(new CachedOpThreadSafe(*sym, flags));
+  }
+  API_END();
+}
+
 int MXFreeCachedOp(CachedOpHandle handle) {
   CachedOpPtr* g = static_cast<CachedOpPtr*>(handle);
   API_BEGIN();
@@ -203,7 +224,10 @@ int MXInvokeCachedOp(CachedOpHandle handle,
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   API_BEGIN();
-  CachedOpPtr op = *static_cast<CachedOpPtr*>(handle);
+  CachedOpPtr op_shared = *static_cast<CachedOpPtr*>(handle);
+  // CachedOp* points to CachedOpThreadSafe object if CreateCachedOpEX
+  // was called with thread_safe=true
+  CachedOp* op = dynamic_cast<CachedOp*>(op_shared.get());
   std::vector<NDArray*> ndinputs;
   ndinputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
@@ -224,7 +248,7 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     }
   }
 
-  op->Forward(op, ndinputs, ndoutputs);
+  op->Forward(op_shared, ndinputs, ndoutputs);
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();

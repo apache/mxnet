@@ -48,8 +48,8 @@ def _get_operator_profile(operator_name, operator_profile_results):
     # alias map : dictionary of the form {"alias" : "registered_name"}
     # allows to retrieve alias operator profile from the profiler results
     # TODO handling - "identity" : "_copy"
-    alias_map = {"broadcast_plus" : "broadcast_add", "broadcast_minus" : "broadcast_sub", "flatten" : "Flatten", "max_axis" : "max",
-                 "swapaxes" : "SwapAxis", "flip" : "reverse", "reshape" : "Reshape", "crop" : "slice", "sum_axis" : "sum", "min_axis" : "min"}
+    alias_map = {"broadcast_plus": "broadcast_add", "broadcast_minus": "broadcast_sub", "flatten": "Flatten", "max_axis": "max",
+                 "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min", "CTCLoss": "ctc_loss"}
 
     op_name = None
 
@@ -58,14 +58,24 @@ def _get_operator_profile(operator_name, operator_profile_results):
     else:
         op_name = operator_name
 
+    # Variables to store forward/backward performance results
+    forward_res, backward_res = None, None
+
     for line in operator_profile_results:
         if op_name in line or op_name[:3] + " " in line:
             operation = line.split()[0]
             operation_avg_time = float(line.split()[-1])
             if "_backward" in operation:
-                operator_profile["avg_time_backward_" + operator_name] = operation_avg_time
+                backward_res = operation_avg_time
             else:
-                operator_profile["avg_time_forward_" + operator_name] = operation_avg_time
+                forward_res = operation_avg_time
+
+    # Add forward and backward performance results to the dict in the correct order
+    if forward_res:
+        operator_profile["avg_time_forward_" + operator_name] = forward_res
+
+    if backward_res:
+        operator_profile["avg_time_backward_" + operator_name] = backward_res
 
     return operator_profile
 

@@ -48,8 +48,8 @@ else
 fi
 export MAKE="make $ADD_MAKE_FLAG"
 
-export CC="gcc -fPIC"
-export CXX="g++ -fPIC"
+export CC="gcc -fPIC -mno-avx"
+export CXX="g++ -fPIC -mno-avx"
 export FC="gfortran"
 export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 export CPATH=$DEPS_PATH/include:$CPATH
@@ -68,8 +68,12 @@ mkdir -p licenses
 cp tools/dependencies/LICENSE.binary.dependencies licenses/
 cp NOTICE licenses/
 cp LICENSE licenses/
-cp DISCLAIMER licenses/
+cp DISCLAIMER-WIP licenses/
 
 
 # Build mxnet
-source tools/staticbuild/build_lib.sh
+if [[ -z "$CMAKE_STATICBUILD" ]]; then
+    source tools/staticbuild/build_lib.sh
+else
+    source tools/staticbuild/build_lib_cmake.sh
+fi

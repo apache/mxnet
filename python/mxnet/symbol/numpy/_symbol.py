@@ -41,16 +41,17 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
-           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'tensordot', 'eye', 'linspace',
+           'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
            'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
-           'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round', 'hypot', 'bitwise_xor',
-           'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot',
-           'inner', 'outer', 'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit',
-           'rot90', 'einsum', 'true_divide', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'nan_to_num',
-           'where', 'bincount']
+           'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
+           'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
+           'resize', 'nan_to_num', 'isnan', 'isinf', 'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -471,13 +472,13 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute pick')
 
-    def sort(self, *args, **kwargs):
+    def sort(self, axis=-1, kind=None, order=None):  # pylint: disable=arguments-differ
         """Convenience fluent method for :py:func:`sort`.
 
         The arguments are the same as for :py:func:`sort`, with
         this array as data.
         """
-        raise NotImplementedError
+        raise sort(self, axis=axis, kind=kind, order=order)
 
     def topk(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`topk`.
@@ -1625,6 +1626,39 @@ def argsort(a, axis=-1, kind=None, order=None):
 
 
 @set_module('mxnet.symbol.numpy')
+def sort(a, axis=-1, kind=None, order=None):
+    """
+    Return a sorted copy of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array to be sorted.
+    axis : int or None, optional
+        Axis along which to sort.  The default is -1 (the last axis). If None,
+        the flattened array is used.
+    kind : string, optional
+        This argument can take any string, but it does not have any effect on the
+        final result.
+    order : str or list of str, optional
+        Not supported yet, will raise NotImplementedError if not None.
+
+    Returns
+    -------
+    sorted_array : ndarray
+        Array of the same type and shape as `a`.
+
+    Notes
+    -----
+    This operator does not support different sorting algorithms.
+    """
+    if order is not None:
+        raise NotImplementedError("order is not supported yet...")
+
+    return _npi.sort(data=a, axis=axis, is_ascend=True)
+
+
+@set_module('mxnet.symbol.numpy')
 def tensordot(a, b, axes=2):
     r"""
     tensordot(a, b, axes=2)
@@ -1804,7 +1838,7 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
     """
     dtype_list = {None:'None', _np.int8:'int8', _np.uint8:'uint8', _np.int32:'int32',
                   _np.int64:'int64', _np.float16:'float16', _np.float32:'float32',
-                  _np.float64:'float64', _np.bool_:'bool'}
+                  _np.float64:'float64', _np.bool_:'bool_', bool:'bool', int:'int64', float:'float64'}
     if order != 'C':
         raise NotImplementedError("Only support C order at this moment")
     if subok:
@@ -4409,6 +4443,45 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
         raise NotImplementedError('Don not support column-major (Fortran-style) order at this moment')
 
 
+def diag_indices_from(arr):
+    """
+    This returns a tuple of indices that can be used to access the main diagonal of an array
+    a with a.ndim >= 2 dimensions and shape (n, n, …, n). For a.ndim = 2 this is
+    the usual diagonal, for a.ndim > 2 this is the set of indices to access
+    a[i, i, ..., i] for i = [0..n-1].
+
+    Parameters:
+    -------------
+    arr : _Symbol
+        Input array for acessing the main diagonal. All dimensions
+        should have equal length.
+
+    Return:
+    -------------
+    diag: _Symbol
+        indices of the main diagonal.
+
+    Examples:
+    -------------
+    >>> a = np.arange(16).reshape(4, 4)
+    >>> a
+    array([[ 0,  1,  2,  3],
+        [ 4,  5,  6,  7],
+        [ 8,  9, 10, 11],
+        [12, 13, 14, 15]])
+    >>> idx = np.diag_indices_from(a)
+    >>> idx
+    (array([0, 1, 2, 3]), array([0, 1, 2, 3]))
+    >>> a[idx] = 100
+    >>> a
+    array([[100,   1,   2,   3],
+        [  4, 100,   6,   7],
+        [  8,   9, 100,  11],
+        [ 12,  13,  14, 100]])
+    """
+    return _npi.diag_indices_from(arr)
+
+
 @set_module('mxnet.symbol.numpy')
 def hanning(M, dtype=_np.float32, ctx=None):
     r"""Return the Hanning window.
@@ -4894,6 +4967,30 @@ def hypot(x1, x2, out=None, **kwargs):
         - Only support float16, float32 and float64.
     """
     return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_binary_func
+def bitwise_and(x1, x2, out=None, **kwargs):
+    r"""
+    Compute the bit-wise XOR of two arrays element-wise.
+
+    Parameters
+    ----------
+    x1, x2 : _Symbol or scalar
+        Only integer and boolean types are handled. If x1.shape != x2.shape,
+        they must be broadcastable to a common shape (which becomes the shape of the output).
+    out : _Symbol or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    out : _Symbol or scalar
+        Result.
+    """
+    return _ufunc_helper(x1, x2, _npi.bitwise_and, _np.bitwise_and, _npi.bitwise_and_scalar, None, out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5550,6 +5647,112 @@ def einsum(*operands, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
+    """
+    Compute the q-th percentile of the data along the specified axis.
+    Returns the q-th percentile(s) of the array elements.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array
+    q : _Symbol
+        Percentile or sequence of percentiles to compute.
+    axis : {int, tuple of int, None}, optional
+        Axis or axes along which the percentiles are computed. The default is to
+        compute the percentile(s) along a flattened version of the array.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have the same
+        shape and buffer length as the expected output, but the type (of the output)
+        will be cast if necessary.
+    overwrite_input : bool, optional (Not supported yet)
+        If True, then allow the input array a to be modified by intermediate calculations,
+        to save memory. In this case, the contents of the input a after this function
+        completes is undefined.
+    interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        This optional parameter specifies the interpolation method to use when the
+        desired percentile lies between two data points i < j:
+        'linear': i + (j - i) * fraction, where fraction is the fractional part of the
+        index surrounded by i and j.
+        'lower': i.
+        'higher': j.
+        'nearest': i or j, whichever is nearest.
+        'midpoint': (i + j) / 2.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result as
+        dimensions with size one. With this option, the result will broadcast
+        correctly against the original array a.
+
+    Returns
+    -------
+    percentile : _Symbol
+        Output array.
+    """
+    if overwrite_input is not None:
+        raise NotImplementedError('overwrite_input is not supported yet')
+    return _npi.percentile(a, q, axis=axis, interpolation=interpolation,
+                           keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
+    """
+    Compute the q-th quantile of the data along the specified axis.
+    New in version 1.15.0.
+    Parameters
+    ----------
+    a : _Symbol
+        Input array or object that can be converted to an array.
+    q : _Symbol
+        Quantile or sequence of quantiles to compute, which must be between 0 and 1 inclusive.
+    axis : {int, tuple of int, None}, optional
+        Axis or axes along which the quantiles are computed.
+        The default is to compute the quantile(s) along a flattened version of the array.
+    out : ndarray, optional
+        Alternative output array in which to place the result.
+        It must have the same shape and buffer length as the expected output,
+        but the type (of the output) will be cast if necessary.
+    interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}
+        This optional parameter specifies the interpolation method to use
+        when the desired quantile lies between two data points i < j:
+            linear: i + (j - i) * fraction, where fraction is the fractional part of the index surrounded by i and j.
+            lower: i.
+            higher: j.
+            nearest: i or j, whichever is nearest.
+            midpoint: (i + j) / 2.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the result as dimensions with size one.
+        With this option, the result will broadcast correctly against the original array a.
+    Returns
+    -------
+    quantile : _Symbol
+        If q is a single quantile and axis=None, then the result is a scalar.
+        If multiple quantiles are given, first axis of the result corresponds to the quantiles.
+        The other axes are the axes that remain after the reduction of a.
+        If out is specified, that array is returned instead.
+    See also
+    --------
+    mean
+    Notes
+    -----
+    Given a vector V of length N, the q-th quantile of V is the value q of the way from the minimum
+    to the maximum in a sorted copy of V. The values and distances of the two nearest neighbors
+    as well as the interpolation parameter will determine the quantile if the normalized ranking
+    does not match the location of q exactly. This function is the same as the median if q=0.5,
+    the same as the minimum if q=0.0 and the same as the maximum if q=1.0.
+    This function differs from the original `numpy.quantile
+    <https://numpy.org/devdocs/reference/generated/numpy.quantile.html>`_ in
+    the following aspects:
+    - q must be _Symbol type even if it is a scalar
+    - do not support overwrite_input
+    """
+    if overwrite_input is not None:
+        raise NotImplementedError('overwrite_input is not supported yet')
+    return _npi.percentile(a, q * 100, axis=axis, interpolation=interpolation,
+                           keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
 def shares_memory(a, b, max_work=None):
     """
     Determine if two arrays share memory
@@ -5753,6 +5956,82 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def isnan(x, out=None, **kwargs):
+    """
+    Test element-wise for NaN and return result as a boolean array.
+
+    Parameters
+    ----------
+    x : _Symbol
+        Input array.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol or bool
+        True where x is NaN, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+
+    This function differs from the original `numpy.isnan
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    """
+    return _unary_func_helper(x, _npi.isnan, _np.isnan, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def isinf(x, out=None, **kwargs):
+    """
+    Test element-wise for positive or negative infinity.
+
+    Parameters
+    ----------
+    x : _Symbol
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol or bool
+        True where x is positive or negative infinity, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+
+    This function differs from the original `numpy.isnan
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
+    the following aspects:
+    - Does not support complex number for now
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - ``out`` param does not support scalar input case.
+    """
+    return _unary_func_helper(x, _npi.isinf, _np.isinf, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
 def where(condition, x, y):
     """
     Return elements chosen from `x` or `y` depending on `condition`.
@@ -5772,7 +6051,22 @@ def where(condition, x, y):
         from `y` elsewhere.
 
     """
-    return _npi.where(condition, x, y, out=None)
+    if isinstance(condition, numeric_types):
+        if condition != 0:
+            return x
+        else:
+            return y
+    else:
+        if isinstance(x, numeric_types) and isinstance(y, numeric_types):
+            return _npi.where_scalar2(condition, float(x), float(y), out=None)
+        elif isinstance(x, Symbol) and isinstance(y, Symbol):
+            return _npi.where(condition, x, y, out=None)
+        elif isinstance(y, Symbol):
+            return _npi.where_lscalar(condition, y, float(x), out=None)
+        elif isinstance(x, Symbol):
+            return _npi.where_rscalar(condition, x, float(y), out=None)
+        else:
+            raise TypeError('type {0} and {1} not supported'.format(str(type(x)), str(type(y))))
 
 
 @set_module('mxnet.symbol.numpy')

@@ -62,7 +62,7 @@ The storage type of ``retain`` output depends on storage types of inputs
 .set_attr<FInferStorageType>("FInferStorageType", SparseRetainForwardInferStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseRetainOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_sparse_retain", n, ograds,
                                {n->inputs[sr::kIdx]}, n->attrs.dict);
   })

@@ -154,10 +154,18 @@ if variant.endswith('MKL'):
         shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
-    package_data['mxnet'].append('mxnet/libgfortran.so.3')
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
+    libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
+    if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.4')
+    else:
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.4'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.4')
+    shutil.copy(os.path.join(libdir, 'libquadmath.so.0'), mxdir)
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
+    if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
+        shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
+        package_data['mxnet'].append('mxnet/libquadmath.so.0')
 
 # Copy licenses and notice
 for f in os.listdir('mxnet/licenses'):

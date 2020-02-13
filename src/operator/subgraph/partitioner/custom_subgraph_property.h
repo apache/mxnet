@@ -161,7 +161,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     }
   }
   // override CreateSubgraphNode
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
     int accept = 1;
     int num_attr = 0;
@@ -195,7 +195,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         << "Error calling accept_subgraph for '" << subgraph_prop << "'";
     }
     if (accept) {
-      nnvm::NodePtr n = nnvm::Node::Create();
+      nnvm::ObjectPtr n = nnvm::Node::Create();
       n->attrs.op = Op::Get(subgraph_op_name);
       n->attrs.name = "_op" + std::to_string(subgraph_id);
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
@@ -210,7 +210,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       call_free_(attr_keys);
       return n;
     } else {
-      return NULL;
+      return nullptr;
     }
   }
   // override CreateSubgraphSelector
