@@ -897,7 +897,8 @@ void TestFullyConnectedOp(const OpAttrs &forward_attrs, const OpAttrs &backwards
   TestArrayShapes tas = GetTestArrayShapes();
   std::vector<mkldnn::memory::desc> mds = tas.mds;
 
-  std::vector<NDArrayAttrs> in_arrs = GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1);
+  std::vector<NDArrayAttrs> in_arrs =
+      GetTestInputArrays(forward_attrs.input_types, true, {1}, false, 1);
   std::vector<std::vector<NDArrayAttrs>> out_arrs(forward_attrs.num_outputs);
   std::vector<std::vector<NDArrayAttrs>> ex_out_arrs(forward_attrs.num_outputs);
 
