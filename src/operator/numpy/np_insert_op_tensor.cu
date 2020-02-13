@@ -24,13 +24,13 @@
  */
 
 #include "./np_insert_op-inl.h"
-#include "./np_insert_op_tensor_indices-inl.h"
+#include "./np_insert_op_tensor-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_insert_tensor_indices)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertTensorIndicesCompute<gpu>);
+NNVM_REGISTER_OP(_npi_insert_tensor)
+.set_attr<FCompute>("FCompute<gpu>", NumpyInsertTensorCompute<gpu>);
 
 }
 }

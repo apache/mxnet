@@ -449,7 +449,7 @@ void NumpyInsertCompute(const nnvm::NodeAttrs& attrs,
   // get numnew
   mxnet::TShape old_valshape(values.shape_);
   if (param.int_ind.has_value() ||
-    (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0)) {  // scaler
+      (obj_is_tensor && inputs[obj_pos].shape_.ndim() == 0)) {  // scaler
     if (param.int_ind.has_value()) {
       index = param.int_ind.value();
       CHECK(index >= -1 * N && index <= N)

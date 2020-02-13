@@ -3096,7 +3096,7 @@ def insert(arr, obj, values, axis=None):
         elif isinstance(obj, integer_types):
             return _npi.insert(arr, val=values, int_ind=obj, axis=axis)
         elif isinstance(obj, Symbol):
-            return _npi.insert(arr, obj, val=values, axis=axis)
+            return _npi.insert_tensor(arr, obj, val=values, axis=axis)
     if not isinstance(arr, Symbol): # pylint: disable= undefined-variable
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))
     if not isinstance(values, Symbol): # pylint: disable= undefined-variable
@@ -3109,7 +3109,7 @@ def insert(arr, obj, values, axis=None):
     elif isinstance(obj, integer_types):
         return _npi.insert(arr, values, int_ind=obj, axis=axis)
     elif isinstance(obj, Symbol):
-        return _npi.insert(arr, values, obj, axis=axis)
+        return _npi.insert_tensor(arr, values, obj, axis=axis)
     else:
         raise TypeError("'obj' can not support type {}".format(str(type(obj))))
 

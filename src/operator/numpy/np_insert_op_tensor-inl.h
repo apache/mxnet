@@ -22,8 +22,8 @@
  * \file np_insert_op-inl.h
  * \brief Function definition of insert operators
  */
-#ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INDICES_INL_H_
-#define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INDICES_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INL_H_
 
 #include <vector>
 #include <memory>
@@ -56,11 +56,11 @@ struct NumpyInsertTensorParam : public dmlc::Parameter<NumpyInsertTensorParam> {
  * Only support tensor indices (ndim > 0)
  */
 template<typename xpu>
-void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
-                                     const OpContext& ctx,
-                                     const std::vector<TBlob>& inputs,
-                                     const std::vector<OpReqType>& req,
-                                     const std::vector<TBlob>& outputs) {
+void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
 
@@ -76,7 +76,6 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
   const int obj_pos = val_pos + 1;
   const int out_pos = 0;
   int ndim = inputs[arr_pos].shape_.ndim();
-  CHECK_NE(ndim, 0) << "Use scalar instead of zero ndim tensor.\n";
   int axis = param.axis.has_value() ? param.axis.value() : 0;
   TBlob arr;
   TBlob values = param.val.has_value() ?
@@ -85,6 +84,18 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
   if (!param.axis.has_value()) {
     arr = inputs[arr_pos].reshape(Shape1(inputs[arr_pos].shape_.Size()));
     ndim = 1;
+  } else if (ndim == 0) {
+    if (param.val.has_value()) {
+      CHECK_EQ(inputs[val_pos].shape_.ndim(), 0)
+        << "'arr' is a 0-d array, 'values' can not assign to it. "
+        << "alueError: assignment to 0-d array.";
+      mxnet_op::copy(s, outputs[out_pos], inputs[val_pos]);
+    } else {
+      MSHADOW_TYPE_SWITCH(outputs[out_pos].type_flag_, DType, {
+        Fill(s, outputs[out_pos], req[0], static_cast<DType>(param.val.value()));
+      });
+    }
+    return;
   } else {
     arr = inputs[arr_pos];
     CHECK(axis >= -1 * arr.shape_.ndim() && axis < arr.shape_.ndim())
@@ -115,7 +126,24 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
 
   // get numnew
   mxnet::TShape old_valshape(values.shape_);
-  if (indices_len == 1) {  // tensor with only one element
+  if (inputs[obj_pos].shape_.ndim() == 0) {  // scaler
+    // values = moveaxis(values, 0, axis), will change values's shape
+    numnew = values.shape_[0];
+    mxnet::TShape axes(values.ndim(), -1);  // moved axes
+    mxnet::TShape val_newshape(values.ndim(), -1);
+    int axes_id = 0;
+    for (int i = 1; i <= axis; ++i) {
+      axes[axes_id++] = i;
+    }
+    axes[axes_id++] = 0;
+    for (int i = axis + 1; i < values.ndim(); ++i) {
+      axes[axes_id++] = i;
+    }
+    for (int i = 0; i < values.ndim(); ++i) {
+      val_newshape[i] = values.shape_[axes[i]];
+    }
+    values.shape_.assign(val_newshape.begin(), val_newshape.end());
+  } else if (indices_len == 1) {  // tensor with only one element
     numnew = values.shape_[axis];
   } else {
     numnew = static_cast<int>(indices_len);
@@ -126,14 +154,28 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
   int vtype = param.val.has_value() ?
               mshadow::DataType<double>::kFlag :
               inputs[val_pos].type_flag_;
-  if ((indices_len == 1) && param.val.has_value()) {
+  if ((inputs[obj_pos].shape_.ndim() == 0 || indices_len == 1)
+      && param.val.has_value()) {
     MSHADOW_TYPE_SWITCH(vtype, VType, {
       // If insert use single index and 'value' is inputed as numerical parameter
       values = TBlob(ctx.requested[0].get_space_typed<xpu, 1, VType>(Shape1(1), s));
       Fill(s, values, kWriteTo, param.val.value());
     });
   }
-  if (indices_len == 1) {
+  if (inputs[obj_pos].shape_.ndim() == 0) {
+    // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
+    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
+      InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                        mxnet_op::calc_stride(outshape.get<ndim>()),
+                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                        numnew, N, outshape.Size(), true);
+      
+    });
+  } else if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
                                         mxnet_op::calc_stride(arr.shape_.get<ndim>()),
@@ -198,4 +240,4 @@ void NumpyInsertTensorIndicesCompute(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INDICES_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INL_H_
