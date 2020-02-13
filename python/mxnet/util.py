@@ -17,10 +17,7 @@
 """general utility functions"""
 
 import ctypes
-import os
-import sys
 import functools
-import itertools
 import inspect
 import threading
 

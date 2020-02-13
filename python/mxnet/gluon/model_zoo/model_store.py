@@ -26,7 +26,7 @@ import uuid
 import shutil
 
 from ..utils import download, check_sha1, replace_file
-from ... import base, util
+from ... import base
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),

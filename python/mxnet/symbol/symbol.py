@@ -28,7 +28,6 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-import sys
 import numpy as _numpy  # pylint: disable=relative-import
 
 from ..attribute import AttrScope

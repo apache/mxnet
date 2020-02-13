@@ -21,7 +21,6 @@
 # pylint: disable= protected-access, invalid-name
 """Logging utilities."""
 import logging
-import sys
 import warnings
 
 CRITICAL = logging.CRITICAL

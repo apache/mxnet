@@ -17,8 +17,6 @@
 
 """Make builtin ops' signatures compatible with NumPy."""
 
-import sys
-import warnings
 import inspect
 from . import _numpy_op_doc
 from . import numpy as mx_np

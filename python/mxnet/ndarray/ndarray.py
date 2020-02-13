@@ -32,7 +32,6 @@ import ctypes
 import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
-import sys
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
