@@ -122,7 +122,8 @@ def prepare_op_inputs(op, arg_params):
     custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator',
                    'sample_multinomial', 'linalg_maketrian', 'squeeze', 'fill_element_0index'}
 
-    int_only = ['random_randint']
+    int_only = {'random_randint'}
+    float_only = {'log_softmax', 'softmax', 'softmin'}
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -134,7 +135,7 @@ def prepare_op_inputs(op, arg_params):
         # rest all operators take int as well as float
         if op in int_only and arg_name == "dtype":
             arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
-        elif op.startswith(('random','sample')) and arg_name == "dtype":
+        elif (op.startswith(('random','sample')) or op in float_only) and arg_name == "dtype":
             arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
         elif "NDArray" in arg_type and op == "ravel_multi_index":
             arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
@@ -186,7 +187,7 @@ def get_all_unary_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Cast operators (cast & amp_cast are unary)
-    cast_ops = ['cast', 'amp_cast']
+    cast_ops = {'cast', 'amp_cast'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -233,7 +234,7 @@ def get_all_misc_binary_operators():
 
     # Filter for miscellaneous binary operators
     binary_misc_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if "choose_element_0index" == op_name:
             binary_misc_mx_operators[op_name] = mx_operators[op_name]
         elif "reshape_like" == op_name:
@@ -364,7 +365,7 @@ def get_all_optimizer_operators():
 
     # Filter for Optimizer operators
     optimizer_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in optimizer_ops:
             optimizer_mx_operators[op_name] = mx_operators[op_name]
     return optimizer_mx_operators
@@ -383,7 +384,7 @@ def get_all_sorting_searching_operators():
 
     # Filter for Sort and search operators
     sort_search_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in sort_search_ops:
             sort_search_mx_operators[op_name] = mx_operators[op_name]
     return sort_search_mx_operators
@@ -403,7 +404,7 @@ def get_all_rearrange_operators():
 
     # Filter for Array Rearrange operators
     rearrange_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in rearrange_ops:
             rearrange_mx_operators[op_name] = mx_operators[op_name]
     return rearrange_mx_operators
@@ -468,7 +469,7 @@ def get_all_loss_operators():
 
     # Filter for NN Loss operators
     loss_mx_operators = {}
-    for op_name, op_params in mx_operators.items():
+    for op_name, _ in mx_operators.items():
         if op_name in loss_ops:
             loss_mx_operators[op_name] = mx_operators[op_name]
     return loss_mx_operators
