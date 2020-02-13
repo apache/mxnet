@@ -71,7 +71,7 @@ Note that apart from this header, the custom operator library is independent of 
 
 To build your own library containing custom CPU operator, compose a C++ source file like `myop_lib.cc`, include `lib_api.h` header file, and write your custom operator implementation with these required functions:
 - `initialize` - Library Initialization Function
-- `REGISTER_OP` - Operator Registration Marco
+- `REGISTER_OP` - Operator Registration Macro
 - `parseAttrs` - Attribute Parser
 - `inferType` - Type Inference
 - `inferShape` - Shape Inference
@@ -210,6 +210,7 @@ Additionally, you can use a `dltensor` tensor structure stored in the `MXTensor`
 * **backward**: This function is doing the backward gradient computation. It will be similar to the forward function. And you need to figure out the formula of the backward gradient computation.
 
 * **mutateInputs**: This function is for marking mutable inputs. It takes two arguments. The 1st argument is the attributes. The 2nd argument is a list of input indices that are mutable among all input tensors.
+For example, you can write `input_indices.push_back(1)` to mark the 2nd input tensor a mutable input.
 It is useful when some inputs are auxiliary model parameters and might be altered during forward/backward computation. Remember, the index number of `input_indices` should not exceed the number of inputs.
 
 ### Writing A Stateful Custom Operator
