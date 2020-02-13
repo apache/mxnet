@@ -39,7 +39,7 @@
 #include <utility>
 #include <stdexcept>
 
-#define MX_LIBRARY_VERSION 3
+#define MX_LIBRARY_VERSION 4
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -241,34 +241,21 @@ enum MXReturnValue {
   MX_SUCCESS = 1,
 };
 
-struct ChunkDense {
+struct MXSparse {
   // Pointer to data.
   void *data{nullptr};
-  // Size of data in bytes.
-  size_t dataSize{0};
-  // shape of data.
-  std::vector<int64_t> shape;
-  // Context of data.
-  // MXContext ctx;
-};
-
-struct ChunkSparse {
-  // Pointer to data.
-  void *data{nullptr};
-  // Size of data in bytes.
-  size_t dataSize{0};
-  // length  of data.
-  int64_t data_lens;
+  // length of (non-zero) data.
+  int64_t data_len;
 
   // To store aux data for sparse.
-  // for row_sparse, aux_data[0] = indices
-  // for csr, aux_data[0] = indptr, aux_data[1] = indices
-  std::vector<std::vector<int64_t>> aux_data;
+  // For CSR, indices stores the col index of non-zero values.
+  // For row sparse, indices store row index of rows which have non-zero values.
+  std::vector<int64_t> indices;
 
-  // Lens of the aux_data.
-  // for row_sparse, aux_lens[0] = len(indices)
-  // for csr, aux_lens[0] = len(indptr), aux_lens[1] = len(indices)
-  std::vector<int64_t> aux_lens;
+  // For CSR, indptr gives the start and end index of data for each row.
+  // For row sparse, indptr is empty. 
+  std::vector<int64_t> indptr;
+
   // Context of data.
   // MXContext ctx;
 };
@@ -281,13 +268,13 @@ struct MXTensor {
 
   // Construtor for dense.
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
-           size_t vID, MXContext mx_ctx, MXStorageType stype = kDefaultStorage)
+           size_t vID, MXContext mx_ctx, MXStorageType stype)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx), stype(stype) {}
 
   /*! \brief populate internal tensor fields */
   // To do: solve for CSR and row sparse.
   void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
-                 size_t vID, MXContext mx_ctx, MXStorageType stype = kDefaultStorage) {
+                 size_t vID, MXContext mx_ctx, MXStorageType stype) {
     data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx; stype = stype;
     shape.clear();
     for (int j = 0; j < ndims; j++) {
@@ -385,11 +372,8 @@ struct MXTensor {
            stype == oth.stype;
   }
 
-  /*! \brief get MXTensors storage type*/
-  inline MXStorageType getStorageType() { return stype; } 
-
-  // For dense, data_ptr points to ChunkDense.
-  // For sparse, data_ptr points to ChunkSparse.
+  // For dense, data_ptr points to data.
+  // For sparse, data_ptr points to MXSparse.
   void *data_ptr;
 
   // shape is in [2,3,4] format to represent high-dim tensor
