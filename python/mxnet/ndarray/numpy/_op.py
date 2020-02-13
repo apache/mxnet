@@ -44,7 +44,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
-           'diff', 'resize', 'nan_to_num', 'isnan', 'isinf', 'where', 'bincount']
+           'diff', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'where', 'bincount']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -203,7 +203,11 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     >>> np.zeros_like(y)
     array([0., 0., 0.], dtype=float64)
     """
-    return _npi.full_like(a, fill_value=0, dtype=dtype, ctx=None, out=None)
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=0, dtype=dtype, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -259,7 +263,11 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     >>> np.ones_like(y)
     array([1., 1., 1.], dtype=float64)
     """
-    return _npi.full_like(a, fill_value=1, dtype=dtype, ctx=None, out=None)
+    if order != 'C':
+        raise NotImplementedError
+    if ctx is None:
+        ctx = current_context()
+    return _npi.full_like(a, fill_value=1, dtype=dtype, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6920,6 +6928,58 @@ def where(condition, x=None, y=None):  # pylint: disable=too-many-return-stateme
                 return _npi.where_rscalar(condition, x, float(y), out=None)
             else:
                 raise TypeError('type {0} and {1} not supported'.format(str(type(x)), str(type(y))))
+
+
+@set_module('mxnet.ndarray.numpy')
+def polyval(p, x):
+    """
+    Evaluate a polynomial at specific values.
+    If p is of length N, this function returns the value:
+    p[0]*x**(N-1) + p[1]*x**(N-2) + ... + p[N-2]*x + p[N-1]
+    If x is a sequence, then p(x) is returned for each element of x.
+    If x is another polynomial then the composite polynomial p(x(t)) is returned.
+
+    Parameters
+    ----------
+    p : ndarray
+        1D array of polynomial coefficients (including coefficients equal to zero)
+        from highest degree to the constant term.
+    x : ndarray
+        An array of numbers, at which to evaluate p.
+
+    Returns
+    -------
+    values : ndarray
+        Result array of polynomials
+
+    Notes
+    -----
+    This function differs from the original `numpy.polyval
+    <https://numpy.org/devdocs/reference/generated/numpy.polyval.html>`_ in
+    the following way(s):
+    - Does not support poly1d.
+    - X should be ndarray type even if it contains only one element.
+
+    Examples
+    --------
+    >>> p = np.array([3, 0, 1])
+    array([3., 0., 1.])
+    >>> x = np.array([5])
+    array([5.])
+    >>> np.polyval(p, x)  # 3 * 5**2 + 0 * 5**1 + 1
+    array([76.])
+    >>> x = np.array([5, 4])
+    array([5., 4.])
+    >>> np.polyval(p, x)
+    array([76., 49.])
+    """
+    from ...numpy import ndarray
+    if isinstance(p, ndarray) and isinstance(x, ndarray):
+        return _npi.polyval(p, x)
+    elif not isinstance(p, ndarray) and not isinstance(x, ndarray):
+        return _np.polyval(p, x)
+    else:
+        raise TypeError('type not supported')
 
 
 @set_module('mxnet.ndarray.numpy')

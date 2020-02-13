@@ -162,6 +162,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'meshgrid',
     'outer',
     'einsum',
+    'polyval',
     'shares_memory',
     'may_share_memory',
     'quantile',
