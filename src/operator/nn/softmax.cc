@@ -94,8 +94,6 @@ inline static bool SoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
                                       DispatchMode* dispatch_mode,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
-  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-
   bool support = true;
   if (softmax_use_length(attrs) || softmax_has_dtype_override(attrs)) {
     support = false;
