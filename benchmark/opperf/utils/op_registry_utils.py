@@ -121,11 +121,21 @@ def prepare_op_inputs(op, arg_params):
     # For ops with args that need to change shape/value for different ops
     custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian']
 
+    int_only = ['random_randint']
+
     # Prepare op to default input mapping
     arg_values = {}
     for arg_name, arg_type in zip(arg_params["params"]["arg_names"],
                                   arg_params["params"]["arg_types"]):
-        if "NDArray" in arg_type and op == "ravel_multi_index":
+        # Due to lack of an internal API for fetching permissible dtype
+        # added a logic for using float only dtype as input for ops that take only floats
+        # same for randint (which is the only op that takes only int as input)
+        # rest all operators take int as well as float
+        if op in int_only and arg_name == "dtype":
+            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
+        elif op.startswith(('random','sample')) and arg_name == "dtype":
+            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
+        elif "NDArray" in arg_type and op == "ravel_multi_index":
             arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
         elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
             arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
@@ -174,14 +184,18 @@ def get_all_unary_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
+    # Cast operators (cast & amp_cast are unary)
+    cast_ops = ['cast', 'amp_cast']
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
     # Filter for unary broadcast operators
     unary_broadcast_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_params["params"]["narg"] == 1 and \
-                "data" in op_params["params"]["arg_names"]:
+        if (op_params["params"]["narg"] == 1 and \
+                "data" in op_params["params"]["arg_names"]) or \
+                op_name in cast_ops:
             unary_broadcast_mx_operators[op_name] = mx_operators[op_name]
     return unary_broadcast_mx_operators
 
@@ -305,8 +319,9 @@ def get_all_reduction_operators():
     # Filter for Reduction operators
     reduction_mx_operators = {}
     for op_name, op_params in mx_operators.items():
-        if op_params["params"]["narg"] == 4 and \
-                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])):
+        if (op_params["params"]["narg"] == 4 and \
+                set(["data", "axis", "exclude", "keepdims"]).issubset(set(op_params["params"]["arg_names"])) \
+                or op_name == 'norm'):
             reduction_mx_operators[op_name] = mx_operators[op_name]
     return reduction_mx_operators
 
@@ -340,7 +355,8 @@ def get_all_optimizer_operators():
      """
     optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
                      'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
-                     'adam_update']
+                     'adam_update', 'mp_nag_mom_update', 'nag_mom_update', 'lamb_update_phase1',
+                     'lamb_update_phase2']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
