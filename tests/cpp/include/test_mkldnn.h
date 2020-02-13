@@ -63,7 +63,7 @@ struct TestArrayShapes {
 };
 
 // Init arrays with the default layout.
-inline static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
+inline static void InitDefaultArray(NDArray *arr, bool is_rand = false, int max = 50) {
   const TBlob &blob = arr->data();
   mshadow::default_real_t *data = blob.dptr<mshadow::default_real_t>();
   int size = blob.Size();
@@ -72,17 +72,17 @@ inline static void InitDefaultArray(NDArray *arr, bool is_rand = false) {
 
   for (int i = 0; i < size; i++)
     if (is_rand) {
-      data[i] = (std::rand() % 100) - 50;
+      data[i] = (std::rand() % (max * 2)) - max;
     } else {
-      data[i] = i % 100 - 50;
+      data[i] = i % (max * 2) - max;
     }
 }
 
 
 // Init arrays with the specified layout.
 inline static void InitMKLDNNArray(NDArray *arr, const mkldnn::memory::desc &desc,
-                                   bool is_rand = false) {
-  InitDefaultArray(arr, is_rand);
+                                   bool is_rand = false, int max = 50) {
+  InitDefaultArray(arr, is_rand, max);
   arr->MKLDNNDataReorderAsync(desc);
   arr->WaitToRead();
 }
@@ -332,7 +332,7 @@ inline void PrintVerifyMsg(const NDArrayAttrs &arr1, const NDArrayAttrs &arr2) {
  */
 inline std::vector<NDArrayAttrs> GetTestInputArrays(
     int types = ArrayTypes::All, bool rand = false,
-    std::vector<float> scale = {1}, bool spatial_data_format = false) {
+    std::vector<float> scale = {1}, bool spatial_data_format = false, int max = 50) {
   TestArrayShapes tas = GetTestArrayShapes(spatial_data_format);
   std::vector<mxnet::TShape> shapes = tas.shapes;
   std::vector<mkldnn::memory::desc> mds = tas.mds;
@@ -351,14 +351,14 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
     // Type 1.
     NDArray arr(shape, Context());
     if (types & ArrayTypes::Normal) {
-      InitDefaultArray(&arr, rand);
+      InitDefaultArray(&arr, rand, max);
       in_arrs.emplace_back(arr, "Normal NDArray");
     }
 
     // Type 4
     arr = NDArray(shape, Context());
     if (types & ArrayTypes::NormalReshaped) {
-      InitDefaultArray(&arr, rand);
+      InitDefaultArray(&arr, rand, max);
       in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount),
                            "Reshaped Normal NDArray");
     }
@@ -447,7 +447,7 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
 inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     const mxnet::TShape &shp,
     const std::vector<mkldnn::memory::desc> &mds,
-    std::vector<float>scale = {1}, bool rand = true, int types = ArrayTypes::All) {
+    std::vector<float>scale = {1}, bool rand = true, int types = ArrayTypes::All, int max = 50) {
   mxnet::TShape shape = shp;
 
   for (int dim = 0; dim < scale.size(); dim++)
@@ -460,7 +460,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
 
   if (types & ArrayTypes::Normal) {
     in_arrs.emplace_back(arr, "Normal NDArray");
-    InitDefaultArray(&in_arrs.back().arr, rand);
+    InitDefaultArray(&in_arrs.back().arr, rand, max);
   }
 
   mxnet::TShape tmp_shape = shape;
@@ -468,7 +468,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     // Type 4.
     tmp_shape[0] = shape[0] * 2;
     NDArray arr0(tmp_shape, Context());
-    InitDefaultArray(&arr0, rand);
+    InitDefaultArray(&arr0, rand, max);
     in_arrs.emplace_back(arr0.Slice(1, shape[0] + 1), "Reshaped NDArray");
   }
 
@@ -479,7 +479,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     s[0] = shape.Size();
     NDArray arr1(s, Context());
     arr1 = arr1.AsArray(shape, arr1.dtype());
-    InitDefaultArray(&arr1, rand);
+    InitDefaultArray(&arr1, rand, max);
     in_arrs.emplace_back(arr1, "Reused NDArray");
   }
 
@@ -488,7 +488,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     s[0] = shape.Size() * GetTypeSize(mshadow::default_type_flag);
     NDArray arr2(s, Context(), true, mshadow::kUint8);
     arr2 = arr2.AsArray(shape, mshadow::default_type_flag);
-    InitDefaultArray(&arr2, rand);
+    InitDefaultArray(&arr2, rand, max);
     in_arrs.emplace_back(arr2, "Reused NDArray with diff data type");
   }
 
@@ -498,7 +498,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     NDArray arr3(s, Context(), true, mshadow::kUint8);
     tmp_shape[0] = shape[0] * 2;
     arr3 = arr3.AsArray(tmp_shape, mshadow::default_type_flag);
-    InitDefaultArray(&arr3, rand);
+    InitDefaultArray(&arr3, rand, max);
     in_arrs.emplace_back(arr3.Slice(1, shape[0] + 1), "Reused+Reshaped NDArray");
   }
 
