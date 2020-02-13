@@ -23,7 +23,6 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import io
 import logging
 import os
 import tarfile
@@ -257,7 +256,7 @@ class _TokenEmbedding(vocab.Vocabulary):
         tokens = set()
         loaded_unknown_vec = None
         line_num = 0
-        with io.open(pretrained_file_path, 'r', encoding=encoding) as f:
+        with open(pretrained_file_path, 'r', encoding=encoding) as f:
             for line in f:
                 line_num += 1
                 elems = line.rstrip().split(elem_delim)
