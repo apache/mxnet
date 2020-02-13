@@ -287,6 +287,14 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_expm1, "x", mshadow_op::expm1)
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(_npi_logical_not, "x", mshadow_op::np_logical_not)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
+// isnan
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(_npi_isnan, "x", mshadow_op::isnan)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// isinf
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(_npi_isinf, "x", mshadow_op::isinf)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
 // sin
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_sin, "x", mshadow_op::sin)
 .describe(R"code(Trigonometric sine, element-wise.

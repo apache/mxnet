@@ -30,7 +30,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator* CreateOp<gpu>(GridGeneratorParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new GridGeneratorOp<gpu, DType>(param);
   })

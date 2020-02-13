@@ -483,7 +483,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
       code += "op::store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
               var_name + "_shape);\n";
     } else if (req[counter] == kNullOp) {
-      // NULL req, do not do anything
+      // nullptr req, do not do anything
     } else {
       LOG(FATAL) << "Encountered unexpected req.";
     }
@@ -589,8 +589,8 @@ CUfunction FusedOp::CompileCode(const std::string &code,
                                   &code_with_header[0],                      // buffer
                                   (kernel_name + "_kernel.cu").c_str(),      // name
                                   0,                                         // num headers
-                                  NULL,                                      // headers
-                                  NULL));                                    // include names
+                                  nullptr,                                      // headers
+                                  nullptr));                                    // include names
 
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
@@ -723,7 +723,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     kernel_functions_[fusion::kGeneral] = CompileCode(code, attrs.name, dev_id);
     if (check_shape_args_.size() > 0) {
       const auto& code = GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
-                           node_shapes, node_dtypes, nvec, attrs.name, NULL);
+                           node_shapes, node_dtypes, nvec, attrs.name, nullptr);
       kernel_functions_[fusion::kShapeOptimized] = CompileCode(code, attrs.name, dev_id);
     }
     initialized_ = true;

@@ -19,12 +19,12 @@
 1. Operators are automatically fetched from MXNet operator registry.
 2. Default Inputs are generated. See rules/default_params.py. You can override the default values.
 
-Below 16 random sampling Operators are covered:
+Below 18 random sampling Operators are covered:
 
 ['random_exponential', 'random_gamma', 'random_generalized_negative_binomial', 'random_negative_binomial',
 'random_normal', 'random_poisson', 'random_randint', 'random_uniform', 'sample_exponential', 'sample_gamma',
 'sample_generalized_negative_binomial', 'sample_multinomial', 'sample_negative_binomial', 'sample_normal',
-'sample_poisson', 'sample_uniform']
+'sample_poisson', 'sample_uniform', 'GridGenerator', 'BilinearSampler']
 
 """
 
@@ -44,6 +44,8 @@ def run_mx_random_sampling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', p
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
+    profiler: str, default 'native'
+        Type of Profiler to use (native/python)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100

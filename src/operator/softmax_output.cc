@@ -34,7 +34,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 struct SoftmaxOutputGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
   std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
   for (uint32_t i = 0; i < out_data.size(); ++i) {
@@ -44,7 +44,7 @@ struct SoftmaxOutputGrad {
   heads.push_back(out_data[softmaxout_enum::kOut]);
   heads.push_back(n->inputs[softmaxout_enum::kLabel]);
 
-  nnvm::NodePtr gnode = nnvm::Node::Create();
+  nnvm::ObjectPtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
   gnode->control_deps.emplace_back(n);
   gnode->attrs = n->attrs;

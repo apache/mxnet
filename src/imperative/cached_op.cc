@@ -90,7 +90,7 @@ CachedOp::~CachedOp() {
 }
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
-    const nnvm::NodePtr& node,
+    const nnvm::ObjectPtr& node,
     const std::vector<nnvm::NodeEntry>& ograds) const {
   using namespace nnvm;
   static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
@@ -1259,7 +1259,7 @@ NNVM_REGISTER_OP(_CachedOp)
   })
 .set_attr_parser(CachedOpParamParser)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
     return op->Gradient(n, ograds);
   })

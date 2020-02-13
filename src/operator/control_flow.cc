@@ -471,7 +471,7 @@ static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-ForeachGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+ForeachGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_foreach"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
@@ -826,7 +826,7 @@ static OpStatePtr CreateWhileLoopState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-WhileLoopGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+WhileLoopGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_while_loop"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
@@ -1079,7 +1079,7 @@ static OpStatePtr CreateCondState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-CondGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+CondGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_cond"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;

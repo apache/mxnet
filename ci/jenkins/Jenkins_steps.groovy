@@ -311,6 +311,19 @@ def compile_unix_cmake_gpu_no_tvm_op() {
     }]
 }
 
+def compile_unix_cmake_gpu_no_rtc() {
+    return ['GPU: CMake CUDA RTC OFF': {
+        node(NODE_LINUX_CPU) {
+            ws('workspace/build-cmake-gpu-no-rtc') {
+                timeout(time: max_time, unit: 'MINUTES') {
+                    utils.init_git()
+                    utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_rtc', false)
+                }
+            }
+        }
+    }]
+}
+
 def compile_unix_tensorrt_gpu() {
     return ['TensorRT': {
       node(NODE_LINUX_CPU) {
@@ -663,6 +676,19 @@ def test_static_python_cpu() {
   }]
 }
 
+def test_static_python_cpu_cmake() {
+    return ['Static build CPU 14.04 Python with CMake' : {
+        node(NODE_LINUX_CPU) {
+            ws('workspace/ut-publish-python-cpu') {
+                timeout(time: max_time, unit: 'MINUTES') {
+                    utils.init_git()
+                    utils.docker_run("publish.ubuntu1404_cpu", 'build_static_python_cpu_cmake', false)
+                }
+            }
+        }
+    }]
+}
+
 def test_static_python_gpu() {
   return ['Static build GPU 14.04 Python' : {
     node(NODE_LINUX_GPU) {
@@ -674,6 +700,19 @@ def test_static_python_gpu() {
         }
     }
   }]
+}
+
+def test_static_python_gpu_cmake() {
+    return ['Static build GPU 14.04 Python' : {
+        node(NODE_LINUX_GPU) {
+            ws('workspace/ut-publish-python-gpu') {
+                timeout(time: max_time, unit: 'MINUTES') {
+                    utils.init_git()
+                    utils.docker_run("publish.ubuntu1404_gpu", 'build_static_python_cu101_cmake', true)
+                }
+            }
+        }
+    }]
 }
 
 def test_unix_python3_cpu() {

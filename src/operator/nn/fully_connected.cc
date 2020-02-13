@@ -170,7 +170,7 @@ static bool FullyConnectedType(const nnvm::NodeAttrs& attrs,
 
 struct FullyConnectedGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.push_back(n->inputs[fullc::kData]);
@@ -181,7 +181,7 @@ struct FullyConnectedGrad {
 
 struct FullyConnectedGradGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.push_back(n->inputs[0]);  // o_y : head gradient of the output y

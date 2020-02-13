@@ -2600,6 +2600,10 @@ def test_convolution_dilated_impulse_response():
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 3D
+    for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
+        for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
 @with_seed()
@@ -5983,7 +5987,7 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
-
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/17467")
 @with_seed()
 def test_custom_op_fork():
     # test custom operator fork
