@@ -381,19 +381,19 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
       if (shape.ndim() == md.data.ndims && IsSameShape(md, shape)
           && types & ArrayTypes::MKLDNN) {
         desc_str = "MKLDNN NDArray";
-        InitMKLDNNArray(&arr, md, rand);
+        InitMKLDNNArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr, desc_str);
       } else if (shape.ndim() == md.data.ndims && !IsSameShape(md, shape)
           && types & ArrayTypes::MKLDNNDiffShape) {
         desc_str = "MKLDNN NDArray with different shape";
-        InitMKLDNNArray(&arr, md, rand);
+        InitMKLDNNArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr, desc_str);
       } else if (shape.ndim() != md.data.ndims && types & ArrayTypes::MKLDNNDiffDim) {
         std::stringstream ss;
         ss << "MKLDNN NDArray with different dim " <<
            shape.ndim() << "/" << md.data.ndims;
         desc_str = ss.str();
-        InitMKLDNNArray(&arr, md, rand);
+        InitMKLDNNArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr, desc_str);
       }
 
@@ -403,12 +403,12 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
       if (shape.ndim() == md.data.ndims && IsSameShape(md, shape)
           && types & ArrayTypes::MKLDNNReshaped) {
         desc_str = "Reshaped MKLDNN NDArray";
-        InitMKLDNNArray(&arr, md, rand);
+        InitMKLDNNArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc_str);
       } else if (shape.ndim() == md.data.ndims && !IsSameShape(md, shape)
           && types & ArrayTypes::MKLDNNReshapedDiffShape) {
         desc_str = "Reshaped MKLDNN NDArray with different shape";
-        InitMKLDNNArray(&arr, md, rand);
+        InitMKLDNNArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc_str);
       } else if (shape.ndim() != md.data.ndims
           && types & ArrayTypes::MKLDNNReshapedDiffDim) {
@@ -416,7 +416,7 @@ inline std::vector<NDArrayAttrs> GetTestInputArrays(
         ss << "MKLDNN NDArray with different dim " <<
            shape.ndim() << "/" << md.data.ndims;
         desc_str = ss.str();
-        InitMKLDNNArray(&arr, md, rand);
+        InitMKLDNNArray(&arr, md, rand, max);
         in_arrs.emplace_back(arr.Slice(slice_amount, arr.shape()[0] - slice_amount), desc_str);
       }
     }
@@ -525,7 +525,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     if ((types & ArrayTypes::MKLDNN && shape.ndim() == md.data.ndims) ||
         (types & ArrayTypes::MKLDNNDiffDim && shape.ndim() != md.data.ndims)) {
       in_arrs.emplace_back(arr, desc_str);
-      InitMKLDNNArray(&in_arrs.back().arr, md, rand);
+      InitMKLDNNArray(&in_arrs.back().arr, md, rand, max);
     }
 
     // Type 8, 9.
@@ -534,7 +534,7 @@ inline std::vector<NDArrayAttrs> GetTestOutputArrays(
     s[0] = shape.Size();
     NDArray arr = NDArray(s, Context());
     arr = arr.AsArray(shape, arr.dtype());
-    InitMKLDNNArray(&arr, md, rand);
+    InitMKLDNNArray(&arr, md, rand, max);
     desc_str = "Reused MKLDNN NDArray";
     if (shape.ndim() != md.data.ndims) {
       std::stringstream ss;
