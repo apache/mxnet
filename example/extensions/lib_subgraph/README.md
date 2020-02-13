@@ -16,7 +16,7 @@
 <!--- under the License. -->
 
 Custom Partitioner Example and Tutorial
-=============================
+=======================================
 
 ## Introduction
 
@@ -37,7 +37,7 @@ You can start getting familiar with custom partitioners by running an example pr
 1. Run `make`. The Makefile will generate a dynamic library ** libsubgraph_lib.so** compiled from `subgraph_lib.cc`. This is the library you are going to load that contains everything for the custom partitioner.
 2. Run `python test_subgraph.py`. It’ll first load the above .so library, find the components, register them in the MXNet backend, print "Found x", then partition the model and execute the operators like a regular MXNet operator and output the result.
 
-### Basic Files For Gemm Library:
+### Basic Files For Custom Partitioner Library:
 
 * ** lib_subgraph/subgraph_lib.cc**: This file has a source code implementation of all required components of a custom partitioner, as well as the registration of the custom components.
 
