@@ -1928,11 +1928,14 @@ int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
   CHECK_GT(num_output, 0);
   std::vector<std::vector<NDArray> > ndinputs;
   ndinputs.reserve(batch_size);
+  int pos = 0;
   for (int i = 0; i < batch_size; ++i) {
-    ndinputs[i].reserve(num_output);
+    std::vector<NDArray> tmp;
+    tmp.reserve(num_output);
     for (int j = 0; j < num_output; ++j) {
-      ndinputs[i].emplace_back(*reinterpret_cast<NDArray*>(inputs[i][j]));
+      tmp.emplace_back(*reinterpret_cast<NDArray*>((*inputs)[pos++]));
     }
+    ndinputs.emplace_back(tmp);
   }
   auto res = (*static_cast<BatchifyFunctionPtr*>(handle))->Batchify(ndinputs);
   std::vector<NDArray*> ndoutputs;

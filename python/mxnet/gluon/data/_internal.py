@@ -28,7 +28,7 @@ from .dataset import Dataset
 from .sampler import Sampler
 from ...base import _LIB
 from ...base import c_str_array, mx_uint, py_str
-from ...base import DatasetHandle, NDArrayHandle
+from ...base import DatasetHandle, NDArrayHandle, BatchifyFunctionhandle
 from ...base import mx_real_t
 from ...base import check_call, build_param_doc as _build_param_doc
 from ...ndarray import NDArray
@@ -37,7 +37,7 @@ from ...ndarray.sparse import CSRNDArray
 from ...ndarray import _ndarray_cls
 from ...numpy.multiarray import _np_ndarray_cls
 from ...ndarray import concat, tile
-from ...util import is_np_array
+from ...util import is_np_array, default_array
 from ...io import io as _io
 
 
@@ -130,16 +130,11 @@ class MXBatchifyFunction(object):
         check_call(_LIB.MXBatchifyFunctionFree(self.handle))
 
     def __call__(self, data):
-        if isinstance(data[0], (nd.NDArray, tuple, list)):
+        if isinstance(data[0], NDArray):
             create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
-            if isinstance(data[0], nd.NDArray):
-                num_output = ctypes.c_int(1)
-                flat_data = data
-            else:
-                num_output = ctypes.c_int(len(data[0]))
-                flat_data = [e for tupl in data for e in tupl]
-            input_arrs = (NDArrayHandle * len(flat_data))()
-            for i, d in enumerate(flat_data):
+            num_output = ctypes.c_int(1)
+            input_arrs = (NDArrayHandle * len(data))()
+            for i, d in enumerate(data):
                 input_arrs[i] = d.handle
             input_vars = ctypes.cast(input_arrs, ctypes.POINTER(NDArrayHandle))
             batch_size = ctypes.c_int(len(data))
@@ -147,15 +142,18 @@ class MXBatchifyFunction(object):
             check_call(_LIB.MXBatchifyFunctionInvoke(self.handle,
                                                      batch_size,
                                                      num_output,
-                                                     ctypes.byref(input_vars)
-                                                     ctypes.byref(output_vars))
-            out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
-                                           False) for i in range(num_output.value)]
+                                                     ctypes.byref(input_vars),
+                                                     ctypes.byref(output_vars)))
+            out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle), \
+                False) for i in range(num_output.value)]
             if len(out) == 1:
                 out = out[0]
             return out
+        elif isinstance(data[0], tuple):
+            data = zip(*data)
+            return [self.__call__(i) for i in data]
         else:
-            data = [np.asarray(i) for i in data]
+            data = [default_array(i) for i in data]
             return self.__call__(data)
 
 def _make_internal_datasets(handle):
@@ -307,7 +305,7 @@ def _make_internal_batchify_functions(handle):
         # create atomic symbol
         param_keys = c_str_array(param_keys)
         param_vals = c_str_array(param_vals)
-        batchify_fn_handle = DatasetHandle()
+        batchify_fn_handle = BatchifyFunctionhandle()
         check_call(_LIB.MXBatchifyFunctionCreateFunction(
             handle,
             mx_uint(len(param_keys)),

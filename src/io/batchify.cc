@@ -106,13 +106,12 @@ class StackBatchify : public BatchifyFunction {
       auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
       std::vector<TBlob> ret(out_size);
-
       #pragma omp parallel for num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {
         omp_exc_.Run([&] {
           // Process i-th output
-          auto ashape = inputs[0][i].shape();
-          CHECK_GE(ashape.ndim(), 1) << "Data dim must be larger than 1";
+          mxnet::TShape ashape = inputs[0][i].shape();
+          CHECK_GE(ashape.ndim(), 0) << "Data dim must be larger than 0";
           // check if all shapes are same
           for (size_t j = 1; j < bs; ++j) {
               CHECK_EQ(ashape, inputs[j][i].shape())
