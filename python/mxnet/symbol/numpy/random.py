@@ -22,7 +22,7 @@ from . import _internal as _npi
 
 
 __all__ = ['randint', 'uniform', 'normal', 'multivariate_normal',
-           'logistic', 'gumbel', 'rayleigh',
+           'logistic', 'gumbel', 'rayleigh', 'f',
            'rand', 'shuffle', 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal',
            'weibull', 'pareto', 'power']
 
@@ -566,6 +566,43 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     Y = gamma(b, 1, size=size, dtype='float64', ctx=ctx)
     out = X/(X + Y)
     return out.astype(dtype)
+
+
+def f(dfnum, dfden, size=None, ctx=None):
+    r"""Draw samples from an F distribution.
+
+    Samples are drawn from an F distribution with specified parameters,
+    `dfnum` (degrees of freedom in numerator) and `dfden` (degrees of
+    freedom in denominator), where both parameters must be greater than
+    zero.
+
+    The random variate of the F distribution (also known as the
+    Fisher distribution) is a continuous probability distribution
+    that arises in ANOVA tests, and is the ratio of two chi-square
+    variates.
+
+    Parameters
+    ----------
+    dfnum : float or array_like of floats
+        Degrees of freedom in numerator, must be > 0.
+    dfden : float or array_like of float
+        Degrees of freedom in denominator, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``dfnum`` and ``dfden`` are both scalars.
+        Otherwise, ``np.broadcast(dfnum, dfden).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Fisher distribution.
+    """
+    X = chisquare(df=dfnum, size=size, ctx=ctx)
+    Y = chisquare(df=dfden, size=size, ctx=ctx)
+    return (X * dfden) / (Y * dfnum)
 
 
 def chisquare(df, size=None, dtype=None, ctx=None):
