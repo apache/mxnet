@@ -39,7 +39,7 @@ except ImportError:
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
-           'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p',
+           'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
@@ -1553,6 +1553,62 @@ def remainder(x1, x2, out=None, **kwargs):
 @wrap_np_binary_func
 def power(x1, x2, out=None, **kwargs):
     return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_binary_func
+def matmul(a, b, out=None, **kwargs):
+    """
+    Matrix product of two arrays.
+
+    Parameters
+    ----------
+    a, b : _Symbol.
+    out : _Symbol, optional
+        A location into which the result is stored.
+        If provided, it must have a shape that matches the signature (n,k),(k,m)->(n,m).
+        If not provided or None, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol
+        The matrix product of the inputs.
+        This is a scalar only when both x1, x2 are 1-d vectors.
+
+    Raises
+    ------
+    MXNetError
+        If the last dimension of a is not the same size as the second-to-last dimension of b.
+        If a scalar value is passed in.
+
+    See Also
+    --------
+    tensordot :
+        Sum products over arbitrary axes.
+    dot :
+        alternative matrix product with different broadcasting rules.
+    einsum :
+        Einstein summation convention.
+
+    Notes
+    -----
+    The behavior depends on the arguments in the following way.
+
+    - If both arguments are 2-D they are multiplied like conventional matrices.
+    - If either argument is N-D, N > 2, it is treated as a stack of matrices
+      residing in the last two indexes and broadcast accordingly.
+    - If the first argument is 1-D, it is promoted to a matrix by prepending
+      a 1 to its dimensions. After matrix multiplication the prepended 1 is removed.
+    - If the second argument is 1-D, it is promoted to a matrix by appending a 1
+      to its dimensions. After matrix multiplication the appended 1 is removed.
+
+    matmul differs from dot in two important ways:
+
+    - Multiplication by scalars is not allowed, use multiply instead.
+    - Stacks of matrices are broadcast together as if the matrices were elements,
+      respecting the signature (n,k),(k,m)->(n,m).
+    """
+    return _npi.matmul(a, b, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
