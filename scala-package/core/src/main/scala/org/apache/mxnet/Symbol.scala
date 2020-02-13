@@ -121,7 +121,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
   def listArguments(): IndexedSeq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListArguments(handle, arr))
-    arr
+    arr.toIndexedSeq
   }
 
   /**
@@ -131,7 +131,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
   def listOutputs(): IndexedSeq[String] = {
     val arr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListOutputs(handle, arr))
-    arr
+    arr.toIndexedSeq
   }
 
   /**
@@ -146,7 +146,7 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
   def listAuxiliaryStates(): IndexedSeq[String] = {
     val sarr = ArrayBuffer.empty[String]
     checkCall(_LIB.mxSymbolListAuxiliaryStates(handle, sarr))
-    sarr
+    sarr.toIndexedSeq
   }
 
   /**
@@ -204,7 +204,11 @@ class Symbol private(private[mxnet] val handle: SymbolHandle) extends NativeReso
     checkCall(_LIB.mxSymbolInferType(
       handle, keys, values, argTypeData, outTypeData, auxTypeData, complete))
     if (complete.value != 0) {
-      (argTypeData.map(DType(_)), outTypeData.map(DType(_)), auxTypeData.map(DType(_)))
+      (
+        argTypeData.map(DType(_)).toSeq,
+        outTypeData.map(DType(_)).toSeq,
+        auxTypeData.map(DType(_)).toSeq
+      )
     } else {
       (null, null, null)
     }

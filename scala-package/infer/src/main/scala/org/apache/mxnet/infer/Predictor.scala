@@ -42,7 +42,7 @@ private[infer] trait PredictBase {
     *              An IndexedSequence is needed when the model has more than one input.
     * @return      Indexed sequence array of outputs
     */
-  def predict[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]])
+  def predict[@specialized (Base.MX_PRIMITIVES_SPECIALIZED_GROUP) T](input: IndexedSeq[Array[T]])
   : IndexedSeq[Array[T]]
 
   /**
@@ -138,8 +138,8 @@ class Predictor(modelPathPrefix: String,
                               An IndexedSequence is needed when the model has more than one input.
    * @return                  Indexed sequence array of outputs
    */
-  override def predict[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]])
-  : IndexedSeq[Array[T]] = {
+  override def predict[@specialized (Base.MX_PRIMITIVES_SPECIALIZED_GROUP) T]
+      (input: IndexedSeq[Array[T]]): IndexedSeq[Array[T]] = {
     require(input.length == inputDescriptors.length,
       s"number of inputs provided: ${input.length} does not match number of inputs " +
         s"in inputDescriptors: ${inputDescriptors.length}")
@@ -166,7 +166,7 @@ class Predictor(modelPathPrefix: String,
     var inputND: ListBuffer[NDArray] = ListBuffer.empty[NDArray]
 
     for((i, d) <- input.zip(inputDescriptors)) {
-      val shape = d.shape.toVector.patch(from = batchIndex, patch = Vector(1), replaced = 1)
+      val shape = d.shape.toVector.patch(batchIndex, Vector(1), 1)
       if (d.dtype == DType.Float64) {
         inputND += mxNetHandler.execute(NDArray.array(i.asInstanceOf[Array[Double]], Shape(shape)))
       }

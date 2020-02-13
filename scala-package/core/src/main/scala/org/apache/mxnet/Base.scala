@@ -60,7 +60,7 @@ private[mxnet] object Base {
   val MX_REAL_TYPE = DType.Float32
 
   // The primitives currently supported for NDArray operations
-  val MX_PRIMITIVES = new Group ((Double, Float))
+  val MX_PRIMITIVES_SPECIALIZED_GROUP = new Group ((Double, Float))
 
 
   /* Find the native libray either on the path or copy it from

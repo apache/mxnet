@@ -54,9 +54,7 @@
 
   <properties>
     <java.version>1.7</java.version>
-    <scala.version>2.11.8</scala.version>
     <build.platform/>
-    <scala.binary.version>2.11</scala.binary.version>
     <base.revision>1.6.0</base.revision>
     <build.platform />
     <cxx>g++</cxx>
@@ -74,39 +72,92 @@
     <module>native</module>
     <module>core</module>
     <module>infer</module>
-    <module>examples</module>
-    <module>spark</module>
     <module>assembly</module>
     <module>externalPom</module>
     <module>deploy</module>
   </modules>
 
   <profiles>
+
     <profile>
       <id>scala-2.11</id>
+      <properties>
+        <scala.version>2.11.12</scala.version>
+        <scala.binary.version>2.11</scala.binary.version>
+        <scalacheck.version>1.13.5</scalacheck.version>
+        <parser-combinators.version>1.0.5</parser-combinators.version>
+        <scala-xml.version>1.0.6</scala-xml.version>
+      </properties>
       <build>
         <plugins>
           <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>enforce-versions</id>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <bannedDependencies>
-                      <excludes combine.children="append">
-                        <exclude>*:*_2.12</exclude>
-                        <exclude>*:*_2.10</exclude>
-                      </excludes>
-                    </bannedDependencies>
-                  </rules>
-                </configuration>
-              </execution>
-            </executions>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <configuration>
+              <compilerPlugins>
+                <compilerPlugin>
+                  <groupId>org.scalamacros</groupId>
+                  <artifactId>paradise_${scala.version}</artifactId>
+                  <version>2.1.0</version>
+                </compilerPlugin>
+              </compilerPlugins>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+      <modules>
+        <module>spark</module>
+        <module>examples</module>
+      </modules>
+    </profile>
+
+    <profile>
+      <id>scala-2.12</id>
+      <properties>
+        <scala.version>2.12.10</scala.version>
+        <scala.binary.version>2.12</scala.binary.version>
+        <scalacheck.version>1.14.3</scalacheck.version>
+        <parser-combinators.version>1.1.2</parser-combinators.version>
+        <scala-xml.version>1.2.0</scala-xml.version>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <configuration>
+              <compilerPlugins>
+                <compilerPlugin>
+                  <groupId>org.scalamacros</groupId>
+                  <artifactId>paradise_${scala.version}</artifactId>
+                  <version>2.1.0</version>
+                </compilerPlugin>
+              </compilerPlugins>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>scala-2.13</id>
+      <properties>
+        <scala.version>2.13.1</scala.version>
+        <scala.binary.version>2.13</scala.binary.version>
+        <scalacheck.version>1.14.3</scalacheck.version>
+        <parser-combinators.version>1.1.2</parser-combinators.version>
+        <scala-xml.version>1.2.0</scala-xml.version>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>net.alchim31.maven</groupId>
+            <artifactId>scala-maven-plugin</artifactId>
+            <configuration>
+              <args>
+                <arg>-Ymacro-annotations</arg>
+              </args>
+            </configuration>
           </plugin>
         </plugins>
       </build>
@@ -212,6 +263,45 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>one-of-scala-version-profiles-should-be-active</id>
+            <inherited>false</inherited>
+            <phase>initialize</phase>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <evaluateBeanshell>
+                  <message>One of Scala profiles should be active. Run Maven with -Pscala2.11 argument to build the project for Scala 2.11. Compile is also available for Scala 2.12 and Scala 2.13. Note only one Scala profile can be active at the same time.</message>
+                  <condition>
+                    <![CDATA[
+                      String activeProfilesString = "${project.activeProfiles}";
+                      String activeProfilesRegexp = "Profile \\{id: ([\\.\\-_\\w]+), source: pom\\}";
+                      String[] activeProfiles = activeProfilesString
+                        .substring(1, activeProfilesString.length() - 1) // Remove `[]`
+                        .replaceAll(activeProfilesRegexp, "$1")
+                        .split(",");
+                      int scalaProfilesCount = 0;
+                      for (profile: activeProfiles) {
+                        if (profile.trim().startsWith("scala-"))
+                          scalaProfilesCount++;
+                      }
+                      print(scalaProfilesCount);
+                      return scalaProfilesCount == 1;
+                    ]]>
+                  </condition>
+                </evaluateBeanshell>
+              </rules>
+              <fail>true</fail>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.commonjava.maven.plugins</groupId>
         <artifactId>directory-maven-plugin</artifactId>
@@ -348,21 +438,15 @@
       <plugin>
         <groupId>net.alchim31.maven</groupId>
         <artifactId>scala-maven-plugin</artifactId>
-        <version>3.4.4</version>
+        <version>4.3.1</version>
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>
-          <compilerPlugins>
-            <compilerPlugin>
-              <groupId>org.scalamacros</groupId>
-              <artifactId>paradise_${scala.version}</artifactId>
-              <version>2.1.0</version>
-            </compilerPlugin>
-          </compilerPlugins>
           <args>
             <arg>-feature</arg>
             <arg>-deprecation</arg>
           </args>
+          <scalaVersion>${scala.version}</scalaVersion>
         </configuration>
         <executions>
           <execution>
@@ -424,26 +508,44 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.scalatest</groupId>
-      <artifactId>scalatest_2.11</artifactId>
-      <version>3.0.2</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>args4j</groupId>
       <artifactId>args4j</artifactId>
       <version>2.0.29</version>
     </dependency>
     <dependency>
-      <groupId>org.scalacheck</groupId>
-      <artifactId>scalacheck_2.11</artifactId>
-      <version>1.13.5</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-parser-combinators_${scala.binary.version}</artifactId>
+      <version>${parser-combinators.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang.modules</groupId>
+      <artifactId>scala-xml_${scala.binary.version}</artifactId>
+      <version>${scala-xml.version}</version>
+    </dependency>
+
+    <!-- Test -->
+    <dependency>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_${scala.binary.version}</artifactId>
+      <version>3.1.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.scalatestplus</groupId>
+      <artifactId>scalatestplus-scalacheck_${scala.binary.version}</artifactId>
+      <version>3.1.0.0-RC2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.scalacheck</groupId>
+      <artifactId>scalacheck_${scala.binary.version}</artifactId>
+      <version>${scalacheck.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -457,16 +559,6 @@
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-reflect</artifactId>
       <version>${scala.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.scala-lang.modules</groupId>
-      <artifactId>scala-parser-combinators_2.11</artifactId>
-      <version>1.0.5</version>
-    </dependency>
-    <dependency>
-      <groupId>org.scala-lang.modules</groupId>
-      <artifactId>scala-xml_2.11</artifactId>
-      <version>1.0.6</version>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>

@@ -86,7 +86,7 @@ object IO {
     val argTypes = new ListBuffer[String]
     val argDescs = new ListBuffer[String]
     checkCall(_LIB.mxDataIterGetIterInfo(handle, name, desc, argNames, argTypes, argDescs))
-    val paramStr = Base.ctypes2docstring(argNames, argTypes, argDescs)
+    val paramStr = Base.ctypes2docstring(argNames.toSeq, argTypes.toSeq, argDescs.toSeq)
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
     logger.debug(docStr)
     (name.value, creator(handle))

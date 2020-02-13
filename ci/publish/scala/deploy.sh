@@ -33,7 +33,9 @@ export GPG_TTY=$(tty)
 
 cd scala-package
 
-mvn -B deploy -Pnightly
+mvn -B deploy -Pnightly -Pscala-2.11
+mvn -B clean deploy -Pnightly -Pscala-2.12
+mvn -B clean deploy -Pnightly -Pscala-2.13
 
 # On Jenkins, clear all password .xml files, exp files, and gpg key files
 if [[ $BUILD_ID ]]; then

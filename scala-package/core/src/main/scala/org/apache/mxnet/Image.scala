@@ -24,6 +24,7 @@ import java.io.InputStream
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
+import scala.collection.parallel.mutable.ParArray
 
 /**
   * Image API of Scala package
@@ -52,7 +53,7 @@ object Image {
     map("flag") = flag
     map("to_rgb") = to_rgb
     if (out.isDefined) map("out") = out.get
-    NDArray.genericNDArrayFunctionInvoke("_cvimdecode", args, map.toMap)
+    NDArray.genericNDArrayFunctionInvoke("_cvimdecode", args.toSeq, map.toMap)
   }
 
   /**
@@ -96,7 +97,7 @@ object Image {
     if (flag.isDefined) map("flag") = flag.get
     if (to_rgb.isDefined) map("to_rgb") = to_rgb.get
     if (out.isDefined) map("out") = out.get
-    NDArray.genericNDArrayFunctionInvoke("_cvimread", args, map.toMap)
+    NDArray.genericNDArrayFunctionInvoke("_cvimread", args.toSeq, map.toMap)
   }
 
   /**
@@ -118,7 +119,7 @@ object Image {
     map("h") = h
     if (interp.isDefined) map("interp") = interp.get
     if (out.isDefined) map("out") = out.get
-    NDArray.genericNDArrayFunctionInvoke("_cvimresize", args, map.toMap)
+    NDArray.genericNDArrayFunctionInvoke("_cvimresize", args.toSeq, map.toMap)
   }
 
   /**
@@ -149,7 +150,7 @@ object Image {
     if (value.isDefined) map("value") = value.get
     if (values.isDefined) map("values") = values.get
     if (out.isDefined) map("out") = out.get
-    NDArray.genericNDArrayFunctionInvoke("_cvcopyMakeBorder", args, map.toMap)
+    NDArray.genericNDArrayFunctionInvoke("_cvcopyMakeBorder", args.toSeq, map.toMap)
   }
 
   /**
@@ -179,8 +180,9 @@ object Image {
     val width = src.shape.get(1)
     val img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
     val arr = src.toArray
-    (0 until height).par.foreach(r => {
-      (0 until width).par.foreach(c => {
+
+    ParArray(0 until height: _*).foreach(r => {
+      ParArray(0 until width: _*).foreach(c => {
         // NDArray in RGB
         val cellIndex = r * width * 3 + c * 3
         val red = arr(cellIndex).toByte & 0xFF

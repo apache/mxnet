@@ -1131,14 +1131,16 @@ unittest_centos7_cpu_scala() {
     cd /work/mxnet
     scala_prepare
     cd scala-package
-    mvn -B integration-test
+    mvn -B -Pscala-2.11 integration-test
+    mvn -B -Pscala-2.12 clean integration-test
+    mvn -B -Pscala-2.13 clean integration-test
 }
 
 unittest_ubuntu_cpu_clojure() {
     set -ex
     scala_prepare
     cd scala-package
-    mvn -B install
+    mvn -B install -Pscala-2.11
     cd ..
     ./contrib/clojure-package/ci-test.sh
 }
@@ -1146,7 +1148,7 @@ unittest_ubuntu_cpu_clojure() {
 unittest_ubuntu_cpu_clojure_integration() {
     set -ex
     cd scala-package
-    mvn -B install
+    mvn -B install -Pscala-2.11
     cd ..
     ./contrib/clojure-package/integration-tests.sh
 }
@@ -1354,7 +1356,9 @@ integrationtest_ubuntu_cpu_scala() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     scala_prepare
     cd scala-package
-    mvn -B verify -DskipTests=false
+    mvn -B verify -Pscala-2.11 -DskipTests=false
+    mvn -B verify -Pscala-2.12 -DskipTests=false
+    mvn -B verify -Pscala-2.13 -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_scala() {
@@ -1363,7 +1367,9 @@ integrationtest_ubuntu_gpu_scala() {
     scala_prepare
     cd scala-package
     export SCALA_TEST_ON_GPU=1
-    mvn -B verify -DskipTests=false
+    mvn -B verify -Pscala-2.11 -DskipTests=false
+    mvn -B verify -Pscala-2.12 -DskipTests=false
+    mvn -B verify -Pscala-2.13 -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -1570,7 +1576,7 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
 nightly_java_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    mvn -B -Pci-nightly install
+    mvn -B -Pscala-2.11 -Pci-nightly install
     bash bin/java_sample.sh
     bash bin/run_od.sh
 }
@@ -1578,7 +1584,7 @@ nightly_java_demo_test_cpu() {
 nightly_scala_demo_test_cpu() {
     set -ex
     cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    mvn -B -Pci-nightly install
+    mvn -B -Pscala-2.11 -Pci-nightly install
     bash bin/demo.sh
     bash bin/run_im.sh
 }
@@ -1740,7 +1746,9 @@ build_scala() {
    pushd .
 
    cd scala-package
-   mvn -B install -DskipTests
+   mvn -B -Pscala-2.11 install -DskipTests
+   mvn -B -Pscala-2.12 install -DskipTests
+   mvn -B -Pscala-2.13 install -DskipTests
 
    popd
 }

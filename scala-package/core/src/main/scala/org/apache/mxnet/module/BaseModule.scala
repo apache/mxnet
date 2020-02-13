@@ -20,7 +20,11 @@ package org.apache.mxnet.module
 import java.io.IOException
 
 import org.apache.mxnet.optimizer.SGD
-import org.apache.mxnet._
+import org.apache.mxnet.{
+  Symbol, Accuracy, BatchEndCallback, Context, DataBatch, DataDesc,
+  DataIter, EpochEndCallback, EvalMetric, Initializer, Monitor, NDArray,
+  Optimizer, Shape, Uniform
+}
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 
@@ -230,7 +234,7 @@ abstract class BaseModule {
       nBatch += 1
     }
 
-    outputList
+    outputList.toIndexedSeq
   }
 
   def predict(batch: DataBatch): IndexedSeq[NDArray] = {

@@ -66,7 +66,7 @@
     <properties>
         <mxnet.scalaprofile>2.11</mxnet.scalaprofile>
         <mxnet.version>[1.4.0, )</mxnet.version>
-        <scala.version>2.11.8</scala.version>
+        <scala.version>2.11.12</scala.version>
     </properties>
 
     <dependencies>

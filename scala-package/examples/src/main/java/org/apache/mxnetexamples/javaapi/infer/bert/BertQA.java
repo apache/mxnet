@@ -74,9 +74,9 @@ public class BertQA {
         NDArray endLogits = output[1].reshape(new int[]{0, -3});
         // Get Probability distribution
         float[] startProb = NDArray.softmax(
-                new softmaxParam(startLogits))[0].toArray();
+                new softmaxParam(startLogits, startLogits))[0].toArray();
         float[] endProb = NDArray.softmax(
-                new softmaxParam(endLogits))[0].toArray();
+                new softmaxParam(endLogits, endLogits))[0].toArray();
         int startIdx = argmax(startProb);
         int endIdx = argmax(endProb);
         return tokens.subList(startIdx, endIdx + 1);

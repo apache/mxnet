@@ -307,7 +307,7 @@ private[mxnet] object ExecutorManager {
     val gradReq = argNames.map { name =>
       if (gradSet.contains(name)) name -> "write"
       else name -> "null"
-    }(collection.breakOut): Map[String, String]
+    }.toMap
 
     // create or borrow arguments and gradients
     argNames.zipWithIndex.foreach { case (name, i) =>

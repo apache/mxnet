@@ -18,6 +18,7 @@
 package org.apache.mxnet.annotation
 
 import java.lang.annotation.{ElementType, Retention, Target, _}
+import scala.annotation.Annotation
 
 /**
   * Experimental: there is a comparably high chance that
@@ -26,4 +27,4 @@ import java.lang.annotation.{ElementType, Retention, Target, _}
 @Retention(RetentionPolicy.RUNTIME)
 @Target(Array(ElementType.TYPE, ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER,
   ElementType.CONSTRUCTOR, ElementType.LOCAL_VARIABLE, ElementType.PACKAGE))
-class Experimental {}
+class Experimental extends Annotation {}

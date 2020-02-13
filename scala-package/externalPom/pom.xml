@@ -36,7 +36,7 @@
 
   <properties>
     <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
-    <ARTIFACT_ID>mxnet-full_2.11-${platform}-${flavor}</ARTIFACT_ID>
+    <ARTIFACT_ID>mxnet-full_${scala.binary.version}-${platform}-${flavor}</ARTIFACT_ID>
     <revision>${base.revision}-SNAPSHOT</revision>
     <skipGpg>true</skipGpg>
   </properties>
@@ -44,7 +44,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-full_2.11</artifactId>
+      <artifactId>mxnet-full</artifactId>
       <version>INTERNAL</version>
     </dependency>
   </dependencies>

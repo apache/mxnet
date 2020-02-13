@@ -27,7 +27,7 @@ private[mxnet] class AddNDArrayFunctions(isContrib: Boolean) extends StaticAnnot
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) = macro NDArrayMacro.addDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any = macro NDArrayMacro.addDefs
 }
 
 private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation {
@@ -36,7 +36,8 @@ private[mxnet] class AddNDArrayAPIs(isContrib: Boolean) extends StaticAnnotation
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) = macro TypedNDArrayAPIMacro.typeSafeAPIDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any =
+    macro TypedNDArrayAPIMacro.typeSafeAPIDefs
 }
 
 private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
@@ -45,7 +46,7 @@ private[mxnet] class AddNDArrayRandomAPIs(isContrib: Boolean) extends StaticAnno
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) =
+  private[mxnet] def macroTransform(annottees: Any*): Any =
   macro TypedNDArrayRandomAPIMacro.typeSafeAPIDefs
 }
 
