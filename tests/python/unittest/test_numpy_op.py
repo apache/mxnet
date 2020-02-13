@@ -3580,6 +3580,32 @@ def test_np_random():
 
 @with_seed()
 @use_np
+def test_gamma_exception():
+    def _test_gamma_exception(shape, scale):
+        return np.random.gamma(shape, scale).asnumpy()
+
+    shape_list = [
+        1,
+        np.array(1),
+        np.array(1),
+        0,
+        0,
+        np.array(0)
+    ]
+    scale_list = [
+        0,
+        0,
+        np.array(-1.0),
+        1,
+        np.array(1),
+        np.array(1)
+    ]
+    for (shape, scale) in zip(shape_list, scale_list):
+        assertRaises(ValueError, _test_gamma_exception, shape, scale)
+
+
+@with_seed()
+@use_np
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
         def __init__(self, size=None, dtype=None, ctx=None):
@@ -3622,6 +3648,41 @@ def test_np_random_beta():
         # test scalar
         mx_out_imperative = mx.np.random.beta(1, 1, size=param_shape, dtype=out_dtype)
         assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
+
+
+@with_seed()
+@use_np
+def test_np_random_chisquare():
+    class TestRandomChisquare(HybridBlock):
+        def __init__(self, size=None, dtype=None, ctx=None):
+            super(TestRandomChisquare, self).__init__()
+            self._size = size
+            self._dtype = dtype
+            self._ctx = ctx
+
+        def hybrid_forward(self, F, df):
+            return F.np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
+
+    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+
+    dtype_list = [np.float16, np.float32, np.float64]
+    hybridize_list = [False, True]
+    df = np.array([1])
+    for [param_shape, in_dtype, out_dtype, hybridize] in itertools.product(shape_list,
+            dtype_list, dtype_list, hybridize_list):
+        if sys.version_info.major < 3 and param_shape == ():
+            continue
+        mx_df = df.astype(in_dtype)
+        np_df = mx_df.asnumpy()
+        test_random_chisquare = TestRandomChisquare(size=param_shape, dtype=out_dtype)
+        if hybridize:
+            test_random_chisquare.hybridize()
+        np_out = _np.random.chisquare(np_df, size=param_shape)
+        mx_out = test_random_chisquare(mx_df)
+        mx_out_imperative = mx.np.random.chisquare(mx_df, size=param_shape, dtype=out_dtype)
+
+        assert_almost_equal(np_out.shape, mx_out.shape)
+        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
 
 
 @with_seed()

@@ -24,7 +24,8 @@ from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", 'gamma', 'beta', 'exponential', 'lognormal', 'weibull', 'pareto', 'power', 'laplace']
+           "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal',
+           'weibull', 'pareto', 'power', 'laplace']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -623,6 +624,8 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``shape`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -691,8 +694,6 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'.
-        Dtype 'float32' or 'float64' is strongly recommended,
-        since lower precision might lead to out of range issue.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -716,6 +717,83 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     Y = gamma(b, 1, size=size, dtype='float64', ctx=ctx)
     out = X/(X + Y)
     return out.astype(dtype)
+
+
+def chisquare(df, size=None, dtype=None, ctx=None):
+    r"""
+    chisquare(df, size=None, dtype=None, ctx=None)
+
+    Draw samples from a chi-square distribution.
+
+    When `df` independent random variables, each with standard normal
+    distributions (mean 0, variance 1), are squared and summed, the
+    resulting distribution is chi-square (see Notes).  This distribution
+    is often used in hypothesis testing.
+
+    Parameters
+    ----------
+    df : float or ndarray of floats
+         Number of degrees of freedom, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``df`` is a scalar.  Otherwise,
+        ``np.array(df).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized chi-square distribution.
+
+    Raises
+    ------
+    ValueError
+        When `df` <= 0 or when an inappropriate `size`
+        is given.
+
+    Notes
+    -----
+    The variable obtained by summing the squares of `df` independent,
+    standard normally distributed random variables:
+
+    .. math:: Q = \sum_{i=0}^{\mathtt{df}} X^2_i
+
+    is chi-square distributed, denoted
+
+    .. math:: Q \sim \chi^2_k.
+
+    The probability density function of the chi-squared distribution is
+
+    .. math:: p(x) = \frac{(1/2)^{k/2}}{\Gamma(k/2)}
+                     x^{k/2 - 1} e^{-x/2},
+
+    where :math:`\Gamma` is the gamma function,
+
+    .. math:: \Gamma(x) = \int_0^{-\infty} t^{x - 1} e^{-t} dt.
+
+    References
+    ----------
+    .. [1] NIST "Engineering Statistics Handbook"
+           https://www.itl.nist.gov/div898/handbook/eda/section3/eda3666.htm
+
+    Examples
+    --------
+    >>> np.random.chisquare(2,4)
+    array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    return gamma(df/2, 1/2, size=size, dtype=dtype, ctx=ctx)
 
 
 def rand(*size, **kwargs):
