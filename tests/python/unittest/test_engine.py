@@ -21,6 +21,7 @@ import os
 import unittest
 from mxnet.test_utils import EnvManager
 
+@unittest.skip("test CI edge")
 def test_bulk():
     with mx.engine.bulk(10):
         x = mx.nd.ones((10,))
