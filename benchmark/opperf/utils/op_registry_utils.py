@@ -113,14 +113,14 @@ def prepare_op_inputs(op, arg_params):
     inputs = []
 
     # 4d tensor is needed only by following two ops
-    ops_4d = ['depth_to_space', 'space_to_depth']
+    ops_4d = {'depth_to_space', 'space_to_depth'}
 
     # 3d tensor is needed by following ops
-    ops_3d = ['CTCLoss', 'ctc_loss']
+    ops_3d = {'CTCLoss', 'ctc_loss'}
 
     # For ops with args that need to change shape/value for different ops
-    custom_data = ['Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator',
-                   'sample_multinomial', 'linalg_maketrian', 'squeeze', 'fill_element_0index']
+    custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator',
+                   'sample_multinomial', 'linalg_maketrian', 'squeeze', 'fill_element_0index'}
 
     int_only = ['random_randint']
 
@@ -271,7 +271,7 @@ def get_all_random_sampling_operators():
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
     # Additional Random Sampling ops which do not start with "random_" or "sample_"
-    additional_random_sampling_ops = ['GridGenerator', 'BilinearSampler']
+    additional_random_sampling_ops = {'GridGenerator', 'BilinearSampler'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -291,10 +291,10 @@ def get_all_linalg_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    other_linalg_ops = ['moments']
+    other_linalg_ops = {'moments'}
 
     # Already tested linalg_potrf independently
-    independently_tested = ['linalg_potrf']
+    independently_tested = {'linalg_potrf'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -334,7 +334,7 @@ def get_all_nn_activation_operators():
      -------
      {"operator_name": {"has_backward", "nd_op_handle", "params"}}
      """
-    nn_activation_ops = ['Softmax', 'SoftmaxActivation', 'softmin', 'Activation', 'LeakyReLU', 'hard_sigmoid', 'softmax', 'log_softmax']
+    nn_activation_ops = {'Softmax', 'SoftmaxActivation', 'softmin', 'Activation', 'LeakyReLU', 'hard_sigmoid', 'softmax', 'log_softmax'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -354,10 +354,10 @@ def get_all_optimizer_operators():
      -------
      {"operator_name": {"has_backward", "nd_op_handle", "params"}}
      """
-    optimizer_ops = ['mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
+    optimizer_ops = {'mp_sgd_update', 'signum_update', 'rmspropalex_update', 'ftml_update', 'rmsprop_update',
                      'sgd_mom_update', 'signsgd_update', 'mp_sgd_mom_update', 'ftrl_update', 'sgd_update',
                      'adam_update', 'mp_nag_mom_update', 'nag_mom_update', 'lamb_update_phase1',
-                     'lamb_update_phase2']
+                     'lamb_update_phase2'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -376,7 +376,7 @@ def get_all_sorting_searching_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    sort_search_ops = ['sort', 'argsort', 'argmax', 'argmin', 'topk']
+    sort_search_ops = {'sort', 'argsort', 'argmax', 'argmin', 'topk'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -396,7 +396,7 @@ def get_all_rearrange_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    rearrange_ops = ['transpose','swapaxes','flip','depth_to_space','space_to_depth']
+    rearrange_ops = {'transpose','swapaxes','flip','depth_to_space','space_to_depth'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -416,7 +416,7 @@ def get_remaining_miscellaneous_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask', 'cast_storage', 'cumsum', 'fill_element_0index']
+    misc_ops = {'squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask', 'cast_storage', 'cumsum', 'fill_element_0index'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -440,8 +440,8 @@ def get_all_indexing_routines():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    indexing_routines = ['slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
-                         'where', 'ravel_multi_index', 'gather_nd', 'pick']
+    indexing_routines = {'slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
+                         'where', 'ravel_multi_index', 'gather_nd', 'pick'}
     
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -461,7 +461,7 @@ def get_all_loss_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    loss_ops = ['smooth_l1', 'CTCLoss', 'ctc_loss', 'MakeLoss', 'softmax_cross_entropy']
+    loss_ops = {'smooth_l1', 'CTCLoss', 'ctc_loss', 'MakeLoss', 'softmax_cross_entropy'}
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -472,26 +472,6 @@ def get_all_loss_operators():
         if op_name in loss_ops:
             loss_mx_operators[op_name] = mx_operators[op_name]
     return loss_mx_operators
-
-
-def get_remaining_miscellaneous_operators():
-    """Gets remaining Miscellaneous operators registered with MXNet not covered by individual tests.
-
-    Returns
-    -------
-    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
-    """
-    misc_ops = ['squeeze', 'all_finite', 'clip', 'multi_lars', 'SequenceReverse', 'SequenceLast', 'SequenceMask', 'cast_storage', 'cumsum', 'fill_element_0index']
-
-    # Get all mxnet operators
-    mx_operators = _get_all_mxnet_operators()
-
-    # Filter for Miscellaneous operators
-    misc_mx_operators = {}
-    for op_name, _ in mx_operators.items():
-        if op_name in misc_ops:
-            misc_mx_operators[op_name] = mx_operators[op_name]
-    return misc_mx_operators
 
 
 def get_operators_with_no_benchmark(operators_with_benchmark):
