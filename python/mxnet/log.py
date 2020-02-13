@@ -31,8 +31,6 @@ INFO = logging.INFO
 DEBUG = logging.DEBUG
 NOTSET = logging.NOTSET
 
-PY3 = sys.version_info[0] == 3
-
 
 class _Formatter(logging.Formatter):
     # pylint: disable= no-self-use
@@ -71,10 +69,7 @@ class _Formatter(logging.Formatter):
         fmt += '%(asctime)s %(process)d %(pathname)s:%(funcName)s:%(lineno)d'
         fmt += ']\x1b[0m'
         fmt += ' %(message)s'
-        if PY3:
-            self._style._fmt = fmt # pylint: disable= no-member
-        else:
-            self._fmt = fmt
+        self._style._fmt = fmt # pylint: disable= no-member
         return super(_Formatter, self).format(record)
 
 def getLogger(name=None, filename=None, filemode=None, level=WARNING):

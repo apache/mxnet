@@ -104,7 +104,7 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     else:
         logging.info('Model file not found. Downloading to %s.', file_path)
 
-    util.makedirs(root)
+    os.makedirs(root, exist_ok=True)
 
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
     if repo_url[-1] != '/':
