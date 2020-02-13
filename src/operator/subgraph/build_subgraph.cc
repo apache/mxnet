@@ -574,8 +574,7 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     auto it = name_count_map.find(var_name);
     if (name_count_map.end() == it) {
       // if the node is not yet an input to the subgraph, create a node in the subgraph
-      nnvm::ObjectPtr n = nnvm::CreateVariableNode(
-          var_name + std::to_string(name_count_map[var_name]));
+      nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name);
       // set attribute for subgraph input to indicate if it is from an arg/param to model
       if (e->node->is_variable())
         n->attrs.dict["isArg"] = "True";
@@ -624,7 +623,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   FindInputEntries(*g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
   // deduplicated array of inputs to connect to subgraph
   std::vector<nnvm::NodeEntry> orig_input_entries;
-  // all original input connections, used to reattach subgraph inputs 
+  // all original input connections, used to reattach subgraph inputs
   std::vector<nnvm::NodeEntry> all_input_entries;
   CutGraphInputs(input_entries, &orig_input_entries, &all_input_entries, false);
 #if DEBUG_SUBGRAPH
