@@ -25,7 +25,7 @@ __all__ = ["Constraint", "Real", "Boolean",
            "LessThan", "LessThanEq", "IntegerLessThan", "IntegerLessThanEq",
            "Positive", "NonNegative", "PositiveInteger", "NonNegativeInteger",
            "Simplex", "LowerTriangular", "LowerCholesky", "PositiveDefinite",
-           "Cat"]
+           "Cat", "Stack"]
 
 from .utils import getF
 from .... import nd
@@ -502,6 +502,8 @@ class Stack(Constraint):
     Constraint functor that applies a sequence of constraints
     `constraint_seq` at the submatrices at `axis`,
     in compatible with :func:`np.stack`.
+
+    Stack is currently only supported in imperative mode.
     """
     def __init__(self, constraint_seq, axis=0):
         assert all(isinstance(c, Constraint) for c in constraint_seq)
