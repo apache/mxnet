@@ -127,7 +127,25 @@ class MXBatchifyFunction(object):
         self.handle = handle
 
     def __del__(self):
-        check_call(_LIB.MXBatchifyFunctionFree(self.handle))
+        if self.handle is not None:
+            check_call(_LIB.MXBatchifyFunctionFree(self.handle))
+
+    def __getstate__(self):
+        """Override pickling behavior."""
+        # pickling pointer is not allowed
+        d = dict({'creator_name': self._kwargs['creator_name'],
+                  '_kwargs': self._kwargs})
+        return d
+
+    def __setstate__(self, d):
+        """Restore from pickled."""
+        creator = d['_kwargs']['creator_name']
+        d['_kwargs'].pop('creator_name')
+        other = getattr(sys.modules[__name__], creator)(**d['_kwargs'])
+        self.handle = other.handle
+        self._kwargs = other._kwargs
+        other.handle = None
+
 
     def __call__(self, data):
         if isinstance(data[0], NDArray):
@@ -315,7 +333,7 @@ def _make_internal_batchify_functions(handle):
         if len(args):
             raise TypeError('%s can only accept keyword arguments' % bf_name)
 
-        return MXBatchifyFunction(batchify_fn_handle, **kwargs)
+        return MXBatchifyFunction(batchify_fn_handle, creator_name=bf_name, **kwargs)
 
     creator.__name__ = bf_name
     creator.__doc__ = doc_str
