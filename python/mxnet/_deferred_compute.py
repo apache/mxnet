@@ -53,12 +53,13 @@ def context():
     # code: "Context managers that have state should use Context Variables
     # instead of threading.local() to prevent their state from bleeding to
     # other code unexpectedly, when used in concurrent code."
+    # https://github.com/apache/incubator-mxnet/issues/17495#issuecomment-585461965
     val = set_deferred_compute(True)
     yield
     set_deferred_compute(val)
 
 
-def get_symbol(input_arrays, output_arrays, input_names=None):
+def get_symbol(input_arrays, output_arrays, input_names=None, *, sym_cls=Symbol):
     input_arrays = _as_list(input_arrays)
     output_arrays = _as_list(output_arrays)
 

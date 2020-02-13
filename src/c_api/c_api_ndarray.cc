@@ -459,8 +459,8 @@ int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *input_handles,
                                       const char **c_input_names,
                                       int num_inputs,
                                       int num_outputs, SymbolHandle *out) {
+  nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
-
   // Obtain the NDArrays and their names
   std::vector<std::pair<NDArray*, std::string>> inputs;
   std::vector<NDArray *> outputs;
@@ -474,9 +474,8 @@ int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *input_handles,
     NDArray *array = reinterpret_cast<NDArray *>(output_handles[i]);
     outputs.emplace_back(array);
   }
-
-  // Obtain Symbeol
-  *out = Imperative::Get()->GetDeferredComputeSymbol(inputs, outputs);
-
-  API_END();
+  // Obtain Symbol
+  *s = Imperative::Get()->GetDeferredComputeSymbol(inputs, outputs);
+  *out = s;
+  API_END_HANDLE_ERROR(delete s;);
 }

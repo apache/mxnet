@@ -331,7 +331,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   }
 }
 
-nnvm::Symbol *Imperative::GetDeferredComputeSymbol(
+nnvm::Symbol Imperative::GetDeferredComputeSymbol(
     const std::vector<std::pair<NDArray *, std::string>> &inputs,
     const std::vector<NDArray *> &outputs
     ) {
@@ -407,11 +407,7 @@ nnvm::Symbol *Imperative::GetDeferredComputeSymbol(
 
   // Deep copy of symbol as subsequent calls to this function may change the
   // name of input variables.
-  s = s.Copy();
-  Symbol *out = new Symbol();
-  out->outputs = s.outputs;
-
-  return out;
+  return s.Copy();
 }
 
 std::vector<NDArray*> Imperative::Backward(
@@ -714,7 +710,7 @@ void Imperative::DCInfo::Compute(const NDArray &arr) {
   info.is_computed_ = true;  // We will Invoke at the end of this function.
 
   // Recursively compute input arrays
-  for (NDArray &input : info.inputs_) {
+  for (const NDArray &input : info.inputs_) {
     Compute(input);
   }
 
