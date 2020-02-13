@@ -24,7 +24,8 @@ __all__ = ["Constraint", "Real", "Boolean",
            "GreaterThan", "GreaterThanEq", "IntegerGreaterThan", "IntegerGreaterThanEq",
            "LessThan", "LessThanEq", "IntegerLessThan", "IntegerLessThanEq",
            "Positive", "NonNegative", "PositiveInteger", "NonNegativeInteger",
-           "Simplex", "LowerTriangular", "LowerCholesky", "PositiveDefinite"]
+           "Simplex", "LowerTriangular", "LowerCholesky", "PositiveDefinite",
+           "Cat"]
 
 from .utils import getF
 
@@ -464,6 +465,33 @@ class PositiveDefinite(Constraint):
         condition = F.np.bitwise_and(condition, F.linalg.eigvals(value) > 0)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
+
+
+class Cat(Constraint):
+    """
+    Constraint functor that applies a sequence of constraints
+    `constraint_seq` at the submatrices at `axis`, each of size `lengths[axis]`.
+    """
+    def __init__(self, constraint_seq, axis=0, lengths=None):
+        assert all(isinstance(c, Constraint) for c in constraint_seq)
+        self._constraint_seq = list(constraint_seq)
+        if lengths is None:
+            lengths = [1] * len(self._constraint_seq)
+        self._lengths = list(lengths)
+        assert len(self._lengths) == len(self._constraint_seq),\
+            "The number of lengths {} should be equal to number" \
+            " of constraints {}".format(len(self._lengths), len(self._constraint_seq))
+        self._axis = axis
+
+    def check(self, value):
+        F = getF(value)
+        _values = []
+        start = 0
+        for constraint, length in zip(self._constraint_seq, self._lengths):
+            v = F.np.take(value, indices=F.np.arange(start, start + length), axis=self._axis)
+            _values.append(v)
+            start = start + length
+        return F.np.concatenate(_values, self._axis)
 
 
 dependent_property = _DependentProperty
