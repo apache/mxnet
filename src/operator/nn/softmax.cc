@@ -95,15 +95,15 @@ inline static bool SoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
                                       std::vector<int> *in_attrs,
                                       std::vector<int> *out_attrs) {
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
-  if (param.use_length.value() || softmax_has_dtype_override(attrs)) {
-    auto& out_stype = out_attrs->at(0);
-    return storage_type_assign(&out_stype, kDefaultStorage,
-                               dispatch_mode, DispatchMode::kFCompute);
+
+  bool support = true;
+  if (softmax_use_length(attrs) || softmax_has_dtype_override(attrs)) {
+    support = false;
   }
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
-                           out_attrs);
+
+  CHECK_EQ(in_attrs->size(), SoftmaxGradOpNumInputs(attrs));
+  CHECK_EQ(out_attrs->size(), softmax_use_length(attrs) ? 2U : 1U);
+  return MKLDNNStorageType(attrs, dev_mask, support, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
