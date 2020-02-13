@@ -68,5 +68,4 @@ class ExponentialFamily(Distribution):
         could be computed by:
         H(P) = F(\theta) - <\theta, F(\theta)'> - E_p[k(x)]
         """
-        # TODO
         raise NotImplementedError

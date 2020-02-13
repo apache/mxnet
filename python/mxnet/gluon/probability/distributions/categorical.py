@@ -22,6 +22,7 @@ __all__ = ['Categorical']
 
 from .distribution import Distribution
 from .utils import prob2logit, logit2prob, getF
+from .constraint import Simplex, Real
 
 
 # FIXME: Finish implementation
@@ -30,31 +31,41 @@ class Categorical(Distribution):
 
     Parameters
     ----------
-    Distribution : [type]
-        [description]
-
-    Returns
-    -------
-    [type]
-        [description]
-
-    Raises
-    ------
-    ValueError
-        [description]
+    num_events : Int
+        Number of events.
+    prob : Tensor
+        Probabilities of each event.
+    logit : Tensor
+        The log-odds of each event
+     F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
     """
 
-    def __init__(self, prob, logit=None, F=None):
+    arg_constraints = {'prob': Simplex(),
+                       'logit': Real()}
+
+    def __init__(self, num_events, prob, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF([prob, logit])
-        super(Categorical, self).__init__(F=_F)
+
+        if (num_events > 0):
+            num_events = int(num_events)
+            self.num_events = num_events
+        else:
+            raise ValueError("`num_events` should be greater than zero. " +
+                             "Received num_events={}".format(num_events))
 
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
                 "Received prob={}, logit={}".format(prob, logit))
 
-        self._prob = prob
-        self._logit = logit
+        if prob is not None:
+            self.prob = prob
+        else:
+            self.logit = logit
+
+        super(Categorical, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
     @property
     def prob(self):
@@ -65,7 +76,7 @@ class Categorical(Distribution):
         Tensor
             Parameter tensor.
         """
-        return self._prob if self._prob is not None else logit2prob(self._logit, False, self.F)
+        return logit2prob(self.logit, False, self.F)
 
     @property
     def logit(self):
@@ -76,12 +87,13 @@ class Categorical(Distribution):
         Tensor
             Parameter tensor.
         """
-        return self._logit if self._logit is not None else prob2logit(self._prob, False, self.F)
+        return prob2logit(self.prob, False, self.F)
 
     def log_prob(self, value):
         logit = self.logit
         return (logit * value).sum(-1)
 
     def sample(self, size):
+        # TODO: fix batch sampling with multinomial.
         F = self.F
         return F.np.random.multinomial(1, self.prob, size)

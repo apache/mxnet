@@ -95,6 +95,19 @@ def test_gluon_normal():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestNormal("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
@@ -109,7 +122,11 @@ def test_gluon_bernoulli():
             bernoulli = mgp.Bernoulli(logit=params, F=F) if self._is_logit else \
                         mgp.Bernoulli(prob=params, F=F)
             if (len(args) == 0):
-                return getattr(bernoulli, self._func)
+                out = getattr(bernoulli, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
             return getattr(bernoulli, self._func)(*args)
 
     def prob_to_logit(prob):
@@ -143,6 +160,21 @@ def test_gluon_bernoulli():
             net.hybridize()
         mx_out = net(param).asnumpy()
         np_out = ss.bernoulli(prob.asnumpy()).var()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        prob = np.random.uniform(size=shape)
+        sample = npx.random.bernoulli(prob=0.5, size=shape)
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestBernoulli("entropy", use_logit)
+        if hybridize:
+            net.hybridize()
+        mx_out = net(param).asnumpy()
+        np_out = ss.bernoulli(prob.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
 

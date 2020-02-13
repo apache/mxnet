@@ -123,3 +123,9 @@ class Bernoulli(ExponentialFamily):
     @property
     def _log_normalizer(self, x):
         return self.F.np.log(1 + self.F.np.exp(x))
+
+    def entropy(self):
+        F = self.F
+        logit = self.logit
+        prob = self.prob
+        return -(logit * (prob - 1) - F.np.log(F.np.exp(-logit) + 1))
