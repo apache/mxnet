@@ -17,7 +17,6 @@
 
 """Utils for registering NumPy array function protocol for mxnet.numpy ops."""
 
-from __future__ import absolute_import
 import functools
 import numpy as _np
 from . import numpy as mx_np  # pylint: disable=reimported

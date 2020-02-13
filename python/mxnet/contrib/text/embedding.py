@@ -20,8 +20,6 @@
 # pylint: disable=super-init-not-called
 
 """Text token embeddings."""
-from __future__ import absolute_import
-from __future__ import print_function
 
 import logging
 import os

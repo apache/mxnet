@@ -20,8 +20,6 @@
 # pylint: disable=too-many-lines, unused-argument
 """numpy ndarray and util functions."""
 
-from __future__ import absolute_import
-from __future__ import division
 
 try:
     from __builtin__ import slice as py_slice

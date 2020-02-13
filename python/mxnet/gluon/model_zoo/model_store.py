@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Model zoo for pre-trained models."""
-from __future__ import print_function
 __all__ = ['get_model_file', 'purge']
 import os
 import zipfile

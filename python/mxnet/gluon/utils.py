@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
-from __future__ import absolute_import
 
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download', 'replace_file']

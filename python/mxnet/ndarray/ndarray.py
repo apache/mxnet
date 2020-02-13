@@ -21,7 +21,6 @@
 
 """NDArray API of MXNet."""
 
-from __future__ import absolute_import, division
 
 try:
     from __builtin__ import slice as py_slice

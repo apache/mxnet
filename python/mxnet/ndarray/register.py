@@ -16,7 +16,6 @@
 # under the License.
 
 """Register backend ops in mxnet.ndarray namespace"""
-from __future__ import absolute_import
 import os as _os
 import ctypes
 import numpy as _np  # pylint: disable=unused-import

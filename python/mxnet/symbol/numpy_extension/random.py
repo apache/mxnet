@@ -17,7 +17,6 @@
 
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
-from __future__ import absolute_import
 from ...context import current_context
 from ..numpy import _internal as _npi
 

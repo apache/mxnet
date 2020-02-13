@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass, too-many-lines, wrong-import-position
 """ctypes library of mxnet and helper functions."""
-from __future__ import absolute_import
 
 import re
 import atexit

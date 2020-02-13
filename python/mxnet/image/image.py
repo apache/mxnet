@@ -19,7 +19,6 @@
 # pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Read individual image files and perform augmentations."""
 
-from __future__ import absolute_import, print_function
 
 import sys
 import os

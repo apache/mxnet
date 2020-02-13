@@ -20,7 +20,6 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
-from __future__ import print_function
 import re
 
 __all__ = ['RNN', 'LSTM', 'GRU']

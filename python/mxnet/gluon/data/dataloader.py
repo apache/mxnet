@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
-from __future__ import absolute_import
 __all__ = ['DataLoader']
 
 import pickle
