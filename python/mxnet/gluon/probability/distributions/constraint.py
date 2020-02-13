@@ -28,6 +28,7 @@ __all__ = ["Constraint", "Real", "Boolean",
            "Cat"]
 
 from .utils import getF
+from .... import nd
 
 
 class Constraint(object):
@@ -470,7 +471,8 @@ class PositiveDefinite(Constraint):
 class Cat(Constraint):
     """
     Constraint functor that applies a sequence of constraints
-    `constraint_seq` at the submatrices at `axis`, each of size `lengths[axis]`.
+    `constraint_seq` at the submatrices at `axis`, each of size `lengths[axis]`,
+    in compatible with :func:`np.concatenate`.
     """
     def __init__(self, constraint_seq, axis=0, lengths=None):
         assert all(isinstance(c, Constraint) for c in constraint_seq)
@@ -491,7 +493,31 @@ class Cat(Constraint):
             v = F.np.take(value, indices=F.np.arange(start, start + length), axis=self._axis)
             _values.append(v)
             start = start + length
-        return F.np.concatenate(_values, self._axis)
+        _value = F.np.concatenate(_values, self._axis)
+        return _value
+
+
+class Stack(Constraint):
+    """
+    Constraint functor that applies a sequence of constraints
+    `constraint_seq` at the submatrices at `axis`,
+    in compatible with :func:`np.stack`.
+    """
+    def __init__(self, constraint_seq, axis=0):
+        assert all(isinstance(c, Constraint) for c in constraint_seq)
+        self._constraint_seq = list(constraint_seq)
+        self._axis = axis
+
+    def check(self, value):
+        F = getF(value)
+        assert F is nd, "mxnet.probability.distributions.constraint.Stack" \
+                        " is only supported when hybridization is turned off"
+        size = value.shape[self._axis]
+        value_array = F.np.split(value, size, axis=self._axis)
+        value_array = [constraint.check(F.np.squeeze(v)) for v, constraint
+                       in zip(value_array, self._constraint_seq)]
+        _value = F.np.stack(value_array, self._axis)
+        return _value
 
 
 dependent_property = _DependentProperty
