@@ -1065,12 +1065,6 @@ struct minimum {
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
-  case mshadow::kBfloat16:                          \
-    {                                               \
-      typedef mshadow::bfloat::bf16_t DType;        \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
   case mshadow::kUint8:                             \
     {                                               \
       typedef uint8_t DType;                        \
@@ -1273,13 +1267,6 @@ struct minimum {
       {__VA_ARGS__}                                 \
     }                                               \
     break;                                          \
-  case mshadow::kBfloat16:                          \
-    {                                               \
-      typedef mshadow::bfloat::bf16_t DType$;       \
-      typedef float DLargeType$;                    \
-      {__VA_ARGS__}                                 \
-    }                                               \
-    break;                                          \
   case mshadow::kUint8:                             \
     LOG(FATAL) << "This operation only support "    \
                   "floating point types not uint8"; \
@@ -1406,12 +1393,6 @@ struct minimum {
   case mshadow::kFloat16:                                     \
     {                                                         \
       typedef mshadow::half::half_t DType;                    \
-      {__VA_ARGS__}                                           \
-    }                                                         \
-    break;                                                    \
-  case mshadow::kBfloat16:                                    \
-    {                                                         \
-      typedef mshadow::bfloat::bf16_t DType;                  \
       {__VA_ARGS__}                                           \
     }                                                         \
     break;                                                    \
