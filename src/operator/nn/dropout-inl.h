@@ -141,19 +141,22 @@ class DropoutOp {
     const int blk_size = 64;
     const int nblk = count / blk_size;
 
-#pragma omp parallel for num_threads(nthr)
-    for (index_t b = 0; b < nblk; ++b) {
-      for (index_t k = 0; k < blk_size; ++k) {
-        const index_t i = b * blk_size + k;
-        outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
-        auto mask_idx = i >> 3;  // div 8
-        uint8_t mask_offset = i & 7;  // mod 8
-        if (mkl_mask[i]) {
-          // set bit
-          mask.dptr_[mask_idx] |= 1U << mask_offset;
-        } else {
-          // clear bit
-          mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+    #pragma omp parallel num_threads(nthr)
+    {
+      #pragma omp for
+      for (index_t b = 0; b < nblk; ++b) {
+        for (index_t k = 0; k < blk_size; ++k) {
+          const index_t i = b * blk_size + k;
+          outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+          auto mask_idx = i >> 3;  // div 8
+          uint8_t mask_offset = i & 7;  // mod 8
+          if (mkl_mask[i]) {
+            // set bit
+            mask.dptr_[mask_idx] |= 1U << mask_offset;
+          } else {
+            // clear bit
+            mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+          }
         }
       }
     }
