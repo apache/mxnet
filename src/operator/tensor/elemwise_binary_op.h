@@ -575,30 +575,6 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
-  static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
-                               const OpContext &ctx,
-                               const std::vector<TBlob> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<TBlob> &outputs) {
-    using namespace mxnet_op;
-    if (req[0] == kNullOp) return;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    CHECK_EQ(inputs.size(), 2U);
-    CHECK_EQ(outputs.size(), 1U);
-    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-      MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-        const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
-        + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
-        if (size != 0) {
-          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
-          outputs[0].dptr<DType>(),
-          inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
-        }
-      });
-    });
-  }
-
-  template<typename xpu, typename OP>
   static void ComputeEx(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
                         const std::vector<NDArray> &inputs,
