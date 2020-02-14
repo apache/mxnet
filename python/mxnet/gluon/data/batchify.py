@@ -273,6 +273,63 @@ class Pad(object):
             raise NotImplementedError(
                 "Pad() does not support multiple items, use Group(Pad(), Pad(), ...) instead")
 
+def _append_arrs(arrs, use_shared_mem=False, expand=False, batch_axis=0):
+    """Internal impl for returning appened arrays as list."""
+    _arr = _np if is_np_array() else nd
+    if isinstance(arrs[0], _arr.NDArray):
+        if use_shared_mem:
+            out = [x.as_in_context(Context('cpu_shared', 0)) for x in arrs]
+        else:
+            out = arrs
+    else:
+        if use_shared_mem:
+            out = [_arr.array(x, ctx=Context('cpu_shared', 0)) for x in arrs]
+        else:
+            out = [_arr.array(x) for x in arrs]
+
+    # add batch axis
+    if expand:
+        out = [x.expand_dims(axis=batch_axis) for x in out]
+    return out
+
+
+class Append(object):
+    r"""Loosely return list of the input data samples.
+    There is no constraint of shape for any of the input samples, however, you will
+    only be able to apply single batch operations since the output have different shapes.
+    Examples
+    --------
+    >>> a = [1, 2, 3, 4]
+    >>> b = [4, 5, 6]
+    >>> c = [8, 2]
+    >>> batchify.Append()([a, b, c])
+    [
+    [[1. 2. 3. 4.]]
+    <NDArray 1x4 @cpu_shared(0)>,
+    [[4. 5. 6.]]
+    <NDArray 1x3 @cpu_shared(0)>,
+    [[8. 2.]]
+    <NDArray 1x2 @cpu_shared(0)>
+    ]
+    """
+
+    def __init__(self, expand=True, batch_axis=0, use_shared_mem=False):
+        self._expand = expand
+        self._batch_axis = batch_axis
+        self._use_shared_mem = use_shared_mem
+
+    def __call__(self, data):
+        """Batchify the input data.
+        Parameters
+        ----------
+        data : list
+            The input data samples
+        Returns
+        -------
+        batch_data : NDArray
+        """
+        return _append_arrs(data, use_shared_mem=self._use_shared_mem,
+                            expand=self._expand, batch_axis=self._batch_axis)
 
 class Group:
     """Wrap multiple batchify functions together. The input functions will be applied
