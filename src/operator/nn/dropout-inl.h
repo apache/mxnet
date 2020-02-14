@@ -138,12 +138,13 @@ class DropoutOp {
     BernoulliGenerate(*pgen, count, this->pkeep_, mkl_mask);
     const float pk_1 = 1.0f / this->pkeep_;
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    const int nblk = count / 64;
+    const int blk_size = 64;
+    const int nblk = count / blk_size;
 
-#pragma omp parallel for num_threads(nthr) schedule(static, 8)
-    for (index_t nb = 0; nb < nblk; ++nb) {
-      for (index_t k = 0; k < 64; ++k) {
-        const index_t i = nb * 64 + k;
+#pragma omp parallel for num_threads(nthr)
+    for (index_t b = 0; b < nblk; ++b) {
+      for (index_t k = 0; k < blk_size; ++k) {
+        const index_t i = b * blk_size + k;
         outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
         auto mask_idx = i >> 3;  // div 8
         uint8_t mask_offset = i & 7;  // mod 8
@@ -158,18 +159,16 @@ class DropoutOp {
     }
 
     // tail
-    if (nblk * 64 < count) {
-      for (index_t i = nblk * 64; i < count; ++i) {
-        outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
-        auto mask_idx = i >> 3;  // div 8
-        uint8_t mask_offset = i & 7;  // mod 8
-        if (mkl_mask[i]) {
-          // set bit
-          mask.dptr_[mask_idx] |= 1U << mask_offset;
-        } else {
-          // clear bit
-          mask.dptr_[mask_idx] &= ~(1U << mask_offset);
-        }
+    for (index_t i = nblk * blk_size; i < count; ++i) {
+      outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+      auto mask_idx = i >> 3;  // div 8
+      uint8_t mask_offset = i & 7;  // mod 8
+      if (mkl_mask[i]) {
+        // set bit
+        mask.dptr_[mask_idx] |= 1U << mask_offset;
+      } else {
+        // clear bit
+        mask.dptr_[mask_idx] &= ~(1U << mask_offset);
       }
     }
   }
@@ -189,8 +188,22 @@ class DropoutOp {
     const index_t count = grad.shape_[0] * grad.shape_[1];
     const float pk_1 = 1.0f / this->pkeep_;
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-#pragma omp parallel for num_threads(nthr) schedule(static, 8)
-    for (index_t i = 0; i < count; ++i) {
+    const int blk_size = 64;
+    const int nblk = count / blk_size;
+
+#pragma omp parallel for num_threads(nthr)
+    for (index_t b = 0; b < nblk; ++b) {
+      for (index_t k = 0; k < blk_size; ++k) {
+        index_t i = b * blk_size + k;
+        auto mask_idx = i >> 3;  // div 8;
+        uint8_t mask_offset = i & 7;  // mod 8
+        bool mask_val = maskptr[mask_idx] & (1U << mask_offset);
+        ingradptr[i] = outgradptr[i] * mask_val * pk_1;
+      }
+    }
+
+    // tail
+    for (index_t i = nblk * blk_size; i < count; ++i) {
       auto mask_idx = i >> 3;  // div 8;
       uint8_t mask_offset = i & 7;  // mod 8
       bool mask_val = maskptr[mask_idx] & (1U << mask_offset);
