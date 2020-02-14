@@ -1337,15 +1337,15 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     export MXNET_USE_OPERATOR_TUNING=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
-    ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+    python3 ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
     popd
 }
 
@@ -1374,10 +1374,10 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
+    python3 ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
+    python3 ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
+    python3 ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
+    python3 ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
 
