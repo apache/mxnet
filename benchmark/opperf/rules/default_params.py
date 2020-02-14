@@ -31,6 +31,9 @@ DEFAULT_ARGS = [(1024, 1024)]
 
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_DTYPE = ['float32', 'int32', 'float32']  # required parameter for amp_cast, cast
+DEFAULT_DTYPE_INT = ['int32', 'int64', 'int32']  # randint works for int* types only
+DEFAULT_DTYPE_FLOAT = ['float16', 'float32', 'float64']  # random_exp works for float* types only
 
 # For Binary miscellaneous operators like choose_element0_index
 # argument data must be indexed via an NDArray.
@@ -89,6 +92,8 @@ DEFAULT_D = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_V = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Z = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_G = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_R1 = [(1, 1024), (1, 1), (1, 100)]
+DEFAULT_R2 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LRS = [(0.1, 0.1)]
 DEFAULT_LR = [0.1, 0.5, 0.9]
@@ -109,6 +114,22 @@ DEFAULT_LAZY_UPDATE = [0, 1]
 # For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
 DEFAULT_DATA_4d = [(1, 4, 2, 4), (10, 25, 10, 100)]
 DEFAULT_BLOCK_SIZE = [2, 5]
+
+# For miscellaneous operators
+DEFAULT_DATA_SQUEEZE = [(1, 1024, 1024), (32, 1, 256, 256)]
+DEFAULT_AXIS_SQUEEZE = [0, 1]
+DEFAULT_A_MIN = [0.1]
+DEFAULT_A_MAX = [0.9]
+DEFAULT_LRS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_WSS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_GSS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_WDS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_ETA = [.5]
+DEFAULT_STYPE = ['default', 'csr', 'row_sparse']
+DEFAULT_A = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_MHS = [(1024,), (10000,), (10000,)]
+DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
@@ -148,6 +169,9 @@ DEFAULT_AXES = [[0, 1]]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
+                   "dtype": DEFAULT_DTYPE,
+                   "dtype_int": DEFAULT_DTYPE_INT,
+                   "dtype_float": DEFAULT_DTYPE_FLOAT,
                    "sample": DEFAULT_SAMPLE,
                    "lhs": DEFAULT_LHS,
                    "rhs": DEFAULT_RHS,
@@ -173,6 +197,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "mean": DEFAULT_MEAN,
                    "var": DEFAULT_VAR,
                    "mom": DEFAULT_MOM,
+                   "r1": DEFAULT_R1,
+                   "r2": DEFAULT_R2,
                    "n": DEFAULT_N,
                    "d": DEFAULT_D,
                    "v": DEFAULT_V,
@@ -182,6 +208,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "lr": DEFAULT_LR,
                    "lrs": DEFAULT_LRS,
                    "wds": DEFAULT_LRS,
+                   "wd": DEFAULT_LR,
                    "gamma1": DEFAULT_GAMMA_1,
                    "gamma2": DEFAULT_GAMMA_2,
                    "epsilon": DEFAULT_EPSILON,
@@ -225,7 +252,22 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "axes": DEFAULT_AXES,
                    "act_type_leakyrelu": DEFAULT_ACT_TYPE_LR,
                    "label_softmax": DEFAULT_LABEL_SOFTMAX,
-                   "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION}
+                   "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION,
+                   "data_squeeze": DEFAULT_DATA_SQUEEZE,
+                   "axis_squeeze": DEFAULT_AXIS_SQUEEZE,
+                   "a_min": DEFAULT_A_MIN,
+                   "a_max": DEFAULT_A_MAX,
+                   "lrs": DEFAULT_LRS,
+                   "weights_sum_sq": DEFAULT_WSS,
+                   "grads_sum_sq": DEFAULT_GSS,
+                   "wds": DEFAULT_WDS,
+                   "eta": DEFAULT_ETA,
+                   "eps": DEFAULT_EPSILON,
+                   "stype": DEFAULT_STYPE,
+                   "a": DEFAULT_A,
+                   "lhs_fill_element_0index": DEFAULT_LHS_FEI,
+                   "rhs_fill_element_0index": DEFAULT_RHS_FEI,
+                   "mhs": DEFAULT_MHS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -239,4 +281,5 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
-                          "A", "B", "C", "rois"]
+                          "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
+                          "grads_sum_sq", "mhs"]
