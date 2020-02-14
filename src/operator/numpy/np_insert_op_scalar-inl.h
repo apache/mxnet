@@ -25,11 +25,16 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_SCALAR_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_SCALAR_INL_H_
 
+#include <vector>
+#include <algorithm>
 #include "./np_insert_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
+/*
+ * Only support scalar index (the type of param 'obj' is scalar).
+ */
 template<typename xpu>
 void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
                               const OpContext& ctx,
@@ -152,4 +157,4 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_SCALAR_INL_H_

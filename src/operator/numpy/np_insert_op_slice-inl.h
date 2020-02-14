@@ -19,48 +19,38 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_insert_op-inl.h
- * \brief Function definition of insert operators
+ * \file np_insert_op_slice-inl.h
+ * \brief Function definition of insert operators (insert by slice index)
  */
-#ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INL_H_
-#define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INL_H_
+#ifndef MXNET_OPERATOR_NUMPY_NP_INSERT_OP_SLICE_INL_H_
+#define MXNET_OPERATOR_NUMPY_NP_INSERT_OP_SLICE_INL_H_
 
 #include <vector>
-#include <memory>
 #include <algorithm>
-#include "../../common/utils.h"
-#include "../tensor/sort_op.h"
-#include "../tensor/init_op.h"
-#include "../operator_common.h"
-#include "../mxnet_op.h"
-#include "./np_delete_op-inl.h"
 #include "./np_insert_op-inl.h"
 
 namespace mxnet {
 namespace op {
 
 /*
- * Only support tensor indices (the type of param 'obj' is tensor).
+ * Only support slice index (the type of param 'obj' is slice).
  */
 template<typename xpu>
-void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<TBlob>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<TBlob>& outputs) {
+void NumpyInsertSliceCompute(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
 
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
-  int input_count = param.val.has_value() ? 1 : 2;
-  int insize = input_count + 1;
-  CHECK_EQ(inputs.size(), insize);
+  CHECK_EQ(inputs.size(), (param.val.has_value() ? 1 : 2));
   CHECK_EQ(outputs.size(), 1);
   CHECK_EQ(req.size(), 1);
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   const int arr_pos = 0;
   const int val_pos = param.val.has_value() ? 0 : 1;
-  const int obj_pos = val_pos + 1;
   const int out_pos = 0;
   int ndim = inputs[arr_pos].shape_.ndim();
   int axis = param.axis.has_value() ? param.axis.value() : 0;
@@ -91,10 +81,15 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   }
 
   int N = arr.shape_[axis];
-  size_t indices_len = inputs[obj_pos].shape_.Size();  // indices amount
+  size_t indices_len = 0;  // indices amount
+  int start = 0, stop = 0, step = 0;  // arguments from 'obj' when it's 'slice'
 
-  // get and check indices from tensor
+  // get and check indices from slice or sequence of ints
+  SliceIndices(param.start, param.stop, param.step,
+                N, &start, &stop, &step, &indices_len);
+
   int numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
+  int index = 0;  // save modified index, because index may be negative integer
   mxnet::TShape val_newshape(arr.shape_.ndim(), -1);
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
@@ -113,25 +108,14 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
 
   // get numnew
   mxnet::TShape old_valshape(values.shape_);
-  if (inputs[obj_pos].shape_.ndim() == 0) {  // scaler
-    // values = moveaxis(values, 0, axis), will change values's shape
-    numnew = values.shape_[0];
-    mxnet::TShape axes(values.ndim(), -1);  // moved axes
-    mxnet::TShape val_newshape(values.ndim(), -1);
-    int axes_id = 0;
-    for (int i = 1; i <= axis; ++i) {
-      axes[axes_id++] = i;
-    }
-    axes[axes_id++] = 0;
-    for (int i = axis + 1; i < values.ndim(); ++i) {
-      axes[axes_id++] = i;
-    }
-    for (int i = 0; i < values.ndim(); ++i) {
-      val_newshape[i] = values.shape_[axes[i]];
-    }
-    values.shape_.assign(val_newshape.begin(), val_newshape.end());
-  } else if (indices_len == 1) {  // tensor with only one element
+  if (indices_len == 1) {  // tensor with only one element
     numnew = values.shape_[axis];
+    index = start;
+    CHECK(index >= -1 * N && index <= N)
+      << "Index should be in the range of [-r, r-1] where r is the dim size in 'axis'";
+    if (index < 0) {
+      index += N;
+    }
   } else {
     numnew = static_cast<int>(indices_len);
   }
@@ -141,36 +125,24 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   int vtype = param.val.has_value() ?
               mshadow::DataType<double>::kFlag :
               inputs[val_pos].type_flag_;
-  if ((inputs[obj_pos].shape_.ndim() == 0 || indices_len == 1)
-      && param.val.has_value()) {
+  if ((indices_len == 1) && param.val.has_value()) {
     MSHADOW_TYPE_SWITCH(vtype, VType, {
       // If insert use single index and 'value' is inputed as numerical parameter
       values = TBlob(ctx.requested[0].get_space_typed<xpu, 1, VType>(Shape1(1), s));
       Fill(s, values, kWriteTo, param.val.value());
     });
   }
-  if (inputs[obj_pos].shape_.ndim() == 0) {
-    // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
+
+  if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
-                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
-                                        mxnet_op::calc_stride(outshape.get<ndim>()),
-                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
-                                        numnew, N, outshape.Size(), true);
-    });
-  } else if (indices_len == 1) {
-    MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
-                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
-                                        mxnet_op::calc_stride(outshape.get<ndim>()),
-                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
-                                        numnew, N, outshape.Size(), false);
+      InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                  mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                  mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                  mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                  mxnet_op::calc_stride(outshape.get<ndim>()),
+                                  outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                  dtype, vtype, req[out_pos], axis, start, numnew,
+                                  outshape.Size(), false);
     });
   } else {
     // broadcast check
@@ -200,8 +172,7 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
     int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
-    Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
-                                      inputs[obj_pos].dptr<int64_t>());
+    Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, start, step);
     Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
     mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
     Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
@@ -226,4 +197,4 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_TENSOR_INL_H_
+#endif  // MXNET_OPERATOR_NUMPY_NP_INSERT_OP_SLICE_INL_H_

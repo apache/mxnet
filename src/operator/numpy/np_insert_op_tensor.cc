@@ -30,6 +30,8 @@
 namespace mxnet {
 namespace op {
 
+DMLC_REGISTER_PARAMETER(NumpyInsertParam);
+
 bool NumpyInsertTensorType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *in_type,
                                   std::vector<int> *out_type) {

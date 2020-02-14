@@ -2714,7 +2714,6 @@ def test_np_insert():
                 obj_mxnp = np.array(obj, dtype='int64')
                 obj_onp = _np.array(obj)
             elif type(obj) == slice:
-                continue
                 obj_mxnp = obj
                 obj_onp = obj
             else:  # integer
@@ -2727,7 +2726,6 @@ def test_np_insert():
             b = mx.nd.random.uniform(-1.0, 1.0, shape=val_shape).as_np_ndarray().astype(btype)
             b.attach_grad()
             expected_ret = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
-
             with mx.autograd.record():
                 y = test_insert(a, b)
             

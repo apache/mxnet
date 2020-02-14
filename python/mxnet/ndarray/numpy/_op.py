@@ -757,7 +757,7 @@ def insert(arr, obj, values, axis=None):
             start = obj.start
             stop = obj.stop
             step = 1 if obj.step is None else obj.step
-            return _npi.insert(arr, val=values, start=start, stop=stop, step=step, axis=axis)
+            return _npi.insert_slice(arr, val=values, start=start, stop=stop, step=step, axis=axis)
         elif isinstance(obj, integer_types):
             return _npi.insert_scalar(arr, val=values, int_ind=obj, axis=axis)
         elif isinstance(obj, NDArray):
@@ -771,7 +771,7 @@ def insert(arr, obj, values, axis=None):
         start = obj.start
         stop = obj.stop
         step = 1 if obj.step is None else obj.step
-        return _npi.insert(arr, values, start=start, stop=stop, step=step, axis=axis)
+        return _npi.insert_slice(arr, values, start=start, stop=stop, step=step, axis=axis)
     elif isinstance(obj, integer_types):
         return _npi.insert_scalar(arr, values, int_ind=obj, axis=axis)
     elif isinstance(obj, NDArray):

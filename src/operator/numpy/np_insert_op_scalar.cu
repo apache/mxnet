@@ -19,7 +19,7 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_insert_int_index_op.cu
+ * \file np_insert_op_scalar.cu
  * \brief GPU Implementation of numpy insert operations (insert by int index)
  */
 

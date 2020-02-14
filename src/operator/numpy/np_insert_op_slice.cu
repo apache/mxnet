@@ -19,17 +19,18 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file np_insert_op.cu
- * \brief GPU Implementation of numpy insert operations
+ * \file np_insert_op_slice.cu
+ * \brief GPU Implementation of numpy insert operations (insert by int index)
  */
 
 #include "./np_insert_op-inl.h"
+#include "./np_insert_op_slice-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_insert)
-.set_attr<FCompute>("FCompute<gpu>", NumpyInsertCompute<gpu>);
+NNVM_REGISTER_OP(_npi_insert_slice)
+.set_attr<FCompute>("FCompute<gpu>", NumpyInsertSliceCompute<gpu>);
 
 }
 }
