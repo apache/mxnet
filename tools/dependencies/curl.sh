@@ -35,6 +35,7 @@ if [[ ! -f $DEPS_PATH/lib/libcurl.a ]]; then
         CONFIG_FLAG="--with-darwinssl"
     fi
     ./configure $CONFIG_FLAG \
+                --without-libidn2 \
                 --with-zlib \
                 --with-nghttps2 \
                 --without-zsh-functions-dir \
