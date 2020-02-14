@@ -188,29 +188,15 @@ class DropoutOp {
     const index_t count = grad.shape_[0] * grad.shape_[1];
     const float pk_1 = 1.0f / this->pkeep_;
     const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    const int blk_size = 64;
-    const int nblk = count / blk_size;
 
 #pragma omp parallel for num_threads(nthr)
-    for (index_t b = 0; b < nblk; ++b) {
-      for (index_t k = 0; k < blk_size; ++k) {
-        index_t i = b * blk_size + k;
-        auto mask_idx = i >> 3;  // div 8;
-        uint8_t mask_offset = i & 7;  // mod 8
-        bool mask_val = maskptr[mask_idx] & (1U << mask_offset);
-        ingradptr[i] = outgradptr[i] * mask_val * pk_1;
-      }
-    }
-
-    // tail
-    for (index_t i = nblk * blk_size; i < count; ++i) {
+    for (index_t i = 0; i < count; ++i) {
       auto mask_idx = i >> 3;  // div 8;
       uint8_t mask_offset = i & 7;  // mod 8
       bool mask_val = maskptr[mask_idx] & (1U << mask_offset);
       ingradptr[i] = outgradptr[i] * mask_val * pk_1;
     }
   }
-
 #endif  // #if MXNET_USE_MKL_DROPOUT
 
  public:
@@ -489,7 +475,7 @@ class DropoutOp {
           CHECK_NOTNULL(pgen);
           CHECK(req[dropout::kOut] != kAddTo);
           // Use batch size 8 to avoid race condition on mask
-          LaunchRNGBatch<DropoutKernel, xpu>(s, pgen, out.Size(), 8 /* batch_size */,
+          LaunchRNGBatch<DropoutKernel, xpu>(s, pgen, out.Size(), 64 /* batch_size */,
                                              out.dptr<DType>(),
                                              mask.dptr<uint8_t>(),
                                              in.dptr<DType>(),
@@ -508,7 +494,7 @@ class DropoutOp {
           CHECK_NOTNULL(pgen);
           // initialize the mask
           // Use batch size 8 to avoid race condition on mask
-          LaunchRNGBatch<BernoulliKernel, xpu>(s, pgen, temp_shape.Size(), 8 /* batch_size */,
+          LaunchRNGBatch<BernoulliKernel, xpu>(s, pgen, temp_shape.Size(), 64 /* batch_size */,
                                                temp.dptr_,
                                                mask.dptr<uint8_t>(),
                                                this->pkeep_);
