@@ -160,7 +160,7 @@ class MXBatchifyFunction(object):
             check_call(_LIB.MXBatchifyFunctionInvoke(self.handle,
                                                      batch_size,
                                                      num_output,
-                                                     ctypes.byref(input_vars),
+                                                     input_vars,
                                                      ctypes.byref(output_vars)))
             out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle), \
                 False) for i in range(num_output.value)]

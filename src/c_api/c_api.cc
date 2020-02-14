@@ -1920,7 +1920,7 @@ int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
 int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
                              int batch_size,
                              int num_output,
-                             NDArrayHandle **inputs,
+                             NDArrayHandle *inputs,
                              NDArrayHandle **outputs) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
@@ -1933,7 +1933,7 @@ int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
     std::vector<NDArray> tmp;
     tmp.reserve(num_output);
     for (int j = 0; j < num_output; ++j) {
-      tmp.emplace_back(*reinterpret_cast<NDArray*>((*inputs)[pos++]));
+      tmp.emplace_back(*reinterpret_cast<NDArray*>(inputs[pos++]));
     }
     ndinputs.emplace_back(tmp);
   }
