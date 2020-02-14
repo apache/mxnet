@@ -8367,8 +8367,8 @@ def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='lin
     >>> out
     array([6.5, 4.5, 2.5])
     """
-    return _mx_nd_np.quantile(a, q, axis=axis, overwrite_input=overwrite_input,
-                              interpolation=interpolation, keepdims=keepdims, out=out)
+    return _mx_nd_np.quantile(a, q, axis=axis, out=out, overwrite_input=overwrite_input,
+                              interpolation=interpolation, keepdims=keepdims)
 
 
 @set_module('mxnet.numpy')
