@@ -114,12 +114,18 @@ void CustomFComputeDispatcher(const std::string op_name,
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
   std::vector<void*> in_data, out_data;
-  std::vector<const int64_t *> in_shapes, out_shapes;
+  std::vector<const int64_t*> in_shapes, out_shapes;
   std::vector<int> in_dims, out_dims;
   std::vector<int> in_types, out_types;
   std::vector<size_t> in_verIDs, out_verIDs;
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
+
+  // Aux data for sparse representation.
+  std::vector<void*> in_indices, out_indices;
+  std::vector<void*> in_indptr, out_indptr;
+  std::vector<int64_t> in_indices_shapes, out_indices_shapes;
+  std::vector<int64_t> in_indptr_shapes, out_indptr_shapes;
 
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
@@ -131,6 +137,17 @@ void CustomFComputeDispatcher(const std::string op_name,
     const char* ctx_str = inputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
     in_dev_type.push_back(ctx_str);
     in_dev_id.push_back(inputs[i].ctx().real_dev_id());
+    
+    if(inputs[i].storage_type() == mxnet::kRowSparseStorage) {
+      in_indices.push_back(inputs[i].aux_data(rowsparse::kIdx).dptr_);
+      in_indices_shapes.push_back(inputs[i].aux_shape(rowsparse::kIdx).Size());
+    }
+    else if(inputs[i].storage_type() == mxnet::kCSRStorage) {
+      in_indices.push_back(inputs[i].aux_data(csr::kIdx).dptr_);
+      in_indptr.push_back(inputs[i].aux_data(csr::kIndPtr).dptr_);
+      in_indices_shapes.push_back(inputs[i].aux_shape(rowsparse::kIdx).Size());
+      in_indptr_shapes.push_back(inputs[i].aux_shape(csr::kIndPtr).Size());
+    }
   }
 
   for (size_t i = 0; i < outputs.size(); i++) {
@@ -142,6 +159,18 @@ void CustomFComputeDispatcher(const std::string op_name,
     const char* ctx_str = outputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
     out_dev_type.push_back(ctx_str);
     out_dev_id.push_back(outputs[i].ctx().real_dev_id());
+
+    // To do: Find ways to handle out dimenson is unknown for sparse.
+    if(outputs[i].storage_type() == mxnet::kRowSparseStorage) {
+      out_indices.push_back(outputs[i].aux_data(rowsparse::kIdx).dptr_);
+      out_indices_shapes.push_back(outputs[i].aux_shape(rowsparse::kIdx).Size());
+    }
+    else if(outputs[i].storage_type() == mxnet::kCSRStorage) {
+      out_indices.push_back(outputs[i].aux_data(csr::kIdx).dptr_);
+      out_indptr.push_back(outputs[i].aux_data(csr::kIndPtr).dptr_);
+      out_indices_shapes.push_back(outputs[i].aux_shape(rowsparse::kIdx).Size());
+      out_indptr_shapes.push_back(outputs[i].aux_shape(csr::kIndPtr).Size());
+    }
   }
 
   // get memory resource and mxnet backend streams

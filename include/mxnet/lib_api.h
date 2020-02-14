@@ -1150,14 +1150,14 @@ extern "C" {
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], {indev_type[i], indev_id[i]});
+                          inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]});
+                           outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
     }
 
     OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
@@ -1235,14 +1235,14 @@ extern "C" {
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
       inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], {indev_type[i], indev_id[i]});
+                          inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
       outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]});
+                           outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
     }
 
     OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
