@@ -1009,10 +1009,6 @@ cd_unittest_ubuntu() {
 
     local nose_cmd="nosetests-3.4"
 
-    if [[ ${python_cmd} = "python" ]]; then
-        nose_cmd="nosetests-2.7"
-    fi
-
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
     $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/quantization
 
@@ -1337,15 +1333,15 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     export MXNET_USE_OPERATOR_TUNING=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
-    ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
-    ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+    python3 ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
     popd
 }
 
@@ -1374,10 +1370,10 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
-    ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
+    python3 ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
+    python3 ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
+    python3 ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
+    python3 ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
     popd
 }
 
@@ -1965,15 +1961,11 @@ cd_integration_test_pypi() {
     local test_conv_params=''
     local mnist_params=''
 
-    local pip_cmd='pip'
+    local pip_cmd='pip3'
 
     if [ "${gpu_enabled}" = "true" ]; then
         mnist_params="--gpu 0"
         test_conv_params="--gpu"
-    fi
-
-    if [ "${python_cmd}" = "python3" ]; then
-        pip_cmd='pip3'
     fi
 
     # install mxnet wheel package

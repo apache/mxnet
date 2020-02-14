@@ -24,7 +24,8 @@ from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", 'gamma', 'beta', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
+           'logistic', 'gumbel',
+           "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -196,10 +197,12 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
     mean : float or array_like of floats, optional
@@ -218,6 +221,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -225,6 +229,102 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from . import _op as _mx_np_op
     return _mx_np_op.exp(normal(loc=mean, scale=sigma, size=size, dtype=dtype, ctx=ctx, out=out))
+
+
+def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a logistic distribution.
+
+    Samples are drawn from a logistic distribution with specified
+    parameters, loc (location or mean, also median), and scale (>0).
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        Parameter of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        Parameter of the distribution. Must be non-negative.
+        Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized logistic distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.logistic(loc, scale, loc=None, scale=None, size=size,
+                             ctx=ctx, out=out)
+    elif input_type == (False, True):
+        return _npi.logistic(scale, loc=loc, scale=None, size=size,
+                             ctx=ctx, out=out)
+    elif input_type == (True, False):
+        return _npi.logistic(loc, loc=None, scale=scale, size=size,
+                             ctx=ctx, out=out)
+    else:
+        return _npi.logistic(loc=loc, scale=scale, size=size,
+                             ctx=ctx, out=out)
+
+
+def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Gumbel distribution.
+
+    Draw samples from a Gumbel distribution with specified location and
+    scale.
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        The location of the mode of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        The scale parameter of the distribution. Default is 1. Must be non-
+        negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Gumbel distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.gumbel(loc, scale, loc=None, scale=None, size=size,
+                           ctx=ctx, out=out)
+    elif input_type == (False, True):
+        return _npi.gumbel(scale, loc=loc, scale=None, size=size,
+                           ctx=ctx, out=out)
+    elif input_type == (True, False):
+        return _npi.gumbel(loc, loc=None, scale=scale, size=size,
+                           ctx=ctx, out=out)
+    else:
+        return _npi.gumbel(loc=loc, scale=scale, size=size,
+                           ctx=ctx, out=out)
 
 
 def multinomial(n, pvals, size=None):
@@ -436,6 +536,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
+
     Parameters
     ----------
     scale : float or array_like of floats
@@ -446,6 +547,11 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -623,6 +729,8 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``shape`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -691,8 +799,6 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples. Default is 'float32'.
-        Dtype 'float32' or 'float64' is strongly recommended,
-        since lower precision might lead to out of range issue.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -716,6 +822,83 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     Y = gamma(b, 1, size=size, dtype='float64', ctx=ctx)
     out = X/(X + Y)
     return out.astype(dtype)
+
+
+def chisquare(df, size=None, dtype=None, ctx=None):
+    r"""
+    chisquare(df, size=None, dtype=None, ctx=None)
+
+    Draw samples from a chi-square distribution.
+
+    When `df` independent random variables, each with standard normal
+    distributions (mean 0, variance 1), are squared and summed, the
+    resulting distribution is chi-square (see Notes).  This distribution
+    is often used in hypothesis testing.
+
+    Parameters
+    ----------
+    df : float or ndarray of floats
+         Number of degrees of freedom, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``df`` is a scalar.  Otherwise,
+        ``np.array(df).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized chi-square distribution.
+
+    Raises
+    ------
+    ValueError
+        When `df` <= 0 or when an inappropriate `size`
+        is given.
+
+    Notes
+    -----
+    The variable obtained by summing the squares of `df` independent,
+    standard normally distributed random variables:
+
+    .. math:: Q = \sum_{i=0}^{\mathtt{df}} X^2_i
+
+    is chi-square distributed, denoted
+
+    .. math:: Q \sim \chi^2_k.
+
+    The probability density function of the chi-squared distribution is
+
+    .. math:: p(x) = \frac{(1/2)^{k/2}}{\Gamma(k/2)}
+                     x^{k/2 - 1} e^{-x/2},
+
+    where :math:`\Gamma` is the gamma function,
+
+    .. math:: \Gamma(x) = \int_0^{-\infty} t^{x - 1} e^{-t} dt.
+
+    References
+    ----------
+    .. [1] NIST "Engineering Statistics Handbook"
+           https://www.itl.nist.gov/div898/handbook/eda/section3/eda3666.htm
+
+    Examples
+    --------
+    >>> np.random.chisquare(2,4)
+    array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    return gamma(df/2, 1/2, size=size, dtype=dtype, ctx=ctx)
 
 
 def rand(*size, **kwargs):
