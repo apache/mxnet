@@ -1866,22 +1866,24 @@ def _add_workload_nan_to_num():
     OpArgMngr.add_workload('nan_to_num', array3, True)
 
 
-def _add_workload_isnan():
-    array1 = np.array([[-_np.nan, 0, 456, _np.inf], [-1, -_np.inf, 0, _np.nan]])
-    array2 = np.array([_np.inf/_np.inf, _np.inf, _np.nan, -574, 0, 23425, _np.nan,-5])
-    array3 = np.array(_np.nan)
-    OpArgMngr.add_workload('isnan', array1,)
-    OpArgMngr.add_workload('isnan', array2)
-    OpArgMngr.add_workload('isnan', array3)
+def _add_workload_isnan(array_pool):
+    OpArgMngr.add_workload('isnan', array_pool['2x4'])
 
 
-def _add_workload_isinf():
-    array1 = np.array([[-433, float('inf'), 456, _np.inf], [-1, -_np.inf, 0, 1]])
-    array2 = np.array([_np.inf/_np.inf, _np.inf, -_np.inf, -574, 0, 23425, _np.inf,-5])
-    array3 = np.array(_np.inf)
-    OpArgMngr.add_workload('isinf', array1)
-    OpArgMngr.add_workload('isinf', array2)
-    OpArgMngr.add_workload('isinf', array3)
+def _add_workload_isinf(array_pool):
+    OpArgMngr.add_workload('isinf', array_pool['2x4'])
+
+
+def _add_workload_isposinf(array_pool):
+    OpArgMngr.add_workload('isposinf', array_pool['2x4'])
+
+
+def _add_workload_isneginf(array_pool):
+    OpArgMngr.add_workload('isneginf', array_pool['2x4'])
+
+
+def _add_workload_isfinite(array_pool):
+    OpArgMngr.add_workload('isfinite', array_pool['2x4'])
 
 
 def _add_workload_polyval():
@@ -1930,6 +1932,8 @@ def _add_workload_spacing():
 def _prepare_workloads():
     array_pool = {
         '4x1': np.random.uniform(size=(4, 1)) + 2,
+        '2x4': np.array([[    -433, float('inf'), 456, _np.inf, _np.nan],
+                         [-_np.inf, float("nan"),  -1,       0, _np.inf]]),
         '1x2': np.random.uniform(size=(1, 2)) + 2,
         '1x1x0': np.array([[[]]])
     }
@@ -2081,9 +2085,12 @@ def _prepare_workloads():
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
     _add_workload_nan_to_num()
-    _add_workload_isnan()
-    _add_workload_isinf()
     _add_workload_polyval()
+    _add_workload_isnan(array_pool)
+    _add_workload_isinf(array_pool)
+    _add_workload_isposinf(array_pool)
+    _add_workload_isneginf(array_pool)
+    _add_workload_isfinite(array_pool)
     _add_workload_heaviside()
     _add_workload_spacing()
 
