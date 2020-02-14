@@ -25,6 +25,7 @@
 #include <dmlc/parameter.h>
 #include <dmlc/omp.h>
 #include <mxnet/io.h>
+#include <mshadow/tensor.h>
 #include "./inst_vector.h"
 
 namespace mxnet {
@@ -106,9 +107,7 @@ class StackBatchify : public BatchifyFunction {
       auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
       std::vector<TBlob> ret(out_size);
-      #pragma omp parallel for num_threads(out_size)
       for (size_t i = 0; i < out_size; ++i) {
-        omp_exc_.Run([&] {
           // Process i-th output
           mxnet::TShape ashape = inputs[0][i].shape();
           CHECK_GE(ashape.ndim(), 0) << "Data dim must be larger than 0";
@@ -133,14 +132,16 @@ class StackBatchify : public BatchifyFunction {
           ret[i] = TBlob(container->dptr_, sshape, cpu::kDevMask, dtype, 0);
           MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
             DType *ptr = ret[i].dptr<DType>();
+            auto asize = ashape.Size();
+            // _Pragma("omp parallel for num_threads(bs)")
             for (size_t j = 0; j < bs; ++j) {
               inputs[j][i].WaitToRead();
-              std::memcpy(ptr, inputs[j][i].data().dptr<DType>(), ashape.Size() * sizeof(DType));
-              ptr += ashape.Size();
+              mshadow::Copy(
+                TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0).FlatTo2D<cpu, DType>(),
+                inputs[j][i].data().FlatTo2D<cpu, DType>());
+              // std::memcpy(ptr + asize * j, inputs[j][i].data().dptr<DType>(), asize * sizeof(DType));
             }
-            CHECK_EQ(ptr, ret[i].dptr<DType>() + sshape.Size());
           })
-        });
       }
       return ret;
     }

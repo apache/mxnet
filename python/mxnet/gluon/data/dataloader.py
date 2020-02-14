@@ -38,6 +38,7 @@ except ImportError:
     pass
 
 from . import sampler as _sampler
+from . import batchify as _batchify
 from ... import nd, context
 from ...util import is_np_shape, is_np_array, set_np
 from ... import numpy as _mx_np  # pylint: disable=reimported
@@ -159,7 +160,6 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
         self._writer = ConnectionWrapper(self._writer)
         self._send = self._writer.send
         self._recv = self._reader.recv
-
 
 def default_batchify_fn(data):
     """Collate data into batch."""
@@ -401,9 +401,9 @@ class DataLoaderV1(object):
         self._num_workers = num_workers if num_workers >= 0 else 0
         if batchify_fn is None:
             if num_workers > 0:
-                self._batchify_fn = default_mp_batchify_fn
+                self._batchify_fn = _batchify.Stack(use_shared_mem=True)
             else:
-                self._batchify_fn = default_batchify_fn
+                self._batchify_fn = _batchify.Stack()
         else:
             self._batchify_fn = batchify_fn
 
@@ -556,17 +556,7 @@ class DataLoader(object):
         shuffle, sampler, and last_batch if batch_sampler is specified.
     batchify_fn : callable
         Callback function to allow users to specify how to merge samples
-        into a batch. Defaults to `default_batchify_fn`::
-
-            def default_batchify_fn(data):
-                if isinstance(data[0], nd.NDArray):
-                    return nd.stack(*data)
-                elif isinstance(data[0], tuple):
-                    data = zip(*data)
-                    return [default_batchify_fn(i) for i in data]
-                else:
-                    data = np.asarray(data)
-                    return nd.array(data, dtype=data.dtype)
+        into a batch. Defaults to `gluon.data.batchify.Stack()`::
 
     num_workers : int, default 0
         The number of multiprocessing workers to use for data preprocessing.
@@ -631,9 +621,9 @@ class DataLoader(object):
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
         if batchify_fn is None:
             if num_workers > 0:
-                self._batchify_fn = default_mp_batchify_fn
+                self._batchify_fn = _batchify.Stack(use_shared_mem=True)
             else:
-                self._batchify_fn = default_batchify_fn
+                self._batchify_fn = _batchify.Stack()
         else:
             self._batchify_fn = batchify_fn
         # check for capability to use mx backend threadedLoader
@@ -729,8 +719,8 @@ def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
         return False, {}
 
     # supported batchify functions
-    if batchify_fn in (default_batchify_fn, default_mp_batchify_fn):
-        mx_loader_args['batchify_fn'] = StackBatchify()
+    if hasattr(batchify_fn, '__mx_handle__'):
+        mx_loader_args['batchify_fn'] = batchify_fn.__mx_handle__()
     elif isinstance(batchify_fn, MXBatchifyFunction):
         mx_loader_args['batchify_fn'] = batchify_fn
     else:
@@ -775,9 +765,12 @@ class MXThreadedDataLoader(object):
             num_workers = 1  # different convention for single thread
         if prefetch == 0:
             prefetch = 1  # at least one buffer required
+        pin_device_id = pin_device_id if pin_memory else -1
+        ctx = 'cpu_pinned' if pin_memory else 'cpu'
         self._iter = ThreadedDataLoader(num_workers=num_workers, dataset=dataset,
                                         sampler=batch_sampler, batchify_fn=batchify_fn,
-                                        prefetch_buffer=prefetch, ctx='cpu')
+                                        prefetch_buffer=prefetch, ctx=ctx,
+                                        device_id=pin_device_id)
 
     def __iter__(self):
         while self._iter.iter_next():

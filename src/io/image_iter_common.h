@@ -381,13 +381,13 @@ struct ImageDetNormalizeParam :  public dmlc::Parameter<ImageDetNormalizeParam> 
 
 // Define prefetcher parameters
 struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
-  enum CtxType { kGPU = 0, kCPU};
+  enum CtxType { kGPU = 0, kCPU, kCPUPinned, kCPUShared};
   /*! \brief number of prefetched batches */
   size_t prefetch_buffer;
 
   /*! \brief Context data loader optimized for */
   int ctx;
-
+  int device_id;
   /*! \brief data type */
   dmlc::optional<int> dtype;
 
@@ -398,7 +398,13 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
     DMLC_DECLARE_FIELD(ctx).set_default(kGPU)
         .add_enum("cpu", kCPU)
         .add_enum("gpu", kGPU)
-        .describe("Context data loader optimized for.");
+        .add_enum("cpu_pinned", kCPUPinned)
+        .describe("Context data loader optimized for. "
+                  "Note that it only indicates the optimization strategy for devices, "
+                  "by no means the prefetcher will load data to GPUs. "
+                  "If ctx is 'cpu_pinned' and device_id is not -1, it will use cpu_pinned(device_id) as ctx");
+    DMLC_DECLARE_FIELD(device_id).set_default(-1)
+        .describe("The default device id for context. -1 indicate it's on default device");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
