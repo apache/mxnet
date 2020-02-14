@@ -28,6 +28,7 @@
 
 #include <cuda_runtime.h>
 #include "../operator_common.h"
+#include "../../common/cuda_utils.h"
 
 #include <vector>
 
@@ -48,6 +49,29 @@ class VectorizedStorage {
     MSHADOW_XINLINE ~vectorized_storage() {}
   } scratch_;
 };
+
+template <typename LType>
+MSHADOW_XINLINE void ldg(LType* dst, const LType* src) {
+    *dst = *src;
+}
+
+template <>
+MSHADOW_XINLINE void ldg(double* dst, const double* src) {
+    double temp;
+    asm volatile ("ld.global.f64 %0, [%1];" :
+                  "=d"(temp) :
+                  "l"(src));
+    *dst = temp;
+}
+
+/*template <>*/
+/*MSHADOW_XINLINE void ldg(uint64_t* dst, const uint64_t* src) {*/
+    /*uint64_t temp;*/
+    /*asm volatile ("ld.global.u64 %0, [%1];" :*/
+                  /*"=l"(temp) :*/
+                  /*"l"(src));*/
+    /**dst = temp;*/
+/*}*/
 
 template <typename DType, typename LType, bool aligned = false>
 class VectorizedAccessor {
@@ -80,10 +104,12 @@ class VectorizedAccessor {
 
   MSHADOW_XINLINE void load(const index_t id, const index_t N) {
     if (aligned) {
-      storage_.scratch_.aligned = aligned_ptr_[id];
+      ldg<typename std::remove_const<LType>::type>(&(storage_.scratch_.aligned),
+                                                   aligned_ptr_ + id);
     } else {
       if (id > 0 && id < n_elems_ - 1) {
-        storage_.scratch_.aligned = aligned_ptr_[id];
+        ldg<typename std::remove_const<LType>::type>(&(storage_.scratch_.aligned),
+                                                     aligned_ptr_ + id);
       } else {
 #pragma unroll
         for (int j = 0; j < storage_.nvec; ++j) {
@@ -203,11 +229,11 @@ size_t minthree(const size_t a, const size_t b, const size_t c) {
 }  // namespace
 
 template<typename OP>
-void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs) {
+void VectorizedCompute(const nnvm::NodeAttrs &attrs,
+                       const OpContext &ctx,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
   using namespace mxnet_op;
   if (req[0] == kNullOp) return;
   Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -226,7 +252,7 @@ void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
         });
       } else {
         MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-          using LType = double;
+          using LType = uint4;
           static_assert(sizeof(LType) >= sizeof(DType), "Load type is smaller than operand type");
           if (outputs[0].Size() != 0) {
             cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
@@ -234,7 +260,8 @@ void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
             VectorizedLoader<DType, LType> l(outputs[0].dptr<DType>(), outputs[0].Size());
             size_t num_elements = l.num_aligned_elements();
             constexpr int threads = 512;
-            index_t blocks = (num_elements + threads - 1) / threads;
+            index_t blocks = std::min(static_cast<int>((num_elements + threads - 1) / threads),
+                                      65535);
             auto align = CheckAlignment<LType, DType>({outputs[0].dptr<DType>(),
                                                        inputs[0].dptr<DType>(),
                                                        inputs[1].dptr<DType>()});
@@ -252,6 +279,9 @@ void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
                                                    inputs[1].dptr<DType>(),
                                                    outputs[0].Size());
               } else {
+                index_t blocks = std::min(static_cast<int>((outputs[0].Size() + threads - 1) /
+                                                           threads),
+                                          65535);
                 // If the pointers are aligned differently we cannot vectorize
                 VectorizedElementwiseKernel<true, DType, DType, OP, Req>
                   <<<blocks, threads, 0, stream>>>(outputs[0].dptr<DType>(),
