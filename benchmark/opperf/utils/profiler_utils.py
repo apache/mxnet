@@ -48,8 +48,9 @@ def _get_operator_profile(operator_name, operator_profile_results):
     # alias map : dictionary of the form {"alias" : "registered_name"}
     # allows to retrieve alias operator profile from the profiler results
     # TODO handling - "identity" : "_copy"
-    alias_map = {"broadcast_plus": "broadcast_add", "broadcast_minus": "broadcast_sub", "flatten": "Flatten", "max_axis": "max",
-                 "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min", "CTCLoss": "ctc_loss"}
+    alias_map = {"broadcast_plus": "broadcast_add", "broadcast_minus": "broadcast_sub", "flatten": "Flatten", "max_axis": "max", "Custom": "CustomAddOne",
+                 "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min", "ctc_loss": "CTCLoss",
+                 "fill_element_0index": "TernaryOp", "identity": "_copy", "ElementWiseSum": "add_n", "choose_element_0index": "pick", "stop_gradient": "BlockGrad"}
 
     op_name = None
 
@@ -135,7 +136,11 @@ def parse_profiler_dump(operator_name, profiler_dump):
     # String Patterns to look out for when parsing
     memory_profile_result_start = "Device Storage"  # Helps identify start of Memory profile
     c_api_profile_result_start = "MXNET_C_API"  # Helps identify end of Memory profile
-    operator_profile_result_start = "operator"  # Helps identify start of Operator profile
+
+    if operator_name == "Custom":
+        operator_profile_result_start = "Custom Operator"  # Helps identify start of Custom Operator profile
+    else:
+        operator_profile_result_start = "operator"  # Helps identify start of Operator profile
 
     memory_profile_results = []
     operator_profile_results = []
