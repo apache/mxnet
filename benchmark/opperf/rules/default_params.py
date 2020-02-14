@@ -124,6 +124,22 @@ DEFAULT_REPEATS = [2]
 DEFAULT_DATA_DIM1 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_SIZE = [2]
 
+# For miscellaneous operators
+DEFAULT_DATA_SQUEEZE = [(1, 1024, 1024), (32, 1, 256, 256)]
+DEFAULT_AXIS_SQUEEZE = [0, 1]
+DEFAULT_A_MIN = [0.1]
+DEFAULT_A_MAX = [0.9]
+DEFAULT_LRS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_WSS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_GSS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_WDS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_ETA = [.5]
+DEFAULT_STYPE = ['default', 'csr', 'row_sparse']
+DEFAULT_A = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_MHS = [(1024,), (10000,), (10000,)]
+DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
+
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
@@ -251,7 +267,22 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "axes": DEFAULT_AXES,
                    "act_type_leakyrelu": DEFAULT_ACT_TYPE_LR,
                    "label_softmax": DEFAULT_LABEL_SOFTMAX,
-                   "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION}
+                   "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION,
+                   "data_squeeze": DEFAULT_DATA_SQUEEZE,
+                   "axis_squeeze": DEFAULT_AXIS_SQUEEZE,
+                   "a_min": DEFAULT_A_MIN,
+                   "a_max": DEFAULT_A_MAX,
+                   "lrs": DEFAULT_LRS,
+                   "weights_sum_sq": DEFAULT_WSS,
+                   "grads_sum_sq": DEFAULT_GSS,
+                   "wds": DEFAULT_WDS,
+                   "eta": DEFAULT_ETA,
+                   "eps": DEFAULT_EPSILON,
+                   "stype": DEFAULT_STYPE,
+                   "a": DEFAULT_A,
+                   "lhs_fill_element_0index": DEFAULT_LHS_FEI,
+                   "rhs_fill_element_0index": DEFAULT_RHS_FEI,
+                   "mhs": DEFAULT_MHS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -265,4 +296,5 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
-                          "A", "B", "C", "r1", "r2", "rois"]
+                          "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
+                          "grads_sum_sq", "mhs"]
