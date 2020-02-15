@@ -1877,9 +1877,12 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const op::SubgraphBac
   std::unordered_map<std::string, NDArray> aux_states_map;
   const std::vector<std::string> arg_names = src.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
   const std::vector<std::string> aux_names = src.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+  std::cout << "---------in_args_map----------------" << std::endl;
   for (size_t i = 0; i < arg_names.size(); ++i) {
     in_args_map[arg_names[i]] = in_args->at(i);
+    std::cout << arg_names[i] << std::endl;
   }
+  std::cout << "---------------------------------------" << std::endl;
 
   for (size_t i = 0; i < aux_names.size(); ++i) {
     aux_states_map[aux_names[i]] = aux_states->at(i);
@@ -1919,6 +1922,10 @@ static nnvm::Symbol BuildSubgraph(const nnvm::Symbol& src, const op::SubgraphBac
       const std::vector<std::string> input_names = ret.ListInputNames(Symbol::kAll);
       const std::vector<std::string> arg_names = ret.ListInputNames(nnvm::Symbol::kReadOnlyArgs);
       const std::vector<std::string> aux_names = ret.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      std::cout << "@@@@@@@@@@@@arg_names@@@@@@@@@@@@@@@@" << std::endl;
+      for(std::string s : arg_names)
+        std::cout << s << std::endl;
+      std::cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
       CHECK_EQ(arg_names.size(), in_args_map.size());
       CHECK_EQ(aux_names.size(), aux_states_map.size());
       mxnet::ShapeVector arg_shapes;  // all input shapes
