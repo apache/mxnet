@@ -129,7 +129,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU101'):
+    if variant.startswith('CU102'):
+        libraries.append('CUDA-10.2')
+    elif variant.startswith('CU101'):
         libraries.append('CUDA-10.1')
     elif variant.startswith('CU100'):
         libraries.append('CUDA-10.0')
@@ -156,10 +158,18 @@ if variant.endswith('MKL'):
                         os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 
 if platform.system() == 'Linux':
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libgfortran.so.3'), os.path.join(CURRENT_DIR, 'mxnet'))
-    package_data['mxnet'].append('mxnet/libgfortran.so.3')
-    shutil.copy(os.path.join(os.path.dirname(LIB_PATH[0]), 'libquadmath.so.0'), os.path.join(CURRENT_DIR, 'mxnet'))
+    libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
+    if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.4')
+    else:
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.4'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.4')
+    shutil.copy(os.path.join(libdir, 'libquadmath.so.0'), mxdir)
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
+    if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
+        shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
+        package_data['mxnet'].append('mxnet/libquadmath.so.0')
 elif platform.system() == 'Windows':
     package_data['mxnet'].append(os.path.abspath(os.path.join('mxnet', os.path.basename(LIB_PATH[0]))))
     package_data['mxnet'].append(os.path.abspath(os.path.join('mxnet', 'libmxnet.lib')))

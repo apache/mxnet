@@ -613,6 +613,13 @@ struct SoftmaxParam : public dmlc::Parameter<SoftmaxParam> {
     .set_default(dmlc::optional<bool>(false))
     .describe("Whether to use the length input as a mask over the data input.");
   }
+
+  bool operator==(const SoftmaxParam& other) const {
+    return this->axis == other.axis &&
+           this->temperature == other.temperature &&
+           this->dtype == other.dtype &&
+           this->use_length == other.use_length;
+  }
 };
 
 static inline bool softmax_has_dtype_override(const nnvm::NodeAttrs& attrs) {
@@ -751,7 +758,7 @@ static inline std::vector<std::string> SoftmaxGradOpInputNames(const nnvm::NodeA
 
 struct SoftmaxFGradient {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     if (softmax_has_dtype_override(n->attrs) || softmax_use_length(n->attrs)) {
       return ElemwiseGradUseInOut {op_name}(n, ograds);
@@ -898,5 +905,19 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+namespace std {
+template<>
+struct hash<mxnet::op::SoftmaxParam> {
+  size_t operator()(const mxnet::op::SoftmaxParam& val) {
+    size_t ret = 0;
+    ret = dmlc::HashCombine(ret, val.axis);
+    ret = dmlc::HashCombine(ret, val.temperature);
+    ret = dmlc::HashCombine(ret, val.dtype);
+    ret = dmlc::HashCombine(ret, val.use_length);
+    return ret;
+  }
+};
+}  // namespace std
 
 #endif  // MXNET_OPERATOR_NN_SOFTMAX_INL_H_

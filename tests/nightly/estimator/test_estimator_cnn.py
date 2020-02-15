@@ -116,7 +116,7 @@ def test_estimator_cpu():
         # Define estimator
         est = estimator.Estimator(net=net,
                                   loss=loss,
-                                  metrics=mx.metric.Accuracy(),
+                                  train_metrics=mx.metric.Accuracy(),
                                   trainer=trainer,
                                   context=context)
         # Call fit()
@@ -145,7 +145,7 @@ def test_estimator_gpu():
     # Define estimator
     est = estimator.Estimator(net=net,
                               loss=loss,
-                              metrics=acc,
+                              train_metrics=acc,
                               trainer=trainer,
                               context=context)
     # Call fit()

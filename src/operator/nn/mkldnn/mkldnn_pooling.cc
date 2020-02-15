@@ -127,13 +127,6 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
   }
 }
 
-static inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
-  if ((x + padl + padr - k) % s != 0) {
-    return (padr + s - ((x + padl + padr - k) % s));
-  } else {
-    return padr;
-  }
-}
 
 mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
     const PoolingParam &param, const bool is_train, const mkldnn::memory::desc &data_md,

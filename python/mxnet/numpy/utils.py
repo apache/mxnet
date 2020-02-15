@@ -18,12 +18,12 @@
 """Util functions for the numpy module."""
 
 
-from __future__ import absolute_import
 
 import numpy as onp
 
 __all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64',
-           'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis']
+           'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis', 'finfo',
+           '_STR_2_DTYPE_']
 
 float16 = onp.float16
 float32 = onp.float32
@@ -42,3 +42,19 @@ PZERO = onp.PZERO
 NZERO = onp.NZERO
 
 newaxis = None
+finfo = onp.finfo
+
+_STR_2_DTYPE_ = {'float16': float16, 'float32': float32, 'float64':float64, 'float': float64,
+                 'uint8': uint8, 'int8': int8, 'int32': int32, 'int64': int64, 'int': int64,
+                 'bool': bool, 'bool_': bool_, 'None': None}
+
+_ONP_OP_MODULES = [onp, onp.linalg, onp.random, onp.fft]
+
+
+def _get_np_op(name):
+    """Get official NumPy operator with `name`. If not found, raise ValueError."""
+    for mod in _ONP_OP_MODULES:
+        op = getattr(mod, name, None)
+        if op is not None:
+            return op
+    raise ValueError('Operator `{}` is not supported by `mxnet.numpy`.'.format(name))

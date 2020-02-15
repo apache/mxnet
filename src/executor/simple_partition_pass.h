@@ -64,7 +64,7 @@ class BidirectionalGraph {
     // Create all the nodes in a new graph from
     // nodes in the NNVM graph and store them
     // in nodes array
-    DFSVisit(g.outputs, [this](const nnvm::NodePtr& n) {
+    DFSVisit(g.outputs, [this](const nnvm::ObjectPtr& n) {
       Node new_node;
       new_node.nnvmptr = n.get();
       nnvm2nid[n.get()] = static_cast<uint32_t>(nodes.size());
@@ -102,8 +102,7 @@ class BidirectionalGraph {
   std::vector<std::unordered_set<Node*>> get_subsets(FCompatible is_compatible) {
     std::vector<std::unordered_set<Node*>> subgraphs;
     std::unordered_set<Node*> incomp_set;
-    std::unordered_set<Node*> all_set(nodes.size());
-    std::vector<PairSet> separation_sets;
+    std::vector<std::pair<bool, PairSet>> separation_sets;
     // Check each node for compatibility
     // and, if it is incompatible, mark nodes
     // on each side of it as not possible to be
@@ -111,48 +110,79 @@ class BidirectionalGraph {
     for (Node& node : nodes) {
       if (!is_compatible(node.nnvmptr)) {
         incomp_set.insert(&node);
-        std::unordered_set<Node*> in_graph;
-        std::unordered_set<Node*> out_graph;
-        std::vector<Node*> dummy_head;
-        dummy_head.emplace_back(&node);
-        DFS(dummy_head, false, [&out_graph, &is_compatible](Node* node) {
-          if (is_compatible(node->nnvmptr))
-            out_graph.insert(node);
-        });
-        DFS(dummy_head, true, [&in_graph, is_compatible](Node* node) {
-          if (is_compatible(node->nnvmptr))
-            in_graph.insert(node);
-        });
-        if (!(in_graph.empty() || out_graph.empty()))
-          separation_sets.push_back(std::make_pair(in_graph, out_graph));
       }
-      all_set.emplace(&node);
+    }
+    for (Node& node : nodes) {
+      if (incomp_set.count(&node) != 0) {
+        // Check if all your inputs are incompatible too.
+        // If so, then your separation set does not matter,
+        // because it will covered by the sets of your inputs
+        bool inside_node = true;
+        for (Node* input : node.inputs) {
+          if (incomp_set.count(input) == 0) {
+            inside_node = false;
+          }
+        }
+        if (!inside_node) {
+          std::unordered_set<Node*> in_graph;
+          std::unordered_set<Node*> out_graph;
+          std::vector<Node*> dummy_head;
+          dummy_head.emplace_back(&node);
+          DFS(dummy_head, false, [&out_graph](Node* node) {
+              out_graph.insert(node);
+          });
+          DFS(dummy_head, true, [&in_graph](Node* node) {
+              in_graph.insert(node);
+          });
+            separation_sets.push_back(std::make_pair(true,
+                                                     std::make_pair(in_graph, out_graph)));
+        } else {
+          separation_sets.push_back(std::make_pair(false, PairSet()));
+        }
+      } else {
+        separation_sets.push_back(std::make_pair(false, PairSet()));
+      }
     }
     IncompMap incomp_map;
-    std::unordered_set<Node*> comp_set;
-    comp_set.insert(all_set.begin(), all_set.end());
-    for (Node* n : incomp_set) {
-      comp_set.erase(n);
-    }
     // For each node construct the map of nodes that cannot be in
     // the same subset
-    for (Node* n : comp_set) {
-      for (PairSet p : separation_sets) {
-        if (p.first.count(n)) {
-          incomp_map[n].insert(p.second.begin(), p.second.end());
-        } else if (p.second.count(n)) {
-          incomp_map[n].insert(p.first.begin(), p.first.end());
+    index_t num_nodes = nodes.size();
+    for (index_t i = 0; i < num_nodes; ++i) {
+      const auto n = &(nodes[i]);
+      if (incomp_set.count(n) == 0) {
+        for (index_t j = i + 1; j < num_nodes; ++j) {
+          const auto& sep_set_pair = separation_sets[j];
+          if (sep_set_pair.first && incomp_map[n].count(&nodes[j]) == 0) {
+            const auto& p = sep_set_pair.second;
+            if (p.first.count(n)) {
+              incomp_map[n].insert(p.second.begin(), p.second.end());
+            } else if (p.second.count(n)) {
+              incomp_map[n].insert(p.first.begin(), p.first.end());
+            }
+          }
         }
-      }
-      for (Node* incomp_n : incomp_set) {
-        incomp_map[n].erase(incomp_n);
+        for (index_t j = i - 1; j >= 0; --j) {
+          const auto& sep_set_pair = separation_sets[j];
+          if (sep_set_pair.first && incomp_map[n].count(&nodes[j]) == 0) {
+            const auto& p = sep_set_pair.second;
+            if (p.first.count(n)) {
+              incomp_map[n].insert(p.second.begin(), p.second.end());
+            } else if (p.second.count(n)) {
+              incomp_map[n].insert(p.first.begin(), p.first.end());
+            }
+          }
+        }
+        for (Node* incomp_n : incomp_set) {
+          incomp_map[n].erase(incomp_n);
+        }
       }
     }
     std::unordered_set<Node*> unused_set;
-    unused_set.reserve(comp_set.size());
 
-    for (auto& n : comp_set) {
-      unused_set.insert(n);
+    for (auto& n : nodes) {
+      if (incomp_set.count(&n) == 0) {
+        unused_set.insert(&n);
+      }
     }
     std::unordered_set<Node*> visited;
     std::deque<Node*> stack(outputs.begin(), outputs.end());
@@ -268,7 +298,7 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
       outputs.insert({e, count++});
     }
   }
-  DFSVisit(g.outputs, [&subgraph_set, &outputs, &count](const nnvm::NodePtr &node){
+  DFSVisit(g.outputs, [&subgraph_set, &outputs, &count](const nnvm::ObjectPtr &node){
     if (!subgraph_set.count(node.get())) {
       for (auto& e : node->inputs) {
         if (subgraph_set.count(e.node.get()) && !outputs.count(e)) {
@@ -287,7 +317,7 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
 std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_set) {
   std::vector<nnvm::NodeEntry> inputs;
   nnvm::NodeEntryMap<nnvm::NodeEntry> entry_map;
-  DFSVisit(g.outputs, [&subgraph_set, &inputs, &entry_map](const nnvm::NodePtr &node){
+  DFSVisit(g.outputs, [&subgraph_set, &inputs, &entry_map](const nnvm::ObjectPtr &node){
     if (subgraph_set.count(node.get())) {
       for (auto &e : node->inputs) {
         if (!subgraph_set.count(e.node.get())) {
@@ -331,7 +361,7 @@ std::unordered_map<uint32_t, uint32_t> GetGraphInputsMap(const Graph& g) {
  * \brief Helper function to display what nodes are in a specific subset.
  */
 void dispNodesSet(Graph g, NodeRawPtrSet s) {
-  DFSVisit(g.outputs, [&s](const nnvm::NodePtr n){
+  DFSVisit(g.outputs, [&s](const nnvm::ObjectPtr n){
     if (s.count(n.get())) {
       std::cout << "  Y " << n->attrs.name << std::endl;
     } else {
@@ -364,7 +394,7 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
     // replug inputs of node out of subgraph to be output of the subgraph node
     // if it was a node in the subgraph
     DFSVisit(g.outputs,
-        [&subgraph_node, &subgraph_set, &sub_outputs_in_main](const nnvm::NodePtr node) {
+        [&subgraph_node, &subgraph_set, &sub_outputs_in_main](const nnvm::ObjectPtr node) {
       if (!subgraph_set.count(node.get())) {
         for (auto &e : node->inputs) {
           auto it = sub_outputs_in_main.find(e);
@@ -386,13 +416,13 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
     }
     // move control dependencies between nodes of the subgraph and out of the subgraph
     // to a dependencies between the subgraph node and the nodes out of the subgraph
-    DFSVisit(g.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
+    DFSVisit(g.outputs, [&subgraph_node, &subgraph_set](const nnvm::ObjectPtr& node) {
       for (auto &e : node->control_deps) {
         if (subgraph_set.count(e.get()))
           e = subgraph_node;
       }
     });
-    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
+    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::ObjectPtr& node) {
       auto it = node->control_deps.begin();
       while (it != node->control_deps.end()) {
         if (subgraph_set.count(it->get())) {

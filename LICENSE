@@ -246,9 +246,9 @@
           Copyright 2016, ps-lite developers
           Copyright (c) 2015-2016 by Contributors
           Copyright by Contributors
+          Copyright (c) 2018-2019 Bytedance Inc.
     12. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
-          Copyright (c) 2017-2018 Intel Corporation
-          Copyright 2016-2018 Intel Corporation
+          Copyright 2016-2019 Intel Corporation
           Copyright 2018 YANDEX LLC
     13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
           Copyright [2007-2009] Neal Norwitz
@@ -275,7 +275,12 @@
     26. Cephes Library Functions - For details, see src/operator/special_functions-inl.h
           Copyright (c) 2015 by Contributors
           Copyright 1984, 1987, 1992 by Stephen L. Moshier
-
+    27. MathJax (3rdparty/mkldnn/doc/assets/mathjax)
+          Copyright (c) 2009-2018 The MathJax Consortium
+          Copyright (c) 2015-2017 Martin Hensel
+          Copyright (c) 2007, Apostolos Syropoulos (<asyropoulos@yahoo.com>)
+    28. material-design-icons - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1/iconfont/
+    29. Roboto fonts - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto/
 
     =======================================================================================
     MIT licenses
@@ -326,7 +331,16 @@
          Copyright 2005-2015, Google Inc.
     8. OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
          Copyright (c) 2011, 2012 University of Houston System
-
+    9. CMake FindCUDAToolkit.cmake, FindOpenCL.cmake - For details, see,
+         cmake/upstream/FindCUDAToolkit.cmake
+         cmake/upstream/select_compute_arch.cmake
+         3rdparty/mkldnn/cmake/FindOpenCL.cmake
+         Copyright 2000-2019 Kitware, Inc. and Contributors
+    10. ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
+         Copyright (c) 2011, Intel Corporation
+    11. Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op-inl.h
+         Copyright (c) 2005-2019, NumPy Developers.
+         Copyright (c) 2019, The Apache Software Foundation.
 
     =======================================================================================
     2-clause BSD licenses
@@ -930,6 +944,15 @@
     
     For more information, please refer to <http://unlicense.org>
 
+    20. Font-Awesome, SIL Open Font License(OFL)
+
+    For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/
+
+    In the Font Awesome Free download, the SIL OFL license applies to all icons packaged as web and desktop font files.
+
+    For more information, please refer to <https://github.com/FortAwesome/Font-Awesome/blob/master/LICENSE.txt>
+
+    For full text of the SIL Open Font License, refer to <https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL>
 
     =======================================================================================
     Appendix

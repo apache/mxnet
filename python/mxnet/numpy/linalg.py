@@ -17,10 +17,81 @@
 
 """Namespace for ops used in imperative programming."""
 
-from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
+from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from . import fallback_linalg
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet']
+__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
+           'eigvals', 'eig', 'eigvalsh', 'eigh']
+__all__ += fallback_linalg.__all__
+
+
+def pinv(a, rcond=1e-15, hermitian=False):
+    r"""
+    Compute the (Moore-Penrose) pseudo-inverse of a matrix.
+
+    Calculate the generalized inverse of a matrix using its
+    singular-value decomposition (SVD) and including all
+    *large* singular values.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        Matrix or stack of matrices to be pseudo-inverted.
+    rcond : (...) {float or ndarray of float}, optional
+        Cutoff for small singular values.
+        Singular values less than or equal to
+        ``rcond * largest_singular_value`` are set to zero.
+        Broadcasts against the stack of matrices.
+    hermitian : bool, optional
+        If True, `a` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    B : (..., N, M) ndarray
+        The pseudo-inverse of `a`. If `a` is a `matrix` instance, then so
+        is `B`.
+
+    Raises
+    ------
+    MXNetError
+        If the SVD computation does not converge.
+
+    Notes
+    -----
+    The pseudo-inverse of a matrix A, denoted :math:`A^+`, is
+    defined as: "the matrix that 'solves' [the least-squares problem]
+    :math:`Ax = b`," i.e., if :math:`\\bar{x}` is said solution, then
+    :math:`A^+` is that matrix such that :math:`\\bar{x} = A^+b`.
+
+    It can be shown that if :math:`Q_1 \\Sigma Q_2^T = A` is the singular
+    value decomposition of A, then
+    :math:`A^+ = Q_2 \\Sigma^+ Q_1^T`, where :math:`Q_{1,2}` are
+    orthogonal matrices, :math:`\\Sigma` is a diagonal matrix consisting
+    of A's so-called singular values, (followed, typically, by
+    zeros), and then :math:`\\Sigma^+` is simply the diagonal matrix
+    consisting of the reciprocals of A's singular values
+    (again, followed by zeros). [1]_
+
+    References
+    ----------
+    .. [1] G. Strang, *Linear Algebra and Its Applications*, 2nd Ed., Orlando,
+           FL, Academic Press, Inc., 1980, pp. 139-142.
+
+    Examples
+    --------
+    The following example checks that ``a * a+ * a == a`` and
+    ``a+ * a * a+ == a+``:
+    >>> a = np.random.randn(2, 3)
+    >>> pinv_a = np.linalg.pinv(a)
+    >>> (a - np.dot(a, np.dot(pinv_a, a))).sum()
+    array(0.)
+    >>> (pinv_a - np.dot(pinv_a, np.dot(a, pinv_a))).sum()
+    array(0.)
+    """
+    return _mx_nd_np.linalg.pinv(a, rcond, hermitian)
 
 
 def norm(x, ord=None, axis=None, keepdims=False):
@@ -370,3 +441,422 @@ def slogdet(a):
     (1., -1151.2925464970228)
     """
     return _mx_nd_np.linalg.slogdet(a)
+
+
+def solve(a, b):
+    r"""
+    Solve a linear matrix equation, or system of linear scalar equations.
+
+    Computes the "exact" solution, `x`, of the well-determined, i.e., full
+    rank, linear matrix equation `ax = b`.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Coefficient matrix.
+    b : {(..., M,), (..., M, K)}, ndarray
+        Ordinate or "dependent variable" values.
+
+    Returns
+    -------
+    x : {(..., M,), (..., M, K)} ndarray
+        Solution to the system a x = b.  Returned shape is identical to `b`.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not square.
+
+    Notes
+    -----
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    The solutions are computed using LAPACK routine ``_gesv``.
+
+    `a` must be square and of full-rank, i.e., all rows (or, equivalently,
+    columns) must be linearly independent; if either is not true, use
+    `lstsq` for the least-squares best "solution" of the
+    system/equation.
+
+    Examples
+    --------
+    Solve the system of equations ``3 * x0 + x1 = 9`` and ``x0 + 2 * x1 = 8``:
+
+    >>> a = np.array([[3,1], [1,2]])
+    >>> b = np.array([9,8])
+    >>> x = np.linalg.solve(a, b)
+    >>> x
+    array([2.,  3.])
+
+    Check that the solution is correct:
+
+    >>> np.allclose(np.dot(a, x), b)
+    True
+    """
+    return _mx_nd_np.linalg.solve(a, b)
+
+
+def tensorinv(a, ind=2):
+    r"""
+    Compute the 'inverse' of an N-dimensional array.
+
+    The result is an inverse for `a` relative to the tensordot operation
+    ``tensordot(a, b, ind)``, i. e., up to floating-point accuracy,
+    ``tensordot(tensorinv(a), a, ind)`` is the "identity" tensor for the
+    tensordot operation.
+
+    Parameters
+    ----------
+    a : array_like
+        Tensor to 'invert'. Its shape must be 'square', i. e.,
+        ``prod(a.shape[:ind]) == prod(a.shape[ind:])``.
+    ind : int, optional
+        Number of first indices that are involved in the inverse sum.
+        Must be a positive integer, default is 2.
+
+    Returns
+    -------
+    b : ndarray
+        `a`'s tensordot inverse, shape ``a.shape[ind:] + a.shape[:ind]``.
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not 'square' (in the above sense).
+
+    See Also
+    --------
+    tensordot, tensorsolve
+
+    Examples
+    --------
+    >>> a = np.eye(4*6)
+    >>> a.shape = (4, 6, 8, 3)
+    >>> ainv = np.linalg.tensorinv(a, ind=2)
+    >>> ainv.shape
+    (8, 3, 4, 6)
+    >>> b = np.random.randn(4, 6)
+    >>> np.allclose(np.tensordot(ainv, b), np.linalg.tensorsolve(a, b))
+    True
+
+    >>> a = np.eye(4*6)
+    >>> a.shape = (24, 8, 3)
+    >>> ainv = np.linalg.tensorinv(a, ind=1)
+    >>> ainv.shape
+    (8, 3, 24)
+    >>> b = np.random.randn(24)
+    >>> np.allclose(np.tensordot(ainv, b, 1), np.linalg.tensorsolve(a, b))
+    True
+    """
+    return _mx_nd_np.linalg.tensorinv(a, ind)
+
+
+def tensorsolve(a, b, axes=None):
+    r"""
+    Solve the tensor equation ``a x = b`` for x.
+    It is assumed that all indices of `x` are summed over in the product,
+    together with the rightmost indices of `a`, as is done in, for example,
+    ``tensordot(a, x, axes=b.ndim)``.
+
+    Parameters
+    ----------
+    a : ndarray
+        Coefficient tensor, of shape ``b.shape + Q``. `Q`, a tuple, equals
+        the shape of that sub-tensor of `a` consisting of the appropriate
+        number of its rightmost indices, and must be such that
+        ``prod(Q) == prod(b.shape)`` (in which sense `a` is said to be
+        'square').
+    b : ndarray
+        Right-hand tensor, which can be of any shape.
+    axes : tuple of ints, optional
+        Axes in `a` to reorder to the right, before inversion.
+        If None (default), no reordering is done.
+
+    Returns
+    -------
+    x : ndarray, shape Q
+
+    Raises
+    ------
+    MXNetError
+        If `a` is singular or not 'square' (in the above sense).
+
+    See Also
+    --------
+    numpy.tensordot, tensorinv, numpy.einsum
+
+    Examples
+    --------
+    >>> a = np.eye(2*3*4)
+    >>> a.shape = (2*3, 4, 2, 3, 4)
+    >>> b = np.random.randn(2*3, 4)
+    >>> x = np.linalg.tensorsolve(a, b)
+    >>> x.shape
+    (2, 3, 4)
+    >>> np.allclose(np.tensordot(a, x, axes=3), b)
+    True
+    """
+    return _mx_nd_np.linalg.tensorsolve(a, b, axes)
+
+
+def eigvals(a):
+    r"""
+    Compute the eigenvalues of a general matrix.
+
+    Main difference between `eigvals` and `eig`: the eigenvectors aren't
+    returned.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        A real-valued matrix whose eigenvalues will be computed.
+
+    Returns
+    -------
+    w : (..., M,) ndarray
+        The eigenvalues, each repeated according to its multiplicity.
+        They are not necessarily ordered.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eig : eigenvalues and right eigenvectors of general arrays
+    eigh : eigenvalues and eigenvectors of a real symmetric array.
+    eigvalsh : eigenvalues of a real symmetric.
+
+    Notes
+    -----
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    This is implemented using the ``_geev`` LAPACK routines which compute
+    the eigenvalues and eigenvectors of general square arrays.
+
+    This function differs from the original `numpy.linalg.eigvals
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvals.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+
+    Examples
+    --------
+    Illustration, using the fact that the eigenvalues of a diagonal matrix
+    are its diagonal elements, that multiplying a matrix on the left
+    by an orthogonal matrix, `Q`, and on the right by `Q.T` (the transpose
+    of `Q`), preserves the eigenvalues of the "middle" matrix.  In other words,
+    if `Q` is orthogonal, then ``Q * A * Q.T`` has the same eigenvalues as
+    ``A``:
+    >>> from numpy import linalg as LA
+    >>> x = np.random.random()
+    >>> Q = np.array([[np.cos(x), -np.sin(x)], [np.sin(x), np.cos(x)]])
+    >>> LA.norm(Q[0, :]), LA.norm(Q[1, :]), np.dot(Q[0, :],Q[1, :])
+    (1.0, 1.0, 0.0)
+
+    Now multiply a diagonal matrix by ``Q`` on one side and by ``Q.T`` on the other:
+    >>> D = np.diag((-1,1))
+    >>> LA.eigvals(D)
+    array([-1.,  1.])
+    >>> A = np.dot(Q, D)
+    >>> A = np.dot(A, Q.T)
+    >>> LA.eigvals(A)
+    array([ 1., -1.]) # random
+    """
+    return _mx_nd_np.linalg.eigvals(a)
+
+
+def eigvalsh(a, UPLO='L'):
+    r"""
+    Compute the eigenvalues real symmetric matrix.
+
+    Main difference from eigh: the eigenvectors are not computed.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        A real-valued matrix whose eigenvalues are to be computed.
+    UPLO : {'L', 'U'}, optional
+        Specifies whether the calculation is done with the lower triangular
+        part of `a` ('L', default) or the upper triangular part ('U').
+        Irrespective of this value only the real parts of the diagonal will
+        be considered in the computation to preserve the notion of a Hermitian
+        matrix. It therefore follows that the imaginary part of the diagonal
+        will always be treated as zero.
+
+    Returns
+    -------
+    w : (..., M,) ndarray
+        The eigenvalues in ascending order, each repeated according to
+        its multiplicity.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eig : eigenvalues and right eigenvectors of general arrays
+    eigvals : eigenvalues of a non-symmetric array.
+    eigh : eigenvalues and eigenvectors of a real symmetric array.
+
+    Notes
+    -----
+    Broadcasting rules apply, see the `numpy.linalg` documentation for
+    details.
+
+    The eigenvalues are computed using LAPACK routines ``_syevd``.
+
+    This function differs from the original `numpy.linalg.eigvalsh
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigvalsh.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+
+    Examples
+    --------
+    >>> from numpy import linalg as LA
+    >>> a = np.array([[ 5.4119368 ,  8.996273  , -5.086096  ],
+                      [ 0.8866155 ,  1.7490431 , -4.6107802 ],
+                      [-0.08034172,  4.4172044 ,  1.4528792 ]])
+    >>> LA.eigvalsh(a, UPLO='L')
+    array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
+    """
+    return _mx_nd_np.linalg.eigvalsh(a, UPLO)
+
+
+def eig(a):
+    r"""
+    Compute the eigenvalues and right eigenvectors of a square array.
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        Matrices for which the eigenvalues and right eigenvectors will
+        be computed
+
+    Returns
+    -------
+    w : (..., M) ndarray
+        The eigenvalues, each repeated according to its multiplicity.
+        The eigenvalues are not necessarily ordered.
+    v : (..., M, M) ndarray
+        The normalized (unit "length") eigenvectors, such that the
+        column ``v[:,i]`` is the eigenvector corresponding to the
+        eigenvalue ``w[i]``.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eigvals : eigenvalues of a non-symmetric array.
+    eigh : eigenvalues and eigenvectors of a real symmetric array.
+    eigvalsh : eigenvalues of a real symmetric.
+
+    Notes
+    -----
+    This is implemented using the ``_geev`` LAPACK routines which compute
+    the eigenvalues and eigenvectors of general square arrays.
+
+    The number `w` is an eigenvalue of `a` if there exists a vector
+    `v` such that ``dot(a,v) = w * v``. Thus, the arrays `a`, `w`, and
+    `v` satisfy the equations ``dot(a[:,:], v[:,i]) = w[i] * v[:,i]``
+    for :math:`i \\in \\{0,...,M-1\\}`.
+
+    The array `v` of eigenvectors may not be of maximum rank, that is, some
+    of the columns may be linearly dependent, although round-off error may
+    obscure that fact. If the eigenvalues are all different, then theoretically
+    the eigenvectors are linearly independent.
+
+    This function differs from the original `numpy.linalg.eig
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eig.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+
+    Examples
+    --------
+    >>> from numpy import linalg as LA
+    >>> a = np.array([[-1.9147992 ,  6.054115  , 18.046988  ],
+                      [ 0.77563655, -4.860152  ,  2.1012988 ],
+                      [ 2.6083658 ,  2.3705218 ,  0.3192524 ]])
+    >>> w, v = LA.eig(a)
+    >>> w
+    array([ 6.9683027, -7.768063 , -5.655937 ])
+    >>> v
+    array([[ 0.90617794,  0.9543622 ,  0.2492316 ],
+           [ 0.13086087, -0.04077047, -0.9325615 ],
+           [ 0.4021404 , -0.29585576,  0.26117516]])
+    """
+    return _mx_nd_np.linalg.eig(a)
+
+
+def eigh(a, UPLO='L'):
+    r"""
+    Return the eigenvalues and eigenvectors real symmetric matrix.
+
+    Returns two objects, a 1-D array containing the eigenvalues of `a`, and
+    a 2-D square array or matrix (depending on the input type) of the
+    corresponding eigenvectors (in columns).
+
+    Parameters
+    ----------
+    a : (..., M, M) ndarray
+        real symmetric matrices whose eigenvalues and eigenvectors are to be computed.
+    UPLO : {'L', 'U'}, optional
+        Specifies whether the calculation is done with the lower triangular
+        part of `a` ('L', default) or the upper triangular part ('U').
+        Irrespective of this value only the real parts of the diagonal will
+        be considered in the computation to preserve the notion of a Hermitian
+        matrix. It therefore follows that the imaginary part of the diagonal
+        will always be treated as zero.
+
+    Returns
+    -------
+    w : (..., M) ndarray
+        The eigenvalues in ascending order, each repeated according to
+        its multiplicity.
+    v : {(..., M, M) ndarray, (..., M, M) matrix}
+        The column ``v[:, i]`` is the normalized eigenvector corresponding
+        to the eigenvalue ``w[i]``.  Will return a matrix object if `a` is
+        a matrix object.
+
+    Raises
+    ------
+    MXNetError
+        If the eigenvalue computation does not converge.
+
+    See Also
+    --------
+    eig : eigenvalues and right eigenvectors of general arrays
+    eigvals : eigenvalues of a non-symmetric array.
+    eigvalsh : eigenvalues of a real symmetric.
+
+    Notes
+    -----
+    The eigenvalues/eigenvectors are computed using LAPACK routines ``_syevd``.
+
+    This function differs from the original `numpy.linalg.eigh
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigh.html>`_ in
+    the following way(s):
+     - Does not support complex input and output.
+
+    Examples
+    --------
+    >>> from numpy import linalg as LA
+    >>> a = np.array([[ 6.8189726 , -3.926585  ,  4.3990498 ],
+                      [-0.59656644, -1.9166266 ,  9.54532   ],
+                      [ 2.1093285 ,  0.19688708, -1.1634291 ]])
+    >>> w, v = LA.eigh(a, UPLO='L')
+    >>> w
+    array([-2.175445 , -1.4581827,  7.3725457])
+    >>> v
+    array([[ 0.1805163 , -0.16569263,  0.9695154 ],
+           [ 0.8242942 ,  0.56326365, -0.05721384],
+           [-0.53661287,  0.80949366,  0.23825769]])
+    """
+    return _mx_nd_np.linalg.eigh(a, UPLO)

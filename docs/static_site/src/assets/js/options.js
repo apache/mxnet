@@ -46,28 +46,47 @@ $(document).ready(function () {
     }
 
     function setSelects(urlParams) {
-        if (urlParams.get('version'))
-            versionSelect = urlParams.get('version');
-        $('.current-version').html( versionSelect + ' <span class="caret"></span>' );
-        if (urlParams.get('platform'))
-            platformSelect = label(urlParams.get('platform'));
-        if (urlParams.get('language'))
-            languageSelect = label(urlParams.get('language'));
-        if (urlParams.get('processor'))
-            processorSelect = label(urlParams.get('processor'));
-        if (urlParams.get('environ'))
-            environSelect = label(urlParams.get('environ'));
-
-        $('li.versions').removeClass('active');
-        $('li.versions').each(function(){is_a_match($(this), versionSelect)});
+        let queryString = '?';
         $('button.opt').removeClass('active');
-        $('button.opt').each(function(){is_a_match($(this), platformSelect)});
-        $('button.opt').each(function(){is_a_match($(this), languageSelect)});
-        $('button.opt').each(function(){is_a_match($(this), processorSelect)});
-        $('button.opt').each(function(){is_a_match($(this), environSelect)});
+        if (urlParams.get('version')) {
+            versionSelect = urlParams.get('version');
+            $('li.versions').removeClass('active');
+            $('li.versions').each(function(){is_a_match($(this), versionSelect)});
+            $('.current-version').html( versionSelect + ' <span class="caret"></span>' );
+            queryString += 'version=' + versionSelect + '&';
+        }
+        if (urlParams.get('platform')) {
+            platformSelect = label(urlParams.get('platform'));
+            $('button.opt').each(function(){is_a_match($(this), platformSelect)});
+            queryString += 'platform=' + platformSelect + '&';
+        }
+        if (urlParams.get('language')) {
+            languageSelect = label(urlParams.get('language'));
+            $('button.opt').each(function(){
+                if (label($(this).text()) === label(languageSelect)) {
+                    $(this).addClass(('active'))
+                }
+            });
+            queryString += 'language=' + languageSelect + '&';
+        }
+        if (urlParams.get('processor')) {
+            processorSelect = label(urlParams.get('processor'));
+            $('button.opt').each(function(){is_a_match($(this), processorSelect)});
+            queryString += 'processor=' + processorSelect + '&';
+        }
+        if (urlParams.get('environ')) {
+            environSelect = label(urlParams.get('environ'));
+            $('button.opt').each(function(){is_a_match($(this), environSelect)});
+            queryString += 'environ=' + environSelect + '&';
+        }
+        if (urlParams.get('iot')) {
+            iotSelect = label(urlParams.get('iot'));
+            $('button.opt').each(function(){is_a_match($(this), iotSelect)});
+            queryString += 'iot=' + iotSelect + '&';
+        }
 
         showContent();
-        let queryString = '?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&environ=' + environSelect + '&processor=' + processorSelect
+
         if (window.location.href.indexOf("/get_started") >= 0) {
             history.pushState(null, null, queryString);
         }
@@ -100,6 +119,9 @@ $(document).ready(function () {
             urlParams.set("processor", label($(this).text()));
         } else if ($(this).hasClass("environs")) {
             urlParams.set("environ", label($(this).text()));
+        } else if ($(this).hasClass("iots")) {
+            console.log($(this));
+            urlParams.set("iot", label($(this).text()));
         }
         setSelects(urlParams);
     }

@@ -17,8 +17,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -eo pipefail
+
 # This script builds the libraries of mxnet.
-make_config=make/${STATIC_BUILD_TARGET}/${STATIC_BUILD_TARGET}_${PLATFORM}_${VARIANT}.mk
+make_config=make/staticbuild/${PLATFORM}_${VARIANT}.mk
 if [[ ! -f $make_config ]]; then
     >&2 echo "Couldn't find make config $make_config for the current settings."
     exit 1
@@ -41,7 +43,13 @@ fi
 $MAKE DEPS_PATH=$DEPS_PATH
 
 if [[ $PLATFORM == 'linux' ]]; then
-    cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
+    if [[ -f /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so ]]; then
+        cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
+    elif [[ -f /usr/lib/x86_64-linux-gnu/libgfortran.so.3 ]]; then
+        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.3 lib/libgfortran.so.3
+    else
+        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.4 lib/libgfortran.so.4
+    fi
     cp -L /usr/lib/x86_64-linux-gnu/libquadmath.so.0 lib/libquadmath.so.0
 fi
 
@@ -57,4 +65,6 @@ else
     >&2 echo "Not available"
 fi
 
-ln -s staticdeps/ deps
+if [[ ! -L deps ]]; then
+    ln -s staticdeps deps
+fi

@@ -30,14 +30,27 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <vector>
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <iostream>
 #include <utility>
 #include <stdexcept>
 
-#define MX_LIBRARY_VERSION 1
+#define MX_LIBRARY_VERSION 3
+
+/*!
+ * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
+ * times may lead to undefined behaviour, so we need to set symbol visibility to hidden
+ * see https://labjack.com/news/simple-cpp-symbol-visibility-demo for details
+ */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  #define PRIVATE_SYMBOL
+#else
+  #define PRIVATE_SYMBOL  __attribute__ ((visibility ("hidden")))
+#endif
 
 /*
  * Import from DLPack https://github.com/dmlc/dlpack/blob/master/include/dlpack/dlpack.h
@@ -176,7 +189,7 @@ extern "C" {
     int64_t* shape;
     /*!
      * \brief strides of the tensor (in number of elements, not bytes)
-     *  can be NULL, indicating tensor is compact and row-majored.
+     *  can be nullptr, indicating tensor is compact and row-majored.
      */
     int64_t* strides;
     /*! \brief The offset in bytes to the beginning pointer to data */
@@ -198,7 +211,18 @@ enum MXDType {
   kInt32 = 4,
   kInt8  = 5,
   kInt64 = 6,
+  kUNSET = 100,
 };
+
+/*!
+ * \brief Context info passing from MXNet OpContext
+ * dev_type is string repr of supported context, currently only "cpu" and "gpu"
+ * dev_id is the device index where the tensor locates
+ */
+typedef struct {
+  std::string dev_type;
+  int dev_id;
+} MXContext;
 
 enum MXReturnValue {
   MX_FAIL = 0,
@@ -209,21 +233,48 @@ enum MXReturnValue {
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(NULL) {}
+  MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
 
-  MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype) {}
+  MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
+           size_t vID, MXContext mx_ctx)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
+
+  /*! \brief populate internal tensor fields */
+  void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
+                 size_t vID, MXContext mx_ctx) {
+    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx;
+    shape.clear();
+    for (int j = 0; j < ndims; j++) {
+      shape.push_back(dims[j]);
+    }
+    setDLTensor();
+  }
 
   /*! \brief populate DLTensor fields */
   void setDLTensor() {
     dltensor.data = data_ptr;
-    dltensor.ctx.device_type = kDLCPU;
-    dltensor.ctx.device_id = 0;
     dltensor.ndim = shape.size();
     dltensor.shape = const_cast<int64_t*>(shape.data());
-    dltensor.strides = NULL;
+    dltensor.strides = nullptr;
     dltensor.byte_offset = 0;
     dltensor.dtype.lanes = 1;
+    dltensor.ctx.device_id = ctx.dev_id;
+    if (ctx.dev_type == "cpu")
+      dltensor.ctx.device_type = kDLCPU;
+    else if (ctx.dev_type == "gpu")
+      dltensor.ctx.device_type = kDLGPU;
+    else if (ctx.dev_type == "opencl")
+      dltensor.ctx.device_type = kDLOpenCL;
+    else if (ctx.dev_type == "vulcan")
+      dltensor.ctx.device_type = kDLVulkan;
+    else if (ctx.dev_type == "metal")
+      dltensor.ctx.device_type = kDLMetal;
+    else if (ctx.dev_type == "vpi")
+      dltensor.ctx.device_type = kDLVPI;
+    else if (ctx.dev_type == "rocm")
+      dltensor.ctx.device_type = kDLROCM;
+    else
+      dltensor.ctx.device_type = kDLExtDev;
     switch (dtype) {
     case kFloat32:
       dltensor.dtype.code = kDLFloat;
@@ -277,6 +328,16 @@ struct MXTensor {
     return size;
   }
 
+  /*! \brief helper function to compare two MXTensors */
+  inline bool isSame(const MXTensor &oth) const {
+    return data_ptr == oth.data_ptr &&
+           dtype == oth.dtype &&
+           verID == oth.verID &&
+           ctx.dev_type == oth.ctx.dev_type &&
+           ctx.dev_id == oth.ctx.dev_id &&
+           shape == oth.shape;
+  }
+
   // data is flatten 1D repr of tensor, elements are in continuous memory
   // user can access each element using the shape of tensor
   void *data_ptr;
@@ -287,31 +348,58 @@ struct MXTensor {
   // type can only be MXDType enum types
   MXDType dtype;
 
+  // version number updated if the tensor has changed since the last use by custom op
+  size_t verID;
+
+  // context of MXTensor representing which device the tensor data is located
+  MXContext ctx;
+
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
   DLTensor dltensor;
 };
 
-/*!
- * \brief resource malloc function to allocate memory inside Forward/Backward functions
- */
+/*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
+
+#if defined(__NVCC__)
+  typedef cudaStream_t mx_stream_t;
+#else
+  typedef void* mx_stream_t;
+#endif
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
  */
 class OpResource {
  public:
-  OpResource(xpu_malloc_t cm, void* ca) : cpu_malloc(cm), cpu_alloc(ca) {}
+  OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
+             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream)
+    : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
+      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream) {}
 
-  /*! \brief allocate memory controlled by MXNet */
-  void* alloc(int size) {
+  /*! \brief allocate cpu memory controlled by MXNet */
+  void* alloc_cpu(int size) {
     return cpu_malloc(cpu_alloc, size);
   }
 
+  /*! \brief allocate gpu memory controlled by MXNet */
+  void* alloc_gpu(int size) {
+    return gpu_malloc(gpu_alloc, size);
+  }
+
+  /*! \brief return the cuda stream object with correct type */
+  mx_stream_t get_cuda_stream() {
+    return static_cast<mx_stream_t>(cuda_stream);
+  }
+
  private:
-  xpu_malloc_t cpu_malloc;
-  void* cpu_alloc;
+  /*! \brief allocation lambda function */
+  xpu_malloc_t cpu_malloc, gpu_malloc;
+  /*! \brief lambda function to return allocated memory handle */
+  void *cpu_alloc, *gpu_alloc;
+  /*! \brief cuda stream passed from MXNet */
+  void *cuda_stream;
 };
 
 /*!
@@ -530,25 +618,28 @@ typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int> >&,
                                       std::vector<std::vector<unsigned int> >&);
 typedef MXReturnValue (*mutateInputs_t)(std::map<std::string, std::string>,
-                                      std::vector<int>&);
+                                        std::vector<int>&);
 typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
-                                      CustomStatefulOp**);
+                                         CustomStatefulOp**);
 
 /*!
  * \brief Class to hold custom operator registration
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) : name(op_name),
-    forward(NULL), backward(NULL), parse_attrs(NULL), infer_type(NULL),
-    infer_shape(NULL), mutate_inputs(NULL), create_opstate(NULL) {}
-  ~CustomOp() {}
-  CustomOp& setForward(fcomp_t fcomp) {
-    forward = fcomp;
+  explicit CustomOp(const char* op_name) :
+      name(op_name), parse_attrs(nullptr), infer_type(nullptr),
+      infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
+  CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
+    if (forward_ctx_map.count(ctx) > 0)
+      raiseDuplicateContextError();
+    forward_ctx_map[ctx] = fcomp;
     return *this;
   }
-  CustomOp& setBackward(fcomp_t fcomp) {
-    backward = fcomp;
+  CustomOp& setBackward(fcomp_t fgrad, const char* ctx) {
+    if (backward_ctx_map.count(ctx) > 0)
+      raiseDuplicateContextError();
+    backward_ctx_map[ctx] = fgrad;
     return *this;
   }
   CustomOp& setParseAttrs(parseAttrs_t func) {
@@ -567,21 +658,104 @@ class CustomOp {
     mutate_inputs = func;
     return *this;
   }
-  CustomOp& setCreateOpState(createOpState_t func) {
-    create_opstate = func;
+  CustomOp& setCreateOpState(createOpState_t func, const char* ctx) {
+    if (create_op_ctx_map.count(ctx) > 0)
+      raiseDuplicateContextError();
+    create_op_ctx_map[ctx] = func;
     return *this;
   }
+  CustomOp& setIsSubgraphOp() {
+    isSGop = true;
+    return *this;
+  }
+  void mapToVector() {
+    for (auto kv : forward_ctx_map) {
+      forward_ctx_cstr.push_back(kv.first);
+      forward_fp.push_back(kv.second);
+    }
+    for (auto kv : backward_ctx_map) {
+      backward_ctx_cstr.push_back(kv.first);
+      backward_fp.push_back(kv.second);
+    }
+    for (auto kv : create_op_ctx_map) {
+      create_op_ctx_cstr.push_back(kv.first);
+      create_op_fp.push_back(kv.second);
+    }
+  }
+  ~CustomOp() {}
 
   /*! \brief operator name */
   const char* name;
+
   /*! \brief operator functions */
-  fcomp_t forward;
-  fcomp_t backward;
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
-  createOpState_t create_opstate;
+  bool isSGop;
+
+  /*! \brief vector repr of ctx map to be easily loaded from c_api */
+  std::vector<const char*> forward_ctx_cstr, backward_ctx_cstr, create_op_ctx_cstr;
+  std::vector<fcomp_t> forward_fp, backward_fp;
+  std::vector<createOpState_t> create_op_fp;
+
+ private:
+  void raiseDuplicateContextError() {
+    std::string op_name_str(name);
+    throw std::runtime_error(
+      "Error! Error! Cannot register multiple functions under same context for operator '"
+      + op_name_str + "'");
+  }
+
+  /*! \brief dedup context maps - static string ctx to custom function */
+  std::unordered_map<const char*, fcomp_t> forward_ctx_map, backward_ctx_map;
+  std::unordered_map<const char*, createOpState_t> create_op_ctx_map;
+};
+
+/*! \brief Custom Subgraph Create function template */
+typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
+                                        std::unordered_map<std::string, std::string>&);
+typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
+                                          std::unordered_map<std::string, std::string>&,
+                                          std::unordered_map<std::string, std::string>&);
+
+/*!
+ * \brief An abstract class for subgraph property
+ */
+class CustomPartitioner {
+ public:
+  CustomPartitioner() : name("ERROR") {}
+  explicit CustomPartitioner(const char* backend_name) :
+    name(backend_name) {}
+  CustomPartitioner& addStrategy(const char* prop_name,
+                                 supportedOps_t fn,
+                                 const char* sg_name) {
+    strategies.push_back(prop_name);
+    supportedOps.push_back(fn);
+    op_names.push_back(sg_name);
+    return *this;
+  }
+  CustomPartitioner& setAcceptSubgraph(const char* prop_name, acceptSubgraph_t fn) {
+    accept_map[std::string(prop_name)] = fn;
+    return *this;
+  }
+  acceptSubgraph_t getAcceptSubgraph(int stg_id) {
+    std::string prop(strategies[stg_id]);
+    if (accept_map.find(prop) != accept_map.end())
+      return accept_map[prop];
+    else
+      return nullptr;
+  }
+
+  /*! \brief partitioner  name */
+  const char* name;
+  std::map<std::string, acceptSubgraph_t> accept_map;
+  /*! \brief strategy names */
+  std::vector<const char*> strategies;
+  /*! \brief supported ops function */
+  std::vector<supportedOps_t> supportedOps;
+  /*! \brief subgraph operator name */
+  std::vector<const char*> op_names;
 };
 
 /*!
@@ -595,7 +769,7 @@ class Registry {
    * \brief get singleton pointer to class
    * \returns pointer to class
    */
-  static Registry* get() {
+  static Registry* get() PRIVATE_SYMBOL {
     static Registry inst;
     return &inst;
   }
@@ -612,7 +786,7 @@ class Registry {
     return entries.size();
   }
   T& get(int idx) {
-    return *(entries[idx]);
+    return *(entries.at(idx));
   }
 
  private:
@@ -627,7 +801,7 @@ class Registry {
 /*!
  * \brief Macros to help with string concat
  * Annoyingly, the concat_ and concat macros are necessary to
- * be able to use __COUNTER__ in an identifier name 
+ * be able to use __COUNTER__ in an identifier name
  */
 #define MX_STR_CONCAT_(__a, __b) __a ## __b
 #define MX_STR_CONCAT(__a, __b) MX_STR_CONCAT_(__a, __b)
@@ -640,9 +814,16 @@ class Registry {
 #define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
 #define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
 
+#define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
+#define MX_REGISTER_PROP_DEF_(Name) CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
+
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
+
+#define REGISTER_PARTITIONER(Name) \
+  MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
+    Registry<CustomPartitioner>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -655,54 +836,94 @@ class Registry {
 typedef int (*opRegSize_t)(void);
 
 #define MXLIB_OPREGGET_STR "_opRegGet"
-typedef int (*opRegGet_t)(int, const char**, fcomp_t*, fcomp_t*,
-                          parseAttrs_t*, inferType_t*,
-                          inferShape_t*, mutateInputs_t*,
-                          createOpState_t*);
+typedef int (*opRegGet_t)(int idx, const char** name, int *isSGop,
+                          const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
+                          const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
+                          const char*** create_op_ctx, createOpState_t** create_op_fp,
+                          int* create_op_count,
+                          parseAttrs_t* parse, inferType_t* type,
+                          inferShape_t* shape, mutateInputs_t* mutate);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
-typedef int (*opCallFree_t)(void*);
+typedef int (*opCallFree_t)(void* ptr);
 
 #define MXLIB_OPCALLPARSEATTRS_STR "_opCallParseAttrs"
-typedef int (*opCallParseAttrs_t)(parseAttrs_t, const char* const*, const char* const*, int,
-                                  int*, int*);
+typedef int (*opCallParseAttrs_t)(parseAttrs_t parseAttrs, const char* const* keys,
+                                  const char* const* vals, int num,
+                                  int* num_in, int* num_out);
 
 #define MXLIB_OPCALLINFERSHAPE_STR "_opCallInferShape"
-typedef int (*opCallInferShape_t)(inferShape_t, const char* const*, const char* const*, int,
-                                  unsigned int**, int*, int,
-                                  unsigned int***, int**, int);
+typedef int (*opCallInferShape_t)(inferShape_t inferShape, const char* const* keys,
+                                  const char* const* vals, int num,
+                                  unsigned int** inshapes, int* indims, int num_in,
+                                  unsigned int*** outshapes, int** outdims, int num_out);
 
 #define MXLIB_OPCALLINFERTYPE_STR "_opCallInferType"
-typedef int (*opCallInferType_t)(inferType_t, const char* const*, const char* const*, int,
-                                  int*, int, int*, int);
+typedef int (*opCallInferType_t)(inferType_t inferType, const char* const* keys,
+                                 const char* const* vals, int num,
+                                 int* intypes, int num_in, int* outtypes, int num_out);
 
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
-typedef int (*opCallFComp_t)(fcomp_t, const char* const*, const char* const*, int,
-                           const int64_t**, int*, void**, int*, int,
-                           const int64_t**, int*, void**, int*, int,
-                           xpu_malloc_t, void*);
-
-#define MXLIB_OPCALLBKWD_STR "_opCallBackward"
-typedef int (*opCallBkwd_t)(fcomp_t, const char* const*, const char* const*, int,
-                            const int64_t**, int*, void**, int*, int,
-                            const int64_t**, int*, void**, int*, int,
-                            xpu_malloc_t, void*);
+typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
+                             const char* const* vals, int num,
+                             const int64_t** inshapes, int* indims,
+                             void** indata, int* intypes,
+                             size_t* inIDs, const char** indev_type,
+                             int* indev_id, int num_in,
+                             const int64_t** outshapes, int* outdims,
+                             void** outdata, int* outtypes,
+                             size_t* outIDs, const char** outdev_type,
+                             int* outdev_id, int num_out,
+                             xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
-typedef int (*opCallMutateInputs_t)(mutateInputs_t, const char* const*, const char* const*, int,
-                                    int**, int*);
+typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
+                                    const char* const* vals, int num,
+                                    int** mutate_indices, int* indices_size);
 
 #define MXLIB_OPCALLCREATEOPSTATE_STR "_opCallCreateOpState"
-typedef int (*opCallCreateOpState_t)(createOpState_t, const char* const*, const char* const*, int,
-                                     void**);
+typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* const* keys,
+                                     const char* const* vals, int num,
+                                     void** state_op);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
-typedef int (*opCallFStatefulComp_t)(bool, void*, const int64_t**, int*, void**, int*, int,
-                                     const int64_t**, int*, void**, int*, int,
-                                     xpu_malloc_t, void*);
+typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
+                                     const int64_t** inshapes, int* indims,
+                                     void** indata, int* intypes,
+                                     size_t* inIDs, const char** indev_type,
+                                     int* indev_id, int num_in,
+                                     const int64_t** outshapes, int* outdims,
+                                     void** outdata, int* outtypes,
+                                     size_t* outIDs, const char** outdev_type,
+                                     int* outdev_id, int num_out,
+                                     xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                                     xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream);
+
+#define MXLIB_PARTREGSIZE_STR "_partRegSize"
+typedef int (*partRegSize_t)(void);
+
+#define MXLIB_PARTREGGETCOUNT_STR "_partRegGetCount"
+typedef int (*partRegGetCount_t)(int idx, const char** name);
+
+#define MXLIB_PARTREGGET_STR "_partRegGet"
+typedef void (*partRegGet_t)(int part_idx, int stg_idx, const char** strategy,
+                             supportedOps_t* supportedOps, acceptSubgraph_t* acceptSubgraph,
+                             const char** op_name);
+
+#define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
+typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *json,
+                                      int num_ids, int *ids, const char* const* opt_keys,
+                                      const char* const* opt_vals, int num_opts);
+
+#define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
+typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph, const char *json,
+                                        int subgraph_id, int *accept, const char* const* opt_keys,
+                                        const char* const* opt_vals, int num_opts,
+                                        char*** attr_keys, char*** attr_vals, int *num_attrs);
 
 #define MXLIB_INITIALIZE_STR "initialize"
-typedef int (*initialize_t)(int);
+typedef int (*initialize_t)(int version);
 
 #define MXLIB_OPVERSION_STR "_opVersion"
 typedef int (*opVersion_t)();
@@ -734,19 +955,29 @@ extern "C" {
 #else
   void
 #endif
-  _opRegGet(int idx, const char** name, fcomp_t* fcomp, fcomp_t* fgrad,
+  _opRegGet(int idx, const char** name, int *isSGop,
+            const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
+            const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
+            const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
             parseAttrs_t* parse, inferType_t* type,
-            inferShape_t* shape, mutateInputs_t* mutate,
-            createOpState_t* create_op) {
-    CustomOp op = Registry<CustomOp>::get()->get(idx);
+            inferShape_t* shape, mutateInputs_t* mutate) {
+    CustomOp &op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
-    *fcomp = op.forward;
-    *fgrad = op.backward;
     *parse = op.parse_attrs;
     *type = op.infer_type;
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
-    *create_op = op.create_opstate;
+    *isSGop = op.isSGop;
+    op.mapToVector();
+    *forward_ctx = op.forward_ctx_cstr.data();
+    *forward_fp = op.forward_fp.data();
+    *forward_count = op.forward_fp.size();
+    *backward_ctx = op.backward_ctx_cstr.data();
+    *backward_fp = op.backward_fp.data();
+    *backward_count = op.backward_fp.size();
+    *create_op_ctx = op.create_op_ctx_cstr.data();
+    *create_op_fp = op.create_op_fp.data();
+    *create_op_count = op.create_op_fp.size();
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
@@ -866,13 +1097,13 @@ extern "C" {
 #else
   int
 #endif
-  _opCallFCompute(fcomp_t fcomp, const char* const* keys,
-                  const char* const* vals, int num,
-                  const int64_t** inshapes, int* indims,
-                  void** indata, int* intypes, int num_in,
-                  const int64_t** outshapes, int* outdims,
-                  void** outdata, int* outtypes, int num_out,
-                  xpu_malloc_t cpu_malloc, void* cpu_alloc) {
+  _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
+                  const int64_t** inshapes, int* indims, void** indata, int* intypes,
+                  size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
+                  const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
+                  size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
+                  xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -882,26 +1113,18 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].data_ptr = indata[i];
-      inputs[i].dtype = (MXDType)intypes[i];
-      for (int j = 0; j < indims[i]; j++) {
-        inputs[i].shape.push_back(inshapes[i][j]);
-      }
-      inputs[i].setDLTensor();
+      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                          inIDs[i], {indev_type[i], indev_id[i]});
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].data_ptr = outdata[i];
-      outputs[i].dtype = (MXDType) outtypes[i];
-      for (int j = 0; j < outdims[i]; j++) {
-        outputs[i].shape.push_back(outshapes[i][j]);
-      }
-      outputs[i].setDLTensor();
+      outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                           outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
 
     return fcomp(attrs, inputs, outputs, res);
   }
@@ -913,8 +1136,8 @@ extern "C" {
   int
 #endif
   _opCallMutateInputs(mutateInputs_t mutate, const char* const* keys,
-                    const char* const* vals, int num,
-                    int** mutate_indices, int* indices_size) {
+                      const char* const* vals, int num,
+                      int** mutate_indices, int* indices_size) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -954,6 +1177,7 @@ extern "C" {
     }
 
     // void pointer to hold custom state op instance created in custom library
+    // eventually state_op pointer is populated by instance from custom library
     CustomStatefulOp** op_ptr = reinterpret_cast<CustomStatefulOp**>(state_op);
     return create_op(attrs, op_ptr);
   }
@@ -964,39 +1188,134 @@ extern "C" {
 #else
   int
 #endif
-  _opCallFStatefulCompute(bool is_forward, void* state_op,
-                          const int64_t** inshapes, int* indims,
-                          void** indata, int* intypes, int num_in,
-                          const int64_t** outshapes, int* outdims,
-                          void** outdata, int* outtypes, int num_out,
-                          xpu_malloc_t cpu_malloc, void* cpu_alloc) {
+  _opCallFStatefulCompute(int is_forward, void* state_op,
+                          const int64_t** inshapes, int* indims, void** indata, int* intypes,
+                          size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
+                          const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
+                          size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
+                          xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
-      inputs[i].data_ptr = indata[i];
-      inputs[i].dtype = (MXDType)intypes[i];
-      for (int j = 0; j < indims[i]; j++) {
-        inputs[i].shape.push_back(inshapes[i][j]);
-      }
-      inputs[i].setDLTensor();
+      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                          inIDs[i], {indev_type[i], indev_id[i]});
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     for (int i = 0; i < num_out; i++) {
-      outputs[i].data_ptr = outdata[i];
-      outputs[i].dtype = (MXDType) outtypes[i];
-      for (int j = 0; j < outdims[i]; j++) {
-        outputs[i].shape.push_back(outshapes[i][j]);
-      }
-      outputs[i].setDLTensor();
+      outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                           outIDs[i], {outdev_type[i], outdev_id[i]});
     }
-    OpResource res(cpu_malloc, cpu_alloc);
+
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
+
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
       return op_ptr->Forward(inputs, outputs, res);
     }
     return op_ptr->Backward(inputs, outputs, res);
+  }
+
+  /*! \brief returns number of partitioners registered in this library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partRegSize() {
+    return Registry<CustomPartitioner>::get()->size();
+  }
+
+  /* returns number of strategies registered for partitioner
+   * at specified index */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partRegGetCount(int idx, const char** name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
+    *name = part.name;
+    return part.strategies.size();
+  }
+
+  /*! \brief returns partitioner registration at specified index */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) void __cdecl
+#else
+  void
+#endif
+  _partRegGet(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
+              acceptSubgraph_t* acceptSubgraph, const char** op_name) {
+    CustomPartitioner part = Registry<CustomPartitioner>::get()->get(part_idx);
+    *strategy = part.strategies[stg_idx];
+    *supportedOps = part.supportedOps[stg_idx];
+    *op_name = part.op_names[stg_idx];
+    *acceptSubgraph = part.getAcceptSubgraph(stg_idx);
+  }
+
+  /*! \brief returns status of calling parse attributes function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
+                        int num_ids, int *ids, const char* const* opt_keys,
+                        const char* const* opt_vals, int num_opts) {
+    std::string subgraph_json(json);
+    // create map of attributes from list
+    std::unordered_map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++) {
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+    }
+    return supportedOps(subgraph_json, num_ids, ids, opts);
+  }
+
+    /*! \brief returns status of calling parse attributes function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
+                          int subgraph_id, int *accept, const char* const* opt_keys,
+                          const char* const* opt_vals, int num_opts,
+                          char*** attr_keys, char*** attr_vals, int *num_attrs) {
+    std::string subgraph_json(json);
+    bool accept_bool = false;
+    // create map of attributes from list
+    std::unordered_map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++) {
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+    }
+
+    // attributes to set on subgraph node
+    std::unordered_map<std::string, std::string> attrs;
+
+    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
+    *accept = accept_bool;
+
+    if (attrs.size() > 0) {
+      *num_attrs = attrs.size();
+      // allocate space for attributes
+      *attr_keys = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+      *attr_vals = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+
+      // copy attributes
+      int i = 0;
+      for (auto kv : attrs) {
+        (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
+        (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));
+        snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
+        snprintf((*attr_vals)[i], kv.second.size()+1, "%s", kv.second.c_str());
+        i++;
+      }
+    }
+
+    return retval;
   }
 
   /*!

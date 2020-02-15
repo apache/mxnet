@@ -23,7 +23,10 @@ from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.base import py_str
 from mxnet.test_utils import assert_almost_equal
+from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
+from mxnet.test_utils import use_np
+import mxnet.numpy as _mx_np
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied)
 import numpy as np
@@ -952,17 +955,26 @@ def test_deferred_init():
     layer(x)
 
 
+
 def check_split_data(x, num_slice, batch_axis, **kwargs):
     res = gluon.utils.split_data(x, num_slice, batch_axis, **kwargs)
     assert len(res) == num_slice
-    mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
-                                      x.asnumpy())
+    if not is_np_array():
+        mx.test_utils.assert_almost_equal(mx.nd.concat(*res, dim=batch_axis).asnumpy(),
+                                          x.asnumpy())
+    else:
+        mx.test_utils.assert_almost_equal(_mx_np.concatenate(res, axis=batch_axis).asnumpy(),
+                                          x.asnumpy())
+    np_res = np.array_split(x.asnumpy(), num_slice, axis=batch_axis)
+    res_asnp = [s.asnumpy() for s in res]
+    for r1, r2 in zip(np_res, res_asnp):
+        assert all(r1.reshape(-1) == r2.reshape(-1))
 
 
 @with_seed()
-def test_split_data():
-    x = mx.nd.random.uniform(shape=(128, 33, 64))
-
+@use_np
+def test_split_data_np():
+    x = _mx_np.random.uniform(size=(128, 33, 64))
     check_split_data(x, 8, 0)
     check_split_data(x, 3, 1)
     check_split_data(x, 4, 1, even_split=False)
@@ -973,6 +985,18 @@ def test_split_data():
         return
     assert False, "Should have failed"
 
+@with_seed()
+def test_split_data():
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
+    check_split_data(x, 8, 0)
+    check_split_data(x, 3, 1)
+    check_split_data(x, 4, 1, even_split=False)
+    check_split_data(x, 15, 1, even_split=False)
+    try:
+        check_split_data(x, 4, 1)
+    except ValueError:
+        return
+    assert False, "Should have failed"
 
 @with_seed()
 def test_flatten():
@@ -1388,6 +1412,11 @@ def test_activations():
     prelu.initialize()
     x = point_to_validate.reshape((1, 3, 2))
     assert_almost_equal(prelu(x).asnumpy(), mx.nd.where(x >= 0, x, 0.25 * x).asnumpy())
+
+    multichannel_init = mx.initializer.Constant(mx.nd.array([0.1, 0.25, 0.5]))
+    prelu_multichannel = mx.gluon.nn.PReLU(alpha_initializer=multichannel_init, in_channels=3)
+    prelu_multichannel.initialize()
+    assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
 
     gelu = mx.gluon.nn.GELU()
     def gelu_test(x):

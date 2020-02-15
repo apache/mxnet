@@ -37,16 +37,6 @@ The following example shows how you might build a simple expression with the Sym
 	(a, b, c)
 
 
-Tutorials
----------
-.. container:: cards
-
-   .. card::
-      :title: Symbol Guide
-      :link: ../../tutorials/packages/symbol/
-
-      The Symbol guide. Start here!
-
 Symbol Package
 --------------
 

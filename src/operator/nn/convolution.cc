@@ -223,8 +223,6 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
       SHAPE_ASSIGN_CHECK(*in_shape, conv::kBias, Shape1(param_.num_filter));
     }
 
-    // Note: 3D dilation currently not supported.
-    // Calculations below done to preserve symmetry with 1D/2D code.
     const index_t dilated_ksize_d = param_.DilatedKernelSize(0);
     const index_t dilated_ksize_y = param_.DilatedKernelSize(1);
     const index_t dilated_ksize_x = param_.DilatedKernelSize(2);
@@ -239,8 +237,6 @@ static bool ConvolutionShape(const nnvm::NodeAttrs& attrs,
       << "incorrect stride size: " << param_.stride;
     CHECK_GT(param_.dilate.Size(), 0U) \
       << "incorrect dilate size: " << param_.dilate;
-    CHECK_EQ(param_.dilate.Size(), 1U)
-      << "Dilate is not supported in 3d convolution";
     Shape<5> oshape;
     oshape[0] = dshape[0];
     oshape[1] = param_.num_filter;
@@ -384,7 +380,7 @@ void ConvolutionParamParser(nnvm::NodeAttrs* attrs) {
 
 struct ConvolutionGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     const ConvolutionParam& param = nnvm::get<ConvolutionParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -510,6 +506,10 @@ There are other options to tune the performance.
 .add_arguments(ConvolutionParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Convolution)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
+  return params.no_bias ? 3 : 4;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const ConvolutionParam& params = nnvm::get<ConvolutionParam>(attrs.parsed);
   return params.no_bias ? 2 : 3;

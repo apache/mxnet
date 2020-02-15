@@ -19,7 +19,6 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """Profiler setting methods."""
-from __future__ import absolute_import
 import ctypes
 import warnings
 from .base import _LIB, check_call, c_str, ProfileHandle, c_str_array, py_str, KVStoreHandle

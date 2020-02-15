@@ -283,11 +283,12 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
     return;
   }
   const TransposeParam& param = nnvm::get<TransposeParam>(attrs.parsed);
-  CHECK_EQ(req[0], kWriteTo) << "Transpose does not support kWriteInplace and kAddTo";
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo) <<
+      "Transpose only supports kNullOp, kWriteTo and kAddTo";
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
-  if (SupportMKLDNNTranspose(param, inputs[0])) {
+  if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
     MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
@@ -331,7 +332,7 @@ Examples::
 .set_attr<mxnet::FInferShape>("FInferShape", TransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
     if (param.axes.ndim() == 0) {
       return MakeNonlossGradNode(

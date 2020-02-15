@@ -593,7 +593,7 @@ void SearchAxisCompute(const nnvm::NodeAttrs& attrs,
   }
   if (input.shape_.Size() == 0U) return;  // zero-size tensor
   mxnet::TShape shape = AxisShapeCompact(input.shape_, &axis, false);
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> out = outputs[0].get_with_shape<xpu, 2, DType>(
       Shape2(shape[0], shape[2]), s);
     Tensor<xpu, 3, DType> in = input.get_with_shape<xpu, 3, DType>(
@@ -626,6 +626,39 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
         broadcast::Reduce<reducer, NDim, DType, OP, safe_acc>(
+            s, out_data, req[0], workspace, in_data);
+        if (normalize) {
+          auto out = out_data.FlatTo2D<xpu, OType>(s);
+          out /= scalar<OType>(src_shape.Size()/dst_shape.Size());
+        }
+      });
+    });
+  });
+}
+
+template<typename xpu, typename reducer, bool safe_acc, bool normalize = false,
+         typename OP = op::mshadow_op::NonZero>
+void ReduceAxesComputeBoolImpl(const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs,
+                               const mxnet::TShape& small) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+
+  mxnet::TShape src_shape, dst_shape;
+  BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
+      const TBlob in_data = inputs[0].reshape(src_shape);
+      const TBlob out_data = outputs[0].reshape(dst_shape);
+      BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
+        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
+            s, out_data.shape_, req[0], in_data.shape_);
+        Tensor<xpu, 1, char> workspace =
+            ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+        broadcast::ReduceBool<reducer, NDim, DType, OP>(
             s, out_data, req[0], workspace, in_data);
         if (normalize) {
           auto out = out_data.FlatTo2D<xpu, OType>(s);
@@ -1122,7 +1155,7 @@ inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
 
 struct ReduceGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode(
         op_name, n,
@@ -1152,7 +1185,7 @@ inline bool LpNormStorageType(const nnvm::NodeAttrs& attrs,
                                      DispatchMode::kFCompute);
   }
   if (param.ord == 2) {
-    const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape();
+    const mxnet::TShape axis = param.axis.has_value() ? param.axis.value() : mxnet::TShape(0, -1);
     if (!dispatched && (in_stype == kRowSparseStorage || in_stype == kCSRStorage) &&
         axis.ndim() == 0 && param.ord == 2) {
       // l2 norm: rsp/csr, axis = () -> dns
@@ -1637,7 +1670,7 @@ Defined in )code";
   .set_num_outputs(1)                                           \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .set_attr<nnvm::FGradient>("FGradient",                       \
-    [](const nnvm::NodePtr& n,                                  \
+    [](const nnvm::ObjectPtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
       return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
                                  {{"keepdims", "true"}});              \

@@ -238,18 +238,18 @@ __global__ void LayerNormFusedForwardKernelContig(const int nbatch,
     AType invstd_eps = DType(1.0) / std_eps;
     DType* out_col_val = out_data + bid * nchannel;
 
-    if (gamma != NULL && beta != NULL) {
+    if (gamma != nullptr && beta != nullptr) {
       for (int i = tid; i < nchannel; i += nthread) {
         out_col_val[i] = gamma[i] * static_cast<DType>(invstd_eps *
                                                        (static_cast<AType>(col_vals[i]) - mean))
                                                          + beta[i];
       }
-    } else if (gamma == NULL && beta != NULL) {
+    } else if (gamma == nullptr && beta != nullptr) {
       for (int i = tid; i < nchannel; i += nthread) {
         out_col_val[i] = static_cast<DType>(invstd_eps * (static_cast<AType>(col_vals[i]) - mean))
                                                        + beta[i];
       }
-    } else if (gamma != NULL && beta == NULL) {
+    } else if (gamma != nullptr && beta == nullptr) {
       for (int i = tid; i < nchannel; i += nthread) {
         out_col_val[i] = gamma[i] * static_cast<DType>(invstd_eps *
                                                        (static_cast<AType>(col_vals[i]) - mean));

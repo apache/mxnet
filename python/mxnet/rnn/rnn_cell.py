@@ -20,7 +20,6 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines
 """Definition of various recurrent neural network cells."""
-from __future__ import print_function
 
 import warnings
 import functools

@@ -126,6 +126,8 @@ def test_lstmp():
     check_rnn_layer_forward(gluon.rnn.LSTM(10, 2, bidirectional=True, dropout=0.5, projection_size=5),
                             mx.nd.ones((8, 3, 20)),
                             [mx.nd.ones((4, 3, 5)), mx.nd.ones((4, 3, 10))], run_only=True, ctx=ctx)
+    lstm_layer.save_parameters('gpu_tmp.params')
+    lstm_layer.load_parameters('gpu_tmp.params')
 
 
 @with_seed()
@@ -594,6 +596,24 @@ def test_hybridblock_mix_ctx_raise():
     assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
                                                  mx.nd.ones((10,), ctx=mx.cpu())))
 
+@with_seed()
+def test_symbol_block_symbolic_bn_fp16_cast():
+    with mx.gpu(0):
+        net = mx.gluon.nn.HybridSequential()
+        sym = mx.sym.var('data')
+        conv = mx.sym.Convolution(sym, kernel=(3, 3), num_filter=16)
+        bn = mx.sym.BatchNorm(conv, name='bn_test')
+        internals = bn.get_internals()
+        net.add(mx.gluon.nn.SymbolBlock([internals['bn_test_output']], [mx.sym.var('data')]))
+        net.add(mx.gluon.nn.Conv2D(10, kernel_size=1))
+        net.initialize()
+        x = mx.nd.zeros((1, 3, 32, 32), dtype='float32')
+        y = net(x)
+        assert np.dtype(y.dtype).name == 'float32'
+        net.cast('float16')
+        x = x.astype('float16')
+        y1 = net(x)
+        assert np.dtype(y1.dtype).name == 'float16'
 
 if __name__ == '__main__':
     import nose

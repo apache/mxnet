@@ -32,245 +32,10 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
-const char CachedOp::FULL[] = "full";
-const char CachedOp::FORWARD[] = "forward";
-const char CachedOp::BACKWARD[] = "backward";
-const char CachedOp::REF_COUNT[] = "ref_count";
-const char CachedOp::MEM_PLAN[] = "mem_plan";
-const char CachedOp::STORAGE_PLAN[] = "storage_plan";
-
-namespace {
-
-std::string AddPrefix(const std::string& prefix,
-                      const std::string& s) {
-  return prefix + "_" + s;
-}
-
-}  // namespace
-
-struct CachedOp::GraphInfo {
-  nnvm::Graph fwd_graph;
-  nnvm::Graph grad_graph;
-  nnvm::Graph full_graph;
-  std::vector<nnvm::NodeEntry> ograd_entries;
-  std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output;
-  std::vector<OpReqType> bwd_output_reqs;
-  std::vector<uint32_t> bwd_input_eid;
-};
-
 struct CachedOp::DynamicRuntime {
   GraphInfo info;
   std::vector<NDArray> buff;
   std::vector<OpStatePtr> op_states;
-};
-
-void CreateFullGraph(const nnvm::Symbol& sym,
-                     nnvm::Graph* fwd_graph,
-                     nnvm::Graph* grad_graph,
-                     nnvm::Graph* full_graph,
-                     std::vector<nnvm::NodeEntry>* ograd_entries,
-                     std::unordered_map<uint32_t, uint32_t>* fwd_input_to_grad_output) {
-  using namespace nnvm;
-  static const std::vector<const Op*> zero_ops{Op::Get("zeros_like"), Op::Get("_zeros")};
-  static const auto _copy_op = Op::Get("_copy");
-  {
-    NodeEntryMap<size_t> dedup_out;
-    for (const NodeEntry& nodeEntry : sym.outputs) {
-      if (dedup_out.find(nodeEntry) != dedup_out.end()) {
-        NodePtr copy_node = Node::Create();
-        copy_node->attrs.op = _copy_op;
-        copy_node->attrs.name =
-            nodeEntry.node->attrs.name + "_copy" + std::to_string(dedup_out[nodeEntry]++);
-        copy_node->inputs.emplace_back(nodeEntry);
-        if (_copy_op->attr_parser != nullptr) {
-          _copy_op->attr_parser(&(copy_node->attrs));
-        }
-        fwd_graph->outputs.emplace_back(std::move(copy_node));
-      } else {
-        dedup_out.emplace(nodeEntry, 0);
-        fwd_graph->outputs.push_back(nodeEntry);
-      }
-    }
-  }
-
-  bool do_elim_common_expr = dmlc::GetEnv("MXNET_ELIMINATE_COMMON_EXPR", true);
-  if (do_elim_common_expr)
-    *fwd_graph = exec::EliminateCommonExpr(std::move(*fwd_graph));
-
-  // construct backward graph
-  {
-    ograd_entries->reserve(fwd_graph->outputs.size());
-    for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
-      nnvm::NodePtr np = Node::Create();
-      np->attrs.name = "_head_grad_" + std::to_string(i);
-      ograd_entries->emplace_back(np);
-    }
-
-    std::vector<NodeEntry> xs;
-    const IndexedGraph& indexed_graph = fwd_graph->indexed_graph();
-    for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
-      const uint32_t node_id = indexed_graph.input_nodes()[i];
-      if (indexed_graph.mutable_input_nodes().count(node_id))
-        continue;
-      (*fwd_input_to_grad_output)[i] = xs.size();
-      xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
-    }
-
-    CHECK(!xs.empty())
-        << "There are no inputs in computation graph that require gradients.";
-
-    *grad_graph = pass::MXGradient(
-        *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-        exec::AggregateGradient, nullptr, nullptr,
-        zero_ops, "_copy");
-  }
-
-  // construct full graph
-  {
-    full_graph->outputs = fwd_graph->outputs;
-    for (const auto& i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
-  }
-}
-
-void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
-  const auto& idx = fwd_graph->indexed_graph();
-  CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
-
-  std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
-  for (const auto& i : idx.input_nodes()) ++ref_count[idx.entry_id(i, 0)];
-  for (const auto& i : idx.outputs()) ++ref_count[idx.entry_id(i)];
-  for (size_t i = 0; i < idx.num_nodes(); ++i) {
-    for (const auto& j : idx[i].inputs) ++ref_count[idx.entry_id(j)];
-  }
-
-  fwd_graph->attrs[AddPrefix(CachedOp::FORWARD, CachedOp::REF_COUNT)] =
-      std::make_shared<dmlc::any>(std::move(ref_count));
-
-  size_t num_forward_nodes = idx.num_nodes();
-  size_t num_forward_entries = idx.num_node_entries();
-
-  const auto& full_idx = full_graph.indexed_graph();
-
-  std::vector<uint32_t> temp_ref_count(full_idx.num_node_entries(), 0);
-  for (size_t i = num_forward_nodes; i < full_idx.num_nodes(); ++i) {
-    for (const auto& j : full_idx[i].inputs) {
-       ++temp_ref_count[full_idx.entry_id(j)];
-    }
-  }
-
-  auto full_ref_count = fwd_graph->GetAttr<std::vector<uint32_t> >(AddPrefix(CachedOp::FORWARD,
-                                                                             CachedOp::REF_COUNT));
-  for (size_t i = 0; i < num_forward_entries; ++i) full_ref_count.at(i) += temp_ref_count[i];
-  fwd_graph->attrs[AddPrefix(CachedOp::FULL, CachedOp::REF_COUNT)] =
-      std::make_shared<dmlc::any>(std::move(full_ref_count));
-}
-
-void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Graph * grad_graph,
-                   const Context& context, size_t num_forward_outputs, const bool inlining) {
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
-  if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", true)) {
-    nnvm::Graph unoptimized_graph;
-    common::CopyGraph(&unoptimized_graph, *full_graph, false);
-
-    if (common::CheckForInputNameDuplicates(unoptimized_graph.indexed_graph())) {
-      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-      *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
-      full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
-      *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
-      // Check the topological order of inputs
-      const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
-      const auto &new_inputs = full_graph->indexed_graph().input_nodes();
-      if (original_inputs.size() != new_inputs.size()) {
-        LOG(WARNING)
-          << "Number of inputs after fusion does not match original number of inputs. "
-          << "This is most probably a bug. Disabling fusion for this run.";
-        *full_graph = unoptimized_graph;
-      } else {
-        for (size_t i = 0; i < new_inputs.size(); ++i) {
-          if (unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name !=
-              full_graph->indexed_graph()[new_inputs[i]].source->attrs.name) {
-            LOG(WARNING) << "Disabling fusion due to altered topological order of inputs.";
-            *full_graph = unoptimized_graph;
-            break;
-          }
-        }
-      }
-    } else {
-      LOG(WARNING)
-        << "Graph contains duplicate names for some of its inputs - fusion is NOT enabled!";
-     }
-  }
-#else
-  // Only warn user if MXNET_USE_FUSION env var is explicitly set
-  if (context.dev_mask() == kGPU && !inlining && dmlc::GetEnv("MXNET_USE_FUSION", false)) {
-    exec::WarnFusionNotSupported();
-  }
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
-
-  *fwd_graph = nnvm::Graph();
-  fwd_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin(),
-                                                    full_graph->outputs.begin() +
-                                                    num_forward_outputs);
-  *grad_graph = nnvm::Graph();
-  grad_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin() +
-                                                     num_forward_outputs,
-                                                     full_graph->outputs.end());
-  SetRefCounts(fwd_graph, *full_graph);
-}
-
-struct CachedOp::CachedOpState {
-  CachedOpState(const Context& context_,
-                const nnvm::Graph& fwd_graph_,
-                const nnvm::Graph& full_graph_,
-                const bool inlining_) {
-    context = context_;
-    nnvm::Symbol sym;
-    sym.outputs = fwd_graph_.outputs;
-    CreateFullGraph(sym.Copy(), &info.fwd_graph, &info.grad_graph,
-                    &info.full_graph, &info.ograd_entries,
-                    &info.fwd_input_to_grad_output);
-
-    OptimizeGraph(&info.full_graph, &info.fwd_graph, &info.grad_graph,
-                  context_, fwd_graph_.outputs.size(), inlining_);
-
-    size_t max_nodes = info.full_graph.indexed_graph().num_nodes();
-    size_t max_entries = info.full_graph.indexed_graph().num_node_entries();
-    info.fwd_graph.attrs["context"] = std::make_shared<dmlc::any>(
-        std::vector<Context>(info.fwd_graph.indexed_graph().num_nodes(), context));
-    info.full_graph.attrs["context"] = std::make_shared<dmlc::any>(
-        std::vector<Context>(max_nodes, context));
-
-    buff.resize(max_entries);
-    arrays.resize(max_entries);
-    array_reqs.resize(max_entries);
-    dynamic_entries.resize(max_entries, false);
-    op_states.resize(max_nodes);
-    execs.resize(max_nodes);
-    opr_segs.resize(max_nodes);
-  }
-
-  std::mutex mutex;
-  Context context;
-  GraphInfo info;
-
-  bool recording = false;
-  bool fwd_alloc = false;
-  bool bwd_alloc = false;
-  bool fwd_exec_init = false;
-  bool bwd_exec_init = false;
-
-  std::vector<NDArray> buff;
-  std::vector<NDArray*> arrays;
-  std::vector<NDArray*> arrays_with_in_out;
-  std::vector<OpReqType> array_reqs;
-
-  std::vector<OpStatePtr> op_states;
-  std::vector<std::shared_ptr<exec::OpExecutor> > execs;
-  std::vector<imperative::EngineOprSeg> opr_segs;
-
-  std::vector<bool> dynamic_entries;
-  std::multimap<size_t, NDArray> fwd_reuse_pool;
-  std::multimap<size_t, NDArray> bwd_reuse_pool;
 };
 
 CachedOp::CachedOp(
@@ -295,21 +60,7 @@ CachedOp::CachedOp(
         (idx.num_nodes() - idx.input_nodes().size()) <= config_.inline_limit;
   }
 
-  // Set params
-  {
-    const auto& indexed_graph = fwd_graph_.indexed_graph();
-    if (config_.data_indices.ndim() || config_.param_indices.ndim()) {
-      CHECK_EQ(config_.data_indices.ndim() + config_.param_indices.ndim(),
-               indexed_graph.input_nodes().size());
-    } else {
-      std::vector<uint32_t> tmp;
-      tmp.reserve(indexed_graph.input_nodes().size());
-      for (size_t i = 0; i < indexed_graph.input_nodes().size(); ++i) {
-        tmp.emplace_back(i);
-      }
-      config_.data_indices.assign(tmp.begin(), tmp.end());
-    }
-  }
+  SetInputIndices(fwd_graph_, config_.param_indices, &config_.data_indices);
 
   // Set the backward dependency vectors
   {
@@ -339,7 +90,7 @@ CachedOp::~CachedOp() {
 }
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
-    const nnvm::NodePtr& node,
+    const nnvm::ObjectPtr& node,
     const std::vector<nnvm::NodeEntry>& ograds) const {
   using namespace nnvm;
   static const auto _backward_CachedOp = Op::Get("_backward_CachedOp");
@@ -871,6 +622,12 @@ OpStatePtr CachedOp::StaticForward(
   bool recording = Imperative::Get()->is_recording();
   auto state_ptr = GetCachedOpState(default_ctx);
   auto& state = state_ptr.get_state<CachedOpState>();
+
+  // Need to lock the mutex on the state, this allows
+  // for multi context push of ops to dependency engine.
+  // Required to lock for the whole function since static
+  // alloc allocates memory, and executors once and reuses the alloced memory
+  // and executors for multiple forward invokes of the same op.
   std::lock_guard<std::mutex> lock(state.mutex);
 
   bool match = SetForwardGraph(&state.info, recording, inputs);
@@ -955,7 +712,6 @@ OpStatePtr CachedOp::DynamicForward(
   }
   nnvm::Graph& g = runtime.info.fwd_graph;
   const auto& idx = g.indexed_graph();
-  size_t num_inputs = idx.input_nodes().size();
   auto& buff = runtime.buff;
   auto& states = runtime.op_states;
 
@@ -967,39 +723,19 @@ OpStatePtr CachedOp::DynamicForward(
   for (auto& buffered_array : buff) {
     arrays.push_back(&buffered_array);
   }
-  for (size_t i = 0; i < num_inputs; ++i) {
-    arrays[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
-  }
-  for (size_t i = 0; i < idx.outputs().size(); ++i) {
-    auto eid = idx.entry_id(idx.outputs()[i]);
-    if (!arrays[eid]->is_none()) *outputs[i] = arrays[eid]->Detach();
-    arrays[eid] = outputs[i];
-  }
-
-  // Allocate NDArrays
+  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
   const std::string& graph_type = recording ? FULL : FORWARD;
   std::vector<uint32_t> ref_count =
     g.GetAttr<std::vector<uint32_t> >(AddPrefix(graph_type, REF_COUNT));
-
-  std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
-  const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+  CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+
   if (!use_naive_run) {
     const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
-    AllocateMemory(g, idx, default_ctx, 0, idx.num_node_entries(),
-                  mem_plan, arrays, &array_reqs);
-    const auto& dtypes = g.GetAttr<DTypeVector>("dtype");
-    const auto& shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    const auto& stypes = g.GetAttr<StorageTypeVector>("storage_type");
-    for (size_t i = 0; i < outputs.size(); ++i) {
-      auto eid = idx.entry_id(idx.outputs()[i]);
-      arrays[eid] = outputs[i];
-      if (!outputs[i]->is_none()) continue;
-      *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                            shapes[eid], default_ctx, true, dtypes[eid]);
-    }
+    CreateGraphNDs(g, default_ctx, mem_plan, &array_reqs, &arrays);
     // If CachedOp is running in the inline mode, it uses RunGraph to record
     // computation; otherwise, CachedOp records computation itself.
     // So if it's not the inline mode, we disable recording.
@@ -1032,17 +768,19 @@ OpStatePtr CachedOp::Forward(
   CHECK_EQ(inputs.size(), num_inputs());
 
   Context default_ctx = inputs[0]->ctx();
-  auto state_ptr = GetCachedOpState(default_ctx);
-  auto& state = state_ptr.get_state<CachedOpState>();
+  {
+    auto state_ptr = GetCachedOpState(default_ctx);
+    auto& state = state_ptr.get_state<CachedOpState>();
 
-  const auto& idx = state.info.fwd_graph.indexed_graph();
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    CHECK_EQ(inputs[i]->ctx(), default_ctx)
-        << "CachedOp requires all inputs to live on the same context. But "
-        << idx[idx.input_nodes()[0]].source->attrs.name
-        << " is on " << default_ctx << " while "
-        << idx[idx.input_nodes()[i]].source->attrs.name
-        << " is on " << inputs[i]->ctx();
+    const auto& idx = state.info.fwd_graph.indexed_graph();
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      CHECK_EQ(inputs[i]->ctx(), default_ctx)
+          << "CachedOp requires all inputs to live on the same context. But "
+          << idx[idx.input_nodes()[0]].source->attrs.name
+          << " is on " << default_ctx << " while "
+          << idx[idx.input_nodes()[i]].source->attrs.name
+          << " is on " << inputs[i]->ctx();
+    }
   }
 
   int prev_bulk_size = Engine::Get()->set_bulk_size(config_.forward_bulk_size);
@@ -1521,7 +1259,7 @@ NNVM_REGISTER_OP(_CachedOp)
   })
 .set_attr_parser(CachedOpParamParser)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
     return op->Gradient(n, ograds);
   })

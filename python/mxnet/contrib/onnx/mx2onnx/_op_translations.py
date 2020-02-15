@@ -51,10 +51,6 @@
 Conversion Functions for common layers.
 Add new functions here with a decorator.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import re
 import logging
@@ -2080,3 +2076,21 @@ def convert_topk(node, **kwargs):
     )
 
     return [topk_node]
+
+
+@mx_op.register("take")
+def convert_take(node, **kwargs):
+    """Map MXNet's Take operator attributes to onnx's Gather operator.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    axis = int(attrs.get('axis', 0))
+
+    node = onnx.helper.make_node(
+        "Gather",
+        input_nodes,
+        [name],
+        axis=axis,
+        name=name,
+    )
+    return [node]

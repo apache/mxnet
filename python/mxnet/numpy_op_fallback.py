@@ -17,13 +17,14 @@
 
 """Fallback-to-NumPy operator implementation."""
 
-from __future__ import absolute_import
+from distutils.version import StrictVersion
 import functools
 import ast
 import numpy as np
 from . import operator
 from . import numpy as _mx_np  # pylint: disable=reimported
 from .util import np_array, use_np
+from .numpy.utils import _STR_2_DTYPE_
 from .ndarray.numpy import _internal as _nd_npi
 from .symbol.numpy import _internal as _sym_npi
 
@@ -47,6 +48,55 @@ def register(op_name, imperative=True, symbolic=True):
         return prop_cls
 
     return _register_helper
+
+
+@use_np  # enforce np shape and array semantics for all the methods in this class
+class EmptyLike(operator.CustomOp):
+    """Fallback to NumPy empty_like operator."""
+    def __init__(self, dtype, order, subok, shape):
+        super(EmptyLike, self).__init__()
+        self._dtype = dtype
+        self._order = order
+        self._subok = subok
+        self._shape = shape
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        np_version = np.version.version
+        if StrictVersion(np_version) >= StrictVersion('1.6.0'):
+            out = np.empty_like(in_data[0].asnumpy(), dtype=self._dtype, order=self._order,
+                                subok=self._subok)
+        else:
+            out = np.empty_like(in_data[0].asnumpy())
+        self.assign(out_data[0], req[0], _mx_np.array(out, ctx=in_data[0].ctx))
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        raise NotImplementedError('Operator empty_like does not support gradient computation')
+
+
+@register('empty_like_fallback')
+class EmptyLikeProp(operator.CustomOpProp):
+    """Fallback empty_like operator properties."""
+    def __init__(self, dtype, order, subok, shape):
+        super(EmptyLikeProp, self).__init__(need_top_grad=True)
+        self._dtype = None if dtype == 'None' else dtype
+        self._order = order
+        self._subok = ast.literal_eval(subok)
+        self._shape = ast.literal_eval(shape)
+
+    def list_arguments(self):
+        return ['prototype']
+
+    def infer_shape(self, in_shape):
+        return (in_shape[0],), (in_shape[0],), ()
+
+    def infer_type(self, in_type):
+        if self._dtype is None:
+            return (in_type[0],), (in_type[0],), ()
+        else:
+            return (in_type[0],), (_STR_2_DTYPE_[self._dtype],), ()
+
+    def create_operator(self, ctx, in_shapes, in_dtypes):
+        return EmptyLike(self._dtype, self._order, self._subok, self._shape)
 
 
 @use_np  # enforce np shape and array semantics for all the methods in this class
@@ -114,3 +164,66 @@ class Unravel_indexProp(operator.CustomOpProp):
 
     def create_operator(self, ctx, in_shapes, in_dtypes):
         return Unravel_index(self._shape)
+
+
+@use_np
+class MultivariateNormal(operator.CustomOp):
+    """Fallback to the front-end implementation of random.multivariate_normal."""
+    def __init__(self, size=None):
+        super(MultivariateNormal, self).__init__()
+        self._size = size
+
+    def forward(self, is_train, req, in_data, out_data, aux):
+        loc = in_data[0]
+        cov = in_data[1]
+        if cov.dtype == np.float16:
+            scale = _mx_np.linalg.cholesky(cov.astype(np.float32)).astype(np.float16)
+        else:
+            scale = _mx_np.linalg.cholesky(cov)
+        #set context
+        noise = _mx_np.random.normal(size=out_data[0].shape, dtype=loc.dtype, ctx=loc.ctx)
+        out = loc + _mx_np.einsum('...jk,...j->...k', scale, noise)
+        self.assign(out_data[0], req[0], out)
+
+    def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+        raise NotImplementedError('Operator random.multivariate_normal'
+                                  ' does not support gradient computation')
+
+
+@register('mvn_fallback')
+class MultivariateNormalProp(operator.CustomOpProp):
+    """Fallback np.random.multivariate_normal operator properties."""
+
+    def __init__(self, size=None):
+        super(MultivariateNormalProp, self).__init__(need_top_grad=True)
+        self._size = ast.literal_eval(
+            size) if size is not None else None
+
+    def list_arguments(self):
+        return ['mean', 'cov']
+
+    def infer_shape(self, in_shape):
+        loc_shape = in_shape[0]
+        cov_shape = in_shape[1]
+        if len(loc_shape) < 1:
+            raise ValueError("mean must be at least 1 dimensional")
+        if len(cov_shape) < 2:
+            raise ValueError("cov must be at least 2 dimensional")
+        if cov_shape[-1] != cov_shape[-2]:
+            raise ValueError("the last two dimentions of the parameter cov have to be the same,"
+                             " whereas the shape of cov is {}".format(cov_shape))
+        if cov_shape[-1] != loc_shape[-1]:
+            raise ValueError("mean and cov must have same length."
+                             "The shape of mean is {} but the shape of cov is {}"
+                             .format(loc_shape[-1:], cov_shape[-2:]))
+        # handle shape mismatch here
+        out_shape = np.broadcast(np.empty(loc_shape), np.empty(cov_shape[:-1])).shape
+        if self._size is not None:
+            self._size = (self._size,) if np.isscalar(
+                self._size) else self._size
+            out_shape = self._size + out_shape
+
+        return in_shape, (out_shape,), ()
+
+    def create_operator(self, ctx, in_shapes, in_dtypes):
+        return MultivariateNormal(self._size)

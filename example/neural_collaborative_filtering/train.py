@@ -45,7 +45,7 @@ parser.add_argument('--model-type', type=str, default='neumf', choices=['neumf',
                     help="mdoel type")
 parser.add_argument('--num-negative', type=int, default=4,
                     help="number of negative samples per positive sample while training.")
-parser.add_argument('--layers', default='[256, 128, 64]',
+parser.add_argument('--layers', default='[256, 256, 128, 64]',
                     help="list of number hiddens of fc layers in mlp model.")
 parser.add_argument('--factor-size-gmf', type=int, default=64,
                     help="outdim of gmf embedding layers.")

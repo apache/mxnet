@@ -728,7 +728,7 @@ namespace mxnet {
 namespace op {
 template <>
 Operator *CreateOp<gpu>(PadParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, { op = new PadOp<gpu, DType>(param); })
   return op;
 }

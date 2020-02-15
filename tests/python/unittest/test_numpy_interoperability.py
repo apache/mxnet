@@ -18,8 +18,12 @@
 # pylint: skip-file
 from __future__ import absolute_import
 from __future__ import division
+from distutils.version import StrictVersion
+import sys
+import platform
 import itertools
 import numpy as _np
+import unittest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
@@ -57,6 +61,32 @@ class OpArgMngr(object):
         return OpArgMngr._args.get(name, None)
 
 
+def _add_workload_all():
+    # check bad element in all positions
+    for i in range(256-7):
+        e = np.array([True] * 256, dtype=bool)[7::]
+        e[i] = False
+        OpArgMngr.add_workload('all', e)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        e = np.array([True] * 100043, dtype=bool)
+        e[i] = False
+        OpArgMngr.add_workload('all', e)
+
+
+def _add_workload_any():
+    # check bad element in all positions
+    for i in range(256-7):
+        d = np.array([False] * 256, dtype=bool)[7::]
+        d[i] = True
+        OpArgMngr.add_workload('any', d)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        d = np.array([False] * 100043, dtype=bool)
+        d[i] = True
+        OpArgMngr.add_workload('any', d)
+
+
 def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', indices=np.array([2],dtype=_np.int64), shape=(2, 2))
     OpArgMngr.add_workload('unravel_index', np.array([(2*3 + 1)*6 + 4], dtype=_np.int64), (4, 3, 6))
@@ -64,6 +94,29 @@ def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', np.array([1621],dtype=_np.uint8), (6, 7, 8, 9))
     OpArgMngr.add_workload('unravel_index', np.array([],dtype=_np.int64), (10, 3, 5))
     OpArgMngr.add_workload('unravel_index', np.array([3], dtype=_np.int32), (2,2))
+
+
+def _add_workload_diag_indices_from():
+    a = np.random.uniform(-4, 4, size=(4,4))
+    OpArgMngr.add_workload('diag_indices_from', a)
+
+
+def _add_workload_bincount():
+    y = np.arange(4).astype(int)
+    y1 = np.array([1, 5, 2, 4, 1], dtype=_np.int64)
+    y2 = np.array((), dtype=_np.int8)
+    w = np.array([0.2, 0.3, 0.5, 0.1])
+    w1 = np.array([0.2, 0.3, 0.5, 0.1, 0.2])
+
+    OpArgMngr.add_workload('bincount', y)
+    OpArgMngr.add_workload('bincount', y1)
+    OpArgMngr.add_workload('bincount', y, w)
+    OpArgMngr.add_workload('bincount', y1, w1)
+    OpArgMngr.add_workload('bincount', y1, w1, 8)
+    OpArgMngr.add_workload('bincount', y, minlength=3)
+    OpArgMngr.add_workload('bincount', y, minlength=8)
+    OpArgMngr.add_workload('bincount', y2, minlength=0)
+    OpArgMngr.add_workload('bincount', y2, minlength=5)
 
 
 def _add_workload_diag():
@@ -93,6 +146,82 @@ def _add_workload_diag():
     OpArgMngr.add_workload('diag', vals_f, k=0)
     OpArgMngr.add_workload('diag', vals_f, k=2)
     OpArgMngr.add_workload('diag', vals_f, k=-2)
+
+
+def _add_workload_diagonal():
+    A = np.arange(12).reshape((3, 4))
+    B = np.arange(8).reshape((2,2,2))
+
+    OpArgMngr.add_workload('diagonal', A)
+    OpArgMngr.add_workload('diagonal', A, offset=0)
+    OpArgMngr.add_workload('diagonal', A, offset=-1)
+    OpArgMngr.add_workload('diagonal', A, offset=1)
+    OpArgMngr.add_workload('diagonal', B, offset=0)
+    OpArgMngr.add_workload('diagonal', B, offset=1)
+    OpArgMngr.add_workload('diagonal', B, offset=-1)
+    OpArgMngr.add_workload('diagonal', B, 0, 1, 2)
+    OpArgMngr.add_workload('diagonal', B, 0, 0, 1)
+    OpArgMngr.add_workload('diagonal', B, offset=1, axis1=0, axis2=2)
+    OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
+
+
+def _add_workload_quantile():
+    x1 = np.arange(8) * 0.5
+    x2 = np.arange(100.)
+    q1 = np.array(0)
+    q2 = np.array(1)
+    q3 = np.array(0.5)
+    q4 = np.array([0, 0.75, 0.25, 0.5, 1.0])
+    q5 = 0.4
+
+    OpArgMngr.add_workload('quantile', x1, q1)
+    OpArgMngr.add_workload('quantile', x1, q2)
+    OpArgMngr.add_workload('quantile', x1, q3)
+    OpArgMngr.add_workload('quantile', x2, q4, interpolation="midpoint")
+    OpArgMngr.add_workload('quantile', x2, q4, interpolation="nearest")
+    OpArgMngr.add_workload('quantile', x2, q4, interpolation="lower")
+    OpArgMngr.add_workload('quantile', x2, q5, interpolation="midpoint")
+    OpArgMngr.add_workload('quantile', x2, q5, interpolation="nearest")
+    OpArgMngr.add_workload('quantile', x2, q5, interpolation="lower")
+
+
+def _add_workload_percentile():
+    x1 = np.ones(5)
+    q1 = np.array(5)
+    x2 = np.array([[1, 1, 1],
+                   [1, 1, 1],
+                   [4, 4, 3],
+                   [1, 1, 1],
+                   [1, 1, 1]])
+    q2 = np.array(60)
+    x3 = np.arange(10)
+    q3 = np.array([25, 50, 100])
+    q4 = 65
+    x4 = np.arange(11 * 2).reshape(11, 1, 2, 1)
+    x5 = np.array([0, np.nan])
+
+    OpArgMngr.add_workload('percentile', x1, q1, None, None, None)
+    OpArgMngr.add_workload('percentile', x1, q1, None, None, None, 'linear')
+    OpArgMngr.add_workload('percentile', x2, q2, axis=0)
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='linear')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='lower')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='higher')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='midpoint')
+    OpArgMngr.add_workload('percentile', x3, q2, interpolation='nearest')
+    OpArgMngr.add_workload('percentile', x3, q3)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=0)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=1)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=2)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=3)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=-1)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=-2)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=-3)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=-4)
+    OpArgMngr.add_workload('percentile', x4, q2, axis=(1,2))
+    OpArgMngr.add_workload('percentile', x4, q3, axis=(-2,-1))
+    OpArgMngr.add_workload('percentile', x4, q2, axis=(1,2), keepdims=True)
+    OpArgMngr.add_workload('percentile', x5, q2)
+    OpArgMngr.add_workload('percentile', x5, q3)
 
 
 def _add_workload_concatenate(array_pool):
@@ -160,6 +289,18 @@ def _add_workload_split():
     OpArgMngr.add_workload('split', np.random.uniform(size=(4, 1)), 2)
     OpArgMngr.add_workload('split', np.arange(10), 2)
     assertRaises(ValueError, np.split, np.arange(10), 3)
+
+
+def _add_workload_array_split():
+    a = np.arange(10)
+    b = np.array([np.arange(10), np.arange(10)])
+
+    for i in range(1, 12):
+        OpArgMngr.add_workload('array_split', a, i)
+    OpArgMngr.add_workload('array_split', b, 3, axis=0)
+    OpArgMngr.add_workload('array_split', b, [0, 1, 2], axis=0)
+    OpArgMngr.add_workload('array_split', b, 3, axis=-1)
+    OpArgMngr.add_workload('array_split', b, 3)
 
 
 def _add_workload_squeeze():
@@ -236,12 +377,9 @@ def _add_workload_transpose():
 
 def _add_workload_linalg_norm():
     OpArgMngr.add_workload('linalg.norm', np.random.uniform(size=(4, 1)))
-    for dt in ["double", "float32", "int64"]:
+    for dt in ["float64", "float32"]:
         OpArgMngr.add_workload('linalg.norm', np.array([], dtype=dt))
         OpArgMngr.add_workload('linalg.norm', np.array([np.array([]), np.array([])], dtype=dt))
-        # numerical error exceed the tolerance
-        if dt == "int64":
-            continue
         for v in ([1, 2, 3, 4], [-1, -2, -3, -4], [-1, 2, -3, 4]):
             OpArgMngr.add_workload('linalg.norm', np.array(v, dtype=dt))
         A = np.array([[1, 2, 3], [4, 5, 6]], dtype=dt)
@@ -270,7 +408,7 @@ def _add_workload_linalg_norm():
                         OpArgMngr.add_workload('linalg.norm', np.take(B[:], np.array(k), axis=k_index).T)
         A = np.arange(1, 25, dtype=dt).reshape(2, 3, 4)
         OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None)
-        OpArgMngr.add_workload('linalg.norm', A, ord=None,axis=None, keepdims=True)
+        OpArgMngr.add_workload('linalg.norm', A, ord=None, axis=None, keepdims=True)
         for k in range(A.ndim):
             OpArgMngr.add_workload('linalg.norm', A, axis=k)
             OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
@@ -279,12 +417,15 @@ def _add_workload_linalg_norm():
             OpArgMngr.add_workload('linalg.norm', A, axis=k, keepdims=True)
         OpArgMngr.add_workload('linalg.norm', np.array([[]], dtype=dt))
         A = np.array([[1, 3], [5, 7]], dtype=dt)
-        OpArgMngr.add_workload('linalg.norm', A)
-        OpArgMngr.add_workload('linalg.norm', A, 'fro')
+        OpArgMngr.add_workload('linalg.norm', A, 2)
+        OpArgMngr.add_workload('linalg.norm', A, -2)
+        OpArgMngr.add_workload('linalg.norm', A, 'nuc')
         A = (1 / 10) * np.array([[1, 2, 3], [6, 0, 5], [3, 2, 1]], dtype=dt)
         OpArgMngr.add_workload('linalg.norm', A)
         OpArgMngr.add_workload('linalg.norm', A, 'fro')
-    for dt in [np.float16, np.float32, np.float64]:
+        OpArgMngr.add_workload('linalg.norm', A, 1)
+        OpArgMngr.add_workload('linalg.norm', A, -1)
+    for dt in [np.float32, np.float64]:
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt))
         OpArgMngr.add_workload('linalg.norm', np.array([[1, 0, 1], [0, 1, 1]], dtype=dt), 'fro')
 
@@ -317,9 +458,160 @@ def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
 
 
+def _add_workload_linalg_solve():
+    shapes = [(0,0), (1,1), (5,5), (6,6), (3,5,5), (3,0,0), (2,5,5), (0,5,5), (2,3,4,4)]
+    nrhs = (0, 1, 2, 3)
+    dtypes = (np.float32, np.float64)
+    for dtype, shape in itertools.product(dtypes, shapes):
+        a = _np.random.rand(*shape)
+        shape_b = list(shape)
+        shape_b[-1] = 1
+        x = _np.random.rand(*shape_b)
+        b = _np.matmul(a, x)
+        shape_b.pop()
+        b = b.reshape(shape_b)
+        OpArgMngr.add_workload('linalg.solve', np.array(a, dtype=dtype), np.array(b, dtype=dtype))
+        for nrh in nrhs:
+            shape_b = list(shape)
+            shape_b[-1] = nrh
+            x = _np.random.rand(*shape_b)
+            b = _np.matmul(a, x)
+            OpArgMngr.add_workload('linalg.solve', np.array(a, dtype=dtype), np.array(b, dtype=dtype))
+
+
 def _add_workload_linalg_det():
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((2, 2)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.det', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
+
+
+def _add_workload_linalg_tensorinv():
+    shapes = [
+        (1, 20, 4, 5),
+        (2, 2, 10, 4, 5),
+        (2, 12, 5, 3, 4, 5),
+        (3, 2, 3, 4, 24)
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype, shape in itertools.product(dtypes, shapes):
+        ind = shape[0]
+        prod_front = 1
+        prod_back = 1
+        for k in shape[1:ind + 1]:
+            prod_front *= k
+        for k in shape[1 + ind:]:
+            prod_back *= k
+        a_shape = (prod_back, prod_front)
+        a = _np.random.randn(*a_shape)
+        if prod_back == prod_front:
+            if _np.allclose(_np.dot(a, _np.linalg.inv(a)), _np.eye(prod_front)):
+                a_shape = shape[1:]
+                a = a.reshape(a_shape)
+                OpArgMngr.add_workload('linalg.tensorinv', np.array(a, dtype=dtype), ind)
+
+
+def _add_workload_linalg_tensorsolve():
+    shapes = [
+        # a_shape.ndim <= 6
+        # (a_shape, b_shape, axes)
+        ((1, 1), (1,), None),
+        ((1, 1), (1, 1, 1, 1, 1), None),
+        ((4, 4), (4,), None),
+        ((2, 3, 3, 4, 2), (3, 4), (0, 2, 4)),
+        ((1, 3, 3, 4, 4), (1, 3, 4), (1, 3)),
+        ((1, 4, 1, 12, 3), (1, 2, 1, 2, 1, 3, 1), (1, 2, 4)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, b_shape, axes in shapes:
+            a_ndim = len(a_shape)
+            b_ndim = len(b_shape)
+            a_trans_shape = list(a_shape)
+            a_axes = list(range(0, a_ndim))
+            if axes is not None:
+                for k in axes:
+                    a_axes.remove(k)
+                    a_axes.insert(a_ndim, k)
+                for k in range(a_ndim):
+                    a_trans_shape[k] = a_shape[a_axes[k]]
+            x_shape = a_trans_shape[-(a_ndim - b_ndim):]
+            prod = 1
+            for k in x_shape:
+                prod *= k
+            if prod * prod != _np.prod(a_shape):
+                raise ValueError("a is not square")
+            if prod != _np.prod(b_shape):
+                raise ValueError("a's shape and b's shape dismatch")
+            mat_shape = (prod, prod)
+            a_trans_shape = tuple(a_trans_shape)
+            x_shape = tuple(x_shape)
+
+            a_np = _np.eye(prod)
+            shape = mat_shape
+            while 1:
+                # generate well-conditioned matrices with small eigenvalues
+                D = _np.diag(_np.random.uniform(-1.0, 1.0, shape[-1]))
+                I = _np.eye(shape[-1]).reshape(shape)
+                v = _np.random.uniform(-1., 1., shape[-1]).reshape(shape[:-1] + (1,))
+                v = v / _np.linalg.norm(v, axis=-2, keepdims=True)
+                v_T = _np.swapaxes(v, -1, -2)
+                U = I - 2 * _np.matmul(v, v_T)
+                a = _np.matmul(U, D)
+                if (_np.linalg.cond(a, 2) < 4):
+                    a_np = a.reshape(a_trans_shape)
+                    break
+            x_np = _np.random.randn(*x_shape)
+            b_np = _np.tensordot(a_np, x_np, axes=len(x_shape))
+            a_origin_axes = list(range(a_np.ndim))
+            if axes is not None:
+                for k in range(a_np.ndim):
+                    a_origin_axes[a_axes[k]] = k
+            a_np = a_np.transpose(a_origin_axes)
+            OpArgMngr.add_workload('linalg.tensorsolve', np.array(a_np, dtype=dtype), np.array(b_np, dtype=dtype), axes)
+
+
+def _add_workload_linalg_pinv():
+    shapes = [
+        ((1, 1), ()),
+        ((5, 5), ()),
+        ((5, 6), ()),
+        ((6, 5), ()),
+        ((2, 3, 3), (1,)),
+        ((4, 6, 5), (4,)),
+        ((2, 2, 3, 4), (2, 2)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, rcond_shape in shapes:
+            hermitian = False
+            a_np = _np.random.uniform(-10.0, 10.0, a_shape)
+            a_np = _np.array(a_np, dtype=dtype)
+            rcond_np = _np.random.uniform(0., 0.1, rcond_shape)
+            rcond_np = _np.array(rcond_np, dtype=dtype)
+            OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), np.array(rcond_np, dtype=dtype), hermitian)
+
+
+def _add_workload_linalg_eigvals():
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eig():
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eig', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eigvalsh():
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigvalsh', np.array(_np.diag((2, 2)), dtype=np.float64))
+
+
+def _add_workload_linalg_eigh():
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((0, 0)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((1, 1)), dtype=np.float64))
+    OpArgMngr.add_workload('linalg.eigh', np.array(_np.diag((2, 2)), dtype=np.float64))
 
 
 def _add_workload_linalg_slogdet():
@@ -500,6 +792,32 @@ def _add_workload_around():
     OpArgMngr.add_workload('around', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
 
 
+def _add_workload_round():
+    OpArgMngr.add_workload('round', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
+
+
+def _add_workload_argsort():
+    for dtype in [np.int32, np.float32]:
+        a = np.arange(101, dtype=dtype)
+        OpArgMngr.add_workload('argsort', a)
+    OpArgMngr.add_workload('argsort', np.array([[3, 2], [1, 0]]), 1)
+    OpArgMngr.add_workload('argsort', np.array([[3, 2], [1, 0]]), 0)
+    a = np.ones((3, 2, 1, 0))
+    for axis in range(-a.ndim, a.ndim):
+        OpArgMngr.add_workload('argsort', a, axis)
+
+
+def _add_workload_sort():
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=()), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(2, 3, 4)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)), axis=None)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=-1)
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(4, 3, 5)), axis=-1, kind='mergesort')
+    OpArgMngr.add_workload('sort', np.random.randint(0, 100, size=(2, 3, 4)), axis=None, kind='quicksort')
+    OpArgMngr.add_workload('sort', np.random.uniform(0, 100, size=(4, 3, 0)))
+
+
 def _add_workload_broadcast_arrays(array_pool):
     OpArgMngr.add_workload('broadcast_arrays', array_pool['4x1'], array_pool['1x2'])
 
@@ -592,12 +910,52 @@ def _add_workload_flip():
     OpArgMngr.add_workload('flip', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]), (1, 2))
 
 
+def _add_workload_flipud():
+    OpArgMngr.add_workload('flipud', np.random.normal(size=(4, 4)))
+    OpArgMngr.add_workload('flipud', np.array([[0, 1, 2], [3, 4, 5]]))
+    OpArgMngr.add_workload('flipud', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]))
+
+
+def _add_workload_fliplr():
+    OpArgMngr.add_workload('fliplr', np.random.normal(size=(4, 4)))
+    OpArgMngr.add_workload('fliplr', np.array([[0, 1, 2], [3, 4, 5]]))
+    OpArgMngr.add_workload('fliplr', np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]]]))
+
+
 def _add_workload_max(array_pool):
     OpArgMngr.add_workload('max', array_pool['4x1'])
 
 
+def _add_workload_amax(array_pool):
+    a = np.array([3, 4, 5, 10, -3, -5, 6.0])
+    b = np.array([[3, 6.0, 9.0],
+                  [4, 10.0, 5.0],
+                  [8, 3.0, 2.0]])
+    c = np.array(1)
+    OpArgMngr.add_workload('amax', array_pool['4x1'])
+    OpArgMngr.add_workload('amax', a)
+    OpArgMngr.add_workload('amax', b, axis=0)
+    OpArgMngr.add_workload('amax', b, axis=1)
+    OpArgMngr.add_workload('amax', c)
+    OpArgMngr.add_workload('amax', c, axis=None)
+
+
 def _add_workload_min(array_pool):
     OpArgMngr.add_workload('min', array_pool['4x1'])
+
+
+def _add_workload_amin(array_pool):
+    a = np.array([3, 4, 5, 10, -3, -5, 6.0])
+    b = np.array([[3, 6.0, 9.0],
+                  [4, 10.0, 5.0],
+                  [8, 3.0, 2.0]])
+    c = np.array(1)
+    OpArgMngr.add_workload('amin', array_pool['4x1'])
+    OpArgMngr.add_workload('amin', a)
+    OpArgMngr.add_workload('amin', b, axis=0)
+    OpArgMngr.add_workload('amin', b, axis=1)
+    OpArgMngr.add_workload('amin', c)
+    OpArgMngr.add_workload('amin', c, axis=None)
 
 
 def _add_workload_mean(array_pool):
@@ -610,6 +968,30 @@ def _add_workload_mean(array_pool):
 
 def _add_workload_ones_like(array_pool):
     OpArgMngr.add_workload('ones_like', array_pool['4x1'])
+
+
+def _add_workload_atleast_nd():
+    a_0 = np.array(1)
+    b_0 = np.array(2)
+    a_1 = np.array([1, 2])
+    b_1 = np.array([2, 3])
+    a_2 = np.array([[1, 2], [1, 2]])
+    b_2 = np.array([[2, 3], [2, 3]])
+    a_3 = [a_2, a_2]
+    b_3 = [b_2, b_2]
+
+    OpArgMngr.add_workload('atleast_1d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_1d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_1d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_1d', a_3, b_3)
+    OpArgMngr.add_workload('atleast_2d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_2d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_2d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_2d', a_3, b_3)
+    OpArgMngr.add_workload('atleast_3d', a_0, b_0)
+    OpArgMngr.add_workload('atleast_3d', a_1, b_1)
+    OpArgMngr.add_workload('atleast_3d', a_2, b_2)
+    OpArgMngr.add_workload('atleast_3d', a_3, b_3)
 
 
 def _add_workload_prod(array_pool):
@@ -653,7 +1035,7 @@ def _add_workload_reshape():
     # OpArgMngr.add_workload('reshape', b, (2, 2), order='F')  # Items are not equal with order='F'
 
     a = np.array(_np.ones((0, 2)))
-    OpArgMngr.add_workload('reshape', a, -1, 2)
+    OpArgMngr.add_workload('reshape', a, (-1, 2))
 
 
 def _add_workload_rint(array_pool):
@@ -750,6 +1132,27 @@ def _add_workload_unique():
     # OpArgMngr.add_workload('unique', np.arange(10, dtype=np.uint8).reshape(-1, 2).astype(bool), axis=1)
 
 
+def _add_workload_delete():
+    a = np.arange(5)
+    nd_a = np.arange(5).repeat(2).reshape(1, 5, 2)
+    lims = [-6, -2, 0, 1, 2, 4, 5]
+    steps = [-3, -1, 1, 3]
+    for start in lims:
+        for stop in lims:
+            for step in steps:
+                s = slice(start, stop, step)
+                OpArgMngr.add_workload('delete', a, s)
+                OpArgMngr.add_workload('delete', nd_a, s, axis=1)
+    OpArgMngr.add_workload('delete', a, np.array([]), axis=0)
+    OpArgMngr.add_workload('delete', a, 0)
+    OpArgMngr.add_workload('delete', a, np.array([]))
+    OpArgMngr.add_workload('delete', a, np.array([0, 1]))
+    OpArgMngr.add_workload('delete', a, slice(1, 2))
+    OpArgMngr.add_workload('delete', a, slice(1, -2))
+    k = np.arange(10).reshape(2, 5)
+    OpArgMngr.add_workload('delete', k, slice(60, None), axis=1)
+
+
 def _add_workload_var(array_pool):
     OpArgMngr.add_workload('var', array_pool['4x1'])
     OpArgMngr.add_workload('var', np.array([np.float16(1.)]))
@@ -765,9 +1168,17 @@ def _add_workload_var(array_pool):
 
 def _add_workload_zeros_like(array_pool):
     OpArgMngr.add_workload('zeros_like', array_pool['4x1'])
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64))
-    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32))
-    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)))
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float64), np.int64)
+    OpArgMngr.add_workload('zeros_like', np.random.uniform(size=(3, 3)).astype(np.float32), np.float64)
+    OpArgMngr.add_workload('zeros_like', np.random.randint(2, size = (3, 3)), int)
+
+
+def _add_workload_full_like(array_pool):
+    OpArgMngr.add_workload('full_like', array_pool['4x1'], 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'), 1)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3,1)), 2, np.int64)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(9,3)), np.nan)
+    OpArgMngr.add_workload('full_like', np.random.uniform(low=0, high=100, size=(2,0)), 0, np.float32)
 
 
 def _add_workload_outer():
@@ -846,6 +1257,17 @@ def _add_workload_inner():
         OpArgMngr.add_workload('inner', b, a)
 
 
+def _add_workload_insert():
+    a = np.arange(10)
+    OpArgMngr.add_workload('insert', a, 0, np.array([0]))
+    OpArgMngr.add_workload('insert', a, np.array([], dtype=np.int64), np.array([]))
+    OpArgMngr.add_workload('insert', a, np.array([0, 1], dtype=np.int64), np.array([1, 2]))
+    OpArgMngr.add_workload('insert', a, slice(1, 2), np.array([1, 2]))
+    OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
+    OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=np.int64), np.array([3, 4, 5]))
+    OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
+
+
 def _add_workload_hypot():
     OpArgMngr.add_workload('hypot', np.array(1), np.array(1))
     OpArgMngr.add_workload('hypot', np.array(0), np.array(0))
@@ -864,6 +1286,7 @@ def _add_workload_lcm():
     OpArgMngr.add_workload('lcm', np.array([12, 120], dtype=np.uint8), np.array([20, 200], dtype=np.uint8))
     OpArgMngr.add_workload('lcm', np.array(195225786*2, dtype=np.int32), np.array(195225786*5, dtype=np.int32))
 
+
 def _add_workload_bitwise_or():
     OpArgMngr.add_workload('bitwise_or', np.array([False, False, True, True], dtype=np.bool),
                            np.array([False, True, False, True], dtype=np.bool))
@@ -874,6 +1297,19 @@ def _add_workload_bitwise_or():
         OpArgMngr.add_workload('bitwise_or', ones, zeros)
         OpArgMngr.add_workload('bitwise_or', zeros, ones)
         OpArgMngr.add_workload('bitwise_or', ones, ones)
+
+
+def _add_workload_bitwise_and():
+    OpArgMngr.add_workload('bitwise_and', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_and', zeros, zeros)
+        OpArgMngr.add_workload('bitwise_and', ones, zeros)
+        OpArgMngr.add_workload('bitwise_and', zeros, ones)
+        OpArgMngr.add_workload('bitwise_and', ones, ones)
+
 
 def _add_workload_bitwise_xor():
     OpArgMngr.add_workload('bitwise_xor', np.array([False, False, True, True], dtype=np.bool),
@@ -1129,9 +1565,124 @@ def _add_workload_logical_not(array_pool):
     OpArgMngr.add_workload('logical_not', np.array([True, False, True, False], dtype=np.bool))
 
 
+def _add_workload_bitwise_not():
+    OpArgMngr.add_workload('bitwise_not', np.array([True, False, True, False], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('bitwise_not', zeros)
+        OpArgMngr.add_workload('bitwise_not', ones)
+
+
+def _add_workload_invert():
+    OpArgMngr.add_workload('invert', np.array([True, False, True, False], dtype=np.bool))
+    for dtype in [np.int8, np.int32, np.int64]:
+        zeros = np.array([0], dtype=dtype)
+        ones = np.array([-1], dtype=dtype)
+        OpArgMngr.add_workload('invert', zeros)
+        OpArgMngr.add_workload('invert', ones)
+
+
 def _add_workload_vdot():
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)), np.random.normal(size=(4, 2)))
     OpArgMngr.add_workload('vdot', np.random.normal(size=(2, 4)).astype(np.float64), np.random.normal(size=(2, 4)).astype(np.float64))
+
+
+def _add_workload_matmul():
+    OpArgMngr.add_workload('matmul', np.random.normal(size=(2, 4)), np.random.normal(size=(4, 2)))
+    dtype = [np.float32, np.float64]
+    def test_shapes():
+        dims = [((1, 1), (2, 1, 1)),     # broadcast first argument
+                ((2, 1, 1), (1, 1)),     # broadcast second argument
+                ((2, 1, 1), (2, 1, 1)),  # matrix stack sizes match
+                ]
+        for dt, (dm1, dm2) in itertools.product(dtype, dims):
+            a = np.ones(dm1, dtype=dt)
+            b = np.ones(dm2, dtype=dt)
+            OpArgMngr.add_workload('matmul', a, b)
+        # vector vector returns scalars.
+        for dt in dtype:
+            a = np.ones((2,), dtype=dt)
+            b = np.ones((2,), dtype=dt)
+            OpArgMngr.add_workload('matmul', a, b)
+    
+    def test_result_types():
+        mat = np.ones((1,1))
+        vec = np.ones((1,))
+        for dt in dtype:
+            m = mat.astype(dt)
+            v = vec.astype(dt)
+            for arg in [(m, v), (v, m), (m, m)]:
+                OpArgMngr.add_workload('matmul', *arg)
+    
+    def test_scalar_output():
+        vec1 = np.array([2])
+        vec2 = np.array([3, 4]).reshape(1, -1)
+        for dt in dtype:
+            v1 = vec1.astype(dt)
+            v2 = vec2.astype(dt)
+            OpArgMngr.add_workload('matmul', v1, v2)
+            OpArgMngr.add_workload('matmul', v2.T, v1)
+    
+    def test_vector_vector_values():
+        vec1 = np.array([1, 2])
+        vec2 = np.array([3, 4]).reshape(-1, 1)
+        for dt in dtype:
+            v1 = vec1.astype(dt)
+            v2 = vec2.astype(dt)
+            OpArgMngr.add_workload('matmul', v1, v2)
+            # no broadcast, we must make v1 into a 2d ndarray
+            OpArgMngr.add_workload('matmul', v2, v1.reshape(1, -1))
+
+    def test_vector_matrix_values():
+        vec = np.array([1, 2])
+        mat1 = np.array([[1, 2], [3, 4]])
+        mat2 = np.stack([mat1]*2, axis=0)
+        for dt in dtype:
+            v = vec.astype(dt)
+            m1 = mat1.astype(dt)
+            m2 = mat2.astype(dt)
+            OpArgMngr.add_workload('matmul', v, m1)
+            OpArgMngr.add_workload('matmul', v, m2)
+
+    def test_matrix_vector_values():
+        vec = np.array([1, 2])
+        mat1 = np.array([[1, 2], [3, 4]])
+        mat2 = np.stack([mat1]*2, axis=0)
+        for dt in dtype:
+            v = vec.astype(dt)
+            m1 = mat1.astype(dt)
+            m2 = mat2.astype(dt)
+            OpArgMngr.add_workload('matmul', m1, v)
+            OpArgMngr.add_workload('matmul', m2, v)
+    
+    def test_matrix_matrix_values():
+        mat1 = np.array([[1, 2], [3, 4]])
+        mat2 = np.array([[1, 0], [1, 1]])
+        mat12 = np.stack([mat1, mat2], axis=0)
+        mat21 = np.stack([mat2, mat1], axis=0)
+        for dt in dtype:
+            m1 = mat1.astype(dt)
+            m2 = mat2.astype(dt)
+            m12 = mat12.astype(dt)
+            m21 = mat21.astype(dt)
+            # matrix @ matrix
+            OpArgMngr.add_workload('matmul', m1, m2)
+            OpArgMngr.add_workload('matmul', m2, m1)
+            # stacked @ matrix
+            OpArgMngr.add_workload('matmul', m12, m1)
+            # matrix @ stacked
+            OpArgMngr.add_workload('matmul', m1, m12)
+            # stacked @ stacked
+            OpArgMngr.add_workload('matmul', m12, m21)
+
+    test_shapes()
+    test_result_types()
+    test_scalar_output()
+    test_vector_vector_values()
+    test_vector_matrix_values()
+    test_matrix_vector_values()
+    test_matrix_matrix_values()
 
 
 def _add_workload_vstack(array_pool):
@@ -1143,6 +1694,18 @@ def _add_workload_column_stack():
     OpArgMngr.add_workload('column_stack', (np.array([1, 2, 3]), np.array([2, 3, 4])))
     OpArgMngr.add_workload('column_stack', (np.array([[1], [2], [3]]), np.array([[2], [3], [4]])))
     OpArgMngr.add_workload('column_stack', [np.array(_np.arange(3)) for _ in range(2)])
+
+
+def _add_workload_hstack(array_pool):
+    OpArgMngr.add_workload('hstack', (np.random.uniform(size=(1, 4)), np.random.uniform(size=(1, 4))))
+    OpArgMngr.add_workload('hstack', array_pool['4x1'])
+    OpArgMngr.add_workload('hstack', array_pool['1x1x0'])
+
+
+def _add_workload_dstack(array_pool):
+    OpArgMngr.add_workload('dstack', (np.random.uniform(size=(5, 1, 2)), np.random.uniform(size=(5, 1, 3))))
+    OpArgMngr.add_workload('dstack', array_pool['4x1'])
+    OpArgMngr.add_workload('dstack', array_pool['1x1x0'])
 
 
 def _add_workload_equal(array_pool):
@@ -1241,7 +1804,7 @@ def _add_workload_diagflat():
     vals_c = (100 * np.array(get_mat(5)) + 1).astype('l')
     vals_f = _np.array((100 * get_mat(5) + 1), order='F', dtype='l')
     vals_f = np.array(vals_f)
-    
+
     OpArgMngr.add_workload('diagflat', A, k=2)
     OpArgMngr.add_workload('diagflat', A, k=1)
     OpArgMngr.add_workload('diagflat', A, k=0)
@@ -1300,18 +1863,107 @@ def _add_workload_resize():
     OpArgMngr.add_workload('resize', np.zeros((10, 0)), (0, 100))
 
 
+def _add_workload_empty_like():
+    OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(1,3,4), dtype='float64'))
+    OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(9,3,1)), np.int32)
+    OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(9,3)), 'float32')
+    OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(9,3,1)), np.bool_)
+    OpArgMngr.add_workload('empty_like', np.random.uniform(low=0, high=100, size=(0,3)), np.float32)
+
+
+def _add_workload_nan_to_num():
+    array1 = np.array([[-433, 0, 456, _np.inf], [-1, -_np.inf, 0, 1]])
+    array2 = np.array([_np.nan, _np.inf, -_np.inf, -574, 0, 23425, 24234,-5])
+    array3 = np.array(-_np.inf)
+    OpArgMngr.add_workload('nan_to_num', array1, True, 0, 100, -100)
+    OpArgMngr.add_workload('nan_to_num', array1, True, 0.00)
+    OpArgMngr.add_workload('nan_to_num', array2, True)
+    OpArgMngr.add_workload('nan_to_num', array2, True, -2000, 10000, -10000)
+    OpArgMngr.add_workload('nan_to_num', array3, True)
+
+
+def _add_workload_isnan(array_pool):
+    OpArgMngr.add_workload('isnan', array_pool['2x4'])
+
+
+def _add_workload_isinf(array_pool):
+    OpArgMngr.add_workload('isinf', array_pool['2x4'])
+
+
+def _add_workload_isposinf(array_pool):
+    OpArgMngr.add_workload('isposinf', array_pool['2x4'])
+
+
+def _add_workload_isneginf(array_pool):
+    OpArgMngr.add_workload('isneginf', array_pool['2x4'])
+
+
+def _add_workload_isfinite(array_pool):
+    OpArgMngr.add_workload('isfinite', array_pool['2x4'])
+
+
+def _add_workload_polyval():
+    p1 = np.arange(20)
+    p2 = np.arange(1)
+    x1 = np.arange(20)
+    x2 = np.ones((3,3))
+    x3 = np.array(2)
+    OpArgMngr.add_workload('polyval', p1, x1)
+    OpArgMngr.add_workload('polyval', p1, x2)
+    OpArgMngr.add_workload('polyval', p1, x3)
+    OpArgMngr.add_workload('polyval', p2, x1)
+    OpArgMngr.add_workload('polyval', p2, x2)
+    OpArgMngr.add_workload('polyval', p2, x3)
+
+
+def _add_workload_linalg_cond():
+    A = np.array([[1., 0, 1], [0, -2., 0], [0, 0, 3.]])
+    OpArgMngr.add_workload('linalg.cond', A, np.inf)
+    OpArgMngr.add_workload('linalg.cond', A, -np.inf)
+    OpArgMngr.add_workload('linalg.cond', A, 1)
+    OpArgMngr.add_workload('linalg.cond', A, -1)
+    OpArgMngr.add_workload('linalg.cond', A, 'fro')
+
+
+def _add_workload_heaviside():
+    x = np.array([[-30.0, -0.1, 0.0, 0.2], [7.5, np.nan, np.inf, -np.inf]], dtype=np.float64)
+    OpArgMngr.add_workload('heaviside', x, 0.5)
+    OpArgMngr.add_workload('heaviside', x, 1.0)
+
+    x = x.astype(np.float32)
+    OpArgMngr.add_workload('heaviside', x, np.float32(0.5))
+    OpArgMngr.add_workload('heaviside', x, np.float32(1.0))
+
+
+def _add_workload_spacing():
+    OpArgMngr.add_workload('spacing', np.float64(1))
+    OpArgMngr.add_workload('spacing', np.float32(1))
+    OpArgMngr.add_workload('spacing', np.inf)
+    OpArgMngr.add_workload('spacing', -np.inf)
+    OpArgMngr.add_workload('spacing', np.float64(1e30))
+    OpArgMngr.add_workload('spacing', np.float32(1e30))
+
+
 @use_np
 def _prepare_workloads():
     array_pool = {
         '4x1': np.random.uniform(size=(4, 1)) + 2,
+        '2x4': np.array([[    -433, float('inf'), 456, _np.inf, _np.nan],
+                         [-_np.inf, float("nan"),  -1,       0, _np.inf]]),
         '1x2': np.random.uniform(size=(1, 2)) + 2,
         '1x1x0': np.array([[[]]])
     }
 
+    _add_workload_all()
+    _add_workload_any()
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
+    _add_workload_round()
+    _add_workload_argsort()
+    _add_workload_sort()
     _add_workload_append()
+    _add_workload_bincount()
     _add_workload_broadcast_arrays(array_pool)
     _add_workload_broadcast_to()
     _add_workload_clip()
@@ -1320,23 +1972,32 @@ def _prepare_workloads():
     _add_workload_cumsum()
     _add_workload_ravel()
     _add_workload_unravel_index()
+    _add_workload_diag_indices_from()
     _add_workload_diag()
+    _add_workload_diagonal()
     _add_workload_diagflat()
     _add_workload_dot()
+    _add_workload_matmul()
     _add_workload_expand_dims()
     _add_workload_fix()
     _add_workload_flip()
+    _add_workload_flipud()
+    _add_workload_fliplr()
     _add_workload_max(array_pool)
+    _add_workload_amax(array_pool)
     _add_workload_min(array_pool)
+    _add_workload_amin(array_pool)
     _add_workload_mean(array_pool)
     _add_workload_nonzero()
     _add_workload_ones_like(array_pool)
+    _add_workload_atleast_nd()
     _add_workload_prod(array_pool)
     _add_workload_repeat(array_pool)
     _add_workload_reshape()
     _add_workload_rint(array_pool)
     _add_workload_roll()
     _add_workload_split()
+    _add_workload_array_split()
     _add_workload_squeeze()
     _add_workload_stack(array_pool)
     _add_workload_std()
@@ -1347,13 +2008,23 @@ def _prepare_workloads():
     _add_workload_tile()
     _add_workload_transpose()
     _add_workload_unique()
+    _add_workload_delete()
     _add_workload_var(array_pool)
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
     _add_workload_linalg_inv()
+    _add_workload_linalg_solve()
     _add_workload_linalg_det()
+    _add_workload_linalg_tensorinv()
+    _add_workload_linalg_tensorsolve()
+    _add_workload_linalg_pinv()
+    _add_workload_linalg_eigvals()
+    _add_workload_linalg_eig()
+    _add_workload_linalg_eigvalsh()
+    _add_workload_linalg_eigh()
     _add_workload_linalg_slogdet()
+    _add_workload_linalg_cond()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
@@ -1366,8 +2037,10 @@ def _prepare_workloads():
     _add_workload_degrees()
     _add_workload_true_divide()
     _add_workload_inner()
+    _add_workload_insert()
     _add_workload_hypot()
     _add_workload_lcm()
+    _add_workload_bitwise_and()
     _add_workload_bitwise_xor()
     _add_workload_bitwise_or()
     _add_workload_ldexp()
@@ -1407,9 +2080,13 @@ def _prepare_workloads():
     _add_workload_turnc(array_pool)
     _add_workload_floor(array_pool)
     _add_workload_logical_not(array_pool)
+    _add_workload_bitwise_not()
+    _add_workload_invert()
     _add_workload_vdot()
     _add_workload_vstack(array_pool)
     _add_workload_column_stack()
+    _add_workload_hstack(array_pool)
+    _add_workload_dstack(array_pool)
     _add_workload_equal(array_pool)
     _add_workload_not_equal(array_pool)
     _add_workload_greater(array_pool)
@@ -1419,7 +2096,20 @@ def _prepare_workloads():
     _add_workload_where()
     _add_workload_shape()
     _add_workload_diff()
+    _add_workload_quantile()
+    _add_workload_percentile()
     _add_workload_resize()
+    _add_workload_full_like(array_pool)
+    _add_workload_empty_like()
+    _add_workload_nan_to_num()
+    _add_workload_polyval()
+    _add_workload_isnan(array_pool)
+    _add_workload_isinf(array_pool)
+    _add_workload_isposinf(array_pool)
+    _add_workload_isneginf(array_pool)
+    _add_workload_isfinite(array_pool)
+    _add_workload_heaviside()
+    _add_workload_spacing()
 
 
 _prepare_workloads()
@@ -1455,16 +2145,20 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
                 assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
             else:
                 _np.testing.assert_equal(arr, expected_arr)
-    else:
-        assert isinstance(out, np.ndarray)
+    elif isinstance(out, np.ndarray):
         assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+    else:
+        _np.testing.assert_almost_equal(out, expected_out)
 
 
 def check_interoperability(op_list):
     for name in op_list:
         if name in _TVM_OPS and not is_op_runnable():
             continue
-        if name in ['shares_memory', 'may_share_memory']:  # skip list
+        if name in ['shares_memory', 'may_share_memory', 'empty_like']:  # skip list
+            continue
+        if name in ['full_like', 'zeros_like', 'ones_like'] and \
+                StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
             continue
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
@@ -1500,6 +2194,13 @@ def test_np_array_function_protocol():
 @with_array_ufunc_protocol
 def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
+
+
+@with_seed()
+@use_np
+def test_np_fallback_ops():
+    op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
+    check_interoperability(op_list)
 
 
 if __name__ == '__main__':

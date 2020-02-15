@@ -32,7 +32,7 @@ CudaModule::Chunk::Chunk(
     const char* source,
     const std::vector<std::string>& options,
     const std::vector<std::string>& exports) {
-  NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, NULL, NULL));
+  NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, nullptr, nullptr));
   for (const auto& i : exports) exports_.insert(i);
 #if CUDA_VERSION >= 8000
   for (const auto& func : exports) {
