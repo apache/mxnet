@@ -41,9 +41,9 @@
 namespace mxnet {
 namespace op {
 
-template <int ndim, typename DTypeShape>
+template <int ndim>
 MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
-                               const DTypeShape* shape) {
+                               const index_t* shape) {
   index_t ret = 0;
   int nndim = ndim;
   #pragma unroll
@@ -54,9 +54,9 @@ MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
 }
 
 /* Compute coordinates from flattened index given shape */
-template<int ndim, typename DTypeShape>
+template<int ndim>
 MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const int idx,
-                                              const DTypeShape* shape) {
+                                              const index_t* shape) {
   mshadow::Shape<ndim> ret;
   #pragma unroll
   for (int i = ndim-1, j = idx; i >=0; --i) {
