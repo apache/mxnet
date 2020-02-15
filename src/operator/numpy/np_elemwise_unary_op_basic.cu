@@ -88,6 +88,15 @@ NNVM_REGISTER_OP(_npi_isnan)
 NNVM_REGISTER_OP(_npi_isinf)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::isinf>);
 
+NNVM_REGISTER_OP(_npi_isposinf)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::isposinf>);
+
+NNVM_REGISTER_OP(_npi_isneginf)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::isneginf>);
+
+NNVM_REGISTER_OP(_npi_isfinite)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::isfinite>);
+
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sin, mshadow_op::sin);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_cos, mshadow_op::cos);

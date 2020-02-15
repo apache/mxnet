@@ -70,10 +70,7 @@ def config_cython():
 
     try:
         from Cython.Build import cythonize
-        if sys.version_info >= (3, 0):
-            subdir = "_cy3"
-        else:
-            subdir = "_cy2"
+        subdir = "_cy3"
         ret = []
         path = "mxnet/cython"
         if os.name == 'nt':

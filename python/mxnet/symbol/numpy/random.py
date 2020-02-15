@@ -17,7 +17,6 @@
 
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
-from __future__ import absolute_import
 from ...context import current_context
 from . import _internal as _npi
 
@@ -639,7 +638,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         return _npi.exponential(scale=scale, size=size, ctx=ctx, out=out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
 
@@ -685,13 +684,15 @@ def weibull(a, size=None):
     """
     from ..numpy import _Symbol as np_symbol
     tensor_type_name = np_symbol
+    if ctx is None:
+        ctx = current_context()
     if size == ():
         size = None
     is_tensor = isinstance(a, tensor_type_name)
     if is_tensor:
-        return _npi.weibull(a, a=None, size=size)
+        return _npi.weibull(a, a=None, size=size, ctx=ctx, out=out)
     else:
-        return _npi.weibull(a=a, size=size)
+        return _npi.weibull(a=a, size=size, ctx=ctx, out=out)
 
 
 def pareto(a, size=None):

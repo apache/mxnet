@@ -17,7 +17,6 @@
 
 # pylint: disable=unused-import
 """Register backend ops in mxnet.symbol namespace."""
-from __future__ import absolute_import
 import os as _os
 import ctypes
 import numpy as _np

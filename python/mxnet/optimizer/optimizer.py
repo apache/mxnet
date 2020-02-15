@@ -18,7 +18,6 @@
 
 # pylint: disable=too-many-lines
 """Base Optimizer class."""
-from __future__ import absolute_import
 import warnings
 import numpy
 from ..ndarray import (NDArray, zeros, cast)

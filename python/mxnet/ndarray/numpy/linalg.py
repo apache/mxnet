@@ -17,7 +17,6 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 
-from __future__ import absolute_import
 from . import _op as _mx_nd_np
 from . import _internal as _npi
 
