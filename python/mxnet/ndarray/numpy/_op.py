@@ -7359,7 +7359,7 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.ndarray.numpy')
-def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"): # pylint: disable=too-many-arguments
+def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arguments
     """
     Pad an array.
 
@@ -7388,7 +7388,7 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
         'mean'
             not supported yet
         'median'
-           not supported yet
+            not supported yet
         'minimum'
             Pads with the minimum value of all of the
             vector along each axis.
@@ -7400,12 +7400,11 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
             Pads with the reflection of the vector mirrored
             along the edge of the array.
         'wrap'
-            not supported yet
+            not supported yet.
         'empty'
-            Pads with undefined values.
-            .. versionadded:: 1.17
+            not supported yet.
         <function>
-            Padding function, see Notes.
+            not supported yet.
     stat_length : not supported yet
     constant_values : scalar, optional
         Used in 'constant'.  The values to set the padded values for each
@@ -7421,67 +7420,59 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
     pad : ndarray
         Padded array of rank equal to `array` with shape increased
         according to `pad_width`.
-
-    Examples
-    --------
-    >>> a = [1, 2, 3, 4, 5]
-    >>> np.pad(a, (2, 3), 'edge')
-    array([1, 1, 1, ..., 5, 5, 5])
-    >>> np.pad(a, (2, 2), 'maximum')
-    array([5, 5, 1, 2, 3, 4, 5, 5, 5])
-    >>> np.pad(a, (2, 2), 'mean')
-    array([3, 3, 1, 2, 3, 4, 5, 3, 3])
-    >>> a = [[1, 2], [3, 4]]
-    >>> np.pad(a, ((3, 2), (2, 3)), 'minimum')
-    array([[1, 1, 1, 2, 1, 1, 1],
-           [1, 1, 1, 2, 1, 1, 1],
-           [1, 1, 1, 2, 1, 1, 1],
-           [1, 1, 1, 2, 1, 1, 1],
-           [3, 3, 3, 4, 3, 3, 3],
-           [1, 1, 1, 2, 1, 1, 1],
-           [1, 1, 1, 2, 1, 1, 1]])
-    >>> a = [1, 2, 3, 4, 5]
-    >>> np.pad(a, (2, 3), 'reflect')
-    array([3, 2, 1, 2, 3, 4, 5, 4, 3, 2])
-    >>> np.pad(a, (2, 3), 'symmetric')
-    array([2, 1, 1, 2, 3, 4, 5, 5, 4, 3])
-    >>> a = np.arange(6)
-    >>> a = a.reshape((2, 3))
-    >>> np.pad(a, ((2, 2), (2, 2)), pad_with)
-    array([[10, 10, 10, 10, 10, 10, 10],
-           [10, 10, 10, 10, 10, 10, 10],
-           [10, 10,  0,  1,  2, 10, 10],
-           [10, 10,  3,  4,  5, 10, 10],
-           [10, 10, 10, 10, 10, 10, 10],
-           [10, 10, 10, 10, 10, 10, 10]])
     """
     # pylint: disable = too-many-return-statements, inconsistent-return-statements
-    if not isinstance(x, NDArray):
-        raise TypeError("Input data should be NDarray")
     if not isinstance(pad_width, tuple):
-        raise TypeError("Input pad_width data-type only supports tuple")
+        raise TypeError("`pad_width` must be tuple.")
     if mode == "linear_ramp":
-        raise ValueError("Pad doesn't support linear_ramp mode")
+        raise ValueError("mode {'linear_ramp'} is not supported.")
     if mode == "wrap":
-        raise ValueError("Pad doesn't support wrap mode")
-    if stat_length is not None:
-        raise ValueError("Pad doesn't support stat_length")
-    if not isinstance(constant_values, int):
-        raise TypeError("Constant doesn't support sequence data-type")
-    if end_values != 0:
-        raise ValueError("Pad doesn't support end_values")
-    if reflect_type != "even":
-        raise ValueError("reflect_type only supports even")
+        raise ValueError("mode {'wrap'} is not supported.")
+    if mode == "median":
+        raise ValueError("mode {'median'} is not supported.")
+    if mode == "mean":
+        raise ValueError("mode {'mean'} is not supported.")
+    if mode == "empty":
+        raise ValueError("mode {'empty'} is not supported.")
+    if callable(mode):
+        raise ValueError("mode {'<function>'} is not supported.")
+    allowed_kwargs = {
+        'empty': [], 'edge': [], 'wrap': [],
+        'constant': ['constant_values'],
+        'linear_ramp': ['end_values'],
+        'maximum': ['stat_length'],
+        'mean': ['stat_length'],
+        'median': ['stat_length'],
+        'minimum': ['stat_length'],
+        'reflect': ['reflect_type'],
+        'symmetric': ['reflect_type'],
+    }
+    try:
+        unsupported_kwargs = set(kwargs) - set(allowed_kwargs[mode])
+    except KeyError:
+        raise ValueError("mode '{}' is not supported".format(mode))
+    if unsupported_kwargs:
+        raise ValueError("unsupported keyword arguments for mode '{}': {}"
+                         .format(mode, unsupported_kwargs))
     if mode == "constant":
-        return _npi.pad(x, pad_width, 1, constant_values, reflect_type)
-    elif mode == "symmetric" and reflect_type == "even":
-        return _npi.pad(x, pad_width, 2, constant_values, "even")
+        values = kwargs.get("constant_values", 0)
+        if isinstance(values, tuple):
+            raise TypeError("unsupported constant_values type: {'tuple'}.")
+        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+    elif mode == "symmetric":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='symmetric', reflect_type="even")
     elif mode == "edge":
-        return _npi.pad(x, pad_width, 3, constant_values, reflect_type)
-    elif mode == "reflect" and reflect_type == "even":
-        return _npi.pad(x, pad_width, 4, constant_values, "even")
+        return _npi.pad(x, pad_width, mode='edge')
+    elif mode == "reflect":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='reflect', reflect_type="even")
     elif mode == "maximum":
-        return _npi.pad(x, pad_width, 5, constant_values, "even")
+        return _npi.pad(x, pad_width, mode='maximum')
     elif mode == "minimum":
-        return _npi.pad(x, pad_width, 6, constant_values, "even")
-    return _npi.pad(x, pad_width, 1, constant_values, reflect_type)
+        return _npi.pad(x, pad_width, mode='minimum')
+    return _npi.pad(x, pad_width, mode='constant', constant_value=0)

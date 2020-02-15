@@ -9454,7 +9454,7 @@ def bincount(x, weights=None, minlength=0):
 
 
 @set_module('mxnet.numpy')
-def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0, end_values=0, reflect_type="even"): # pylint: disable=too-many-arguments
+def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-many-arguments
     """
     Pad an array.
 
@@ -9483,7 +9483,7 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
         'mean'
             not supported yet
         'median'
-           not supported yet
+            not supported yet
         'minimum'
             Pads with the minimum value of all of the
             vector along each axis.
@@ -9495,17 +9495,17 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
             Pads with the reflection of the vector mirrored
             along the edge of the array.
         'wrap'
-            not supported yet
+            not supported yet.
         'empty'
-            Pads with undefined values.
-            .. versionadded:: 1.17
+            not supported yet.
         <function>
-            Padding function, see Notes.
+            not supported yet.
     stat_length : not supported yet
     constant_values : scalar, optional
         Used in 'constant'.  The values to set the padded values for each
         axis.
         Default is 0.
+
     end_values : not supported yet
     reflect_type : {'even', 'odd'}, optional
         only support even now
@@ -9549,4 +9549,4 @@ def pad(x, pad_width=None, mode="constant", stat_length=None, constant_values=0,
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10]])
     """
-    return _mx_nd_np.pad(x, pad_width, mode, None, constant_values, 0, reflect_type)
+    return _mx_nd_np.pad(x, pad_width, mode, **kwargs)
