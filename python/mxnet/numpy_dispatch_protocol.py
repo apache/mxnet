@@ -107,6 +107,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'flipud',
     'fliplr',
     'inner',
+    'insert',
     'max',
     'amax',
     'mean',
