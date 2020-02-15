@@ -27,23 +27,22 @@ __all__ = []
 def is_deferred_compute():
     """Get status of deferred compute mode."""
     curr = ctypes.c_bool()
-    check_call(_LIB.MXNDArrayIsDeferredComputeEnabled(ctypes.byref(curr)))
+    check_call(_LIB.MXNDArrayIsDeferredCompute(ctypes.byref(curr)))
     return curr.value
 
-def set_deferred_compute(is_deferred_compute):
+def set_deferred_compute(state):
     """Enable / Disable deferred compute mode.
 
     Parameters
     ----------
-    is_deferred_compute: bool
+    state: bool
 
     Returns
     -------
     Previous deferred compute state.
     """
     prev = ctypes.c_int()
-    check_call(_LIB.MXNDArraySetDeferredComputeEnabled(
-        ctypes.c_int(is_deferred_compute), ctypes.byref(prev)))
+    check_call(_LIB.MXNDArraySetIsDeferredCompute(ctypes.c_int(state), ctypes.byref(prev)))
     return bool(prev.value)
 
 
@@ -60,6 +59,20 @@ def context():
 
 
 def get_symbol(input_arrays, output_arrays, input_names=None, *, sym_cls=Symbol):
+    """Get symbolic representation of computation recorded in deferred compute mode.
+
+    Parameters
+    ----------
+    input_arrays: NDArray or List[NDArray]
+    output_arrays: NDArray or List[NDArray]
+    input_names: str or List[str]
+    sym_cls: class used to construct Symbol
+
+    Returns
+    -------
+    Symbol of sym_cls
+    """
+
     input_arrays = _as_list(input_arrays)
     output_arrays = _as_list(output_arrays)
 
@@ -93,4 +106,4 @@ def get_symbol(input_arrays, output_arrays, input_names=None, *, sym_cls=Symbol)
         _LIB.MXNDArrayGetDeferredComputeSymbol(input_handles, output_handles, input_names,
                                                len(input_arrays), len(output_arrays),
                                                ctypes.byref(handle)))
-    return Symbol(handle)
+    return sym_cls(handle)

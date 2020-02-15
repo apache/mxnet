@@ -2161,10 +2161,7 @@ void NDArray::WaitToRead() const {
 void NDArray::WaitToWrite() const {
   if (is_none()) return;
   Imperative::DCInfo::Compute(*this);
-  /*!
-   * Push an empty mutable function to flush all preceding reads to the
-   * variable.
-   */
+  // Push an empty mutable function to flush all preceding reads to the variable.
   Engine::Get()->PushAsync(
       [](RunContext, Engine::CallbackOnComplete on_complete) { on_complete(); },
       Context{}, {}, {ptr_->var});

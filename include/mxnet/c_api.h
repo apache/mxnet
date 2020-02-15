@@ -1428,7 +1428,7 @@ MXNET_DLL int MXCachedOpRegisterOpHook(NDArrayHandle handle,
  * \param curr returns the current status.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArrayIsDeferredComputeEnabled(int *curr);
+MXNET_DLL int MXNDArrayIsDeferredCompute(int *curr);
 
 /*!
  * \brief set whether to enable deferred compute mode
@@ -1436,7 +1436,7 @@ MXNET_DLL int MXNDArrayIsDeferredComputeEnabled(int *curr);
  * \param prev returns the previous status before this set.
  * \return 0 when success, -1 when failure happens
  */
-MXNET_DLL int MXNDArraySetDeferredComputeEnabled(int deferred_compute_enabled, int *prev);
+MXNET_DLL int MXNDArraySetIsDeferredCompute(int deferred_compute_enabled, int *prev);
 
 /*!
  * \brief Convert the graph constructed during deferred computation mode to a Symbol.

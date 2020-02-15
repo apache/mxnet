@@ -442,13 +442,13 @@ int MXCachedOpRegisterOpHook(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayIsDeferredComputeEnabled(int *curr) {
+int MXNDArrayIsDeferredCompute(int *curr) {
   API_BEGIN();
   *curr = Imperative::Get()->is_deferred_compute();
   API_END();
 }
 
-int MXNDArraySetDeferredComputeEnabled(int deferred_compute, int *prev) {
+int MXNDArraySetIsDeferredCompute(int deferred_compute, int *prev) {
   API_BEGIN();
   *prev = Imperative::Get()->set_is_deferred_compute(static_cast<bool>(deferred_compute));
   API_END();

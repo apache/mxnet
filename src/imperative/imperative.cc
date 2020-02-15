@@ -309,8 +309,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
     //     a[:5] = 0
   }
   DispatchMode dispatch_mode = DispatchMode::kUndefined;
-  Context default_ctx = Context::CPU();
-  Context ctx = imperative::GetContext(attrs, inputs, outputs, default_ctx);
+  Context ctx = imperative::GetContext(attrs, inputs, outputs, Context::CPU());
   imperative::SetShapeType(ctx, attrs, inputs, outputs, &dispatch_mode);
 
   nnvm::ObjectPtr node = nnvm::Node::Create();
@@ -368,8 +367,8 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(
           return array == std::get<0>(input);
         };
 
-        // std::vector<std::pair<NDArray *, std::string>>::iterator input_search =
-        auto input_search = std::find_if(inputs.begin(), inputs.end(), is_equal);
+        std::vector<std::pair<NDArray *, std::string>>::const_iterator input_search =
+          std::find_if(inputs.begin(), inputs.end(), is_equal);
         // Create symbol variable
         if (input_search != inputs.end()) {
           NDArray *ndinput;
