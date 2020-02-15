@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,20 +15,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# This script builds the static library of libtiff that can be used as dependency of mxnet/opencv.
-set -ex
-TIFF_VERSION="4.0.9"
-if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
-    # download and build libtiff
-    >&2 echo "Building libtiff..."
-    download \
-        https://download.osgeo.org/libtiff/tiff-${TIFF_VERSION}.zip \
-        ${DEPS_PATH}/libtiff.zip
-    unzip -q $DEPS_PATH/libtiff.zip -d $DEPS_PATH
-    pushd .
-    cd $DEPS_PATH/tiff-$TIFF_VERSION
-    ./configure --quiet --disable-shared --disable-jpeg --disable-zlib --disable-jbig --disable-lzma --prefix=$DEPS_PATH
-    $MAKE
-    $MAKE install
-    popd
-fi
+set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
+set(CFLAGS "-mno-avx" CACHE STRING "CFLAGS")
+set(CXXFLAGS "-mno-avx" CACHE STRING "CXXFLAGS")
+
+set(BLAS "apple" CACHE STRING "BLAS Vendor")
+
+set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
+set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
+set(USE_OPENMP OFF CACHE BOOL "Build with Openmp support")
+set(USE_MKL_IF_AVAILABLE OFF CACHE BOOL "Use Intel MKL if found")
+set(USE_MKLDNN ON CACHE BOOL "Build with MKL-DNN support")
+set(USE_LAPACK ON CACHE BOOL "Build with lapack support")
+set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
+set(USE_SSE ON CACHE BOOL "Build with x86 SSE instruction support")
+set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")
