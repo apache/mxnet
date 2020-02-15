@@ -4035,14 +4035,13 @@ def test_np_random_a():
             expected_shape = a.shape
             assert mx_out.shape == expected_shape
 
-    # test illegal parameter values (as numpy produces)
+    # test illegal parameter values
     def _test_exception(a):
         output = op(a=a).asnumpy()
     for op in op_names:
         op = getattr(np.random, op_name, None)
         if op is not None:
             assertRaises(ValueError, _test_exception, -1)
-        if op in ['pareto', 'power']:
             assertRaises(ValueError, _test_exception, 0)
 
 
@@ -4075,6 +4074,40 @@ def test_np_weibull_grad():
 
             # gradient formula calculus (a=1)
             formula_grad = - mx_out * np.log(mx_out)
+            assert a.grad.shape == out_shape
+            assert_almost_equal(a.grad.asnumpy().sum(), formula_grad.asnumpy().sum(), rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
+def test_np_pareto_grad():
+    class TestRandomP(HybridBlock):
+        def __init__(self, shape):
+            super(TestRandomP, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, a):
+            return F.np.random.pareto(a, self._shape)
+
+    output_shapes = [
+        (3, 2),
+        (4, 3, 2, 2),
+        (3, 4, 5)
+    ]
+    for hybridize in [False, True]:
+        for out_shape in output_shapes:
+            test_w_grad = TestRandomP(out_shape)
+            if hybridize:
+                test_w_grad.hybridize()
+            a = np.ones(out_shape)
+            a.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_w_grad(a)
+            mx_out.backward()
+
+            # gradient formula from calculus (a=1)
+            noise = np.log(mx_out + np.ones(mx_out.shape))
+            formula_grad = - (mx_out + np.ones(mx_out.shape)) * noise
             assert a.grad.shape == out_shape
             assert_almost_equal(a.grad.asnumpy().sum(), formula_grad.asnumpy().sum(), rtol=1e-3, atol=1e-5)
 
