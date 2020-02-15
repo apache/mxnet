@@ -6599,8 +6599,14 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
             raise ValueError("unsupported reflect_type '{}'".format(values))
         return _npi.pad(x, pad_width, mode='reflect', reflect_type="even")
     elif mode == "maximum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='maximum')
     elif mode == "minimum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='minimum')
     return _npi.pad(x, pad_width, mode='constant', constant_value=0)
 
