@@ -142,5 +142,8 @@ NNVM_REGISTER_OP(_np_diagflat)
 NNVM_REGISTER_OP(_backward_np_diagflat)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_diag_indices_from)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagIndicesFromForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

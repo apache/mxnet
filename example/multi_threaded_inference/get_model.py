@@ -15,4 +15,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Namespace for cython generated modules for python2"""
+import logging
+import argparse
+import mxnet as mx
+import gluoncv
+
+
+models = ["imagenet1k-inception-bn", "imagenet1k-resnet-50",
+          "imagenet1k-resnet-152", "imagenet1k-resnet-18"]
+
+def main():
+    logging.basicConfig()
+    logger = logging.getLogger("logger")
+    logger.setLevel(logging.INFO)
+    parser = argparse.ArgumentParser(description='Download model hybridize and save as symbolic model for multithreaded inference')
+    parser.add_argument("--model", type=str, choices=models, required=True)
+    args = parser.parse_args()
+
+    mx.test_utils.download_model(args.model)
+
+if __name__ == "__main__":
+    main()

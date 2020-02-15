@@ -84,7 +84,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0);
+      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, {"cpu", 0});
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute log operator
@@ -95,7 +95,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0);
+      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, {"cpu", 0});
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute exp operator 
@@ -172,7 +172,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
 
 REGISTER_OP(_custom_subgraph_op)
 .setIsSubgraphOp()
-.setCreateOpState(createOpState);
+.setCreateOpState(createOpState, "cpu");
 
 const std::vector<std::string> op_names({"exp","log"});
 

@@ -74,7 +74,7 @@ inline NDArray::NDArray(const mx_float *data, const Shape &shape,
   CHECK_EQ(MXNDArrayCreate(shape.data(), shape.ndim(), context.GetDeviceType(),
                            context.GetDeviceId(), false, &handle),
            0);
-  MXNDArraySyncCopyFromCPU(handle, data, shape.Size());
+  CHECK_EQ(MXNDArraySyncCopyFromCPU(handle, data, shape.Size()), 0);
   blob_ptr_ = std::make_shared<NDBlob>(handle);
 }
 inline NDArray::NDArray(const std::vector<mx_float> &data, const Shape &shape,
@@ -429,7 +429,7 @@ inline const mx_float *NDArray::GetData() const {
   void *ret;
   MXNDArrayGetData(blob_ptr_->handle_, &ret);
   if (GetDType() != 0) {
-    return NULL;
+    return nullptr;
   }
   return static_cast<mx_float*>(ret);
 }

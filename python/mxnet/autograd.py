@@ -17,8 +17,6 @@
 
 # coding: utf-8
 """Autograd for NDArray."""
-from __future__ import absolute_import
-from __future__ import division
 
 from array import array
 from threading import Lock

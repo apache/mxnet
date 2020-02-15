@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=unnecessary-pass, too-many-lines
 """Neural network parameter."""
-from __future__ import absolute_import
 
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']

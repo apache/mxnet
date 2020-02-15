@@ -26,7 +26,6 @@
 #include <nnvm/pass.h>
 #include <nnvm/graph_attr_types.h>
 #include <nnvm/op_attr_types.h>
-#include <nnvm/top/tensor.h>
 #include <mxnet/base.h>
 #include <memory>
 #include "graph_algorithm.h"
@@ -36,7 +35,6 @@ namespace nnvm {
 namespace pass {
 
 namespace {
-  using namespace nnvm::top;
 // Return bytes of data flag.
 static int MXGetDTypeSize(int type_flag) {
   switch (type_flag) {

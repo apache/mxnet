@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License
 
-from __future__ import absolute_import as _abs
 
 import sys as _sys
 import ctypes as _ctypes

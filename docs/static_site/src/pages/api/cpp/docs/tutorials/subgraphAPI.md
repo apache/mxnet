@@ -95,10 +95,10 @@ class SgProperty : public SubgraphProperty {
   static SubgraphPropertyPtr Create() {
     return std::make_shared<SgProperty>();
   }
-  nnvm::NodePtr CreateSubgraphNode(
+  nnvm::ObjectPtr CreateSubgraphNode(
       const nnvm::Symbol &sym, const int subgraph_id = 0) const override {
     // We can use CachedOp to execute the subgraph.
-    nnvm::NodePtr n = nnvm::Node::Create();
+    nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_CachedOp");
     n->attrs.name = "ConvBN" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));

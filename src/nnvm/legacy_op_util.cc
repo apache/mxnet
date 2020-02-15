@@ -36,7 +36,7 @@ namespace op {
 
 using nnvm::Op;
 using nnvm::Node;
-using nnvm::NodePtr;
+using nnvm::ObjectPtr;
 using nnvm::NodeAttrs;
 using nnvm::NodeEntry;
 
@@ -309,7 +309,7 @@ OpStatePtr OpPropCreateLayerOp(const NodeAttrs& attrs,
 
 inline std::vector<NodeEntry> OpPropGradient(
     const Op* back_op,
-    const NodePtr& ptr,
+    const ObjectPtr& ptr,
     const std::vector<NodeEntry>& out_grads) {
   auto& prop = nnvm::get<ParsedOpProp>(ptr->attrs.parsed);
   std::vector<NodeEntry> out_data;
@@ -326,7 +326,7 @@ inline std::vector<NodeEntry> OpPropGradient(
   for (size_t i = 0; i < prop.aux_states.size(); ++i) {
     inputs.emplace_back(ptr->inputs[i + prop.arguments.size()]);
   }
-  NodePtr gnode = Node::Create();
+  ObjectPtr gnode = Node::Create();
   gnode->inputs = std::move(inputs);
   gnode->control_deps.emplace_back(ptr);
   gnode->attrs = ptr->attrs;

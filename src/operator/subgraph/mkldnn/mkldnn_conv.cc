@@ -413,7 +413,7 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
   CHECK_EQ(attrs->subgraphs.size(), 1);
   auto subgraph_sym = attrs->subgraphs[0];
   bool with_act = false;
-  DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr &node) {
+  DFSVisit(subgraph_sym->outputs, [&](const nnvm::ObjectPtr &node) {
     if (node->is_variable()) return;
     auto &node_name = node->op()->name;
     if (node_name == "BatchNorm") {
@@ -644,9 +644,9 @@ std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
   }
 }
 
-nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
+nnvm::ObjectPtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
   CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
       << "Quantized Convolution of MKL-DNN only supports 2D kernel currently."

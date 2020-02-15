@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=ungrouped-imports
 """Dataset generator."""
-from __future__ import absolute_import
 __all__ = ['DataLoader']
 
 import pickle
@@ -55,10 +54,7 @@ else:
     def rebuild_ndarray(pid, fd, shape, dtype):
         """Rebuild ndarray from pickled shared memory"""
         # pylint: disable=no-value-for-parameter
-        if sys.version_info[0] == 2:
-            fd = multiprocessing.reduction.rebuild_handle(fd)
-        else:
-            fd = fd.detach()
+        fd = fd.detach()
         return nd.NDArray(nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype))
 
     def reduce_ndarray(data):
@@ -66,10 +62,7 @@ else:
         # keep a local ref before duplicating fd
         data = data.as_in_context(context.Context('cpu_shared', 0))
         pid, fd, shape, dtype = data._to_shared_mem()
-        if sys.version_info[0] == 2:
-            fd = multiprocessing.reduction.reduce_handle(fd)
-        else:
-            fd = multiprocessing.reduction.DupFd(fd)
+        fd = multiprocessing.reduction.DupFd(fd)
         return rebuild_ndarray, (pid, fd, shape, dtype)
 
 ForkingPickler.register(nd.NDArray, reduce_ndarray)
@@ -87,10 +80,7 @@ else:
     def rebuild_np_ndarray(pid, fd, shape, dtype):
         """Rebuild ndarray from pickled shared memory"""
         # pylint: disable=no-value-for-parameter
-        if sys.version_info[0] == 2:
-            fd = multiprocessing.reduction.rebuild_handle(fd)
-        else:
-            fd = fd.detach()
+        fd = fd.detach()
         return _mx_np.ndarray(nd.ndarray._new_from_shared_mem(pid, fd, shape, dtype))
 
     def reduce_np_ndarray(data):
@@ -98,10 +88,7 @@ else:
         # keep a local ref before duplicating fd
         data = data.as_in_context(context.Context('cpu_shared', 0))
         pid, fd, shape, dtype = data._to_shared_mem()
-        if sys.version_info[0] == 2:
-            fd = multiprocessing.reduction.reduce_handle(fd)
-        else:
-            fd = multiprocessing.reduction.DupFd(fd)
+        fd = multiprocessing.reduction.DupFd(fd)
         return rebuild_np_ndarray, (pid, fd, shape, dtype)
 
 ForkingPickler.register(_mx_np.ndarray, reduce_np_ndarray)
@@ -134,11 +121,7 @@ class ConnectionWrapper(object):
 class Queue(multiprocessing.queues.Queue):
     """Wrapper for multiprocessing queue that dumps NDArray with shared memory."""
     def __init__(self, *args, **kwargs):
-        if sys.version_info[0] <= 2:
-            super(Queue, self).__init__(*args, **kwargs)
-        else:
-            super(Queue, self).__init__(*args, ctx=multiprocessing.get_context(),
-                                        **kwargs)
+        super().__init__(*args, ctx=multiprocessing.get_context(), **kwargs)
         self._reader = ConnectionWrapper(self._reader)
         self._writer = ConnectionWrapper(self._writer)
         self._send = self._writer.send
@@ -150,11 +133,7 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
        SimpleQueue don't use threading internally.
     """
     def __init__(self, *args, **kwargs):
-        if sys.version_info[0] <= 2:
-            super(SimpleQueue, self).__init__(*args, **kwargs)
-        else:
-            super(SimpleQueue, self).__init__(*args, ctx=multiprocessing.get_context(),
-                                              **kwargs)
+        super().__init__(*args, ctx=multiprocessing.get_context(), **kwargs)
         self._reader = ConnectionWrapper(self._reader)
         self._writer = ConnectionWrapper(self._writer)
         self._send = self._writer.send
@@ -240,7 +219,7 @@ class _MultiWorkerIterV1(object):
         self._batchify_fn = batchify_fn
         self._batch_sampler = batch_sampler
         self._key_queue = Queue()
-        self._data_queue = Queue() if sys.version_info[0] <= 2 else SimpleQueue()
+        self._data_queue = SimpleQueue()
 
         self._data_buffer = {}
         self._data_buffer_lock = threading.Lock()

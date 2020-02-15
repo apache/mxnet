@@ -64,22 +64,11 @@ class CMake(object):
         self.cmake_options = None
         self.read_config()
 
-    def read_config(self):
-        assert os.path.isfile(self.cmake_options_yaml)
-        with open(self.cmake_options_yaml, 'r') as f:
-            self.cmake_options = yaml.load(f)
-
-    def _cmdlineflags(self):
-        res = []
-        for opt,v in self.cmake_options.items():
-            res.append('-D{}={}'.format(opt,v))
-        return res
-
     def cmake_command(self) -> str:
         """
         :return: Cmake command to run given the options
         """
-        cmd_lst = ['cmake']
+        cmd_lst = ['cmake', '-C', 'config.cmake']
         cmd_lst.extend(self._cmdlineflags())
         return cmd_lst
 

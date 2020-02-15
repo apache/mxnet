@@ -19,7 +19,6 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
-from __future__ import absolute_import as _abs
 try:
     from __builtin__ import slice as py_slice
 except ImportError:
@@ -29,7 +28,6 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-import sys
 import numpy as _numpy  # pylint: disable=relative-import
 
 from ..attribute import AttrScope
@@ -1212,7 +1210,7 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
@@ -1700,7 +1698,7 @@ class Symbol(SymbolBase):
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
         try:
-            if sys.version_info[0] > 2 and _int64_enabled():
+            if _int64_enabled():
                 check_call(_LIB.MXExecutorSimpleBindEx64(self.handle,
                                                          ctypes.c_int(ctx.device_typeid),
                                                          ctypes.c_int(ctx.device_id),

@@ -64,7 +64,7 @@ class BidirectionalGraph {
     // Create all the nodes in a new graph from
     // nodes in the NNVM graph and store them
     // in nodes array
-    DFSVisit(g.outputs, [this](const nnvm::NodePtr& n) {
+    DFSVisit(g.outputs, [this](const nnvm::ObjectPtr& n) {
       Node new_node;
       new_node.nnvmptr = n.get();
       nnvm2nid[n.get()] = static_cast<uint32_t>(nodes.size());
@@ -298,7 +298,7 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
       outputs.insert({e, count++});
     }
   }
-  DFSVisit(g.outputs, [&subgraph_set, &outputs, &count](const nnvm::NodePtr &node){
+  DFSVisit(g.outputs, [&subgraph_set, &outputs, &count](const nnvm::ObjectPtr &node){
     if (!subgraph_set.count(node.get())) {
       for (auto& e : node->inputs) {
         if (subgraph_set.count(e.node.get()) && !outputs.count(e)) {
@@ -317,7 +317,7 @@ nnvm::NodeEntryMap<uint32_t> GetSubgraphOutputs(Graph g, NodeRawPtrSet subgraph_
 std::vector<nnvm::NodeEntry> GetSubgraphInputs(Graph g, NodeRawPtrSet subgraph_set) {
   std::vector<nnvm::NodeEntry> inputs;
   nnvm::NodeEntryMap<nnvm::NodeEntry> entry_map;
-  DFSVisit(g.outputs, [&subgraph_set, &inputs, &entry_map](const nnvm::NodePtr &node){
+  DFSVisit(g.outputs, [&subgraph_set, &inputs, &entry_map](const nnvm::ObjectPtr &node){
     if (subgraph_set.count(node.get())) {
       for (auto &e : node->inputs) {
         if (!subgraph_set.count(e.node.get())) {
@@ -361,7 +361,7 @@ std::unordered_map<uint32_t, uint32_t> GetGraphInputsMap(const Graph& g) {
  * \brief Helper function to display what nodes are in a specific subset.
  */
 void dispNodesSet(Graph g, NodeRawPtrSet s) {
-  DFSVisit(g.outputs, [&s](const nnvm::NodePtr n){
+  DFSVisit(g.outputs, [&s](const nnvm::ObjectPtr n){
     if (s.count(n.get())) {
       std::cout << "  Y " << n->attrs.name << std::endl;
     } else {
@@ -394,7 +394,7 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
     // replug inputs of node out of subgraph to be output of the subgraph node
     // if it was a node in the subgraph
     DFSVisit(g.outputs,
-        [&subgraph_node, &subgraph_set, &sub_outputs_in_main](const nnvm::NodePtr node) {
+        [&subgraph_node, &subgraph_set, &sub_outputs_in_main](const nnvm::ObjectPtr node) {
       if (!subgraph_set.count(node.get())) {
         for (auto &e : node->inputs) {
           auto it = sub_outputs_in_main.find(e);
@@ -416,13 +416,13 @@ Graph ReplaceSubgraphs(Graph&& g, const std::vector<NodeRawPtrSet>& subgraph_set
     }
     // move control dependencies between nodes of the subgraph and out of the subgraph
     // to a dependencies between the subgraph node and the nodes out of the subgraph
-    DFSVisit(g.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
+    DFSVisit(g.outputs, [&subgraph_node, &subgraph_set](const nnvm::ObjectPtr& node) {
       for (auto &e : node->control_deps) {
         if (subgraph_set.count(e.get()))
           e = subgraph_node;
       }
     });
-    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
+    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::ObjectPtr& node) {
       auto it = node->control_deps.begin();
       while (it != node->control_deps.end()) {
         if (subgraph_set.count(it->get())) {
