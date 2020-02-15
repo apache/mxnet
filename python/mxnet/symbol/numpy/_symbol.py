@@ -18,7 +18,6 @@
 # pylint: disable=too-many-lines, unused-argument
 """numpy namespace for operators used in Gluon APIs dispatched by F=symbol module."""
 
-from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op

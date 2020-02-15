@@ -2184,7 +2184,6 @@ def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
-@unittest.skipIf(sys.version_info.major < 3, "Skip running fallback ops for Python2")
 @with_seed()
 @use_np
 def test_np_fallback_ops():

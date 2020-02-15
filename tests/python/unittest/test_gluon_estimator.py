@@ -118,7 +118,6 @@ def test_validation():
                 epochs=num_epochs)
 
 
-@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_initializer():
     ''' test with no initializer, inconsistent initializer '''
     net = _get_test_network()
@@ -159,7 +158,6 @@ def test_initializer():
             epochs=num_epochs)
 
 
-@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_trainer():
     ''' test with no trainer and invalid trainer '''
     net = _get_test_network()
@@ -324,7 +322,6 @@ def test_categorize_handlers():
     assert len(train_end) == 2
 
 
-@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_default_handlers():
     net = _get_test_network()
     train_data, _ = _get_test_data()

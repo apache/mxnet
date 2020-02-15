@@ -17,7 +17,6 @@
 
 """Operators that fallback to official NumPy implementation for np.linalg."""
 
-from __future__ import absolute_import
 
 import numpy as onp
 

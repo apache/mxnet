@@ -3766,8 +3766,6 @@ def test_np_random_beta():
     data = np.array([1])
     for [param_shape, in_dtype, out_dtype, hybridize] in itertools.product(shape_list,
             dtype_list, dtype_list, hybridize_list):
-        if sys.version_info.major < 3 and param_shape == ():
-            continue
         mx_data = data.astype(in_dtype)
         np_data = mx_data.asnumpy()
         test_random_beta = TestRandomBeta(size=param_shape, dtype=out_dtype)
@@ -6293,8 +6291,6 @@ def test_np_take():
                 check_output_n_grad(config[0], config[1], config[2], mode)
 
 
-@unittest.skipUnless(sys.version_info.major >= 3 and sys.version_info.minor >= 5,
-                     'inspect package requires Python >= 3.5 to work properly')
 @with_seed()
 def test_np_builtin_op_signature():
     import inspect

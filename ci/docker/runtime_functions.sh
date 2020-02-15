@@ -43,11 +43,10 @@ scala_prepare() {
 
 check_cython() {
     set -ex
-    local python_ver=$1
-    local is_cython_used=$(python${python_ver} <<EOF
+    local is_cython_used=$(python3 <<EOF
 import sys
 import mxnet as mx
-cython_ndarraybase = 'mxnet._cy' + str(sys.version_info.major) + '.ndarray'
+cython_ndarraybase = 'mxnet._cy3.ndarray'
 print(mx.nd._internal.NDArrayBase.__module__ == cython_ndarraybase)
 EOF
 )
@@ -1080,7 +1079,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    check_cython 3
+    check_cython
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 

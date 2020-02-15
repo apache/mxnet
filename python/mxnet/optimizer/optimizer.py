@@ -18,7 +18,6 @@
 
 # pylint: disable=too-many-lines
 """Weight updating functions."""
-from __future__ import absolute_import
 import logging
 import math
 import pickle

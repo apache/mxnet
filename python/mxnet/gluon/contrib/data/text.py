@@ -20,7 +20,6 @@
 """Text datasets."""
 __all__ = ['WikiText2', 'WikiText103']
 
-import io
 import os
 import zipfile
 import shutil
@@ -58,7 +57,7 @@ class _LanguageModelDataset(dataset._DownloadedDataset): # pylint: disable=abstr
 class _WikiText(_LanguageModelDataset):
 
     def _read_batch(self, filename):
-        with io.open(filename, 'r', encoding='utf8') as fin:
+        with open(filename, 'r', encoding='utf8') as fin:
             content = fin.read()
         self._build_vocab(content)
 
