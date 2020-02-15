@@ -199,13 +199,26 @@ The following modified ReLU Activation functions are supported:
 .add_argument("gamma", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(LeakyReLUParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (index == 1 && var->attrs.dict.find("__init__") == var->attrs.dict.end()) {
         var->attrs.dict["__init__"] = "[\"Constant\", {\"value\": 0.25}]";
       }
     });
 
 NNVM_REGISTER_OP(_backward_LeakyReLU)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
+  if (param.act_type == leakyrelu::kPReLU) {
+    // forward has 2 inputs and 1 output
+    return 2 + 2 * 1;
+  } else if (param.act_type == leakyrelu::kRReLU) {
+    // forward has 1 input and 2 outputs
+    return 1 + 2 * 2;
+  } else {
+    // forward has 1 input and 1 output
+    return 1 + 2 * 1;
+  }
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   return param.act_type == leakyrelu::kPReLU ? 2 : 1;

@@ -1,24 +1,7 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
-/*
  * Copyright (c) 2005-2019, NumPy Developers.
+ * Copyright (c) 2019, The Apache Software Foundation.
+ *
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +36,8 @@
 /*!
  * \file np_einsum_op-inl.h
  * \brief Function definition of numpy-compatible einsum operator
+ * modified by Haozheng Fan(@hzfan) from:
+ * https://github.com/numpy/numpy/blob/master/numpy/core/src/multiarray/einsum.c.src
  */
 
 #ifndef MXNET_OPERATOR_NUMPY_NP_EINSUM_OP_INL_H_
@@ -188,7 +173,7 @@ inline int parse_operand_subscripts(const char *subscripts, int length,
       /* Search for the next matching label. */
       char *next = reinterpret_cast<char*>(memchr(op_labels + idim + 1, label, ndim - idim - 1));
 
-      while (next != NULL) {
+      while (next != nullptr) {
         /* The offset from next to op_labels[idim] (negative). */
         *next = static_cast<char>((op_labels + idim) - next);
         /* Search for the next matching label. */
@@ -223,7 +208,7 @@ inline int parse_output_subscripts(const char *subscripts, int length,
     /* A proper label for an axis. */
     if (label > 0 && isalpha(label)) {
       /* Check that it doesn't occur again. */
-      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == NULL)
+      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == nullptr)
         << "einstein sum subscripts string includes "
         << "output subscript '" << static_cast<char>(label)
         << "' multiple times";
@@ -371,7 +356,7 @@ inline static int prepare_op_axes(int ndim, int iop, char *labels,
       /* It's a labeled dimension, find the matching one */
       char *match = reinterpret_cast<char*>(memchr(labels, label, ndim));
       /* If the op doesn't have the label, broadcast it */
-      if (match == NULL) {
+      if (match == nullptr) {
         axes[i] = -1;
       } else {
         /* Otherwise use it */
@@ -600,7 +585,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   int ndim_iter = ndim_output;
   for (label = min_label; label <= max_label; ++label) {
     if (label_counts[label] > 0 &&
-        memchr(output_labels, label, ndim_output) == NULL) {
+        memchr(output_labels, label, ndim_output) == nullptr) {
       CHECK(ndim_iter < NPY_MAXDIMS)
         << "too many subscripts in einsum";
       iter_labels[ndim_iter++] = label;

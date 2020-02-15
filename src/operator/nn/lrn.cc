@@ -72,7 +72,7 @@ bool LRNType(const nnvm::NodeAttrs& attrs,
 
 struct LRNGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                 const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[0]);  // out_grad
@@ -184,6 +184,7 @@ number of kernels in the layer.
 .add_arguments(LRNParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_LRN)
+.set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LRNParam>)
 #if MXNET_USE_MKLDNN == 1

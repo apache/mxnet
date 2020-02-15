@@ -608,7 +608,7 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
 })
 .set_attr<FCompute>("FCompute<cpu>", ROIAlignForwardCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[roialign::kOut]);
     heads.push_back(n->inputs[roialign::kBox]);
@@ -621,6 +621,7 @@ He, Kaiming, et al. "Mask R-CNN." ICCV, 2017
 
 
 NNVM_REGISTER_OP(_backward_ROIAlign)
+.set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<ROIAlignParam>)

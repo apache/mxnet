@@ -129,11 +129,11 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     property->SetAttr<bool>("inference_only", true);
     return property;
   }
-  nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::NodePtr fuse_node = nullptr;
-    nnvm::NodePtr requantize_node = nullptr;
-    DFSVisit(sym.outputs, [&](const nnvm::NodePtr &node) {
+    nnvm::ObjectPtr fuse_node = nullptr;
+    nnvm::ObjectPtr requantize_node = nullptr;
+    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
       auto &op_name = node->op()->name;
       if (support_requantize_fusion_op_name.count(op_name)) {
@@ -161,12 +161,11 @@ class SgMKLDNNPostQuantizeProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::NodePtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr n,
+                          std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const override {
+    for (size_t i = 0; i < output_map->size(); ++i) {
+      for (auto e : output_map->at(i))
+        *e = nnvm::NodeEntry{n, e->index, 0};
     }
   }
 

@@ -48,7 +48,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
 .set_attr<FCompute>("FCompute<cpu>",
   ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: dL/dxgrad
     // inputs[0]: dL/dy
     // inputs[1]: x
@@ -123,7 +123,7 @@ The storage type of ``square`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
                                                unary_bwd<mshadow_op::square_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: head_grad_grads (dL/dxgrad)
     // inputs[0]: dL/dy
     // inputs[1]: x (ElemwiseGradUseIn)
@@ -173,7 +173,7 @@ The storage type of ``sqrt`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sqrt,
                                                   unary_bwd<mshadow_op::square_root_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : f(x) = x^1/2
@@ -224,7 +224,7 @@ The storage type of ``rsqrt`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
   _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : x
@@ -273,7 +273,7 @@ The storage type of ``cbrt`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
                                                   unary_bwd<mshadow_op::cube_root_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : f(x) = x^1/3
@@ -329,7 +329,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
                     ElemwiseBinaryOp::Compute<cpu,
                       unary_bwd<mshadow_op::reciprocal_cube_root_grad>>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : x

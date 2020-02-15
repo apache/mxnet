@@ -268,9 +268,9 @@ class TensorrtProperty : public SubgraphProperty {
     return std::make_shared<TensorrtProperty>();
   }
 
-  nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id) const override {
-    nnvm::NodePtr n = nnvm::Node::Create();
+    nnvm::ObjectPtr n = nnvm::Node::Create();
     nnvm::Symbol new_sym;
     std::unique_copy(sym.outputs.begin(), sym.outputs.end(),
         std::back_inserter(new_sym.outputs), [](
@@ -298,26 +298,28 @@ class TensorrtProperty : public SubgraphProperty {
     return std::make_shared<TensorrtSelector>();
   }
 
-  void ConnectSubgraphOutputs(const nnvm::NodePtr subgraph_node, \
-                              std::vector<nnvm::NodeEntry*>* output_entries) const override {
+  void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node, \
+                          std::vector<std::vector<nnvm::NodeEntry*>>* output_map) const override {
     std::vector<nnvm::NodeEntry>& outputs = subgraph_node->attrs.subgraphs[0]->outputs;
     TRTParam& _params = nnvm::get<TRTParam>(subgraph_node->attrs.parsed);
     for (size_t i = 0; i < outputs.size(); i++) {
       auto& o = outputs[i];
-      for (auto& e : *output_entries) {
-        if (o.index == e->index && o.node.get() == e->node.get()) {
-          e->index = i;
-          e->node = subgraph_node;
-          // TODO(cfujitsang): For future support this would fail
-          //                   if the node have multiple outputs
-          _params.outputs_to_idx[o.node->attrs.name] = i;
+      for (size_t idx = 0; i < output_map->size(); ++i) {
+        for (auto& e : output_map->at(idx)) {
+          if (o.index == e->index && o.node.get() == e->node.get()) {
+            e->index = i;
+            e->node = subgraph_node;
+            // TODO(cfujitsang): For future support this would fail
+            //                   if the node have multiple outputs
+            _params.outputs_to_idx[o.node->attrs.name] = i;
+          }
         }
       }
     }
     subgraph_node->attrs.parsed = std::move(_params);
   }
 
-  void ConnectSubgraphInputs(const nnvm::NodePtr subgraph_node,
+  void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
                              std::vector<nnvm::NodeEntry*>* input_entries,
                              std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
     TRTParam& _params = nnvm::get<TRTParam>(subgraph_node->attrs.parsed);

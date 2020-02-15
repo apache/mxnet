@@ -107,7 +107,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(SVMOutputParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new SVMOutputOp<gpu, DType>(param);
   })

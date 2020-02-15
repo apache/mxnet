@@ -28,7 +28,4 @@ apt-get install -y python-dev python3-dev virtualenv wget
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 wget -nv https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py
-python2 get-pip.py
-
 pip3 install -r /work/requirements
-pip2 install -r /work/requirements

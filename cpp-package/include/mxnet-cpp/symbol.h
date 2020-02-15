@@ -138,7 +138,7 @@ class Symbol {
   /*!
   * \return the SymbolHandle
   */
-  SymbolHandle GetHandle() const { return (blob_ptr_) ? blob_ptr_->handle_: NULL; }
+  SymbolHandle GetHandle() const { return (blob_ptr_) ? blob_ptr_->handle_: nullptr; }
   /*!
   * \brief construct an operator Symbol, with given input Symbol and config
   * \param name the name of the Symbol
@@ -174,6 +174,8 @@ class Symbol {
   *unnamed (empty string).
   */
   std::vector<std::string> ListArguments() const;
+  /*! \return lists all argument names and aux states of the symbol */
+  std::vector<std::string> ListInputs() const;
   /*! \return get the descriptions of outputs for this symbol */
   std::vector<std::string> ListOutputs() const;
   /*! \return get the descriptions of auxiliary data for this symbol */

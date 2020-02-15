@@ -20,6 +20,7 @@ import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
 from common import setup_module, with_seed, teardown
+import multiprocessing
 
 
 def eprint(*args, **kwargs):
@@ -49,6 +50,21 @@ def test_models():
             model.collect_params().initialize()
         model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
 
+def parallel_download(model_name):
+    model = get_model(model_name, pretrained=True, root='./parallel_download')
+    print(type(model))
+
+@with_seed()
+def test_parallel_download():
+    processes = []
+    name = 'mobilenetv2_0.25'
+    for _ in range(10):
+        p = multiprocessing.Process(target=parallel_download, args=(name,))
+        processes.append(p)
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
 
 if __name__ == '__main__':
     import nose

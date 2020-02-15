@@ -23,7 +23,7 @@ dependencies:
 - pip
 - python
 - jupyter
-- sphinx
+- sphinx==2.2.2
 - matplotlib
 - notebook
 - pip:

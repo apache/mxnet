@@ -126,8 +126,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     return array;
   }
 
-  nnvm::NodePtr MakeNode() const {
-    nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr MakeNode() const {
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     node->attrs = attrs_;
     return node;
   }
@@ -299,7 +299,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     return foo::kFlag;
   }
 
-  nnvm::NodePtr GetBackwardDependency(const nnvm::NodePtr& node,
+  nnvm::ObjectPtr GetBackwardDependency(const nnvm::ObjectPtr& node,
                                       std::map<int, const NDArray *>* index2array) const {
     index2array->clear();
     static auto& fgradient = nnvm::Op::GetAttr<nnvm::FGradient>("FGradient");
@@ -331,8 +331,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
     return nullptr;
   }
 
-  nnvm::NodePtr CalcBackwardPass(std::map<int, const NDArray *> *index2array) const {
-    nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr CalcBackwardPass(std::map<int, const NDArray *> *index2array) const {
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     node->attrs = attrs_;
     return GetBackwardDependency(node, index2array);
   }
@@ -346,7 +346,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
             const std::vector<NDArray>& inputs = {},
             const std::vector<NDArray>& outputs = {},
             const CoreOpExecutor *backward_for_op = nullptr,
-            nnvm::NodePtr bwd_node_ptr = nullptr
+            nnvm::ObjectPtr bwd_node_ptr = nullptr
   ) {
     if (!initialized_) {
       initialized_ = true;
@@ -366,7 +366,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       CHECK_NOTNULL(op_);
 
       std::map<int, const NDArray *> index2array;
-      nnvm::NodePtr bwd_node_ptr;
+      nnvm::ObjectPtr bwd_node_ptr;
       if (backward_for_op) {
         bwd_node_ptr = backward_for_op->CalcBackwardPass(&index2array);
       }

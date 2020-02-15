@@ -36,6 +36,7 @@ MXNet NDArray Pooling Operators
 9. GlobalAvgPool2D
 10.GlobalSumPool1D
 11.GlobalSumPool2D
+12.ROIPooling
 
 (Under the hood uses mx.nd.pooling)
 
@@ -90,8 +91,23 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                                                      ],
                                                              warmup=warmup,
                                                              runs=runs)
+    # Run ROI Pooling performance runs
+    roipool_benchmark_res = []
+    for roipool_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+        roipool_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "ROIPooling")],
+                                                      run_backward=True,
+                                                      dtype=dtype,
+                                                      ctx=ctx,
+                                                      profiler=profiler,
+                                                      inputs=[{"data": roipool_data,
+                                                               "rois": (32, 5),
+                                                               "pooled_size": (2, 2),
+                                                               "spatial_scale": .5}
+                                                             ],
+                                                      warmup=warmup,
+                                                      runs=runs)
     # Prepare combined results
-    mx_pooling_op_results = merge_map_list(pool1d_benchmark_res + pool2d_benchmark_res)
+    mx_pooling_op_results = merge_map_list(pool1d_benchmark_res + pool2d_benchmark_res + roipool_benchmark_res)
     return mx_pooling_op_results
 
 

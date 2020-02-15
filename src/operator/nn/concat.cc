@@ -300,7 +300,7 @@ static void ConcatGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 
 struct ConcatGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     CHECK_EQ(ograds.size(), 1);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -396,6 +396,14 @@ CONCAT_FORWARD_ATTRS
 .add_arguments(ConcatParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Concat)
+.set_num_inputs([](const NodeAttrs& attrs) {
+#if MXNET_USE_MKLDNN == 1
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return 1 + params.num_args;
+#else
+  return 1;
+#endif
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
   return params.num_args;

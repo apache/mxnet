@@ -390,7 +390,7 @@ static void DeconvolutionParamParser(nnvm::NodeAttrs* attrs) {
 
 struct DeconvolutionGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
     heads.push_back(n->inputs[deconv::kData]);
@@ -445,6 +445,10 @@ NNVM_REGISTER_OP(Deconvolution)
 .add_arguments(DeconvolutionParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_backward_Deconvolution)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
+  return params.no_bias ? 3 : 4;
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const DeconvolutionParam& params = nnvm::get<DeconvolutionParam>(attrs.parsed);
   return params.no_bias ? 2 : 3;

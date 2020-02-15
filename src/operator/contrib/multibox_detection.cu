@@ -238,7 +238,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(MultiBoxDetectionParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new MultiBoxDetectionOp<gpu, DType>(param);
   });

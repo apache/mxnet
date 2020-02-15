@@ -169,7 +169,7 @@ struct TBlobBatch {
   std::string extra_data;
   /*! \brief constructor */
   TBlobBatch(void) {
-    inst_index = NULL;
+    inst_index = nullptr;
     batch_size = 0; num_batch_padd = 0;
   }
   /*! \brief destructor */

@@ -649,7 +649,7 @@ inline void DotCsrDnsRspImpl(const OpContext& ctx,
           size_t *null_ptr = nullptr;
           size_t *null_dptr = nullptr;
           cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-          cub::DeviceSelect::Unique(NULL, unique_temp_bytes, null_dptr, null_dptr,
+          cub::DeviceSelect::Unique(nullptr, unique_temp_bytes, null_dptr, null_dptr,
                                     null_ptr, nnz, stream);
           // the temp storage for sort and unique
           size_t original_idx_bytes = nnz * sizeof(IType);
@@ -791,8 +791,8 @@ inline void DotCsrRspRspImpl(const OpContext& ctx,
             // - mark non-zero columns of csr matrix in row_flg
             // - compute inclusive prefix sum over marked array
             // - copy last value (nnr_out) from device to host
-            dim_t* row_flg_out = NULL;
-            void* d_temp_storage = NULL;
+            dim_t* row_flg_out = nullptr;
+            void* d_temp_storage = nullptr;
             size_t temp_storage_bytes = 0;
             cub::DeviceScan::InclusiveSum(d_temp_storage,
                                           temp_storage_bytes,

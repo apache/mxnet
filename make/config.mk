@@ -18,9 +18,9 @@
 #-------------------------------------------------------------------------------
 #  Template configuration for compiling mxnet
 #
-#  If you want to change the configuration, please use the following
-#  steps. Assume you are on the root directory of mxnet. First copy the this
-#  file so that any local changes will be ignored by git
+#  If you want to change the configuration, please use the following steps.
+#  Assume you are on the root directory of mxnet. First copy this file so that
+#  any local changes will be ignored by git
 #
 #  $ cp make/config.mk .
 #
@@ -199,7 +199,7 @@ USE_GPERFTOOLS_PATH =
 USE_GPERFTOOLS_STATIC =
 
 # Use JEMalloc if found, and not using gperftools
-USE_JEMALLOC = 1
+USE_JEMALLOC = 0
 
 # path to jemalloc library in case of a non-standard installation
 USE_JEMALLOC_PATH =

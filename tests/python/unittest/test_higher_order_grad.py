@@ -27,7 +27,8 @@ from nose.tools import ok_
 from common import with_seed
 import mxnet
 from mxnet import nd, autograd, gluon
-from mxnet.test_utils import assert_almost_equal, random_arrays, rand_shape_nd, same
+from mxnet.test_utils import (
+    assert_almost_equal, random_arrays, random_uniform_arrays, rand_shape_nd, same)
 
 
 @with_seed()
@@ -121,7 +122,7 @@ def test_tanh():
         return nd.tanh(x)
 
     def grad_op(x):
-        return 1 / nd.cosh(x)**2
+        return 1 - tanh(x)**2
 
     def grad_grad_op(x):
         return -2 * tanh(x) * grad_op(x)
@@ -129,8 +130,9 @@ def test_tanh():
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
         array = random_arrays(shape)
+        check_nth_order_unary(array, tanh, grad_op, 1, rtol=1e-6, atol=1e-6)
         check_second_order_unary(
-            array, tanh, grad_grad_op, rtol=1e-6, atol=1e-6)
+            array, tanh, grad_grad_op, rtol=1e-6, atol=1e-5)
 
 
 @with_seed()
@@ -143,12 +145,8 @@ def test_arcsin():
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
-        array = random_arrays(shape)
-        # Hack: Decrease std_dev to make
-        # sure all elements
-        # are in range -1 to 1
-        # i.e. Domain of arcsin
-        array *= 0.2
+        # Domain of arcsin is [-1, 1]
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)[0]
         check_second_order_unary(array, arcsin, grad_grad_op)
 
 
@@ -162,12 +160,8 @@ def test_arccos():
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
-        array = random_arrays(shape)
-        # Hack: Decrease std_dev to make
-        # sure all elements
-        # are in range -1 to 1
-        # i.e. Domain of arccos
-        array *= 0.2
+        # Domain of arccos is [-1, 1]
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)[0]
         check_second_order_unary(array, arccos, grad_grad_op)
 
 
@@ -232,7 +226,8 @@ def test_arctanh():
 
     for dim in range(1, 5):
         shape = rand_shape_nd(dim)
-        array = random_arrays(shape)
+        # Domain of arctanh is (-1, 1)
+        array = random_uniform_arrays(shape, low=-0.99, high=0.99)[0]
         check_second_order_unary(array, arctanh, grad_grad_op)
 
 
