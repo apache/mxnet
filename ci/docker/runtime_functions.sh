@@ -1994,28 +1994,28 @@ cd_s3_publish() {
     aws s3 cp ${filepath} s3://apache-mxnet/dist/python/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
-build_static_scala_mkl() {
+build_static_scala_cpu() {
     set -ex
     pushd .
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
-    export mxnet_variant=mkl
+    export mxnet_variant=cpu
     ./ci/publish/scala/build.sh
     popd
 }
 
-build_static_python_mkl() {
+build_static_python_cpu() {
     set -ex
     pushd .
-    export mxnet_variant=mkl
+    export mxnet_variant=cpu
     ./ci/publish/python/build.sh
     popd
 }
 
-build_static_python_cu101mkl() {
+build_static_python_cu101() {
     set -ex
     pushd .
-    export mxnet_variant=cu101mkl
+    export mxnet_variant=cu101
     ./ci/publish/python/build.sh
     popd
 }
