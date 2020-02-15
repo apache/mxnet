@@ -131,6 +131,146 @@ MXNET_REGISTER_IO_DATASET(RecordFileDataset)
      return new RecordFileDataset();
 });
 
+struct ImageRecordFileDatasetParam : public dmlc::Parameter<ImageRecordFileDatasetParam> {
+    std::string rec_file;
+    std::string idx_file;
+    int flag;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(ImageRecordFileDatasetParam) {
+        DMLC_DECLARE_FIELD(rec_file)
+            .describe("The absolute path of record file.");
+        DMLC_DECLARE_FIELD(idx_file)
+            .describe("The path of the idx file.");
+    }
+};  // struct ImageRecordFileDatasetParam
+
+DMLC_REGISTER_PARAMETER(ImageRecordFileDatasetParam);
+
+#if MXNET_USE_OPENCV
+template<int n_channels>
+NDArray SwapImageChannels(cv::Mat &img) {
+  int swap_indices[n_channels]; // NOLINT(*)
+  if (n_channels == 1) {
+    swap_indices[0] = 0;
+  } else if (n_channels == 3) {
+    swap_indices[0] = 2;
+    swap_indices[1] = 1;
+    swap_indices[2] = 0;
+  } else if (n_channels == 4) {
+    swap_indices[0] = 2;
+    swap_indices[1] = 1;
+    swap_indices[2] = 0;
+    swap_indices[3] = 3;
+  }
+
+  TShape arr_shape = TShape({img.rows, img.cols, n_channels});
+  NDArray arr(arr_shape, mxnet::Context::CPU(0), true, mshadow::kUint8);
+  auto ptr = static_cast<uint8_t*>(arr.data().dptr_);
+
+  // swap channels while copying elements into buffer
+  for (int i = 0; i < img.rows; ++i) {
+    const uint8_t* im_data = img.ptr<uint8_t>(i);
+    uint8_t* buffer_data = ptr + i * img.cols * n_channels;
+    for (int j = 0; j < img.cols; ++j) {
+      for (int k = 0; k < n_channels; ++k) {
+        buffer_data[k] = im_data[swap_indices[k]];
+      }
+      im_data += n_channels;
+      buffer_data += n_channels;
+    }
+  }
+  return arr;
+}
+#endif
+
+/*! \brief Struct for unpack recordio header */
+#pragma pack(1)
+struct IRHeader {
+  uint32_t flag;
+  float label;
+  uint64_t id;
+  uint64_t id2;
+};  // struct IRHeader
+
+class ImageRecordFileDataset : public Dataset {
+  public:
+    ImageRecordFileDataset* Clone(void) const {
+      auto other = new ImageRecordFileDataset();
+      other->param_ = param_;
+      other->base_.reset(base_->Clone());
+      return other;
+    }
+
+    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      std::vector<std::pair<std::string, std::string> > kwargs_left;
+      param_.InitAllowUnknown(kwargs);
+      base_->Init(kwargs);
+    }
+
+    uint64_t GetLen() const {
+      return base_->GetLen();
+    }
+
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
+      CHECK_LT(idx, GetLen());
+      auto out = base_->GetItem(idx, is_scalar);
+      CHECK_EQ(out.size(), 1U) << "RecordFileDataset should return size 1 NDArray vector";
+      char *s = reinterpret_cast<char*>(out[0].data().dptr_);
+      size_t size = out[0].shape().Size();
+      CHECK_GT(size, sizeof(IRHeader)) << "Invalid size of bytes from Record File";
+      IRHeader header;
+      std::memcpy(&header, s, sizeof(header));
+      size -= sizeof(header);
+      NDArray label = NDArray(Context::CPU(), mshadow::default_type_flag);
+      is_scalar.resize(2);
+      is_scalar[0] = 0;
+      if (header.flag > 0) {
+        label.ReshapeAndAlloc(TShape({header.flag}));
+        label.SyncCopyFromCPU(s + sizeof(header), sizeof(float) * header.flag);
+        s += sizeof(float) * header.flag;
+        size -= sizeof(float) * header.flag;
+        is_scalar[1] = header.flag > 1;
+      } else {
+        label.ReshapeAndAlloc(TShape({1}));
+        label.SyncCopyFromCPU(&header.label, 1);
+        is_scalar[1] = 1;
+      }
+#if MXNET_USE_OPENCV
+      cv::Mat buf(1, size, CV_8U, s);
+      cv::Mat res = cv::imdecode(buf, param_.flag);
+      const int n_channels = res.channels();
+      NDArray ret;
+      if (n_channels == 1) {
+        ret = SwapImageChannels<1>(res);
+      } else if (n_channels == 3) {
+        ret = SwapImageChannels<3>(res);
+      } else if (n_channels == 4) {
+        ret = SwapImageChannels<4>(res);
+      }
+      std::vector<NDArray> result;
+      result.reserve(2);
+      result.emplace_back(ret);
+      result.emplace_back(label);
+      return result;
+#else
+    LOG(FATAL) << "Opencv is needed for image decoding.";
+#endif
+    };
+
+  private:
+    /*! \brief parameters */
+    ImageRecordFileDatasetParam param_;
+    /*! \brief base recordIO reader */
+    std::shared_ptr<RecordFileDataset> base_;
+};
+
+MXNET_REGISTER_IO_DATASET(ImageRecordFileDataset)
+ .describe("MXNet Image Record File Dataset")
+ .add_arguments(ImageRecordFileDatasetParam::__FIELDS__())
+ .set_body([]() {
+     return new ImageRecordFileDataset();
+});
+
 struct ImageSequenceDatasetParam : public dmlc::Parameter<ImageSequenceDatasetParam> {
     /*! \brief the list of absolute image paths, separated by \0 characters */
     std::string img_list;
@@ -197,43 +337,6 @@ class ImageSequenceDataset : public Dataset {
     ImageSequenceDatasetParam param_;
     /*! \brief image list */
     std::vector<std::string> img_list_;
-
-#if MXNET_USE_OPENCV
-    template<int n_channels>
-    NDArray SwapImageChannels(cv::Mat &img) const {
-      int swap_indices[n_channels]; // NOLINT(*)
-      if (n_channels == 1) {
-        swap_indices[0] = 0;
-      } else if (n_channels == 3) {
-        swap_indices[0] = 2;
-        swap_indices[1] = 1;
-        swap_indices[2] = 0;
-      } else if (n_channels == 4) {
-        swap_indices[0] = 2;
-        swap_indices[1] = 1;
-        swap_indices[2] = 0;
-        swap_indices[3] = 3;
-      }
-
-      TShape arr_shape = TShape({img.rows, img.cols, n_channels});
-      NDArray arr(arr_shape, mxnet::Context::CPU(0), true, mshadow::kUint8);
-      auto ptr = static_cast<uint8_t*>(arr.data().dptr_);
-
-      // swap channels while copying elements into buffer
-      for (int i = 0; i < img.rows; ++i) {
-        const uint8_t* im_data = img.ptr<uint8_t>(i);
-        uint8_t* buffer_data = ptr + i * img.cols * n_channels;
-        for (int j = 0; j < img.cols; ++j) {
-          for (int k = 0; k < n_channels; ++k) {
-            buffer_data[k] = im_data[swap_indices[k]];
-          }
-          im_data += n_channels;
-          buffer_data += n_channels;
-        }
-      }
-      return arr;
-    }
-#endif
 };
 
 MXNET_REGISTER_IO_DATASET(ImageSequenceDataset)
