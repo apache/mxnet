@@ -27,14 +27,13 @@ environment variable settings. Here are examples you can run with this script:
 ```
 tools/staticbuild/build.sh cu102
 ```
-
-This would build the mxnet package based on CUDA 10.2.
+This would build the mxnet package based on CUDA 10.2. Currently, we support variants cpu, native, cu90, cu92, cu100, and cu101. All of these variants expect native have MKL-DNN backend enabled. 
 
 ```
 tools/staticbuild/build.sh cpu
 ```
 
-This would build the mxnet package based on MKLDNN.
+This would build the mxnet package based on MKL-DNN.
 
 To use CMake to build the `libmxnet.so` instead of the deprecated Makefile based
 build logic, set the `CMAKE_STATICBUILD` environment variable. For example
@@ -53,7 +52,7 @@ This script clones the most up-to-date master and builds the MXNet backend with 
 
 - `DEPS_PATH` Path to your static dependencies
 - `PLATFORM` linux, darwin
-- `VARIANT` cpu, cu*, cu*mkl, mkl
+- `VARIANT` cpu, cu*
 
 It is not recommended to run this file alone since there are a bunch of variables need to be set.
 

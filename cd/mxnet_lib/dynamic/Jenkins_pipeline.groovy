@@ -31,7 +31,7 @@ licenses = 'licenses/*'
 
 // libmxnet dependencies
 mx_deps = ''
-mx_mkldnn_deps = ''
+mx_native_deps = ''
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies

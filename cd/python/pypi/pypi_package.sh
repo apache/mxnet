@@ -18,7 +18,7 @@
 
 set -ex
 
-# variant = cpu, mkl, cu80, cu80mkl, cu100, etc.
+# variant = cpu, native, cu80, cu100, etc.
 export mxnet_variant=${1:?"Please specify the mxnet variant"}
 
 # Due to this PR: https://github.com/apache/incubator-mxnet/pull/14899
