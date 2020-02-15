@@ -611,7 +611,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
     return _mx_nd_np.random.exponential(scale, size=size, ctx=ctx, out=out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
 
@@ -653,7 +653,7 @@ def weibull(a, size=None):
     model time to failure, in modeling particle sizes, in information retrieval
     to model dwell time on pages, in quantitative finance to model risk etc.
     """
-    return _mx_nd_np.random.weibull(a, size)
+    return _mx_nd_np.random.weibull(a, size=size, ctx=ctx, out=out)
 
 
 def pareto(a, size=None):
