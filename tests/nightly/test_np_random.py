@@ -78,6 +78,39 @@ def test_np_uniform():
 @retry(5)
 @with_seed()
 @use_np
+def test_np_logistic():
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 20
+    for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.logistic.ppf(x, loc=loc, scale=scale), num_buckets)
+        buckets = np.array(buckets).tolist()
+        probs = [(ss.logistic.cdf(buckets[i][1], loc, scale) -
+                  ss.logistic.cdf(buckets[i][0], loc, scale)) for i in range(num_buckets)]
+        generator_mx_np = lambda x: mx.np.random.logistic(loc, scale, size=x).asnumpy()
+        verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
+
+
+@retry(5)
+@with_seed()
+@use_np
+def test_np_gumbel():
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 5
+    for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
+        buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.gumbel_r.ppf(x, loc=loc, scale=scale), num_buckets)
+        buckets = np.array(buckets).tolist()
+        probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
+        generator_mx_np = lambda x: mx.np.random.gumbel(loc, scale, size=x).asnumpy()
+        verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
+
+
+@retry(5)
+@with_seed()
+@use_np
 def test_np_normal():
     types = [None, "float32", "float64"]
     ctx = mx.context.current_context()
@@ -89,8 +122,9 @@ def test_np_normal():
         for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
             buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.norm.ppf(x, loc=loc, scale=scale), num_buckets)
             buckets = np.array(buckets, dtype=dtype).tolist()
-            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
-            generator_mx_np = lambda x: np.random.normal(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            probs = [(ss.norm.cdf(buckets[i][1], loc, scale) -
+                      ss.norm.cdf(buckets[i][0], loc, scale)) for i in range(num_buckets)]
+            generator_mx_np = lambda x: mx.np.random.normal(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
 

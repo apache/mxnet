@@ -19,7 +19,6 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments
 # pylint: disable=global-statement, unused-import
 """NDArray configuration API."""
-from __future__ import absolute_import as _abs
 
 import ctypes
 
