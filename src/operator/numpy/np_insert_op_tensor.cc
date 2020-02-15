@@ -33,8 +33,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyInsertParam);
 
 bool NumpyInsertTensorType(const nnvm::NodeAttrs& attrs,
-                                  std::vector<int> *in_type,
-                                  std::vector<int> *out_type) {
+                           std::vector<int> *in_type,
+                           std::vector<int> *out_type) {
   const NumpyInsertParam& param = nnvm::get<NumpyInsertParam>(attrs.parsed);
   int input_count = param.val.has_value() ? 1 : 2;
   int insize = input_count + 1;

@@ -143,14 +143,14 @@ void NumpyInsertScalarCompute(const nnvm::NodeAttrs& attrs,
 
   // 'obj' is integer, need to moveaxis
   MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-    InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
-                               mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                               mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                               mxnet_op::calc_stride(old_valshape.get<ndim>()),
-                               mxnet_op::calc_stride(outshape.get<ndim>()),
-                               outshape.get<ndim>(), values.shape_.get<ndim>(),
-                               dtype, vtype, req[out_pos], axis, index, numnew,
-                               outshape.Size(), true);
+    InsertScalerImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
+                                mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                mxnet_op::calc_stride(outshape.get<ndim>()),
+                                outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                dtype, vtype, req[out_pos], axis, index, numnew,
+                                outshape.Size(), true);
   });
 }
 

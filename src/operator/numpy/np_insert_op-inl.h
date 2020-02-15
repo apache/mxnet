@@ -290,17 +290,17 @@ struct SetOriginArrIdx {
 };
 
 template<typename xpu, int ndim>
-void InsertScalerObj(mshadow::Stream<xpu> *s, const TBlob& output,
-                     const TBlob& arr, const TBlob& values,
-                     const mshadow::Shape<ndim>& arr_strides,
-                     const mshadow::Shape<ndim>& val_strides,
-                     const mshadow::Shape<ndim>& old_val_strides,
-                     const mshadow::Shape<ndim>& out_strides,
-                     const mshadow::Shape<ndim>& k_outshape,
-                     const mshadow::Shape<ndim>& k_valshape,
-                     const int dtype, const int vtype, const int req,
-                     const int axis, const int index, const int numnew,
-                     const size_t len, const bool moveaxis) {
+void InsertScalerImpl(mshadow::Stream<xpu> *s, const TBlob& output,
+                      const TBlob& arr, const TBlob& values,
+                      const mshadow::Shape<ndim>& arr_strides,
+                      const mshadow::Shape<ndim>& val_strides,
+                      const mshadow::Shape<ndim>& old_val_strides,
+                      const mshadow::Shape<ndim>& out_strides,
+                      const mshadow::Shape<ndim>& k_outshape,
+                      const mshadow::Shape<ndim>& k_valshape,
+                      const int dtype, const int vtype, const int req,
+                      const int axis, const int index, const int numnew,
+                      const size_t len, const bool moveaxis) {
   using namespace mshadow;
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
@@ -317,16 +317,16 @@ void InsertScalerObj(mshadow::Stream<xpu> *s, const TBlob& output,
 
 template<typename xpu, int ndim>
 void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
-                            const TBlob& arr, const TBlob& values,
-                            const mshadow::Shape<ndim>& arr_strides,
-                            const mshadow::Shape<ndim>& val_strides,
-                            const mshadow::Shape<ndim>& old_val_strides,
-                            const mshadow::Shape<ndim>& out_strides,
-                            const mshadow::Shape<ndim>& k_outshape,
-                            const mshadow::Shape<ndim>& k_valshape,
-                            const int dtype, const int vtype, const int req,
-                            const int axis, const TBlob& index, const int numnew,
-                            const int N, const size_t len, const bool moveaxis) {
+                             const TBlob& arr, const TBlob& values,
+                             const mshadow::Shape<ndim>& arr_strides,
+                             const mshadow::Shape<ndim>& val_strides,
+                             const mshadow::Shape<ndim>& old_val_strides,
+                             const mshadow::Shape<ndim>& out_strides,
+                             const mshadow::Shape<ndim>& k_outshape,
+                             const mshadow::Shape<ndim>& k_valshape,
+                             const int dtype, const int vtype, const int req,
+                             const int axis, const TBlob& index, const int numnew,
+                             const int N, const size_t len, const bool moveaxis) {
   using namespace mshadow;
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
@@ -343,15 +343,15 @@ void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
 
 template<typename xpu, int ndim>
 void InsertSequenceImpl(mshadow::Stream<xpu> *s, const TBlob& output,
-                       const TBlob& arr, const TBlob& values,
-                       const mshadow::Shape<ndim>& arr_strides,
-                       const mshadow::Shape<ndim>& val_strides,
-                       const mshadow::Shape<ndim>& out_strides,
-                       const mshadow::Shape<ndim>& k_outshape,
-                       const mshadow::Shape<ndim>& k_valshape,
-                       const int* is_insert, const int* origin_idx,
-                       const int dtype, const int vtype, const int req,
-                       const int axis, const size_t len) {
+                        const TBlob& arr, const TBlob& values,
+                        const mshadow::Shape<ndim>& arr_strides,
+                        const mshadow::Shape<ndim>& val_strides,
+                        const mshadow::Shape<ndim>& out_strides,
+                        const mshadow::Shape<ndim>& k_outshape,
+                        const mshadow::Shape<ndim>& k_valshape,
+                        const int* is_insert, const int* origin_idx,
+                        const int dtype, const int vtype, const int req,
+                        const int axis, const size_t len) {
   using namespace mshadow;
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(dtype, DType, {

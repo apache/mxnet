@@ -135,7 +135,7 @@ void NumpyInsertSliceCompute(const nnvm::NodeAttrs& attrs,
 
   if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
-      InsertScalerObj<xpu, ndim>(s, outputs[out_pos], arr, values,
+      InsertScalerImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
                                   mxnet_op::calc_stride(arr.shape_.get<ndim>()),
                                   mxnet_op::calc_stride(values.shape_.get<ndim>()),
                                   mxnet_op::calc_stride(old_valshape.get<ndim>()),
@@ -184,12 +184,12 @@ void NumpyInsertSliceCompute(const nnvm::NodeAttrs& attrs,
     Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertSequenceImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
-                                   mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                                   mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                                   mxnet_op::calc_stride(outshape.get<ndim>()),
-                                   outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                   is_insert, origin_idx, dtype, vtype, req[out_pos],
-                                   axis, outshape.Size());
+                                    mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                    mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                    mxnet_op::calc_stride(outshape.get<ndim>()),
+                                    outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                    is_insert, origin_idx, dtype, vtype, req[out_pos],
+                                    axis, outshape.Size());
     });
   }
 }

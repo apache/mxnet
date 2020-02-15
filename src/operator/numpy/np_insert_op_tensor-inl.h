@@ -153,24 +153,24 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     // 'obj' is tensor and the tensor's ndim is 0, also need to moveaxis
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
-                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
-                                        mxnet_op::calc_stride(outshape.get<ndim>()),
-                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
-                                        numnew, N, outshape.Size(), true);
+                                         mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                         mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                         mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                         mxnet_op::calc_stride(outshape.get<ndim>()),
+                                         outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                         dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                         numnew, N, outshape.Size(), true);
     });
   } else if (indices_len == 1) {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertSizeOneTensorImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
-                                        mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                                        mxnet_op::calc_stride(old_valshape.get<ndim>()),
-                                        mxnet_op::calc_stride(outshape.get<ndim>()),
-                                        outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                        dtype, vtype, req[out_pos], axis, inputs[obj_pos],
-                                        numnew, N, outshape.Size(), false);
+                                         mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                         mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                         mxnet_op::calc_stride(old_valshape.get<ndim>()),
+                                         mxnet_op::calc_stride(outshape.get<ndim>()),
+                                         outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                         dtype, vtype, req[out_pos], axis, inputs[obj_pos],
+                                         numnew, N, outshape.Size(), false);
     });
   } else {
     // broadcast check
@@ -213,12 +213,12 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     Kernel<SetOriginArrIdx, xpu>::Launch(s, outshape[axis], is_insert, origin_idx);
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       InsertSequenceImpl<xpu, ndim>(s, outputs[out_pos], arr, values,
-                                   mxnet_op::calc_stride(arr.shape_.get<ndim>()),
-                                   mxnet_op::calc_stride(values.shape_.get<ndim>()),
-                                   mxnet_op::calc_stride(outshape.get<ndim>()),
-                                   outshape.get<ndim>(), values.shape_.get<ndim>(),
-                                   is_insert, origin_idx, dtype, vtype, req[out_pos],
-                                   axis, outshape.Size());
+                                    mxnet_op::calc_stride(arr.shape_.get<ndim>()),
+                                    mxnet_op::calc_stride(values.shape_.get<ndim>()),
+                                    mxnet_op::calc_stride(outshape.get<ndim>()),
+                                    outshape.get<ndim>(), values.shape_.get<ndim>(),
+                                    is_insert, origin_idx, dtype, vtype, req[out_pos],
+                                    axis, outshape.Size());
     });
   }
 }
