@@ -480,7 +480,9 @@ class ndarray(NDArray):
                 pos -= 1
 
         if isinstance(value, numeric_types):
-            _npi.boolean_mask_assign_scalar(data=data, mask=mask, value=value, start_axis=pos, out=data)
+            _npi.boolean_mask_assign_scalar(data=data, mask=mask,
+                                            value=int(value) if isinstance(value, bool) else value,
+                                            start_axis=pos, out=data)
         elif isinstance(value, ndarray):
             _npi.boolean_mask_assign_tensor(data=data, mask=mask, value=value, start_axis=pos, out=data)
         else:
