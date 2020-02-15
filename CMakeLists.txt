@@ -124,7 +124,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
   set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
 endif()
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream;${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
 
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 
@@ -575,7 +575,7 @@ endif()
 if(USE_CUDA)
   # CUDA_SELECT_NVCC_ARCH_FLAGS is not deprecated, though part of deprecated
   # FindCUDA https://gitlab.kitware.com/cmake/cmake/issues/19199
-  include(${CMAKE_ROOT}/Modules/FindCUDA/select_compute_arch.cmake)
+  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream/select_compute_arch.cmake)
   CUDA_SELECT_NVCC_ARCH_FLAGS(CUDA_ARCH_FLAGS ${MXNET_CUDA_ARCH})
   message("-- CUDA: Using the following NVCC architecture flags ${CUDA_ARCH_FLAGS}")
   set(arch_code_list)
@@ -898,7 +898,7 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
   add_cython_modules(3) # Build cython module for python3 if python3 is found
-  if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
+  if(NOT ${PYTHON3_FOUND})
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()

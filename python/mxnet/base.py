@@ -18,9 +18,7 @@
 # coding: utf-8
 # pylint: disable=invalid-name, no-member, trailing-comma-tuple, bad-mcs-classmethod-argument, unnecessary-pass, too-many-lines, wrong-import-position
 """ctypes library of mxnet and helper functions."""
-from __future__ import absolute_import
 
-import io
 import re
 import atexit
 import ctypes
@@ -51,12 +49,9 @@ numeric_types = (float, int, long, _np.generic)
 string_types = basestring,
 error_types = {}
 
-if sys.version_info[0] > 2:
-    # this function is needed for python3
-    # to convert ctypes.char_p .value back to python str
-    py_str = lambda x: x.decode('utf-8')
-else:
-    py_str = lambda x: x
+# this function is needed for python3
+# to convert ctypes.char_p .value back to python str
+py_str = lambda x: x.decode('utf-8')
 
 
 def data_dir_default():
@@ -77,28 +72,6 @@ def data_dir():
     :return: data directory in the filesystem for storage, for example when downloading models
     """
     return os.getenv('MXNET_HOME', data_dir_default())
-
-class _Py2CompatibleUnicodeFileWriter(object):
-    """
-    Wraps a file handle decorating the write command to unicode the content before writing.
-    This makes writing files opened with encoding='utf-8' compatible with Python 2
-    """
-
-    def __init__(self, file_handle):
-        self._file_handle = file_handle
-        if sys.version_info[0] > 2:
-            self.unicode = str
-        else:
-            from functools import partial
-            # pylint: disable=undefined-variable
-            self.unicode = partial(unicode, encoding="utf-8")
-            # pylint: enable=undefined-variable
-
-    def write(self, value):
-        self._file_handle.write(self.unicode(value))
-
-    def __getattr__(self, name):
-        return getattr(self._file_handle, name)
 
 
 class _NullType(object):
@@ -404,83 +377,43 @@ DLPackHandle = ctypes.c_void_p
 #----------------------------
 # helper function definition
 #----------------------------
-if sys.version_info[0] < 3:
-    def c_str(string):
-        """Create ctypes char * from a Python string.
+def c_str(string):
+    """Create ctypes char * from a Python string.
 
-        Parameters
-        ----------
-        string : string type
-            Python string.
+    Parameters
+    ----------
+    string : string type
+        Python string.
 
-        Returns
-        -------
-        str : c_char_p
-            A char pointer that can be passed to C API.
+    Returns
+    -------
+    str : c_char_p
+        A char pointer that can be passed to C API.
 
-        Examples
-        --------
-        >>> x = mx.base.c_str("Hello, World")
-        >>> print x.value
-        Hello, World
-        """
-        return ctypes.c_char_p(string)
+    Examples
+    --------
+    >>> x = mx.base.c_str("Hello, World")
+    >>> print(x.value)
+    b"Hello, World"
+    """
+    return ctypes.c_char_p(string.encode('utf-8'))
 
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
+def c_str_array(strings):
+    """Create ctypes const char ** from a list of Python strings.
 
-        Parameters
-        ----------
-        strings : list of string
-            Python strings.
+    Parameters
+    ----------
+    strings : list of string
+        Python strings.
 
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = strings
-        return arr
-
-else:
-    def c_str(string):
-        """Create ctypes char * from a Python string.
-
-        Parameters
-        ----------
-        string : string type
-            Python string.
-
-        Returns
-        -------
-        str : c_char_p
-            A char pointer that can be passed to C API.
-
-        Examples
-        --------
-        >>> x = mx.base.c_str("Hello, World")
-        >>> print(x.value)
-        b"Hello, World"
-        """
-        return ctypes.c_char_p(string.encode('utf-8'))
-
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
-
-        Parameters
-        ----------
-        strings : list of string
-            Python strings.
-
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = [s.encode('utf-8') for s in strings]
-        return arr
+    Returns
+    -------
+    (ctypes.c_char_p * len(strings))
+        A const char ** pointer that can be passed to C API.
+    """
+    arr = (ctypes.c_char_p * len(strings))()
+    arr[:] = [s.encode('utf-8') for s in strings]
+    return arr
 
 
 def c_array(ctype, values):
@@ -821,7 +754,7 @@ def _generate_op_module_signature(root_namespace, module_name, op_code_gen_func)
         module_path = module_name.split('.')
         module_path[-1] = 'gen_' + module_path[-1]
         file_name = os.path.join(path, '..', *module_path) + '.py'
-        module_file = _Py2CompatibleUnicodeFileWriter(io.open(file_name, 'w', encoding="utf-8"))
+        module_file = open(file_name, 'w', encoding="utf-8")
         dependencies = {'symbol': ['from ._internal import SymbolBase',
                                    'from ..base import _Null'],
                         'ndarray': ['from ._internal import NDArrayBase',

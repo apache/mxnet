@@ -45,7 +45,6 @@ The following documents are recommended:
   It should show typical calling examples and behaviors (e.g. maps an input
   of what shape to an output of what shape).
 """
-from __future__ import absolute_import as _abs
 import re as _re
 from .base import build_param_doc as _build_param_doc
 

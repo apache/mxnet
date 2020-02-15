@@ -17,7 +17,6 @@
 
 
 """I/O functions for ndarrays."""
-from __future__ import absolute_import
 import numpy as onp
 from ..context import current_context
 from .multiarray import array

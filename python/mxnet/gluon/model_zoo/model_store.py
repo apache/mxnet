@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Model zoo for pre-trained models."""
-from __future__ import print_function
 __all__ = ['get_model_file', 'purge']
 import os
 import zipfile
@@ -27,7 +26,7 @@ import uuid
 import shutil
 
 from ..utils import download, check_sha1, replace_file
-from ... import base, util
+from ... import base
 
 _model_sha1 = {name: checksum for checksum, name in [
     ('44335d1f0046b328243b32a26a4fbd62d9057b45', 'alexnet'),
@@ -104,7 +103,7 @@ def get_model_file(name, root=os.path.join(base.data_dir(), 'models')):
     else:
         logging.info('Model file not found. Downloading to %s.', file_path)
 
-    util.makedirs(root)
+    os.makedirs(root, exist_ok=True)
 
     repo_url = os.environ.get('MXNET_GLUON_REPO', apache_repo_url)
     if repo_url[-1] != '/':

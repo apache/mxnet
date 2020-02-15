@@ -17,12 +17,13 @@
 
 """Namespace for ops used in imperative programming."""
 
-from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", "randn", "gamma", 'beta', "exponential", "lognormal", "weibull", "pareto", "power"]
+           "logistic", "gumbel",
+           "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
+           "weibull", "pareto", "power"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -203,10 +204,12 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
     mean : float or array_like of floats, optional
@@ -225,10 +228,12 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized log-normal distribution.
+
     Notes
     -----
     A variable `x` has a log-normal distribution if `log(x)` is normally
@@ -243,6 +248,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     the same way that a normal distribution results if the variable is the
     *sum* of a large number of independent, identically-distributed
     variables.
+
     References
     ----------
     .. [1] Limpert, E., Stahel, W. A., and Abbt, M., "Log-normal
@@ -251,6 +257,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         https://stat.ethz.ch/~stahel/lognormal/bioscience.pdf
     .. [2] Reiss, R.D. and Thomas, M., "Statistical Analysis of Extreme
         Values," Basel: Birkhauser Verlag, 2001, pp. 31-32.
+
     Examples
     --------
     Draw samples from the distribution:
@@ -258,6 +265,122 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     >>> s = np.random.lognormal(mu, sigma, 1000)
     """
     return _mx_nd_np.random.lognormal(mean, sigma, size, dtype, ctx, out)
+
+
+def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a logistic distribution.
+
+    Samples are drawn from a logistic distribution with specified
+    parameters, loc (location or mean, also median), and scale (>0).
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        Parameter of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        Parameter of the distribution. Must be non-negative.
+        Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized logistic distribution.
+
+    Examples
+    --------
+    Draw samples from the distribution:
+
+    >>> loc, scale = 10, 1
+    >>> s = np.random.logistic(loc, scale, 10000)
+    >>> import matplotlib.pyplot as plt
+    >>> count, bins, ignored = plt.hist(s, bins=50)
+
+    #   plot against distribution
+
+    >>> def logist(x, loc, scale):
+    ...     return np.exp((loc-x)/scale)/(scale*(1+np.exp((loc-x)/scale))**2)
+    >>> lgst_val = logist(bins, loc, scale)
+    >>> plt.plot(bins, lgst_val * count.max() / lgst_val.max())
+    >>> plt.show()
+    """
+    return _mx_nd_np.random.logistic(loc, scale, size, ctx, out)
+
+
+def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Gumbel distribution.
+
+    Draw samples from a Gumbel distribution with specified location and
+    scale.
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        The location of the mode of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        The scale parameter of the distribution. Default is 1. Must be non-
+        negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Gumbel distribution.
+
+    Examples
+    --------
+    Draw samples from the distribution:
+
+    >>> mu, beta = 0, 0.1 # location and scale
+    >>> s = np.random.gumbel(mu, beta, 1000)
+
+    Display the histogram of the samples, along with
+    the probability density function:
+
+    >>> import matplotlib.pyplot as plt
+    >>> count, bins, ignored = plt.hist(s, 30, density=True)
+    >>> plt.plot(bins, (1/beta)*np.exp(-(bins - mu)/beta)
+    ...          * np.exp( -np.exp( -(bins - mu) /beta) ),
+    ...          linewidth=2, color='r')
+    >>> plt.show()
+
+    Show how an extreme value distribution can arise from a Gaussian process
+    and compare to a Gaussian:
+
+    >>> means = []
+    >>> maxima = []
+    >>> for i in range(0,1000) :
+    ...    a = np.random.normal(mu, beta, 1000)
+    ...    means.append(a.mean())
+    ...    maxima.append(a.max())
+    >>> count, bins, ignored = plt.hist(maxima, 30, density=True)
+    >>> beta = np.std(maxima) * np.sqrt(6) / np.pi
+    >>> mu = np.mean(maxima) - 0.57721*beta
+    >>> plt.plot(bins, (1/beta)*np.exp(-(bins - mu)/beta)
+    ...          * np.exp(-np.exp(-(bins - mu)/beta)),
+    ...          linewidth=2, color='r')
+    >>> plt.plot(bins, 1/(beta * np.sqrt(2 * np.pi))
+    ...          * np.exp(-(bins - mu)**2 / (2 * beta**2)),
+    ...          linewidth=2, color='g')
+    >>> plt.show()
+    """
+    return _mx_nd_np.random.gumbel(loc, scale, size, ctx, out)
 
 
 def multinomial(n, pvals, size=None, **kwargs):
@@ -475,6 +598,10 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
 
     Returns
     -------
@@ -649,6 +776,8 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     scale : float or array_like of floats, optional
         The scale of the gamma distribution. Should be greater than zero.
         Default is equal to 1.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
     size : int or tuple of ints, optional
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
@@ -714,6 +843,75 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Drawn samples from the parameterized beta distribution.
     """
     return _mx_nd_np.random.beta(a, b, size=size, dtype=dtype, ctx=ctx)
+
+
+def chisquare(df, size=None, dtype=None, ctx=None):
+    r"""
+    chisquare(df, size=None, dtype=None, ctx=None)
+
+    Draw samples from a chi-square distribution.
+
+    When `df` independent random variables, each with standard normal
+    distributions (mean 0, variance 1), are squared and summed, the
+    resulting distribution is chi-square (see Notes).  This distribution
+    is often used in hypothesis testing.
+
+    Parameters
+    ----------
+    df : float or ndarray of floats
+         Number of degrees of freedom, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``df`` is a scalar.  Otherwise,
+        ``np.array(df).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized chi-square distribution.
+
+    Raises
+    ------
+    ValueError
+        When `df` <= 0 or when an inappropriate `size`
+        is given.
+
+    Notes
+    -----
+    The variable obtained by summing the squares of `df` independent,
+    standard normally distributed random variables:
+
+    .. math:: Q = \sum_{i=0}^{\mathtt{df}} X^2_i
+
+    is chi-square distributed, denoted
+
+    .. math:: Q \sim \chi^2_k.
+
+    The probability density function of the chi-squared distribution is
+
+    .. math:: p(x) = \frac{(1/2)^{k/2}}{\Gamma(k/2)}
+                     x^{k/2 - 1} e^{-x/2},
+
+    where :math:`\Gamma` is the gamma function,
+
+    .. math:: \Gamma(x) = \int_0^{-\infty} t^{x - 1} e^{-t} dt.
+
+    References
+    ----------
+    .. [1] NIST "Engineering Statistics Handbook"
+           https://www.itl.nist.gov/div898/handbook/eda/section3/eda3666.htm
+
+    Examples
+    --------
+    >>> np.random.chisquare(2,4)
+    array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
+    """
+    return _mx_nd_np.random.chisquare(df, size=size, dtype=dtype, ctx=ctx)
 
 
 def randn(*size, **kwargs):
