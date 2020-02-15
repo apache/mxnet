@@ -35,10 +35,11 @@ import zipfile
 from time import sleep
 from urllib.error import HTTPError
 import logging
-from subprocess import check_output, check_call
+from subprocess import check_output, check_call, call
 import re
 import sys
 import urllib.request
+import contextlib
 
 import ssl
 
@@ -48,14 +49,28 @@ log = logging.getLogger(__name__)
 
 
 DEPS = {
-        'openblas': 'https://windows-post-install.s3-us-west-2.amazonaws.com/OpenBLAS-windows-v0_2_19.zip',
-        'opencv': 'https://windows-post-install.s3-us-west-2.amazonaws.com/opencv-windows-4.1.2-vc14_vc15.zip',
-        'cudnn': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cudnn-9.2-windows10-x64-v7.4.2.24.zip',
-        'nvdriver': 'https://windows-post-install.s3-us-west-2.amazonaws.com/nvidia_display_drivers_398.75_server2016.zip',
-        'cmake': 'https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2-win64-x64.msi'
+    'openblas': 'https://windows-post-install.s3-us-west-2.amazonaws.com/OpenBLAS-windows-v0_2_19.zip',
+    'opencv': 'https://windows-post-install.s3-us-west-2.amazonaws.com/opencv-windows-4.1.2-vc14_vc15.zip',
+    'cudnn': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cudnn-9.2-windows10-x64-v7.4.2.24.zip',
+    'nvdriver': 'https://windows-post-install.s3-us-west-2.amazonaws.com/nvidia_display_drivers_398.75_server2016.zip',
+    # This installation of CMake breaks windows PATH when executing vcvars, installing from
+    # chocolatey from powershell instead.
+    'cmake': 'https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2-win64-x64.msi'
 }
 
-DEFAULT_SUBPROCESS_TIMEOUT=3600
+DEFAULT_SUBPROCESS_TIMEOUT = 3600
+
+
+@contextlib.contextmanager
+def remember_cwd():
+    '''
+    Restore current directory when exiting context
+    '''
+    curdir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(curdir)
 
 
 def retry(target_exception, tries=4, delay_s=1, backoff=2):
@@ -98,7 +113,7 @@ def retry(target_exception, tries=4, delay_s=1, backoff=2):
 
 
 @retry((ValueError, OSError, HTTPError), tries=5, delay_s=2, backoff=5)
-def download(url, dest=None, progress=True) -> str:
+def download(url, dest=None, progress=False) -> str:
     from urllib.request import urlopen
     from urllib.parse import (urlparse, urlunparse)
     import progressbar
@@ -166,11 +181,11 @@ def copy(src, dest):
 
 
 # Workaround for windows readonly attribute error
-def on_rm_error( func, path, exc_info):
+def on_rm_error(func, path, exc_info):
     # path contains the path of the file that couldn't be removed
     # let's just assume that it's read-only and unlink it.
-    os.chmod( path, stat.S_IWRITE )
-    os.unlink( path )
+    os.chmod(path, stat.S_IWRITE)
+    os.unlink(path)
 
 
 def install_vs():
@@ -179,30 +194,38 @@ def install_vs():
     # Components: https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-community?view=vs-2017#visual-studio-core-editor-included-with-visual-studio-community-2017
     logging.info("Installing Visual Studio CE 2017...")
     vs_file_path = download('https://aka.ms/eac464')
-    run_command("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(vs_file_path, vs_file_path.split('\\')[-1]), shell=True)
+    run_command("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(vs_file_path,
+                                                                             vs_file_path.split('\\')[-1]), shell=True)
     vs_file_path = vs_file_path + '.exe'
-    run_command(vs_file_path + \
-        ' --add Microsoft.VisualStudio.Workload.ManagedDesktop' \
-        ' --add Microsoft.VisualStudio.Workload.NetCoreTools' \
-        ' --add Microsoft.VisualStudio.Workload.NetWeb' \
-        ' --add Microsoft.VisualStudio.Workload.Node' \
-        ' --add Microsoft.VisualStudio.Workload.Office' \
-        ' --add Microsoft.VisualStudio.Component.TypeScript.2.0' \
-        ' --add Microsoft.VisualStudio.Component.TestTools.WebLoadTest' \
-        ' --add Component.GitHub.VisualStudio' \
-        ' --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core' \
-        ' --add Microsoft.VisualStudio.Component.Static.Analysis.Tools' \
-        ' --add Microsoft.VisualStudio.Component.VC.CMake.Project' \
-        ' --add Microsoft.VisualStudio.Component.VC.140' \
-        ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.Desktop' \
-        ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.UWP' \
-        ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.UWP.Native' \
-        ' --add Microsoft.VisualStudio.ComponentGroup.Windows10SDK.15063' \
-        ' --wait' \
-        ' --passive' \
-        ' --norestart'
-    )
+    ret = call(vs_file_path +
+               ' --add Microsoft.VisualStudio.Workload.ManagedDesktop'
+               ' --add Microsoft.VisualStudio.Workload.NetCoreTools'
+               ' --add Microsoft.VisualStudio.Workload.NetWeb'
+               ' --add Microsoft.VisualStudio.Workload.Node'
+               ' --add Microsoft.VisualStudio.Workload.Office'
+               ' --add Microsoft.VisualStudio.Component.TypeScript.2.0'
+               ' --add Microsoft.VisualStudio.Component.TestTools.WebLoadTest'
+               ' --add Component.GitHub.VisualStudio'
+               ' --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core'
+               ' --add Microsoft.VisualStudio.Component.Static.Analysis.Tools'
+               ' --add Microsoft.VisualStudio.Component.VC.CMake.Project'
+               ' --add Microsoft.VisualStudio.Component.VC.140'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.Desktop'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.UWP'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.UWP.Native'
+               ' --add Microsoft.VisualStudio.ComponentGroup.Windows10SDK.15063'
+               ' --wait'
+               ' --passive'
+               ' --norestart'
+               )
+
+    if ret == 3010 or ret == 0:
+        # 3010 is restart required
+        logging.info("VS install successful.")
+    else:
+        raise RuntimeError("VS failed to install, exit status {}".format(ret))
     # Workaround for --wait sometimes ignoring the subprocesses doing component installs
+
     def vs_still_installing():
         return {'vs_installer.exe', 'vs_installershell.exe', 'vs_setup_bootstrapper.exe'} & set(map(lambda process: process.name(), psutil.process_iter()))
     timer = 0
@@ -260,83 +283,97 @@ def install_cudnn():
         local_file = download(DEPS['cudnn'])
         with zipfile.ZipFile(local_file, 'r') as zip:
             zip.extractall(tmpdir)
-        copy(tmpdir+"\\cuda\\bin\\cudnn64_7.dll","C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\bin")
-        copy(tmpdir+"\\cuda\\include\\cudnn.h","C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\include")
-        copy(tmpdir+"\\cuda\\lib\\x64\\cudnn.lib","C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\lib\\x64")
+        copy(tmpdir+"\\cuda\\bin\\cudnn64_7.dll", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\bin")
+        copy(tmpdir+"\\cuda\\include\\cudnn.h", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\include")
+        copy(tmpdir+"\\cuda\\lib\\x64\\cudnn.lib", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\lib\\x64")
     logging.info("cuDNN install complete")
+
+
+def install_gpu_packages(force=False):
+    if has_gpu() or force:
+        logging.info("GPU detected")
+        install_nvdriver()
+        install_cuda()
+        install_cudnn()
 
 
 def install_nvdriver():
     logging.info("Installing Nvidia Display Drivers...")
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory(prefix='nvidia drivers') as tmpdir:
         local_file = download(DEPS['nvdriver'])
         with zipfile.ZipFile(local_file, 'r') as zip:
             zip.extractall(tmpdir)
-        run_command(tmpdir + "\\setup.exe /n /s /noeula /nofinish")
+        with remember_cwd():
+            os.chdir(tmpdir)
+            check_call(".\setup.exe -noreboot -clean -noeula -nofinish -passive")
     logging.info("NVidia install complete")
 
 
 def install_cuda():
     # CUDA 9.2 and patches
     logging.info("Installing CUDA 9.2 and Patches...")
-    cuda_9_2_file_path = download('https://developer.nvidia.com/compute/cuda/9.2/Prod2/network_installers2/cuda_9.2.148_win10_network')
-    run_command("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(cuda_9_2_file_path, cuda_9_2_file_path.split('\\')[-1]), shell=True)
+    cuda_9_2_file_path = download(
+        'https://developer.nvidia.com/compute/cuda/9.2/Prod2/network_installers2/cuda_9.2.148_win10_network')
+    check_call("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(cuda_9_2_file_path,
+                                                                             cuda_9_2_file_path.split('\\')[-1]), shell=True)
     cuda_9_2_file_path = cuda_9_2_file_path + '.exe'
-    run_command(cuda_9_2_file_path \
-    + ' -s nvcc_9.2' \
-    + ' cuobjdump_9.2' \
-    + ' nvprune_9.2' \
-    + ' cupti_9.2' \
-    + ' gpu_library_advisor_9.2' \
-    + ' memcheck_9.2' \
-    + ' nvdisasm_9.2' \
-    + ' nvprof_9.2' \
-    + ' visual_profiler_9.2' \
-    + ' visual_studio_integration_9.2' \
-    + ' demo_suite_9.2' \
-    + ' documentation_9.2' \
-    + ' cublas_9.2' \
-    + ' cublas_dev_9.2' \
-    + ' cudart_9.2' \
-    + ' cufft_9.2' \
-    + ' cufft_dev_9.2' \
-    + ' curand_9.2' \
-    + ' curand_dev_9.2' \
-    + ' cusolver_9.2' \
-    + ' cusolver_dev_9.2' \
-    + ' cusparse_9.2' \
-    + ' cusparse_dev_9.2' \
-    + ' nvgraph_9.2' \
-    + ' nvgraph_dev_9.2' \
-    + ' npp_9.2' \
-    + ' npp_dev_9.2' \
-    + ' nvrtc_9.2' \
-    + ' nvrtc_dev_9.2' \
-    + ' nvml_dev_9.2' \
-    + ' occupancy_calculator_9.2'
-    )
+    check_call(cuda_9_2_file_path
+                + ' -s nvcc_9.2'
+                + ' cuobjdump_9.2'
+                + ' nvprune_9.2'
+                + ' cupti_9.2'
+                + ' gpu_library_advisor_9.2'
+                + ' memcheck_9.2'
+                + ' nvdisasm_9.2'
+                + ' nvprof_9.2'
+                + ' visual_profiler_9.2'
+                + ' visual_studio_integration_9.2'
+                + ' demo_suite_9.2'
+                + ' documentation_9.2'
+                + ' cublas_9.2'
+                + ' cublas_dev_9.2'
+                + ' cudart_9.2'
+                + ' cufft_9.2'
+                + ' cufft_dev_9.2'
+                + ' curand_9.2'
+                + ' curand_dev_9.2'
+                + ' cusolver_9.2'
+                + ' cusolver_dev_9.2'
+                + ' cusparse_9.2'
+                + ' cusparse_dev_9.2'
+                + ' nvgraph_9.2'
+                + ' nvgraph_dev_9.2'
+                + ' npp_9.2'
+                + ' npp_dev_9.2'
+                + ' nvrtc_9.2'
+                + ' nvrtc_dev_9.2'
+                + ' nvml_dev_9.2'
+                + ' occupancy_calculator_9.2'
+                )
 
 
 def add_paths():
     # TODO: Add python paths (python -> C:\\Python37\\python.exe, python2 -> C:\\Python27\\python.exe)
     logging.info("Adding Windows Kits to PATH...")
-    current_path = run_command("PowerShell (Get-Itemproperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path).Path")
+    current_path = run_command(
+        "PowerShell (Get-Itemproperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path).Path")
+    current_path = current_path.rstrip()
     logging.debug("current_path: {}".format(current_path))
-    new_path = current_path + ";C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.16299.0\\x86;C:\\Program Files\\OpenBLAS-windows-v0_2_19\\bin"
+    new_path = current_path + \
+        ";C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.16299.0\\x86;C:\\Program Files\\OpenBLAS-windows-v0_2_19\\bin"
     logging.debug("new_path: {}".format(new_path))
     run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path -Value '" + new_path + "'")
 
 
 def has_gpu():
     gpu_family = {'p2', 'p3', 'g4dn', 'p3dn', 'g3', 'g2', 'g3s'}
+
     def instance_family():
         return urllib.request.urlopen('http://instance-data/latest/meta-data/instance-type').read().decode().split('.')[0]
     try:
         return instance_family() in gpu_family
     except:
-        logging.warning("Looks like we are not running in AWS, couldn't detect a GPU instance, please use --gpu argument directly to install GPU related utilities.")
         return False
-
 
 
 def script_name() -> str:
@@ -348,22 +385,18 @@ def main():
     logging.getLogger().setLevel(os.environ.get('LOGLEVEL', logging.DEBUG))
     logging.basicConfig(stream=sys.stdout, format='{}: %(asctime)sZ %(levelname)s %(message)s'.format(script_name()))
 
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-g', '--gpu',
                         help='GPU install',
                         default=False,
-			action='store_true')
+                        action='store_true')
     args = parser.parse_args()
     if args.gpu or has_gpu():
-        logging.info("GPU detected")
-        install_nvdriver()
-        install_cuda()
-        install_cudnn()
+        install_gpu_packages(force=True)
     else:
         logging.info("GPU environment skipped")
     install_vs()
-    #install_cmake()
+    # install_cmake()
     install_openblas()
     install_mkl()
     install_opencv()
@@ -371,4 +404,4 @@ def main():
 
 
 if __name__ == "__main__":
-    exit (main())
+    exit(main())
