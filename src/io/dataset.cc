@@ -23,6 +23,8 @@
  * \brief High performance datasets implementation
  */
 #include <dmlc/parameter.h>
+#include <dmlc/recordio.h>
+#include <dmlc/io.h>
 #include <mxnet/io.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/tensor_blob.h>
@@ -41,6 +43,94 @@
 
 namespace mxnet {
 namespace io {
+
+struct RecordFileDatasetParam : public dmlc::Parameter<RecordFileDatasetParam> {
+    std::string rec_file;
+    std::string idx_file;
+    // declare parameters
+    DMLC_DECLARE_PARAMETER(RecordFileDatasetParam) {
+        DMLC_DECLARE_FIELD(rec_file)
+            .describe("The absolute path of record file.");
+        DMLC_DECLARE_FIELD(idx_file)
+            .describe("The path of the idx file.");
+    }
+};  // struct RecordFileDatasetParam
+
+DMLC_REGISTER_PARAMETER(RecordFileDatasetParam);
+
+class RecordFileDataset : public Dataset {
+  public:
+    RecordFileDataset* Clone(void) const {
+      auto other = new RecordFileDataset();
+      other->param_ = param_;
+      other->idx_ = idx_;
+      // do not share the pointer since it's not threadsafe to seek simultaneously
+      if (reader_ && stream_) {
+        dmlc::Stream *stream = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
+        other->reader_ = std::make_shared<dmlc::RecordIOReader>(stream);
+        other->stream_.reset(stream);
+      }
+      return other;
+    }
+
+    void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+      std::vector<std::pair<std::string, std::string> > kwargs_left;
+      param_.InitAllowUnknown(kwargs);
+      // open record file for read
+      dmlc::Stream *stream = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
+      reader_ = std::make_shared<dmlc::RecordIOReader>(stream);
+      stream_.reset(stream);
+      // read and process idx file
+      dmlc::Stream *idx_stream = dmlc::Stream::Create(param_.idx_file.c_str(), "r");
+      dmlc::istream is(idx_stream);
+      size_t key, idx;
+      while (is >> key >> idx) {
+        idx_[key] = idx;
+      }
+      delete idx_stream;
+    }
+
+    uint64_t GetLen() const {
+      return idx_.size();
+    }
+
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
+      is_scalar.resize(1);
+      is_scalar[0] = 0;
+      std::vector<NDArray> ret(1);
+      size_t pos = idx_[static_cast<size_t>(idx)];
+      {
+        std::lock_guard<std::mutex> lck(mutex_);
+        reader_->Seek(pos);
+        if (reader_->NextRecord(&read_buff_)) {
+          const char *buf = read_buff_.c_str();
+          const size_t size = read_buff_.size();
+          ret[0] = NDArray(TShape({size}), Context::CPU(), false, mshadow::kInt8);
+          ret[0].SyncCopyFromCPU(buf, size);
+        }
+      }
+      return ret;
+    };
+
+  private:
+    /*! \brief parameters */
+    RecordFileDatasetParam param_;
+    /*! \brief recordIO context */
+    std::shared_ptr<dmlc::RecordIOReader> reader_;
+    std::shared_ptr<dmlc::Stream> stream_;
+    std::string read_buff_;
+    std::mutex mutex_;
+    /*! \brief indices */
+    std::unordered_map<size_t, size_t> idx_;
+};
+
+MXNET_REGISTER_IO_DATASET(RecordFileDataset)
+ .describe("MXNet Record File Dataset")
+ .add_arguments(RecordFileDatasetParam::__FIELDS__())
+ .set_body([]() {
+     return new RecordFileDataset();
+});
+
 struct ImageSequenceDatasetParam : public dmlc::Parameter<ImageSequenceDatasetParam> {
     /*! \brief the list of absolute image paths, separated by \0 characters */
     std::string img_list;
@@ -80,7 +170,7 @@ class ImageSequenceDataset : public Dataset {
       return img_list_.size();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
       is_scalar.resize(1);
       is_scalar[0] = 0;
 #if MXNET_USE_OPENCV
@@ -185,7 +275,7 @@ class NDArrayDataset : public Dataset {
       return size_;
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
       is_scalar.resize(1);
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
@@ -262,7 +352,7 @@ class GroupDataset : public Dataset {
       return size_;
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
       std::vector<NDArray> ret;
@@ -325,7 +415,7 @@ class IndexedDataset : public Dataset {
       return param_.indices.ndim();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
       CHECK_GT(param_.indices.ndim(), idx) << "IndexError: " << idx
         << " from total: " << param_.indices.ndim();
       auto new_idx = param_.indices[idx];
@@ -440,17 +530,8 @@ class LazyTransformDataset : public Dataset {
       return base_data_->GetLen();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const {
-      // std::vector<NDArray> inputs;
-      // const auto engine = Engine::Get();
-      // auto var = engine->NewVariable();
-      // engine->PushSync([this, &idx, &inputs, &is_scalar](RunContext ctx) {
-      //     inputs = base_data_->GetItem(idx, is_scalar);
-      //   },
-      //   Context::CPU(), {}, {var}, FnProperty::kNormal, 0, "LazyTransformDatasetBaseGetItem");
-      // engine->WaitForVar(var);
+    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
       auto inputs = base_data_->GetItem(idx, is_scalar);
-      // LOG(INFO) << "Get internal data";
       std::vector<NDArray> outputs;
       outputs.reserve(num_outputs_);
       outputs.resize(cached_op_->num_outputs());
@@ -474,49 +555,8 @@ class LazyTransformDataset : public Dataset {
       for (size_t i = 0; i < inputs.size(); ++i) {
         inputs[i].WaitToRead();
       }
-
-      // LOG(INFO) << "before get op";
-      // auto op = CachedOpStore::Get();
-      // // auto mutex = CachedOpMutexStore::Get();
-      // if (!(*op)) {
-      //   LOG(INFO) << "not op";
-      //   *op = CachedOpPtr(new CachedOp(*cached_op_));
-      //   LOG(INFO) << "create threaded cachedop";
-      // }
-      // CachedOpPtr op = CachedOpPtr(new CachedOp(cached_op_->sym_, cached_op_->flags_));  
-      // LOG(INFO) << op->num_inputs() << " o: " << op->num_outputs();
       cached_op_->Forward(cached_op_, ndinputs, ndoutputs);
-      // (*op)->Forward(*op, ndinputs, ndoutputs);
-
-      // const auto engine = Engine::Get();
-      // engine->PushSync(
-      //   [this, &ndinputs, &ndoutputs](RunContext ctx) {
-      //     this->cached_op_->Forward(this->cached_op_, ndinputs, ndoutputs);
-      //   },
-      //   Context::CPU(), {invars}, {}, FnProperty::kNormal, 0, "LazyTransformDatasetGetItem");
       return outputs;
-      
-      // auto inputs = base_data_->GetItem(idx, is_scalar);
-      // std::vector<NDArray> outputs;
-      
-      // outputs.resize(cached_op_->num_outputs());
-      // std::vector<NDArray*> ndinputs;
-      // std::vector<NDArray*> ndoutputs;
-      // ndinputs.reserve(num_inputs);
-      // ndoutputs.reserve(outputs.size());
-      // for (int i = 0; i < num_inputs; ++i) {
-      //   ndinputs.emplace_back(&inputs[tindices[i]]);
-      // }
-      // for (size_t i = 0; i < outputs.size(); ++i) {
-      //   ndoutputs.emplace_back(&outputs[i]);
-      // }
-      // cached_op_->Forward(cached_op_, ndinputs, ndoutputs);
-      // std::vector<NDArray> ret = inputs;
-      // for (int i = 0; i < tindices.ndim(); ++i) {
-      //   ret[tindices[i]] = outputs[i];
-      //   is_scalar[tindices[i]] = param_.scalar_outputs[i];
-      // }
-      // return ret;
     }
 
   private:

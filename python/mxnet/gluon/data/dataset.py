@@ -392,6 +392,10 @@ class RecordFileDataset(Dataset):
     def __len__(self):
         return len(self._record.keys)
 
+    def __mx_handle__(self):
+        from ._internal import RecordFileDataset as _RecordFileDataset
+        return _RecordFileDataset(rec_file=self.filename, idx_file=self.idx_file)
+
 
 class _DownloadedDataset(Dataset):
     """Base class for MNIST, cifar10, etc."""

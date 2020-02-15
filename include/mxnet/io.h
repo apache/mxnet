@@ -144,7 +144,7 @@ class Dataset {
     *  \param idx the integer index for required data
     */
     virtual Dataset* Clone(void) const = 0;
-    virtual std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) const = 0;
+    virtual std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) = 0;
     // virtual destructor
     virtual ~Dataset(void) {}
 };  // class Dataset
