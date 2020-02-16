@@ -232,6 +232,7 @@ MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
     std::cout << "accepting subgraph" << std::endl;
     attrs["myKey"] = "myVal";
   }
+  std::cout << json << std::endl;
   return MX_SUCCESS;
 }
 

@@ -346,8 +346,10 @@ int MXLoadLib(const char *path) {
     } else {
       CHECK(createop_map.size() != 0) << "Error loading '" << name
                             << "' custom subgraph op, CreateOpState function was not set.";
-    }
+    }    
     LOG(INFO) << "\tOp[" << i << "] " << name;
+    if(isSubgraphOp)
+      LOG(INFO) << "\t\tisSubgraphOp";
     std::string name_str(name);
 
     /*
@@ -581,19 +583,37 @@ int MXLoadLib(const char *path) {
 
     // FGradient register lambda
     auto grad_reg = [=](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-        // copy gradients first
-        std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-        // copy inputs second
-        for (auto& h : n->inputs) {
-          heads.push_back(h);
-        }
-        // copy outputs last
-        uint32_t n_out = n->num_outputs();
-        for (uint32_t i = 0; i < n_out; ++i) {
-          heads.emplace_back(n, i, 0);
-        }
-        std::string grad_name = "_backward_" + name_str;
-        return mxnet::op::MakeGradNode(grad_name.c_str(), n, heads, n->attrs.dict);
+      auto p = nnvm::Node::Create();
+      std::string grad_name = "_backward_" + name_str;
+      p->attrs.op = nnvm::Op::Get(grad_name.c_str());
+      p->attrs.name = n->attrs.name + "_backward";
+      p->attrs.dict = n->attrs.dict;
+
+      for(auto s : n->attrs.subgraphs)
+        p->attrs.subgraphs.push_back(s);
+
+      p->control_deps.emplace_back(n);
+      if (p->op()->attr_parser != nullptr) {
+        p->op()->attr_parser(&(p->attrs));
+      }
+      // copy gradients first
+      std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+      // copy inputs second
+      for (auto& h : n->inputs) {
+        heads.push_back(h);
+      }
+      // copy outputs last
+      uint32_t n_out = n->num_outputs();
+      for (uint32_t i = 0; i < n_out; ++i) {
+        heads.emplace_back(n, i, 0);
+      }
+      p->inputs = heads;
+      CHECK_EQ(p->num_inputs(), p->inputs.size())
+      << "Number of inputs to operator " << grad_name << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << p->attrs.name << " (" << p->inputs.size() << ").";
+
+      return mxnet::op::CreateNodeEntries(p);
     };
 
     auto resc_req = [=](const NodeAttrs& attrs) {
@@ -726,15 +746,28 @@ int MXLoadLib(const char *path) {
     }
     // optionally add fgradient if user specified a function
     if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
-      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
       std::string grad_name = "_backward_" + name_str;
       nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
+      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
       gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
-      gradOp.set_attr_parser(attr_parser);
-      gradOp.set_num_inputs(num_inouts);
-      gradOp.set_num_outputs(num_inputs);
       gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
       gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+
+      if(!isSubgraphOp) {
+        gradOp.set_attr_parser(attr_parser);
+        gradOp.set_num_inputs(num_inouts);
+        gradOp.set_num_outputs(num_inputs);
+      } else {
+        using namespace mxnet::op;
+        auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
+          uint32_t cnt = DefaultSubgraphOpNumInputs(attrs);
+          cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
+          return cnt;
+        };
+        gradOp.set_num_inputs(grad_inouts);
+        gradOp.set_num_outputs(DefaultSubgraphOpNumInputs);
+      }
+      
       if (createop_map.size() != 0) {
         gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
         auto fstate_backward = [=](const OpStatePtr& state_ptr,
