@@ -24,6 +24,7 @@ from .types import RETURN_SWITCH, TypeCode
 
 ObjectHandle = ctypes.c_void_p
 
+
 def _return_object(x):
     handle = x.v_handle
     if not isinstance(handle, ObjectHandle):

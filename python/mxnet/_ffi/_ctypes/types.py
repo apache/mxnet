@@ -22,6 +22,7 @@ import ctypes
 from ...base import NDArrayHandle
 from ... import _global_var
 
+
 class TypeCode(object):
     """Type code used in API calls"""
     INT = 0
