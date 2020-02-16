@@ -70,9 +70,9 @@ inline static void InitDefaultArray(NDArray *arr, bool is_rand = false, int max 
 
   for (int i = 0; i < size; i++)
     if (is_rand) {
-      data[i] = (std::rand() % (max * 2)) - max;
+      data[i] = std::rand() * 1.0f / RAND_MAX * max * 2 - max;
     } else {
-      data[i] = i % (max * 2) - max;
+      data[i] = i * 1.0f / size * max * 2 - max;
     }
 }
 
