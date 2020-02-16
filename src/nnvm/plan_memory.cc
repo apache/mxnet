@@ -42,6 +42,7 @@ static int MXGetDTypeSize(int type_flag) {
     case kInt8:
       return 1;
     case kFloat16:
+    case kBfloat16:
     case kInt16:
     case kUint16:
       return 2;

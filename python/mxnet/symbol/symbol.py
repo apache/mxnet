@@ -2796,7 +2796,11 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        np_dtype = _numpy.dtype(dtype)
+        if np_dtype == _numpy.dtype([('bfloat16', _numpy.uint16)]):
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[np_dtype])
+        else:
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()

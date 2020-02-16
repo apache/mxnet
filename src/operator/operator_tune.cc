@@ -55,6 +55,7 @@ double OperatorTuneBase::tuning_weight_scale_ = 0.0;
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(float);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(double);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(mshadow::half::half_t);
+IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(mshadow::bfloat::bf16_t);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int8_t);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(uint8_t);
 IMPLEMENT_OPERATOR_TUNE_STATICS_FOR_TYPE(int32_t);
@@ -80,6 +81,7 @@ struct static_init_var {
   __macro$(__VA_ARGS__, float); \
   __macro$(__VA_ARGS__, double); \
   __macro$(__VA_ARGS__, mshadow::half::half_t); \
+  __macro$(__VA_ARGS__, mshadow::bfloat::bf16_t); \
   __macro$(__VA_ARGS__, uint8_t); \
   __macro$(__VA_ARGS__, int8_t); \
   __macro$(__VA_ARGS__, int32_t); \
@@ -89,6 +91,7 @@ struct static_init_var {
   __macro$(__VA_ARGS__, float); \
   __macro$(__VA_ARGS__, double); \
   __macro$(__VA_ARGS__, mshadow::half::half_t); \
+  __macro$(__VA_ARGS__, mshadow::bfloat::bf16_t); \
   __macro$(__VA_ARGS__, uint8_t); \
   __macro$(__VA_ARGS__, int8_t); \
   __macro$(__VA_ARGS__, int32_t); \
@@ -422,13 +425,14 @@ IMPLEMENT_BINARY_WORKLOAD_BWD(mxnet::op::mshadow_op::rldexp_grad);  // NOLINT()
  * \brief Tuner objects, *not* automatically generated
  */
 #ifdef MXNET_USE_OPERATOR_TUNING
-static BinaryOpTune<float>                  binaryOpTuneFloat;
-static BinaryOpTune<double>                 binaryOpTuneDouble;
-static BinaryOpTune<mshadow::half::half_t>  binaryOpTuneHalf;
-static BinaryOpTune<int8_t>                 binaryOpTuneInt8;
-static BinaryOpTune<uint8_t>                binaryOpTuneUInt8;
-static BinaryOpTune<int32_t>                binaryOpTuneInt32;
-static BinaryOpTune<int64_t>                binaryOpTuneInt64;
+static BinaryOpTune<float>                   binaryOpTuneFloat;
+static BinaryOpTune<double>                  binaryOpTuneDouble;
+static BinaryOpTune<mshadow::half::half_t>   binaryOpTuneHalf;
+static BinaryOpTune<mshadow::bfloat::bf16_t> binaryOpTuneBf16;
+static BinaryOpTune<int8_t>                  binaryOpTuneInt8;
+static BinaryOpTune<uint8_t>                 binaryOpTuneUInt8;
+static BinaryOpTune<int32_t>                 binaryOpTuneInt32;
+static BinaryOpTune<int64_t>                 binaryOpTuneInt64;
 #endif  // MXNET_USE_OPERATOR_TUNING
 }  // namespace op
 }  // namespace mxnet
