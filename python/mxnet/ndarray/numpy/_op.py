@@ -26,7 +26,7 @@ from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
-import pdb
+
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
            'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',

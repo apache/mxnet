@@ -29,7 +29,7 @@ __all__ = [
     'argwhere',
     'array_equal',
     'array_equiv',
-    # 'choose',    #dtype  error
+    'choose',
     'compress',
     'corrcoef',
     'correlate',
@@ -48,26 +48,20 @@ __all__ = [
     'fmin',
     'fmod',
     'frexp',
-    # 'geomspace',   # AssertionError: <class 'numpy.ndarray'> is not a scalar type
+    # 'geomspace', # return <class 'numpy.ndarray'>
     'heaviside',
     'histogram2d',
-    'histogram_bin_edges',   # AssertionError: <class 'numpy.ndarray'> is not a scalar type
-                             # when inputs are list   + interp, isneginf
+    'histogram_bin_edges',
     'histogramdd',
-    'i0',                   # AssertionError: <class 'numpy.ndarray'> is not a scalar type
-                            # when input is scalar
+    'i0',
     'in1d',
     'interp',
-    'isneginf',
     'intersect1d',
     'isclose',
-    'isfinite',
     'isin',
-    'isposinf',
     'ix_',
-    'lexsort',    # only size-1 arrays can be converted to Python scalars
-                  # keys : (k, N) array or tuple containing k (N,)-shaped sequences
-    'min_scalar_type',     #AssertionError: <class 'numpy.dtype'> is not a scalar type
+    'lexsort',
+    'min_scalar_type',
     'mirr',
     'modf',
     'msort',
@@ -82,16 +76,15 @@ __all__ = [
     'nanprod',
     'nanquantile',
     'ndim',
-    # 'nper',     # <class 'numpy.ndarray'> is not a scalar type      // scalar input return ndarray
-                  # return is array(21.5449442)
+    # 'nper', # return <class 'numpy.ndarray'>
     'npv',
-    'partition',   # could input tuple param2
+    'partition',
     'piecewise',
-    'packbits',   # ValueError: uint8 is not supported.
-    # 'place',     #TypeError: Does not support converting <class 'NoneType'> to mx.np.ndarray.
+    'packbits',
+    # 'place',
     'poly',
     'polyadd',
-    # 'polyder',  #return poly1d
+    # 'polyder',
     'polydiv',
     'polyfit',
     'polyint',
@@ -100,23 +93,21 @@ __all__ = [
     'positive',
     'ppmt',
     'product',
-    'promote_types',   # return dtype   <class 'numpy.dtype'> is not a scalar type
+    'promote_types',
     'ptp',
-    #'put',   # test    no return
-    # 'put_along_axis',  # no return
-    # 'putmask',   # no return
+    # 'put',
+    # 'put_along_axis',
+    # 'putmask',
     'pv',
     'rate',
-    # 'ravel_multi_index',  # Converts a tuple of index arrays into an array of flat indices, applying boundary modes to the multi-index.
-                            # input tuple like
+    # 'ravel_multi_index',
     'real',
-    # 'real_if_close',  # If complex input returns a real array if complex parts are close to zero.
-                      # AssertionError: <class 'numpy.ndarray'> is not a scalar type      input scalar output ndarray
-    'result_type',  # return dtype
+    # 'real_if_close',
+    'result_type',
     'rollaxis',
     'roots',
     'round_',
-    # 'safe_eval',   #  input is  string
+    # 'safe_eval',
     'searchsorted',
     'select',
     'setdiff1d',
@@ -132,8 +123,7 @@ __all__ = [
     'triu',
     'triu_indices_from',
     'union1d',
-    'unpackbits',   # TypeError: Expected an input array of unsigned byte data type
-                    # dtype=np.uint8: ValueError: uint8 is not supported.
+    'unpackbits',
     'unwrap',
     'vander',
 ]
@@ -175,10 +165,7 @@ in1d = onp.in1d
 interp = onp.interp
 intersect1d = onp.intersect1d
 isclose = onp.isclose
-isfinite = onp.isfinite
 isin = onp.isin
-isneginf = onp.isneginf
-isposinf = onp.isposinf
 ix_ = onp.ix_
 lexsort = onp.lexsort
 min_scalar_type = onp.min_scalar_type

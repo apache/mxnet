@@ -2086,14 +2086,10 @@ def _add_workload_array_equiv():
     OpArgMngr.add_workload('array_equiv', a, g)
 
 
-# def _add_workload_choose():
-#     x = 2*np.ones((3,), dtype=int)
-#     y = 3*np.ones((3,), dtype=int)
-#     x2 = 2*np.ones((2, 3), dtype=int)
-#     y2 = 3*np.ones((2, 3), dtype=int)
-#     OpArgMngr.add_workload('choose', x, y)
-#     OpArgMngr.add_workload('choose', x2, y2)
-#     OpArgMngr.add_workload('choose', x, y2)
+def _add_workload_choose():
+    a = np.array([[1, 0, 1], [0, 1, 0], [1, 0, 1]], dtype=np.int64)
+    choices = np.array([-10, 10])
+    OpArgMngr.add_workload('choose', a, choices)
 
 
 def _add_workload_compress():
@@ -2334,17 +2330,6 @@ def _add_workload_interp():
     OpArgMngr.add_workload('interp', x, xp, fp)
 
 
-def _add_workload_isneginf():
-    a = np.NINF
-    b = np.inf
-    c = np.PINF
-    d = np.array([-np.inf, 0., np.inf])
-    OpArgMngr.add_workload('isneginf', a)
-    OpArgMngr.add_workload('isneginf', b)
-    OpArgMngr.add_workload('isneginf', c)
-    OpArgMngr.add_workload('isneginf', d)
-
-
 def _add_workload_intersect1d():
     a = np.array([5, 7, 1, 2])
     b = np.array([2, 4, 3, 1, 5])
@@ -2369,16 +2354,6 @@ def _add_workload_isclose():
     OpArgMngr.add_workload('isclose', d, e, atol=0.0)
 
 
-def _add_workload_isfinite():
-    x = np.array([np.log(-1.),1.,np.log(0)])
-    OpArgMngr.add_workload('isfinite', 1)
-    OpArgMngr.add_workload('isfinite', 0)
-    OpArgMngr.add_workload('isfinite', np.nan)
-    OpArgMngr.add_workload('isfinite', np.inf)
-    OpArgMngr.add_workload('isfinite', np.NINF)
-    OpArgMngr.add_workload('isfinite', x)
-
-
 def _add_workload_isin():
     element = 2*np.arange(4).reshape((2, 2))
     test_elements = [1, 2, 4, 8]
@@ -2386,17 +2361,6 @@ def _add_workload_isin():
     OpArgMngr.add_workload('isin', element, test_elements)
     OpArgMngr.add_workload('isin', element, test_elements, invert=True)
     OpArgMngr.add_workload('isin', element, list(test_set))
-
-
-def _add_workload_isposinf():
-    a = np.NINF
-    b = np.inf
-    c = np.PINF
-    d = np.array([-np.inf, 0., np.inf])
-    OpArgMngr.add_workload('isposinf', a)
-    OpArgMngr.add_workload('isposinf', b)
-    OpArgMngr.add_workload('isposinf', c)
-    OpArgMngr.add_workload('isposinf', d)
 
 
 def _add_workload_ix_():
@@ -2641,14 +2605,6 @@ def _add_workload_ptp():
     OpArgMngr.add_workload('ptp', x, axis=0)
     OpArgMngr.add_workload('ptp', x, axis=1)
     OpArgMngr.add_workload('ptp', x, keepdims=True)
-
-
-# def _add_workload_put():
-#     a = np.arange(5)
-#     b = np.array([0, 2])
-#     c = np.array([-44, -55])
-#     OpArgMngr.add_workload('put', a, b, c) # TypeError: Cannot cast array data from dtype('float32') to dtype('int64') according to the rule 'safe'
-#     OpArgMngr.add_workload('put', a, 22, -5, mode='clip') # TypeError: Does not support converting <class 'NoneType'> to mx.np.ndarray.
 
 
 def _add_workload_pv():
@@ -3005,7 +2961,7 @@ def _prepare_workloads():
     _add_workload_argwhere()
     _add_workload_array_equal()
     _add_workload_array_equiv()
-    # _add_workload_choose()
+    _add_workload_choose()
     _add_workload_compress()
     _add_workload_corrcoef()
     _add_workload_correlate()
@@ -3031,12 +2987,9 @@ def _prepare_workloads():
     _add_workload_i0()
     _add_workload_in1d()
     _add_workload_interp()
-    _add_workload_isneginf()
     _add_workload_intersect1d()
     _add_workload_isclose()
-    _add_workload_isfinite()
     _add_workload_isin()
-    _add_workload_isposinf()
     _add_workload_ix_()
     _add_workload_lexsort()
     _add_workload_min_scalar_type()

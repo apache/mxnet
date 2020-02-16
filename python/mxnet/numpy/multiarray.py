@@ -46,7 +46,7 @@ from ..ndarray.ndarray import _storage_type, from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
-import pdb
+
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
@@ -257,8 +257,6 @@ class ndarray(NDArray):
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
                 # try to fallback to official NumPy op
-                # print(name)
-                # pdb.set_trace()
                 onp_op = _get_np_op(name)
                 new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
                 out = onp_op(*new_inputs, **kwargs)
@@ -277,9 +275,7 @@ class ndarray(NDArray):
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
         if mx_np_func is None:
             # try to fallback to official NumPy op
-            # print(type(args), args, func)
             new_args, cur_ctx = _as_onp_array(args)
-            # print(new_args)
             if cur_ctx is None:
                 raise ValueError('Unknown context for the input ndarrays. It is probably a bug. Please'
                                  ' create an issue on GitHub.')
