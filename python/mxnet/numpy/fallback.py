@@ -35,20 +35,12 @@ __all__ = [
     'correlate',
     'count_nonzero',
     'cov',
-    'cross',
     'digitize',
     'divmod',
-    'ediff1d',
     'extract',
-    'fabs',
-    # 'fill_diagonal',
     'flatnonzero',
     'float_power',
-    'fmax',
-    'fmin',
-    'fmod',
     'frexp',
-    # 'geomspace', # return <class 'numpy.ndarray'>
     'heaviside',
     'histogram2d',
     'histogram_bin_edges',
@@ -76,15 +68,12 @@ __all__ = [
     'nanprod',
     'nanquantile',
     'ndim',
-    # 'nper', # return <class 'numpy.ndarray'>
     'npv',
     'partition',
     'piecewise',
     'packbits',
-    # 'place',
     'poly',
     'polyadd',
-    # 'polyder',
     'polydiv',
     'polyfit',
     'polyint',
@@ -92,35 +81,25 @@ __all__ = [
     'polysub',
     'positive',
     'ppmt',
-    'product',
     'promote_types',
     'ptp',
-    # 'put',
-    # 'put_along_axis',
-    # 'putmask',
     'pv',
     'rate',
-    # 'ravel_multi_index',
     'real',
-    # 'real_if_close',
     'result_type',
     'rollaxis',
     'roots',
-    'round_',
-    # 'safe_eval',
     'searchsorted',
     'select',
     'setdiff1d',
     'setxor1d',
     'signbit',
     'size',
-    'sometrue',
     'spacing',
     'take_along_axis',
     'trapz',
     'tril_indices_from',
     'trim_zeros',
-    'triu',
     'triu_indices_from',
     'union1d',
     'unpackbits',
@@ -142,20 +121,12 @@ corrcoef = onp.corrcoef
 correlate = onp.correlate
 count_nonzero = onp.count_nonzero
 cov = onp.cov
-cross = onp.cross
 digitize = onp.digitize
 divmod = onp.divmod
-ediff1d = onp.ediff1d
 extract = onp.extract
-fabs = onp.fabs
-fill_diagonal = onp.fill_diagonal
 flatnonzero = onp.flatnonzero
 float_power = onp.float_power
-fmax = onp.fmax
-fmin = onp.fmin
-fmod = onp.fmod
 frexp = onp.frexp
-geomspace = onp.geomspace
 heaviside = onp.heaviside
 histogram2d = onp.histogram2d
 histogram_bin_edges = onp.histogram_bin_edges
@@ -186,16 +157,13 @@ nanstd = onp.nanstd
 nansum = onp.nansum
 nanvar = onp.nanvar
 ndim = onp.ndim
-nper = onp.nper
 npv = onp.npv
 partition = onp.partition
 packbits = onp.packbits
 piecewise = onp.piecewise
-place = onp.place
 pmt = onp.pmt
 poly = onp.poly
 polyadd = onp.polyadd
-polyder = onp.polyder
 polydiv = onp.polydiv
 polyfit = onp.polyfit
 polyint = onp.polyint
@@ -203,35 +171,25 @@ polymul = onp.polymul
 polysub = onp.polysub
 positive = onp.positive
 ppmt = onp.ppmt
-product = onp.product
 promote_types = onp.promote_types
 ptp = onp.ptp
-put = onp.put
-put_along_axis = onp.put_along_axis
-putmask = onp.putmask
 pv = onp.pv
 rate = onp.rate
-ravel_multi_index = onp.ravel_multi_index
 real = onp.real
-real_if_close = onp.real_if_close
 result_type = onp.result_type
 rollaxis = onp.rollaxis
 roots = onp.roots
-round_ = onp.round_
-safe_eval = onp.safe_eval
 searchsorted = onp.searchsorted
 select = onp.select
 setdiff1d = onp.setdiff1d
 setxor1d = onp.setxor1d
 signbit = onp.signbit
 size = onp.size
-sometrue = onp.sometrue
 spacing = onp.spacing
 take_along_axis = onp.take_along_axis
 trapz = onp.trapz
 tril_indices_from = onp.tril_indices_from
 trim_zeros = onp.trim_zeros
-triu = onp.triu
 triu_indices_from = onp.triu_indices_from
 union1d = onp.union1d
 unpackbits = onp.unpackbits

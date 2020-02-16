@@ -30,6 +30,7 @@ from array import array as native_array
 import ctypes
 import warnings
 import numpy as _np
+from ..autograd import is_recording
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
 from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_code,\
                       get_oshape_of_gather_nd_op
@@ -135,7 +136,6 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
-    # pdb.set_trace()
     if isinstance(object, _np.ndarray):
         if not object.flags['C_CONTIGUOUS']:
             object = _np.ascontiguousarray(object, dtype=object.dtype)
@@ -167,7 +167,7 @@ def _as_onp_array(object):
             if cur_ctx is None:
                 cur_ctx = tmp_ctx
             elif tmp_ctx is not None and cur_ctx != tmp_ctx:
-                raise ValueError('Ambiguous to set the context for the output ndarray since'
+                raise ValueError('Ambiguous to set the context for the output ndarray since'  # pylint: disable=too-few-format-args
                                  ' input ndarrays are allocated on different devices: {} and {}'
                                  .format(str(cur_ctx, tmp_ctx)))
         return object.__class__(tmp), cur_ctx
@@ -257,6 +257,10 @@ class ndarray(NDArray):
             mx_ufunc = _NUMPY_ARRAY_UFUNC_DICT.get(name, None)
             if mx_ufunc is None:
                 # try to fallback to official NumPy op
+                if is_recording():
+                    raise ValueError("Falling back to NumPy operator {} with autograd active is not supported."
+                                     "Please consider moving the operator to the outside of the autograd scope.")\
+                                     .format(name)
                 onp_op = _get_np_op(name)
                 new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
                 out = onp_op(*new_inputs, **kwargs)
@@ -275,6 +279,10 @@ class ndarray(NDArray):
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
         if mx_np_func is None:
             # try to fallback to official NumPy op
+            if is_recording():
+                raise ValueError("Falling back to NumPy operator {} with autograd active is not supported."
+                                 "Please consider moving the operator to the outside of the autograd scope.")\
+                                 .format(func)
             new_args, cur_ctx = _as_onp_array(args)
             if cur_ctx is None:
                 raise ValueError('Unknown context for the input ndarrays. It is probably a bug. Please'
@@ -443,7 +451,7 @@ class ndarray(NDArray):
         from functools import reduce
         mask_shape = key[pos].shape
         mask_ndim = len(mask_shape)
-        ndim = len(self.shape)
+        ndim = len(self.shape)  # pylint: disable=redefined-outer-name, unused-variable
         for i in range(mask_ndim):
             if key[pos].shape[i] != self.shape[pos + i]:
                 raise IndexError('boolean index did not match indexed array along axis {};'
@@ -652,7 +660,7 @@ class ndarray(NDArray):
         array([-1., -2.])
         """
         # handling possible boolean indexing first
-        ndim = self.ndim
+        ndim = self.ndim  # pylint: disable=redefined-outer-name
         shape = self.shape  # pylint: disable=redefined-outer-name
         if isinstance(key, bool): # otherwise will be treated as 0 and 1
             key = array(key, dtype=_np.bool)
@@ -1184,7 +1192,7 @@ class ndarray(NDArray):
         check_call(_LIB.MXNDArrayDetach(self.handle, ctypes.byref(hdl)))
         return _np_ndarray_cls(hdl)
 
-    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument
+    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument, too-many-arguments
         """
         Copy of the array, cast to a specified type.
 

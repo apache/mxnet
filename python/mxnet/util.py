@@ -277,7 +277,6 @@ def use_np_shape(func):
         A function or class wrapped in the NumPy-shape scope.
     """
 
-    # print(func,'-------------------------')
     if inspect.isclass(func):
         for name, method in inspect.getmembers(
                 func,
@@ -462,7 +461,6 @@ def use_np_array(func):
     Function or class
         A function or class wrapped in the NumPy-array scope.
     """
-    # print(func,'+++++++++++++++++++++++')
     if inspect.isclass(func):
         for name, method in inspect.getmembers(
                 func,

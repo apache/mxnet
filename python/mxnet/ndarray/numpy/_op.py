@@ -821,7 +821,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         result array or scalar
     """
     from ...numpy import ndarray
-    from ..ndarray import from_numpy
+    from ..ndarray import from_numpy  # pylint: disable=unused-import
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
