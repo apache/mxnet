@@ -1439,6 +1439,17 @@ MXNET_DLL int MXNDArrayIsDeferredCompute(int *curr);
 MXNET_DLL int MXNDArraySetIsDeferredCompute(int deferred_compute_enabled, int *prev);
 
 /*!
+ * \brief Associate variables with deferred compute arrays
+ * \param arrays ndarray handles to be matched with variables
+ * \param variables symbol handles of variables to be matched with ndarrays
+ * \param num number of arrays and variables respectively
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays,
+                                                  SymbolHandle *variables,
+                                                  int num);
+
+/*!
  * \brief Convert the graph constructed during deferred computation mode to a Symbol.
  * \param input_handles ndarray handles of non-deferred computed inputs
  * \param output_handles ndarray handles of outputs

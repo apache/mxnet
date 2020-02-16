@@ -454,11 +454,17 @@ int MXNDArraySetIsDeferredCompute(int deferred_compute, int *prev) {
   API_END();
 }
 
+int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays, SymbolHandle *variables, int num) {
+  API_BEGIN();
+  Imperative::Get()->SetDeferredComputeVariable(arrays, variables, num);
+  API_END();
+}
+
 int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *input_handles,
                                       NDArrayHandle *output_handles,
                                       const char **c_input_names,
-                                      int num_inputs,
-                                      int num_outputs, SymbolHandle *out) {
+                                      int num_inputs, int num_outputs,
+                                      SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   // Obtain the NDArrays and their names

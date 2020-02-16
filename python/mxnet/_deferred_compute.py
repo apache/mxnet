@@ -47,13 +47,13 @@ def set_deferred_compute(state):
 
 
 @contextlib.contextmanager
-def context():
+def context(state=True):
     # Like other MXNet context manager, this bleeds state across concurrent
     # code: "Context managers that have state should use Context Variables
     # instead of threading.local() to prevent their state from bleeding to
     # other code unexpectedly, when used in concurrent code."
     # https://github.com/apache/incubator-mxnet/issues/17495#issuecomment-585461965
-    val = set_deferred_compute(True)
+    val = set_deferred_compute(state)
     yield
     set_deferred_compute(val)
 
@@ -107,3 +107,25 @@ def get_symbol(input_arrays, output_arrays, input_names=None, *, sym_cls=Symbol)
                                                len(input_arrays), len(output_arrays),
                                                ctypes.byref(handle)))
     return sym_cls(handle)
+
+
+def set_variable(arrays, variables):
+    """Associate variables with arrays.
+
+    Parameters
+    ----------
+    arrays: NDArray or List[NDArray]
+    variables: Symbol or List[Symbol] of variables
+    """
+
+    arrays = _as_list(arrays)
+    variables = _as_list(variables)
+
+    # Prepare ctypes array types
+    arrays_type = variables_type = ctypes.c_void_p * len(arrays)
+
+    # Convert handles
+    arrays = arrays_type(*[array.handle for array in arrays])
+    variables = variables_type(*[symbol.handle for symbol in variables])
+
+    check_call(_LIB.MXNDArraySetDeferredComputeVariable(arrays, variables, len(arrays)))

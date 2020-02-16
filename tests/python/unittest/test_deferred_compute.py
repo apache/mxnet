@@ -243,6 +243,7 @@ def test_dc_no_inputs_context_switch():
             b = a.as_in_ctx(mx.cpu(1))
             c = (b - 1).as_in_ctx(mx.cpu(0))
         return [c]
+
     _assert_dc(_dc_empty_setup, f)
 
 
@@ -255,7 +256,143 @@ def test_dc_context_switch():
             b = a.as_in_ctx(mx.cpu(1))
             c = (b - 1).as_in_ctx(mx.cpu(0))
         return [c]
+
     _assert_dc(_dc_simple_setup, f)
+
+
+###############################################################################
+# Gluon
+###############################################################################
+def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True):
+    """Compare results of deferred compute and normal imperative mode.
+
+    Parameters
+    ----------
+    setup : callable
+        Setup function computing inputs for compute function. Always called
+        outside of deferred compute.
+    net : Block
+    setup_is_deterministic : bool
+        If True, setup function may be called multiple times. If False, will
+        only be called once.
+    numpy : bool
+        If True, use mx.np. Otherwise mx.nd.
+
+    """
+    nd = mx.np if numpy else mx.nd
+
+    xs = setup(nd=nd)
+    ys = net(*xs)
+    ys_np = [y.asnumpy() for y in ys]
+
+    net.hybridize()
+    if setup_is_deterministic:
+        xs = setup(nd=nd)
+    ys_hybrid = net(*xs)
+    ys_hybrid_np = [y.asnumpy() for y in ys_hybrid]
+
+    _all_same(ys_np, ys_hybrid_np)
+
+
+def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
+    return [nd.ones(shape=shape, ctx=mx.cpu())]
+
+
+def test_dc_hybridblock():
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self, *, prefix=None, params=None):
+            super().__init__(prefix, params)
+            with self.name_scope():
+                self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
+                self.weight = self.params.get('weight', shape=(10, ))
+
+        def forward(self, x):
+            assert x.shape[1] == 10  # due to in_units=10 above
+            return self.dense(x) + self.weight.data(x.context)
+
+    net = MyBlock()
+    net.initialize()
+    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
+    with mx.util.np_array(True):
+        net = MyBlock()
+        net.initialize()
+        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
+
+
+@raises(RuntimeError)
+def test_dc_hybridblock_deferred_init_no_infer_shape():
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self, *, prefix=None, params=None):
+            super().__init__(prefix, params)
+            with self.name_scope():
+                self.dense = mx.gluon.nn.Dense(units=10)
+                self.weight = self.params.get('weight', allow_deferred_init=True)
+
+        def forward(self, x):
+            return self.dense(x) + self.weight.data(x.context)
+
+    net = MyBlock()
+    net.initialize()
+    data = mx.nd.ones(shape=(8, 10), ctx=mx.cpu())
+    net(data)  # Raises RuntimeError
+
+
+def test_dc_hybridblock_deferred_init():
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self, *, prefix=None, params=None):
+            super().__init__(prefix, params)
+            with self.name_scope():
+                self.dense = mx.gluon.nn.Dense(units=10)
+                self.weight = self.params.get('weight', allow_deferred_init=True)
+
+        def infer_shape(self, x):
+            self.weight.shape = (x.shape[1], )
+
+        def forward(self, x):
+            return self.dense(x) + self.weight.data(x.context)
+
+    net = MyBlock()
+    net.initialize()
+    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
+    with mx.util.np_array(True):
+        net = MyBlock()
+        net.initialize()
+        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
+
+
+@raises(RuntimeError)
+def test_dc_hybridblock_symbolblock():
+    model = mx.gluon.nn.HybridSequential()
+    model.add(mx.gluon.nn.Dense(128, activation='tanh'))
+    model.add(mx.gluon.nn.Dropout(0.5))
+    model.add(mx.gluon.nn.Dense(64, activation='tanh'),
+              mx.gluon.nn.Dense(32, in_units=64))
+    model.add(mx.gluon.nn.Activation('relu'))
+    model.initialize()
+    inputs = mx.sym.var('data')
+    outputs = model(inputs).get_internals()
+    smodel = mx.gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    assert len(smodel(mx.nd.zeros((16, 10)))) == 14
+
+    class Net(mx.gluon.HybridBlock):
+        def __init__(self, model):
+            super(Net, self).__init__()
+            self.model = model
+
+        def forward(self, x):
+            out = self.model(x)
+            return mx.nd.add_n(*[i.sum() for i in out])
+
+    net = Net(smodel)
+    net.hybridize()
+    data = mx.nd.zeros((16, 10))
+    out = net(data)
+    out.asnumpy()
+
+    net.hybridize()
+    out_hybrid = net(data)  # Raises RuntimeError
+
+    _all_same([out], [out_hybrid])
 
 
 if __name__ == "__main__":

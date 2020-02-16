@@ -387,7 +387,9 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(
           }
 
           node_entry.node = input_variable;
-        } else {
+        } else if (node_entry.node == nullptr) {
+          // If a variable is already associated with this node, it is optional
+          // to specify it as input to GetDeferredComputeSymbol.
           missing_inputs.insert(array);
         }
       }
@@ -407,6 +409,33 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(
   // Deep copy of symbol as subsequent calls to this function may change the
   // name of input variables.
   return s.Copy();
+}
+
+void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
+                                            SymbolHandle *variables, const int num) {
+  // Sanity check all inputs
+  for (int i = 0; i < num; i++) {
+    nnvm::Symbol *s = reinterpret_cast<nnvm::Symbol *>(variables[i]);
+    CHECK_EQ(s->outputs.size(), 1)
+        << "MXNDArraySetDeferredComputeVariable expects variables as input. "
+        << "Instead got a Symbol with " << s->outputs.size()
+        << " outputs as input " << i;
+    CHECK(s->outputs[0].node->is_variable())
+        << "MXNDArraySetDeferredComputeVariable expects variables as input. "
+        << "Instead got a Symbol associated with an operator as input " << i;
+  }
+
+  // Store variables in DCInfo of arrays
+  for (int i = 0; i < num; i++) {
+    nnvm::Symbol *s = reinterpret_cast<nnvm::Symbol *>(variables[i]);
+    NDArray *nd = reinterpret_cast<NDArray *>(arrays[i]);
+    nd->deferredcompute_entry_ = nnvm::NodeEntry{s->outputs[0].node, 0, 0};
+
+    std::vector<NDArray *> inputs;
+    std::vector<NDArray *> outputs;  // No need to specify outputs, as we will set is_computed_
+    Imperative::DCInfo& info = Imperative::DCInfo::Create(s->outputs[0].node, inputs, outputs);
+    info.is_computed_ = true;
+  }
 }
 
 std::vector<NDArray*> Imperative::Backward(
