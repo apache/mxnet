@@ -24,12 +24,9 @@ try:
     if int(_os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from .._ctypes.ndarray import NDArrayBase, CachedOp
         from .._ctypes.ndarray import _set_ndarray_class, _imperative_invoke, _set_np_ndarray_class
-    elif _sys.version_info >= (3, 0):
+    else:
         from .._cy3.ndarray import NDArrayBase, CachedOp
         from .._cy3.ndarray import _set_ndarray_class, _imperative_invoke, _set_np_ndarray_class
-    else:
-        from .._cy2.ndarray import NDArrayBase, CachedOp
-        from .._cy2.ndarray import _set_ndarray_class, _imperative_invoke, _set_np_ndarray_class
 except ImportError:
     if int(_os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")

@@ -21,7 +21,6 @@
 
 """NDArray API of MXNet."""
 
-from __future__ import absolute_import, division
 
 try:
     from __builtin__ import slice as py_slice
@@ -33,7 +32,6 @@ import ctypes
 import warnings
 import operator
 from functools import reduce # pylint: disable=redefined-builtin
-import sys
 import numpy as np
 from ..base import _LIB, numeric_types, integer_types
 from ..base import c_str, c_array, c_array_buf, c_handle_array, mx_real_t
@@ -71,6 +69,7 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
     np.bool_: 7,
+    np.dtype([('bfloat16', np.uint16)]): 12,
 }
 
 _DTYPE_MX_TO_NP = {
@@ -83,6 +82,7 @@ _DTYPE_MX_TO_NP = {
     5: np.int8,
     6: np.int64,
     7: np.bool_,
+    12: np.dtype([('bfloat16', np.uint16)]),
 }
 
 _STORAGE_TYPE_STR_TO_ID = {
@@ -148,7 +148,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
         A new empty `NDArray` handle.
     """
     hdl = NDArrayHandle()
-    if sys.version_info[0] > 2 and _int64_enabled():
+    if _int64_enabled():
         check_call(_LIB.MXNDArrayCreateEx64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
@@ -167,13 +167,17 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
                             "larger than 2^31 elements. Please build with flag " +
                             "USE_INT64_TENSOR_SIZE=1")
+        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
+            dtype_type = np.dtype(dtype)
+        else:
+            dtype_type = np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreateEx(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
             ctypes.byref(hdl)))
     return hdl
 
@@ -965,7 +969,10 @@ fixed-size items.
                     value_nd.copyto(self)
 
             elif isinstance(value, numeric_types):
-                self._full(value)
+                if isinstance(value, bool):
+                    self._full(int(value))
+                else:
+                    self._full(value)
 
             elif isinstance(value, (np.ndarray, np.generic)):
                 tmp_shape = _shape_for_bcast(
@@ -1035,7 +1042,7 @@ fixed-size items.
             )
             handle = NDArrayHandle()
             flat_self = self.reshape(-1)
-            if sys.version_info[0] > 2 and _int64_enabled():
+            if _int64_enabled():
                 check_call(
                     _LIB.MXNDArraySlice64(
                         flat_self.handle,
@@ -1078,7 +1085,7 @@ fixed-size items.
 
         The ``ax_len`` is used to convert `slice` objects to integer arrays.
         """
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             idx_dtype = 'int64'
         else:
             idx_dtype = 'int32'
@@ -1093,7 +1100,7 @@ fixed-size items.
         elif isinstance(idx, py_slice):
             start, stop, step = idx.indices(ax_len)
             return arange(start, stop, step, ctx=ctx, dtype=idx_dtype)
-        elif sys.version_info[0] > 2 and isinstance(idx, range):
+        elif isinstance(idx, range):
             return arange(idx.start, idx.stop, idx.step, ctx=ctx, dtype=idx_dtype)
         else:
             raise RuntimeError('illegal index type {}'.format(type(idx)))
@@ -1376,7 +1383,7 @@ fixed-size items.
             if idx < 0:
                 raise IndexError('index %d is out of bounds for axis 0 with size %d'
                                  % (idx-length, length))
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             check_call(_LIB.MXNDArrayAt64(
                 self.handle, ctypes.c_int64(idx), ctypes.byref(handle)))
         else:
@@ -3037,7 +3044,7 @@ def _is_advanced_index(idx):
         return True
     elif isinstance(idx, py_slice) or idx is None:
         return False
-    elif sys.version_info[0] > 2 and isinstance(idx, range):
+    elif isinstance(idx, range):
         return True
     else:
         raise RuntimeError('illegal index type {}'.format(type(idx)))
@@ -3056,7 +3063,7 @@ def get_indexing_dispatch_code(key):
             if getattr(idx, 'dtype', None) == np.bool_:
                 num_bools += 1
             basic_indexing = False
-        elif sys.version_info[0] > 2 and isinstance(idx, range):
+        elif isinstance(idx, range):
             basic_indexing = False
         elif not (isinstance(idx, (py_slice, integer_types)) or idx is None):
             raise ValueError(

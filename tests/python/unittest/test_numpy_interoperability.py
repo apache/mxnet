@@ -172,6 +172,7 @@ def _add_workload_quantile():
     q2 = np.array(1)
     q3 = np.array(0.5)
     q4 = np.array([0, 0.75, 0.25, 0.5, 1.0])
+    q5 = 0.4
 
     OpArgMngr.add_workload('quantile', x1, q1)
     OpArgMngr.add_workload('quantile', x1, q2)
@@ -179,6 +180,9 @@ def _add_workload_quantile():
     OpArgMngr.add_workload('quantile', x2, q4, interpolation="midpoint")
     OpArgMngr.add_workload('quantile', x2, q4, interpolation="nearest")
     OpArgMngr.add_workload('quantile', x2, q4, interpolation="lower")
+    OpArgMngr.add_workload('quantile', x2, q5, interpolation="midpoint")
+    OpArgMngr.add_workload('quantile', x2, q5, interpolation="nearest")
+    OpArgMngr.add_workload('quantile', x2, q5, interpolation="lower")
 
 
 def _add_workload_percentile():
@@ -192,6 +196,7 @@ def _add_workload_percentile():
     q2 = np.array(60)
     x3 = np.arange(10)
     q3 = np.array([25, 50, 100])
+    q4 = 65
     x4 = np.arange(11 * 2).reshape(11, 1, 2, 1)
     x5 = np.array([0, np.nan])
 
@@ -206,12 +211,12 @@ def _add_workload_percentile():
     OpArgMngr.add_workload('percentile', x3, q3)
     OpArgMngr.add_workload('percentile', x4, q2, axis=0)
     OpArgMngr.add_workload('percentile', x4, q2, axis=1)
-    OpArgMngr.add_workload('percentile', x4, q2, axis=2)
-    OpArgMngr.add_workload('percentile', x4, q2, axis=3)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=2)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=3)
     OpArgMngr.add_workload('percentile', x4, q2, axis=-1)
     OpArgMngr.add_workload('percentile', x4, q2, axis=-2)
-    OpArgMngr.add_workload('percentile', x4, q2, axis=-3)
-    OpArgMngr.add_workload('percentile', x4, q2, axis=-4)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=-3)
+    OpArgMngr.add_workload('percentile', x4, q4, axis=-4)
     OpArgMngr.add_workload('percentile', x4, q2, axis=(1,2))
     OpArgMngr.add_workload('percentile', x4, q3, axis=(-2,-1))
     OpArgMngr.add_workload('percentile', x4, q2, axis=(1,2), keepdims=True)
@@ -1252,6 +1257,17 @@ def _add_workload_inner():
         OpArgMngr.add_workload('inner', b, a)
 
 
+def _add_workload_insert():
+    a = np.arange(10)
+    OpArgMngr.add_workload('insert', a, 0, np.array([0]))
+    OpArgMngr.add_workload('insert', a, np.array([], dtype=np.int64), np.array([]))
+    OpArgMngr.add_workload('insert', a, np.array([0, 1], dtype=np.int64), np.array([1, 2]))
+    OpArgMngr.add_workload('insert', a, slice(1, 2), np.array([1, 2]))
+    OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
+    OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=np.int64), np.array([3, 4, 5]))
+    OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
+
+
 def _add_workload_hypot():
     OpArgMngr.add_workload('hypot', np.array(1), np.array(1))
     OpArgMngr.add_workload('hypot', np.array(0), np.array(0))
@@ -1866,22 +1882,24 @@ def _add_workload_nan_to_num():
     OpArgMngr.add_workload('nan_to_num', array3, True)
 
 
-def _add_workload_isnan():
-    array1 = np.array([[-_np.nan, 0, 456, _np.inf], [-1, -_np.inf, 0, _np.nan]])
-    array2 = np.array([_np.inf/_np.inf, _np.inf, _np.nan, -574, 0, 23425, _np.nan,-5])
-    array3 = np.array(_np.nan)
-    OpArgMngr.add_workload('isnan', array1,)
-    OpArgMngr.add_workload('isnan', array2)
-    OpArgMngr.add_workload('isnan', array3)
+def _add_workload_isnan(array_pool):
+    OpArgMngr.add_workload('isnan', array_pool['2x4'])
 
 
-def _add_workload_isinf():
-    array1 = np.array([[-433, float('inf'), 456, _np.inf], [-1, -_np.inf, 0, 1]])
-    array2 = np.array([_np.inf/_np.inf, _np.inf, -_np.inf, -574, 0, 23425, _np.inf,-5])
-    array3 = np.array(_np.inf)
-    OpArgMngr.add_workload('isinf', array1)
-    OpArgMngr.add_workload('isinf', array2)
-    OpArgMngr.add_workload('isinf', array3)
+def _add_workload_isinf(array_pool):
+    OpArgMngr.add_workload('isinf', array_pool['2x4'])
+
+
+def _add_workload_isposinf(array_pool):
+    OpArgMngr.add_workload('isposinf', array_pool['2x4'])
+
+
+def _add_workload_isneginf(array_pool):
+    OpArgMngr.add_workload('isneginf', array_pool['2x4'])
+
+
+def _add_workload_isfinite(array_pool):
+    OpArgMngr.add_workload('isfinite', array_pool['2x4'])
 
 
 def _add_workload_polyval():
@@ -1930,6 +1948,8 @@ def _add_workload_spacing():
 def _prepare_workloads():
     array_pool = {
         '4x1': np.random.uniform(size=(4, 1)) + 2,
+        '2x4': np.array([[    -433, float('inf'), 456, _np.inf, _np.nan],
+                         [-_np.inf, float("nan"),  -1,       0, _np.inf]]),
         '1x2': np.random.uniform(size=(1, 2)) + 2,
         '1x1x0': np.array([[[]]])
     }
@@ -2017,6 +2037,7 @@ def _prepare_workloads():
     _add_workload_degrees()
     _add_workload_true_divide()
     _add_workload_inner()
+    _add_workload_insert()
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_and()
@@ -2081,9 +2102,12 @@ def _prepare_workloads():
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
     _add_workload_nan_to_num()
-    _add_workload_isnan()
-    _add_workload_isinf()
     _add_workload_polyval()
+    _add_workload_isnan(array_pool)
+    _add_workload_isinf(array_pool)
+    _add_workload_isposinf(array_pool)
+    _add_workload_isneginf(array_pool)
+    _add_workload_isfinite(array_pool)
     _add_workload_heaviside()
     _add_workload_spacing()
 
@@ -2172,7 +2196,6 @@ def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
-@unittest.skipIf(sys.version_info.major < 3, "Skip running fallback ops for Python2")
 @with_seed()
 @use_np
 def test_np_fallback_ops():

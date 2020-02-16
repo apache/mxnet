@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Attribute scoping support for symbolic API."""
-from __future__ import absolute_import
 import threading
 import warnings
 from collections import defaultdict

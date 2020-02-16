@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Information about mxnet."""
-from __future__ import absolute_import
 import os
 import platform
 import logging
