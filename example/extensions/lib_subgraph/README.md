@@ -127,9 +127,10 @@ A partitioning strategy specifies how to partition a model and isolate operators
 
 When registering a custom subgraph operator, all thats needed is to register a `createOpState` function and to set that the operator is a subgraph operator by calling the `setIsSubgraphOp` API like:
 ```
-            REGISTER_OP(my_subgraph_op)
-            .setIsSubgraphOp()
-            .setCreateOpState(createOpState, "cpu");
+REGISTER_OP(my_subgraph_op)
+.setIsSubgraphOp()
+.setCreateOpState(createOpState, "cpu");
+```
 
 ### Parsing a JSON string
 
