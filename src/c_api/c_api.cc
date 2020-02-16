@@ -348,8 +348,7 @@ int MXLoadLib(const char *path) {
                             << "' custom subgraph op, CreateOpState function was not set.";
     }
     LOG(INFO) << "\tOp[" << i << "] " << name;
-    if(isSubgraphOp)
-      LOG(INFO) << "\t\tisSubgraphOp";
+    if (isSubgraphOp) LOG(INFO) << "\t\tisSubgraphOp";
     std::string name_str(name);
 
     /*
@@ -590,7 +589,7 @@ int MXLoadLib(const char *path) {
       p->attrs.name = n->attrs.name + "_backward";
       // copy attributes and subgraphs
       p->attrs.dict = n->attrs.dict;
-      for(auto s : n->attrs.subgraphs)
+      for (auto s : n->attrs.subgraphs)
         p->attrs.subgraphs.push_back(s);
       // set control dependency and attr parser
       p->control_deps.emplace_back(n);
@@ -755,7 +754,7 @@ int MXLoadLib(const char *path) {
       gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
       gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
 
-      if(!isSubgraphOp) {
+      if (!isSubgraphOp) {
         // register attr parser and standard functions for non-subgraph ops
         gradOp.set_attr_parser(attr_parser);
         gradOp.set_num_inputs(num_inouts);
@@ -771,7 +770,7 @@ int MXLoadLib(const char *path) {
         gradOp.set_num_inputs(grad_inouts);
         gradOp.set_num_outputs(DefaultSubgraphOpNumInputs);
       }
-      
+
       if (createop_map.size() != 0) {
         gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
         auto fstate_backward = [=](const OpStatePtr& state_ptr,

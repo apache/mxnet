@@ -20,7 +20,7 @@ Custom Partitioner Example and Tutorial
 
 ## Introduction
 
-Adding custom model partitioners in MXNet used to require understanding of MXNet backend operator registration and recompiling of MXNet with all its dependencies. So our approach for adding custom partitioners is to enable dynamic loading of C++ partitioning code compiled in external libraries at runtime.
+Adding custom model partitioners in MXNet used to require deep understanding of the MXNet backend, including operator registration and, followed by recompiling MXNet from source with all of its dependencies. This feature allows adding custom partitioners by dynamically loading custom C++ partitioners compiled in external libraries at runtime.
 
 Custom partitioners enable users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
 
@@ -28,31 +28,31 @@ Custom partitioners enable users to write custom model partitioning strategies w
 
 ### Have MXNet Ready
 
-First you should install MXNet either from compiling from source code or download from nightly build. It doesn’t matter if the build comes with CUDA or MKLDNN. The custom partitioning APIs do not interact with the execution of other native MXNet operators.
+First you should install MXNet either from compiling from source code or downloading a nightly build. It doesn’t matter if the build comes with CUDA or MKLDNN. The custom partitioning APIs do not interact with the execution of other native MXNet operators.
 
-### Run An Example:
+### Run An Example
 
-You can start getting familiar with custom partitioners by running an example provided in the **example/extensions/lib_subgraph** directory. This example partitions `exp` and `log` operators into subgraphs. Go to `lib_subgraph` directory and follow these steps:
+You can start getting familiar with custom partitioners by running an example provided in the **example/extensions/lib_subgraph** directory. This example partitions `exp` and `log` operators into subgraphs. Go to the `lib_subgraph` directory and follow these steps:
 
-1. Run `make`. The Makefile will generate a dynamic library ** libsubgraph_lib.so** compiled from `subgraph_lib.cc`. This is the library you are going to load that contains everything for the custom partitioner.
-2. Run `python test_subgraph.py`. It’ll first load the above .so library, find the components, register them in the MXNet backend, print "Found x", then partition the model and execute the operators like a regular MXNet operator and output the result.
+1. Run `make`. The Makefile will generate a dynamic library **libsubgraph_lib.so** compiled from `subgraph_lib.cc`. This is the library you are going to load that contains everything for the custom partitioner.
+2. Run `python test_subgraph.py`. It’ll first load the above library, find the components, register them in the MXNet backend, print "Found x", then partition the model and execute the operators like a regular MXNet operator and output the result.
 
-### Basic Files For Custom Partitioner Library:
+### Basic Files For Custom Partitioner Library
 
-* ** lib_subgraph/subgraph_lib.cc**: This file has a source code implementation of all required components of a custom partitioner, as well as the registration of the custom components.
+* **lib_subgraph/subgraph_lib.cc**: This file has a source code implementation of all required components to make a custom partitioner, it also shows registration of them so that they can be loaded by MXNet.
 
-* ** lib_subgraph/Makefile**: Compile source code to a dynamic shared library, with a header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom operator is compatible with C++11 onwards.
+* **lib_subgraph/Makefile**: This file compiles the source code to a dynamic shared library, with a header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom operator is compatible with C++11 onwards.
 
-* ** lib_subgraph/test_subgraph.py**: This file calls `mx.library.load(‘libsubgraph_lib.so’)` to load the library containing the custom components, partitions the model using the `optimize_for` API, and prints outputs of the forward passes. The outputs should be the same as the regular MXNet forward pass without partitioning.
+* **lib_subgraph/test_subgraph.py**: This file calls `mx.library.load(‘libsubgraph_lib.so’)` to load the library containing the custom components, partitions the model using the `optimize_for` API, and prints outputs of the forward passes. The outputs should be the same as the regular MXNet forward pass without partitioning.
 
-## Writing Custom Partitioner Library:
+## Writing Custom Partitioner Library
 
-For building a library containing your own custom partitioner, compose a C++ source file like `mypart_lib.cc`, include `lib_api.h` header file, and write your custom operator implementation with these essential functions:
+For building a library containing your own custom partitioner, compose a C++ source file like `mypart_lib.cc`, include `lib_api.h` header file, and write your custom partitioner with these essential functions:
 - `initialize` - Library Initialization Function
 - `REGISTER_PARTITIONER ` - Partitioner Registration Macro
 - `mySupportedOps ` - Operator Support
 
-Then compile it to `mypart_lib.so` dynamic library using the following command:
+Then compile it to the `mypart_lib.so` dynamic library using the following command:
 ```bash
 g++ -shared -fPIC -std=c++11 mypart_lib.cc -o libmypart_lib.so -I ../../../include/mxnet
 ```
@@ -62,10 +62,16 @@ Finally, you can write a Python script to load the library and partition a model
 import mxnet as mx
 mx.library.load(‘libmyop_lib.so’)
 sym, _, _ = mx.model.load_checkpoint('mymodel', 0) 
-sym.optimize_for("myPart")
+
+# Symbol/Module flow
+sym2 = sym.optimize_for("myPart")
+
+# Gluon flow
+sym_block = nn.SymbolBlock(sym, inputs)
+sym_block.hybridize(backend='myPart')
 ```
 
-### Writing A Custom Partitioner:
+### Writing A Custom Partitioner
 
 There are several essential building blocks for making a custom partitioner:
 
@@ -85,7 +91,7 @@ There are several essential building blocks for making a custom partitioner:
                                    std::string>& options)
 
 * [REGISTER_PARTITIONER(my_part_name)](./subgraph_lib.cc#L238):
-    * This macro registers the custom partitioner and its properties to MXNet by its name. Notice that a partitioner can have multiple partitioning strategies. This enables multiple *passes* to be run in a single partitioning call from the user. The first argument to `addStrategy` is a user-specified name. The second argument is the `supportedOps` function. The third argument is the name of the subgraph operator to create for each subgraph created during partitioning (see below for more info about subgraph operators). The `setAcceptSubgraph` API registers a callback function that is called for each subgraph created during partitioning (more on this below). Notice that the first argument to this function is the strategy to associate with and the second argument is the `acceptSubgraph`.
+    * This macro registers the custom partitioner and its properties to MXNet by its name. Notice that a partitioner can have multiple partitioning strategies. This enables multiple *passes* to be run in a single partitioning call from the user. The first argument to `addStrategy` is a user-specified name. The second argument is the `supportedOps` function. The third argument is the name of the subgraph operator to create for each subgraph created during partitioning (see below for more info about subgraph operators). The `setAcceptSubgraph` API registers a callback function that is called for each subgraph created during partitioning (more on this below). Notice that the first argument to this function is the strategy to associate with and the second argument is the `acceptSubgraph` function.
 
             REGISTER_PARTITIONER(my_part_name)
             .addStrategy("strategy1", 
@@ -98,7 +104,7 @@ There are several essential building blocks for making a custom partitioner:
 Also there are some optional functions you can specify:
 
 * [acceptSubgraph](./subgraph_lib.cc#L220):
-    * This function provides an opportunity to accept/reject a subgraph after MXNet partitions it. It also allows specifying custom attributes on the subgraph (ie. user-generated IDs). If you do not register this function, subgraphs will be accepted by default. Only implement this function to set attributes or conditionally reject subgraphs. 
+    * This function provides an opportunity to accept/reject a subgraph after MXNet partitions it. It also allows specifying custom attributes on the subgraph (ie. user-generated IDs). If you do not register this function, subgraphs will be accepted by default. 
 
             MXReturnValue acceptSubgraph(
                 std::string json,
@@ -115,6 +121,42 @@ Let’s take a closer look at those registry functions:
 
 * **acceptSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. It can be analyzed and accepted/rejected by setting `true`/`false` for the `accept` input. The `options` map is the same one passed to the `supportedOps` API. The `attrs` map provides an API to add user-specified attributes to the subgraph. These attributes will be available at runtime when the subgraph is executed and provides a way to pass info from partitioning-time to runtime. 
 
-### Writing A Custom Subgraph Operator:
+### Writing A Custom Subgraph Operator
 
 A partitioning strategy specifies how to partition a model and isolate operators into subgraphs. In MXNet, subgraphs are just a [stateful operator](../lib_custom_op#writing-stateful-custom-operator). Subgraph operators have an extra attribute called `SUBGRAPH_SYM_JSON` that maps to a JSON string of the subgraph. The expectation is that when a subgraph operator executes a forward/backward call, it executes all of the operators in the subgraph. 
+
+When registering a custom subgraph operator, all thats needed is to register a `createOpState` function and to set that the operator is a subgraph operator by calling the `setIsSubgraphOp` API like:
+```
+            REGISTER_OP(my_subgraph_op)
+            .setIsSubgraphOp()
+            .setCreateOpState(createOpState, "cpu");
+
+### Parsing a JSON string
+
+To simplify custom partitioner libraries, basic JSON parsing utility functions have been implemented in the `lib_api.h` header file. You create a `JsonParser` object and parse the string by calling the `parse_to_json` API like:
+```c++
+JsonParser parser;
+JsonVal json_val = parser.parse_to_json(json_string);
+```
+
+A `JsonVal` is a class that represents the nodes in a JSON structure. You can check the type of a node (num, str, list, or map) by comparing the `JsonVal.type` to `STR`, `NUM`, `LIST`, or `MAP`. Then you can get that value from the node like:
+```c++
+switch(json_val.type) {
+  case STR:
+    std::string str = json_val.str;
+    break;
+  case NUM:
+    int num = json_val.num;
+    break;
+  case LIST:
+    std::vector<JsonVal> list = json_val.list;
+    break;
+  case MAP:
+    std::map<JsonVal, JsonVal> map = json_val.map;
+    break;
+  default:
+    // error
+}
+```
+
+There are also convenience constructors for creating `JsonVal` objects for strings and numbers like `JsonVal("myKey")` or `JsonVal(42)`. This makes it easy to get specific keys from a map like `json_val.map[JsonVal("nodes")]`.
