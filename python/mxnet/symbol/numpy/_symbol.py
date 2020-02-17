@@ -47,7 +47,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
@@ -2111,6 +2111,33 @@ def tril(m, k=0):
     triu : same thing, only for the upper triangle
     """
     return _npi.tril(m, k)
+
+
+@set_module('mxnet.symbol.numpy')
+def triu(m, k=0):
+    r"""
+    Upper triangle of an array.
+
+    Return a copy of an array with elements under the `k`-th diagonal zeroed.
+
+    Parameters
+    ----------
+    m : _Symbol, shape (M, N)
+        Input array.
+    k : int, optional
+        Diagonal under which to zero elements.  `k = 0` (the default) is the
+        main diagonal, `k < 0` is below it and `k > 0` is under.
+
+    Returns
+    -------
+    triu : _Symbol, shape (M, N)
+        Upper triangle of `m`, of same shape and data-type as `m`.
+
+    See Also
+    --------
+    tril : same thing, only for the lower triangle
+    """
+    return _npi.triu(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
