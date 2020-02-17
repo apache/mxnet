@@ -29,7 +29,7 @@ package AI::MXNet::NDArray;
     An NDArray represents a multidimensional, fixed-size homogenous array.
     If you're familiar with the PDL, you might notice some similarities.
     However, NDArray is row-major, unlike the PDL that is column-major.
-    Like the PDL, MXNet’s NDArray enables imperative computation.
+    Like the PDL, MXNet's NDArray enables imperative computation.
 
     Some NDArray advandages compared to PDL:
     MXNet's NDArray supports fast execution on a wide range of hardware configurations, including CPU, GPU, and multi-GPU machines.

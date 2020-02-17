@@ -23,6 +23,8 @@ use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
 use Mouse;
 
+=encoding utf-8
+
 =head1 NAME
 
     AI::MXNet::RunTime - Runtime querying of compile time features in the native library.
