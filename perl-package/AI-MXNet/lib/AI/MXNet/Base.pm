@@ -21,7 +21,7 @@ use warnings;
 use PDL;
 use PDL::Types ();
 use PDL::CCS::Nd;
-use AI::MXNetCAPI 1.32;
+use AI::MXNetCAPI 1.4;
 use AI::NNVMCAPI 1.3;
 use AI::MXNet::Types;
 use Time::HiRes;

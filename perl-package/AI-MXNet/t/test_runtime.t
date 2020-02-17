@@ -60,4 +60,3 @@ test_features();
 test_is_singleton();
 test_is_enabled();
 test_is_enabled_not_existing();
-done_testing();
