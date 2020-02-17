@@ -198,6 +198,29 @@ def test_gluon_bernoulli():
 
 @with_seed()
 @use_np
+def test_gluon_categorical():
+    class TestCategorical():
+        def __init__(self, func, is_logit=False):
+            super(TestCategorical, self).__init__()
+            self._is_logit = is_logit
+            self._func = func
+
+        def hybrid_forward(self, F, params, *args):
+            categorical = mgp.Categorical(logit=params, F=F) if self._is_logit else \
+                        mgp.Categorical(prob=params, F=F)
+            if (len(args) == 0):
+                out = getattr(categorical, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
+            return getattr(categorical, self._func)(*args)
+
+    event_shape = [2, 5, 10]
+    batch_shape = [None, (), (2, 3), (4,0,5)]
+
+@with_seed()
+@use_np
 def test_gluon_half_normal():
     class TestHalfNormal(HybridBlock):
         def __init__(self, func):

@@ -21,7 +21,7 @@
 __all__ = ['Categorical']
 
 from .distribution import Distribution
-from .utils import prob2logit, logit2prob, getF
+from .utils import prob2logit, logit2prob, getF, cached_property
 from .constraint import Simplex, Real
 
 
@@ -45,15 +45,15 @@ class Categorical(Distribution):
     arg_constraints = {'prob': Simplex(),
                        'logit': Real()}
 
-    def __init__(self, num_events, prob, logit=None, F=None, validate_args=None):
+    def __init__(self, prob=None, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF([prob, logit])
 
-        if (num_events > 0):
-            num_events = int(num_events)
-            self.num_events = num_events
-        else:
-            raise ValueError("`num_events` should be greater than zero. " +
-                             "Received num_events={}".format(num_events))
+        # if (num_events > 0):
+        #     num_events = int(num_events)
+        #     self.num_events = num_events
+        # else:
+        #     raise ValueError("`num_events` should be greater than zero. " +
+        #                      "Received num_events={}".format(num_events))
 
         if (prob is None) == (logit is None):
             raise ValueError(
@@ -67,7 +67,7 @@ class Categorical(Distribution):
 
         super(Categorical, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
-    @property
+    @cached_property
     def prob(self):
         """Get the probability of sampling each class.
 
@@ -78,7 +78,7 @@ class Categorical(Distribution):
         """
         return logit2prob(self.logit, False, self.F)
 
-    @property
+    @cached_property
     def logit(self):
         """Get the log probability of sampling each class.
 
@@ -93,7 +93,29 @@ class Categorical(Distribution):
         logit = self.logit
         return (logit * value).sum(-1)
 
-    def sample(self, size):
-        # TODO: fix batch sampling with multinomial.
+    def sample(self, size=None):
+        """Sample from categorical distribution.
+        Given logit/prob of size `(batch_size, num_events)`,
+        `batch_size` samples will be drawn.
+        If `size` is given, `np.broadcast(size, batch_size)` samples will be drawn.
+        
+        Parameters
+        ----------
+        size : int or tuple of ints
+        
+        Returns
+        -------
+        out : Tensor
+            Samples from the categorical distribution.
+        """
         F = self.F
-        return F.np.random.multinomial(1, self.prob, size)
+        if size is None:
+            size = ()
+            logit = self.logit
+        else:
+            if not isinstance(size, tuple):
+                logit = F.np.broadcast_to(self.logit, (size) + (-2,))
+            else:
+                logit = F.np.broadcast_to(self.logit, size + (-2,))
+        gumbel_noise = F.np.random.gumbel(F.np.zeros_like(logit))
+        return F.np.argmax(gumbel_noise + logit, axis=-1)
