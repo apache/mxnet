@@ -6971,9 +6971,7 @@ def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
     >>> np.median(a, axis=1)
     array([7.,  2.])
     """
-    from mxnet import np, npx
-    npx.set_np()
-    return quantile(a=a, q=np.array(0.5), axis=axis, out=out, overwrite_input=overwrite_input,
+    return quantile(a=a, q=0.5, axis=axis, out=out, overwrite_input=overwrite_input,
                     interpolation='midpoint', keepdims=keepdims)
 
 

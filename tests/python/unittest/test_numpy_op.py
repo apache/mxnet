@@ -7416,7 +7416,6 @@ def test_np_median():
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
-
 @with_seed()
 @use_np
 def test_np_quantile():

@@ -9027,7 +9027,7 @@ def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
     array([7.,  2.])
     """
     return _mx_nd_np.median(a, axis=axis, overwrite_input=overwrite_input,
-           keepdims=keepdims, out=out)
+                            keepdims=keepdims, out=out)
 
 
 @set_module('mxnet.numpy')
