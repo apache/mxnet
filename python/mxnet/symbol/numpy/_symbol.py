@@ -4089,7 +4089,6 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4129,7 +4128,6 @@ def argmin(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
