@@ -79,7 +79,6 @@ struct check_legal_scale_kernel {
   }
 };
 
-
 template <int ndim, typename IType, typename OType>
 struct rayleigh_kernel {
   MSHADOW_XINLINE static void Map(index_t i,
