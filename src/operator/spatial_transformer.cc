@@ -41,7 +41,8 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
   DType *out = output.dptr_;
   const DType *data = input.dptr_;
   const DType *grid = grid_src.dptr_;
-  const index_t o_n = output.size(0), o_c = output.size(1), o_h = output.size(2), o_w = output.size(3);
+  const index_t o_n = output.size(0), o_c = output.size(1),
+    o_h = output.size(2), o_w = output.size(3);
   const index_t i_c = input.size(1), i_h = input.size(2), i_w = input.size(3);
   for (index_t n = 0; n < static_cast<index_t>(o_n); ++n) {
     for (index_t c = 0; c < static_cast<index_t>(o_c); ++c) {
