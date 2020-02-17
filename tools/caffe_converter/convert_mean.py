@@ -42,7 +42,7 @@ def convert_mean(binaryproto_fname, output=None):
         mean_blob.ParseFromString(f.read())
 
     img_mean_np = np.array(mean_blob.data)
-    img_mean_np = img_mean_np.reshape(
+    img_mean_np = img_mean_np.reshape(  # pylint: disable=too-many-function-args
         mean_blob.channels, mean_blob.height, mean_blob.width
     )
     # swap channels from Caffe BGR to RGB
