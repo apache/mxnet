@@ -8269,6 +8269,73 @@ def test_np_diag_indices_from():
 
 @with_seed()
 @use_np
+def test_np_interp():
+    class TestInterp(HybridBlock):
+        def __init__(self, left=None, right=None, period=None):
+            super(TestInterp, self).__init__()
+            self._left = left
+            self._right = right
+            self._period = period
+        
+        def hybrid_forward(self, F, x, xp, fp):
+            return F.np.interp(x, xp, fp, left=self._left, right=self._right, period=self._period)
+    
+    class TestInterpScalar(HybridBlock):
+        def __init__(self, x=None, left=None, right=None, period=None):
+            super(TestInterpScalar, self).__init__()
+            self._x = x
+            self._left = left
+            self._right = right
+            self._period = period
+        
+        def hybrid_forward(self, F, xp, fp):
+            return F.np.interp(self._x, xp, fp, left=self._left, right=self._right, period=self._period)
+
+    xtypes = [np.int64, np.float32, np.float64]
+    dtypes = [np.int32, np.int64, np.float32, np.float64]
+    xshapes = [
+        (), (3,), (5,), (20,),
+        (2, 2), (4, 4), (8, 8),
+        (5, 5, 5), (8, 0, 8)
+    ]
+    dsizes = [10, 30]
+    periods = [None, 2*np.pi]
+    lefts = [None, -10, 0]
+    rights= [None, 20, 50]
+    flags = [True, False]
+    combinations = itertools.product(flags, flags, xshapes, dsizes, xtypes, dtypes, lefts, rights, periods)
+    for hybridize, x_scalar, xshape, dsize, xtype, dtype, left, right, period in combinations:
+        rtol = 1e-3
+        atol = 1e-5
+        if period is not None:
+            x = np.random.uniform(-np.pi, np.pi, size=xshape).astype(xtype)
+            xp = np.random.uniform(0, 2*np.pi, size=dsize)
+            fp = np.sin(xp)
+        else:
+            x = np.random.uniform(0, 100, size=xshape).astype(xtype)
+            xp = np.sort(np.random.choice(100, dsize, replace=False).astype(dtype))
+            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype) 
+        np_x = x.asnumpy()
+        if x_scalar and xshape == ():
+            x = x.item()
+            np_x = x
+            test_interp = TestInterpScalar(x=x, left=left, right=right, period=period)
+        else: 
+            test_interp = TestInterp(left=left, right=right, period=period)
+        if hybridize:
+            test_interp.hybridize()
+        mx_out = test_interp(xp, fp) if (x_scalar and xshape == ()) else test_interp(x, xp, fp)
+        np_out = _np.interp(np_x, xp.asnumpy(), fp.asnumpy(), left=left, right=right, period=period)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.interp(x, xp, fp, left=left, right=right, period=period)
+        np_out = _np.interp(np_x ,xp.asnumpy(), fp.asnumpy(), left=left, right=right, period=period)
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+
+@with_seed()
+@use_np
 def test_np_bincount():
     class TestBincount(HybridBlock):
         def __init__(self, minlength=0):
