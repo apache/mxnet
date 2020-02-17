@@ -57,6 +57,10 @@ inline static mkldnn::normalization_flags _GetFlags(const std::vector<NDArray> &
   if (aux_states.size() == 2U && !is_train_and_not_global_stats) {
     flags |=  mkldnn::normalization_flags::use_global_stats;
   }
+
+  if (param.fuse_relu) {
+    flags |=  mkldnn::normalization_flags::fuse_norm_relu;
+  }
   return flags;
 }
 
@@ -149,7 +153,7 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
 template <typename DType>
 void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                             const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
-                            const std::vector<NDArray> &outputs) {
+                            const std::vector<NDArray> &outputs, const NDArray *workspace) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   const std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
   const std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
@@ -220,6 +224,15 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       const NDArray &outVar   = outputs[batchnorm::kVar];
       net_args[MKLDNN_ARG_MEAN] = *(outMean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(outVar.GetMKLDNNData());
+      if (param.fuse_relu) {
+        auto engine = CpuEngine::Get()->get_engine();
+        if (workspace == nullptr) {
+            LOG(FATAL) << "MKLDNN BatchNorm: incorrect workspace input";
+        }
+        auto ws = std::make_shared<mkldnn::memory>(fwd.GetPd().workspace_desc(),
+                          engine, workspace->GetMKLDNNData()->get_data_handle());
+        net_args[MKLDNN_ARG_WORKSPACE] = *ws;
+      }
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
@@ -281,9 +294,13 @@ static MKLDNNBNBackward &GetBNBackward(
 template <typename DType>
 void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                              const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
-                             const std::vector<NDArray> &outputs) {
-  CHECK_EQ(inputs.size(), 8U);
+                             const std::vector<NDArray> &outputs, const NDArray *workspace) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  if (param.fuse_relu) {
+    CHECK_EQ(inputs.size(), 9U);
+  } else {
+    CHECK_EQ(inputs.size(), 8U);
+  }
   std::vector<NDArray> out_grad(1);
   std::vector<NDArray> out_data(3);
   std::vector<NDArray> in_data(3);
@@ -349,6 +366,10 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     net_args[MKLDNN_ARG_SCALE_SHIFT] = bwd.GetWeight();
     net_args[MKLDNN_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
     net_args[MKLDNN_ARG_DIFF_DST] = *diff_mem;
+
+    if (param.fuse_relu && workspace != nullptr){
+      net_args[MKLDNN_ARG_WORKSPACE] = *(workspace->GetMKLDNNData());
+    }
 
     // training but no input mean and variance
     if (ctx.is_train && !param.use_global_stats) {

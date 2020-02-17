@@ -322,7 +322,11 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
-  CHECK_EQ(out_shape->size(), 3U);
+  if (param.fuse_relu) {
+    CHECK_EQ(out_shape->size(), 4U);
+  } else {
+    CHECK_EQ(out_shape->size(), 3U);
+  }
   const mxnet::TShape &dshape = in_shape->at(batchnorm::kData);
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
@@ -345,12 +349,15 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   out_shape->push_back(dshape);                // kOut
   out_shape->push_back(Shape1(channelCount));  // kMean
   out_shape->push_back(Shape1(channelCount));  // kVar
-
+  if (param.fuse_relu) {
+    out_shape->push_back(dshape);                // kWorkspace
+  }
   return true;
 }
 
 static bool BatchNormType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_type, std::vector<int> *out_type) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_GE(in_type->size(), 1U);
   const int dtype = (*in_type)[0];
@@ -370,7 +377,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, args[i]);
     }
   }
-  const size_t n_out = 3;
+  const size_t n_out = (param.fuse_relu ? 4:3);
   out_type->clear();
   out_type->push_back(dtype);
   for (size_t i = 1; i < n_out; ++i) {
@@ -394,10 +401,15 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
                            const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  const NDArray *workspace = nullptr;
   if (SupportMKLDNNBN(inputs[0], param)) {
+    if (param.fuse_relu) {
+      CHECK_GT(outputs.size(), 3U);
+      workspace = &outputs[3];
+    }
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-        MKLDNNRun(MKLDNNBatchNormForward<DTYPE>, attrs, ctx, inputs, req, outputs);
+        MKLDNNBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, workspace);
       });
     MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
@@ -411,9 +423,14 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  const NDArray *workspace = nullptr;
   if (SupportMKLDNNBN(inputs[0], param)) {
+      if (param.fuse_relu) {
+        CHECK_EQ(inputs.size(), 9U);
+        workspace = &inputs[8];
+      }
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNBatchNormBackward<float>, attrs, ctx, inputs, req, outputs);
+      MKLDNNBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, workspace);
       MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
   }
@@ -461,7 +478,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::ObjectPtr& n,
   for (size_t i = 0; i < n->num_outputs(); ++i)
     out_data.emplace_back(n, i, 0);
   std::vector<nnvm::NodeEntry> heads;
-  heads.reserve(8);
+  heads.reserve((n->num_outputs() == 4) ? 9 : 8);
   heads.emplace_back(ograds.at(0));
   heads.emplace_back(out_data.at(batchnorm::kMean));
   heads.emplace_back(out_data.at(batchnorm::kVar));
@@ -470,6 +487,9 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::ObjectPtr& n,
   heads.emplace_back(n->inputs.at(batchnorm::kBeta));
   heads.emplace_back(n->inputs.at(batchnorm::kInMovingMean));
   heads.emplace_back(n->inputs.at(batchnorm::kInMovingVar));
+  if (n->num_outputs() == 4) {
+    heads.emplace_back(out_data.at(batchnorm::kWorkspace));
+  }
 
   nnvm::ObjectPtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
@@ -545,7 +565,10 @@ then set ``gamma`` to 1 and its gradient to 0.
 
 )code" ADD_FILELINE)
 .set_num_inputs(5)
-.set_num_outputs(3)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
+  return param.fuse_relu ? 4:3;
+})
 .set_attr_parser(ParamParser<BatchNormParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
@@ -553,7 +576,12 @@ then set ``gamma`` to 1 and its gradient to 0.
 })
 .set_attr<nnvm::FListOutputNames>("FListOutputNames",
     [](const NodeAttrs& attrs) {
-  return std::vector<std::string>{"output", "mean", "var"};
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
+  if (param.fuse_relu) {
+    return std::vector<std::string>{"output", "mean", "var", "workspace"};
+  } else {
+    return std::vector<std::string>{"output", "mean", "var"};
+  }
 })
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
     [](const NodeAttrs& attrs) {
@@ -595,7 +623,10 @@ then set ``gamma`` to 1 and its gradient to 0.
   });
 
 NNVM_REGISTER_OP(_backward_BatchNorm)
-.set_num_inputs(8)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
+  return param.fuse_relu ? 9:8;
+})
 .set_num_outputs(3)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)

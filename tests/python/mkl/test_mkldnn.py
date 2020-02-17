@@ -295,6 +295,36 @@ def test_batchnorm():
     for stype in stypes:
         check_batchnorm_training(stype)
 
+@with_seed()
+def test_batchnorm_relu_fusion():
+    def check_batchnorm_relu_fusion(shape):
+        x = mx.sym.Variable('x')
+        in_data = mx.nd.random.normal(shape=shape)
+        grad_out = mx.nd.random.uniform(0, 1, shape)
+        bn = mx.sym.BatchNorm(data=x, fix_gamma=False, fuse_relu=False)
+        relu = mx.sym.Activation(data=bn, act_type='relu', name='relu')
+        exe = relu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
+        exe.arg_arrays[0][:] = in_data
+        exe.forward(is_train=True)
+        exe.backward(grad_out)
+        no_fuse_outputs = exe.outputs
+        no_fuse_grads = exe.grad_arrays
+
+        bnrelu = mx.sym.BatchNorm(data=x, fix_gamma=False, fuse_relu=True)
+        exe_fuse = bnrelu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
+        exe_fuse.arg_arrays[0][:] = in_data
+        exe_fuse.forward(is_train=True)
+        exe_fuse.backward(grad_out)
+        fuse_outputs = exe_fuse.outputs
+        fuse_grads = exe_fuse.grad_arrays
+
+        for i in range(len(no_fuse_outputs)):
+            assert_almost_equal(no_fuse_outputs[i], fuse_outputs[i])
+        for i in range(len(no_fuse_grads)):
+            assert_almost_equal(no_fuse_grads[i], fuse_grads[i])
+
+    check_batchnorm_relu_fusion((1, 3, 224, 224))
+    check_batchnorm_relu_fusion((8, 3, 224, 224))
 
 @with_seed()
 def test_softmax():
