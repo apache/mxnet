@@ -1383,6 +1383,14 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
                                           g.GetAttr<StorageTypeVector>("storage_type"));
     }
+    std::vector<std::string> arg_names = sym->ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+    g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
+    g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
+  } else {
+    NDArray **in_args_ptr = static_cast<NDArray**>(nullptr);
+    std::vector<std::string> arg_names;
+    g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
+    g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
   }
   std::vector<std::pair<std::string, std::string>> options_map;
   for (mx_uint i = 0; i < num_options; ++i) {

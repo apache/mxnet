@@ -99,7 +99,10 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     const std::vector<std::pair<std::string, std::string>>& options_map) {
     // clear supported_nodes to remove state from previous calls
     supported_nodes.clear();
-
+    // get input args and arg names
+    in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
+    in_args_ptr = g.GetAttr<NDArray**>("in_args");
+    
     // remove all graph attrs, some cannot be saved to json
     nnvm::Graph graph = std::move(g);
     graph.attrs.clear();
@@ -162,7 +165,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   }
   // override CreateSubgraphNode
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                           const int subgraph_id = 0) const {
+                                             const int subgraph_id = 0) const {
     int accept = 1;
     int num_attr = 0;
     char** attr_keys = nullptr;
@@ -187,11 +190,37 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         }
       }
 
+      // convert input args
+      std::vector<const char*> arg_names;
+      std::vector<void*> arg_data;
+      std::vector<const int64_t *> arg_shapes;
+      std::vector<int> arg_dims;
+      std::vector<int> arg_types;
+      std::vector<size_t> arg_verIDs;
+      std::vector<const char*> arg_dev_type;
+      std::vector<int> arg_dev_id;
+      for (int i=0; i<in_arg_names.size(); i++) {
+        arg_names.push_back(in_arg_names[i].c_str());
+        const auto &in_arg = *(in_args_ptr[i]);
+        arg_data.push_back(in_arg.data().dptr_);
+        arg_shapes.push_back(in_arg.shape().data());
+        arg_dims.push_back(in_arg.shape().ndim());
+        arg_types.push_back(in_arg.dtype());
+        arg_verIDs.push_back(in_arg.version());
+        const char* ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        arg_dev_type.push_back(ctx_str);
+        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+      }
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
       CHECK(call_accept_subgraph_(accept_subgraph_, subgraph_json.c_str(),
-                                subgraph_id, &accept, opt_keys_.data(),
-                                opt_vals_.data(), opt_keys_.size(),
-                                &attr_keys, &attr_vals, &num_attr))
+                                  subgraph_id, &accept, opt_keys_.data(),
+                                  opt_vals_.data(), opt_keys_.size(),
+                                  &attr_keys, &attr_vals, &num_attr,
+                                  arg_names.data(), arg_names.size(),
+                                  arg_data.data(), arg_shapes.data(),
+                                  arg_dims.data(), arg_types.data(),
+                                  arg_verIDs.data(), arg_dev_type.data(),
+                                  arg_dev_id.data()))
         << "Error calling accept_subgraph for '" << subgraph_prop << "'";
     }
     if (accept) {
@@ -228,6 +257,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
+  std::vector<std::string> in_arg_names;
+  NDArray **in_args_ptr;
 };
 }  // namespace op
 }  // namespace mxnet

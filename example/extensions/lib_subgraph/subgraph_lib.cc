@@ -219,9 +219,19 @@ MXReturnValue mySupportedOps(std::string json,
 
 MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
                                std::unordered_map<std::string, std::string>& options,
-                               std::unordered_map<std::string, std::string>& attrs) {
+                               std::unordered_map<std::string, std::string>& attrs,
+                               std::map<std::string, MXTensor>& args) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
+  }
+  for (auto kv : args) {
+    std::cout << "arg: " << kv.first << " ==> (";
+    for (auto s : kv.second.shape)
+      std::cout << s << ",";
+    std::cout << ") [";
+    for (int i=0; i<kv.second.size(); i++)
+      std::cout << kv.second.data<float>()[i] << ", ";
+    std::cout << "]" << std::endl;
   }
   if(options.find("reject") != options.end() &&
      options["reject"].compare("True") == 0) {
