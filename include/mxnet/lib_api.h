@@ -919,8 +919,8 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              int* outdev_id, int num_out,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
                              xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-			     void** in_indices, void** out_indices, 
-			     void** in_indptr, void** out_indptr,
+                             void** in_indices, void** out_indices, 
+                             void** in_indptr, void** out_indptr,
                              int64_t* in_indices_shapes, int64_t* out_indices_shapes,
                              int64_t* in_indptr_shapes, int64_t* out_indptr_shapes);
 
@@ -946,10 +946,10 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      int* outdev_id, int num_out,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc,
                                      xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-				     void** in_indices, void** out_indices,
-				     void** in_indptr, void** out_indptr,
-				     int64_t* in_indices_shapes, int64_t* out_indices_shapes,
-				     int64_t* in_indptr_shapes, int64_t* out_indptr_shapes);
+                                     void** in_indices, void** out_indices,
+                                     void** in_indptr, void** out_indptr,
+                                     int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                                     int64_t* in_indptr_shapes, int64_t* out_indptr_shapes);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
@@ -1155,9 +1155,9 @@ extern "C" {
                   size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
                   xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-		  void** in_indices, void** out_indices, void** in_indptr, void** out_indptr,
-		  int64_t* in_indices_shapes, int64_t* out_indices_shapes,
-		  int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
+                  void** in_indices, void** out_indices, void** in_indptr, void** out_indptr,
+                  int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                  int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1296,9 +1296,9 @@ extern "C" {
                           size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc,
                           xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-			  void** in_indices, void** out_indices, void** in_indptr, void** out_indptr, 
-			  int64_t* in_indices_shapes, int64_t* out_indices_shapes,
-			  int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
+                          void** in_indices, void** out_indices, void** in_indptr, void** out_indptr, 
+                          int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                          int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {

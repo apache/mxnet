@@ -234,9 +234,9 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
-		    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
-		    in_indices_shapes.data(), out_indices_shapes.data(), 
-		    in_indptr_shapes.data(), out_indptr_shapes.data()))
+                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                    in_indices_shapes.data(), out_indices_shapes.data(), 
+                    in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -256,7 +256,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-			    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                            in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
                             in_indices_shapes.data(), out_indices_shapes.data(),
                             in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
