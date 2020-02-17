@@ -6197,7 +6197,7 @@ def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
     mean, percentile
     """
     return quantile(a=a, q=0.5, axis=axis, out=out, overwrite_input=overwrite_input,
-                    interpolation='linear', keepdims=keepdims)
+                    interpolation='midpoint', keepdims=keepdims)
 
 
 @set_module('mxnet.symbol.numpy')
