@@ -303,6 +303,29 @@ def _add_workload_array_split():
     OpArgMngr.add_workload('array_split', b, 3)
 
 
+def _add_workload_hsplit():
+    a = np.array([1, 2, 3, 4])
+    OpArgMngr.add_workload('hsplit', a, 2)
+    b = np.array([[1, 2, 3, 4], [1, 2, 3, 4]])
+    OpArgMngr.add_workload('hsplit', b, 2)
+
+
+def _add_workload_vsplit():
+    assertRaises(ValueError, np.vsplit, np.array([1, 2, 3, 4]), 2)
+    a = np.array([[1, 2, 3, 4], [1, 2, 3, 4]])
+    OpArgMngr.add_workload('vsplit', a, 2)
+    assertRaises(ValueError, np.vsplit, np.array(1), 2)
+
+
+def _add_workload_dsplit():
+    a = np.array([[[1, 2, 3, 4], [1, 2, 3, 4]],
+                  [[1, 2, 3, 4], [1, 2, 3, 4]]])
+    OpArgMngr.add_workload('dsplit', a, 2)
+    assertRaises(ValueError, np.dsplit, np.array(1), 2)
+    assertRaises(ValueError, np.dsplit, np.array([1, 2, 3, 4]), 2)
+    assertRaises(ValueError, np.dsplit, np.array([[1, 2, 3, 4], [1, 2, 3, 4]]), 2)
+
+
 def _add_workload_squeeze():
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(4, 1)))
     OpArgMngr.add_workload('squeeze', np.random.uniform(size=(20, 10, 10, 1, 1)))
@@ -1998,6 +2021,9 @@ def _prepare_workloads():
     _add_workload_roll()
     _add_workload_split()
     _add_workload_array_split()
+    _add_workload_hsplit()
+    _add_workload_vsplit()
+    _add_workload_dsplit()
     _add_workload_squeeze()
     _add_workload_stack(array_pool)
     _add_workload_std()
