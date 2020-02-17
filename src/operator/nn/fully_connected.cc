@@ -34,7 +34,8 @@ namespace op {
 
 bool SupportMKLDNNFC(const NDArray& input) {
   int ndim = input.shape().ndim();
-  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
+  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
+         (ndim >= 1 && ndim <= 4) &&
          input.storage_type() == kDefaultStorage;
 }
 

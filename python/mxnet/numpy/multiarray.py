@@ -54,14 +54,15 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
-           'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange', 'array_split',
-           'split', 'vsplit', 'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
+           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
+           'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
-           'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum', 'true_divide', 'nonzero',
+           'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount']
 
@@ -5439,8 +5440,8 @@ def vsplit(ary, indices_or_sections):
 
     Notes
     -------
-    This function differs from the original `numpy.degrees
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.degrees.html>`_ in
+    This function differs from the original `numpy.vsplit
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.vsplit.html>`_ in
     the following aspects:
 
     - Currently parameter ``indices_or_sections`` does not support ndarray, but supports scalar,
@@ -5474,7 +5475,83 @@ def vsplit(ary, indices_or_sections):
             [6., 7.]]])]
 
     """
-    return split(ary, indices_or_sections, 0)
+    return _mx_nd_np.vsplit(ary, indices_or_sections)
+
+
+@set_module('mxnet.numpy')
+def dsplit(ary, indices_or_sections):
+    r"""
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+    Please refer to the `split` documentation.  `dsplit` is equivalent
+    to `split` with ``axis=2``, the array is always split along the third
+    axis provided the array dimension is greater than or equal to 3.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1 - D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 2.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 2 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:, :, :2]
+          - ary[:, :, 2:3]
+          - ary[:, :, 3:]
+
+        If an index exceeds the dimension of the array along axis 2, an error will be thrown.
+
+    Returns
+    -------
+    sub-arrays : list of ndarrays
+        A list of sub-arrays.
+
+    See Also
+    --------
+    split : Split an array into multiple sub-arrays of equal size.
+
+    Notes
+    -------
+    This function differs from the original `numpy.dsplit
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.dsplit.html>`_ in
+    the following aspects:
+
+    - Currently parameter ``indices_or_sections`` does not support ndarray, but supports scalar,
+    tuple and list.
+    - In ``indices_or_sections``, if an index exceeds the dimension of the array along axis 2,
+    an error will be thrown.
+
+    Examples
+    --------
+    >>> x = np.arange(16.0).reshape(2, 2, 4)
+    >>> x
+    array([[[ 0.,   1.,   2.,   3.],
+            [ 4.,   5.,   6.,   7.]],
+           [[ 8.,   9.,  10.,  11.],
+            [12.,  13.,  14.,  15.]]])
+    >>> np.dsplit(x, 2)
+    [array([[[ 0.,  1.],
+            [ 4.,  5.]],
+           [[ 8.,  9.],
+            [12., 13.]]]), array([[[ 2.,  3.],
+            [ 6.,  7.]],
+           [[10., 11.],
+            [14., 15.]]])]
+    >>> np.dsplit(x, np.array([3, 6]))
+    [array([[[ 0.,   1.,   2.],
+            [ 4.,   5.,   6.]],
+           [[ 8.,   9.,  10.],
+            [12.,  13.,  14.]]]),
+     array([[[ 3.],
+            [ 7.]],
+           [[11.],
+            [15.]]]),
+    array([], shape=(2, 2, 0), dtype=float64)]
+
+    """
+    return _mx_nd_np.dsplit(ary, indices_or_sections)
 
 
 @set_module('mxnet.numpy')
@@ -6009,7 +6086,6 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -6078,7 +6154,6 @@ def argmin(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -6642,7 +6717,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
-    a with a.ndim >= 2 dimensions and shape (n, n, …, n). For a.ndim = 2 this is
+    a with a.ndim >= 2 dimensions and shape (n, n, ..., n). For a.ndim = 2 this is
     the usual diagonal, for a.ndim > 2 this is the set of indices to access
     a[i, i, ..., i] for i = [0..n-1].
 

@@ -67,13 +67,13 @@ static void CheckAndUpdateInferredDtypes(
 }
 
 // Graph pass to infer unknown nodes which are input nodes
-// as FP16 if possible
+// as LP16 if possible
 Graph AMPInferUnknown(Graph &&src) {
   const nnvm::DTypeVector &inferred_dtypes =
       src.GetAttr<nnvm::DTypeVector>("inferred_dtypes");
   const int target_dtype = src.GetAttr<int>("target_dtype");
-  CHECK(target_dtype == mshadow::kFloat16)
-      << "Only float16 target_dtype is supported yet";
+  CHECK(target_dtype == mshadow::kFloat16 || target_dtype == mshadow::kBfloat16)
+      << "Only float16 and bfloat16 target_dtypes are supported yet";
 
   nnvm::DTypeVector inferred_dtype_result(inferred_dtypes);
   const nnvm::IndexedGraph &idx = src.indexed_graph();

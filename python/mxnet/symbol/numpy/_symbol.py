@@ -41,14 +41,14 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
-           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
+           'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'where', 'bincount']
@@ -3704,6 +3704,46 @@ def vsplit(ary, indices_or_sections):
     return split(ary, indices_or_sections, 0)
 
 
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def dsplit(ary, indices_or_sections):
+    """
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+
+    Please refer to the `split` documentation.  `dsplit` is equivalent
+    to `split` with ``axis=2``, the array is always split along the third
+    axis provided the array dimension is greater than or equal to 3.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 2.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 2 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:, :, :2]
+          - ary[:, :, 2:3]
+          - ary[:, :, 3:]
+
+        If an index exceeds the dimension of the array along axis 2, an error will be thrown.
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.dsplit(ary, indices, 2, False, sections)
+    return ret
+# pylint: enable=redefined-outer-name
+
+
 @set_module('mxnet.symbol.numpy')
 def concatenate(seq, axis=0, out=None):
     """Join a sequence of arrays along an existing axis.
@@ -4089,7 +4129,6 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4129,7 +4168,6 @@ def argmin(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4565,7 +4603,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
-    a with a.ndim >= 2 dimensions and shape (n, n, …, n). For a.ndim = 2 this is
+    a with a.ndim >= 2 dimensions and shape (n, n, ..., n). For a.ndim = 2 this is
     the usual diagonal, for a.ndim > 2 this is the set of indices to access
     a[i, i, ..., i] for i = [0..n-1].
 
