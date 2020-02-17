@@ -226,19 +226,17 @@ void CustomFComputeDispatcher(const std::string op_name,
       attr_keys.push_back(kv.first.c_str());
       attr_vals.push_back(kv.second.c_str());
     }
+
     // call fcompute function
-    //  std::vector<void*> in_indices, out_indices;
-  std::vector<void*> in_indptr, out_indptr;
-  std::vector<int64_t> in_indices_shapes, out_indices_shapes;
-  std::vector<int64_t> in_indptr_shapes, out_indptr_shapes;
     CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                     in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
                     in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
-		    in_indptr.data(), out_indptr.data(), in_indices_shapes.data(), 
-		    out_indices_shapes.data(), in_indptr_shapes.data(), out_indptr_shapes.data()))
+		    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+		    in_indices_shapes.data(), out_indices_shapes.data(), 
+		    in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -258,8 +256,9 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-		            in_indptr.data(), out_indptr.data(), in_indices_shapes.data(),
-                            out_indices_shapes.data(), in_indptr_shapes.data(), out_indptr_shapes.data()))
+			    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                            in_indices_shapes.data(), out_indices_shapes.data(),
+                            in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
   }
 }
