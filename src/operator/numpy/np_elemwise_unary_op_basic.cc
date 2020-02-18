@@ -133,6 +133,7 @@ Example::
 // abs
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_absolute, "x", mshadow_op::abs)
 .add_alias("_npi_abs")
+.add_alias("_npi_fabs")
 .describe(R"code(Returns element-wise absolute value of the input.
 Example::
    absolute([-2, 0, 3]) = [2, 0, 3]

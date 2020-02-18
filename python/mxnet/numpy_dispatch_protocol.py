@@ -84,10 +84,12 @@ def with_array_ufunc_protocol(func):
 _NUMPY_ARRAY_FUNCTION_LIST = [
     'all',
     'any',
+    'sometrue',
     'argmin',
     'argmax',
     'around',
     'round',
+    'round_',
     'argsort',
     'sort',
     'append',
@@ -230,6 +232,7 @@ def _register_array_function():
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
     'abs',
+    'fabs',
     'add',
     'arctan2',
     'copysign',
