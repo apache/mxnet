@@ -717,33 +717,32 @@ int MXLoadLib(const char *path) {
         CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
                                  callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs);
       };
-      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
-      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
+      if (createop_map.count("cpu") > 0)
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
+      if (createop_map.count("gpu") > 0)
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
     } else {
-      if (forward_ctx_map.count("cpu") > 0) {
-        fcomp_t fcomp_cpu = forward_ctx_map.at("cpu");
-        auto forward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                      const OpContext& ctx,
-                                      const std::vector<NDArray>& inputs,
-                                      const std::vector<OpReqType>& req,
-                                      const std::vector<NDArray>& outputs) {
-          CustomFComputeDispatcher(name_str, callFComp, fcomp_cpu, &attrs,
+      auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+        if (ctx.dev_mask() == Context::kCPU) {
+          CHECK(forward_ctx_map.count("cpu") > 0)
+          fcomp_t fcomp = forward_ctx_map.at("cpu");
+          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
                                    nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        };
-        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_cpu_lambda, plevel);
-      }
-      if (forward_ctx_map.count("gpu") > 0) {
-        fcomp_t fcomp_gpu = forward_ctx_map.at("gpu");
-        auto forward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                      const OpContext& ctx,
-                                      const std::vector<NDArray>& inputs,
-                                      const std::vector<OpReqType>& req,
-                                      const std::vector<NDArray>& outputs) {
-          CustomFComputeDispatcher(name_str, callFComp, fcomp_gpu, &attrs,
+        } else if (ctx.dev_mask() == Context::kGPU) {
+          CHECK(forward_ctx_map.count("gpu") > 0)
+          fcomp_t fcomp = forward_ctx_map.at("gpu");
+          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
                                    nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        };
-        regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_gpu_lambda, plevel);
-      }
+        }
+      };
+      if (forward_ctx_map.count("cpu") > 0)
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
+      if (forward_ctx_map.count("gpu") > 0)
+        regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
     }
     // optionally add fgradient if user specified a function, or for stateful ops
     if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
