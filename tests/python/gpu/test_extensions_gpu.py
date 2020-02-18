@@ -32,7 +32,6 @@ def check_platform():
 
 @unittest.skipIf(check_platform(), "not all machine types supported")
 @unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
-@unittest.skipIf(default_context().device_type == 'cpu', "ignoring custom_op_gpu test on cpu run")
 def test_custom_op_gpu():
     # possible places to find library file
     if (os.name=='posix'):
