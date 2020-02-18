@@ -727,13 +727,13 @@ int MXLoadLib(const char *path) {
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-        if (ctx.dev_mask() == Context::kCPU) {
-          CHECK(forward_ctx_map.count("cpu") > 0)
+        if (ctx.run_ctx.ctx.dev_mask() == Context::kCPU) {
+          CHECK(forward_ctx_map.count("cpu") > 0);
           fcomp_t fcomp = forward_ctx_map.at("cpu");
           CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
                                    nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        } else if (ctx.dev_mask() == Context::kGPU) {
-          CHECK(forward_ctx_map.count("gpu") > 0)
+        } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
+          CHECK(forward_ctx_map.count("gpu") > 0);
           fcomp_t fcomp = forward_ctx_map.at("gpu");
           CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
                                    nullptr, 0, nullptr, ctx, inputs, req, outputs);
