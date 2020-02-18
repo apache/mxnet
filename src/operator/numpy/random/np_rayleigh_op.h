@@ -19,12 +19,12 @@
 
 /*!
  * Copyright (c) 2019 by Contributors
- * \file np_exponential_op.h
- * \brief Operator for numpy sampling from exponential distribution.
+ * \file np_rayleigh_op.h
+ * \brief Operator for numpy sampling from rayleigh distribution.
  */
 
-#ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_EXPONENTIAL_OP_H_
-#define MXNET_OPERATOR_NUMPY_RANDOM_NP_EXPONENTIAL_OP_H_
+#ifndef MXNET_OPERATOR_NUMPY_RANDOM_NP_RAYLEIGH_OP_H_
+#define MXNET_OPERATOR_NUMPY_RANDOM_NP_RAYLEIGH_OP_H_
 
 #include <mxnet/operator_util.h>
 #include <algorithm>
@@ -41,11 +41,11 @@
 namespace mxnet {
 namespace op {
 
-struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
+struct NumpyRayleighParam : public dmlc::Parameter<NumpyRayleighParam> {
   dmlc::optional<float> scale;
   dmlc::optional<mxnet::Tuple<int>> size;
   std::string ctx;
-  DMLC_DECLARE_PARAMETER(NumpyExponentialParam) {
+  DMLC_DECLARE_PARAMETER(NumpyRayleighParam) {
       DMLC_DECLARE_FIELD(scale)
       .set_default(dmlc::optional<float>(1.0));
       DMLC_DECLARE_FIELD(size)
@@ -60,10 +60,11 @@ struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
 };
 
 template <typename DType>
-struct scalar_exponential_kernel {
+struct scalar_rayleigh_kernel {
   MSHADOW_XINLINE static void Map(index_t i, float scale, float *threshold,
                                   DType *out) {
-    out[i] = -scale * log(threshold[i]);
+    threshold[i] = sqrt(-2 * log(threshold[i]));
+    out[i] =  scale * threshold[i];
   }
 };
 
@@ -78,31 +79,30 @@ struct check_legal_scale_kernel {
   }
 };
 
-
 template <int ndim, typename IType, typename OType>
-struct exponential_kernel {
+struct rayleigh_kernel {
   MSHADOW_XINLINE static void Map(index_t i,
                                   const Shape<ndim> &stride,
                                   const Shape<ndim> &oshape,
                                   IType *scales, float* threshold, OType *out) {
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
-    threshold[i] = -log(threshold[i]);
-    out[i] =  scales[idx] * threshold[i];
+    threshold[i] = sqrt(-2 * log(threshold[i]));
+    out[i] = scales[idx] * threshold[i];
   }
 };
 
 }  // namespace mxnet_op
 
 template <typename xpu>
-void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs) {
+void NumpyRayleighForward(const nnvm::NodeAttrs &attrs,
+                          const OpContext &ctx,
+                          const std::vector<TBlob> &inputs,
+                          const std::vector<OpReqType> &req,
+                          const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  const NumpyExponentialParam &param = nnvm::get<NumpyExponentialParam>(attrs.parsed);
+  const NumpyRayleighParam &param = nnvm::get<NumpyRayleighParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   Random<xpu, float> *prnd = ctx.requested[0].get_random<xpu, float>(s);
   Tensor<xpu, 1, float> workspace =
@@ -116,7 +116,7 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
   if (param.scale.has_value()) {
     CHECK_GE(param.scale.value(), 0.0) << "ValueError: expect scale >= 0";
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<scalar_exponential_kernel<DType>, xpu>::Launch(
+      Kernel<scalar_rayleigh_kernel<DType>, xpu>::Launch(
         s, outputs[0].Size(), param.scale.value(),
         uniform_tensor.dptr_, outputs[0].dptr<DType>());
     });
@@ -135,7 +135,7 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
         BROADCAST_NDIM_SWITCH(ndim, NDim, {
           Shape<NDim> oshape = new_oshape.get<NDim>();
           Shape<NDim> stride = calc_stride(new_lshape.get<NDim>());
-          Kernel<exponential_kernel<NDim, IType, OType>, xpu>::Launch(
+          Kernel<rayleigh_kernel<NDim, IType, OType>, xpu>::Launch(
               s, outputs[0].Size(), stride, oshape, inputs[0].dptr<IType>(),
               uniform_tensor.dptr_, outputs[0].dptr<OType>());
         });
@@ -145,12 +145,12 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename xpu, int ndim, typename DType>
-inline void ExponentialReparamBackwardImpl(const OpContext& ctx,
-                                           const std::vector<TBlob>& inputs,
-                                           const std::vector<OpReqType>& req,
-                                           const std::vector<TBlob>& outputs,
-                                           const mxnet::TShape& new_ishape,
-                                           const mxnet::TShape& new_oshape) {
+inline void ScalarRayleighReparamBackwardImpl(const OpContext& ctx,
+                                              const std::vector<TBlob>& inputs,
+                                              const std::vector<OpReqType>& req,
+                                              const std::vector<TBlob>& outputs,
+                                              const mxnet::TShape& new_ishape,
+                                              const mxnet::TShape& new_oshape) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace broadcast;
@@ -171,11 +171,11 @@ inline void ExponentialReparamBackwardImpl(const OpContext& ctx,
 }
 
 template<typename xpu>
-void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<TBlob>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<TBlob>& outputs) {
+void RayleighReparamBackward(const nnvm::NodeAttrs& attrs,
+                             const OpContext& ctx,
+                             const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs) {
   // skip kernel launch for zero-size tensors
   if (inputs[0].shape_.Size() == 0U) {
     return;
@@ -191,7 +191,7 @@ void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
                          &new_ishape, &new_ishape, &new_oshape);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        ExponentialReparamBackwardImpl<xpu, NDim, DType>(
+        ScalarRayleighReparamBackwardImpl<xpu, NDim, DType>(
           ctx, inputs, req, outputs, new_ishape, new_oshape);
       });
     });
@@ -201,4 +201,4 @@ void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace op
 }  // namespace mxnet
 
-#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_EXPONENTIAL_OP_H_
+#endif  // MXNET_OPERATOR_NUMPY_RANDOM_NP_RAYLEIGH_OP_H_
