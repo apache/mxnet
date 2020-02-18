@@ -204,6 +204,7 @@ class ImageRecordFileDataset : public Dataset {
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       std::vector<std::pair<std::string, std::string> > kwargs_left;
       param_.InitAllowUnknown(kwargs);
+      base_ = std::make_shared<RecordFileDataset>();
       base_->Init(kwargs);
     }
 
@@ -215,21 +216,22 @@ class ImageRecordFileDataset : public Dataset {
       CHECK_LT(idx, GetLen());
       auto out = base_->GetItem(idx, is_scalar);
       CHECK_EQ(out.size(), 1U) << "RecordFileDataset should return size 1 NDArray vector";
-      char *s = reinterpret_cast<char*>(out[0].data().dptr_);
+      uint8_t *s = reinterpret_cast<uint8_t*>(out[0].data().dptr_);
       size_t size = out[0].shape().Size();
       CHECK_GT(size, sizeof(IRHeader)) << "Invalid size of bytes from Record File";
       IRHeader header;
       std::memcpy(&header, s, sizeof(header));
       size -= sizeof(header);
+      s += sizeof(header);
       NDArray label = NDArray(Context::CPU(), mshadow::default_type_flag);
       is_scalar.resize(2);
       is_scalar[0] = 0;
       if (header.flag > 0) {
         label.ReshapeAndAlloc(TShape({header.flag}));
-        label.SyncCopyFromCPU(s + sizeof(header), sizeof(float) * header.flag);
+        label.SyncCopyFromCPU(s, header.flag);
         s += sizeof(float) * header.flag;
         size -= sizeof(float) * header.flag;
-        is_scalar[1] = header.flag > 1;
+        is_scalar[1] = header.flag <= 1;
       } else {
         label.ReshapeAndAlloc(TShape({1}));
         label.SyncCopyFromCPU(&header.label, 1);
@@ -237,7 +239,8 @@ class ImageRecordFileDataset : public Dataset {
       }
 #if MXNET_USE_OPENCV
       cv::Mat buf(1, size, CV_8U, s);
-      cv::Mat res = cv::imdecode(buf, param_.flag);
+      cv::Mat res = cv::imdecode(buf, -1);
+      CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
       const int n_channels = res.channels();
       NDArray ret;
       if (n_channels == 1) {
@@ -247,11 +250,7 @@ class ImageRecordFileDataset : public Dataset {
       } else if (n_channels == 4) {
         ret = SwapImageChannels<4>(res);
       }
-      std::vector<NDArray> result;
-      result.reserve(2);
-      result.emplace_back(ret);
-      result.emplace_back(label);
-      return result;
+      return std::vector<NDArray>({ret, label});
 #else
     LOG(FATAL) << "Opencv is needed for image decoding.";
 #endif
@@ -317,6 +316,7 @@ class ImageSequenceDataset : public Dataset {
       CHECK_LT(idx, img_list_.size())
         << "GetItem index: " << idx << " out of bound: " << img_list_.size();
       cv::Mat res = cv::imread(img_list_[idx], param_.flag);
+      CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
       const int n_channels = res.channels();
       NDArray ret;
       if (n_channels == 1) {

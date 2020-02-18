@@ -86,7 +86,7 @@ class MXDataset(Dataset):
         nd_isscalar = create_ndarray_fn(is_scalars).asnumpy()
         for i in range(num_output.value):
             if nd_isscalar[i] == 1:
-                assert out[i].size == 1
+                assert out[i].size == 1, "is_scalar size: {}".format(out[i].size)
                 out[i] = out[i].asnumpy()[0]
         if len(out) > 1:
             return tuple(out)

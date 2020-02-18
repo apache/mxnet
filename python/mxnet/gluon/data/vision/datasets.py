@@ -260,6 +260,10 @@ class ImageRecordDataset(dataset.RecordFileDataset):
             return self._transform(image.imdecode(img, self._flag), header.label)
         return image.imdecode(img, self._flag), header.label
 
+    def __mx_handle__(self):
+        from .._internal import ImageRecordFileDataset as _ImageRecordFileDataset
+        return _ImageRecordFileDataset(rec_file=self.filename, idx_file=self.idx_file)
+
 
 class ImageFolderDataset(dataset.Dataset):
     """A dataset for loading image files stored in a folder structure.
