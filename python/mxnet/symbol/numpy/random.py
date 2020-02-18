@@ -583,9 +583,9 @@ def f(dfnum, dfden, size=None, ctx=None):
 
     Parameters
     ----------
-    dfnum : float or array_like of floats
+    dfnum : float or _Symbol of floats
         Degrees of freedom in numerator, must be > 0.
-    dfden : float or array_like of float
+    dfden : float or _Symbol of float
         Degrees of freedom in denominator, must be > 0.
     size : int or tuple of ints, optional
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
@@ -597,7 +597,7 @@ def f(dfnum, dfden, size=None, ctx=None):
 
     Returns
     -------
-    out : ndarray or scalar
+    out : _Symbol
         Drawn samples from the parameterized Fisher distribution.
     """
     X = chisquare(df=dfnum, size=size, ctx=ctx)

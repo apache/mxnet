@@ -878,9 +878,9 @@ def f(dfnum, dfden, size=None, ctx=None):
 
     Parameters
     ----------
-    dfnum : float or array_like of floats
+    dfnum : float or ndarray of floats
         Degrees of freedom in numerator, must be > 0.
-    dfden : float or array_like of float
+    dfden : float or ndarray of float
         Degrees of freedom in denominator, must be > 0.
     size : int or tuple of ints, optional
         Output shape.  If the given shape is, e.g., ``(m, n, k)``, then

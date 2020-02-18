@@ -3909,13 +3909,12 @@ def test_np_random_beta():
 @use_np
 def test_np_random_f():
     class TestRandomF(HybridBlock):
-        def __init__(self, size=None, ctx=None):
+        def __init__(self, size=None):
             super(TestRandomF, self).__init__()
             self._size = size
-            self._ctx = ctx
 
         def hybrid_forward(self, F, dfnum, dfden):
-            return F.np.random.f(dfnum, dfden, size=self._size, ctx=self._ctx)
+            return F.np.random.f(dfnum, dfden, size=self._size)
 
     shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     hybridize_list = [False, True]
