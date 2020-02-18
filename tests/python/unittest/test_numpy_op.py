@@ -4902,6 +4902,82 @@ def test_np_linalg_svd():
 
 @with_seed()
 @use_np
+def test_np_linalg_qr():
+    class TestQR(HybridBlock):
+        def __init__(self):
+            super(TestQR, self).__init__()
+
+        def hybrid_forward(self, F, data):
+            return F.np.linalg.qr(data)
+
+    def check_qr(q, r, a_np):
+        # check Q@R = A
+        t = _np.matmul(q, r)
+        assert t.shape == data_np.shape
+        assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
+        # check QT@Q = I
+        qT = _np.swapaxes(q, -2, -1)
+        I = _np.matmul(qT, q)
+        Ip = _np.eye(I.shape[-2])
+        assert_almost_equal(I, Ip, atol=atol, rtol=rtol)
+        # check original numpy
+        try:
+            q_expected, r_expected = _np.linalg.qr(a_np)
+        except Exception as e:
+            print("a_np", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            assert q.shape == q_expected.shape
+            assert r.shape == r_expected.shape
+            assert_almost_equal(q.asnumpy(), q_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(r.asnumpy(), r_expected, rtol=rtol, atol=atol)
+    shapes = [
+        (0, 0),
+        (0, 1),
+        (1, 1),
+        (5, 3),
+        (3, 5),
+        (3, 3),
+        (5, 5),
+        (8, 8),
+        (4, 5),
+        (4, 6),
+        (5, 4),
+        (6, 5),
+        (6, 5, 6),
+        (6, 6, 5),
+        (3, 0, 0),
+        (2, 3, 3, 4),
+        (0, 5, 3, 3),
+        (5, 0, 3, 3),
+        (3, 3, 0, 0),
+        (4, 2, 2, 1),
+        (2, 3, 4, 3)
+    ]
+    dtypes = ['float32', 'float64']
+    for hybridize, shape, dtype in itertools.product([True, False], shapes, dtypes):
+        rtol = atol = 0.01
+        test_qr = TestQR()
+        if hybridize:
+            test_qr.hybridize()
+        data_np = _np.random.uniform(-10.0, 10.0, shape)
+        data_np = _np.array(data_np, dtype=dtype)
+        data = np.array(data_np, dtype=dtype)
+
+        ret = test_qr(data)
+        Q, R = ret[0], ret[1]
+        check_qr(Q, R, data_np)
+
+        # check imperative once more; mode='reduced' is default
+        # behavior and optional parameter in original numpy
+        ret = np.linalg.qr(data, mode='reduced')
+        Q, R = ret[0], ret[1]
+        check_qr(Q, R, data_np)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_cholesky():
     class TestCholesky(HybridBlock):
         def __init__(self):
