@@ -21,8 +21,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "./cached_op.h"
 #include "./imperative_utils.h"
+#include "./cached_op.h"
 
 namespace nnvm {
 ObjectPtr CreateVariableNode(const std::string &name);
