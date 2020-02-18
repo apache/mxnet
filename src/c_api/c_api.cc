@@ -435,7 +435,7 @@ int MXLoadLib(const char *path) {
       CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
-
+      // for backward passes, inputs + outputs + input gradients (one for each output)
       return num_in + 2 * num_out;
     };
 
@@ -760,9 +760,10 @@ int MXLoadLib(const char *path) {
         gradOp.set_num_inputs(num_inouts);
         gradOp.set_num_outputs(num_inputs);
       } else {
-        // for subgraph ops use special functions
+        // for subgraph ops use special functions that do not invoke attr_parser
         using namespace mxnet::op;
         auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
+          // for backward passes, inputs + outputs + input gradients (one for each output)
           uint32_t cnt = DefaultSubgraphOpNumInputs(attrs);
           cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
           return cnt;
@@ -772,6 +773,7 @@ int MXLoadLib(const char *path) {
       }
 
       if (createop_map.size() != 0) {
+        // for stateful operators
         gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
         auto fstate_backward = [=](const OpStatePtr& state_ptr,
                                    const OpContext& ctx,
@@ -785,6 +787,7 @@ int MXLoadLib(const char *path) {
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
       } else {
+        // for stateless operators
         if (backward_ctx_map.count("cpu") > 0) {
           fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
           auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,

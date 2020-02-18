@@ -20,22 +20,30 @@ Custom Partitioner Example and Tutorial
 
 ## Introduction
 
-Adding custom model partitioners in MXNet used to require deep understanding of the MXNet backend, including operator registration and, followed by recompiling MXNet from source with all of its dependencies. This feature allows adding custom partitioners by dynamically loading custom C++ partitioners compiled in external libraries at runtime.
+Adding custom model partitioners in MXNet used to require deep understanding of the MXNet backend, including operator registration and other internal classes, followed by recompiling MXNet from source. This feature allows adding custom partitioners by dynamically loading external libraries at runtime.
 
-Custom partitioners enable users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
+This custom partitioner feature, enables users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
 
 ## Getting Started
 
 ### Have MXNet Ready
 
-First you should install MXNet either from compiling from source code or downloading a nightly build. It doesn’t matter if the build comes with CUDA or MKLDNN. The custom partitioning APIs do not interact with the execution of other native MXNet operators.
+the custom partitioner feature was merged recently (#15969) and is not available in versions of MXNet prior to v1.7.0. To use the feature now, please install MXNet either by compiling from source code or downloading a nightly build. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom partitioner doesn’t interact with the execution of other native MXNet features. Note that if you want to write your custom partitioners running on GPU, you still need an MXNet CUDA build. 
 
 ### Run An Example
 
-You can start getting familiar with custom partitioners by running an example provided in the **example/extensions/lib_subgraph** directory. This example partitions `exp` and `log` operators into subgraphs. Go to the `lib_subgraph` directory and follow these steps:
+You can start getting familiar with custom partitioners by running an example provided in the **example/extensions/lib_subgraph** directory. This example partitions `exp` and `log` operators into subgraphs. Go to the **lib_subgraph** directory and follow these steps:
 
-1. Run `make`. The Makefile will generate a dynamic library **libsubgraph_lib.so** compiled from `subgraph_lib.cc`. This is the library you are going to load that contains everything for the custom partitioner.
-2. Run `python test_subgraph.py`. It’ll first load the above library, find the components, register them in the MXNet backend, print "Found x", then partition the model and execute the operators like a regular MXNet operator and output the result.
+1. Run `make`. The Makefile will generate the dynamic library **libsubgraph_lib.so** which is compiled from the `subgraph_lib.cc` file. This is the library you are going to load that contains everything for the custom partitioner.
+2. Run `python test_subgraph.py`. It’ll first load the above library, find the components, register them in the MXNet backend, then partition the model and execute the operators like a regular MXNet operator and output the result. Below is the output when running the `python test_subgraph.py` command. Notice that it loads 2 operators: my_gemm and state_gemm.
+
+```
+[10:38:03] src/c_api/c_api.cc:286: Found 1 operators in library
+[10:38:03] src/c_api/c_api.cc:350:       Op[0] _custom_subgraph_op
+[10:38:03] src/c_api/c_api.cc:785: Found 1 partitioners in library
+[10:38:03] src/c_api/c_api.cc:801:       Partitioner[0] myProp
+[10:38:03] src/c_api/c_api.cc:821:             Strategy[0] strategy1 subgraphOp: '_custom_subgraph_op'
+```
 
 ### Basic Files For Custom Partitioner Library
 
@@ -53,11 +61,13 @@ For building a library containing your own custom partitioner, compose a C++ sou
 - `mySupportedOps ` - Operator Support
 
 Then compile it to the `mypart_lib.so` dynamic library using the following command:
+
 ```bash
 g++ -shared -fPIC -std=c++11 mypart_lib.cc -o libmypart_lib.so -I ../../../include/mxnet
 ```
 
 Finally, you can write a Python script to load the library and partition a model with your custom partitioner:
+
 ```python
 import mxnet as mx
 mx.library.load(‘libmyop_lib.so’)
@@ -70,6 +80,24 @@ sym2 = sym.optimize_for("myPart")
 sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.hybridize(backend='myPart')
 ```
+
+### Using a Custom Partitioner Library
+
+Partitioning APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, the `optimize_for` API can be called on Symbol objects to return a partitioned Symbol.
+
+```
+optimize_for(backend, args=None, ctx=None, **kwargs)
+```
+
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` argument is optional and takes a list of NDArray or dict of str to NDArray. It is used to infer shapes and types and before partitioning. The `ctx` argument is optional and takes a device context to infer storage types. It also take any other user-specified options that will be passed to the backend partitioning APIs.
+
+For the Gluon API, the `hybridize` API can be called on HybridBlocks to partition the internal CachedOp Symbol.
+
+```
+hybridize(backend=None, backend_opts=None)
+```
+
+When the `hybridize` function is called, Gluon will convert the program’s execution into the style used in symbolic programming. The `backend` argument is a string that identifies which backend to partition the model for. The `backend_opts` takes other user-specified options that will be passed to the backend partitioning APIs.
 
 ### Writing A Custom Partitioner
 
@@ -87,8 +115,7 @@ There are several essential building blocks for making a custom partitioner:
                 std::string json,
                 const int num_ids,
                 int *ids,
-                std::unordered_map<std::string, 
-                                   std::string>& options)
+                std::unordered_map<std::string, std::string>& options)
 
 * [REGISTER_PARTITIONER(my_part_name)](./subgraph_lib.cc#L238):
     * This macro registers the custom partitioner and its properties to MXNet by its name. Notice that a partitioner can have multiple partitioning strategies. This enables multiple *passes* to be run in a single partitioning call from the user. The first argument to `addStrategy` is a user-specified name. The second argument is the `supportedOps` function. The third argument is the name of the subgraph operator to create for each subgraph created during partitioning (see below for more info about subgraph operators). The `setAcceptSubgraph` API registers a callback function that is called for each subgraph created during partitioning (more on this below). Notice that the first argument to this function is the strategy to associate with and the second argument is the `acceptSubgraph` function.
@@ -119,13 +146,14 @@ Let’s take a closer look at those registry functions:
 
 * **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `1` for the node ID in the `ids` array. Users can pass custom options to the partitioner and they are passed to the function in the `options` map. 
 
-* **acceptSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. It can be analyzed and accepted/rejected by setting `true`/`false` for the `accept` input. The `options` map is the same one passed to the `supportedOps` API. The `attrs` map provides an API to add user-specified attributes to the subgraph. These attributes will be available at runtime when the subgraph is executed and provides a way to pass info from partitioning-time to runtime. 
+* **acceptSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. It can be analyzed and accepted/rejected by setting `true`/`false` for the `accept` input. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The `attrs` map provides an API to add user-specified attributes to the subgraph. These attributes will be available at runtime when the subgraph is executed and provides a way to pass info from partitioning-time to runtime. 
 
 ### Writing A Custom Subgraph Operator
 
 A partitioning strategy specifies how to partition a model and isolate operators into subgraphs. In MXNet, subgraphs are just a [stateful operator](../lib_custom_op#writing-stateful-custom-operator). Subgraph operators have an extra attribute called `SUBGRAPH_SYM_JSON` that maps to a JSON string of the subgraph. The expectation is that when a subgraph operator executes a forward/backward call, it executes all of the operators in the subgraph. 
 
 When registering a custom subgraph operator, all thats needed is to register a `createOpState` function and to set that the operator is a subgraph operator by calling the `setIsSubgraphOp` API like:
+
 ```
 REGISTER_OP(my_subgraph_op)
 .setIsSubgraphOp()
@@ -135,12 +163,14 @@ REGISTER_OP(my_subgraph_op)
 ### Parsing a JSON string
 
 To simplify custom partitioner libraries, basic JSON parsing utility functions have been implemented in the `lib_api.h` header file. You create a `JsonParser` object and parse the string by calling the `parse_to_json` API like:
+
 ```c++
 JsonParser parser;
 JsonVal json_val = parser.parse_to_json(json_string);
 ```
 
 A `JsonVal` is a class that represents the nodes in a JSON structure. You can check the type of a node (num, str, list, or map) by comparing the `JsonVal.type` to `STR`, `NUM`, `LIST`, or `MAP`. Then you can get that value from the node like:
+
 ```c++
 switch(json_val.type) {
   case STR:
