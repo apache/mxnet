@@ -172,6 +172,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'quantile',
     'percentile',
     'diff',
+    'ediff1d',
     'resize',
     'where',
     'full_like',

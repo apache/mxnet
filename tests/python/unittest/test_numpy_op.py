@@ -7332,6 +7332,120 @@ def test_np_diff():
 
 @with_seed()
 @use_np
+def test_np_ediff1d():
+    def np_diff_backward(size, shape):
+        if size <= 1:
+            return _np.zeros(shape)
+        else:
+            ret = _np.ones(size - 1)
+            return _np.negative(_np.diff(ret, n=1, axis=-1, prepend=0, append=0)).reshape(shape)
+
+    # case 1: when both `to_begin` and `to_end` are arrays
+    class TestEDiff1DCASE1(HybridBlock):
+        def __init__(self):
+            super(TestEDiff1DCASE1, self).__init__()
+
+        def hybrid_forward(self, F, a, b, c):
+            return F.np.ediff1d(a, to_end=b, to_begin=c)
+
+    # case 2: only `to_end` is array but `to_begin` is scalar/None
+    class TestEDiff1DCASE2(HybridBlock):
+        def __init__(self, to_begin=None):
+            super(TestEDiff1DCASE2, self).__init__()
+            self._to_begin = to_begin
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.ediff1d(a, to_end=b, to_begin=self._to_begin)
+
+    # case 3: only `to_begin` is array but `to_end` is scalar/None
+    class TestEDiff1DCASE3(HybridBlock):
+        def __init__(self, to_end=None):
+            super(TestEDiff1DCASE3, self).__init__()
+            self._to_end = to_end
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.ediff1d(a, to_end=self._to_end, to_begin=b)
+
+    # case 4: both `to_begin` and `to_end` are scalar/None
+    class TestEDiff1DCASE4(HybridBlock):
+        def __init__(self, to_end=None, to_begin=None):
+            super(TestEDiff1DCASE4, self).__init__()
+            self._to_begin = to_begin
+            self._to_end = to_end
+
+        def hybrid_forward(self, F, a):
+            return F.np.ediff1d(a, to_end=self._to_end, to_begin=self._to_begin)
+
+    rtol = 1e-3
+    atol = 1e-5
+    mapper = {(True, True): TestEDiff1DCASE1,
+              (False, True): TestEDiff1DCASE2,
+              (True, False): TestEDiff1DCASE3,
+              (False, False): TestEDiff1DCASE4}
+    hybridize_list = [True, False]
+    shape_list = [(), (1,), (2, 3), 6, (7, 8), 10, (4, 0, 5)]
+    # dtype_list = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    dtype_list = [np.float16, np.float32, np.float64]
+    append_list = [1, 2, None, (1, 2, 4), (4, 3), (), (5, 0), (6)]
+
+    for hybridize, dtype, shape, to_begin, to_end in itertools.product(hybridize_list, dtype_list,
+                shape_list, append_list, append_list):
+        mx_arr = np.random.randint(5, size=shape).astype(dtype)
+        np_arr = mx_arr.asnumpy()
+        kwargs = {}
+        mx_args = [mx_arr]
+        np_args = [np_arr]
+        mx_args_imperative = [mx_arr]
+
+        if isinstance(to_end, tuple):
+            to_end = np.random.randint(5, size=to_end).astype(dtype)
+            mx_args.append(to_end)
+            np_args.append(to_end.asnumpy())
+        else:
+            kwargs["to_end"] = to_end
+            np_args.append(to_end)
+        mx_args_imperative.append(to_end)
+
+        if isinstance(to_begin, tuple):
+            to_begin = np.random.randint(5, size=to_begin).astype(dtype)
+            mx_args.append(to_begin)
+            np_args.append(to_begin.asnumpy())
+        else:
+            kwargs["to_begin"] = to_begin
+            np_args.append(to_begin)
+        mx_args_imperative.append(to_begin)
+
+        from mxnet.numpy import ndarray as np_ndarray
+        input_type = (isinstance(to_begin, np_ndarray), isinstance(to_end, np_ndarray))
+        test_np_ediff1d = mapper[input_type](**kwargs)
+
+        if hybridize:
+            test_np_ediff1d.hybridize()
+
+        np_out = _np.ediff1d(*np_args)
+        for arg in mx_args:
+            arg.attach_grad()
+
+        with mx.autograd.record():
+            mx_out = test_np_ediff1d(*mx_args)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+        # test imperative 
+        mx_out_imperative = np.ediff1d(*mx_args_imperative)
+        assert mx_out_imperative.shape == np_out.shape
+        assert_almost_equal(mx_out_imperative.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out.backward()
+        if dtype in [np.float16, np.float32, np.float64]:
+            for idx, arg in enumerate(mx_args):
+                if idx == 0:
+                    assert_almost_equal(arg.grad.asnumpy(), np_diff_backward(arg.size, arg.shape), atol=atol, rtol=rtol)
+                else:
+                    assert_almost_equal(arg.grad.asnumpy(), np.ones_like(arg), atol=atol, rtol=rtol)
+
+
+@with_seed()
+@use_np
 def test_np_column_stack():
     class TestColumnStack(HybridBlock):
         def __init__(self):
