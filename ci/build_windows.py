@@ -61,10 +61,14 @@ class BuildFlavour(Enum):
 
 CMAKE_FLAGS = {
     'WIN_CPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -74,10 +78,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -87,10 +95,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
@@ -100,10 +112,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
@@ -113,10 +129,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON  '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -127,10 +147,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
