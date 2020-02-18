@@ -113,7 +113,7 @@ class Categorical(Distribution):
             size = ()
             logit = self.logit
         else:
-            if not isinstance(size, tuple):
+            if isinstance(size, int):
                 logit = F.np.broadcast_to(self.logit, (size) + (-2,))
             else:
                 logit = F.np.broadcast_to(self.logit, size + (-2,))
