@@ -323,8 +323,35 @@ def test_batchnorm_relu_fusion():
         for i in range(len(no_fuse_grads)):
             assert_almost_equal(no_fuse_grads[i], fuse_grads[i])
 
+    def check_batchnorm_relu_fusion_gluon(shape):
+        class BNNet(gluon.HybridBlock):
+            def __init__(self, fuse_relu):
+                super(BNNet, self).__init__()
+                self.fuse_relu = fuse_relu
+                with self.name_scope():
+                    self.bn = gluon.nn.BatchNorm(fuse_relu=self.fuse_relu)
+                    self.relu = gluon.nn.Activation('relu')
+
+            def forward(self, x):
+                y = self.bn(x)
+                if not self.fuse_relu:
+                    y = self.relu(y)
+                return y
+        fused_net = BNNet(fuse_relu=True)
+        unfused_net = BNNet(fuse_relu=False)
+        fused_net.collect_params().initialize()
+        unfused_net.collect_params().initialize()
+        in_data = mx.nd.random.normal(shape=shape)
+        no_fuse_outputs = unfused_net.forward(in_data)
+        fuse_outputs = fused_net.forward(in_data)
+
+        for i in range(len(no_fuse_outputs)):
+            assert_almost_equal(no_fuse_outputs[i], fuse_outputs[i])
+
     check_batchnorm_relu_fusion((1, 3, 224, 224))
     check_batchnorm_relu_fusion((8, 3, 224, 224))
+    check_batchnorm_relu_fusion_gluon((1, 3, 224, 224))
+    check_batchnorm_relu_fusion_gluon((8, 3, 224, 224))
 
 @with_seed()
 def test_softmax():

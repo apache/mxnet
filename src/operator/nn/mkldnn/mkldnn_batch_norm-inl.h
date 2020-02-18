@@ -121,7 +121,8 @@ class MKLDNNBNForward {
 };
 
 template<typename DType, typename ParamType>
-static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ctx, const mkldnn::memory *data_mem,
+static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ctx,
+                                     const mkldnn::memory *data_mem,
                                      mkldnn::normalization_flags flags) {
   typedef ParamOpSign<ParamType> MKLDNNSignature;
 #if DMLC_CXX11_THREAD_LOCAL
@@ -144,13 +145,16 @@ static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ct
 }
 
 template<typename DType, typename ParamType>
-static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ctx, const NDArray &in_data,
+static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ctx,
+                                     const NDArray &in_data,
                                      mkldnn::normalization_flags flags) {
   return GetBNForward<DType, ParamType>(param, ctx, in_data.GetMKLDNNData(), flags);
 }
 
 template <typename DType, typename ParamType>
-void MKLDNNBatchNormForward(const ParamType &param, const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+void MKLDNNBatchNormForward(const ParamType &param,
+                            const nnvm::NodeAttrs &attrs,
+                            const OpContext &ctx,
                             const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                             const std::vector<NDArray> &outputs, bool fuse_relu) {
   const std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
@@ -295,7 +299,9 @@ static MKLDNNBNBackward &GetBNBackward(const ParamType &param, const OpContext &
 }
 
 template <typename DType, typename ParamType>
-void MKLDNNBatchNormBackward(const ParamType &param, const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+void MKLDNNBatchNormBackward(const ParamType &param,
+                             const nnvm::NodeAttrs &attrs,
+                             const OpContext &ctx,
                              const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                              const std::vector<NDArray> &outputs, bool fuse_relu) {
   if (fuse_relu) {
@@ -369,7 +375,7 @@ void MKLDNNBatchNormBackward(const ParamType &param, const nnvm::NodeAttrs &attr
     net_args[MKLDNN_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
     net_args[MKLDNN_ARG_DIFF_DST] = *diff_mem;
 
-    if (fuse_relu){
+    if (fuse_relu) {
       const NDArray *workspace = nullptr;
       workspace = &inputs[8];
       if (workspace != nullptr) {

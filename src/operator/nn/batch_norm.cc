@@ -398,7 +398,8 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
   if (SupportMKLDNNBN(inputs[0], param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-        MKLDNNBatchNormForward<DTYPE, BatchNormParam>(param, attrs, ctx, inputs, req, outputs, fuse_relu);
+        MKLDNNBatchNormForward<DTYPE, BatchNormParam>(param, attrs, ctx, inputs,
+                                                      req, outputs, fuse_relu);
     });
     MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
@@ -415,7 +416,8 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
   bool fuse_relu = false;
   if (SupportMKLDNNBN(inputs[0], param)) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormBackward<float, BatchNormParam>(param, attrs, ctx, inputs, req, outputs, fuse_relu);
+      MKLDNNBatchNormBackward<float, BatchNormParam>(param, attrs, ctx, inputs,
+                                                     req, outputs, fuse_relu);
       MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
   }

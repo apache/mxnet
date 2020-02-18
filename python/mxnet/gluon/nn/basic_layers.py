@@ -336,8 +336,8 @@ class BatchNorm(HybridBlock):
                  in_channels=0, **kwargs):
         super(BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
-                        'fix_gamma': not scale, 'use_global_stats': use_global_stats,
-                        'fuse_relu': fuse_relu}
+                        'fix_gamma': not scale, 'use_global_stats': use_global_stats}
+        self.fuse_relu = fuse_relu
         if in_channels != 0:
             self.in_channels = in_channels
 
@@ -367,8 +367,8 @@ class BatchNorm(HybridBlock):
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
-        if (not is_np_array()) and (self._kwargs['fuse_relu'] == True):
-            batch_norm = F.BatchNormWithReLU
+        if (not is_np_array()) and self.fuse_relu:
+            batch_norm = F.contrib.BatchNormWithReLU
         return batch_norm(x, gamma, beta, running_mean, running_var,
                           name='fwd', **self._kwargs)
 
