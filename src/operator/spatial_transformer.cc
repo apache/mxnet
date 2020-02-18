@@ -63,13 +63,17 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
           index_t bottom_left_v = 0;
           index_t bottom_right_v = 0;
           index_t lower_bound = 0;
-          if (between(top_left_x, lower_bound, i_w-1) && between(top_left_y, lower_bound, i_h-1))
+          if (between(top_left_x, lower_bound, i_w-1) &&
+              between(top_left_y, lower_bound, i_h-1))
             top_left_v = *(data + data_index);
-          if (between(top_left_x + 1, lower_bound, i_w-1) && between(top_left_y, lower_bound, i_h-1))
+          if (between(top_left_x + 1, lower_bound, i_w-1) && 
+              between(top_left_y, lower_bound, i_h-1))
             top_right_v = *(data + data_index + 1);
-          if (between(top_left_x, lower_bound, i_w-1) && between(top_left_y + 1, lower_bound, i_h-1))
+          if (between(top_left_x, lower_bound, i_w-1) &&
+              between(top_left_y + 1, lower_bound, i_h-1))
             bottom_left_v = *(data + data_index + i_w);
-          if (between(top_left_x+1, lower_bound, i_w-1) && between(top_left_y + 1, lower_bound, i_h-1))
+          if (between(top_left_x+1, lower_bound, i_w-1) &&
+              between(top_left_y + 1, lower_bound, i_h-1))
             bottom_right_v = *(data + data_index + i_w + 1);
           *(out+out_index) = top_left_v * top_left_y_w * top_left_x_w +
                              top_right_v * top_left_y_w * (1.0 - top_left_x_w) +
@@ -115,21 +119,25 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
             index_t bottom_left_v = 0;
             index_t bottom_right_v = 0;
             index_t lower_bound = 0;
-            if (between(top_left_x, lower_bound, i_w-1) && between(top_left_y, lower_bound, i_h-1)) {
+            if (between(top_left_x, lower_bound, i_w-1) &&
+                between(top_left_y, lower_bound, i_h-1)) {
               *(g_input + data_index) += *(grad + grad_index) * top_left_y_w * top_left_x_w;
               top_left_v = *(data + data_index);
             }
-            if (between(top_left_x+1, lower_bound, i_w-1) && between(top_left_y, lower_bound, i_h-1)) {
+            if (between(top_left_x+1, lower_bound, i_w-1) &&
+                between(top_left_y, lower_bound, i_h-1)) {
               *(g_input + data_index + 1) += *(grad + grad_index) * top_left_y_w
                                              * (1.0 - top_left_x_w);
               top_right_v = *(data + data_index + 1);
             }
-            if (between(top_left_x, lower_bound, i_w-1) && between(top_left_y+1, lower_bound, i_h-1)) {
+            if (between(top_left_x, lower_bound, i_w-1) &&
+                between(top_left_y+1, lower_bound, i_h-1)) {
               *(g_input + data_index+ i_w) += *(grad + grad_index) * (1.0 - top_left_y_w)
                                               * top_left_x_w;
               bottom_left_v = *(data + data_index + i_w);
             }
-            if (between(top_left_x+1, lower_bound, i_w-1) && between(top_left_y+1, lower_bound, i_h-1)) {
+            if (between(top_left_x+1, lower_bound, i_w-1) &&
+                between(top_left_y+1, lower_bound, i_h-1)) {
               *(g_input + data_index+ i_w + 1) += *(grad + grad_index) * (1.0 - top_left_y_w)
                                                   * (1.0 - top_left_x_w);
               bottom_right_v = *(data + data_index + i_w + 1);
