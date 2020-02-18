@@ -23,7 +23,7 @@ from ..ndarray import numpy as _mx_nd_np
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
            "logistic", "gumbel",
            "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
-           "weibull", "pareto", "power"]
+           "weibull", "pareto", "power", "rayleigh"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -556,6 +556,34 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     array([2, 3, 0])
     """
     return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
+
+
+def rayleigh(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+
+    Parameters
+    ----------
+    scale : float, optional
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    return _mx_nd_np.random.rayleigh(scale, size, ctx, out)
 
 
 def rand(*size, **kwargs):
