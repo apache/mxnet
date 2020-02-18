@@ -66,7 +66,7 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
           if (between(top_left_x, lower_bound, i_w-1) &&
               between(top_left_y, lower_bound, i_h-1))
             top_left_v = *(data + data_index);
-          if (between(top_left_x + 1, lower_bound, i_w-1) && 
+          if (between(top_left_x + 1, lower_bound, i_w-1) &&
               between(top_left_y, lower_bound, i_h-1))
             top_right_v = *(data + data_index + 1);
           if (between(top_left_x, lower_bound, i_w-1) &&
