@@ -46,15 +46,14 @@ from test_ndarray import *
 from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
+from test_extensions_gpu import *
 from test_tvm_op import *
-from test_extensions import *
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
 del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
-
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
