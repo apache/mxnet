@@ -58,10 +58,10 @@ inline void BilinearSamplingForward(const Tensor<cpu, 4, DType> &output,
           const DType top_left_x_w = 1.0 - (x_real - top_left_x);
           const index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w +
                                  top_left_y * i_w + top_left_x;
-          index_t top_left_v = 0;
-          index_t top_right_v = 0;
-          index_t bottom_left_v = 0;
-          index_t bottom_right_v = 0;
+          DType top_left_v = 0;
+          DType top_right_v = 0;
+          DType bottom_left_v = 0;
+          DType bottom_right_v = 0;
           index_t lower_bound = 0;
           if (between(top_left_x, lower_bound, i_w-1) &&
               between(top_left_y, lower_bound, i_h-1))
@@ -114,10 +114,10 @@ inline void BilinearSamplingBackward(const Tensor<cpu, 4, DType> &input_grad,
             const index_t data_index = n * i_c * i_h * i_w + c * i_h * i_w +
                                    top_left_y * i_w + top_left_x;
             // calc 4 vertex value in input data
-            index_t top_left_v = 0;
-            index_t top_right_v = 0;
-            index_t bottom_left_v = 0;
-            index_t bottom_right_v = 0;
+            DType top_left_v = 0;
+            DType top_right_v = 0;
+            DType bottom_left_v = 0;
+            DType bottom_right_v = 0;
             index_t lower_bound = 0;
             if (between(top_left_x, lower_bound, i_w-1) &&
                 between(top_left_y, lower_bound, i_h-1)) {
