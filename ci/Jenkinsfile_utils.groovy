@@ -278,7 +278,6 @@ def main_wrapper(args) {
     currentBuild.result = "SUCCESS"
     update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
-    caughtError.printStackTrace(System.out);
     node(NODE_UTILITY) {
       echo "caught ${caughtError}"
       err = caughtError
