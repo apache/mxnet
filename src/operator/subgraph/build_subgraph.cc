@@ -561,10 +561,12 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     nnvm::ObjectPtr n = nnvm::CreateVariableNode(
         var_name + std::to_string(name_count_map[var_name]));
     // set attribute for subgraph input to indicate if it is from an arg/param to model
-    if (e->node->is_variable())
+    if (e->node->is_variable()) {
       n->attrs.dict["isArg"] = "True";
-    else
+      n->attrs.dict["argName"] = var_name;
+    } else {
       n->attrs.dict["isArg"] = "False";
+    }
     *e = nnvm::NodeEntry{n, 0, 0};
   }
 }

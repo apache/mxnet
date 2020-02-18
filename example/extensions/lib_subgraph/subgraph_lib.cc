@@ -206,7 +206,7 @@ MXReturnValue mySupportedOps(std::string json,
     }
 
     //check if op dtype is float
-    if(dtype == kFloat32) {
+    if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
         // found op in whitelist, set value to 1 to include op in subgraph
@@ -233,6 +233,12 @@ MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
       std::cout << kv.second.data<float>()[i] << ", ";
     std::cout << "]" << std::endl;
   }
+  if(options.count("reqArgs") > 0 && args.size() == 0) {
+    *accept = false;
+    std::cout << "rejecting subgraph since args were not provided" << std::endl;
+    return MX_SUCCESS;
+  }
+  
   if(options.find("reject") != options.end() &&
      options["reject"].compare("True") == 0) {
     *accept = false;

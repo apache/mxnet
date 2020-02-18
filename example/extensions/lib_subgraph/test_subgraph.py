@@ -35,11 +35,16 @@ elif (os.name=='nt'):
     path = os.path.abspath('libsubgraph_lib.dll')
     mx.library.load(path)
 
+# example model, ops to be partitioned do not have args (use outputs from other ops as inputs)
 a = mx.sym.var('a')
 b = mx.sym.var('b')
 c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
+
+# example model, ops to be partitioned have args
+d2 = mx.sym.exp(a)
+sym2 = mx.sym.log(d2)
 
 #execute in MXNet
 print('-------------------------------')
@@ -74,3 +79,28 @@ mysym3 = sym.optimize_for("myProp", myOpt='yello')
 exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out3 = exe3.forward()
 print(out3)
+
+#execute in MXNet
+print('-------------------------------')
+print('Testing regular MXNet execution')
+exe4 = sym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+out4 = exe4.forward()
+print(out4)
+
+# with propogating shapes/types
+print('-------------------------------')
+print('Testing partitioning with shapes/types')
+arg_array = [mx.nd.ones((3,2),dtype='float32')]
+mysym5 = sym2.optimize_for("myProp", arg_array, reqArgs=True)
+print(mysym5.tojson())
+exe5 = mysym5.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+out5 = exe5.forward()
+print(out5)
+
+# without propogating shapes/types
+print('-------------------------------')
+print('Testing partitioning without shapes/types')
+mysym6 = sym2.optimize_for("myProp", reqArgs=True)
+exe6 = mysym6.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+out6 = exe6.forward()
+print(out6)

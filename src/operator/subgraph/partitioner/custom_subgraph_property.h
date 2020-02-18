@@ -102,6 +102,28 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // get input args and arg names
     in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
     in_args_ptr = g.GetAttr<NDArray**>("in_args");
+
+    // convert input args
+    arg_names.clear();
+    arg_data.clear();
+    arg_shapes.clear();
+    arg_dims.clear();
+    arg_types.clear();
+    arg_verIDs.clear();
+    arg_dev_type.clear();
+    arg_dev_id.clear();
+    for (size_t i=0; i<in_arg_names.size(); i++) {
+      arg_names.push_back(in_arg_names[i].c_str());
+      const auto &in_arg = *(in_args_ptr[i]);
+      arg_data.push_back(in_arg.data().dptr_);
+      arg_shapes.push_back(in_arg.shape().data());
+      arg_dims.push_back(in_arg.shape().ndim());
+      arg_types.push_back(in_arg.dtype());
+      arg_verIDs.push_back(in_arg.version());
+      const char* ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+      arg_dev_type.push_back(ctx_str);
+      arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+    }
     
     // remove all graph attrs, some cannot be saved to json
     nnvm::Graph graph = std::move(g);
@@ -190,27 +212,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         }
       }
 
-      // convert input args
-      std::vector<const char*> arg_names;
-      std::vector<void*> arg_data;
-      std::vector<const int64_t *> arg_shapes;
-      std::vector<int> arg_dims;
-      std::vector<int> arg_types;
-      std::vector<size_t> arg_verIDs;
-      std::vector<const char*> arg_dev_type;
-      std::vector<int> arg_dev_id;
-      for (int i=0; i<in_arg_names.size(); i++) {
-        arg_names.push_back(in_arg_names[i].c_str());
-        const auto &in_arg = *(in_args_ptr[i]);
-        arg_data.push_back(in_arg.data().dptr_);
-        arg_shapes.push_back(in_arg.shape().data());
-        arg_dims.push_back(in_arg.shape().ndim());
-        arg_types.push_back(in_arg.dtype());
-        arg_verIDs.push_back(in_arg.version());
-        const char* ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-        arg_dev_type.push_back(ctx_str);
-        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
-      }
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
       CHECK(call_accept_subgraph_(accept_subgraph_, subgraph_json.c_str(),
                                   subgraph_id, &accept, opt_keys_.data(),
@@ -246,7 +247,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
     return std::make_shared<CustomContainOpSelector>(supported_nodes);
   }
-
+  
   std::string subgraph_prop;
   partCallSupportedOps_t call_supported_ops_;
   supportedOps_t supported_ops_;
@@ -259,7 +260,15 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::vector<const char*> opt_keys_, opt_vals_;
   std::vector<std::string> in_arg_names;
   NDArray **in_args_ptr;
-};
+  std::vector<const char*> arg_names;
+  std::vector<void*> arg_data;
+  std::vector<const int64_t*> arg_shapes;
+  std::vector<int> arg_dims;
+  std::vector<int> arg_types;
+  std::vector<size_t> arg_verIDs;
+  std::vector<const char*> arg_dev_type;
+  std::vector<int> arg_dev_id;
+  };
 }  // namespace op
 }  // namespace mxnet
 
