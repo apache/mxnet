@@ -2661,7 +2661,7 @@ def test_np_insert():
     E = (1)
     F = (3, 1)
     G = (3, 2)
-    H = (5, 2, 3, 4)
+    H = (2, 2, 3, 8)
     config = []
     # test scale index
     for idx in range(-1 * GetSize(A), GetSize(A) + 1):
@@ -2705,7 +2705,7 @@ def test_np_insert():
     config.append(tuple([H, 0, 1, 3]))
     config.append(tuple([H, [1], E, 2]))
     config.append(tuple([H, [1], 1, 2]))
-    idx = _np.random.randint(-1 * H[3], H[3] + 1, size = (3)).tolist()
+    idx = _np.random.randint(-1 * H[3], H[3] + 1, size = (5)).tolist()
     config.append(tuple([H, idx, E, 3]))
     config.append(tuple([H, idx, 1, 3]))
     # test slice
