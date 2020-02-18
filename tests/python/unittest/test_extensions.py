@@ -22,6 +22,8 @@ import platform
 import unittest
 import mxnet as mx
 import numpy as np
+from mxnet import nd
+from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_context
 
@@ -156,6 +158,14 @@ def test_subgraph():
     out3 = exe3.forward()
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out3[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+    # Gluon Hybridize partitioning with shapes/types
+    sym_block = nn.SymbolBlock(sym, [a,b])
+    sym_block.initialize()
+    sym_block.hybridize(backend='myProp')
+    out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+    # check that result matches one executed by MXNet
+    assert_almost_equal(out[0].asnumpy(), out4[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
 @unittest.skipIf(check_platform(), "not all machine types supported")
 @unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
