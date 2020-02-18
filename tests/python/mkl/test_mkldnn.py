@@ -301,7 +301,7 @@ def test_batchnorm_relu_fusion():
         x = mx.sym.Variable('x')
         in_data = mx.nd.random.normal(shape=shape)
         grad_out = mx.nd.random.uniform(0, 1, shape)
-        bn = mx.sym.BatchNorm(data=x, fix_gamma=False, fuse_relu=False)
+        bn = mx.sym.BatchNorm(data=x, fix_gamma=False)
         relu = mx.sym.Activation(data=bn, act_type='relu', name='relu')
         exe = relu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
         exe.arg_arrays[0][:] = in_data
@@ -310,7 +310,7 @@ def test_batchnorm_relu_fusion():
         no_fuse_outputs = exe.outputs
         no_fuse_grads = exe.grad_arrays
 
-        bnrelu = mx.sym.BatchNorm(data=x, fix_gamma=False, fuse_relu=True)
+        bnrelu = mx.sym.contrib.BatchNormWithReLU(data=x, fix_gamma=False)
         exe_fuse = bnrelu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
         exe_fuse.arg_arrays[0][:] = in_data
         exe_fuse.forward(is_train=True)

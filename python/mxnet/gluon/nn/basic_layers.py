@@ -367,6 +367,8 @@ class BatchNorm(HybridBlock):
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
+        if (not is_np_array()) and (self._kwargs['fuse_relu'] == True):
+            batch_norm = F.BatchNormWithReLU
         return batch_norm(x, gamma, beta, running_mean, running_var,
                           name='fwd', **self._kwargs)
 

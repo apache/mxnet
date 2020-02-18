@@ -49,7 +49,7 @@ namespace op {
 namespace batchnorm {
 enum BatchNormOpInputs {kData, kGamma, kBeta, kInMovingMean,
   kInMovingVar};  // kGamma: weights, kBeta: biases
-enum BatchNormOpOutputs {kOut, kMean, kVar, kWorkspace};  // req, out_data
+enum BatchNormOpOutputs {kOut, kMean, kVar};  // req, out_data
 enum BatchNormOpResource {kTempSpace};
 enum BatchNormOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 
@@ -74,7 +74,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool output_mean_var;
   int axis;
   bool cudnn_off;
-  bool fuse_relu;
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
@@ -97,8 +96,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Do not select CUDNN operator, if available");
-    DMLC_DECLARE_FIELD(fuse_relu).set_default(false)
-    .describe("Whether to fuse ReLU activation.");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -119,7 +116,6 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
                 this->use_global_stats == other.use_global_stats &&
                 this->output_mean_var == other.output_mean_var && this->axis == other.axis &&
                 this->cudnn_off == other.cudnn_off &&
-                this->fuse_relu == other.fuse_relu &&
                 this->min_calib_range.has_value() == other.min_calib_range.has_value() &&
                 this->max_calib_range.has_value() == other.max_calib_range.has_value();
     if (this->min_calib_range.has_value() && other.min_calib_range.has_value() &&
@@ -144,7 +140,6 @@ struct hash<mxnet::op::BatchNormParam> {
     ret = dmlc::HashCombine(ret, val.use_global_stats);
     ret = dmlc::HashCombine(ret, val.output_mean_var);
     ret = dmlc::HashCombine(ret, val.axis);
-    ret = dmlc::HashCombine(ret, val.fuse_relu);
     return ret;
   }
 };
