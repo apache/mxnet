@@ -121,7 +121,6 @@ def _np_any(a, axis=None, keepdims=False, out=None):
     pass
 
 
-
 def _np_sometrue(a, axis=None, keepdims=False, out=None):
     """
     sometrue(*args, **kwargs)

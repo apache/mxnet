@@ -1652,14 +1652,6 @@ class ndarray(NDArray):
         """
         return clip(self, min, max, out=out)
 
-    def fabs(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`fabs`.
-
-        The arguments are the same as for :py:func:`fabs`, with
-        this array as data.
-        """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute fabs')
-
     def abs(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`abs`.
 
