@@ -4003,6 +4003,44 @@ def test_np_random_chisquare():
 
 @with_seed()
 @use_np
+def test_np_random_rayleigh():
+    class TestRayleigh(HybridBlock):
+        def __init__(self, shape):
+            super(TestRayleigh, self).__init__()
+            self._shape = shape
+
+        def hybrid_forward(self, F, scale):
+            return F.np.random.rayleigh(scale, self._shape)
+
+    shapes = [(2, 3), (4, 0, 5), (7, 8)]
+    for hybridize in [False, True]:
+        for shape in shapes:
+            test_rayleigh = TestRayleigh(shape)
+            if hybridize:
+                test_rayleigh.hybridize()
+            
+            scale = np.ones(shape)
+            scale.attach_grad()
+            with mx.autograd.record():
+                mx_out = test_rayleigh(scale)
+            np_out = _np.random.rayleigh(scale = scale.asnumpy(), size = shape)
+            assert_almost_equal(np_out.shape, mx_out.shape)
+            mx_out.backward()
+            assert scale.grad.shape == shape
+            assert_almost_equal(scale.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
+
+    for shape in shapes:
+        mx_out = np.random.rayleigh(np.array([1]), shape)
+        np_out = _np.random.rayleigh(np.array([1]).asnumpy(), shape)
+        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
+    def _test_rayleigh_exception(scale):
+        output = np.random.rayleigh(scale=scale).asnumpy()
+    assertRaises(ValueError, _test_rayleigh_exception, -1)
+
+
+@with_seed()
+@use_np
 def test_np_exponential():
     class TestRandomExp(HybridBlock):
         def __init__(self, shape):
