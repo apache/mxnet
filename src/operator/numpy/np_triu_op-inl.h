@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2020 by Contributors
  * \file np_triu_op-inl.h
- * \brief Function definition of the triu (upper triangle of an array) op
+ * \brief Function definition of triu (upper triangle of an array) op
  */
 
 #ifndef MXNET_OPERATOR_NUMPY_NP_TRIU_OP_INL_H_
