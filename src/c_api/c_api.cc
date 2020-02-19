@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -277,8 +276,8 @@ int MXLoadLib(const char *path) {
     get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
 
 
-  partCallAcceptSubgraph_t callAcceptSubgraph =
-    get_func<partCallAcceptSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLACCEPTSUBGRAPH_STR));
+  partCallReviewSubgraph_t callReviewSubgraph =
+    get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
 
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
@@ -844,12 +843,12 @@ int MXLoadLib(const char *path) {
       const char* strategy;
       // function pointers holding implementation from custom library
       supportedOps_t supportedOps_fp = nullptr;
-      acceptSubgraph_t acceptSubgraph_fp = nullptr;
+      reviewSubgraph_t reviewSubgraph_fp = nullptr;
       // name of subgraph op
       const char* op_name = nullptr;
 
     // get custom partitioner strategy from the dynamic library
-      partRegGet(i, j, &strategy, &supportedOps_fp, &acceptSubgraph_fp, &op_name);
+      partRegGet(i, j, &strategy, &supportedOps_fp, &reviewSubgraph_fp, &op_name);
       // validate custom partitioner functions from the dynamic library
       CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
                                         << "' custom partitioner strategy '" << strategy
@@ -863,7 +862,7 @@ int MXLoadLib(const char *path) {
       mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
                             std::make_shared<mxnet::op::CustomSubgraphProperty>(
                            strategy_str, callSupportedOps, supportedOps_fp,
-                           callAcceptSubgraph, acceptSubgraph_fp, callFree, op_name_str));
+                           callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
     }
   }
   API_END();

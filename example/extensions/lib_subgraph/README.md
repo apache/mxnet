@@ -117,22 +117,22 @@ There are several essential building blocks for making a custom partitioner:
                 std::unordered_map<std::string, std::string>& options)
 
 * [REGISTER_PARTITIONER(my_part_name)](./subgraph_lib.cc#L238):
-    * This macro registers the custom partitioner and its properties to MXNet by its name. Notice that a partitioner can have multiple partitioning strategies. This enables multiple *passes* to be run in a single partitioning call from the user. The first argument to `addStrategy` is a user-specified name. The second argument is the `supportedOps` function. The third argument is the name of the subgraph operator to create for each subgraph created during partitioning (see below for more info about subgraph operators). The `setAcceptSubgraph` API registers a callback function that is called for each subgraph created during partitioning (more on this below). Notice that the first argument to this function is the strategy to associate with and the second argument is the `acceptSubgraph` function.
+    * This macro registers the custom partitioner and its properties to MXNet by its name. Notice that a partitioner can have multiple partitioning strategies. This enables multiple *passes* to be run in a single partitioning call from the user. The first argument to `addStrategy` is a user-specified name. The second argument is the `supportedOps` function. The third argument is the name of the subgraph operator to create for each subgraph created during partitioning (see below for more info about subgraph operators). The `setReviewSubgraph` API registers a callback function that is called for each subgraph created during partitioning (more on this below). Notice that the first argument to this function is the strategy to associate with and the second argument is the `reviewSubgraph` function.
 
             REGISTER_PARTITIONER(my_part_name)
             .addStrategy("strategy1", 
                           supportedOps, 
                           "_custom_subgraph_op")
-            .setAcceptSubgraph("strategy1", 
-                                acceptSubgraph);
+            .setReviewSubgraph("strategy1", 
+                                reviewSubgraph);
 
 
 Also there are some optional functions you can specify:
 
-* [acceptSubgraph](./subgraph_lib.cc#L220):
+* [reviewSubgraph](./subgraph_lib.cc#L220):
     * This function provides an opportunity to accept/reject a subgraph after MXNet partitions it. It also allows specifying custom attributes on the subgraph (ie. user-generated IDs). If you do not register this function, subgraphs will be accepted by default. 
 
-            MXReturnValue acceptSubgraph(
+            MXReturnValue reviewSubgraph(
                 std::string json,
                 int subraph_id,
                 bool* accept,
@@ -145,7 +145,7 @@ Let’s take a closer look at those registry functions:
 
 * **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of booleans, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `true` for the node ID in the `ids` array. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
 
-* **acceptSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. The 4th argument is the map of options specified by the user. The last argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API.
+* **reviewSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. The 4th argument is the map of options specified by the user. The last argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API.
 
 ### Writing A Custom Subgraph Operator
 

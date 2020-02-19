@@ -216,7 +216,7 @@ MXReturnValue mySupportedOps(std::string json,
   return MX_SUCCESS;
 }
 
-MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
+MXReturnValue myReviewSubgraph(std::string json, int subraph_id, bool* accept,
                                std::unordered_map<std::string, std::string>& options,
                                std::unordered_map<std::string, std::string>& attrs) {
   for (auto kv : options) {
@@ -237,7 +237,7 @@ MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
 
 REGISTER_PARTITIONER(myProp)
 .addStrategy("strategy1", mySupportedOps, "_custom_subgraph_op")
-.setAcceptSubgraph("strategy1", myAcceptSubgraph);
+.setReviewSubgraph("strategy1", myReviewSubgraph);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {
