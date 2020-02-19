@@ -6583,8 +6583,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         # Make sure have allowed kwargs appropriate for mode
         for key in kwargs:
             if key not in allowedkwargs[mode]:
-                raise ValueError('%s keyword not in allowed keywords %s' %
-                                (key, allowedkwargs[mode]))
+                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
 
     unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
     if unsupported_kwargs:
