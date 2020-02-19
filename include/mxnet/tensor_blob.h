@@ -411,6 +411,7 @@ class TBlob {
         break;
       case kDLUInt:
         switch (dldata_type.bits) {
+          case 1: return mshadow::kBool;
           case 8: return mshadow::kUint8;
         }
         break;
