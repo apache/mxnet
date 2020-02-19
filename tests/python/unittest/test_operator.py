@@ -2395,6 +2395,10 @@ def test_convolution_dilated_impulse_response():
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 3D
+    for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
+        for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
 @with_seed()
