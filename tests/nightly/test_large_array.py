@@ -479,6 +479,19 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
+    def check_rnn():
+        data = nd.random_normal(shape=(2**28, 4, 4))
+        parameters = nd.random_normal(shape=(7,))
+        state = nd.random_normal(shape=(1, 4, 1))
+        mode = 'rnn_relu'
+        state_size = 1
+        num_layers = 1
+
+        out = nd.RNN(data=data, parameters=parameters, state=state, mode=mode,
+                     state_size=state_size, num_layers=num_layers)
+
+        assert out.shape[0] == 268435456
+        assert out.shape[1] == 4
         assert out.shape[2] == 1
         
     def check_spatial_transformer():
@@ -556,6 +569,7 @@ def test_nn():
     check_ravel()
     check_cumsum()
     check_multi_lars()
+    check_rnn()
 
 
 def test_tensor():
