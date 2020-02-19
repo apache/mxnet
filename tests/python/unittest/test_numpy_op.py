@@ -2728,9 +2728,9 @@ def test_np_insert():
                 obj_onp = obj
             test_insert = TestInsert(obj=obj_mxnp, axis=axis)
 
-            a = mx.nd.random.uniform(-1.0, 1.0, shape=arr_shape).as_np_ndarray().astype(atype)
+            a = mx.nd.random.uniform(-10.0, 10.0, shape=arr_shape).as_np_ndarray().astype(atype)
             a.attach_grad()
-            b = mx.nd.random.uniform(-1.0, 1.0, shape=val_shape).as_np_ndarray().astype(btype)
+            b = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(btype)
             b.attach_grad()
             expected_ret = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
             with mx.autograd.record():
