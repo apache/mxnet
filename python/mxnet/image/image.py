@@ -19,7 +19,6 @@
 # pylint: disable=too-many-arguments, too-many-locals, no-name-in-module, too-many-branches, too-many-statements
 """Read individual image files and perform augmentations."""
 
-from __future__ import absolute_import, print_function
 
 import sys
 import os
@@ -202,7 +201,7 @@ def imdecode(buf, *args, **kwargs):
     <NDArray 224x224x3 @cpu(0)>
     """
     if not isinstance(buf, nd.NDArray):
-        if sys.version_info[0] == 3 and not isinstance(buf, (bytes, bytearray, np.ndarray)):
+        if not isinstance(buf, (bytes, bytearray, np.ndarray)):
             raise ValueError('buf must be of type bytes, bytearray or numpy.ndarray,'
                              'if you would like to input type str, please convert to bytes')
         array_fn = _mx_np.array if is_np_array() else nd.array

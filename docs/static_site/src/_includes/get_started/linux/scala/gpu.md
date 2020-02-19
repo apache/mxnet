@@ -8,9 +8,9 @@ of instructions to help you with the setup process.
         src="https://img.shields.io/badge/org.apache.mxnet-linux gpu-green.svg"
         alt="maven badge"/></a>
 
-```html
+{% highlight html %}
 <dependency>
 <groupId>org.apache.mxnet</groupId>
 <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
 </dependency>
-```
+{% endhighlight %}

@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=too-many-arguments, too-many-locals
 """Definition of various recurrent neural network cells."""
-from __future__ import print_function
 
 import bisect
 import random

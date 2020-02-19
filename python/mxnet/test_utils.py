@@ -17,7 +17,6 @@
 
 """Tools for testing."""
 # pylint: disable=too-many-lines
-from __future__ import absolute_import, print_function, division
 import time
 import gzip
 import struct
@@ -542,6 +541,22 @@ def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
+def locationError(a, b, index, names, maxError=False):
+    """Create element mismatch comment
+
+    Parameters
+    ----------
+    a, b : compared np.ndarray's
+    index : tuple of coordinate arrays
+        Location of violation
+    names : tuple of names
+        The names of compared arrays.
+    maxError: boolean, optional
+        Flag indicating that maximum error is reporting.
+    """
+    maximum = "maximum " if maxError else ""
+    return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
+            % (maximum, str(index), names[0], a[index], names[1], b[index])
 
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False,
                         use_broadcast=True, mismatches=(10, 10)):
@@ -590,23 +605,6 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         a = a.asnumpy()
         b = b.asnumpy()
 
-    def locationError(a, b, index, names, maxError=False):
-        """Create element mismatch comment
-
-        Parameters
-        ----------
-        a, b : compared np.ndarray's
-        index : tuple of coordinate arrays
-            Location of violation
-        names : tuple of names
-            The names of compared arrays.
-        maxError: boolean, optional
-            Flag indicating that maximum error is reporting.
-        """
-        maximum = "maximum " if maxError else ""
-        return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
-               % (maximum, str(index), names[0], a[index], names[1], b[index])
-
     index, rel = find_max_violation(a, b, rtol, atol)
     indexErr = index
     relErr = rel
@@ -643,7 +641,8 @@ def assert_allclose(a, b, rtol=1e-07, atol=0, equal_nan=True):
     assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
+                                 names=('a', 'b'), equal_nan=False, mismatches=(10, 10)):
     """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
 
     Parameters
@@ -656,35 +655,48 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
     """
-    rtol = get_rtol(rtol)
-    atol = get_atol(atol)
     etol = get_etol(etol)
-    if etol:
+    if etol > 0:
+        rtol = get_rtol(rtol)
+        atol = get_atol(atol)
+        if isinstance(a, mx.nd.NDArray):
+            a = a.asnumpy()
+        if isinstance(b, mx.nd.NDArray):
+            b = b.asnumpy()
         equals = np.isclose(a, b, rtol=rtol, atol=atol)
         err = 1 - np.count_nonzero(equals) / equals.size
         if err > etol:
             index, rel = find_max_violation(a, b, rtol, atol)
-            np.set_printoptions(threshold=4, suppress=True)
-            msg = npt.build_err_msg([a, b],
-                                    err_msg="Error %f exceeds tolerance rtol=%f, atol=%f, etol=%f."
-                                            " Error_rate=%f. Location of maximum error:%s, a=%f, b=%f"
-                                    % (rel, rtol, atol, etol, err, str(index), a[index], b[index]),
-                                    names=names)
-            raise AssertionError(msg)
+            indexErr = index
+            relErr = rel
 
-        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
-            return
+            print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
+            aTmp = a.copy()
+            bTmp = b.copy()
+            i = 1
+            while i <= a.size:
+                if i <= mismatches[0]:
+                    print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
+
+                aTmp[index] = bTmp[index] = 0
+                if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
+                    break
+
+                i += 1
+                if i <= mismatches[1] or mismatches[1] <= 0:
+                    index, rel = find_max_violation(aTmp, bTmp, rtol, atol)
+                else:
+                    break
+
+            mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
+            errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
+                    (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
+                    locationError(a, b, indexErr, names, maxError=True))
+            np.set_printoptions(threshold=4, suppress=True)
+            msg = npt.build_err_msg([a, b], err_msg=errMsg)
+            raise AssertionError(msg)
     else:
-        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
-            return
-        index, rel = find_max_violation(a, b, rtol, atol)
-        np.set_printoptions(threshold=4, suppress=True)
-        msg = npt.build_err_msg([a, b],
-                                err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
-                                        " Location of maximum error:%s, a=%f, b=%f"
-                                % (rel, rtol, atol, str(index), a[index], b[index]),
-                                names=names)
-        raise AssertionError(msg)
+        assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):

@@ -121,6 +121,9 @@ NNVM_REGISTER_OP(_npi_hsplit)
 NNVM_REGISTER_OP(_npi_hsplit_backward)
 .set_attr<FCompute>("FCompute<gpu>", HSplitOpBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_dsplit)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpForward<gpu>);
+
 NNVM_REGISTER_OP(_npx_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 

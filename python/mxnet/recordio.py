@@ -16,7 +16,6 @@
 # under the License.
 
 """Read and write for the RecordIO data format."""
-from __future__ import absolute_import
 from collections import namedtuple
 from multiprocessing import current_process
 

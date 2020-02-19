@@ -18,7 +18,6 @@
 # pylint: disable=too-many-lines, unused-argument
 """numpy namespace for operators used in Gluon APIs dispatched by F=symbol module."""
 
-from __future__ import absolute_import
 import ctypes
 import numpy as _np
 from . import _op as _mx_np_op
@@ -40,18 +39,19 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
-           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
+           'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
-           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
+           'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
-           'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'where', 'bincount']
+           'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
+           'where', 'bincount']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -296,7 +296,7 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument,too-many-arguments
         """
         Copy of the array, cast to a specified type.
 
@@ -304,6 +304,26 @@ class _Symbol(Symbol):
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
+        order : {'C', 'F', 'A', 'K'}, optional
+            Controls the memory layout order of the result.
+            'C' means C order, 'F' means Fortran order, 'A'
+            means 'F' order if all the arrays are Fortran contiguous,
+            'C' order otherwise, and 'K' means as close to the
+            order the array elements appear in memory as possible.
+            Default is 'K'.
+        casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+            Controls what kind of data casting may occur. Defaults to 'unsafe'
+            for backwards compatibility.
+
+              * 'no' means the data types should not be cast at all.
+              * 'equiv' means only byte-order changes are allowed.
+              * 'safe' means only casts which can preserve values are allowed.
+              * 'same_kind' means only safe casts or casts within a kind,
+                like float64 to float32, are allowed.
+              * 'unsafe' means any data conversions may be done.
+        subok : bool, optional
+            If True, then sub-classes will be passed-through (default), otherwise
+            the returned array will be forced to be a base-class array.
         copy : bool, optional
             Default `True`. By default, astype always returns a newly
             allocated ndarray on the same context. If this is set to
@@ -316,8 +336,21 @@ class _Symbol(Symbol):
             Unless `copy` is False and the other conditions for returning the input
             array are satisfied (see description for `copy` input parameter), `arr_t`
             is a new array of the same shape as the input array with `dtype`.
+
+        Notes
+        -----
+        This function differs from the official `ndarray`'s ``astype`` function in the following
+        aspects:
+            - `order` only supports 'C' and 'K'.
+            - `casting` only supports 'unsafe'.
+            - `subok` only supports ``True``.
         """
-        _sanity_check_params('astype', ['order', 'casting', 'subok'], kwargs)
+        if order is not None and order != 'K' and order != 'C':
+            raise ValueError('order must be either \'K\' or \'C\'')
+        if casting != 'unsafe':
+            raise ValueError('casting must be equal to \'unsafe\'')
+        if not subok:
+            raise ValueError('subok must be equal to True')
         return _npi.cast(self, dtype=dtype)
 
     def dot(self, b, out=None):
@@ -3052,6 +3085,69 @@ def ceil(x, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def insert(arr, obj, values, axis=None):
+    """
+    Insert values along the given axis before the given indices.
+
+    Parameters
+    ----------
+    arr : _Symbol
+        Input array.
+    obj : int, slice or ndarray of int64
+        Object that defines the index or indices before which `values` is
+        inserted.
+        Support for multiple insertions when `obj` is a single scalar or a
+        sequence with one element (only support int32 and int64 element).
+    values : _Symbol
+        Values to insert into `arr`.
+        If the type of values is different from that of arr, values is converted
+        to the type of arr.
+    axis : int, optional
+        Axis along which to insert `values`.  If `axis` is None then `arr`
+        is flattened first.
+
+    Returns
+    -------
+    out : _Symbol
+        A copy of `arr` with `values` inserted.  Note that `insert`
+        does not occur in-place: a new array is returned. If
+        `axis` is None, `out` is a flattened array.
+
+    Notes
+    -----
+    - Note that for higher dimensional inserts `obj=0` behaves very different
+    from `obj=[0]` just like `arr[:,0,:] = values` is different from
+    `arr[:,[0],:] = values`.
+    - If obj is a ndarray, it's dtype only supports int64
+    """
+    if isinstance(values, numeric_types):
+        if isinstance(obj, slice):
+            start = obj.start
+            stop = obj.stop
+            step = 1 if obj.step is None else obj.step
+            return _npi.insert_slice(arr, val=values, start=start, stop=stop, step=step, axis=axis)
+        elif isinstance(obj, integer_types):
+            return _npi.insert_scalar(arr, val=values, int_ind=obj, axis=axis)
+        elif isinstance(obj, Symbol):
+            return _npi.insert_tensor(arr, obj, val=values, axis=axis)
+    if not isinstance(arr, Symbol): # pylint: disable= undefined-variable
+        raise TypeError("'arr' can not support type {}".format(str(type(arr))))
+    if not isinstance(values, Symbol): # pylint: disable= undefined-variable
+        raise TypeError("'values' can not support type {}".format(str(type(values))))
+    if isinstance(obj, slice):
+        start = obj.start
+        stop = obj.stop
+        step = 1 if obj.step is None else obj.step
+        return _npi.insert_slice(arr, values, start=start, stop=stop, step=step, axis=axis)
+    elif isinstance(obj, integer_types):
+        return _npi.insert_scalar(arr, values, int_ind=obj, axis=axis)
+    elif isinstance(obj, Symbol):
+        return _npi.insert_tensor(arr, values, obj, axis=axis)
+    else:
+        raise TypeError("'obj' can not support type {}".format(str(type(obj))))
+
+
+@set_module('mxnet.symbol.numpy')
 @wrap_np_unary_func
 def floor(x, out=None, **kwargs):
     r"""
@@ -3641,6 +3737,46 @@ def vsplit(ary, indices_or_sections):
     return split(ary, indices_or_sections, 0)
 
 
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def dsplit(ary, indices_or_sections):
+    """
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+
+    Please refer to the `split` documentation.  `dsplit` is equivalent
+    to `split` with ``axis=2``, the array is always split along the third
+    axis provided the array dimension is greater than or equal to 3.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 2.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 2 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:, :, :2]
+          - ary[:, :, 2:3]
+          - ary[:, :, 3:]
+
+        If an index exceeds the dimension of the array along axis 2, an error will be thrown.
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.dsplit(ary, indices, 2, False, sections)
+    return ret
+# pylint: enable=redefined-outer-name
+
+
 @set_module('mxnet.symbol.numpy')
 def concatenate(seq, axis=0, out=None):
     """Join a sequence of arrays along an existing axis.
@@ -4026,7 +4162,6 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4066,7 +4201,6 @@ def argmin(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4457,7 +4591,7 @@ def ravel(x, order='C'):
     This function differs from the original numpy.arange in the following aspects:
         - Only support row-major, C-style order.
     """
-    if order != 'C':
+    if order == 'F':
         raise NotImplementedError('order {} is not supported'.format(order))
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
@@ -4502,7 +4636,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
-    a with a.ndim >= 2 dimensions and shape (n, n, …, n). For a.ndim = 2 this is
+    a with a.ndim >= 2 dimensions and shape (n, n, ..., n). For a.ndim = 2 this is
     the usual diagonal, for a.ndim > 2 this is the set of indices to access
     a[i, i, ..., i] for i = [0..n-1].
 
@@ -5746,8 +5880,11 @@ def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='l
     """
     if overwrite_input is not None:
         raise NotImplementedError('overwrite_input is not supported yet')
+    if isinstance(q, numeric_types):
+        return _npi.percentile(a, axis=axis, interpolation=interpolation,
+                               keepdims=keepdims, q_scalar=q, out=out)
     return _npi.percentile(a, q, axis=axis, interpolation=interpolation,
-                           keepdims=keepdims, out=out)
+                           keepdims=keepdims, q_scalar=None, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5804,8 +5941,11 @@ def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='lin
     """
     if overwrite_input is not None:
         raise NotImplementedError('overwrite_input is not supported yet')
+    if isinstance(q, numeric_types):
+        return _npi.percentile(a, axis=axis, interpolation=interpolation,
+                               keepdims=keepdims, q_scalar=q * 100, out=out)
     return _npi.percentile(a, q * 100, axis=axis, interpolation=interpolation,
-                           keepdims=keepdims, out=out)
+                           keepdims=keepdims, q_scalar=None, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -6019,7 +6159,7 @@ def isnan(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : _Symbol
+    x : _Symbol or scalar
         Input array.
     out : _Symbol or None, optional
         A location into which the result is stored.
@@ -6057,9 +6197,9 @@ def isinf(x, out=None, **kwargs):
 
     Parameters
     ----------
-    x : _Symbol
+    x : _Symbol or scalar
         Input array.
-    out : ndarray or None, optional
+    out : _Symbol or None, optional
         A location into which the result is stored.
         If provided, it must have the same shape and dtype as input ndarray.
         If not provided or `None`, a freshly-allocated array is returned.
@@ -6073,9 +6213,8 @@ def isinf(x, out=None, **kwargs):
     Notes
     -----
     NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
-    This means that Not a Number is not equivalent to infinity.
 
-    This function differs from the original `numpy.isnan
+    This function differs from the original `numpy.isinf
     <https://docs.scipy.org/doc/numpy/reference/generated/numpy.isnan.html>`_ in
     the following aspects:
     - Does not support complex number for now
@@ -6085,6 +6224,98 @@ def isinf(x, out=None, **kwargs):
     - ``out`` param does not support scalar input case.
     """
     return _unary_func_helper(x, _npi.isinf, _np.isinf, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def isposinf(x, out=None, **kwargs):
+    """
+    Test element-wise for positive infinity, return result as bool array.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol or bool
+        True where x is positive infinity, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+    """
+    return _unary_func_helper(x, _npi.isposinf, _np.isposinf, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def isneginf(x, out=None, **kwargs):
+    """
+    Test element-wise for negative infinity, return result as bool array.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol or bool
+        True where x is negative infinity, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+    """
+    return _unary_func_helper(x, _npi.isneginf, _np.isneginf, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def isfinite(x, out=None, **kwargs):
+    """
+    Test element-wise for finiteness (not infinity or not Not a Number).
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None, optional
+        A location into which the result is stored.
+        If provided, it must have the same shape and dtype as input ndarray.
+        If not provided or `None`, a freshly-allocated array is returned.
+
+    Returns
+    -------
+    y : _Symbol or bool
+        True where x is negative infinity, false otherwise.
+        This is a scalar if x is a scalar.
+
+    Notes
+    -----
+    Not a Number, positive infinity and negative infinity are considered to be non-finite.
+
+    NumPy uses the IEEE Standard for Binary Floating-Point for Arithmetic (IEEE 754).
+    This means that Not a Number is not equivalent to infinity.
+    Also that positive infinity is not equivalent to negative infinity.
+    But infinity is equivalent to positive infinity. Errors result if the second argument
+    is also supplied when x is a scalar input, or if first and second arguments have different shapes.
+    """
+    return _unary_func_helper(x, _npi.isfinite, _np.isfinite, out=out, **kwargs)
 
 
 @set_module('mxnet.symbol.numpy')

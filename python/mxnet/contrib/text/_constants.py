@@ -18,8 +18,6 @@
 # coding: utf-8
 
 """Read text files and load embeddings."""
-from __future__ import absolute_import
-from __future__ import print_function
 
 UNKNOWN_IDX = 0
 

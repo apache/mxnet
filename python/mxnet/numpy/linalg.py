@@ -17,7 +17,6 @@
 
 """Namespace for ops used in imperative programming."""
 
-from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg

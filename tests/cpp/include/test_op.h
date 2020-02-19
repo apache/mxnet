@@ -183,7 +183,11 @@ class Validator {
   static inline DType ErrorBound(const TBlob *blob) {
     // Due to eps, for a small number of entries, the error will be a bit higher for one pass
     if (blob->shape_.ndim() >= 3) {
-      return (blob->Size() / blob->shape_[1]) <= 4 ? (ERROR_BOUND() * 15) : ERROR_BOUND();
+      if (blob->Size() / blob->shape_[1] <=4) {
+        return ERROR_BOUND() * 15;
+      } else {
+        return ERROR_BOUND();
+      }
     } else {
       // Probably just a vector
       return ERROR_BOUND();
