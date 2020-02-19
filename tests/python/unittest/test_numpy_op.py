@@ -6884,6 +6884,7 @@ def test_np_pad():
             self._mode = mode
         def hybrid_forward(self,F,A,**kwargs):
             return F.np.pad(A, self._pad_width, mode=self._mode, **kwargs)
+            
     shapes = [(1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum', 'maximum']

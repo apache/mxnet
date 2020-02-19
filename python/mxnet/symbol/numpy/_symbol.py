@@ -6549,6 +6549,8 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         according to `pad_width`.
     """
     # pylint: disable = too-many-return-statements, inconsistent-return-statements
+    if not _np.asarray(pad_width).dtype.kind == 'i':
+        raise TypeError('`pad_width` must be of integral type.')
     if not isinstance(pad_width, tuple):
         raise TypeError("`pad_width` must be tuple.")
     if mode == "linear_ramp":
@@ -6563,9 +6565,10 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         raise ValueError("mode {'empty'} is not supported.")
     if callable(mode):
         raise ValueError("mode {'<function>'} is not supported.")
-    allowed_kwargs = {
-        'empty': [], 'edge': [], 'wrap': [],
+
+    allowedkwargs = {
         'constant': ['constant_values'],
+        'edge': [],
         'linear_ramp': ['end_values'],
         'maximum': ['stat_length'],
         'mean': ['stat_length'],
@@ -6573,11 +6576,17 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         'minimum': ['stat_length'],
         'reflect': ['reflect_type'],
         'symmetric': ['reflect_type'],
-    }
-    try:
-        unsupported_kwargs = set(kwargs) - set(allowed_kwargs[mode])
-    except KeyError:
-        raise ValueError("mode '{}' is not supported".format(mode))
+        'wrap': [],
+        }
+
+    if isinstance(mode, _np.compat.basestring):
+        # Make sure have allowed kwargs appropriate for mode
+        for key in kwargs:
+            if key not in allowedkwargs[mode]:
+                raise ValueError('%s keyword not in allowed keywords %s' %
+                                (key, allowedkwargs[mode]))
+
+    unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
     if unsupported_kwargs:
         raise ValueError("unsupported keyword arguments for mode '{}': {}"
                          .format(mode, unsupported_kwargs))
