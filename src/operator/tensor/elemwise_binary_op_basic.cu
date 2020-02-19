@@ -227,7 +227,7 @@ NNVM_REGISTER_OP(_grad_add)
 
 NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
+                    VectorizedBackwardUseNoneCompute<mshadow_op::identity,
                     mshadow_op::identity>);
 
 NNVM_REGISTER_OP(elemwise_sub)
@@ -236,7 +236,7 @@ NNVM_REGISTER_OP(elemwise_sub)
 
 NNVM_REGISTER_OP(_backward_sub)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseNoneWithHalf2<gpu, mshadow_op::identity,
+                    VectorizedBackwardUseNoneCompute<mshadow_op::identity,
                     mshadow_op::negation>);
 
 NNVM_REGISTER_OP(elemwise_mul)
