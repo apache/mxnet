@@ -63,7 +63,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   bool bidirectional, state_outputs;
   int mode;
   float p;
-  int seq_length_, batch_size_, input_size_;
+  index_t seq_length_, batch_size_, input_size_;
 
   bool use_sequence_length;
   dmlc::optional<int> projection_size;
@@ -123,7 +123,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
 };
 
 inline int GetRnnParamSize(int num_layer,
-                           int input_size,
+                           index_t input_size,
                            int state_size,
                            int direction,
                            int mode,
@@ -182,8 +182,8 @@ inline int GetRnnBiasSize(int num_layer,
  *  - output -> h[t](, c[t] additionally with Lstm) time by time(sz: NxH(x2))
  *  - intermediate y[1...T] as next layer's inputs(sz: TxNxHxD)
  */
-inline size_t GetRNNWorkspaceSize(int seq_length,
-                                  int batch_size,
+inline size_t GetRNNWorkspaceSize(index_t seq_length,
+                                  index_t batch_size,
                                   int hidden_size,
                                   int projection_size,
                                   int direction,
@@ -214,8 +214,8 @@ inline size_t GetRNNWorkspaceSize(int seq_length,
 
 inline size_t GetRNNReserveSpaceSize(int num_layer,
                                      int direction,
-                                     int seq_length,
-                                     int batch_size,
+                                     index_t seq_length,
+                                     index_t batch_size,
                                      int hidden_size,
                                      int mode) {
   size_t size = 0;
@@ -279,9 +279,9 @@ void RNNForwardTraining(DType* ws,
                         bool state_outputs,
                         const int num_layers,
                         const int direction,
-                        const int seq_length,
-                        const int batch_size,
-                        const int input_size,
+                        const index_t seq_length,
+                        const index_t batch_size,
+                        const index_t input_size,
                         const int state_size,
                         DType* x_ptr,
                         DType* hx_ptr,
@@ -321,9 +321,9 @@ void RNNForwardInference(DType* ws,
                          bool state_outputs,
                          const int num_layers,
                          const int direction,
-                         const int seq_length,
-                         const int batch_size,
-                         const int input_size,
+                         const index_t seq_length,
+                         const index_t batch_size,
+                         const index_t input_size,
                          const int state_size,
                          const int projection_size,
                          DType* x_ptr,
@@ -363,9 +363,9 @@ void RNNBackward(DType* ws,
                  DType* rs,
                  const int num_layers,
                  const int direction,
-                 const int seq_length,
-                 const int batch_size,
-                 const int input_size,
+                 const index_t seq_length,
+                 const index_t batch_size,
+                 const index_t input_size,
                  const int state_size,
                  DType* x_ptr,
                  DType* hx_ptr,
