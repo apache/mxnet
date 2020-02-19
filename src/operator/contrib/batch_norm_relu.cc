@@ -18,36 +18,40 @@
  */
 
 /*!
- * Copyright (c) 2015 by Contributors
+ * Copyright (c) 2020 by Contributors
  * \file batch_norm_relu.cc
  * \brief
  * \author Xinyu Chen
 */
 
-#include "batch_norm_relu-inh.h"
+#include "../nn/batch_norm-inl.h"
 #include <nnvm/op_attr_types.h>
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
 #if MXNET_USE_MKLDNN == 1
 #include "../nn/mkldnn/mkldnn_batch_norm-inl.h"
+#include "../nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(BatchNormWithReLUParam);
-
 namespace batchnormrelu {
 
-/*! \brief Global disable of batchnorm mkl operator for unit testing */
-volatile bool disable_mkl = false;
+enum BatchNormWithReLUOpInputs {kData, kGamma, kBeta, kInMovingMean,
+  kInMovingVar};  // kGamma: weights, kBeta: biases
+enum BatchNormWithReLUOpOutputs {kOut, kMean, kVar, kWorkspace};  // req, out_data
+enum BatchNormWithReLUOpResource {kTempSpace};
+enum BatchNormWithReLUOpAuxiliary {kMovingMean, kMovingVar};  // aux_states
 
+/*! \brief Default channel axis if none specified in the params */
+constexpr int DEFAULT_AXIS = 1;
 }  // namespace batchnormrelu
 
 static bool BatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
-                           mxnet::ShapeVector *in_shape,
-                           mxnet::ShapeVector *out_shape) {
-  const BatchNormWithReLUParam& param = nnvm::get<BatchNormWithReLUParam>(attrs.parsed);
+                                   mxnet::ShapeVector *in_shape,
+                                   mxnet::ShapeVector *out_shape) {
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 4U);
@@ -78,7 +82,7 @@ static bool BatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
 }
 
 static bool BatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_type, std::vector<int> *out_type) {
+                                  std::vector<int> *in_type, std::vector<int> *out_type) {
   using namespace mshadow;
   CHECK_GE(in_type->size(), 1U);
   const int dtype = (*in_type)[0];
@@ -108,27 +112,25 @@ static bool BatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
 }
 
 #if MXNET_USE_MKLDNN == 1
-static inline bool SupportMKLDNNBNReLU(const NDArray &input, const BatchNormWithReLUParam &param) {
+static inline bool SupportMKLDNNBNReLU(const NDArray &input, const BatchNormParam &param) {
   mxnet::TShape shape = input.shape();
   return SupportMKLDNN(input) && shape.ndim() == 4
-      && param.axis == mxnet::op::batchnormrelu::DEFAULT_AXIS
-      && !mxnet::op::batchnormrelu::disable_mkl;
+      && param.axis == mxnet::op::batchnormrelu::DEFAULT_AXIS;
 }
 
 void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs &attrs,
-                           const OpContext &ctx,
-                           const std::vector<NDArray> &inputs,
-                           const std::vector<OpReqType> &req,
-                           const std::vector<NDArray> &outputs) {
+                                   const OpContext &ctx,
+                                   const std::vector<NDArray> &inputs,
+                                   const std::vector<OpReqType> &req,
+                                   const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
-  const BatchNormWithReLUParam &param = nnvm::get<BatchNormWithReLUParam>(attrs.parsed);
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   bool fuse_relu = true;
   if (SupportMKLDNNBNReLU(inputs[0], param)) {
     CHECK_GT(outputs.size(), 3U);
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-      MKLDNNBatchNormForward<DTYPE, BatchNormWithReLUParam>(param, attrs, ctx, inputs,
-                                                            req, outputs, fuse_relu);
+      MKLDNNBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
     });
     return;
   }
@@ -136,17 +138,16 @@ void BatchNormWithReLUComputeExCPU(const nnvm::NodeAttrs &attrs,
 }
 
 void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs &attrs,
-                               const OpContext &ctx,
-                               const std::vector<NDArray> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<NDArray> &outputs) {
-  const BatchNormWithReLUParam &param = nnvm::get<BatchNormWithReLUParam>(attrs.parsed);
+                                       const OpContext &ctx,
+                                       const std::vector<NDArray> &inputs,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<NDArray> &outputs) {
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   bool fuse_relu = true;
   if (SupportMKLDNNBNReLU(inputs[0], param)) {
       CHECK_EQ(inputs.size(), 9U);
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNBatchNormBackward<float, BatchNormWithReLUParam>(param, attrs, ctx, inputs,
-                                                             req, outputs, fuse_relu);
+      MKLDNNBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
       return;
   }
   LOG(FATAL) << "BatchNormWithReLU operator only supports MKL-DNN Backend.";
@@ -154,11 +155,11 @@ void BatchNormWithReLUGradComputeExCPU(const nnvm::NodeAttrs &attrs,
 #endif
 
 static inline bool BatchNormWithReLUStorageType(const nnvm::NodeAttrs &attrs,
-                                        const int dev_mask,
-                                        DispatchMode *dispatch_mode,
-                                        std::vector<int> *in_attrs,
-                                        std::vector<int> *out_attrs) {
-  const BatchNormWithReLUParam &param = nnvm::get<BatchNormWithReLUParam>(attrs.parsed);
+                                                const int dev_mask,
+                                                DispatchMode *dispatch_mode,
+                                                std::vector<int> *in_attrs,
+                                                std::vector<int> *out_attrs) {
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
 
   bool dispatched = false;
 #if MXNET_USE_MKLDNN == 1
@@ -187,7 +188,7 @@ static inline bool BatchNormWithReLUStorageType(const nnvm::NodeAttrs &attrs,
 }
 
 std::vector<nnvm::NodeEntry> BatchNormWithReLUGrad(const nnvm::ObjectPtr& n,
-                                           const std::vector<nnvm::NodeEntry>& ograds) {
+                                                   const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> out_data;
   out_data.reserve(n->num_outputs());
   for (size_t i = 0; i < n->num_outputs(); ++i)
@@ -233,7 +234,7 @@ An extented operator of Batch normalization which can fuse ReLU activation。
 )code" ADD_FILELINE)
 .set_num_inputs(5)
 .set_num_outputs(4)
-.set_attr_parser(ParamParser<BatchNormWithReLUParam>)
+.set_attr_parser(ParamParser<BatchNormParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
     [](const NodeAttrs& attrs) {
   return std::vector<std::string>{"data", "gamma", "beta", "moving_mean", "moving_var"};
@@ -244,7 +245,7 @@ An extented operator of Batch normalization which can fuse ReLU activation。
 })
 .set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
     [](const NodeAttrs& attrs) {
-  const BatchNormWithReLUParam& param = nnvm::get<BatchNormWithReLUParam>(attrs.parsed);
+  const BatchNormParam& param = nnvm::get<BatchNormParam>(attrs.parsed);
   return param.output_mean_var ? 3 : 1;
 })
 .set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
@@ -268,7 +269,7 @@ An extented operator of Batch normalization which can fuse ReLU activation。
 .add_argument("beta", "NDArray-or-Symbol", "beta array")
 .add_argument("moving_mean", "NDArray-or-Symbol", "running mean of input")
 .add_argument("moving_var", "NDArray-or-Symbol", "running variance of input")
-.add_arguments(BatchNormWithReLUParam::__FIELDS__())
+.add_arguments(BatchNormParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>(
   "FSetInputVarAttrOnCompose",
   [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
@@ -292,7 +293,7 @@ NNVM_REGISTER_OP(_backward_contrib_BatchNormWithReLU)
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", BatchNormWithReLUGradComputeExCPU)
 #endif
-.set_attr_parser(ParamParser<BatchNormWithReLUParam>);
+.set_attr_parser(ParamParser<BatchNormParam>);
 
 }  // namespace op
 }  // namespace mxnet

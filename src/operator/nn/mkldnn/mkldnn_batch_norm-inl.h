@@ -31,7 +31,6 @@
 #include <utility>
 #include <mkldnn.hpp>
 #include "../batch_norm-inl.h"
-#include "../../contrib/batch_norm_relu-inh.h"
 #include "./mkldnn_ops-inl.h"
 #include "./mkldnn_base-inl.h"
 
@@ -94,6 +93,8 @@ inline static t_bn_b_pdesc _GetBwd(const mkldnn::memory &data_mem,
   return t_bn_b_pdesc(bnBwd_desc, engine, _GetFwd(data_mem, true, eps, flags));
 }
 
+typedef ParamOpSign<BatchNormParam> MKLDNNBNSignature;
+
 class MKLDNNBNForward {
   std::shared_ptr<const mkldnn::memory> weight_m;
   std::shared_ptr<mkldnn::batch_normalization_forward> fwd;
@@ -120,17 +121,16 @@ class MKLDNNBNForward {
   }
 };
 
-template<typename DType, typename ParamType>
-static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ctx,
-                                     const mkldnn::memory *data_mem,
+template<typename DType>
+static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
+                                     const OpContext &ctx, const mkldnn::memory *data_mem,
                                      mkldnn::normalization_flags flags) {
-  typedef ParamOpSign<ParamType> MKLDNNSignature;
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSignature, MKLDNNBNForward, OpHash> fwds;
+  static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSignature, MKLDNNBNForward, OpHash> fwds;
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNBNSignature, MKLDNNBNForward, OpHash> fwds;
 #endif
-  MKLDNNSignature key(param);
+  MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(*data_mem);
 
@@ -144,19 +144,18 @@ static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ct
   return it->second;
 }
 
-template<typename DType, typename ParamType>
-static MKLDNNBNForward &GetBNForward(const ParamType &param, const OpContext &ctx,
-                                     const NDArray &in_data,
+template<typename DType>
+static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
+                                     const OpContext &ctx, const NDArray &in_data,
                                      mkldnn::normalization_flags flags) {
-  return GetBNForward<DType, ParamType>(param, ctx, in_data.GetMKLDNNData(), flags);
+  return GetBNForward<DType>(param, ctx, in_data.GetMKLDNNData(), flags);
 }
 
-template <typename DType, typename ParamType>
-void MKLDNNBatchNormForward(const ParamType &param,
-                            const nnvm::NodeAttrs &attrs,
-                            const OpContext &ctx,
+template <typename DType>
+void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                             const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                             const std::vector<NDArray> &outputs, bool fuse_relu) {
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   const std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
   const std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
@@ -165,7 +164,7 @@ void MKLDNNBatchNormForward(const ParamType &param,
                                                 ctx.is_train && !param.use_global_stats,
                                                 fuse_relu);
   const NDArray &data = in_data[batchnorm::kData];
-  auto &fwd = GetBNForward<DType, ParamType>(param, ctx, data, flags);
+  auto &fwd = GetBNForward<DType>(param, ctx, data, flags);
   const NDArray &out = outputs[batchnorm::kOut];
 
   // for output memory
@@ -272,20 +271,17 @@ class MKLDNNBNBackward {
   const mkldnn::batch_normalization_backward &GetBwd() const { return *bwd; }
 };
 
-template <typename DType, typename ParamType>
-static MKLDNNBNBackward &GetBNBackward(const ParamType &param, const OpContext &ctx,
-                                       const NDArray &in_data,
-                                       const mkldnn::memory &in_mem,
-                                       const NDArray &diff_data,
-                                       const mkldnn::memory &diff_mem,
-                                       mkldnn::normalization_flags flags) {
-  typedef ParamOpSign<ParamType> MKLDNNSignature;
+template <typename DType>
+static MKLDNNBNBackward &GetBNBackward(
+    const BatchNormParam &param, const OpContext &ctx, const NDArray &in_data,
+    const mkldnn::memory &in_mem, const NDArray &diff_data,
+    const mkldnn::memory &diff_mem, mkldnn::normalization_flags flags) {
 #if DMLC_CXX11_THREAD_LOCAL
-  static thread_local std::unordered_map<MKLDNNSignature, MKLDNNBNBackward, OpHash> bwds;
+  static thread_local std::unordered_map<MKLDNNBNSignature, MKLDNNBNBackward, OpHash> bwds;
 #else
-  static MX_THREAD_LOCAL std::unordered_map<MKLDNNSignature, MKLDNNBNBackward, OpHash> bwds;
+  static MX_THREAD_LOCAL std::unordered_map<MKLDNNBNSignature, MKLDNNBNBackward, OpHash> bwds;
 #endif
-  MKLDNNSignature key(param);
+  MKLDNNBNSignature key(param);
   key.AddSign(in_data);
   key.AddSign(diff_data);
 
@@ -298,10 +294,8 @@ static MKLDNNBNBackward &GetBNBackward(const ParamType &param, const OpContext &
   return it->second;
 }
 
-template <typename DType, typename ParamType>
-void MKLDNNBatchNormBackward(const ParamType &param,
-                             const nnvm::NodeAttrs &attrs,
-                             const OpContext &ctx,
+template <typename DType>
+void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                              const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                              const std::vector<NDArray> &outputs, bool fuse_relu) {
   if (fuse_relu) {
@@ -309,6 +303,8 @@ void MKLDNNBatchNormBackward(const ParamType &param,
   } else {
     CHECK_EQ(inputs.size(), 8U);
   }
+  CHECK_EQ(inputs.size(), 8U);
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<NDArray> out_grad(1);
   std::vector<NDArray> out_data(3);
   std::vector<NDArray> in_data(3);
@@ -349,7 +345,7 @@ void MKLDNNBatchNormBackward(const ParamType &param,
     data_mem = data.GetMKLDNNDataReorder(diff_mem->get_desc());
   else if (diff.IsDefaultData())
     diff_mem = diff.GetMKLDNNDataReorder(data_mem->get_desc());
-  auto &bwd = GetBNBackward<DType, ParamType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
+  auto &bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
   auto gradi_mem = const_cast<NDArray &>(gradIn).CreateMKLDNNData(data_mem->get_desc());
 
   if (static_cast<int>(flags) & static_cast<int>(mkldnn::normalization_flags::use_scale_shift)) {
