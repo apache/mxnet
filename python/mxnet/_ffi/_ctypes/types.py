@@ -16,8 +16,6 @@
 # under the License.
 """The C Types used in API."""
 # pylint: disable=invalid-name
-from __future__ import absolute_import as _abs
-
 import ctypes
 from ...base import NDArrayHandle
 from ... import _global_var

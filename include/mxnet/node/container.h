@@ -40,10 +40,6 @@ class ArrayNode : public Object {
   /*! \brief the data content */
   std::vector<ObjectRef> data;
 
-  // reflection is not supported for now
-  // void VisitAttrs(AttrVisitor* visitor) {
-  // }
-
   static constexpr const char* _type_key = "Array";
   MXNET_DECLARE_FINAL_OBJECT_INFO(ArrayNode, Object);
 };

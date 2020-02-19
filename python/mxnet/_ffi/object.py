@@ -16,8 +16,6 @@
 # under the License.
 # pylint: disable=invalid-name
 """Runtime Object API"""
-from __future__ import absolute_import
-
 from ._ctypes.function import _set_class_object
 from ._ctypes.object import ObjectBase as _ObjectBase
 

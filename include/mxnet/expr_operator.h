@@ -35,28 +35,8 @@ namespace mxnet {
 template<typename ValueType>
 inline PrimExpr MakeConstScalar(MXNetDataType t, ValueType value) {
   if (t.is_int()) return IntImm(t, static_cast<int64_t>(value));
-  // if (t.is_uint()) {
-    // Use IntImm if it is a small integer
-    // uint64_t uval = static_cast<uint64_t>(value);
-    // if (uval <= static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
-    //   return IntImm(t, static_cast<int64_t>(value));
-    // } else {
-    //   uint64_t mask = (static_cast<uint64_t>(1) << 32U) - 1U;
-    //   uint64_t low = uval & mask;
-    //   uint64_t high = uval >> 32U;
-    //   return LargeUIntImm(t, static_cast<int64_t>(low), static_cast<int64_t>(high));
-    // }
-  // }
-  // uint type is not supported for MXNet for now
   if (t.is_float()) return FloatImm(t, static_cast<double>(value));
-  // For now, we store const scalar values of custom datatypes within doubles; later, during the
-  // datatypes lowering pass, we will lower the value to its true representation in the format
-  // specified by the datatype.
-  // TODO(gus) when do we need to start worrying about doubles not being precise enough?
-  // if (static_cast<uint8_t>(t.code()) >= static_cast<uint8_t>(kTVMCustomBegin)) {
-  //   return FloatImm(t, static_cast<double>(value));
-  // }
-  // customized type is not supported for MXNet for now
+  // customized type and uint is not supported for MXNet for now
   LOG(FATAL) << "cannot make const for type " << t;
   return PrimExpr();
 }

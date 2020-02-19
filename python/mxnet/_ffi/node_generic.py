@@ -16,7 +16,6 @@
 # under the License.
 """Common implementation of Node generic related logic"""
 # pylint: disable=unused-import
-from __future__ import absolute_import
 from numbers import Number, Integral
 from .. import _api_internal
 

@@ -139,12 +139,6 @@ class IntImmNode : public PrimExprNode {
   /*! \brief the Internal value. */
   int64_t value;
 
-  // reflection is not supported for now
-  // void VisitAttrs(AttrVisitor* v) {
-  //   v->Visit("dtype", &dtype);
-  //   v->Visit("value", &value);
-  // }
-
   static constexpr const char* _type_key = "IntImm";
   MXNET_DECLARE_FINAL_OBJECT_INFO(IntImmNode, PrimExprNode);
 };
@@ -189,12 +183,6 @@ class FloatImmNode : public PrimExprNode {
  public:
   /*! \brief The constant value content. */
   double value;
-
-  // reflection is not supported for now
-  // void VisitAttrs(AttrVisitor* v) {
-  //   v->Visit("dtype", &dtype);
-  //   v->Visit("value", &value);
-  // }
 
   static constexpr const char* _type_key = "FloatImm";
   MXNET_DECLARE_FINAL_OBJECT_INFO(FloatImmNode, PrimExprNode);

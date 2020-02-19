@@ -16,7 +16,6 @@
 # under the License.
 # pylint: disable=invalid-name
 """Runtime Object api"""
-from __future__ import absolute_import
 import ctypes
 from ...base import _LIB, check_call
 from . import function
@@ -30,9 +29,6 @@ def _return_object(x):
     if not isinstance(handle, ObjectHandle):
         handle = ObjectHandle(handle)
     # Does not support specific cpp node class for now
-    # tindex = ctypes.c_uint()
-    # check_call(_LIB.TVMObjectGetTypeIndex(handle, ctypes.byref(tindex)))
-    # cls = OBJECT_TYPE.get(tindex.value, _CLASS_NODE)
     cls = function._CLASS_OBJECT
     # Avoid calling __init__ of cls, instead directly call __new__
     # This allows child class to implement their own __init__
@@ -52,26 +48,3 @@ class ObjectBase(object):
             check_call(_LIB.MXNetObjectFree(self.handle))
 
     # Does not support creation of cpp node class via python class
-    # def __init_handle_by_constructor__(self, fconstructor, *args):
-    #     """Initialize the handle by calling constructor function.
-
-    #     Parameters
-    #     ----------
-    #     fconstructor : Function
-    #         Constructor function.
-
-    #     args: list of objects
-    #         The arguments to the constructor
-
-    #     Note
-    #     ----
-    #     We have a special calling convention to call constructor functions.
-    #     So the return handle is directly set into the Node object
-    #     instead of creating a new Node.
-    #     """
-    #     # assign handle first to avoid error raising
-    #     self.handle = None
-    #     handle = __init_by_constructor__(fconstructor, args)
-    #     if not isinstance(handle, ObjectHandle):
-    #         handle = ObjectHandle(handle)
-    #     self.handle = handle

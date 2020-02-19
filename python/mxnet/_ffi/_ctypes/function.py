@@ -17,8 +17,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-branches, global-statement, unused-import
 """Function configuration API."""
-from __future__ import absolute_import
-
 import ctypes
 from numbers import Number, Integral
 

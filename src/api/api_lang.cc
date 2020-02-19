@@ -33,19 +33,6 @@
 
 namespace mxnet {
 
-// MXNET_REGISTER_GLOBAL("_const")
-// .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-//     if (args[0].type_code() == kDLInt) {
-//       *ret = make_const(args[1].operator MXNetDataType(),
-//                         args[0].operator int64_t());
-//     } else if (args[0].type_code() == kDLFloat) {
-//       *ret = make_const(args[1].operator MXNetDataType(),
-//                         args[0].operator double());
-//     } else {
-//       LOG(FATAL) << "only accept int or float";
-//     }
-// });
-
 MXNET_REGISTER_GLOBAL("_Integer")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
     using namespace runtime;
@@ -55,21 +42,6 @@ MXNET_REGISTER_GLOBAL("_Integer")
       LOG(FATAL) << "only accept int";
     }
 });
-
-// MXNET_REGISTER_GLOBAL("_Array")
-// .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-//     std::vector<ObjectRef> data;
-//     for (int i = 0; i < args.size(); ++i) {
-//       if (args[i].type_code() != kNull) {
-//         data.push_back(args[i].operator ObjectRef());
-//       } else {
-//         data.emplace_back(nullptr);
-//       }
-//     }
-//     auto node = make_object<ArrayNode>();
-//     node->data = std::move(data);
-//     *ret = Array<ObjectRef>(node);
-//   });
 
 MXNET_REGISTER_GLOBAL("_ADT")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
@@ -83,18 +55,6 @@ MXNET_REGISTER_GLOBAL("_ADT")
       }
     }
     *ret = ADT(0, data.begin(), data.end());
-});
-
-MXNET_REGISTER_GLOBAL("_Test")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  TShape shape{args[0].operator runtime::ObjectRef()};
-  std::cout << shape << std::endl;
-  // Array<IntImm> arr = Downcast<Array<IntImm>, ObjectRef>(args[0].operator ObjectRef());
-  // std::cout << arr.size() << std::endl;
-  // for (size_t i = 0; i < arr.size(); ++i) {
-  //   std::cout << arr[i]->value << " ";
-  // }
-  // std::cout << std::endl;
 });
 
 }  // namespace mxnet

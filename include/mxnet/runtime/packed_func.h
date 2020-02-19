@@ -54,28 +54,6 @@ namespace mxnet {
 namespace runtime {
 
 /*!
- * \brief Runtime utility for getting custom type name from code
- * \param type_code Custom type code
- * \return Custom type name
- */
-// MXNET_DLL std::string GetCustomTypeName(uint8_t type_code);
-
-/*!
- * \brief Runtime utility for checking whether custom type is registered
- * \param type_code Custom type code
- * \return Bool representing whether type is registered
- */
-// MXNET_DLL bool GetCustomTypeRegistered(uint8_t type_code);
-
-/*!
- * \brief Runtime utility for parsing string of the form "custom[<typename>]"
- * \param s String to parse
- * \param scan pointer to parsing pointer, which is scanning across s
- * \return type code of custom type parsed
- */
-// MXNET_DLL uint8_t ParseCustomDatatype(const std::string& s, const char** scan);
-
-/*!
  * \brief convert a string to TVM type.
  * \param s The string to be converted.
  * \return The corresponding tvm type.
@@ -403,34 +381,6 @@ struct extension_type_info {
 };
 
 /*!
- * \brief Runtime function table about extension type.
- */
-// class ExtTypeVTable {
-//  public:
-//   /*! \brief function to be called to delete a handle */
-//   void (*destroy)(void* handle);
-//   /*! \brief function to be called when clone a handle */
-//   void* (*clone)(void* handle);
-//   /*!
-//    * \brief Register type
-//    * \tparam T The type to be register.
-//    * \return The registered vtable.
-//    */
-//   template <typename T>
-//   static inline ExtTypeVTable* Register_();
-//   /*!
-//    * \brief Get a vtable based on type code.
-//    * \param type_code The type code
-//    * \return The registered vtable.
-//    */
-//   MXNET_DLL static ExtTypeVTable* Get(int type_code);
-
-//  private:
-//   // Internal registration function.
-//   MXNET_DLL static ExtTypeVTable* RegisterInternal(int type_code, const ExtTypeVTable& vt);
-// };
-
-/*!
  * \brief Internal base class to
  *  handle conversion to POD values.
  */
@@ -539,9 +489,6 @@ class MXNetArgValue : public MXNetPODValue_ {
 
   // conversion operator.
   operator std::string() const {
-    // if (type_code_ == kTVMType) {
-    //   return TVMType2String(operator TVMType());
-    // } else if (type_code_ == kBytes) {
     if (type_code_ == kBytes) {
       MXNetByteArray* arr = static_cast<MXNetByteArray*>(value_.v_handle);
       return std::string(arr->data, arr->size);

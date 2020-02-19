@@ -20,8 +20,6 @@
 Adapted from incubator-tvm/python/tvm/_ffi/function.py
 Function namespace.
 """
-from __future__ import absolute_import
-
 import os
 import sys
 import ctypes
@@ -33,10 +31,8 @@ try:
         from ._ctypes.function import FunctionBase as _FunctionBase
         # To set RETURN_SWITCH for OBJECT_HANDLE
         from . import object
-    elif sys.version_info >= (3, 0):
-        from ._cy3.core import FunctionBase as _FunctionBase
     else:
-        from ._cy2.core import FunctionBase as _FunctionBase
+        from ._cy3.core import FunctionBase as _FunctionBase
 except ImportError:
     if int(os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")

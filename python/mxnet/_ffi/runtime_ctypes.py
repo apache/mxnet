@@ -19,8 +19,6 @@ Adapted from incubator-tvm/python/tvm/_ffi/runtime_ctypes.py
 Common runtime ctypes.
 """
 # pylint: disable=invalid-name
-from __future__ import absolute_import
-
 import ctypes
 
 

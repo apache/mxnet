@@ -41,16 +41,10 @@ struct Registry::Manager {
   // and the resource can become invalid because of indeterminstic order of destruction.
   // The resources will only be recycled during program exit.
   std::unordered_map<std::string, Registry*> fmap;
-  // vtable for extension type
-  // std::array<ExtTypeVTable, kExtEnd> ext_vtable;
-  // mutex
   std::mutex mutex;
 
-  Manager() {
-    // for (auto& x : ext_vtable) {
-    //   x.destroy = nullptr;
-    // }
-  }
+  // vtable for extension type is not suported for now
+  Manager() {}
 
   static Manager* Global() {
     // We deliberately leak the Manager instance, to avoid leak sanitizers
