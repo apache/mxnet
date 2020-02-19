@@ -1271,12 +1271,12 @@ class ndarray(NDArray):
             raise ValueError('casting must be equal to \'unsafe\'')
         if not subok:
             raise ValueError('subok must be equal to True')
+        if dtype is None:
+            dtype = _np.float32
         if not copy and _np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, dtype=dtype, ctx=self.ctx)
-        self.copyto(res)
-        return res
+        return _npi.cast(self, dtype=dtype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.

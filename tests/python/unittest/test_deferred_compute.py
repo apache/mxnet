@@ -260,6 +260,14 @@ def test_dc_context_switch():
     _assert_dc(_dc_simple_setup, f)
 
 
+def test_dc_astype():
+    def f(a, *, nd):
+        a = a.astype(np.int32)
+        b = nd.zeros_like(a)
+        return [a + b]
+
+    _assert_dc(_dc_simple_setup, f)
+
 ###############################################################################
 # Gluon
 ###############################################################################

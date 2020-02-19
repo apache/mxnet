@@ -2614,12 +2614,12 @@ fixed-size items.
         <type 'numpy.int32'>
         """
 
+        if dtype is None:
+            dtype = mx_real_t
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, ctx=self.ctx, dtype=dtype)
-        self.copyto(res)
-        return res
+        return op.cast(self, dtype=dtype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.

@@ -2202,8 +2202,9 @@ bool CopyToType(const nnvm::NodeAttrs &attrs, std::vector<int> *in_attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   int in_type = in_attrs->at(0);
-  int out_type = in_type;
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, out_type);
+  if (out_attrs->at(0) == -1) {
+    TYPE_ASSIGN_CHECK(*out_attrs, 0, in_type);
+  }
   return out_attrs->at(0) != -1;
 }
 
