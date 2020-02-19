@@ -1276,7 +1276,7 @@ extern "C" {
     // call user's supportedOps function
     MXReturnValue retval = supportedOps(subgraph_json, _ids, opts);
     if (!retval) return retval;
-    
+
     // copy bools in ids to ints
     for (int i = 0; i < num_ids; i++)
       ids[i] = _ids[i];
