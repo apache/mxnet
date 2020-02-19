@@ -39,7 +39,7 @@
 #include <utility>
 #include <stdexcept>
 
-#define MX_LIBRARY_VERSION 3
+#define MX_LIBRARY_VERSION 4
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
