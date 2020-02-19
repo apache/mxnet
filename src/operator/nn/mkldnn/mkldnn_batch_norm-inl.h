@@ -133,6 +133,7 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
   MKLDNNBNSignature key(param);
   key.AddSign(ctx.is_train);
   key.AddSign(*data_mem);
+  key.AddSign(static_cast<int>(flags));
 
   auto it = fwds.find(key);
   if (it == fwds.end()) {
@@ -283,6 +284,7 @@ static MKLDNNBNBackward &GetBNBackward(
   MKLDNNBNSignature key(param);
   key.AddSign(in_data);
   key.AddSign(diff_data);
+  key.AddSign(static_cast<int>(flags));
 
   auto it = bwds.find(key);
   if (it == bwds.end()) {
