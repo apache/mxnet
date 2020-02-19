@@ -2896,6 +2896,7 @@ def _prepare_workloads():
     _add_workload_nanquantile()
     _add_workload_ndim()
     _add_workload_npv()
+    _add_workload_pad()
     _add_workload_partition()
     _add_workload_piecewise()
     _add_workload_packbits()
@@ -2932,7 +2933,6 @@ def _prepare_workloads():
     _add_workload_unpackbits()
     _add_workload_unwrap()
     _add_workload_vander()
-    _add_workload_pad()
 
 
 _prepare_workloads()
