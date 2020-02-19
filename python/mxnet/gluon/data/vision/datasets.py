@@ -32,7 +32,7 @@ from .. import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
 from .... import nd, image, recordio, base
 from .... import numpy as _mx_np  # pylint: disable=reimported
-from ....util import is_np_array
+from ....util import is_np_array, default_array
 
 
 class MNIST(dataset._DownloadedDataset):
@@ -302,6 +302,7 @@ class ImageFolderDataset(dataset.Dataset):
         self._transform = transform
         self._exts = ['.jpg', '.jpeg', '.png']
         self._list_images(self._root)
+        self._handle = None
 
     def _list_images(self, root):
         self.synsets = []
@@ -332,3 +333,14 @@ class ImageFolderDataset(dataset.Dataset):
 
     def __len__(self):
         return len(self.items)
+
+    def __mx_handle__(self):
+        if self._handle is None:
+            from .._internal import ImageSequenceDataset, NDArrayDataset, GroupDataset
+            path_sep = '|'
+            im_names = path_sep.join([x[0] for x in self.items])
+            label = default_array([x[1] for x in self.items])
+            self._handle = GroupDataset(datasets=(
+                ImageSequenceDataset(img_list=im_names, path_sep=path_sep, flag=self._flag),
+                NDArrayDataset(arr=label)))
+        return self._handle

@@ -74,6 +74,20 @@ def test_recordimage_dataset():
         assert x.shape[0] == 1 and x.shape[3] == 3
         assert y.asscalar() == i
 
+@with_seed()
+def test_recordimage_dataset_handle():
+    recfile = prepare_record()
+    class TmpTransform(mx.gluon.HybridBlock):
+        def hybrid_forward(self, F, x):
+            return x
+    fn = TmpTransform()
+    dataset = gluon.data.vision.ImageRecordDataset(recfile).transform_first(fn).__mx_handle__()
+    loader = gluon.data.DataLoader(dataset, 1)
+
+    for i, (x, y) in enumerate(loader):
+        assert x.shape[0] == 1 and x.shape[3] == 3
+        assert y.asscalar() == i
+
 def _dataset_transform_fn(x, y):
     """Named transform function since lambda function cannot be pickled."""
     return x, y
@@ -139,6 +153,15 @@ def test_image_folder_dataset():
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
+
+@with_seed()
+def test_image_folder_dataset_handle():
+    prepare_record()
+    dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
+    hd = dataset.__mx_handle__()
+    assert len(hd) == 16
+    assert (hd[1][0] == dataset[1][0]).asnumpy().all()
+    assert hd[5][1] == dataset[5][1]
 
 @with_seed()
 def test_list_dataset():
