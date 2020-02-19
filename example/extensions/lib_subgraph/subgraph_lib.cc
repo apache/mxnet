@@ -177,8 +177,7 @@ REGISTER_OP(_custom_subgraph_op)
 const std::vector<std::string> op_names({"exp","log"});
 
 MXReturnValue mySupportedOps(std::string json,
-                             const int num_ids,
-                             int *ids,
+                             std::vector<bool> ids,
                              std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
@@ -210,7 +209,7 @@ MXReturnValue mySupportedOps(std::string json,
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
         // found op in whitelist, set value to 1 to include op in subgraph
-        ids[i]=1;
+        ids[i]=true;
       }
     }
   }

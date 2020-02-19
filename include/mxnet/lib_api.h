@@ -713,7 +713,7 @@ class CustomOp {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
+typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<bool>,
                                         std::unordered_map<std::string, std::string>&);
 typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
                                           std::unordered_map<std::string, std::string>&,
@@ -1271,7 +1271,17 @@ extern "C" {
     for (int i = 0; i < num_opts; i++) {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }
-    return supportedOps(subgraph_json, num_ids, ids, opts);
+    // create array of bools for operator support
+    std::vector<bool> _ids(num_ids, false);
+    // call user's supportedOps function
+    MXReturnValue retval = supportedOps(subgraph_json, _ids, opts);
+    if (!retval) return retval;
+    
+    // copy bools in ids to ints
+    for (int i = 0; i < num_ids; i++)
+      ids[i] = _ids[i];
+
+    return retval;
   }
 
     /*! \brief returns status of calling parse attributes function for operator from library */
