@@ -924,8 +924,9 @@ typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph, const c
                                         char*** attr_keys, char*** attr_vals, int *num_attrs,
                                         const char* const* arg_names, int num_args,
                                         void* const* arg_data, const int64_t* const* arg_shapes,
-                                        const int* arg_dims, const int* arg_types, const size_t* arg_IDs,
-                                        const char* const* arg_dev_type, const int* arg_dev_id);
+                                        const int* arg_dims, const int* arg_types,
+                                        const size_t* arg_IDs, const char* const* arg_dev_type,
+                                        const int* arg_dev_id);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
@@ -1290,8 +1291,9 @@ extern "C" {
                           const char* const* opt_vals, int num_opts,
                           char*** attr_keys, char*** attr_vals, int *num_attrs,
                           const char* const* arg_names, int num_args,
-                          void* const* arg_data, const int64_t* const* arg_shapes, const int* arg_dims,
-                          const int* arg_types, const size_t* arg_IDs, const char* const* arg_dev_type,
+                          void* const* arg_data, const int64_t* const* arg_shapes,
+                          const int* arg_dims, const int* arg_types,
+                          const size_t* arg_IDs, const char* const* arg_dev_type,
                           const int* arg_dev_id) {
     std::string subgraph_json(json);
     bool accept_bool = false;
@@ -1308,7 +1310,6 @@ extern "C" {
       for (int j = 0; j < arg_dims[i]; j++)
         shapes.push_back(arg_shapes[i][j]);
 
-      // void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype, size_t vID, MXContext mx_ctx
       MXTensor tensor(arg_data[i], shapes, (MXDType)arg_types[i],
             arg_IDs[i], {arg_dev_type[i], arg_dev_id[i]});
       args[arg_names[i]] = tensor;
@@ -1318,7 +1319,8 @@ extern "C" {
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
-    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs, args);
+    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool,
+                                          opts, attrs, args);
     *accept = accept_bool;
 
     if (attrs.size() > 0) {

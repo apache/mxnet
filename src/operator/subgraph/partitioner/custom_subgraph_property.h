@@ -112,7 +112,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     arg_verIDs.clear();
     arg_dev_type.clear();
     arg_dev_id.clear();
-    for (size_t i=0; i<in_arg_names.size(); i++) {
+    for (size_t i=0; i < in_arg_names.size(); i++) {
       arg_names.push_back(in_arg_names[i].c_str());
       const auto &in_arg = *(in_args_ptr[i]);
       arg_data.push_back(in_arg.data().dptr_);
@@ -124,7 +124,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       arg_dev_type.push_back(ctx_str);
       arg_dev_id.push_back(in_arg.ctx().real_dev_id());
     }
-    
+
     // remove all graph attrs, some cannot be saved to json
     nnvm::Graph graph = std::move(g);
     graph.attrs.clear();
@@ -247,7 +247,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
     return std::make_shared<CustomContainOpSelector>(supported_nodes);
   }
-  
+
   std::string subgraph_prop;
   partCallSupportedOps_t call_supported_ops_;
   supportedOps_t supported_ops_;
@@ -268,7 +268,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::vector<size_t> arg_verIDs;
   std::vector<const char*> arg_dev_type;
   std::vector<int> arg_dev_id;
-  };
+};
 }  // namespace op
 }  // namespace mxnet
 
