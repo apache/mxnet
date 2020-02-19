@@ -22,13 +22,13 @@ Custom Partitioner Example and Tutorial
 
 Adding custom model partitioners in MXNet used to require deep understanding of the MXNet backend, including operator registration and other internal classes, followed by recompiling MXNet from source. This feature allows adding custom partitioners by dynamically loading external libraries at runtime.
 
-This custom partitioner feature, enables users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
+This custom partitioner feature enables users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
 
 ## Getting Started
 
 ### Have MXNet Ready
 
-the custom partitioner feature was merged recently (#15969) and is not available in versions of MXNet prior to v1.7.0. To use the feature now, please install MXNet either by compiling from source code or downloading a nightly build. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom partitioner doesn’t interact with the execution of other native MXNet features. Note that if you want to write your custom partitioners running on GPU, you still need an MXNet CUDA build. 
+The custom partitioner feature was merged recently (#15969) and is not available in versions of MXNet prior to v1.7.0. To use the feature now, please install MXNet either by installing the nightly pip wheel or compiling from source. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom partitioner doesn’t interact with the execution of other native MXNet features. Note that if you want to write your custom partitioners running on GPU, you still need an MXNet CUDA build. 
 
 ### Run An Example
 
@@ -113,8 +113,7 @@ There are several essential building blocks for making a custom partitioner:
 
             MXReturnValue supportedOps(
                 std::string json,
-                const int num_ids,
-                int *ids,
+                std::vector<bool>& ids,
                 std::unordered_map<std::string, std::string>& options)
 
 * [REGISTER_PARTITIONER(my_part_name)](./subgraph_lib.cc#L238):
@@ -144,9 +143,9 @@ Also there are some optional functions you can specify:
 
 Let’s take a closer look at those registry functions:
 
-* **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `1` for the node ID in the `ids` array. Users can pass custom options to the partitioner and they are passed to the function in the `options` map. 
+* **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of booleans, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `true` for the node ID in the `ids` array. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
 
-* **acceptSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. It can be analyzed and accepted/rejected by setting `true`/`false` for the `accept` input. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The `attrs` map provides an API to add user-specified attributes to the subgraph. These attributes will be available at runtime when the subgraph is executed and provides a way to pass info from partitioning-time to runtime. 
+* **acceptSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. The 4th argument is the map of options specified by the user. The last argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API.
 
 ### Writing A Custom Subgraph Operator
 
