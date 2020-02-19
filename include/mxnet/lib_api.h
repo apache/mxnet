@@ -256,15 +256,15 @@ struct MXSparse {
   // For row sparse, indptr is empty. 
   std::vector<int64_t> indptr;
 
-  void set(void *Data, const int64_t* Dims, int NDims, void *Indices,
-          int64_t IndicesLen, void *IndPtr = nullptr, int64_t IndPtrLen = 0) {
-    data = Data;
+  void set(void *data_ptr, const int64_t* dims, int ndims, void *idx,
+          int64_t num_idx, void *idx_ptr = nullptr, int64_t num_idx_ptr = 0) {
+    data = data_ptr;
     data_len = 1;
-    for (int i = 0; i < NDims; i++) {
-      data_len *= Dims[i];
+    for (int i = 0; i < ndims; i++) {
+      data_len *= dims[i];
     }
-    indices.assign((int64_t*)Indices, (int64_t*)Indices + IndicesLen);
-    if(IndPtr) indptr.assign((int64_t*)IndPtr, (int64_t*)IndPtr + IndPtrLen);
+    indices.assign((int64_t*)idx, (int64_t*)idx + num_idx);
+    if(idx_ptr) indptr.assign((int64_t*)idx_ptr, (int64_t*)idx_ptr + num_idx_ptr);
   }
 };
 
@@ -1172,14 +1172,14 @@ extern "C" {
       void *data = nullptr;
       MXSparse sparse;
       // Dense representation.
-      if(in_indices_shapes[i] == 0) {
+      if(!in_indices_shapes) {
         type = kDefaultStorage;
 	data = indata[i]; 
       }
       // Sparse representation.
       else {
         // To do: remove if else.
-	if(in_indptr_shapes[i] == 0) {
+	if(!in_indptr_shapes) {
           type = kRowSparseStorage;
 	  sparse.set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
         }
@@ -1190,7 +1190,6 @@ extern "C" {
         }
 	data = (void*)(&sparse);
       }
-        
       inputs[i].setTensor(data, (MXDType)intypes[i], inshapes[i], indims[i],
                           inIDs[i], {indev_type[i], indev_id[i]}, type);
     }
@@ -1202,14 +1201,14 @@ extern "C" {
       void *data = nullptr;
       MXSparse sparse;
       // Dense representation.
-      if(out_indices_shapes[i] == 0) {
+      if(!out_indices_shapes) {
         type = kDefaultStorage;
         data = outdata[i];
       }
       // Sparse representation.
       else {
         // To do: remove if else.
-        if(out_indptr_shapes[i] == 0) {
+        if(!out_indptr_shapes) {
           type = kRowSparseStorage;
           sparse.set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
         }

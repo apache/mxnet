@@ -121,7 +121,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
 
-  // Aux data for sparse representation.
+  // Extra data for sparse representation.
   std::vector<void*> in_indices, out_indices;
   std::vector<void*> in_indptr, out_indptr;
   std::vector<int64_t> in_indices_shapes, out_indices_shapes;
@@ -246,7 +246,6 @@ void CustomFComputeDispatcher(const std::string op_name,
     CustomStatefulOp* state_op_inst = op.get_instance();
     CHECK(state_op_inst != nullptr)
       << "Error custom stateful operator is null for operator '" << op_name << "'";
-
     // call fcompute function
     CHECK(callFStatefulComp(stateful_forward_flag, state_op_inst,
                             in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
