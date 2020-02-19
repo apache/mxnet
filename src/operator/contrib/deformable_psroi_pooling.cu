@@ -163,7 +163,7 @@ namespace cuda {
                                          const index_t sample_per_part, const float trans_std) {
     const DType *bottom_data = data.dptr_;
     const DType *bottom_rois = bbox.dptr_;
-    const DType *bottom_trans = no_trans ? NULL : trans.dptr_;
+    const DType *bottom_trans = no_trans ? nullptr : trans.dptr_;
     DType *top_data = out.dptr_;
     DType *top_count_data = top_count.dptr_;
     const index_t count = out.shape_.Size();
@@ -331,9 +331,9 @@ namespace cuda {
     const DType *top_diff = out_grad.dptr_;
     const DType *bottom_data = data.dptr_;
     const DType *bottom_rois = bbox.dptr_;
-    const DType *bottom_trans = no_trans ? NULL : trans.dptr_;
+    const DType *bottom_trans = no_trans ? nullptr : trans.dptr_;
     DType *bottom_data_diff = in_grad.dptr_;
-    DType *bottom_trans_diff = no_trans ? NULL : trans_grad.dptr_;
+    DType *bottom_trans_diff = no_trans ? nullptr : trans_grad.dptr_;
     const DType *top_count_data = top_count.dptr_;
     const index_t count = out_grad.shape_.Size();
     const index_t num_rois = bbox.size(0);

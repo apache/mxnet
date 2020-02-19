@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """ Key value store interface of MXNet for parameter synchronization."""
-from __future__ import absolute_import
 
 from array import array
 import ctypes
@@ -142,8 +141,7 @@ class KVStoreBase(object):
 
     OPTIMIZER = 'optimizer'
 
-    @staticmethod
-    def is_capable(capability):
+    def is_capable(self, capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 
@@ -441,6 +439,7 @@ def create(name='local'):
     if not isinstance(name, string_types):
         raise TypeError('name must be a string')
     name = name.lower()
+
     # first lookup the registry
     if name in KVStoreBase.kv_registry:
         return KVStoreBase.kv_registry[name]()

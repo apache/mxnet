@@ -2600,6 +2600,10 @@ def test_convolution_dilated_impulse_response():
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 3D
+    for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
+        for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
 @with_seed()
@@ -4802,11 +4806,14 @@ def test_cast_float32_to_float16():
                     fp32_val, model_fp16_val, np_fp16_val)
 
     check_cast(mx.sym.Cast, input_np, expected_output)
-    check_cast(mx.sym.amp_cast, input_np, expected_output)
+    if default_context().device_type == 'gpu':
+        check_cast(mx.sym.amp_cast, input_np, expected_output)
 
 
 @with_seed()
 def test_amp_multicast():
+    if default_context().device_type == 'cpu':
+        return
     x = mx.sym.Variable('x', dtype=np.float16)
     y = mx.sym.Variable('y', dtype=np.float32)
     z = mx.sym.Variable('z', dtype=np.float16)
@@ -5983,7 +5990,7 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
-
+@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/17467")
 @with_seed()
 def test_custom_op_fork():
     # test custom operator fork
@@ -6955,8 +6962,9 @@ def test_stack():
         check_numeric_gradient(out, inputs)
 
 
+## TODO: test fails intermittently when cudnn on. temporarily disabled cudnn until gets fixed.
+## tracked at https://github.com/apache/incubator-mxnet/issues/14288
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/14288")
 def test_dropout():
     def zero_count(array, ratio):
         zeros = 0
@@ -7083,18 +7091,18 @@ def test_dropout():
     check_dropout_ratio(1.0, shape)
     check_dropout_ratio(0.75, shape)
     check_dropout_ratio(0.25, shape)
-    check_dropout_ratio(0.5, shape, cudnn_off=False)
-    check_dropout_ratio(0.0, shape, cudnn_off=False)
-    check_dropout_ratio(1.0, shape, cudnn_off=False)
-    check_dropout_ratio(0.75, shape, cudnn_off=False)
-    check_dropout_ratio(0.25, shape, cudnn_off=False)
+    # check_dropout_ratio(0.5, shape, cudnn_off=False)
+    # check_dropout_ratio(0.0, shape, cudnn_off=False)
+    # check_dropout_ratio(1.0, shape, cudnn_off=False)
+    # check_dropout_ratio(0.75, shape, cudnn_off=False)
+    # check_dropout_ratio(0.25, shape, cudnn_off=False)
 
     check_passthrough(0.5, shape)
     check_passthrough(0.0, shape)
     check_passthrough(1.0, shape)
-    check_passthrough(0.5, shape, cudnn_off=False)
-    check_passthrough(0.0, shape, cudnn_off=False)
-    check_passthrough(1.0, shape, cudnn_off=False)
+    # check_passthrough(0.5, shape, cudnn_off=False)
+    # check_passthrough(0.0, shape, cudnn_off=False)
+    # check_passthrough(1.0, shape, cudnn_off=False)
 
     nshape = (10, 10, 10, 10)
     with mx.autograd.train_mode():
@@ -7111,20 +7119,19 @@ def test_dropout():
         check_dropout_axes(0.25, nshape, axes = (0, 1, 2))
         check_dropout_axes(0.25, nshape, axes = (0, 2, 3))
         check_dropout_axes(0.25, nshape, axes = (1, 2, 3))
-        check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
-        check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
-
+        # check_dropout_axes(0.25, nshape, axes = (0,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (2,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (3,), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 1), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 2), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1, 2), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (2, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 1, 2), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
+        # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")

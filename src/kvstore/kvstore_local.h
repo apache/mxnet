@@ -129,6 +129,15 @@ class KVStoreLocal : public KVStore {
     PullImpl(keys, values, priority, ignore_sparse);
   }
 
+  void Broadcast(const std::vector<int>& vkeys,
+                 const std::vector<int>& okeys,
+                 const std::vector<NDArray>& values,
+                 const std::vector<NDArray*>& outs,
+                 int priority) override {
+    SetKeyType(kIntKey);
+    BroadcastImpl(vkeys, okeys, values, outs, priority);
+  }
+
   void PushPull(const std::vector<int>& vkeys,
                 const std::vector<int>& okeys,
                 const std::vector<NDArray>& values,
@@ -162,6 +171,28 @@ class KVStoreLocal : public KVStore {
     std::vector<int> keys(str_keys.size());
     LookupKeys(str_keys, &keys);
     PullImpl(keys, values, priority, ignore_sparse);
+  }
+
+  void Broadcast(const std::vector<std::string>& str_vkeys,
+                 const std::vector<std::string>& str_okeys,
+                 const std::vector<NDArray>& values,
+                 const std::vector<NDArray*>& outs,
+                 int priority) override {
+    SetKeyType(kStringKey);
+    std::vector<int> vkeys(str_vkeys.size());
+    std::vector<int> okeys(str_okeys.size());
+    for (size_t i = 0; i < str_vkeys.size(); ++i) {
+      auto &str_key = str_vkeys[i];
+      CHECK(str_key_dict_.find(str_key) == str_key_dict_.end())
+            << "duplicate init of key " << str_key;
+      auto key = next_str_key_++;
+      str_key_dict_[str_key] = key;
+      // record reverse mapping from int to string
+      reverse_str_key_dict_[key] = str_key;
+      vkeys[i] = key;
+    }
+    LookupKeys(str_okeys, &okeys);
+    BroadcastImpl(vkeys, okeys, values, outs, priority);
   }
 
   void PushPull(const std::vector<std::string>& str_vkeys,
@@ -291,6 +322,15 @@ class KVStoreLocal : public KVStore {
   void SetKeyType(const KeyType key_type) {
     if (key_type_ == kUndefinedKey) key_type_ = key_type;
     CHECK_EQ(key_type_, key_type) << "Mixed key types are not allowed";
+  }
+
+  virtual void BroadcastImpl(const std::vector<int>& vkeys,
+                             const std::vector<int>& okeys,
+                             const std::vector<NDArray>& values,
+                             const std::vector<NDArray*>& outs,
+                             int priority) {
+    InitImpl(vkeys, values);
+    PullImpl(okeys, outs, priority, true);
   }
 
   virtual void PushPullImpl(const std::vector<int>& vkeys,

@@ -103,7 +103,7 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
   unsigned m = inputs[2].shape[1];
   // allocate temporary workspace memory through resource manager
   // for multiple arrays better to request a big memory pool
-  void *workspace = res.alloc((k*n + m*k) * sizeof(float));
+  void *workspace = res.alloc_cpu((k*n + m*k) * sizeof(float));
   float *At = static_cast<float*>(workspace);
   float *Bt = static_cast<float*>(workspace) + (k*n);
 
@@ -167,8 +167,8 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
 }
 
 REGISTER_OP(my_gemm)
-.setForward(forward)
-.setBackward(backward)
+.setForward(forward, "cpu")
+.setBackward(backward, "cpu")
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape);
@@ -182,8 +182,7 @@ class MyStatefulGemm : public CustomStatefulOp {
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
-    ++count;
-    std::cout << "Info: keyword + number of forward: " << count << std::endl;
+    std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
     std::map<std::string, std::string> attrs;
     return forward(attrs, inputs, outputs, op_res);
   }
@@ -203,9 +202,9 @@ class MyStatefulGemm : public CustomStatefulOp {
 
 MXReturnValue createOpState(std::map<std::string, std::string> attrs,
                             CustomStatefulOp** op_inst) {
-  int count = 0;
-  if (attrs.count("test_kw") > 0)
-    count = std::stoi(attrs["test_kw"]);
+  // testing passing of keyword arguments
+  int count = attrs.count("test_kw") > 0 ? std::stoi(attrs["test_kw"]) : 0;
+  // creating stateful operator instance
   *op_inst = new MyStatefulGemm(count);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
@@ -222,7 +221,7 @@ REGISTER_OP(state_gemm)
 .setInferType(inferType)
 .setInferShape(inferShape)
 .setMutateInputs(mutateInputs)
-.setCreateOpState(createOpState);
+.setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

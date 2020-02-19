@@ -184,6 +184,11 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Values: 0(false) or 1(true) ```(default=1)```
   - If true, weight updates are performed during the communication step, if possible.
 
+* MXNET_KVSTORE_SLICE_THRESHOLD
+  - Values: Int ```(default=40000)```
+  - The maximum size of an NDArray slice in terms of number of parameters.
+  - This parameter is used to slice an NDArray before synchronizing through P3Store (dist_p3).
+
 ## Memonger
 
 * MXNET_BACKWARD_DO_MIRROR

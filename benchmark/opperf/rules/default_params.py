@@ -31,6 +31,14 @@ DEFAULT_ARGS = [(1024, 1024)]
 
 # For Unary operators like abs, arccos, arcsin etc..
 DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_DTYPE = ['float32', 'int32', 'float32']  # required parameter for amp_cast, cast
+DEFAULT_DTYPE_INT = ['int32', 'int64', 'int32']  # randint works for int* types only
+DEFAULT_DTYPE_FLOAT = ['float16', 'float32', 'float64']  # random_exp works for float* types only
+
+# For Binary miscellaneous operators like choose_element0_index
+# argument data must be indexed via an NDArray.
+# NOTE: Data used is DEFAULT_DATA
+DEFAULT_INDEX = [(1, 1024), (1, 1), (1, 100)]
 
 # For Binary broadcast operators like - broadcast_add/sub/mod/logical_and etc..
 DEFAULT_LHS = [(1024, 1024), (10000, 10), (10000, 1)]
@@ -58,6 +66,12 @@ DEFAULT_BETA_ND = [[1.0, 0.7]]
 DEFAULT_LAM = [[1.0, 8.5]]
 DEFAULT_K_ND = [[20, 49]]
 DEFAULT_P_ND = [[0.4, 0.77]]
+DEFAULT_GRID = [(32, 2, 256, 256)]
+DEFAULT_DATA_BILINEAR = [(32, 2, 256, 256)]
+DEFAULT_TRANSFORM_TYPE = ['warp', 'affine']
+DEFAULT_DATA_GRIDGEN = [(32, 2, 256, 256), (256, 6)]
+DEFAULT_TARGET_SHAPE = [(256, 6)]
+DEFAULT_DATA_SM = [(32, 32), (64, 64)]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
@@ -78,33 +92,86 @@ DEFAULT_D = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_V = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Z = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_G = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_R1 = [(1, 1024), (1, 1), (1, 100)]
+DEFAULT_R2 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
-DEFAULT_LRS = [(0.1,0.1)]
-DEFAULT_LR = [0.1,0.5,0.9]
-DEFAULT_GAMMA_1 = [0.1,0.5,0.9]
-DEFAULT_GAMMA_2 = [0.1,0.5,0.9]
+DEFAULT_LRS = [(0.1, 0.1)]
+DEFAULT_LR = [0.1, 0.5, 0.9]
+DEFAULT_GAMMA_1 = [0.1, 0.5, 0.9]
+DEFAULT_GAMMA_2 = [0.1, 0.5, 0.9]
 DEFAULT_EPSILON = [1e-08]
-DEFAULT_BETA_1 = [0.1,0.5,0.9]
-DEFAULT_BETA_2 = [0.1,0.5,0.9]
-DEFAULT_T = [1,5]
+DEFAULT_BETA_1 = [0.1, 0.5, 0.9]
+DEFAULT_BETA_2 = [0.1, 0.5, 0.9]
+DEFAULT_T = [1, 5]
 DEFAULT_RESCALE_GRAD = [0.4, 0.77]
-DEFAULT_CLIP_GRADIENT = [-1.0,0.8]
-DEFAULT_CLIP_WEIGHTS = [-1.0,0.8]
-DEFAULT_LAZY_UPDATE = [0,1]
+DEFAULT_CLIP_GRADIENT = [-1.0, 0.8]
+DEFAULT_CLIP_WEIGHTS = [-1.0, 0.8]
+DEFAULT_LAZY_UPDATE = [0, 1]
 
 # For rearrange operators
 # NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
 # Hence below we append 4d to mark the difference.
 # For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
-DEFAULT_DATA_4d = [(1, 4, 2, 4), (10,25,10,100)]
+DEFAULT_DATA_4d = [(1, 4, 2, 4), (10, 25, 10, 100)]
 DEFAULT_BLOCK_SIZE = [2, 5]
+
+# For miscellaneous operators
+DEFAULT_DATA_SQUEEZE = [(1, 1024, 1024), (32, 1, 256, 256)]
+DEFAULT_AXIS_SQUEEZE = [0, 1]
+DEFAULT_A_MIN = [0.1]
+DEFAULT_A_MAX = [0.9]
+DEFAULT_LRS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_WSS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_GSS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_WDS = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_ETA = [.5]
+DEFAULT_STYPE = ['default', 'csr', 'row_sparse']
+DEFAULT_A = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_MHS = [(1024,), (10000,), (10000,)]
+DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
 
+# For indexing routines
+DEFAULT_INDEX = [(1,1024), (1,1), (1,100)]
+DEFAULT_INDICES = [(1, 1)]
+DEFAULT_BEGIN = [0] # slice_axis expects int, slice can have tuple/int
+DEFAULT_END =[1] # same as above
+DEFAULT_SHAPE_LIKE = [(100, 100), (10, 1), (100, 10)]
+DEFAULT_X = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_Y = [(1024, 1024), (10000, 1), (10000, 100)]
+DEFAULT_COND = [(1024,), (10000,), (10000,)]
+DEFAULT_DEPTH = [0]
+# For ravel_multi_index op, ndim(shape) = 2; hence data NDArray's first dim = 2
+# First dimension of input of ravel operator should match shape parameter dimension
+# DEFAULT_SHAPE is reused for ravel_multi_index op
+RAVEL_DATA = [(2, 1024)]
+
+# For loss operators
+DEFAULT_DATA_3d = [(1024, 100, 100)]
+DEFAULT_LABEL = [(100,100)]
+DEFAULT_DATA_SMCE = [(1024, 1024)]
+DEFAULT_LABEL_SMCE = [(1024,)]
+# For NN operators
+DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
+DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'softrelu', 'softsign', 'tanh']
+DEFAULT_LABEL_SOFTMAX = [(1024, 1024), (10000, 1), (10000, 100)]
+
+# For linalg operators
+DEFAULT_A = [(1024, 1024)]
+DEFAULT_B = [(1024, 1024)]
+DEFAULT_C = [(1024, 1024)]
+DEFAULT_A_MT = [(1024, 1035)]
+DEFAULT_AXES = [[0, 1]]
+
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
+                   "dtype": DEFAULT_DTYPE,
+                   "dtype_int": DEFAULT_DTYPE_INT,
+                   "dtype_float": DEFAULT_DTYPE_FLOAT,
                    "sample": DEFAULT_SAMPLE,
                    "lhs": DEFAULT_LHS,
                    "rhs": DEFAULT_RHS,
@@ -124,35 +191,83 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p_nd": DEFAULT_P_ND,
                    "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS,
-                   "weight" : DEFAULT_WEIGHT,
-                   "weight32" : DEFAULT_WEIGHT,
-                   "grad" : DEFAULT_GRAD,
-                   "mean" : DEFAULT_MEAN,
-                   "var" : DEFAULT_VAR,
-                   "mom" : DEFAULT_MOM,
-                   "n" : DEFAULT_N,
-                   "d" : DEFAULT_D,
-                   "v" : DEFAULT_V,
-                   "z" : DEFAULT_Z,
-                   "g" : DEFAULT_G,
-                   "delta" : DEFAULT_DELTA,
-                   "lr" : DEFAULT_LR,
-                   "lrs" : DEFAULT_LRS,
-                   "wds" : DEFAULT_LRS,
-                   "gamma1" : DEFAULT_GAMMA_1,
-                   "gamma2" : DEFAULT_GAMMA_2,
-                   "epsilon" : DEFAULT_EPSILON,
-                   "beta1" : DEFAULT_BETA_1,
-                   "beta2" : DEFAULT_BETA_2,
-                   "t" : DEFAULT_T,
-                   "rescale_grad" : DEFAULT_RESCALE_GRAD,
-                   "clip_grad" : DEFAULT_CLIP_GRADIENT,
-                   "lazy_update" : DEFAULT_LAZY_UPDATE,
+                   "weight": DEFAULT_WEIGHT,
+                   "weight32": DEFAULT_WEIGHT,
+                   "grad": DEFAULT_GRAD,
+                   "mean": DEFAULT_MEAN,
+                   "var": DEFAULT_VAR,
+                   "mom": DEFAULT_MOM,
+                   "r1": DEFAULT_R1,
+                   "r2": DEFAULT_R2,
+                   "n": DEFAULT_N,
+                   "d": DEFAULT_D,
+                   "v": DEFAULT_V,
+                   "z": DEFAULT_Z,
+                   "g": DEFAULT_G,
+                   "delta": DEFAULT_DELTA,
+                   "lr": DEFAULT_LR,
+                   "lrs": DEFAULT_LRS,
+                   "wds": DEFAULT_LRS,
+                   "wd": DEFAULT_LR,
+                   "gamma1": DEFAULT_GAMMA_1,
+                   "gamma2": DEFAULT_GAMMA_2,
+                   "epsilon": DEFAULT_EPSILON,
+                   "beta1": DEFAULT_BETA_1,
+                   "beta2": DEFAULT_BETA_2,
+                   "t": DEFAULT_T,
+                   "rescale_grad": DEFAULT_RESCALE_GRAD,
+                   "clip_grad": DEFAULT_CLIP_GRADIENT,
+                   "lazy_update": DEFAULT_LAZY_UPDATE,
                    "data_4d": DEFAULT_DATA_4d,
                    "dim1": DEFAULT_DIM_1,
                    "dim2": DEFAULT_DIM_2,
                    "block_size": DEFAULT_BLOCK_SIZE,
-                   "args": DEFAULT_ARGS}
+                   "args": DEFAULT_ARGS,
+                   "a": DEFAULT_DATA,
+                   "index": DEFAULT_INDEX,
+                   "indices": DEFAULT_INDICES,
+                   "begin": DEFAULT_BEGIN,
+                   "end": DEFAULT_END,
+                   "shape_like": DEFAULT_SHAPE_LIKE,
+                   "x": DEFAULT_X,
+                   "y": DEFAULT_Y,
+                   "condition": DEFAULT_COND,
+                   "depth": DEFAULT_DEPTH,
+                   "ravel_data": RAVEL_DATA,
+                   "data_smce": DEFAULT_DATA_SMCE,
+                   "data_3d": DEFAULT_DATA_3d,
+                   "label_smce": DEFAULT_LABEL_SMCE,
+                   "label": DEFAULT_LABEL,
+                   "index": DEFAULT_INDEX,
+                   "grid": DEFAULT_GRID,
+                   "data_bilinearsampler": DEFAULT_DATA_BILINEAR,
+                   "transform_type": DEFAULT_TRANSFORM_TYPE,
+                   "data_gridgenerator": DEFAULT_DATA_GRIDGEN,
+                   "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE,
+                   "data_sample_multinomial": DEFAULT_DATA_SM,
+                   "A": DEFAULT_A,
+                   "B": DEFAULT_B,
+                   "C": DEFAULT_C,
+                   "A_linalg_maketrian": DEFAULT_A_MT,
+                   "axes": DEFAULT_AXES,
+                   "act_type_leakyrelu": DEFAULT_ACT_TYPE_LR,
+                   "label_softmax": DEFAULT_LABEL_SOFTMAX,
+                   "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION,
+                   "data_squeeze": DEFAULT_DATA_SQUEEZE,
+                   "axis_squeeze": DEFAULT_AXIS_SQUEEZE,
+                   "a_min": DEFAULT_A_MIN,
+                   "a_max": DEFAULT_A_MAX,
+                   "lrs": DEFAULT_LRS,
+                   "weights_sum_sq": DEFAULT_WSS,
+                   "grads_sum_sq": DEFAULT_GSS,
+                   "wds": DEFAULT_WDS,
+                   "eta": DEFAULT_ETA,
+                   "eps": DEFAULT_EPSILON,
+                   "stype": DEFAULT_STYPE,
+                   "a": DEFAULT_A,
+                   "lhs_fill_element_0index": DEFAULT_LHS_FEI,
+                   "rhs_fill_element_0index": DEFAULT_RHS_FEI,
+                   "mhs": DEFAULT_MHS}
 
 
 # These are names of MXNet operator parameters that is of type NDArray.
@@ -164,4 +279,7 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "mu", "sigma", "lam", "alpha", "beta", "gamma", "k", "p",
                           "low", "high", "weight", "bias", "moving_mean", "moving_var",
                           "weight", "weight32", "grad", "mean", "var", "mom", "n", "d",
-                          "v", "z", "g", "delta", "args"]
+                          "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
+                          "x", "condition", "a", "index", "raveL_data", "label", "grid",
+                          "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
+                          "grads_sum_sq", "mhs"]
