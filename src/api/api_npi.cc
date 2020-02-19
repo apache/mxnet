@@ -21,6 +21,7 @@
  * \file api_npi.cc
  * \brief Implementation of API _npi functions
  */
+// Acknowledgement: This file originates from incubator-tvm
 #include <mxnet/runtime/ffi_helper.h>
 #include <mxnet/runtime/container.h>
 #include <mxnet/runtime/packed_func.h>

@@ -19,10 +19,10 @@
 
 /*!
  * \file api_registry.h
- * \brief Adapted from incubator-tvm/include/tvm/api_registry.h
- *  This file contains utilities related to
+ * \brief This file contains utilities related to
  *  the MXNet's global function registry.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_API_REGISTRY_H_
 #define MXNET_API_REGISTRY_H_
 

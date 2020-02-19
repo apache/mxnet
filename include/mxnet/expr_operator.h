@@ -24,6 +24,7 @@
  * \note Most of the operator defined here perform simple constant folding
  *   when the type is int32 or int64 for simplifying the index expressions.
  */
+// Acknowledgement: This file originates from incubator-tvm
 // Acknowledgement: Most operator APIs originate from Halide.
 #ifndef MXNET_EXPR_OPERATOR_H_
 #define MXNET_EXPR_OPERATOR_H_

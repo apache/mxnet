@@ -15,7 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 # pylint: disable=invalid-name
-"""Runtime Object API"""
+"""Runtime Object API
+Acknowledgement: This file originates from incubator-tvm"""
 from ._ctypes.function import _set_class_object
 from ._ctypes.object import ObjectBase as _ObjectBase
 

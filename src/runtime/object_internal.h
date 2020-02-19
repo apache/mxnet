@@ -21,6 +21,7 @@
  * \brief Expose a few functions for CFFI purposes.
  *        This file is not intended to be used
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_RUNTIME_OBJECT_INTERNAL_H_
 #define MXNET_RUNTIME_OBJECT_INTERNAL_H_
 

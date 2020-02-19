@@ -19,9 +19,9 @@
 
 /*!
  * \file container.h
- * \brief Adapted from incubator-tvm/include/tvm/runtime/container.h
- * Common POD(plain old data) container types.
+ * \brief Common POD(plain old data) container types.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_RUNTIME_CONTAINER_H_
 #define MXNET_RUNTIME_CONTAINER_H_
 #include <dmlc/logging.h>

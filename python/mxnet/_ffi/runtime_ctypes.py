@@ -14,9 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Adapted from incubator-tvm/python/tvm/_ffi/runtime_ctypes.py
-Common runtime ctypes.
+"""Common runtime ctypes.
+Acknowledgement: This file originates from incubator-tvm
 """
 # pylint: disable=invalid-name
 import ctypes

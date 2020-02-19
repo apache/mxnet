@@ -14,7 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Functions defined in MXNet."""
+"""Functions defined in MXNet.
+Acknowledgement: This file originates from incubator-tvm"""
 
 from ._ffi.function import _init_api
 

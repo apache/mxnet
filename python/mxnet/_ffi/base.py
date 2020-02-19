@@ -16,9 +16,8 @@
 # under the License.
 # coding: utf-8
 # pylint: disable=invalid-name
-"""
-Adapted from incubator-tvm/python/tvm/_ffi/base.py
-Base library for MXNet FFI.
+"""Base library for MXNet FFI.
+Acknowledgement: This file originates from incubator-tvm
 """
 import sys
 import ctypes

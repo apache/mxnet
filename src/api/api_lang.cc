@@ -21,6 +21,7 @@
  *  Implementation of API functions related to Higher DSL build.
  * \file api_lang.cc
  */
+// Acknowledgement: This file originates from incubator-tvm
 #include <mxnet/api_registry.h>
 #include <mxnet/base.h>
 #include <mxnet/expr_operator.h>

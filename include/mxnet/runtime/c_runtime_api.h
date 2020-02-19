@@ -19,9 +19,9 @@
 
 /*
  * \file c_runtime_api.h
- * \brief Adapted from incubator-tvm/include/tvm/runtime/c_runtime_api.h
- * MXNet runtime library.
+ * \brief MXNet runtime library.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_RUNTIME_C_RUNTIME_API_H_
 #define MXNET_RUNTIME_C_RUNTIME_API_H_
 

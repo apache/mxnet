@@ -20,6 +20,8 @@
  * \file object.cc
  * \brief Object type management system.
  */
+// Acknowledgement: This file originates from incubator-tvm
+
 #include <dmlc/logging.h>
 #include <mxnet/runtime/c_runtime_api.h>
 #include <mxnet/runtime/object.h>

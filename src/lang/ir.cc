@@ -20,6 +20,7 @@
 /*!
  * \file ir.cc
  */
+// Acknowledgement: This file originates from incubator-tvm
 
 #include <mxnet/ir/expr.h>
 #include <mxnet/runtime/object.h>

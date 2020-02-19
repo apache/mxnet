@@ -20,6 +20,7 @@
  * \file data_type.h
  * \brief Primitive runtime data type.
  */
+// Acknowledgement: This file originates from incubator-tvm
 // Acknowledgement: MXNetDataType structure design originates from Halide.
 #ifndef MXNET_RUNTIME_DATA_TYPE_H_
 #define MXNET_RUNTIME_DATA_TYPE_H_

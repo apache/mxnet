@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Adapted from incubator-tvm/python/tvm/_ffi/_cython/core.pyx """
+"""Acknowledgement: This file originates from incubator-tvm"""
 
 include "./base.pxi"
 include "./ndarray.pxi"

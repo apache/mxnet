@@ -31,6 +31,7 @@
  *  reflection and serialization, which are important features
  *  for building a compiler infra.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_NODE_NODE_H_
 #define MXNET_NODE_NODE_H_
 

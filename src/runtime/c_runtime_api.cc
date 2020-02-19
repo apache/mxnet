@@ -19,9 +19,9 @@
 
 /*!
  * \file c_runtime_api.cc
- * \brief Adapted from incubator-tvm/src/runtime/c_runtime_api.cc
- *  Device specific implementations
+ * \brief Device specific implementations
  */
+// Acknowledgement: This file originates from incubator-tvm
 
 #include <mxnet/runtime/c_runtime_api.h>
 

@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Adapted from incubator-tvm/python/tvm/_ffi/_cython/convert.pxi """
+"""Acknowledgement: This file originates from incubator-tvm"""
 
 from libc.stdint cimport *
 from numbers import Integral

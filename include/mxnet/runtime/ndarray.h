@@ -19,9 +19,9 @@
 
 /*!
  * \file runtime/ndarray.h
- * \brief Adapted from incubator-tvm/include/tvm/runtime/ndarray.h
- * A device-independent managed NDArray abstraction.
+ * \brief A device-independent managed NDArray abstraction.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_RUNTIME_NDARRAY_H_
 #define MXNET_RUNTIME_NDARRAY_H_
 

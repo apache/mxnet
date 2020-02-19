@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-""" Adapted from incubator-tvm/python/tvm/_ffi/_cython/ndarray.pxi """
+"""Acknowledgement: This file originates from incubator-tvm"""
 
 import ctypes
 from ... import _global_var

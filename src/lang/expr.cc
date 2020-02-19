@@ -20,6 +20,7 @@
 /*!
  * \file expr.cc
  */
+// Acknowledgement: This file originates from incubator-tvm
 
 #include <mxnet/node/container.h>
 #include <mxnet/runtime/object.h>

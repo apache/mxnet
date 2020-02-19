@@ -17,8 +17,8 @@
 
 # pylint: disable=invalid-name, unused-import
 """
-Adapted from incubator-tvm/python/tvm/_ffi/function.py
 Function namespace.
+Acknowledgement: This file originates from incubator-tvm
 """
 import os
 import sys

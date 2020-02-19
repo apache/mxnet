@@ -14,7 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""Common implementation of Node generic related logic"""
+"""Common implementation of Node generic related logic
+Acknowledgement: This file originates from incubator-tvm"""
 # pylint: disable=unused-import
 from numbers import Number, Integral
 from .. import _api_internal

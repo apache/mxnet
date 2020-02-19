@@ -19,8 +19,7 @@
 
 /*!
  * \file registry.h
- * \brief Adapted from incubator-tvm/include/tvm/runtime/registry.h
- *  This file defines the TVM global function registry.
+ * \brief This file defines the TVM global function registry.
  *
  *  The registered functions will be made available to front-end
  *  as well as backend users.
@@ -41,6 +40,7 @@
  *   });
  * \endcode
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_RUNTIME_REGISTRY_H_
 #define MXNET_RUNTIME_REGISTRY_H_
 

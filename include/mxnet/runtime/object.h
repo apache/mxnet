@@ -18,9 +18,9 @@
  */
 /*!
  * \file object.h
- * \brief Adapted from incubator-tvm/include/tvm/runtime/object.h
- * A managed object in MXNet runtime.
+ * \brief A managed object in MXNet runtime.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_RUNTIME_OBJECT_H_
 #define MXNET_RUNTIME_OBJECT_H_
 

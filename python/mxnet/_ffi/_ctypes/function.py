@@ -16,7 +16,10 @@
 # under the License.
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-branches, global-statement, unused-import
-"""Function configuration API."""
+"""
+Function configuration API.
+Acknowledgement: This file originates from incubator-tvm
+"""
 import ctypes
 from numbers import Number, Integral
 

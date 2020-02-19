@@ -21,6 +21,7 @@
  * \file expr.h
  * \brief Base expr nodes in MXNet.
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_IR_EXPR_H_
 #define MXNET_IR_EXPR_H_
 

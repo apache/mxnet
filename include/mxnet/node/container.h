@@ -20,6 +20,7 @@
  * \file container.h
  * \brief Array container
  */
+// Acknowledgement: This file originates from incubator-tvm
 #ifndef MXNET_NODE_CONTAINER_H_
 #define MXNET_NODE_CONTAINER_H_
 

@@ -21,6 +21,7 @@
  * \file expr.cc
  * \brief The expression AST nodes for the common IR infra.
  */
+// Acknowledgement: This file originates from incubator-tvm
 
 #include <mxnet/ir/expr.h>
 

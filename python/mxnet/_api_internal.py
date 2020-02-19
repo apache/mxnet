@@ -21,4 +21,6 @@ that is registered by "MXNET_REGISTER_*" macro. This way makes calling Python fu
 side very easily.
 
 Each string starts with "_" in the "MXNET_REGISTER_*" macro is an internal API.
+
+Acknowledgement: This file originates from incubator-tvm
 """
