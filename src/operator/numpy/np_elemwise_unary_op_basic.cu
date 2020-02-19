@@ -148,17 +148,9 @@ NNVM_REGISTER_OP(_backward_npi_log)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
   gpu, unary_bwd<mshadow_op::log_grad> >);
 
-// log10
-NNVM_REGISTER_OP(log10)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log10>);
-
 NNVM_REGISTER_OP(_backward_npi_log10)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
 gpu, unary_bwd<mshadow_op::log10_grad> >);
-
-// log2
-NNVM_REGISTER_OP(log2)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log2>);
 
 NNVM_REGISTER_OP(_backward_npi_log2)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
