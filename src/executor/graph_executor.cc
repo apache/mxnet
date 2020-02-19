@@ -216,7 +216,7 @@ const std::unordered_map<std::string, NDArray>& GraphExecutor::aux_state_map() c
 
 static nnvm::NodeEntry AttrHint(nnvm::NodeEntry src, nnvm::NodeEntry like) {
   static const Op* id_like = Op::Get("_identity_with_attr_like_rhs");
-  nnvm::NodePtr n = nnvm::Node::Create();
+  nnvm::ObjectPtr n = nnvm::Node::Create();
   n->attrs.op = id_like;
   n->attrs.name = src.node->attrs.name + "_id";
   n->inputs = {src, like};
@@ -233,7 +233,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   static const Op* zeros_like_op = Op::Get("zeros_like");
 
   if (v.empty()) {
-    nnvm::NodePtr ng = nnvm::Node::Create();
+    nnvm::ObjectPtr ng = nnvm::Node::Create();
     ng->attrs.op = Op::Get("_zeros_without_dtype");
     ng->attrs.name = "zeros_without_dtype";
     ng->attrs.op->attr_parser(&(ng->attrs));
@@ -253,7 +253,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
     return std::move(v[0]);
   } else {
     if (v.size() < inplace_sum_cap) {
-      nnvm::NodePtr sum_node = nnvm::Node::Create();
+      nnvm::ObjectPtr sum_node = nnvm::Node::Create();
       sum_node->attrs.op = ewise_sum_op;
       sum_node->attrs.name = "sum_grad";
       sum_node->attrs.dict["num_args"] = std::to_string(v.size());
@@ -285,7 +285,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
         std::ostringstream os;
         os << "sum_grad_" << i;
-        nnvm::NodePtr x = nnvm::Node::Create();
+        nnvm::ObjectPtr x = nnvm::Node::Create();
         x->attrs.op = ewise_plus_op;
         x->attrs.name = os.str();
         x->inputs = {ret, v[i]};
@@ -293,7 +293,7 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
       }
       // identity node is used to avoid exposure of dummy plus node
       // when its output get assigned to another space.
-      nnvm::NodePtr id_node = nnvm::Node::Create();
+      nnvm::ObjectPtr id_node = nnvm::Node::Create();
       id_node->attrs.op = identity_op;
       id_node->attrs.name = "sum_grad_final";
       id_node->inputs = {ret};
@@ -324,7 +324,7 @@ inline ValueType get_node_attr(
  */
 nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
                                          const std::vector<OpReqType>& grad_req_types) {
-  using nnvm::NodePtr;
+  using nnvm::ObjectPtr;
   using nnvm::NodeEntry;
   // initial information
   num_forward_outputs_ = symbol.outputs.size();
@@ -346,7 +346,7 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
-  std::vector<NodePtr> args = symbol.ListInputs(nnvm::Symbol::kReadOnlyArgs);
+  std::vector<ObjectPtr> args = symbol.ListInputs(nnvm::Symbol::kReadOnlyArgs);
   std::vector<NodeEntry> xs;
   for (size_t i = 0; i < grad_req_types.size(); ++i) {
     if (grad_req_types[i] != kNullOp) {
@@ -1421,7 +1421,7 @@ void GraphExecutor::ExecuteMonOutputCallback(size_t nid) {
   const auto& node = idx[nid].source;
   for (size_t i = 0; i < opnode.exec->out_array.size(); ++i) {
     NDArray *cpy = new NDArray(opnode.exec->out_array[i]);
-    nnvm::NodePtr node_ptr = std::make_shared<nnvm::Node>(*node);
+    nnvm::ObjectPtr node_ptr = std::make_shared<nnvm::Node>(*node);
     std::string name = GetOutputName({node_ptr, static_cast<uint32_t >(i), 0});
     this->monitor_callback_(name.c_str(), reinterpret_cast<void*>(cpy));
   }
@@ -1630,10 +1630,9 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   };
   opr_names.pop_back();
   opr_names += "]";
-  auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
     exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-    iter->c_str());
+    opr_names.c_str());
   return ret;
 }
 

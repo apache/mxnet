@@ -27,7 +27,6 @@
 #define MXNET_OPERATOR_NUMPY_RANDOM_NP_GAMMA_OP_H_
 
 #include <mxnet/operator_util.h>
-#include <mshadow/base.h>
 #include <vector>
 #include <string>
 #include <algorithm>
@@ -129,20 +128,20 @@ struct gamma_kernel {
                                   const Shape<ndim> &hstride,
                                   const Shape<ndim> &oshape, IType *shape,
                                   IType *scale, FType *uniforms, FType *normals,
-                                  OType *out, FType *flag = nullptr) {
+                                  OType *out, FType *flag, bool resample) {
     // We know the sampling procedure is in its first stage, if `flag` is
     // nullptr, i.e. there is no need for reseting the indicator
     // variable(flag[0] = 1) nor checking whether a specific element is sampled
     // successfully (out[i] < 0).
-    bool in_first_stage = (flag == nullptr);
-    if (!in_first_stage) {
-      flag[0] = 1;
-    }
+    bool in_first_stage = !resample;
     Shape<ndim> coord = unravel(i, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto hidx = static_cast<index_t>(dot(coord, hstride));
     IType shape_value = shape[lidx];
     IType scale_value = scale[hidx];
+    if ((shape_value <= 0) || (scale_value <= 0)) {
+      flag[0] = -1;
+    }
     if (in_first_stage || out[i] < 0) {
       // map phase
       GammaTransform<IType, FType>(shape_value, scale_value, uniforms + i * M,
@@ -161,15 +160,13 @@ struct gamma_one_scalar_kernel {
                                   const Shape<ndim> &stride,
                                   const Shape<ndim> &oshape, IType *array,
                                   float scalar, FType *uniforms, FType *normals,
-                                  OType *out, FType *flag = nullptr) {
-    // We know the sampling procedure is in its first stage, if `flag` is
-    // nullptr, i.e. there is no need for reseting the indicator
+                                  OType *out, FType *flag, bool resample) {
+    // We know the sampling procedure is in its first stage, if `resample` is
+    // false, i.e. there is no need for reseting the indicator
     // variable(flag[0] = 1) nor checking whether a specific element is sampled
-    // successfully (out[i] < 0).
-    bool in_first_stage = (flag == nullptr);
-    if (!in_first_stage) {
-      flag[0] = 1;
-    }
+    // successfully (out[i] < 0). Instead, we would check if `array` is strictly
+    // larger than zero.
+    bool in_first_stage = !resample;
     Shape<ndim> coord = unravel(i, oshape);
     auto idx = static_cast<index_t>(dot(coord, stride));
     IType shape_value;
@@ -177,9 +174,17 @@ struct gamma_one_scalar_kernel {
     if (scalar_pos == 0) {
       shape_value = scalar;
       scale_value = array[idx];
+      // This branch shall only be executed in the first trial.
+      if (scale_value <= 0) {
+        flag[0] = -1;
+      }
     } else {
       shape_value = array[idx];
       scale_value = scalar;
+      // This branch shall only be executed in the first trial.
+      if (shape_value <= 0) {
+        flag[0] = -1;
+      }
     }
     if (in_first_stage || out[i] < 0) {
       // map phase
@@ -246,6 +251,12 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   FType *failure_indicator_device = failure_indic_workspace.dptr_;
   // [scalar scalar] case
   if (inputs.size() == 0U) {
+    if (param.shape.value() <= 0) {
+      CHECK(false) << "ValueError: expect shape > 0";
+    }
+    if (param.scale.value() <= 0) {
+      CHECK(false) << "ValueError: expect scale > 0";
+    }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       bool in_resample_stage = false;
       do {
@@ -274,9 +285,15 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     if (param.shape.has_value()) {
       scalar_pos = 0;
       scalar_value = param.shape.value();
+      if (scalar_value <= 0) {
+        LOG(FATAL) << "ValueError: expect shape > 0";
+      }
     } else {
       scalar_pos = 1;
       scalar_value = param.scale.value();
+      if (scalar_value <= 0) {
+        LOG(FATAL) << "ValueError: expect scale > 0";
+      }
     }
     MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, IType, {
       MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
@@ -289,12 +306,28 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
               prnd->SampleUniform(&uniform_tensor, 0, 1);
               prnd->SampleGaussian(&normal_tensor, 0, 1);
             }
+            Kernel<set_one, xpu>::Launch(s, 1, failure_indicator_device);
             Kernel<gamma_one_scalar_kernel<NDim, IType, OType, FType>, xpu>::Launch(
               s, outputs[0].Size(), scalar_pos, stride, oshape,
               inputs[0].dptr<IType>(), scalar_value,
               uniform_tensor.dptr_, normal_tensor.dptr_,
               outputs[0].dptr<OType>(),
-              in_resample_stage ? failure_indicator_device : nullptr);
+              failure_indicator_device, in_resample_stage);
+            // We reuse `failure_indicator` for parameter check.
+            failure_indicator = 1.0;
+            if (!in_resample_stage) {
+              // Only check parameter validity in the first trial.
+              _copy<xpu>(s, &failure_indicator, failure_indicator_device);
+              if (failure_indicator < 0) {
+                if (param.shape.has_value()) {
+                  // Problematic tensor contains `scale`.
+                  LOG(FATAL) << "ValueError: expect scale > 0";
+                } else {
+                  // Problematic tensor contains `shape`.
+                  LOG(FATAL) << "ValueError: expect shape > 0";
+                }
+              }
+            }
             failure_indicator = 1.0;
             Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
               s, outputs[0].Size(), outputs[0].dptr<OType>(),
@@ -321,13 +354,19 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
             prnd->SampleUniform(&uniform_tensor, 0, 1);
             prnd->SampleGaussian(&normal_tensor, 0, 1);
           }
-          prnd->SampleUniform(&uniform_tensor, 0, 1);
-          prnd->SampleGaussian(&normal_tensor, 0, 1);
+          Kernel<set_one, xpu>::Launch(s, 1, failure_indicator_device);
+          failure_indicator = 1.0;
           Kernel<gamma_kernel<NDim, IType, OType, FType>, xpu>::Launch(
             s, outputs[0].Size(), lstride, hstride, oshape,
             inputs[0].dptr<IType>(), inputs[1].dptr<IType>(),
             uniform_tensor.dptr_, normal_tensor.dptr_,
-            outputs[0].dptr<OType>(), in_resample_stage ? failure_indicator_device : nullptr);
+            outputs[0].dptr<OType>(), failure_indicator_device, in_resample_stage);
+          if (!in_resample_stage) {
+            _copy<xpu>(s, &failure_indicator, failure_indicator_device);
+            if (failure_indicator < 0) {
+              LOG(FATAL) << "ValueError: expect shape and value > 0";
+            }
+          }
           failure_indicator = 1.0;
           Kernel<CheckSuccessKernel<OType, FType>, xpu>::Launch(
             s, outputs[0].Size(), outputs[0].dptr<OType>(),

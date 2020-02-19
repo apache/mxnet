@@ -1,0 +1,18 @@
+name: continuous build
+
+on: [push, pull_request]
+
+jobs:
+  macosx-x86_64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Dependencies
+        run: |
+          brew install nasm automake ninja libtool
+      - name: Build project
+        run: |
+          git --version
+          clang --version
+          CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu

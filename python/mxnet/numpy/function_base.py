@@ -16,7 +16,6 @@
 # under the License.
 
 """Numpy basic functions."""
-from __future__ import absolute_import
 
 from .stride_tricks import broadcast_arrays
 

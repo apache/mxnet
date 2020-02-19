@@ -86,12 +86,16 @@ def main():
                         values from current system to all workers and servers. \
                         Not necessary when launcher is local as in that case \
                         all environment variables which are set are copied.')
+    parser.add_argument('--p3', action='store_true', default=False,
+                        help = 'Use P3 distributed training')
     parser.add_argument('command', nargs='+',
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
     args.command += unknown
     if args.num_servers is None:
         args.num_servers = args.num_workers
+    if args.p3:
+        args.command = ['DMLC_PS_VAN_TYPE=p3 DMLC_PS_WATER_MARK=10'] + args.command
 
     args = dmlc_opts(args)
 

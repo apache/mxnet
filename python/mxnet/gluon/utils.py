@@ -18,10 +18,9 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
-from __future__ import absolute_import
 
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
-           'check_sha1', 'download']
+           'check_sha1', 'download', 'replace_file']
 
 import os
 import sys
@@ -197,8 +196,14 @@ def check_sha1(filename, sha1_hash):
 
 if not sys.platform.startswith('win32'):
     # refer to https://github.com/untitaker/python-atomicwrites
-    def _replace_atomic(src, dst):
-        """Implement atomic os.replace with linux and OSX. Internal use only"""
+    def replace_file(src, dst):
+        """Implement atomic os.replace with linux and OSX.
+
+        Parameters
+        ----------
+        src : source file path
+        dst : destination file path
+        """
         try:
             os.rename(src, dst)
         except OSError:
@@ -220,11 +225,9 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
-
     def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""
-        if not isinstance(x, text_type):
+        if not isinstance(x, str):
             return x.decode(sys.getfilesystemencoding())
         return x
 
@@ -240,11 +243,17 @@ else:
             finally:
                 raise OSError(msg)
 
-    def _replace_atomic(src, dst):
+    def replace_file(src, dst):
         """Implement atomic os.replace with windows.
+
         refer to https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-movefileexw
         The function fails when one of the process(copy, flush, delete) fails.
-        Internal use only"""
+
+        Parameters
+        ----------
+        src : source file path
+        dst : destination file path
+        """
         _handle_errors(ctypes.windll.kernel32.MoveFileExW(
             _str_to_unicode(src), _str_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
@@ -252,7 +261,7 @@ else:
 
 
 def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
-    """Download an given URL
+    """Download a given URL
 
     Parameters
     ----------
@@ -298,7 +307,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
         while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703
@@ -318,7 +327,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 # delete the temporary file
                 if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
                     # atmoic operation in the same file system
-                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
+                    replace_file('{}.{}'.format(fname, random_uuid), fname)
                 else:
                     try:
                         os.remove('{}.{}'.format(fname, random_uuid))

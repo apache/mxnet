@@ -32,12 +32,12 @@ namespace common {
 
 void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables) {
   using nnvm::Node;
-  using nnvm::NodePtr;
+  using nnvm::ObjectPtr;
   using nnvm::NodeEntry;
-  std::unordered_map<Node*, NodePtr> old_new;
+  std::unordered_map<Node*, ObjectPtr> old_new;
   // use DFSVisit to copy all the nodes
-  DFSVisit(src.outputs, [&old_new, copy_variables](const NodePtr& node) {
-      NodePtr np;
+  DFSVisit(src.outputs, [&old_new, copy_variables](const ObjectPtr& node) {
+      ObjectPtr np;
       if (copy_variables || !node->is_variable()) {
         np = Node::Create();
         np->attrs = node->attrs;
@@ -52,7 +52,7 @@ void CopyGraph(nnvm::Graph *dst, const nnvm::Graph &src, bool copy_variables) {
       Node *ptr = e.node.get();
       kv.second->inputs.emplace_back(NodeEntry{old_new[ptr], e.index, e.version});
     }
-    for (const NodePtr& p : kv.first->control_deps) {
+    for (const ObjectPtr& p : kv.first->control_deps) {
       kv.second->control_deps.emplace_back(old_new[p.get()]);
     }
   }

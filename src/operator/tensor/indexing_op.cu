@@ -238,10 +238,10 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   const dim_t row_length = output.shape()[1];
   const dim_t data_size = static_cast<dim_t>(data.shape_.Size());
   // temp resource declarations
-  dim_t* lookup_table = NULL;
-  void* temp_storage = NULL;
-  dim_t* sorted_data = NULL;
-  dim_t* original_idx = NULL;
+  dim_t* lookup_table = nullptr;
+  void* temp_storage = nullptr;
+  dim_t* sorted_data = nullptr;
+  dim_t* original_idx = nullptr;
   // calculate number of bytes for temp resources
   size_t lookup_table_bytes = num_rows * sizeof(dim_t);
   size_t sorted_data_storage_bytes = data_size * sizeof(dim_t);
@@ -252,7 +252,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   IType* data_ptr = data.dptr<IType>();
   size_t *null_ptr = nullptr;
   // unique operations will be applied on sorted data
-  cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, sorted_data, sorted_data,
+  cub::DeviceSelect::Unique(nullptr, unique_workspace_bytes, sorted_data, sorted_data,
     null_ptr, data_size, Stream<gpu>::GetStream(s));
   // One more space reserved for unique count
   size_t temp_workspace_bytes = std::max(unique_workspace_bytes,
@@ -386,8 +386,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
-        dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
+        dim_t* prefix_sum = nullptr;
+        void* d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(d_temp_storage,
                                       temp_storage_bytes,
@@ -550,8 +550,8 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         // check out-of-bound indices
         IType min = 0;

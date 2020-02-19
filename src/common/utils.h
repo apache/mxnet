@@ -696,6 +696,11 @@ constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
   return size_t(2) << 10;
 }
 
+template <>
+constexpr size_t MaxIntegerValue<mshadow::bfloat::bf16_t>() {
+  return size_t(2) << 14;
+}
+
 MSHADOW_XINLINE int ilog2ul(size_t a) {
   int k = 1;
   while (a >>= 1) ++k;

@@ -16,15 +16,20 @@
 # under the License.
 
 import os
+import sys
 import tempfile
 import math
 import numpy as np
 import mxnet as mx
 
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, '../python/unittest/'))
+
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
 from tests.python.unittest.common import with_seed
 from nose.tools import with_setup
+import unittest
 
 # dimension constants
 LARGE_X = 4300000000
@@ -147,6 +152,7 @@ def test_nn():
         # check if it takes 2nd sequence from the first batch
         assert b[0] == a[1][0]
 
+    check_sequence_last()
     check_dense()
     check_regression()
     check_sign()
@@ -154,7 +160,6 @@ def test_nn():
     check_batchnorm()
     check_sequence_mask()
     check_sequence_reverse()
-    check_sequence_last()
 
 
 def test_tensor():
@@ -178,6 +183,8 @@ def test_tensor():
         a = nd.random.uniform(shape=LARGE_X)
         assert a[-1] != 0
 
+    @unittest.skip("Randint flaky, tracked at "
+                   "https://github.com/apache/incubator-mxnet/issues/16172")
     @with_seed()
     def check_ndarray_random_randint():
         # check if randint can generate value greater than 2**32 (large)
@@ -474,11 +481,15 @@ def test_basic():
         assert idx[0] == 0
         assert idx.shape[0] == 1
 
+    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
+                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_argsort():
         a = create_vector(size=LARGE_X)
         s = nd.argsort(a, axis=0, is_ascend=False, dtype=np.int64)
         assert s[0] == (LARGE_X - 1)
 
+    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
+                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_sort():
         a = create_vector(size=LARGE_X)
 
@@ -493,6 +504,8 @@ def test_basic():
         check_descend(a)
         check_ascend(a)
 
+    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
+                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_topk():
         a = create_vector(size=LARGE_X)
         ind = nd.topk(a, k=10, axis=0, dtype=np.int64)

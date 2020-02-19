@@ -31,19 +31,13 @@ def test_recordio():
 
     writer = mx.recordio.MXRecordIO(frec, 'w')
     for i in range(N):
-        if sys.version_info[0] < 3:
-            writer.write(str(chr(i)))
-        else:
-            writer.write(bytes(str(chr(i)), 'utf-8'))
+        writer.write(bytes(str(chr(i)), 'utf-8'))
     del writer
 
     reader = mx.recordio.MXRecordIO(frec, 'r')
     for i in range(N):
         res = reader.read()
-        if sys.version_info[0] < 3:
-            assert res == str(chr(i))
-        else:
-            assert res == bytes(str(chr(i)), 'utf-8')
+        assert res == bytes(str(chr(i)), 'utf-8')
 
 @with_seed()
 def test_indexed_recordio():
@@ -53,10 +47,7 @@ def test_indexed_recordio():
 
     writer = mx.recordio.MXIndexedRecordIO(fidx, frec, 'w')
     for i in range(N):
-        if sys.version_info[0] < 3:
-            writer.write_idx(i, str(chr(i)))
-        else:
-            writer.write_idx(i, bytes(str(chr(i)), 'utf-8'))
+        writer.write_idx(i, bytes(str(chr(i)), 'utf-8'))
     del writer
 
     reader = mx.recordio.MXIndexedRecordIO(fidx, frec, 'r')
@@ -65,10 +56,7 @@ def test_indexed_recordio():
     random.shuffle(keys)
     for i in keys:
         res = reader.read_idx(i)
-        if sys.version_info[0] < 3:
-            assert res == str(chr(i))
-        else:
-            assert res == bytes(str(chr(i)), 'utf-8')
+        assert res == bytes(str(chr(i)), 'utf-8')
 
 @with_seed()
 def test_recordio_pack_label():

@@ -74,7 +74,7 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
   // gradient function, used to get node correspondence.
   static auto& fgrad =
       Op::GetAttr<nnvm::FGradient>("FGradient");
-  nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
+  nnvm::ObjectPtr fwd_ptr = inode.source->control_deps[0];
   const nnvm::IndexedGraph::Node& fnode = idx[inode.control_deps[0]];
   // use gradient function to find out the correspondence.
   std::vector<nnvm::NodeEntry> ograd(fwd_ptr->num_outputs());
@@ -140,7 +140,7 @@ void GetAttrFromFusedNode(uint32_t nid,
   // gradient function, used to get node correspondence.
   static auto& fgrad =
       Op::GetAttr<nnvm::FGradient>("FGradient");
-  nnvm::NodePtr fused_fwd_ptr = inode.source->control_deps[0];
+  nnvm::ObjectPtr fused_fwd_ptr = inode.source->control_deps[0];
   static auto& finfer_fused_shape =
     Op::GetAttr<FAccessSubgraphType>(infer_fusion_name);
   auto finfer = finfer_fused_shape.get(fused_fwd_ptr->op(), nullptr);
@@ -394,7 +394,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
         << "Backward inference for node attributes is not available";
       CHECK_GE(inode.source->control_deps.size(), 1U)
         << "BackwardOp need to have control_deps to its forward op";
-      nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
+      nnvm::ObjectPtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
       static auto& is_fusion_helper = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
@@ -690,7 +690,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
         << "Backward inference for node attributes is not available";
       CHECK_GE(inode.source->control_deps.size(), 1U)
         << "BackwardOp need to have control_deps to its forward op";
-      nnvm::NodePtr fwd_ptr = inode.source->control_deps[0];
+      nnvm::ObjectPtr fwd_ptr = inode.source->control_deps[0];
       CHECK(fwd_ptr->op() != nullptr) << "Forward op cannot be a variable";
 
       static auto& is_fusion_helper = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");

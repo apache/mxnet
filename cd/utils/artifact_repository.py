@@ -291,9 +291,9 @@ def probe_cpu_variant(mxnet_features: Dict[str, bool]) -> str:
     :return: Either cpu, or mkl as the variant
     """
     logger.debug('Determining cpu variant')
-    if mxnet_features['MKLDNN']:
-        logger.debug('variant is: mkl')
-        return 'mkl'
+    if not mxnet_features['MKLDNN']:
+        logger.debug('variant is: native')
+        return 'native'
 
     logger.debug('variant is: cpu')
     return 'cpu'
@@ -312,8 +312,8 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
     cuda_version = get_cuda_version()
     if cuda_version:
         variant = 'cu{}'.format(cuda_version)
-        if mxnet_features['MKLDNN']:
-            variant = '{}mkl'.format(variant)
+        if not mxnet_features['MKLDNN']:
+            RuntimeError('Error determining mxnet variant: MKL-DNN should be enabled for cuda variants')
         logger.debug('variant is: {}'.format(variant))
         return variant
 
@@ -323,7 +323,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
 def probe_mxnet_variant(limxnet_path: str) -> Optional[str]:
     """
     Probes the libmxnet library and environment to determine
-    the mxnet variant, eg. cpu, mkl, cu90, cu90mkl, etc.
+    the mxnet variant, eg. cpu, cu90, etc.
     :return:
     """
     logger.debug('Probing for mxnet variant')
