@@ -467,7 +467,7 @@ class ndarray(NDArray):
             scale = reduce(lambda x, y: x * y, self.shape[:pos], 1)
             keys = mask if scale == 1 else _reshape_view(_npi.stack(*[mask for i in range(scale)]), -1)
             all_shapes = self.shape[:pos] + remaining_shapes
-            return _reshape_view(_npi.boolean_mask(data, keys), -1, *all_shapes)
+            return _reshape_view(_npi.boolean_mask(data, keys), *all_shapes, -1)
 
         elif bool_type == _NDARRAY_INT_BOOLEAN_INDEXING:
             out = self

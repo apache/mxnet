@@ -1194,6 +1194,18 @@ def test_np_ndarray_boolean_indexing():
         assert same(a[0, b].asnumpy(), _np_a[0, _np_b])
         assert same(a[b, 1].asnumpy(), _np_a[_np_b, 1])
 
+        a = np.arange(12).reshape(4,3)
+        b = np.array([1.,2.,3.])
+        _np_a = a.asnumpy()
+        _np_b = b.asnumpy()
+        assert same(a[:, b > 2].shape, _np_a[:, _np_b > 2].shape)
+        assert same(a[:, b > 2].asnumpy(), _np_a[:, _np_b > 2])
+
+        a = np.array([[1,2,3],[3,4,5]])
+        _np_a = a.asnumpy()
+        assert same(a[:,a[1,:] > 0].shape, _np_a[:,_np_a[1,: ] > 0].shape)
+        assert same(a[:,a[1,:] > 0].asnumpy(), _np_a[:,_np_a[1,: ] > 0])
+
     def test_boolean_indexing_assign():
         # test boolean indexing assign
         shape = (3, 2, 3)
