@@ -6619,4 +6619,5 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         return _npi.pad(x, pad_width, mode='minimum')
     return _npi.pad(x, pad_width, mode='constant', constant_value=0)
 
+
 _set_np_symbol_class(_Symbol)
