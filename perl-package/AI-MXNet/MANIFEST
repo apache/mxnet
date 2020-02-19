@@ -75,6 +75,7 @@ lib/AI/MXNet/NDArray/Base.pm
 lib/AI/MXNet/NDArray/Doc.pm
 lib/AI/MXNet/NDArray/Slice.pm
 lib/AI/MXNet/NDArray/Sparse.pm
+lib/AI/MXNet/NS.pm
 lib/AI/MXNet/Optimizer.pm
 lib/AI/MXNet/Profiler.pm
 lib/AI/MXNet/Random.pm
