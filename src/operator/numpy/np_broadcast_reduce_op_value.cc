@@ -133,7 +133,7 @@ void TVMOpReduce(const OpContext& ctx,
       values.resize(num_args);
 
       // input tensor setup
-      type_codes[0] = kArrayHandle;
+      type_codes[0] = kTVMDLTensorHandle;
       values[0].v_handle = const_cast<DLTensor*>(&(input_tvm.dltensor()));
 
       // scalar param setup
@@ -141,11 +141,11 @@ void TVMOpReduce(const OpContext& ctx,
       values[1].v_float64 = initial.value();
 
       // output tensor setup
-      type_codes[2] = kArrayHandle;
+      type_codes[2] = kTVMDLTensorHandle;
       values[2].v_handle = const_cast<DLTensor*>(&(output_tvm.dltensor()));
 
       // output tensor setup
-      type_codes[3] = kArrayHandle;
+      type_codes[3] = kTVMDLTensorHandle;
       values[3].v_handle = const_cast<DLTensor*>(&(output_tvm.dltensor()));
 
       tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], 4);
