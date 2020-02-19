@@ -38,8 +38,9 @@ from docker.models.containers import Container
 
 from util import config_logging
 
-DOCKER_STOP_TIMEOUT_SECONDS = 3
+DOCKER_STOP_TIMEOUT_SECONDS = 10
 CONTAINER_WAIT_SECONDS = 600
+DOCKER_CLIENT_TIMEOUT = 600
 
 
 class SafeDockerClient:
@@ -54,7 +55,7 @@ class SafeDockerClient:
         return cid[:12]
 
     def __init__(self):
-        self._docker_client = docker.from_env()
+        self._docker_client = docker.from_env(timeout=DOCKER_CLIENT_TIMEOUT)
         self._containers = set()
         self._docker_stop_timeout = DOCKER_STOP_TIMEOUT_SECONDS
         self._container_wait_seconds = CONTAINER_WAIT_SECONDS
