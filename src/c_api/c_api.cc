@@ -821,11 +821,10 @@ int MXLoadLib(const char *path) {
       LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
                 << " subgraphOp: '" << op_name_str << "'";
 
-      // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
-                               std::make_shared<mxnet::op::CustomSubgraphProperty>(
-                                    strategy_str, callSupportedOps, supportedOps_fp,
-                         callAcceptSubgraph, acceptSubgraph_fp, callFree, op_name_str));
+      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__
+        (name_str, std::make_shared<mxnet::op::CustomSubgraphProperty>
+          (strategy_str, callSupportedOps, supportedOps_fp,
+           callAcceptSubgraph, acceptSubgraph_fp, callFree, op_name_str));
     }
   }
   API_END();
