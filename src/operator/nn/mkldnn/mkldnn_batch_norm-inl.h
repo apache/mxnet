@@ -205,7 +205,17 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     net_args[MKLDNN_ARG_SRC] = *data.GetMKLDNNData();
     net_args[MKLDNN_ARG_SCALE_SHIFT] = weight_mem;
     net_args[MKLDNN_ARG_DST] = *out_mem;
-
+    if (fuse_relu) {
+      const NDArray *workspace = nullptr;
+      workspace = &outputs[3];
+      auto engine = CpuEngine::Get()->get_engine();
+      if (workspace == nullptr) {
+          LOG(FATAL) << "MKLDNN BatchNorm: incorrect workspace input";
+      }
+      auto ws = std::make_shared<mkldnn::memory>(fwd.GetPd().workspace_desc(),
+                        engine, workspace->GetMKLDNNData()->get_data_handle());
+      net_args[MKLDNN_ARG_WORKSPACE] = *ws;
+    }
     if (!ctx.is_train || param.use_global_stats) {
       float* omean    = outputs[batchnorm::kMean].data().dptr<float>();
       float* ovar     = outputs[batchnorm::kVar].data().dptr<float>();
@@ -225,17 +235,6 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       const NDArray &outVar   = outputs[batchnorm::kVar];
       net_args[MKLDNN_ARG_MEAN] = *(outMean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(outVar.GetMKLDNNData());
-      if (fuse_relu) {
-        const NDArray *workspace = nullptr;
-        workspace = &outputs[3];
-        auto engine = CpuEngine::Get()->get_engine();
-        if (workspace == nullptr) {
-            LOG(FATAL) << "MKLDNN BatchNorm: incorrect workspace input";
-        }
-        auto ws = std::make_shared<mkldnn::memory>(fwd.GetPd().workspace_desc(),
-                          engine, workspace->GetMKLDNNData()->get_data_handle());
-        net_args[MKLDNN_ARG_WORKSPACE] = *ws;
-      }
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
