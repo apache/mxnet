@@ -30,7 +30,6 @@
 #include "../operator_common.h"
 #if MXNET_USE_MKLDNN == 1
 #include "../nn/mkldnn/mkldnn_batch_norm-inl.h"
-#include "../nn/mkldnn/mkldnn_base-inl.h"
 #endif
 
 namespace mxnet {

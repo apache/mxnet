@@ -303,7 +303,6 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   } else {
     CHECK_EQ(inputs.size(), 8U);
   }
-  CHECK_EQ(inputs.size(), 8U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   std::vector<NDArray> out_grad(1);
   std::vector<NDArray> out_data(3);
