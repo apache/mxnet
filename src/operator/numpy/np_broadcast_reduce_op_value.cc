@@ -224,6 +224,7 @@ NNVM_REGISTER_OP(_backward_np_min)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesNoDTypeBackward<cpu, mshadow_op::eq>);
 
 NNVM_REGISTER_OP(_np_prod)
+.add_alias("_np_product")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)

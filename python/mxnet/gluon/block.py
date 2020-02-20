@@ -879,7 +879,7 @@ class HybridBlock(Block):
         self._callback = None
         self._monitor_all = False
         self._backend = None
-        self._backend_args = {}
+        self._backend_opts = {}
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -974,7 +974,7 @@ class HybridBlock(Block):
             arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
                          for name in out.list_arguments()]
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
+            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_opts)
 
         self._cached_op = ndarray.CachedOp(out, flags)
 
@@ -1040,7 +1040,7 @@ class HybridBlock(Block):
         super(HybridBlock, self).register_child(block, name)
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_args=None, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1050,7 +1050,7 @@ class HybridBlock(Block):
             Whether to turn hybrid on or off.
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_args : dict of arguments, optional
+        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
@@ -1061,10 +1061,10 @@ class HybridBlock(Block):
         """
 
         self._backend = backend
-        if backend_args is not None:
-            assert isinstance(backend_args, dict), \
-            "HybridBlock hybridize requires backend_args to be a dictionary."
-            self._backend_args = backend_args
+        if backend_opts is not None:
+            assert isinstance(backend_opts, dict), \
+            "HybridBlock hybridize requires backend_opts to be a dictionary."
+            self._backend_opts = backend_opts
 
         self._active = active
         self._flags = list(kwargs.items())
