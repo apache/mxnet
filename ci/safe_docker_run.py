@@ -33,14 +33,15 @@ from itertools import chain
 from typing import Dict, Any
 
 import docker
+import docker.constants
 from docker.errors import NotFound
 from docker.models.containers import Container
 
 from util import config_logging
 
+docker.constants.DEFAULT_TIMEOUT_SECONDS = 300
 DOCKER_STOP_TIMEOUT_SECONDS = 10
 CONTAINER_WAIT_SECONDS = 600
-DOCKER_CLIENT_TIMEOUT = 600
 
 
 class SafeDockerClient:
@@ -55,7 +56,7 @@ class SafeDockerClient:
         return cid[:12]
 
     def __init__(self):
-        self._docker_client = docker.from_env(timeout=DOCKER_CLIENT_TIMEOUT)
+        self._docker_client = docker.from_env()
         self._containers = set()
         self._docker_stop_timeout = DOCKER_STOP_TIMEOUT_SECONDS
         self._container_wait_seconds = CONTAINER_WAIT_SECONDS
