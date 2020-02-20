@@ -167,8 +167,8 @@ def test_custom_op_gpu():
         lib = 'libcustomop_gpu_lib.so'
         if os.path.exists(lib):
             fname = lib
-        elif os.path.exists('build/'+lib):
-            fname = 'build/'+lib
+        elif os.path.exists(os.path.join(base_path, 'build/'+lib)):
+            fname = os.path.join(base_path, 'build/'+lib)
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
