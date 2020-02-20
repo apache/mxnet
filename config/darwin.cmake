@@ -22,7 +22,7 @@
 #  Assume you are on the root directory of mxnet. First copy this file so that
 #  any local changes will be ignored by git
 #
-#  $ cp config/config.cmake config.cmake
+#  $ cp config/darwin.cmake config.cmake
 #
 #  Next modify the according entries, and then compile by
 #
@@ -36,30 +36,14 @@
 #-------------------------------------------------------------------------------
 
 #---------------------------------------------
-# GPU support
-#---------------------------------------------
-set(USE_CUDA ON CACHE BOOL "Build with CUDA support")
-set(USE_CUDNN ON CACHE BOOL "Build with cudnn support, if found")
-
-# Target NVIDIA GPU achitecture.
-# Valid options are "Auto" for autodetection, "All" for all available
-# architectures or a list of architectures by compute capability number, such as
-# "7.0" or "7.0;7.5" as well as name, such as "Volta" or "Volta;Turing".
-# The value specified here is passed to cmake's CUDA_SELECT_NVCC_ARCH_FLAGS to
-# obtain the compilation flags for nvcc.
-#
-# When compiling on a machine without GPU, autodetection will fail and you
-# should instead specify the target architecture manually to avoid excessive
-# compilation times.
-set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture")
-
-#---------------------------------------------
 # Common libraries
 #---------------------------------------------
+set(BLAS "apple" CACHE STRING "BLAS Vendor")
+
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")
 
-set(USE_OPENMP ON CACHE BOOL "Build with Openmp support")
+set(USE_OPENMP OFF CACHE BOOL "Build with Openmp support")
 
 set(USE_MKL_IF_AVAILABLE ON CACHE BOOL "Use Intel MKL if found")
 set(USE_MKLDNN ON CACHE BOOL "Build with MKL-DNN support")
@@ -108,6 +92,25 @@ set(USE_JEMALLOC OFF CACHE BOOL "Build with Jemalloc support")
 # path to folders containing projects specific operators that you don't want to
 # put in src/operators
 SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
+
+
+#---------------------------------------------
+# GPU support
+#---------------------------------------------
+set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
+set(USE_CUDNN OFF CACHE BOOL "Build with cudnn support, if found")
+
+# Target NVIDIA GPU achitecture.
+# Valid options are "Auto" for autodetection, "All" for all available
+# architectures or a list of architectures by compute capability number, such as
+# "7.0" or "7.0;7.5" as well as name, such as "Volta" or "Volta;Turing".
+# The value specified here is passed to cmake's CUDA_SELECT_NVCC_ARCH_FLAGS to
+# obtain the compilation flags for nvcc.
+#
+# When compiling on a machine without GPU, autodetection will fail and you
+# should instead specify the target architecture manually to avoid excessive
+# compilation times.
+set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture")
 
 
 #----------------------------

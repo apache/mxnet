@@ -28,6 +28,7 @@ use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::Symbol::Base;
 use AI::MXNet::Symbol::Random;
+use AI::MXNet::RunTime;
 use AI::MXNet::Types;
 use Mouse;
 use AI::MXNet::Function::Parameters;
@@ -663,7 +664,16 @@ method _infer_shape_impl(Maybe[Str|Shape] @args)
             push @{ $indptr }, scalar(@{ $sdata });
         }
     }
-    my $infer_func = $partial ? \&AI::MXNetCAPI::SymbolInferShapePartialEx : \&AI::MXNetCAPI::SymbolInferShapeEx;
+    my $is64 = AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE');
+    my $infer_func = $partial
+                        ? (
+                            $is64 ? \&AI::MXNetCAPI::SymbolInferShapePartialEx64
+                                  : \&AI::MXNetCAPI::SymbolInferShapePartialEx
+                        )
+                        : (
+                            $is64 ? \&AI::MXNetCAPI::SymbolInferShapeEx64
+                                  : \&AI::MXNetCAPI::SymbolInferShapeEx
+                        );
     my ($arg_shapes, $out_shapes, $aux_shapes, $complete) = check_call(
         $infer_func->(
             $self->handle,
@@ -934,11 +944,14 @@ method simple_bind(
         $aux_state_handles,
         $exe_handle
     );
+    my $sub = AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE')
+              ? \&AI::MXNetCAPI::ExecutorSimpleBindEx64
+              : \&AI::MXNetCAPI::ExecutorSimpleBindEx;
     eval {
         ($updated_shared_data, $in_arg_handles, $arg_grad_handles, $aux_state_handles, $exe_handle)
             =
         check_call(
-            AI::MXNetCAPI::ExecutorSimpleBindEx(
+            $sub->(
                 $self->handle,
                 $ctx->device_type_id,
                 $ctx->device_id,

@@ -17,7 +17,6 @@
 
 """Utils for registering NumPy array function protocol for mxnet.numpy ops."""
 
-from __future__ import absolute_import
 import functools
 import numpy as _np
 from . import numpy as mx_np  # pylint: disable=reimported
@@ -108,6 +107,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'flipud',
     'fliplr',
     'inner',
+    'insert',
     'max',
     'amax',
     'mean',
@@ -125,6 +125,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'roll',
     'split',
     'array_split',
+    'hsplit',
+    'vsplit',
+    'dsplit',
     'squeeze',
     'stack',
     'std',
@@ -162,6 +165,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'meshgrid',
     'outer',
     'einsum',
+    'polyval',
     'shares_memory',
     'may_share_memory',
     'quantile',
@@ -174,6 +178,9 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'empty_like',
     'nan_to_num',
     'isnan',
+    'isfinite',
+    'isposinf',
+    'isneginf',
     'isinf',
 ]
 
@@ -234,6 +241,7 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'negative',
     'power',
     'mod',
+    'matmul',
     'absolute',
     'rint',
     'sign',

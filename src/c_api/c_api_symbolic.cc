@@ -1222,6 +1222,8 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_syms"] =
       std::make_shared<nnvm::any>(std::move(excluded_syms));
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
+  g.attrs["data_name_types"] = std::make_shared<nnvm::any>(kwargs);
+  g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
 
   g = ApplyPass(std::move(g), "ReducePrecision");
   // Need to run type inference since it is possible that inferred

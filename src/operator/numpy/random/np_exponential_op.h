@@ -145,12 +145,12 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename xpu, int ndim, typename DType>
-inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
-                                                 const std::vector<TBlob>& inputs,
-                                                 const std::vector<OpReqType>& req,
-                                                 const std::vector<TBlob>& outputs,
-                                                 const mxnet::TShape& new_ishape,
-                                                 const mxnet::TShape& new_oshape) {
+inline void ExponentialReparamBackwardImpl(const OpContext& ctx,
+                                           const std::vector<TBlob>& inputs,
+                                           const std::vector<OpReqType>& req,
+                                           const std::vector<TBlob>& outputs,
+                                           const mxnet::TShape& new_ishape,
+                                           const mxnet::TShape& new_oshape) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace broadcast;
@@ -191,7 +191,7 @@ void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
                          &new_ishape, &new_ishape, &new_oshape);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        ScalarExponentialReparamBackwardImpl<xpu, NDim, DType>(
+        ExponentialReparamBackwardImpl<xpu, NDim, DType>(
           ctx, inputs, req, outputs, new_ishape, new_oshape);
       });
     });

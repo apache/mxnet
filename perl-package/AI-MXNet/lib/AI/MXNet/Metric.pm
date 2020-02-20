@@ -23,6 +23,8 @@ use AI::MXNet::Function::Parameters;
 use Scalar::Util qw/blessed/;
 use JSON::PP;
 
+=encoding utf-8
+
 =head1 NAME
 
     AI::MXNet::Metric - Evaluation Metric API.
@@ -295,7 +297,7 @@ method update(ArrayRef[AI::MXNet::NDArray] $labels, ArrayRef[AI::MXNet::NDArray]
 
     If top_k = 1, then TopKAccuracy is identical to Accuracy.
 
-    Parameters:	
+    Parameters:
     top_k(Int, default 1) – Whether targets are in top k predictions.
     name (Str, default 'top_k_accuracy') – Name of this metric instance for display.
 

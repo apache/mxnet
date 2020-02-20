@@ -1630,10 +1630,9 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   };
   opr_names.pop_back();
   opr_names += "]";
-  auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
     exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-    iter->c_str());
+    opr_names.c_str());
   return ret;
 }
 

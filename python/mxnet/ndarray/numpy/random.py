@@ -16,7 +16,6 @@
 # under the License.
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
-from __future__ import absolute_import
 import numpy as np
 from ...context import current_context
 from . import _internal as _npi
@@ -24,8 +23,9 @@ from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal',
-           'weibull', 'pareto', 'power', 'geometric']
+           'logistic', 'gumbel', "rayleigh",
+           'geometric',
+           "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -197,10 +197,12 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
     mean : float or array_like of floats, optional
@@ -219,6 +221,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -226,6 +229,102 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from . import _op as _mx_np_op
     return _mx_np_op.exp(normal(loc=mean, scale=sigma, size=size, dtype=dtype, ctx=ctx, out=out))
+
+
+def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a logistic distribution.
+
+    Samples are drawn from a logistic distribution with specified
+    parameters, loc (location or mean, also median), and scale (>0).
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        Parameter of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        Parameter of the distribution. Must be non-negative.
+        Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized logistic distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.logistic(loc, scale, loc=None, scale=None, size=size,
+                             ctx=ctx, out=out)
+    elif input_type == (False, True):
+        return _npi.logistic(scale, loc=loc, scale=None, size=size,
+                             ctx=ctx, out=out)
+    elif input_type == (True, False):
+        return _npi.logistic(loc, loc=None, scale=scale, size=size,
+                             ctx=ctx, out=out)
+    else:
+        return _npi.logistic(loc=loc, scale=scale, size=size,
+                             ctx=ctx, out=out)
+
+
+def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Gumbel distribution.
+
+    Draw samples from a Gumbel distribution with specified location and
+    scale.
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        The location of the mode of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        The scale parameter of the distribution. Default is 1. Must be non-
+        negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Gumbel distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    if input_type == (True, True):
+        return _npi.gumbel(loc, scale, loc=None, scale=None, size=size,
+                           ctx=ctx, out=out)
+    elif input_type == (False, True):
+        return _npi.gumbel(scale, loc=loc, scale=None, size=size,
+                           ctx=ctx, out=out)
+    elif input_type == (True, False):
+        return _npi.gumbel(loc, loc=None, scale=scale, size=size,
+                           ctx=ctx, out=out)
+    else:
+        return _npi.gumbel(loc=loc, scale=scale, size=size,
+                           ctx=ctx, out=out)
 
 
 def multinomial(n, pvals, size=None):
@@ -278,6 +377,44 @@ def multinomial(n, pvals, size=None):
         if any(isinstance(i, list) for i in pvals):
             raise ValueError('object too deep for desired array')
         return _npi.multinomial(n=n, pvals=pvals, size=size)
+
+
+def rayleigh(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+
+    Parameters
+    ----------
+    scale : float, optional
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    is_tensor = isinstance(scale, tensor_type_name)
+    if is_tensor:
+        return _npi.rayleigh(scale, scale=None, size=size, ctx=ctx, out=out)
+    else:
+        return _npi.rayleigh(scale=scale, size=size, ctx=ctx, out=out)
 
 
 def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
@@ -437,6 +574,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
+
     Parameters
     ----------
     scale : float or array_like of floats
@@ -447,6 +585,11 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -466,7 +609,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         return _npi.exponential(scale=scale, size=size, ctx=ctx, out=out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given
     parameter a, via inversion.
 
@@ -510,13 +653,15 @@ def weibull(a, size=None):
     """
     from ...numpy import ndarray as np_ndarray
     tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = current_context()
     if size == ():
         size = None
     is_tensor = isinstance(a, tensor_type_name)
     if is_tensor:
-        return _npi.weibull(a, a=None, size=size)
+        return _npi.weibull(a, a=None, size=size, ctx=ctx, out=out)
     else:
-        return _npi.weibull(a=a, size=size)
+        return _npi.weibull(a=a, size=size, ctx=ctx, out=out)
 
 
 def pareto(a, size=None):

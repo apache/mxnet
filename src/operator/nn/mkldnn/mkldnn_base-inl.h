@@ -60,6 +60,24 @@
 #include "mxnet/op_attr_types.h"
 #include "mxnet/resource.h"
 
+#define MKLDNN_REAL_TYPE_SWITCH(type, DType, ...)   \
+  switch (type) {                                   \
+  case mshadow::kFloat32:                           \
+    {                                               \
+      typedef float DType;                          \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kBfloat16:                          \
+    {                                               \
+      typedef mshadow::bfloat::bf16_t DType;        \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    LOG(FATAL) << "Unknown type enum " << type;     \
+  }
+
 namespace mxnet {
 
 // =====  CpuEngine =======================================
@@ -97,6 +115,11 @@ struct data_type_enum<float> {
 };
 
 template <>
+struct data_type_enum<mshadow::bfloat::bf16_t> {
+  enum { type = static_cast<unsigned int>(mkldnn::memory::data_type::bf16) };
+};
+
+template <>
 struct data_type_enum<int32_t> {
   enum { type = static_cast<unsigned int>(mkldnn::memory::data_type::s32) };
 };
@@ -114,8 +137,9 @@ struct data_type_enum<uint8_t> {
 static inline bool SupportMKLDNNArray(int dtype, const mxnet::TShape &shape) {
   int ndim = shape.ndim();
   bool support = ndim == 1 || ndim == 2 || ndim == 4;
-  support = support && (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32
-                        || dtype == mshadow::kInt8 || dtype == mshadow::kUint8);
+  support = support &&
+            (dtype == mshadow::kFloat32 || dtype == mshadow::kInt32 || dtype == mshadow::kInt8 ||
+             dtype == mshadow::kUint8 || dtype == mshadow::kBfloat16);
   return support;
 }
 
@@ -129,7 +153,9 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
     // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
     return false;
   }
-  return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
+
+  return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
+         (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNNRnn(const NDArray &input) {
@@ -142,7 +168,7 @@ static inline bool SupportMKLDNNRnn(const NDArray &input) {
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kInt8 ||
-         dtype == mshadow::kUint8;
+         dtype == mshadow::kUint8 || dtype == mshadow::kBfloat16;
 }
 
 static inline bool SupportMKLDNN(const NDArray &input) {
@@ -217,6 +243,8 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
   switch (dtype) {
     case mshadow::kFloat32:
       return mkldnn::memory::data_type::f32;
+    case mshadow::kBfloat16:
+      return mkldnn::memory::data_type::bf16;
     case mshadow::kInt32:
       return mkldnn::memory::data_type::s32;
     case mshadow::kInt8:
@@ -224,7 +252,7 @@ static inline mkldnn::memory::data_type get_mkldnn_type(int dtype) {
     case mshadow::kUint8:
       return mkldnn::memory::data_type::u8;
     default:
-      LOG(FATAL) << "unknown type for MKLDNN";
+      LOG(FATAL) << "unknown type for MKLDNN :" << static_cast<int>(dtype);
       return mkldnn::memory::data_type::undef;
   }
 }
@@ -249,6 +277,8 @@ static inline int get_mxnet_type(mkldnn_data_type_t dtype) {
   switch (mkldnn_dtype) {
     case mkldnn::memory::data_type::f32:
       return mshadow::kFloat32;
+    case mkldnn::memory::data_type::bf16:
+      return mshadow::kBfloat16;
     case mkldnn::memory::data_type::s32:
       return mshadow::kInt32;
     case mkldnn::memory::data_type::s8:
@@ -594,10 +624,11 @@ class MKLDNNMemory {
     return mem->get_desc();
   }
 
-  mkldnn::memory::desc GetDesc(mkldnn_format_tag_t format) const {
+  mkldnn::memory::desc GetDesc(mkldnn_format_tag_t format,
+          mkldnn::memory::data_type data_type = mkldnn::memory::data_type::undef) const {
     mkldnn::memory::dims dims(desc.data.dims, desc.data.dims + desc.data.ndims);
-    mkldnn::memory::data_type cpp_type =
-        static_cast<mkldnn::memory::data_type>(desc.data.data_type);
+    mkldnn::memory::data_type cpp_type = (data_type == mkldnn::memory::data_type::undef)
+                        ? static_cast<mkldnn::memory::data_type>(desc.data.data_type) : data_type;
     mkldnn::memory::desc data_md(dims, cpp_type,
         static_cast<mkldnn::memory::format_tag>(format));
     return data_md;
@@ -624,6 +655,9 @@ class MKLDNNMemory {
     mkldnn::reorder(*mem, *other).execute(s, *mem, *other);
   }
 };
+
+// reorder mkldnn src to dst format dtype
+void ReorderTo(const mkldnn::memory *src, const mkldnn::memory *dst);
 
 template <typename Compute, typename AttrState>
 void FallBackCompute(Compute fn, const AttrState &attrs,

@@ -44,6 +44,7 @@ from benchmark.opperf.nd_operations.array_rearrange import run_rearrange_operato
 from benchmark.opperf.nd_operations.indexing_routines import run_indexing_routines_benchmarks
 from benchmark.opperf.nd_operations.nn_loss_operators import run_loss_operators_benchmarks
 from benchmark.opperf.nd_operations.linalg_operators import run_linalg_operators_benchmarks
+from benchmark.opperf.nd_operations.misc_operators import run_mx_misc_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark, \
@@ -114,6 +115,9 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all NN loss operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_loss_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, warmup=warmup, runs=runs))
+    
+    # Run all Miscellaneous operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_mx_misc_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, warmup=warmup, runs=runs))
 
     # Run all Linear Algebra operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_linalg_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, warmup=warmup, runs=runs))
