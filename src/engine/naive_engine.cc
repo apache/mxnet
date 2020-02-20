@@ -229,10 +229,6 @@ class NaiveEngine final : public Engine {
     shutdown_phase_.store(true);
   }
 
-  bool IsNaiveEngine() override {
-    return true;
-  }
-
  private:
   // callback to oncomplete
   static void OnComplete(Engine *engine, void *param,

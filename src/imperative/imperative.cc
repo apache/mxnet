@@ -55,7 +55,8 @@ OpStatePtr Imperative::InvokeOp(
   std::vector<engine::VarHandle> read_vars, write_vars;
   std::vector<Resource> requested;
   std::vector<uint32_t> mutate_idx;
-  if (Engine::Get()->IsNaiveEngine()) {
+  static const bool is_naive_engine = IsNaiveEngine();
+  if (is_naive_engine) {
     PrepareResources(attrs, ctx, &requested, &mutate_idx, dispatch_mode);
   } else {
     SetDependency(attrs, ctx, inputs, outputs,

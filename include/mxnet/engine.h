@@ -315,11 +315,6 @@ class MXNET_API Engine {
   virtual int set_bulk_size(int) {
     return 0;
   }
-
-  /*! \brief query whether to use naive engine */
-  virtual bool IsNaiveEngine() {
-    return false;
-  }
 };  // class Engine
 #endif  // DMLC_USE_CXX11
 }  // namespace mxnet

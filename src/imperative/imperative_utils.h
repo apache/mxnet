@@ -224,6 +224,21 @@ inline void SetShapeType(const Context& ctx,
   }
 }
 
+inline const bool IsNaiveEngine() {
+  const char *type = getenv("MXNET_ENGINE_TYPE");
+  std::string stype;
+  if (type) {
+    stype = type;
+    if (stype == "NaiveEngine") {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
 inline void SetDependency(const nnvm::NodeAttrs& attrs,
                           const Context& ctx,
                           const std::vector<NDArray*>& inputs,
