@@ -182,6 +182,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'isposinf',
     'isneginf',
     'isinf',
+    'pad',
 ]
 
 
