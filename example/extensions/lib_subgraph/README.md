@@ -53,9 +53,11 @@ You can start getting familiar with custom partitioners by running an example pr
 
 * **lib_subgraph/test_subgraph.py**: This file calls `mx.library.load(‘libsubgraph_lib.so’)` to load the library containing the custom components, partitions the model using the `optimize_for` API, and prints outputs of the forward passes. The outputs should be the same as the regular MXNet forward pass without partitioning.
 
+* **include/mxnet/lib_api.h**: This file from MXNet source code is the single header file needed to include all necessary data types and function prototypes for writing a custom operator library. You can either specify the include path in the `Makefile`, or copy the header file over to `example/extensions/lib_subgraph` folder. Note that apart from this header, the custom operator library is independent of MXNet source.
+
 ## Writing Custom Partitioner Library
 
-For building a library containing your own custom partitioner, compose a C++ source file like `mypart_lib.cc`, include `lib_api.h` header file, and write your custom partitioner with these essential functions:
+To build your own library containing a custom partitioner, compose a C++ source file like `mypart_lib.cc`, include `lib_api.h` header file, and write your custom partitioner with these essential functions:
 - `initialize` - Library Initialization Function
 - `REGISTER_PARTITIONER ` - Partitioner Registration Macro
 - `mySupportedOps ` - Operator Support
