@@ -501,6 +501,17 @@ def test_mx_data_loader():
     for _ in dl:
         pass
 
+def test_mx_data_loader_nopython():
+    from mxnet.gluon.data.dataloader import DataLoader
+    from mxnet.gluon.data.vision.transforms import ToTensor
+    dataset = mx.gluon.data.vision.MNIST(train=False)
+    dl1 = DataLoader(dataset=dataset.transform_first(ToTensor()), batch_size=32, try_nopython=True, shuffle=False)
+    dl2 = DataLoader(dataset=dataset.transform_first(ToTensor()), batch_size=32, try_nopython=False, shuffle=False)
+    assert len(dl1) == len(dl2)
+    assert np.all(next(iter(dl1))[1].asnumpy() == next(iter(dl2))[1].asnumpy())
+    for _ in dl1:
+        pass
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
