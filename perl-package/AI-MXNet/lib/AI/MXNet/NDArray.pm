@@ -29,7 +29,7 @@ package AI::MXNet::NDArray;
     An NDArray represents a multidimensional, fixed-size homogenous array.
     If you're familiar with the PDL, you might notice some similarities.
     However, NDArray is row-major, unlike the PDL that is column-major.
-    Like the PDL, MXNet’s NDArray enables imperative computation.
+    Like the PDL, MXNet's NDArray enables imperative computation.
 
     Some NDArray advandages compared to PDL:
     MXNet's NDArray supports fast execution on a wide range of hardware configurations, including CPU, GPU, and multi-GPU machines.
@@ -63,6 +63,7 @@ use AI::MXNet::NS;
 use AI::MXNet::Base;
 use AI::MXNet::NDArray::Slice;
 use AI::MXNet::Context;
+use AI::MXNet::RunTime;
 use Mouse;
 use AI::MXNet::Function::Parameters;
 use overload (
@@ -384,8 +385,11 @@ method _slice (
 )
 {
     confess("start $start > stop $stop") if $start > $stop;
+    my $sub = AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE')
+              ? \&AI::MXNetCAPI::NDArraySlice64
+              : \&AI::MXNetCAPI::NDArraySlice;
     my $handle = check_call(
-        AI::MXNetCAPI::NDArraySlice(
+        $sub->(
             $self->handle,
             $start,
             $stop
@@ -407,8 +411,11 @@ method _slice (
 
 method _at(Index $idx)
 {
+    my $sub = AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE')
+              ? \&AI::MXNetCAPI::NDArrayAt64
+              : \&AI::MXNetCAPI::NDArrayAt;
     my $handle = check_call(
-                AI::MXNetCAPI::NDArrayAt(
+                $sub->(
                     $self->handle, $idx >=0 ? $idx : $self->shape->[0] + $idx
                 )
     );
@@ -549,7 +556,14 @@ method wait_to_read()
 
 method shape()
 {
-    return scalar(check_call(AI::MXNetCAPI::NDArrayGetShapeEx($self->handle)));
+    if(AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE'))
+    {
+        return [map { $_ + 0 } @{ scalar(check_call(AI::MXNetCAPI::NDArrayGetShapeEx64($self->handle))) }];
+    }
+    else
+    {
+       return scalar(check_call(AI::MXNetCAPI::NDArrayGetShapeEx($self->handle)));
+    }
 }
 
 =head2 size
@@ -1464,8 +1478,11 @@ sub _new_empty_handle
 
 func _new_alloc_handle($shape, $ctx, $delay_alloc, $dtype)
 {
+    my $sub = AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE')
+              ? \&AI::MXNetCAPI::NDArrayCreateEx64
+              : \&AI::MXNetCAPI::NDArrayCreateEx;
     my $hdl = check_call(
-        AI::MXNetCAPI::NDArrayCreateEx(
+        $sub->(
             $shape,
             scalar(@$shape),
             $ctx->device_type_id,

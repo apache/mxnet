@@ -1021,6 +1021,10 @@ def _add_workload_prod(array_pool):
     OpArgMngr.add_workload('prod', array_pool['4x1'])
 
 
+def _add_workload_product(array_pool):
+    OpArgMngr.add_workload('product', array_pool['4x1'])
+
+
 def _add_workload_repeat(array_pool):
     OpArgMngr.add_workload('repeat', array_pool['4x1'], 3)
     OpArgMngr.add_workload('repeat', np.array(_np.arange(12).reshape(4, 3)[:, 2]), 3)
@@ -1806,6 +1810,18 @@ def _add_workload_where():
     b = np.ones((2, 25))
     OpArgMngr.add_workload('where', c.reshape((2, 1)), a, b)
     OpArgMngr.add_workload('where', c, a.T, b.T)
+
+
+def _add_workload_pad():
+    array = _np.array([[1, 2, 3], [1, 2, 3]])
+    pad_width = ((5, 5), (5,5))
+    array = np.array(array)
+    OpArgMngr.add_workload('pad', array, pad_width, mode="constant", constant_values=0)
+    OpArgMngr.add_workload('pad', array, pad_width, mode="edge")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="symmetric", reflect_type="even")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="reflect", reflect_type="even")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="maximum")
+    OpArgMngr.add_workload('pad', array, pad_width, mode="minimum")
 
 
 def _add_workload_nonzero():
@@ -2711,6 +2727,7 @@ def _prepare_workloads():
     _add_workload_ones_like(array_pool)
     _add_workload_atleast_nd()
     _add_workload_prod(array_pool)
+    _add_workload_product(array_pool)
     _add_workload_repeat(array_pool)
     _add_workload_reshape()
     _add_workload_rint(array_pool)
@@ -2884,6 +2901,7 @@ def _prepare_workloads():
     _add_workload_nanquantile()
     _add_workload_ndim()
     _add_workload_npv()
+    _add_workload_pad()
     _add_workload_partition()
     _add_workload_piecewise()
     _add_workload_packbits()
