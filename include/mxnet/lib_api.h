@@ -1329,8 +1329,8 @@ extern "C" {
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
-      MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool,
-                                            opts, attrs, args);
+    MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool,
+                                          opts, attrs, args);
     if (!retval) return retval;
     
     *accept = accept_bool;
