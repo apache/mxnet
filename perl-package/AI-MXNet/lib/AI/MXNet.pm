@@ -42,6 +42,7 @@ use AI::MXNet::Module::Base;
 use AI::MXNet::Module qw(mod module);
 use AI::MXNet::Module::Bucketing;
 use AI::MXNet::RNN 'rnn';
+use AI::MXNet::RunTime 'runtime';
 use AI::MXNet::Visualization 'viz';
 use AI::MXNet::RecordIO 'recordio';
 use AI::MXNet::Image qw(img image);
@@ -53,7 +54,7 @@ use AI::MXNet::Gluon 'gluon';
 use AI::MXNet::NDArray::Sparse;
 use AI::MXNet::Symbol::Sparse;
 use AI::MXNet::Engine 'engine';
-our $VERSION = '1.4';
+our $VERSION = '1.5';
 
 sub cpu { AI::MXNet::Context->cpu($_[1]//0) }
 sub cpu_pinned { AI::MXNet::Context->cpu_pinned($_[1]//0) }

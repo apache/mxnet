@@ -127,6 +127,17 @@ def test_nn():
         expected_grad_out[k] = -1
         assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
 
+    def check_softmax_activation():
+        data = nd.random_normal(shape=(2**29, 2, 2, 2))
+        out = nd.random_normal(shape=(2**29, 2, 2, 2))
+
+        res = nd.SoftmaxActivation(data=data, out=out)
+
+        assert res.shape[0] == 536870912
+        assert res.shape[1] == 2
+        assert res.shape[2] == 2
+        assert res.shape[3] == 2
+
     def np_softmax(x, axis=-1, temperature=1.0):
         x = x - np.max(x, axis=axis, keepdims=True)
         x = np.exp(x/temperature)
@@ -450,6 +461,7 @@ def test_nn():
     check_softmax()
     check_softmax_cross_entropy()
     check_softmax_output()
+    check_softmax_activation()
     check_log_softmax()
     check_leaky_relu()
     check_pooling()

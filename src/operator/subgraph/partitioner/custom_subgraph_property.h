@@ -72,21 +72,21 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     subgraph_prop("error"),
     call_supported_ops_(nullptr),
     supported_ops_(nullptr),
-    call_accept_subgraph_(nullptr),
-    accept_subgraph_(nullptr),
+    call_review_subgraph_(nullptr),
+    review_subgraph_(nullptr),
     subgraph_op_name("error") {}
   CustomSubgraphProperty(std::string subgraph_prop_name,
                          partCallSupportedOps_t call_supported_ops,
                          supportedOps_t supported_ops,
-                         partCallAcceptSubgraph_t call_accept_subgraph,
-                         acceptSubgraph_t accept_subgraph,
+                         partCallReviewSubgraph_t call_review_subgraph,
+                         reviewSubgraph_t review_subgraph,
                          opCallFree_t call_free,
                          std::string op_name) :
       subgraph_prop(subgraph_prop_name),
       call_supported_ops_(call_supported_ops),
       supported_ops_(supported_ops),
-      call_accept_subgraph_(call_accept_subgraph),
-      accept_subgraph_(accept_subgraph),
+      call_review_subgraph_(call_review_subgraph),
+      review_subgraph_(review_subgraph),
       call_free_(call_free),
       subgraph_op_name(op_name) {}
 
@@ -192,7 +192,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     int num_attr = 0;
     char** attr_keys = nullptr;
     char** attr_vals = nullptr;
-    if (accept_subgraph_) {
+    if (review_subgraph_) {
       nnvm::Graph g;
       g.outputs = sym.outputs;
       const auto& idx = g.indexed_graph();
@@ -213,7 +213,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
 
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
-      CHECK(call_accept_subgraph_(accept_subgraph_, subgraph_json.c_str(),
+
+      CHECK(call_review_subgraph_(review_subgraph_, subgraph_json.c_str(),
                                   subgraph_id, &accept, opt_keys_.data(),
                                   opt_vals_.data(), opt_keys_.size(),
                                   &attr_keys, &attr_vals, &num_attr,
@@ -222,8 +223,9 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                                   arg_dims.data(), arg_types.data(),
                                   arg_verIDs.data(), arg_dev_type.data(),
                                   arg_dev_id.data()))
-        << "Error calling accept_subgraph for '" << subgraph_prop << "'";
+        << "Error calling review_subgraph for '" << subgraph_prop << "'";
     }
+
     if (accept) {
       nnvm::ObjectPtr n = nnvm::Node::Create();
       n->attrs.op = Op::Get(subgraph_op_name);
@@ -251,8 +253,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::string subgraph_prop;
   partCallSupportedOps_t call_supported_ops_;
   supportedOps_t supported_ops_;
-  partCallAcceptSubgraph_t call_accept_subgraph_;
-  acceptSubgraph_t accept_subgraph_;
+  partCallReviewSubgraph_t call_review_subgraph_;
+  reviewSubgraph_t review_subgraph_;
   opCallFree_t call_free_;
   std::unordered_set<std::string> supported_nodes;
   std::string subgraph_op_name;

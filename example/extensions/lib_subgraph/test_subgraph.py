@@ -23,8 +23,10 @@
 # This test checks if dynamic loading of library into MXNet is successful
 # and checks the end of end computation of custom operator
 
-import mxnet as mx
 import os, ctypes
+import mxnet as mx
+from mxnet.gluon import nn
+from mxnet import nd
 from mxnet.base import _LIB, check_call, mx_uint, c_str, c_str_array, SymbolHandle
 
 # load library
@@ -104,3 +106,13 @@ mysym6 = sym2.optimize_for("myProp", reqArgs=True)
 exe6 = mysym6.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
 out6 = exe6.forward()
 print(out6)
+
+# Gluon Hybridize partitioning with shapes/types
+print('-------------------------------')
+print('Testing Gluon Hybridize partitioning with shapes/types')
+inputs = [a,b]
+sym_block = nn.SymbolBlock(sym, inputs)
+sym_block.initialize()
+sym_block.hybridize(backend='myProp')
+out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+print(out4)

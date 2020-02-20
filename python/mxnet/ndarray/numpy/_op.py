@@ -27,6 +27,7 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
+
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
            'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'insert',
@@ -34,17 +35,17 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort',
            'tensordot', 'eye', 'linspace',
-           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
+           'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
            'diff', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount']
+           'where', 'bincount', 'pad']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -820,6 +821,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         result array or scalar
     """
     from ...numpy import ndarray
+    from ..ndarray import from_numpy  # pylint: disable=unused-import
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
@@ -831,7 +833,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
                 return rfn_scalar(rhs, float(lhs), out=out)
     elif isinstance(rhs, numeric_types):
         return lfn_scalar(lhs, float(rhs), out=out)
-    elif isinstance(rhs, ndarray):
+    elif isinstance(lhs, ndarray) and isinstance(rhs, ndarray):
         return fn_array(lhs, rhs, out=out)
     else:
         raise TypeError('type {} not supported'.format(str(type(rhs))))
@@ -3734,21 +3736,19 @@ def hsplit(ary, indices_or_sections):
     >>> np.hsplit(x, [2, 2])
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
-    axis = 1
-    if len(ary.shape) == 1:
-        axis = 0
-    axis_size = ary.shape[axis]
+    if len(ary.shape) < 1:
+        raise ValueError('hsplit only works on arrays of 1 or more dimensions')
+    indices = []
+    sections = 0
     if isinstance(indices_or_sections, integer_types):
         sections = indices_or_sections
-        if axis_size % sections:
-            raise ValueError('array hsplit does not result in an equal division')
-        section_size = int(axis_size / sections)
-        indices = [i * section_size for i in range(sections)]
     elif isinstance(indices_or_sections, (list, set, tuple)):
         indices = [0] + list(indices_or_sections)
     else:
-        raise ValueError('indices_or_sections must either int or tuple of ints')
-    ret = _npi.hsplit(ary, indices, axis, False)
+        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
+    ret = _npi.hsplit(ary, indices, 1, False, sections)
+    if not isinstance(ret, list):
+        return [ret]
     return ret
 # pylint: enable=redefined-outer-name
 
@@ -3827,7 +3827,69 @@ def vsplit(ary, indices_or_sections):
             [6., 7.]]])]
 
     """
+    if len(ary.shape) < 2:
+        raise ValueError("vsplit only works on arrays of 2 or more dimensions")
     return split(ary, indices_or_sections, 0)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.ndarray.numpy')
+def dsplit(ary, indices_or_sections):
+    """
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+
+    Please refer to the `split` documentation.  `dsplit` is equivalent
+    to `split` with ``axis=2``, the array is always split along the third
+    axis provided the array dimension is greater than or equal to 3.
+
+    Parameters
+    ----------
+    ary : ndarray
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1 - D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 2.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 2 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:, :, :2]
+          - ary[:, :, 2:3]
+          - ary[:, :, 3:]
+
+        If an index exceeds the dimension of the array along axis 2, an error will be thrown.
+
+    Examples
+    --------
+    >>> x = np.arange(16.0).reshape(2, 2, 4)
+    >>> x
+    array([[[ 0.,   1.,   2.,   3.],
+            [ 4.,   5.,   6.,   7.]],
+           [[ 8.,   9.,  10.,  11.],
+            [12.,  13.,  14.,  15.]]])
+    >>> np.dsplit(x, 2)
+    [array([[[ 0.,  1.],
+            [ 4.,  5.]],
+           [[ 8.,  9.],
+            [12., 13.]]]), array([[[ 2.,  3.],
+            [ 6.,  7.]],
+           [[10., 11.],
+            [14., 15.]]])]
+    >>> np.dsplit(x, np.array([3, 6]))
+    [array([[[ 0.,   1.,   2.],
+            [ 4.,   5.,   6.]],
+           [[ 8.,   9.,  10.],
+            [12.,  13.,  14.]]]),
+     array([[[ 3.],
+            [ 7.]],
+           [[11.],
+            [15.]]]),
+    array([], shape=(2, 2, 0), dtype=float64)]
+    """
+    if len(ary.shape) < 3:
+        raise ValueError('dsplit only works on arrays of 3 or more dimensions')
+    return split(ary, indices_or_sections, 2)
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4297,7 +4359,6 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4366,7 +4427,6 @@ def argmin(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4849,7 +4909,7 @@ def ravel(x, order='C'):
     >>> print(np.ravel(x.T))
     [1. 4. 2. 5. 3. 6.]
     """
-    if order != 'C':
+    if order == 'F':
         raise NotImplementedError('order {} is not supported'.format(order))
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
@@ -7296,3 +7356,137 @@ def bincount(x, weights=None, minlength=0):
     if weights is None:
         return _npi.bincount(x, minlength=minlength, has_weights=False)
     return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
+
+
+@set_module('mxnet.ndarray.numpy')
+def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arguments
+    """
+    Pad an array.
+
+    Parameters
+    ----------
+    array : array_like of rank N
+        The array to pad.
+    pad_width : {sequence, array_like, int}
+        Number of values padded to the edges of each axis.
+        ((before_1, after_1), ... (before_N, after_N)) unique pad widths
+        for each axis.
+        ((before, after),) yields same before and after pad for each axis.
+        (pad,) or int is a shortcut for before = after = pad width for all
+        axes.
+    mode : str or function, optional
+        One of the following string values or a user supplied function.
+        'constant' (default)
+            Pads with a constant value.
+        'edge'
+            Pads with the edge values of array.
+        'linear_ramp'
+            not supported yet
+        'maximum'
+            Pads with the maximum value of all of the
+            vector along each axis.
+        'mean'
+            not supported yet
+        'median'
+            not supported yet
+        'minimum'
+            Pads with the minimum value of all of the
+            vector along each axis.
+        'reflect'
+            Pads with the reflection of the vector mirrored on
+            the first and last values of the vector along each
+            axis.
+        'symmetric'
+            Pads with the reflection of the vector mirrored
+            along the edge of the array.
+        'wrap'
+            not supported yet.
+        'empty'
+            not supported yet.
+        <function>
+            not supported yet.
+    stat_length : not supported yet
+    constant_values : scalar, optional
+        Used in 'constant'.  The values to set the padded values for each
+        axis.
+        Default is 0.
+
+    end_values : not supported yet
+    reflect_type : {'even', 'odd'}, optional
+        only support even now
+
+    Returns
+    -------
+    pad : ndarray
+        Padded array of rank equal to `array` with shape increased
+        according to `pad_width`.
+    """
+    # pylint: disable = too-many-return-statements, inconsistent-return-statements
+    if not _np.asarray(pad_width).dtype.kind == 'i':
+        raise TypeError('`pad_width` must be of integral type.')
+    if not isinstance(pad_width, tuple):
+        raise TypeError("`pad_width` must be tuple.")
+    if mode == "linear_ramp":
+        raise ValueError("mode {'linear_ramp'} is not supported.")
+    if mode == "wrap":
+        raise ValueError("mode {'wrap'} is not supported.")
+    if mode == "median":
+        raise ValueError("mode {'median'} is not supported.")
+    if mode == "mean":
+        raise ValueError("mode {'mean'} is not supported.")
+    if mode == "empty":
+        raise ValueError("mode {'empty'} is not supported.")
+    if callable(mode):
+        raise ValueError("mode {'<function>'} is not supported.")
+
+    allowedkwargs = {
+        'constant': ['constant_values'],
+        'edge': [],
+        'linear_ramp': ['end_values'],
+        'maximum': ['stat_length'],
+        'mean': ['stat_length'],
+        'median': ['stat_length'],
+        'minimum': ['stat_length'],
+        'reflect': ['reflect_type'],
+        'symmetric': ['reflect_type'],
+        'wrap': [],
+        }
+
+    if isinstance(mode, _np.compat.basestring):
+        # Make sure have allowed kwargs appropriate for mode
+        for key in kwargs:
+            if key not in allowedkwargs[mode]:
+                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
+
+    unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
+    if unsupported_kwargs:
+        raise ValueError("unsupported keyword arguments for mode '{}': {}"
+                         .format(mode, unsupported_kwargs))
+    if mode == "constant":
+        values = kwargs.get("constant_values", 0)
+        if isinstance(values, tuple):
+            raise TypeError("unsupported constant_values type: {'tuple'}.")
+        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+    elif mode == "symmetric":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='symmetric', reflect_type="even")
+    elif mode == "edge":
+        return _npi.pad(x, pad_width, mode='edge')
+    elif mode == "reflect":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='reflect', reflect_type="even")
+    elif mode == "maximum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='maximum')
+    elif mode == "minimum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='minimum')
+    return _npi.pad(x, pad_width, mode='constant', constant_value=0)

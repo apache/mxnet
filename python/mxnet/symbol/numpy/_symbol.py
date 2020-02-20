@@ -41,17 +41,17 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
-           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'vsplit', 'concatenate', 'append',
-           'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
+           'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
+           'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'hsplit', 'rot90', 'einsum',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount']
+           'where', 'bincount', 'pad']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -296,7 +296,7 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    def astype(self, dtype, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument,too-many-arguments
         """
         Copy of the array, cast to a specified type.
 
@@ -304,6 +304,26 @@ class _Symbol(Symbol):
         ----------
         dtype : str or dtype
             Typecode or data-type to which the array is cast.
+        order : {'C', 'F', 'A', 'K'}, optional
+            Controls the memory layout order of the result.
+            'C' means C order, 'F' means Fortran order, 'A'
+            means 'F' order if all the arrays are Fortran contiguous,
+            'C' order otherwise, and 'K' means as close to the
+            order the array elements appear in memory as possible.
+            Default is 'K'.
+        casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+            Controls what kind of data casting may occur. Defaults to 'unsafe'
+            for backwards compatibility.
+
+              * 'no' means the data types should not be cast at all.
+              * 'equiv' means only byte-order changes are allowed.
+              * 'safe' means only casts which can preserve values are allowed.
+              * 'same_kind' means only safe casts or casts within a kind,
+                like float64 to float32, are allowed.
+              * 'unsafe' means any data conversions may be done.
+        subok : bool, optional
+            If True, then sub-classes will be passed-through (default), otherwise
+            the returned array will be forced to be a base-class array.
         copy : bool, optional
             Default `True`. By default, astype always returns a newly
             allocated ndarray on the same context. If this is set to
@@ -316,8 +336,21 @@ class _Symbol(Symbol):
             Unless `copy` is False and the other conditions for returning the input
             array are satisfied (see description for `copy` input parameter), `arr_t`
             is a new array of the same shape as the input array with `dtype`.
+
+        Notes
+        -----
+        This function differs from the official `ndarray`'s ``astype`` function in the following
+        aspects:
+            - `order` only supports 'C' and 'K'.
+            - `casting` only supports 'unsafe'.
+            - `subok` only supports ``True``.
         """
-        _sanity_check_params('astype', ['order', 'casting', 'subok'], kwargs)
+        if order is not None and order != 'K' and order != 'C':
+            raise ValueError('order must be either \'K\' or \'C\'')
+        if casting != 'unsafe':
+            raise ValueError('casting must be equal to \'unsafe\'')
+        if not subok:
+            raise ValueError('subok must be equal to True')
         return _npi.cast(self, dtype=dtype)
 
     def dot(self, b, out=None):
@@ -3704,6 +3737,46 @@ def vsplit(ary, indices_or_sections):
     return split(ary, indices_or_sections, 0)
 
 
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.symbol.numpy')
+def dsplit(ary, indices_or_sections):
+    """
+    Split array into multiple sub-arrays along the 3rd axis (depth).
+
+    Please refer to the `split` documentation.  `dsplit` is equivalent
+    to `split` with ``axis=2``, the array is always split along the third
+    axis provided the array dimension is greater than or equal to 3.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        Array to be divided into sub-arrays.
+    indices_or_sections : int or 1-D Python tuple, list or set.
+        If `indices_or_sections` is an integer, N, the array will be divided into N equal arrays
+        along axis 2.  If such a split is not possible, an error is raised.
+
+        If `indices_or_sections` is a 1-D array of sorted integers, the entries indicate where
+        along axis 2 the array is split.  For example, ``[2, 3]`` would result in
+
+          - ary[:, :, :2]
+          - ary[:, :, 2:3]
+          - ary[:, :, 3:]
+
+        If an index exceeds the dimension of the array along axis 2, an error will be thrown.
+    """
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    ret = _npi.dsplit(ary, indices, 2, False, sections)
+    return ret
+# pylint: enable=redefined-outer-name
+
+
 @set_module('mxnet.symbol.numpy')
 def concatenate(seq, axis=0, out=None):
     """Join a sequence of arrays along an existing axis.
@@ -4089,7 +4162,6 @@ def argmax(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4129,7 +4201,6 @@ def argmin(a, axis=None, out=None):
     the following aspects:
 
     - Input type does not support Python native iterables(list, tuple, ...).
-    - Output has dtype that is same as the input ndarray.
     - ``out`` param: cannot perform auto broadcasting. ``out`` symbol's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` symnbol's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
@@ -4520,7 +4591,7 @@ def ravel(x, order='C'):
     This function differs from the original numpy.arange in the following aspects:
         - Only support row-major, C-style order.
     """
-    if order != 'C':
+    if order == 'F':
         raise NotImplementedError('order {} is not supported'.format(order))
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
@@ -6412,6 +6483,140 @@ def bincount(x, weights=None, minlength=0):
     if weights is None:
         return _npi.bincount(x, minlength=minlength, has_weights=False)
     return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
+
+
+@set_module('mxnet.symbol.numpy')
+def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arguments
+    """
+    Pad an array.
+
+    Parameters
+    ----------
+    array : array_like of rank N
+        The array to pad.
+    pad_width : {sequence, array_like, int}
+        Number of values padded to the edges of each axis.
+        ((before_1, after_1), ... (before_N, after_N)) unique pad widths
+        for each axis.
+        ((before, after),) yields same before and after pad for each axis.
+        (pad,) or int is a shortcut for before = after = pad width for all
+        axes.
+    mode : str or function, optional
+        One of the following string values or a user supplied function.
+        'constant' (default)
+            Pads with a constant value.
+        'edge'
+            Pads with the edge values of array.
+        'linear_ramp'
+            not supported yet
+        'maximum'
+            Pads with the maximum value of all of the
+            vector along each axis.
+        'mean'
+            not supported yet
+        'median'
+            not supported yet
+        'minimum'
+            Pads with the minimum value of all of the
+            vector along each axis.
+        'reflect'
+            Pads with the reflection of the vector mirrored on
+            the first and last values of the vector along each
+            axis.
+        'symmetric'
+            Pads with the reflection of the vector mirrored
+            along the edge of the array.
+        'wrap'
+            not supported yet.
+        'empty'
+            not supported yet.
+        <function>
+            not supported yet.
+    stat_length : not supported yet
+    constant_values : scalar, optional
+        Used in 'constant'.  The values to set the padded values for each
+        axis.
+        Default is 0.
+
+    end_values : not supported yet
+    reflect_type : {'even', 'odd'}, optional
+        only support even now
+
+    Returns
+    -------
+    pad : ndarray
+        Padded array of rank equal to `array` with shape increased
+        according to `pad_width`.
+    """
+    # pylint: disable = too-many-return-statements, inconsistent-return-statements
+    if not _np.asarray(pad_width).dtype.kind == 'i':
+        raise TypeError('`pad_width` must be of integral type.')
+    if not isinstance(pad_width, tuple):
+        raise TypeError("`pad_width` must be tuple.")
+    if mode == "linear_ramp":
+        raise ValueError("mode {'linear_ramp'} is not supported.")
+    if mode == "wrap":
+        raise ValueError("mode {'wrap'} is not supported.")
+    if mode == "median":
+        raise ValueError("mode {'median'} is not supported.")
+    if mode == "mean":
+        raise ValueError("mode {'mean'} is not supported.")
+    if mode == "empty":
+        raise ValueError("mode {'empty'} is not supported.")
+    if callable(mode):
+        raise ValueError("mode {'<function>'} is not supported.")
+
+    allowedkwargs = {
+        'constant': ['constant_values'],
+        'edge': [],
+        'linear_ramp': ['end_values'],
+        'maximum': ['stat_length'],
+        'mean': ['stat_length'],
+        'median': ['stat_length'],
+        'minimum': ['stat_length'],
+        'reflect': ['reflect_type'],
+        'symmetric': ['reflect_type'],
+        'wrap': [],
+        }
+
+    if isinstance(mode, _np.compat.basestring):
+        # Make sure have allowed kwargs appropriate for mode
+        for key in kwargs:
+            if key not in allowedkwargs[mode]:
+                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
+
+    unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
+    if unsupported_kwargs:
+        raise ValueError("unsupported keyword arguments for mode '{}': {}"
+                         .format(mode, unsupported_kwargs))
+    if mode == "constant":
+        values = kwargs.get("constant_values", 0)
+        if isinstance(values, tuple):
+            raise TypeError("unsupported constant_values type: {'tuple'}.")
+        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+    elif mode == "symmetric":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='symmetric', reflect_type="even")
+    elif mode == "edge":
+        return _npi.pad(x, pad_width, mode='edge')
+    elif mode == "reflect":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='reflect', reflect_type="even")
+    elif mode == "maximum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='maximum')
+    elif mode == "minimum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='minimum')
+    return _npi.pad(x, pad_width, mode='constant', constant_value=0)
 
 
 _set_np_symbol_class(_Symbol)
