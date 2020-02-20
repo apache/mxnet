@@ -105,7 +105,7 @@ class RecordFileDataset : public Dataset {
         if (reader_->NextRecord(&read_buff_)) {
           const char *buf = read_buff_.c_str();
           const size_t size = read_buff_.size();
-          ret[0] = NDArray(TShape({size}), Context::CPU(), false, mshadow::kInt8);
+          ret[0] = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
           ret[0].SyncCopyFromCPU(buf, size);
         }
       }

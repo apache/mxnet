@@ -22,6 +22,7 @@ from __future__ import absolute_import
 __all__ = ['DataLoader']
 
 import pickle
+import logging
 import io
 import sys
 import signal
@@ -583,6 +584,15 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
+    try_nopython : bool, default is None
+        Try compile python dataloading pipeline into pure MXNet c++ implementation. The benefit is
+        potentially faster iteration, no `shared_memory` usage, and less processes managed by python.
+        The compilation is not gauranteed to support all use cases, but it will fallback to python in
+        case of failure. You can set `try_nopython` to `False` to disable auto-detection of the
+        compilation feature or leave it to `None` to allow MXNet to determine it automatically.
+        If you request `try_nopython` to `True` and the compilation fails, it will raise a warning and
+        continue with python based implementation.
+
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
@@ -626,11 +636,19 @@ class DataLoader(object):
                 self._batchify_fn = _batchify.Stack()
         else:
             self._batchify_fn = batchify_fn
-        # check for capability to use mx backend threadedLoader
-        use_mx_iter, mx_iter_args = _check_mx_loader_capability(
-            self._dataset, self._batch_sampler, self._batchify_fn)
+
+        if try_nopython is not False:
+            # check for capability to use mx backend threadedLoader
+            use_mx_iter, mx_iter_args = _check_mx_loader_capability(
+                self._dataset, self._batch_sampler, self._batchify_fn)
+            if not use_mx_iter:
+                if try_nopython is True:
+                    warnings.warn(mx_iter_args)
+        else:
+            use_mx_iter = False
+
         if use_mx_iter:
-            print("Using MXNet backend ThreadedDataLoader...")
+            logging.info("Using MXNet backend ThreadedDataLoader...")
             self._mx_iter = MXThreadedDataLoader(
                 num_workers=self._num_workers,
                 pin_memory=self._pin_memory,
@@ -682,30 +700,12 @@ class DataLoader(object):
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
 
-
-class MXThreadedLoaderScope(object):
-    _enable_status = True
-    def __init__(self, enabled=True):
-        self._status = enabled
-        self._old_status = None
-
-    def __enter__(self):
-        self._old_status = MXThreadedLoaderScope._enable_status
-        MXThreadedLoaderScope._enable_status = self._status
-        return self
-
-    def __exit__(self, ptype, value, trace):
-        MXThreadedLoaderScope._enable_status = self._old_status
-
-no_mx_iter = MXThreadedLoaderScope(False)
-use_mx_iter = MXThreadedLoaderScope(True)
-
 def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
-    if not MXThreadedLoaderScope._enable_status:
-        return False, {}
     from ._internal import MXDataset, MXSampler
     from ._internal import StackBatchify, MXBatchifyFunction
     mx_loader_args = {}
+    error_template = "MXNet backend loader compatibility: " \
+        "[dataset - {}][batchify_fn - {}][batch sampler - {}]"
 
     # supported dataset
     if isinstance(dataset, MXDataset):
@@ -714,9 +714,9 @@ def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
         try:
             mx_loader_args['dataset'] = dataset.__mx_handle__()
         except:
-            return False, {}
+            return False, error_template.format('fail', 'unknown', 'unknown')
     else:
-        return False, {}
+        return False, error_template.format('fail', 'unknown', 'unknown')
 
     # supported batchify functions
     if hasattr(batchify_fn, '__mx_handle__'):
@@ -724,7 +724,7 @@ def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
     elif isinstance(batchify_fn, MXBatchifyFunction):
         mx_loader_args['batchify_fn'] = batchify_fn
     else:
-        return False, {}
+        return False, error_template.format('pass', 'fail', 'unknown')
 
     # supported sampler
     if isinstance(batch_sampler, _sampler.BatchSampler):
@@ -740,11 +740,11 @@ def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
                 batch_size=batch_sampler._batch_size,
                 last_batch=batch_sampler._last_batch)
         else:
-            return False, {}
+            return False, error_template.format('pass', 'pass', 'fail')
     elif isinstance(batch_sampler, MXSampler):
         mx_loader_args['batch_sampler'] = batch_sampler
     else:
-        return False, {}
+        return False, error_template.format('pass', 'pass', 'fail')
     # all good
     return True, mx_loader_args
 
