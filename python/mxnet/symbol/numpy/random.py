@@ -22,7 +22,7 @@ from . import _internal as _npi
 
 
 __all__ = ['randint', 'uniform', 'normal', 'multivariate_normal',
-           'logistic', 'gumbel',
+           'logistic', 'gumbel', 'rayleigh',
            'rand', 'shuffle', 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal',
            'weibull', 'pareto', 'power', 'laplace']
 
@@ -525,6 +525,42 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     raise ValueError("Distribution parameters must be either _Symbol or numbers")
 
 
+def rayleigh(scale=0.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+
+    Parameters
+    ----------
+    scale : float or _Symbol
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : _Symbol
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    from ..numpy import _Symbol as np_symbol
+    tensor_type_name = np_symbol
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    is_tensor = isinstance(scale, tensor_type_name)
+    if is_tensor:
+        return _npi.rayleigh(scale, scale=None, size=size, ctx=ctx, out=out)
+    else:
+        return _npi.rayleigh(scale=scale, size=size, ctx=ctx, out=out)
+
+
 def beta(a, b, size=None, dtype=None, ctx=None):
     r"""Draw samples from a Beta distribution.
 
@@ -688,7 +724,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         return _npi.exponential(scale=scale, size=size, ctx=ctx, out=out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
 
@@ -734,13 +770,15 @@ def weibull(a, size=None):
     """
     from ..numpy import _Symbol as np_symbol
     tensor_type_name = np_symbol
+    if ctx is None:
+        ctx = current_context()
     if size == ():
         size = None
     is_tensor = isinstance(a, tensor_type_name)
     if is_tensor:
-        return _npi.weibull(a, a=None, size=size)
+        return _npi.weibull(a, a=None, size=size, ctx=ctx, out=out)
     else:
-        return _npi.weibull(a=a, size=size)
+        return _npi.weibull(a=a, size=size, ctx=ctx, out=out)
 
 
 def pareto(a, size=None):

@@ -289,7 +289,7 @@ build_armv6() {
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
-    ninja -v
+    ninja
     build_wheel
     popd
 }
@@ -319,7 +319,7 @@ build_armv7() {
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
-    ninja -v
+    ninja
     build_wheel
     popd
 }
@@ -336,7 +336,7 @@ build_armv8() {
         -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
     build_wheel
 }
 
@@ -361,7 +361,7 @@ build_android_armv7() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
 }
 
 build_android_armv8() {
@@ -379,7 +379,7 @@ build_android_armv8() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
 }
 
 build_centos7_cpu() {
@@ -412,7 +412,7 @@ build_amzn_linux_cpu() {
         -DUSE_LAPACK=OFF\
         -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
 }
 
 build_centos7_mkldnn() {
@@ -504,7 +504,7 @@ build_ubuntu_cpu_cmake_debug() {
         -G Ninja \
         /work/mxnet
 
-    ninja -v
+    ninja
     popd
 }
 
@@ -525,7 +525,7 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
         -G Ninja \
         /work/mxnet
 
-    ninja -v
+    ninja
     popd
 }
 
@@ -609,7 +609,7 @@ build_ubuntu_cpu_clang_tidy() {
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         /work/mxnet
 
-    ninja -v
+    ninja
     cd /work/mxnet
     $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
     popd
@@ -730,7 +730,7 @@ build_ubuntu_gpu_tensorrt() {
           -G Ninja                                \
           /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_mkldnn() {
@@ -862,7 +862,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_cmake() {
@@ -885,7 +885,7 @@ build_ubuntu_gpu_cmake() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_cmake_no_rtc() {
@@ -909,7 +909,7 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_cmake_no_tvm_op() {
@@ -932,7 +932,7 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_cpu_large_tensor() {
@@ -949,7 +949,7 @@ build_ubuntu_cpu_large_tensor() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_large_tensor() {
@@ -972,7 +972,7 @@ build_ubuntu_gpu_large_tensor() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_blc() {
@@ -1332,15 +1332,15 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     export MXNET_USE_OPERATOR_TUNING=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_step_cpu
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_sparse_step_cpu
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=invalid_cpu
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=gluon_type_cpu
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --no-multiprecision
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu
-    python3 ../../tools/launch.py -n 7 --launcher local python dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
-    python3 ../../tools/launch.py -n 3 --launcher local python test_server_profiling.py
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=gluon_step_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=gluon_sparse_step_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=invalid_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=gluon_type_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --no-multiprecision
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+    python3 ../../tools/launch.py -n 3 --launcher local python3 test_server_profiling.py
     popd
 }
 
@@ -1369,10 +1369,10 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    python3 ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore.py
-    python3 ../../tools/launch.py -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    python3 ../../tools/launch.py --p3 -n 4 --launcher local python dist_device_sync_kvstore_custom.py
-    python3 ../../tools/launch.py -n 4 --launcher local python dist_sync_kvstore.py --type=init_gpu
+    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore.py
+    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
+    python3 ../../tools/launch.py --p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
+    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu
     popd
 }
 
@@ -1994,28 +1994,28 @@ cd_s3_publish() {
     aws s3 cp ${filepath} s3://apache-mxnet/dist/python/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
-build_static_scala_mkl() {
+build_static_scala_cpu() {
     set -ex
     pushd .
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
-    export mxnet_variant=mkl
+    export mxnet_variant=cpu
     ./ci/publish/scala/build.sh
     popd
 }
 
-build_static_python_mkl() {
+build_static_python_cpu() {
     set -ex
     pushd .
-    export mxnet_variant=mkl
+    export mxnet_variant=cpu
     ./ci/publish/python/build.sh
     popd
 }
 
-build_static_python_cu101mkl() {
+build_static_python_cu101() {
     set -ex
     pushd .
-    export mxnet_variant=cu101mkl
+    export mxnet_variant=cu101
     ./ci/publish/python/build.sh
     popd
 }

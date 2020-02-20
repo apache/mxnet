@@ -22,8 +22,9 @@ from ..ndarray import numpy as _mx_nd_np
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
            "logistic", "gumbel",
+           "laplace",
            "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
-           "weibull", "pareto", "power", "laplace"]
+           "weibull", "pareto", "power", "rayleigh"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -558,6 +559,34 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
 
 
+def rayleigh(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+
+    Parameters
+    ----------
+    scale : float, optional
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    return _mx_nd_np.random.rayleigh(scale, size, ctx, out)
+
+
 def rand(*size, **kwargs):
     r"""Random values in a given shape.
 
@@ -611,7 +640,7 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
     return _mx_nd_np.random.exponential(scale, size=size, ctx=ctx, out=out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
 
@@ -653,7 +682,7 @@ def weibull(a, size=None):
     model time to failure, in modeling particle sizes, in information retrieval
     to model dwell time on pages, in quantitative finance to model risk etc.
     """
-    return _mx_nd_np.random.weibull(a, size)
+    return _mx_nd_np.random.weibull(a, size=size, ctx=ctx, out=out)
 
 
 def pareto(a, size=None):

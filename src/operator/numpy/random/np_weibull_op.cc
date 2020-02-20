@@ -32,6 +32,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyWeibullParam);
 
 NNVM_REGISTER_OP(_npi_weibull)
+.describe("Numpy behavior Weibull")
 .set_num_inputs(
   [](const nnvm::NodeAttrs& attrs) {
     const NumpyWeibullParam& param = nnvm::get<NumpyWeibullParam>(attrs.parsed);
@@ -41,7 +42,11 @@ NNVM_REGISTER_OP(_npi_weibull)
     }
     return num_inputs;
   })
-.set_num_outputs(1)
+.set_num_outputs(2)
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+  [](const NodeAttrs& attrs){
+    return 1;
+  })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyWeibullParam& param = nnvm::get<NumpyWeibullParam>(attrs.parsed);
@@ -52,10 +57,11 @@ NNVM_REGISTER_OP(_npi_weibull)
     return (num_inputs == 0) ? std::vector<std::string>() : std::vector<std::string>{"input1"};
   })
 .set_attr_parser(ParamParser<NumpyWeibullParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", UnaryDistOpShape<NumpyWeibullParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", TwoparamsDistOpShape<NumpyWeibullParam>)
 .set_attr<nnvm::FInferType>("FInferType",
   [](const nnvm::NodeAttrs &attrs, std::vector<int> *in_attrs,  std::vector<int> *out_attrs) {
     (*out_attrs)[0] = mshadow::kFloat32;
+    (*out_attrs)[1] = mshadow::kFloat32;
     return true;
   })
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -64,9 +70,35 @@ NNVM_REGISTER_OP(_npi_weibull)
         ResourceRequest::kRandom, ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyWeibullForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_broadcast_weibull"})
 .add_argument("input1", "NDArray-or-Symbol", "Source input")
 .add_arguments(NumpyWeibullParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_broadcast_weibull)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr_parser(ParamParser<NumpyWeibullParam>)
+.set_num_inputs(
+  [](const nnvm::NodeAttrs& attrs){
+    const NumpyWeibullParam& param = nnvm::get<NumpyWeibullParam>(attrs.parsed);
+    int num_inputs = 5;
+    if (param.a.has_value()) num_inputs -= 1;
+    return num_inputs;
+  }
+)
+  .set_num_outputs(
+  [](const nnvm::NodeAttrs& attrs){
+    const NumpyWeibullParam& param = nnvm::get<NumpyWeibullParam>(attrs.parsed);
+    int num_outputs = 1;
+    if (param.a.has_value()) num_outputs -= 1;
+    return num_outputs;
+  }
+  )
+  .set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs){
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+  .set_attr<FCompute>("FCompute<cpu>", WeibullReparamBackward<cpu>)
+  .add_arguments(NumpyWeibullParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

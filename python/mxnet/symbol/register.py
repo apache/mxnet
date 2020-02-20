@@ -161,8 +161,12 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
-            dtype_name, dtype_name, dtype_name))
+        if _np.dtype(kwargs['%s']).names:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
+        else:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
+                dtype_name, dtype_name, dtype_name,
+                dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
     if not hasattr(AttrScope._current, "value"):
@@ -238,7 +242,11 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                     code.append("""
     if %s is not _Null:
         _keys.append('%s')
-        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        if _np.dtype(%s).names:
+            _vals.append(_np.dtype(%s).names[0])
+        else:
+            _vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
+                                                  dtype_name, dtype_name))
 
             code.append("""
     if not hasattr(NameManager._current, "value"):
