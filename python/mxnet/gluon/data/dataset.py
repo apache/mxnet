@@ -197,12 +197,25 @@ class SimpleDataset(Dataset):
     """
     def __init__(self, data):
         self._data = data
+        self._handle = None
 
     def __len__(self):
         return len(self._data)
 
     def __getitem__(self, idx):
         return self._data[idx]
+
+    def __mx_handle__(self):
+        if self._handle is None:
+            import numpy as np
+            from ._internal import NDArrayDataset
+            if isinstance(self._data, (np.ndarray, ndarray.NDArray)):
+                self._handle = NDArrayDataset(arr=default_array(self._data))
+            else:
+                raise NotImplementedError(
+                    "C++ handle for general type object is not supported, "
+                    "given {}, expect np.ndarray".format(type(self._data)))
+        return self._handle
 
 
 class _LazyTransformDataset(Dataset):
@@ -255,7 +268,7 @@ class _LazyTransformDataset(Dataset):
                                                    transform_indices=(0,))
             else:
                 raise NotImplementedError(
-                    "Not implemented for transforms that are not hybridizable")
+                    "C++ handle Not implemented for transforms that are not hybridizable")
         return self.handle
 
 

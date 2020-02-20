@@ -148,6 +148,18 @@ def test_datasets():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
 
 @with_seed()
+def test_datasets_handles():
+    assert len(gluon.data.vision.MNIST(root='data/mnist').__mx_handle__()) == 60000
+    assert len(gluon.data.vision.MNIST(root='data/mnist', train=False).__mx_handle__()) == 10000
+    assert len(gluon.data.vision.FashionMNIST(root='data/fashion-mnist').__mx_handle__()) == 60000
+    assert len(gluon.data.vision.FashionMNIST(root='data/fashion-mnist', train=False).__mx_handle__()) == 10000
+    assert len(gluon.data.vision.CIFAR10(root='data/cifar10').__mx_handle__()) == 50000
+    assert len(gluon.data.vision.CIFAR10(root='data/cifar10', train=False).__mx_handle__()) == 10000
+    assert len(gluon.data.vision.CIFAR100(root='data/cifar100').__mx_handle__()) == 50000
+    assert len(gluon.data.vision.CIFAR100(root='data/cifar100', fine_label=True).__mx_handle__()) == 50000
+    assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False).__mx_handle__()) == 10000
+
+@with_seed()
 def test_image_folder_dataset():
     prepare_record()
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
@@ -339,6 +351,19 @@ def test_dataset_filter():
     for idx, sample in enumerate(a_xform_filtered):
         assert sample % 10 == 0
 
+def test_dataset_filter_handle():
+    length = 100
+    a = mx.gluon.data.SimpleDataset(np.arange(length))
+    a_filtered = a.filter(lambda x: x % 10 == 0).__mx_handle__()
+    assert(len(a_filtered) == 10)
+    for idx, sample in enumerate(a_filtered):
+        assert sample % 10 == 0
+    a_xform_filtered = a.transform(lambda x: x + 1).filter(lambda x: x % 10 == 0)
+    assert(len(a_xform_filtered) == 10)
+    # the filtered data is already transformed
+    for idx, sample in enumerate(a_xform_filtered):
+        assert sample % 10 == 0
+
 def test_dataset_shard():
     length = 9
     a = mx.gluon.data.SimpleDataset([i for i in range(length)])
@@ -346,6 +371,24 @@ def test_dataset_shard():
     shard_1 = a.shard(4, 1)
     shard_2 = a.shard(4, 2)
     shard_3 = a.shard(4, 3)
+    assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
+    assert len(shard_0) == 3
+    assert len(shard_1) == 2
+    assert len(shard_2) == 2
+    assert len(shard_3) == 2
+    total = 0
+    for shard in [shard_0, shard_1, shard_2, shard_3]:
+        for idx, sample in enumerate(shard):
+            total += sample
+    assert total == sum(a)
+
+def test_dataset_shard_handle():
+    length = 9
+    a = mx.gluon.data.SimpleDataset(np.arange(length))
+    shard_0 = a.shard(4, 0).__mx_handle__()
+    shard_1 = a.shard(4, 1).__mx_handle__()
+    shard_2 = a.shard(4, 2).__mx_handle__()
+    shard_3 = a.shard(4, 3).__mx_handle__()
     assert len(shard_0) + len(shard_1) + len(shard_2) + len(shard_3) == length
     assert len(shard_0) == 3
     assert len(shard_1) == 2
@@ -383,6 +426,32 @@ def test_dataset_take():
         total += sample
     assert total == expected_total
 
+def test_dataset_take_handle():
+    length = 100
+    a = mx.gluon.data.SimpleDataset(np.arange(length))
+    a_take_full = a.take(1000).__mx_handle__()
+    assert len(a_take_full) == length
+    a_take_full = a.take(None).__mx_handle__()
+    assert len(a_take_full) == length
+    count = 10
+    a_take_10 = a.take(count).__mx_handle__()
+    assert len(a_take_10) == count
+    expected_total = sum([i for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_take_10):
+        assert sample < count
+        total += sample
+    assert total == expected_total
+
+    a_xform_take_10 = a.take(count).__mx_handle__()
+    assert len(a_xform_take_10) == count
+    expected_total = sum([i for i in range(count)])
+    total = 0
+    for idx, sample in enumerate(a_xform_take_10):
+        assert sample < count
+        total += sample
+    assert total == expected_total
+
 def test_dataloader_scope():
     """
     Bug: Gluon DataLoader terminates the process pool early while
@@ -404,7 +473,7 @@ def test_dataloader_scope():
 
     assert item is not None
 
-def test_mx_cpp_datasets():
+def test_mx_datasets_handle():
     # _DownloadedDataset
     mnist = mx.gluon.data.vision.MNIST(train=False).__mx_handle__()
     assert len(mnist) == 10000
