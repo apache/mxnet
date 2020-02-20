@@ -119,6 +119,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'atleast_2d',
     'atleast_3d',
     'prod',
+    'product',
     'ravel',
     'repeat',
     'reshape',
