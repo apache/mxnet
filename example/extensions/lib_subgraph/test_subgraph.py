@@ -74,3 +74,17 @@ mysym3 = sym.optimize_for("myProp", myOpt='yello')
 exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
 out3 = exe3.forward()
 print(out3)
+
+from mxnet.gluon import nn
+from mxnet import nd
+
+# Gluon Hybridize partitioning with shapes/types
+print('-------------------------------')
+print('Testing Gluon Hybridize partitioning with shapes/types')
+inputs = [a,b]
+sym_block = nn.SymbolBlock(sym, inputs)
+sym_block.initialize()
+sym_block.hybridize(backend='myProp')
+out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+print(out4)
+
