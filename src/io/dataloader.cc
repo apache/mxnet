@@ -114,6 +114,8 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     auto real_batch_size = batch_size - samples.num_batch_padd;
     const int64_t *idx_ptr = static_cast<int64_t*>(
         samples.data[0].data().dptr_);
+    std::vector<int64_t> idx_ptrs;
+    idx_ptrs.assign(idx_ptr, idx_ptr + real_batch_size);
 
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
@@ -122,34 +124,15 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     // const auto engine = Engine::Get();
     for (size_t i = 0; i < real_batch_size; ++i) {
       // omp_exc_.Run([&] {
-      auto idx = idx_ptr[i];
+      auto idx = idx_ptrs[i];
       std::vector<int> is_temp;
       inputs[i] = dataset_->GetItem(idx, is_temp);
       if (i == 0) {
         is_scalars = is_temp;
       }
-      // if (vars_.size() <= i) {
-      //   vars_.emplace_back(engine->NewVariable());
-      // }
-      // engine->PushSync(
-      //   [this, &inputs, &is_scalars, &idx, &i](RunContext ctx) {
-      //     std::vector<int> is_temp;
-      //     LOG(INFO) << "before get";
-      //     inputs[i] = dataset_->GetItem(idx, is_temp);
-      //     LOG(INFO) << "after get";
-      //     if (i == 0) {
-      //       is_scalars = is_temp;
-      //     }
-      //   },
-      //   Context::CPU(), {}, {vars_[i]}, FnProperty::kNormal, 0, "DataLoaderGetPerItem");
-        
-      // });
     }
     // omp_exc_.Rethrow();
 
-    // for (size_t i = 0; i < real_batch_size; ++i) {
-    //   engine->WaitForVar(vars_[i]);
-    // }
     // pad to normal batch size
     for (size_t i = real_batch_size; i < batch_size; ++i) {
       inputs[i] = inputs[0];
@@ -159,7 +142,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     auto batched_data = batchify_fn_->Batchify(inputs);
     for (size_t i = 0; i < is_scalars.size(); ++i) {
       if (is_scalars[i] == 1) {
-        // batched scalar array should have dim 1 not 2
         CHECK_EQ(batched_data[i].ndim(), 2);
         batched_data[i] = batched_data[i].reshape(
           TShape({static_cast<dim_t>(batched_data[i].Size())}));
