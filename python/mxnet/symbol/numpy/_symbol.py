@@ -556,14 +556,6 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute abs')
 
-    def fabs(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`fabs`.
-
-        The arguments are the same as for :py:func:`fabs`, with
-        this array as data.
-        """
-        raise AttributeError('_Symbol object has no attribute fabs')
-
     def sign(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sign`.
 
