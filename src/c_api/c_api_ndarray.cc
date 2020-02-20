@@ -29,7 +29,6 @@
 #include <mxnet/operator_util.h>
 #include <mxnet/op_attr_types.h>
 #include <mxnet/imperative.h>
-#include <dmlc/timer.h>
 #include <nnvm/node.h>
 #include <nnvm/op_attr_types.h>
 #include <string>
@@ -148,11 +147,8 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
                          const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-  double start = dmlc::GetTime();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
                          num_params, param_keys, param_vals);
-  double elapsed = dmlc::GetTime() - start;
-  LOG(INFO) << elapsed;
   NDArray** out_array = *reinterpret_cast<NDArray***>(outputs);
   ret->out_types.clear();
   ret->out_types.reserve(*num_outputs);
