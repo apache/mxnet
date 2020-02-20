@@ -6165,6 +6165,7 @@ def test_psroipooling_with_type():
 
 
 @with_seed()
+@unittest.skip('skip deformable_convolution')
 def test_deformable_convolution():
     for num_batch in [1, 2]:
         for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):

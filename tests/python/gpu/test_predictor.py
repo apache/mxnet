@@ -17,6 +17,7 @@
 
 from __future__ import print_function
 import sys, os
+import unittest
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, "../../../amalgamation/python/"))
 from mxnet_predict import Predictor, load_ndarray_file
