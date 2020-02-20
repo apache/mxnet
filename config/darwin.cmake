@@ -55,6 +55,8 @@ set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 #---------------------
 # Compilers
 #--------------------
+set(CMAKE_GENERATOR "Ninja" CACHE STRING "Build Tool Generator used by CMake")
+
 # Compilers are usually autodetected. Uncomment and modify the next 3 lines to
 # choose manually:
 
