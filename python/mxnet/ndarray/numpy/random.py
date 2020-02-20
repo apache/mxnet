@@ -23,7 +23,7 @@ from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           'logistic', 'gumbel',
+           'logistic', 'gumbel', "rayleigh",
            "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
@@ -376,6 +376,44 @@ def multinomial(n, pvals, size=None):
         if any(isinstance(i, list) for i in pvals):
             raise ValueError('object too deep for desired array')
         return _npi.multinomial(n=n, pvals=pvals, size=size)
+
+
+def rayleigh(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+
+    Parameters
+    ----------
+    scale : float, optional
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    from ...numpy import ndarray as np_ndarray
+    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    is_tensor = isinstance(scale, tensor_type_name)
+    if is_tensor:
+        return _npi.rayleigh(scale, scale=None, size=size, ctx=ctx, out=out)
+    else:
+        return _npi.rayleigh(scale=scale, size=size, ctx=ctx, out=out)
 
 
 def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):

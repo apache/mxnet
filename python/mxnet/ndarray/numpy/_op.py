@@ -27,6 +27,7 @@ from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
 
+
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
            'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'insert',
@@ -820,6 +821,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         result array or scalar
     """
     from ...numpy import ndarray
+    from ..ndarray import from_numpy  # pylint: disable=unused-import
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
@@ -831,7 +833,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
                 return rfn_scalar(rhs, float(lhs), out=out)
     elif isinstance(rhs, numeric_types):
         return lfn_scalar(lhs, float(rhs), out=out)
-    elif isinstance(rhs, ndarray):
+    elif isinstance(lhs, ndarray) and isinstance(rhs, ndarray):
         return fn_array(lhs, rhs, out=out)
     else:
         raise TypeError('type {} not supported'.format(str(type(rhs))))
@@ -4907,7 +4909,7 @@ def ravel(x, order='C'):
     >>> print(np.ravel(x.T))
     [1. 4. 2. 5. 3. 6.]
     """
-    if order != 'C':
+    if order == 'F':
         raise NotImplementedError('order {} is not supported'.format(order))
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
