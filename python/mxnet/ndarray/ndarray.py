@@ -5088,6 +5088,7 @@ def from_numpy(ndarray, zero_copy=True, array_cls=NDArray):
 
     if not ndarray.flags['C_CONTIGUOUS']:
         raise ValueError("Only c-contiguous arrays are supported for zero-copy")
+
     ndarray.flags['WRITEABLE'] = False
     c_obj = _make_dl_managed_tensor(ndarray)
     handle = NDArrayHandle()
