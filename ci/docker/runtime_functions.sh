@@ -2008,28 +2008,12 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    ./ci/publish/python/build.sh
-    popd
-}
-
-build_static_python_cu101() {
-    set -ex
-    pushd .
-    export mxnet_variant=cu101
-    ./ci/publish/python/build.sh
-    popd
-}
-
-build_static_python_cpu_cmake() {
-    set -ex
-    pushd .
-    export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
     ./ci/publish/python/build.sh
     popd
 }
 
-build_static_python_cu101_cmake() {
+build_static_python_cu101() {
     set -ex
     pushd .
     export mxnet_variant=cu101
@@ -2042,6 +2026,7 @@ publish_scala_build() {
     set -ex
     pushd .
     scala_prepare
+    export CMAKE_STATICBUILD=1
     ./ci/publish/scala/build.sh
     popd
 }
