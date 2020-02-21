@@ -23,9 +23,7 @@ import numpy
 from ..ndarray import (NDArray, zeros, cast)
 from ..util import is_np_array
 
-__all__ = [
-    'Optimizer', 'Test', 'create', 'register'
-]
+__all__ = ['Optimizer', 'Test', 'create', 'register']
 
 
 class Optimizer(object):
