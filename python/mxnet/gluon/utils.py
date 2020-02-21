@@ -31,8 +31,6 @@ import collections
 import weakref
 import requests
 
-import mxnet as mx
-from mxnet import nd
 import numpy as np
 
 from .. import ndarray
@@ -145,12 +143,12 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
     all_ctx_sum = []
     ctx = arrays[0].context
     for group in arrays_groups:
-        sum_sq = mx.nd.multi_sum_sq(*arrays_groups[group],
-                                    num_arrays=len(arrays_groups[group]))
-        sum_sq = nd.add_n(*sum_sq)
+        sum_sq = ndarray.multi_sum_sq(*arrays_groups[group],
+                                      num_arrays=len(arrays_groups[group]))
+        sum_sq = ndarray.add_n(*sum_sq)
         all_ctx_sum.append(sum_sq.as_in_context(ctx))
     # global reduce
-    total_norm = nd.add_n(*all_ctx_sum).sqrt()
+    total_norm = ndarray.add_n(*all_ctx_sum).sqrt()
     if check_isfinite:
         if not np.isfinite(total_norm.asscalar()):
             warnings.warn(
