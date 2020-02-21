@@ -38,7 +38,7 @@
 #---------------------------------------------
 # Common libraries
 #---------------------------------------------
-set(BLAS "apple" CACHE STRING "BLAS Vendor")
+set(USE_BLAS "apple" CACHE STRING "BLAS Vendor")
 
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")
