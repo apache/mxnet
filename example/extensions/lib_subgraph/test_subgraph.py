@@ -91,6 +91,15 @@ sym_block.hybridize(backend='myProp')
 out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
 print(out4)
 
+# Gluon Hybridize partitioning with shapes/types without inference
+print('-------------------------------')
+print('Testing Gluon Hybridize partitioning with shapes/types without inference')
+inputs = [a,b]
+sym_block2 = nn.SymbolBlock(sym, inputs)
+sym_block2.initialize()
+sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend='myProp')
+sym_block2.export('partitioned')
+
 
 ###############################################
 # Test with subgraph directly consuming params
