@@ -156,26 +156,6 @@ static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
   return ret;
 }
 
-NNVM_REGISTER_OP(_backward_add)
-.set_num_inputs(1)
-.set_num_outputs(2)
-.set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<nnvm::FInplaceOption>("FInplaceOption",
-                                [](const NodeAttrs &attrs) {
-                                  return std::vector<std::pair<int, int> >{{0, 0},
-                                                                           {0, 1}};
-                                })
-#if MXNET_USE_MKLDNN == 1
-.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {
-  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-})
-.set_attr<bool>("TIsMKLDNN", true)
-#endif
-.set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseNone<
-  cpu, mshadow_op::identity, mshadow_op::identity>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", _backward_ElemwiseAddEx)
-.set_attr<FInferStorageType>("FInferStorageType", ElemwiseAddBackwardStorageType);
-
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_PD(elemwise_sub, op::mshadow_op::minus)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_sub)
 .add_alias("_sub").add_alias("_minus").add_alias("_Minus")
