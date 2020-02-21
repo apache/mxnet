@@ -16,71 +16,61 @@
 # under the License.
 
 import mxnet as mx
-from benchmark.opperf.utils.benchmark_utils import run_performance_test
-from benchmark.opperf.utils.common_utils import merge_map_list
-from benchmark.opperf.rules.default_params import MX_OP_MODULE
+
+from benchmark.opperf.utils.op_registry_utils import get_all_nn_basic_operators
+from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
 """Performance benchmark tests for MXNet NDArray basic NN Operators.
 
 1. FullyConnected
 2. Dropout
 3. BatchNorm
+4. SoftmaxOutput
+5. LinearRegressionOutput
+6. LogisticRegressionOutput
+7. MAERegressionOutput
+8. SVMOutput
+9. L2Normalization
+10. LayerNorm
+11. InstanceNorm
+12. Embedding
+13. Correlation
+14. SpatialTransformer
+15. im2col
+16. col2im
+17. GroupNorm
+18. RNN
+19. LRN
 
 """
 
 
 def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    # FullyConnnected operator benchmarks
-    fc_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "FullyConnected")],
-                                            run_backward=True,
-                                            dtype=dtype,
-                                            ctx=ctx,
-                                            profiler=profiler,
-                                            inputs=[{"data": (32, 3, 256, 256),
-                                                     "num_hidden": 64,
-                                                     "weight": (64, 3 * 256 * 256),
-                                                     "bias": (64,),
-                                                     "flatten": True},
-                                                    {"data": (32, 3, 256, 256),
-                                                     "num_hidden": 64,
-                                                     "weight": (64, 256),
-                                                     "bias": (64,),
-                                                     "flatten": False}],
-                                            warmup=warmup,
-                                            runs=runs)
+    """Runs benchmarks with the given context and precision (dtype)for all the NN basic
+    operators in MXNet.
 
-    # Dropout benchmarks
-    dropout_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "Dropout")],
-                                                 run_backward=True,
-                                                 dtype=dtype,
-                                                 ctx=ctx,
-                                                 profiler=profiler,
-                                                 inputs=[{"data": (32, 3, 256, 256),
-                                                          "p": 0.5,
-                                                          "mode": "always"},
-                                                         {"data": (10000, 10),
-                                                          "p": 0.5,
-                                                          "mode": "always"}],
-                                                 warmup=warmup,
-                                                 runs=runs)
-    # BatchNorm benchmarks
-    batchnorm_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "BatchNorm")],
-                                                   run_backward=True,
-                                                   dtype=dtype,
-                                                   ctx=ctx,
-                                                   profiler=profiler,
-                                                   inputs=[{"data": (32, 3, 256, 256),
-                                                            "gamma": (3,),
-                                                            "beta": (3,),
-                                                            "moving_mean": (3,),
-                                                            "moving_var": (3,)},
-                                                           {"data": (32, 3, 10000, 10),
-                                                            "gamma": (3,),
-                                                            "beta": (3,),
-                                                            "moving_mean": (3,),
-                                                            "moving_var": (3,)}],
-                                                   warmup=warmup,
-                                                   runs=runs)
-    # Prepare combined results
-    mx_basic_nn_results = merge_map_list(fc_benchmark_res + dropout_benchmark_res + batchnorm_benchmark_res)
-    return mx_basic_nn_results
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    profiler: str, default 'native'
+        Module to use for tracking benchmark excecution time
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
+
+    # Fetch all NN Basic Operators
+    mx_nn_basic_ops = get_all_nn_basic_operators()
+    
+    # Run benchmarks
+    mx_nn_basic_op_results = run_op_benchmarks(mx_nn_basic_ops, dtype, ctx, profiler, warmup, runs)
+    return mx_nn_basic_op_results

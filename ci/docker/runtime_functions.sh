@@ -289,7 +289,7 @@ build_armv6() {
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
-    ninja -v
+    ninja
     build_wheel
     popd
 }
@@ -319,7 +319,7 @@ build_armv7() {
         -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
-    ninja -v
+    ninja
     build_wheel
     popd
 }
@@ -336,7 +336,7 @@ build_armv8() {
         -DCMAKE_BUILD_TYPE=Release\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
     build_wheel
 }
 
@@ -361,7 +361,7 @@ build_android_armv7() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
 }
 
 build_android_armv8() {
@@ -379,7 +379,7 @@ build_android_armv8() {
         -DCMAKE_BUILD_TYPE=RelWithDebInfo\
         -DUSE_MKL_IF_AVAILABLE=OFF\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
 }
 
 build_centos7_cpu() {
@@ -412,7 +412,7 @@ build_amzn_linux_cpu() {
         -DUSE_LAPACK=OFF\
         -DUSE_DIST_KVSTORE=ON\
         -G Ninja /work/mxnet
-    ninja -v
+    ninja
 }
 
 build_centos7_mkldnn() {
@@ -504,7 +504,7 @@ build_ubuntu_cpu_cmake_debug() {
         -G Ninja \
         /work/mxnet
 
-    ninja -v
+    ninja
     popd
 }
 
@@ -525,7 +525,7 @@ build_ubuntu_cpu_cmake_no_tvm_op() {
         -G Ninja \
         /work/mxnet
 
-    ninja -v
+    ninja
     popd
 }
 
@@ -609,7 +609,7 @@ build_ubuntu_cpu_clang_tidy() {
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         /work/mxnet
 
-    ninja -v
+    ninja
     cd /work/mxnet
     $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
     popd
@@ -730,7 +730,7 @@ build_ubuntu_gpu_tensorrt() {
           -G Ninja                                \
           /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_mkldnn() {
@@ -862,7 +862,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_cmake() {
@@ -885,7 +885,7 @@ build_ubuntu_gpu_cmake() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_cmake_no_rtc() {
@@ -909,7 +909,7 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_cmake_no_tvm_op() {
@@ -932,7 +932,7 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_cpu_large_tensor() {
@@ -949,7 +949,7 @@ build_ubuntu_cpu_large_tensor() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_gpu_large_tensor() {
@@ -972,7 +972,7 @@ build_ubuntu_gpu_large_tensor() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
 }
 
 build_ubuntu_blc() {
