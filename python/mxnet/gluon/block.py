@@ -1067,7 +1067,7 @@ class HybridBlock(Block):
         super(HybridBlock, self).hybridize(True, **kwargs)
 
         # do part of forward API call
-        has_symbol, has_ndarray, ctx_set, first_ctx = _gather_type_ctx_info([x] + list(args))
+        has_symbol, has_ndarray, ctx_set,_ = _gather_type_ctx_info([x] + list(args))
         if has_symbol:
             raise ValueError('Inputs must be NDArrays for the optimize_for API'
                              ' Please check the type of the args.\n')
