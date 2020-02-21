@@ -56,7 +56,7 @@ set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture")
 #---------------------------------------------
 # Common libraries
 #---------------------------------------------
-set(BLAS "open" CACHE STRING "BLAS Vendor")
+set(USE_BLAS "open" CACHE STRING "BLAS Vendor")
 
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")
