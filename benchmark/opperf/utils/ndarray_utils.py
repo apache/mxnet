@@ -20,7 +20,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 
 
-def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
+def nd_forward_backward_and_profile(op, runs, **kwargs):
     """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes both forward and backward pass.
 
@@ -32,8 +32,6 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
         NDArray operator (Function reference) to execute. Example: mx.nd.add
     runs: int
         Number of times to execute the operation
-    args:
-        Arguments for the NDArray operator (op) being executed.
     kwargs:
         Key value arguments for the NDArray operator (op) being executed.
 
@@ -44,16 +42,26 @@ def nd_forward_backward_and_profile(op, runs, *args, **kwargs):
     """
     for _ in range(runs):
         with mx.autograd.record():
-            if not isinstance(args[0],nd.NDArray):
-                res = op(**kwargs)
+            args = []
+            # need to create a new dictionary because can't update dict while iterating
+            kwargs_new = dict()
+            for key in kwargs:
+                # separate positional args from key-worded args
+                if key.startswith("args"):
+                    args.append(kwargs[key])
+                else:
+                    kwargs_new[key]=kwargs[key]
+            # check for positional args
+            if len(args):
+                res = op(*args, **kwargs_new)
             else:
-                res = op(*args, **kwargs)
+                res = op(**kwargs_new)
         res.backward()
         nd.waitall()
     return res
 
 
-def nd_forward_and_profile(op, runs, *args, **kwargs):
+def nd_forward_and_profile(op, runs, **kwargs):
     """Helper function to run a given NDArray operator (op) for 'runs' number of times with
     given args and kwargs. Executes ONLY forward pass.
 
@@ -65,8 +73,6 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
         NDArray operator (Function reference) to execute. Example: mx.nd.add
     runs: int
         Number of time to execute the operation
-    args:
-        Arguments for the NDArray operator (op) being executed.
     kwargs:
         Key value arguments for the NDArray operator (op) being executed.
 
@@ -75,10 +81,20 @@ def nd_forward_and_profile(op, runs, *args, **kwargs):
     any results from NDArray operation execution
     """
     for _ in range(runs):
-        if not isinstance(args[0],nd.NDArray):
-            res = op(**kwargs)
+        args = []
+        # need to create a new dictionary because can't update dict while iterating
+        kwargs_new = dict()
+        for key in kwargs:
+            # separate positional args from key-worded args
+            if key.startswith("args"):
+                args.append(kwargs[key])
+            else:
+                kwargs_new[key]=kwargs[key]
+        # check for positional args
+        if len(args):
+            res = op(*args, **kwargs_new)
         else:
-            res = op(*args, **kwargs)
+            res = op(**kwargs_new)
         nd.waitall()
     return res
 
@@ -116,8 +132,8 @@ def get_mx_ndarray(ctx, in_tensor, dtype, initializer, attach_grad=True):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
     elif isinstance(in_tensor, np.ndarray):
         tensor = nd.array(in_tensor, ctx=ctx, dtype=dtype)
-    elif isinstance(in_tensor, mx.ndarray):
-        tensor = in_tensor.as_in_context(ctx=ctx).astype(dtype=dtype)
+    elif isinstance(in_tensor, nd.NDArray):
+        tensor = in_tensor.as_in_context(ctx).astype(dtype=dtype)
     else:
         raise ValueError("Invalid input type for creating input tensor. Input can be tuple() of shape or Numpy Array or"
                          " MXNet NDArray. Given - ", in_tensor)

@@ -96,6 +96,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 # disable stack trace in exception by default.
 CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
+CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -455,7 +456,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 endif
 
 .PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
-	cython2 cython3 cython cyclean
+	cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
 
@@ -646,6 +647,7 @@ $(BIN) :
 # CPP Package
 ifeq ($(USE_CPP_PACKAGE), 1)
 include cpp-package/cpp-package.mk
+CFLAGS += -DMXNET_USE_CPP_PACKAGE=1
 endif
 
 include mkldnn.mk
@@ -665,25 +667,25 @@ pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
 # MXNet extension dynamically loading libraries
-EXT_LIBS = custom_op_lib subgraph_lib
+EXT_LIBS = build/libcustomop_lib.so build/libsubgraph_lib.so
 ifeq ($(USE_CUDA), 1)
-	EXT_LIBS += custom_op_gpu_lib
+        EXT_LIBS += build/libcustomop_gpu_lib.so
 endif
 extension_libs: $(EXT_LIBS)
 
-custom_op_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o build/libcustomop_lib.so -I include/mxnet
-custom_op_gpu_lib:
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o build/libcustomop_gpu_lib.so -I include/mxnet
-subgraph_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o build/libsubgraph_lib.so -I include/mxnet
+build/libcustomop_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+build/libcustomop_gpu_lib.so:
+	@mkdir -p $(@D)
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+build/libsubgraph_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
 
 # Cython build
 cython:
 	cd python; $(PYTHON) setup.py build_ext --inplace --with-cython
-
-cython2:
-	cd python; python2 setup.py build_ext --inplace --with-cython
 
 cython3:
 	cd python; python3 setup.py build_ext --inplace --with-cython
@@ -713,15 +715,15 @@ rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
-build/rat/apache-rat/target/apache-rat-0.13.jar:
-	mkdir -p build
-	svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.13/ build/rat; \
+build/rat/apache-rat-0.13/apache-rat-0.13.jar:
+	mkdir -p build/rat
 	cd build/rat; \
-	mvn -Dmaven.test.skip=true install;
+	wget http://mirror.metrocast.net/apache//creadur/apache-rat-0.13/apache-rat-0.13-bin.zip; \
+	unzip apache-rat-0.13-bin.zip;
 
-ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
+ratcheck: build/rat/apache-rat-0.13/apache-rat-0.13.jar
 	exec 5>&1; \
-	RAT_JAR=build/rat/apache-rat/target/apache-rat-0.13.jar; \
+	RAT_JAR=build/rat/apache-rat-0.13/apache-rat-0.13.jar; \
 	OUTPUT=$(java -jar $(RAT_JAR) -E tests/nightly/apache_rat_license_check/rat-excludes -d .|tee >(cat - >&5)); \
     ERROR_MESSAGE="Printing headers for text files without a valid license header"; \
     echo "-------Process The Output-------"; \

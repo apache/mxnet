@@ -1502,6 +1502,38 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs& attrs,
                                  ishape, in_data.Size(), param, s, req);
 }
 
+struct diag_indices_from {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const int length) {
+    int index = i % length;
+    out[i] = index;
+  }
+};
+
+template<typename xpu>
+void NumpyDiagIndicesFromForward(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const int length = in_data.shape_[0];
+  if (in_data.Size() == 0) return;
+
+  MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, DType, {
+    Kernel<diag_indices_from, xpu>::Launch(
+      s, out_data.Size(), out_data.dptr<DType>(), length);
+  });
+}
+
 }  // namespace op
 }  // namespace mxnet
 

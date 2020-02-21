@@ -17,10 +17,10 @@
 
 # coding: utf-8
 """ Key value store interface of MXNet for parameter synchronization."""
-from __future__ import absolute_import
 
 import pickle
 import ctypes
+import os
 from ..ndarray import NDArray
 from ..ndarray import _ndarray_cls
 from ..base import _LIB, c_str
@@ -67,6 +67,7 @@ class KVStore(KVStoreBase):
         self._updater = None
         self._updater_func = None
         self._str_updater_func = None
+        self._is_p3 = (os.getenv('DMLC_PS_VAN_TYPE', '') == 'p3')
 
     def __del__(self):
         check_call(_LIB.MXKVStoreFree(self.handle))
@@ -82,11 +83,11 @@ class KVStore(KVStoreBase):
         key : str, or int
             The key.
 
-        value : NDArray
-            The value corresponding to the key to broadcast
+        value : NDArray, list of NDArray, or list of list of NDArray
+            Values corresponding to the keys.
 
-        out : NDArray, list of NDArray
-            Values corresponding to the key to store the result
+        out: NDArray or list of NDArray or list of list of NDArray
+            Outputs corresponding to the keys.
 
         priority : int, optional
             The priority of the operation.
@@ -104,11 +105,20 @@ class KVStore(KVStoreBase):
         [ 2.  2.  2.]]
 
         """
-        self.init(key, value)
-        self.pull(key, out=out, priority=priority)
+        cvkeys, cvals, use_str_keys = _ctype_key_value(key, value)
+        cokeys, couts, _ = _ctype_key_value(key, out)
 
-    @staticmethod
-    def is_capable(capability):
+        if use_str_keys:
+            check_call(_LIB.MXKVStoreBroadcastEx(
+                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
+                cvals, couts, ctypes.c_int(priority)))
+        else:
+            check_call(_LIB.MXKVStoreBroadcast(
+                self.handle, mx_uint(len(cvkeys)), cvkeys, mx_uint(len(cokeys)), cokeys,
+                cvals, couts, ctypes.c_int(priority)))
+
+
+    def is_capable(self, capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
 
@@ -123,7 +133,7 @@ class KVStore(KVStoreBase):
             Whether the capability is supported or not.
         """
         if capability.lower() == KVStoreBase.OPTIMIZER:
-            return True
+            return not self._is_p3
         else:
             raise ValueError('Unknown capability: {}'.format(capability))
 
@@ -347,8 +357,8 @@ class KVStore(KVStoreBase):
         value : NDArray, list of NDArray, or list of list of NDArray
             Values corresponding to the keys.
 
-        out: NDArray or list of NDArray or list of list of NDArray
-            Values corresponding to the keys.
+        out: NDArray or list of NDArray or list of list of NDArray, optional
+            Outputs corresponding to the keys.
 
         priority : int, optional
             The priority of the operation.

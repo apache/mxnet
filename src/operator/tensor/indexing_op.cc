@@ -296,8 +296,8 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         IType min = 0;
         IType max = static_cast<IType>(arrshape[actual_axis] - 1);
@@ -614,7 +614,7 @@ The storage type of weight can be either row_sparse or default.
 .set_attr<FCompute>("FCompute<cpu>", EmbeddingOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_Embedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
@@ -690,7 +690,7 @@ Examples::
 .set_attr<FInferStorageType>("FInferStorageType", SparseEmbeddingOpForwardStorageType)
 .set_attr<FComputeEx>("FComputeEx<cpu>", SparseEmbeddingOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_SparseEmbedding", n, ograds,
                                {n->inputs[0]}, n->attrs.dict);
   })
@@ -793,7 +793,7 @@ The storage type of ``take`` output depends upon the input storage type:
 .set_attr<FCompute>("FCompute<cpu>", TakeOpForward<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TakeOpForwardEx<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n,  const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode("_backward_take", n, ograds,
                                {n->inputs[1]}, n->attrs.dict);
   })
@@ -898,6 +898,7 @@ Examples::
 
 NNVM_REGISTER_OP(gather_nd)
 .add_alias("_npi_gather_nd")
+.add_alias("_npx_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 
@@ -937,7 +938,7 @@ Examples::
   })
 .set_attr<FCompute>("FCompute<cpu>", GatherNDForwardCPU)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
     p->attrs.op = nnvm::Op::Get("_backward_gather_nd");
     p->attrs.name = n->attrs.name + "_backward";
@@ -1012,7 +1013,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
 .set_attr<FCompute>("FCompute<cpu>", ScatterNDForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
     p->attrs.op = nnvm::Op::Get("gather_nd");
     p->attrs.name = n->attrs.name + "_backward";
@@ -1075,7 +1076,7 @@ Examples::
 .set_attr<nnvm::FInferType>("FInferType", ScatterNDType)
 .set_attr<FCompute>("FCompute<cpu>", GatherNDBackward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto p = nnvm::Node::Create();
     p->attrs.op = nnvm::Op::Get("gather_nd");
     p->attrs.name = n->attrs.name + "_backward";

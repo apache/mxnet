@@ -97,7 +97,7 @@ print(curr_weight - net.weight.grad() * 1 / batch_size)
 
 In the previous example, we use the string argument `sgd` to select the optimization method, and `optimizer_params` to specify the optimization method arguments.
 
-All pre-defined optimization methods can be passed in this way and the complete list of implemented optimizers is provided in the [`mxnet.optimizer`](/api/python/docs/api/optimizer/index.html) module.
+All pre-defined optimization methods can be passed in this way and the complete list of implemented optimizers is provided in the [mxnet.optimizer](/api/python/docs/api/optimizer/index.html) module.
 
 However we can also pass an optimizer instance directly to the `Trainer` constructor.
 
@@ -120,8 +120,8 @@ For reference and implementation details about each optimizer, please refer to t
 
 The `Trainer` constructor also accepts the following keyword arguments for :
 
-- `kvstore` – how key value store  should be created for multi-gpu and distributed training. Check out  [`mxnet.kvstore.KVStore`](/api/python/docs/api/kvstore/index.html) for more information. String options are any of the following ['local', 'device', 'dist_device_sync', 'dist_device_async'].
-- `compression_params` – Specifies type of gradient compression and additional arguments depending on the type of compression being used. See [`mxnet.KVStore.set_gradient_compression_method`](/api/python/docs/api/kvstore/index.html#mxnet.kvstore.KVStore.set_gradient_compression) for more details on gradient compression.
+- `kvstore` – how key value store  should be created for multi-gpu and distributed training. Check out  [mxnet.kvstore.KVStore](/api/python/docs/api/kvstore/index.html) for more information. String options are any of the following ['local', 'device', 'dist_device_sync', 'dist_device_async'].
+- `compression_params` – Specifies type of gradient compression and additional arguments depending on the type of compression being used. See [mxnet.KVStore.set_gradient_compression_method](/api/python/docs/api/kvstore/index.html#mxnet.kvstore.KVStore.set_gradient_compression) for more details on gradient compression.
 - `update_on_kvstore` – Whether to perform parameter updates on KVStore. If None, then the `Trainer` instance  will choose the more suitable option depending on the type of KVStore.
 
 ### Changing the Learning Rate

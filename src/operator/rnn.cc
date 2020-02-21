@@ -207,7 +207,7 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
 
 struct RNNGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr &n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr &n,
           const std::vector<nnvm::NodeEntry> &ograd) const {
     const RNNParam& params = nnvm::get<RNNParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads{ n->inputs[rnn_enum::kData],

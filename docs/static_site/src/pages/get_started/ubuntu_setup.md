@@ -90,8 +90,8 @@ Further information is provided in the source guide's [Math Library
 Selection](build_from_source#math-library-selection) section.
 
 `libopencv-dev` is an optional dependency. You can delete it from above `apt-get
-install` line and build MXNet without OpenCV support by passing
-`-DUSE_OPENCV=OFF` to the `cmake` command below.
+install` line and build MXNet without OpenCV support by setting `USE_OPENCV` to
+`OFF` in the configuration file described below.
 
 Note: CMake 3.13 or higher is required. If you are running an older version of
 CMake, you will see an error message like `CMake 3.13 or higher is required. You
@@ -109,13 +109,12 @@ Clone the repository:
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet
-cp config/config.cmake config.cmake
+cp config/linux.cmake config.cmake  # or config/linux_gpu.cmake for build with CUDA
 ```
 
 Please edit the config.cmake file based on your needs. The file contains a
-series of `set(name value CACHE TYPE "Description")` entries. For example, to
-build without Cuda, change `set(USE_CUDA ON CACHE TYPE "Build with CUDA
-support")` to `set(USE_CUDA OFF CACHE TYPE "Build with CUDA support")`.
+series of `set(name value CACHE TYPE "Description")` entries. You can change the
+values of the respective `value`.
 
 For a GPU-enabled build make sure you have installed the [CUDA dependencies
 first](#cuda-dependencies)). When building a GPU-enabled build on a machine
@@ -132,8 +131,11 @@ the guide in [Math Library Selection](build_from_source#math-library-selection).
 rm -rf build
 mkdir -p build && cd build
 cmake -GNinja -C ../config.cmake ..
-cmake --build
+cmake --build . --parallel 8
 ```
+
+You can increase the `--parallel 8` argument to match the number of processor
+cores of your computer.
 
 After a successful build, you will find the `libmxnet.so` in the `build` folder
 in your MXNet project root. `libmxnet.so` is required to install language
@@ -144,8 +146,8 @@ bindings described in the next section.
 
 ## Installing Language Packages for MXNet
 
-After you have installed the MXNet core library. You may install MXNet interface packages for the programming language
-of your choice:
+After you have installed the MXNet core library. You may install MXNet interface
+packages for the programming language of your choice:
 - [Python](#install-mxnet-for-python)
 - [C++](#install-the-mxnet-package-for-c&plus;&plus;)
 - [Clojure](#install-the-mxnet-package-for-clojure)
@@ -166,8 +168,9 @@ cd python
 pip install --user -e .
 ```
 
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these
-changes will be reflected in the package installed.
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means
+that if you edit the source files, these changes will be reflected in the
+package installed.
 
 #### Optional Python Packages
 

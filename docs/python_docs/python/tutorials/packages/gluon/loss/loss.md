@@ -160,7 +160,7 @@ In classification, we often apply the
 softmax operator to the predicted outputs to obtain prediction probabilities,
 and then apply the cross entropy loss against the true labels:
 
-$$ \begin{align}\begin{aligned}p = \softmax({pred})\\L = -\sum_i \sum_j {label}_j \log p_{ij}\end{aligned}\end{align}
+$$ \begin{align}\begin{aligned}p = \text{softmax}({pred})\\L = -\sum_i \sum_j {label}_j \log p_{ij}\end{aligned}\end{align}
 $$
 
 Running these two steps one-by-one, however, may lead to numerical instabilities. The `loss` module provides a single operators with softmax and cross entropy fused to avoid such problem.

@@ -48,6 +48,7 @@ extern bool debug_output;
 extern bool quick_test;
 extern bool performance_run;
 extern bool csv;
+extern bool thread_safety_force_cpu;
 
 template<typename DType>
 inline size_t shapeMemorySize(const mxnet::TShape& shape) {
@@ -787,6 +788,44 @@ struct ScopeSet {
   T& var_;
   T  saveValue_;
 };
+
+
+static void AssertEqual(const std::vector<NDArray *> &in_arrs,
+                 const std::vector<NDArray *> &out_arrs,
+                 float rtol = 1e-5, float atol = 1e-8,
+                 bool test_first_only = false) {
+  for (size_t j = 0; j < in_arrs.size(); ++j) {
+    // When test_all is fir
+    if (test_first_only && j == 1) {
+      return;
+    }
+    NDArray tmp1 = *in_arrs[j];
+    NDArray tmp2 = *out_arrs[j];
+    if (tmp1.ctx().dev_type == mxnet::Context::kGPU) {
+      tmp1 = tmp1.Copy(mxnet::Context::CPU(0));
+      tmp2 = tmp2.Copy(mxnet::Context::CPU(0));
+      tmp1.WaitToRead();
+      tmp2.WaitToRead();
+    }
+#if MXNET_USE_MKLDNN == 1
+    tmp1 = tmp1.Reorder2Default();
+    tmp2 = tmp2.Reorder2Default();
+#endif
+    EXPECT_EQ(tmp1.shape().Size(), tmp2.shape().Size());
+    TBlob blob1 = tmp1.data();
+    TBlob blob2 = tmp2.data();
+    mshadow::default_real_t *d1 =
+        static_cast<mshadow::default_real_t *>(blob1.dptr_);
+    mshadow::default_real_t *d2 =
+        static_cast<mshadow::default_real_t *>(blob2.dptr_);
+    for (int i = 0; i < tmp1.shape().Size(); i++) {
+      float abs_err = fabs((d1[i]) - (d2[i]));
+      ASSERT_LE(abs_err, (atol + rtol * fabs(d2[i])))
+          << "index: " << i << ", " << d1[i] << " vs " << d2[i];
+    }
+  }
+}
+
 
 
 }  // namespace test
