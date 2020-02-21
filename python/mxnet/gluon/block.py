@@ -1075,7 +1075,6 @@ class HybridBlock(Block):
             raise ValueError('In HybridBlock, there must be one NDArray as input.'
                              ' Please check the type of the args.\n')
 
-        ctx = first_ctx
         if len(ctx_set) > 1:
             raise ValueError('Find multiple contexts in the input, '
                              'After hybridized, the HybridBlock only supports one input '
@@ -1089,7 +1088,7 @@ class HybridBlock(Block):
                                 "Please submit an issue on Github" \
                                 " https://github.com/apache/incubator-mxnet."
         # do not actually call the cached_op
-        
+
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
