@@ -110,9 +110,12 @@ the guide in [Math Library Selection](build_from_source#math-library-selection).
 ```bash
 rm -rf build
 mkdir -p build && cd build
-cmake -C ../config.cmake ..
+cmake ..
 cmake --build .
 ```
+
+Specify `cmake --build . --parallel N` to set the number of parallel compilation
+jobs. Default is derived from CPUs available.
 
 After a successful build, you will find the `libmxnet.dylib` in the `build`
 folder in your MXNet project root. `libmxnet.dylib` is required to install
