@@ -1332,7 +1332,7 @@ extern "C" {
     MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool,
                                           opts, attrs, args);
     if (!retval) return retval;
-    
+
     *accept = accept_bool;
 
     if (attrs.size() > 0) {
