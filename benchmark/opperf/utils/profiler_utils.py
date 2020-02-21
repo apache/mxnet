@@ -248,11 +248,17 @@ def python_profile(func):
     @functools.wraps(func)
     def python_profile_it(*args, **kwargs):
         runs = args[1]
+
+        if len(args) > 2:
+            modified_args = (args[0], 1, args[2])
+        else:
+            modified_args = (args[0], 1)
+            
         times = []
 
         for _ in range(runs):
             start_time = time.perf_counter()    # 1
-            res = func(*args, **kwargs)
+            res = func(*modified_args, **kwargs)
             end_time = time.perf_counter()      # 2
             run_time = (end_time - start_time)*1000    # 3
             times.append(run_time)
