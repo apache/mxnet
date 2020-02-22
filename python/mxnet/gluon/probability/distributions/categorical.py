@@ -48,13 +48,6 @@ class Categorical(Distribution):
     def __init__(self, prob=None, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF([prob, logit])
 
-        # if (num_events > 0):
-        #     num_events = int(num_events)
-        #     self.num_events = num_events
-        # else:
-        #     raise ValueError("`num_events` should be greater than zero. " +
-        #                      "Received num_events={}".format(num_events))
-
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
@@ -90,8 +83,11 @@ class Categorical(Distribution):
         return prob2logit(self.prob, False, self.F)
 
     def log_prob(self, value):
+        F = self.F
         logit = self.logit
-        return (logit * value).sum(-1)
+        indices = F.np.expand_dims(value, -1).astype('int')
+        expanded_logit = logit * F.np.ones_like(logit + indices)
+        return F.npx.pick(expanded_logit, indices).squeeze()
 
     def sample(self, size=None):
         """Sample from categorical distribution.

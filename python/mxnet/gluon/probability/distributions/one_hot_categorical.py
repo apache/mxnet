@@ -33,7 +33,10 @@ class OneHotCategorical(Distribution):
         prob = self.prob
         return prob * (1 - prob)
 
-    def sample(self, size):
+    def sample(self, size=None):
         indices = self._categorical.sample(size)
         return self.F.npx.one_hot(indices, self.num_events)
     
+    def log_prob(self, value):
+        indices = value.argmax(-1)
+        return self._categorical.log_prob(indices)

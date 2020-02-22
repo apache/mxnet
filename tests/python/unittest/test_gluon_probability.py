@@ -221,11 +221,12 @@ def test_gluon_categorical():
                     return out
             return getattr(categorical, self._func)(*args)
 
-    event_shape = [2, 5, 10]
-    batch_shape = [None, (2, 3), (4,0,5)]
+    event_shapes = [2, 5, 10]
+    batch_shapes = [None, (2, 3), (4, 0, 5)]
+    sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
-    for event_shape, batch_shape in itertools.product(event_shape, batch_shape):
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
             param = prob
@@ -238,10 +239,36 @@ def test_gluon_categorical():
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == desired_shape
 
+    # Test log_prob
+    for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            samples = np.random.choice(event_shape, size=desired_shape)
+            if use_logit:
+                param = np.log(param)
+            net = TestCategorical("log_prob", use_logit, batch_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param, samples)
+            # Check shape
+            assert mx_out.shape == desired_shape
+            # Check value
+            log_pmf, indices = np.broadcast_arrays(np.log(prob), np.expand_dims(samples, -1))
+            if indices.ndim >= 1:
+                indices = indices[..., :1]
+            expect_log_prob = _np.take_along_axis(log_pmf, indices.astype('int'), axis=-1).asnumpy()
+            assert_almost_equal(mx_out.asnumpy(), expect_log_prob.squeeze(), atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
 def test_gluon_one_hot_categorical():
+    def one_hot(a, num_classes):
+        return np.identity(num_classes)[a]
+
     class TestOneHotCategorical(HybridBlock):
         def __init__(self, func, is_logit=False, batch_shape=None, num_events=None):
             super(TestOneHotCategorical, self).__init__()
@@ -264,11 +291,12 @@ def test_gluon_one_hot_categorical():
                     return out
             return getattr(categorical, self._func)(*args)
 
-    event_shape = [2, 5, 10]
-    batch_shape = [None, (), (2, 3), (4,0,5)]
+    event_shapes = [2, 5, 10]
+    batch_shapes = [None, (2, 3), (4, 0, 5)]
+    sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
-    for event_shape, batch_shape in itertools.product(event_shape, batch_shape):
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
             param = prob
@@ -280,6 +308,24 @@ def test_gluon_one_hot_categorical():
             mx_out = net(param).asnumpy()
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == desired_shape + (event_shape,)
+
+    # Test log_prob
+    for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            samples = np.random.choice(event_shape, size=desired_shape)
+            samples = one_hot(samples, event_shape)
+            if use_logit:
+                param = np.log(param)
+            net = TestOneHotCategorical("log_prob", use_logit, batch_shape, event_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param, samples)
+            # Check shape
+            assert mx_out.shape == desired_shape
+            
 
 @with_seed()
 @use_np
