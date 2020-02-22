@@ -676,17 +676,6 @@ class ElemwiseBinaryOp : public OpBase {
   }
 
   template<typename xpu, typename LOP, typename ROP>
-  static inline void BackwardUseNoneWithHalf2(const nnvm::NodeAttrs &attrs,
-                                              const OpContext &ctx,
-                                              const std::vector<TBlob> &inputs,
-                                              const std::vector<OpReqType> &req,
-                                              const std::vector<TBlob> &outputs) {
-    MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      BackwardUseNone_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
-    });
-  }
-
-  template<typename xpu, typename LOP, typename ROP>
   static inline void BackwardUseNoneEx(const nnvm::NodeAttrs &attrs,
                                        const OpContext &ctx,
                                        const std::vector<NDArray> &inputs,
@@ -728,17 +717,6 @@ class ElemwiseBinaryOp : public OpBase {
                                    const std::vector<OpReqType> &req,
                                    const std::vector<TBlob> &outputs) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      BackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
-    });
-  }
-
-  template<typename xpu, typename LOP, typename ROP>
-  static inline void BackwardUseInWithHalf2(const nnvm::NodeAttrs &attrs,
-                                            const OpContext &ctx,
-                                            const std::vector<TBlob> &inputs,
-                                            const std::vector<OpReqType> &req,
-                                            const std::vector<TBlob> &outputs) {
-    MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
       BackwardUseIn_<xpu, LOP, ROP, DType>(attrs, ctx, inputs, req, outputs);
     });
   }
