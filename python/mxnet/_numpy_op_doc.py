@@ -123,8 +123,6 @@ def _np_any(a, axis=None, keepdims=False, out=None):
 
 def _np_sometrue(a, axis=None, keepdims=False, out=None):
     """
-    sometrue(*args, **kwargs)
-
     Check whether some values are true.
 
     Refer to `any` for full documentation.
