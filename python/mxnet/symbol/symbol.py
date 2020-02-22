@@ -1486,14 +1486,13 @@ class Symbol(SymbolBase):
             args = []
             args_handle = c_array(NDArrayHandle, [])
         else:
-            listed_arguments = self.list_arguments()
-            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+            args_handle, args = self._get_ndarray_inputs('args', args,
+                                                         self.list_arguments(), False)
 
         if aux is None or len(aux) == 0:
             aux = []
             aux_handle = c_array(NDArrayHandle, [])
         else:
-            listed_aux = self.list_arguments()
             aux_handle, aux = self._get_ndarray_inputs('aux_states', aux,
                                                        self.list_auxiliary_states(), False)
         if ctx is None:
