@@ -112,9 +112,8 @@ class DropoutOp {
     }
   }
   static inline bool MKLAvailable() {
-    // BernoulliGenerate expects an array int, so for types smaller than int, the mask buffer
-    // will be too small, so we cannot use MKL in those cases
-    return sizeof(DType) >= sizeof(int);
+    // TODO(lnyuan): how to let user enable/disable MKL Dropout
+    return true;
   }
 
   // MKL forward pass
@@ -124,25 +123,56 @@ class DropoutOp {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     RandGenerator<xpu, DType> *pgen = ctx.requested[0].get_parallel_random<xpu, DType>();
     CHECK_NOTNULL(pgen);
-    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, uint8_t> mask = out_data[dropout::kMask].FlatTo1D<xpu, uint8_t>(s);
     Tensor<xpu, 2, DType> data = in_data[dropout::kData].FlatTo2D<xpu, DType>(s);
     Tensor<xpu, 2, DType> out = out_data[dropout::kOut].FlatTo2D<xpu, DType>(s);
     DType *outptr = out.dptr_;
     DType *dataptr = data.dptr_;
-    auto maskptr = reinterpret_cast<int *>(mask.dptr_);
-    index_t count = mask.shape_[0] * mask.shape_[1];
-    if (sizeof(DType) > sizeof(int)) {
-      // allocating new buffer to avoiding memory overlapping between `mask.dptr_` and `maskptr`
-      Tensor<xpu, 1, int> temp = ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
-      maskptr = temp.dptr_;
-    }
-    BernoulliGenerate(*pgen, count, this->pkeep_, maskptr);
+
+    index_t count = data.shape_[0] * data.shape_[1];
+    // allocating buffer for MKL routine to calculate int32 based maskptr
+    Tensor<xpu, 1, int> temp_space =
+      ctx.requested[1].get_space_typed<xpu, 1, int>(Shape1(count), s);
+    auto mkl_mask = temp_space.dptr_;
+
+    BernoulliGenerate(*pgen, count, this->pkeep_, mkl_mask);
     const float pk_1 = 1.0f / this->pkeep_;
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int i = 0; i < count; ++i) {
-      const DType maskVal = static_cast<DType>(maskptr[i]) * pk_1;
-      outptr[i] = dataptr[i] * maskVal;
-      mask.dptr_[i] = maskVal;
+    const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    const int blk_size = 64;
+    const int nblk = count / blk_size;
+
+    #pragma omp parallel num_threads(nthr)
+    {
+      #pragma omp for
+      for (index_t b = 0; b < nblk; ++b) {
+        for (index_t k = 0; k < blk_size; ++k) {
+          const index_t i = b * blk_size + k;
+          outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+          auto mask_idx = i >> 3;  // div 8
+          uint8_t mask_offset = i & 7;  // mod 8
+          if (mkl_mask[i]) {
+            // set bit
+            mask.dptr_[mask_idx] |= 1U << mask_offset;
+          } else {
+            // clear bit
+            mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+          }
+        }
+      }
+    }
+
+    // tail
+    for (index_t i = nblk * blk_size; i < count; ++i) {
+      outptr[i] = dataptr[i] * mkl_mask[i] * pk_1;
+      auto mask_idx = i >> 3;  // div 8
+      uint8_t mask_offset = i & 7;  // mod 8
+      if (mkl_mask[i]) {
+        // set bit
+        mask.dptr_[mask_idx] |= 1U << mask_offset;
+      } else {
+        // clear bit
+        mask.dptr_[mask_idx] &= ~(1U << mask_offset);
+      }
     }
   }
 
@@ -153,15 +183,21 @@ class DropoutOp {
                           const std::vector<TBlob> &out_grad) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Tensor<xpu, 2, DType> grad = out_grad[dropout::kOut].FlatTo2D<xpu, DType>(s);
-    Tensor<xpu, 2, DType> mask = out_data[dropout::kMask].FlatTo2D<xpu, DType>(s);
+    Tensor<xpu, 1, uint8_t> mask = out_data[dropout::kMask].FlatTo1D<xpu, uint8_t>(s);
     Tensor<xpu, 2, DType> gdata = in_grad[dropout::kData].FlatTo2D<xpu, DType>(s);
     DType *ingradptr = gdata.dptr_;
     const DType *outgradptr = grad.dptr_;
-    const DType *maskptr = mask.dptr_;
-    const index_t count = mask.shape_[0] * mask.shape_[1];
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+    const uint8_t *maskptr = mask.dptr_;
+    const index_t count = grad.shape_[0] * grad.shape_[1];
+    const float pk_1 = 1.0f / this->pkeep_;
+    const int nthr = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+
+#pragma omp parallel for num_threads(nthr)
     for (index_t i = 0; i < count; ++i) {
-      ingradptr[i] = outgradptr[i] * maskptr[i];
+      auto mask_idx = i >> 3;  // div 8;
+      uint8_t mask_offset = i & 7;  // mod 8
+      bool mask_val = maskptr[mask_idx] & (1U << mask_offset);
+      ingradptr[i] = outgradptr[i] * mask_val * pk_1;
     }
   }
 #endif  // #if MXNET_USE_MKL_DROPOUT
@@ -420,18 +456,18 @@ class DropoutOp {
       const TBlob &in = in_data[dropout::kData];
       const TBlob &out = out_data[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
+      CHECK_EQ(mask.type_flag_, mshadow::kUint8);
 
       if (this->pkeep_ < 1 && (ctx.is_train || this->mode_ == dropout::kAlways)) {
         this->dropout_passthrough_ = false;
         if (this->axes_.ndim() == 0) {
+          CHECK_EQ((out.Size() + 7) / 8, mask.Size());
 #if MXNET_USE_MKL_DROPOUT
           if (MKLAvailable()) {
             MKLForward(ctx, in_data, out_data);
             return;
           }
 #endif  // MXNET_USE_MKL_DROPOUT
-          CHECK_EQ((out.Size() + 7) / 8, mask.Size());
-          CHECK_EQ(mask.type_flag_, mshadow::kUint8);
 #if MXNET_USE_CUDNN_DROPOUT && defined(__CUDACC__)
           if (CuDNNAvailable()) {
             CuDNNForward(ctx, in, mask, out);
@@ -512,12 +548,8 @@ class DropoutOp {
       const TBlob &gdata = in_grad[dropout::kData];
       const TBlob &grad = out_grad[dropout::kOut];
       const TBlob &mask = out_data[dropout::kMask];
-#if MXNET_USE_MKL_DROPOUT
-      CHECK_EQ(grad.Size(), mask.Size());
-#else
       CHECK_EQ(mask.type_flag_, mshadow::kUint8);
       CHECK_EQ((grad.Size() + 7) / 8, mask.Size());
-#endif
 
       if (this->axes_.ndim() == 0) {
 #if MXNET_USE_MKL_DROPOUT

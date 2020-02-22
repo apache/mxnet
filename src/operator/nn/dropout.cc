@@ -117,15 +117,6 @@ Example::
   if (!mxnet::ndim_is_known(dshape)) return false;
   out_shape->clear();
   out_shape->push_back(dshape);
-
-#if MXNET_USE_MKL_DROPOUT
-  // TODO(TaoLv): Do not use bit-mask when MKL dropout is enabled
-  // Need to enhance MKLDNN engine for more efficient memory usage
-  if (param.axes.ndim() == 0) {
-    out_shape->push_back(dshape);
-    return true;
-  }
-#endif
   if (param.axes.ndim() > 0) {
     for (int i = 0; i < param.axes.ndim(); ++i) {
       dshape[param.axes[i]] = 1;
@@ -156,16 +147,6 @@ Example::
 
   out_type->clear();
   out_type->push_back(dtype);  // data type for output
-
-#if MXNET_USE_MKL_DROPOUT
-  // TODO(TaoLv): Do not use bit-mask when MKL dropout is enabled
-  // Need to enhance MKLDNN engine for more efficient memory usage
-  const DropoutParam& param = nnvm::get<DropoutParam>(attrs.parsed);
-  if (param.axes.ndim() == 0) {
-    out_type->push_back(dtype);
-    return true;
-  }
-#endif
   out_type->push_back(mshadow::kUint8);  // data type for mask
   return true;
 })
