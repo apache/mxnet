@@ -20,6 +20,7 @@
 """Batchify function."""
 from __future__ import absolute_import
 
+import warnings
 import numpy as np
 
 from ...context import Context, cpu
@@ -273,6 +274,12 @@ class Pad(object):
             raise NotImplementedError(
                 "Pad() does not support multiple items, use Group(Pad(), Pad(), ...) instead")
 
+    def __mx_handle__(self):
+        if self._ret_length:
+            raise NotImplementedError("'ret_length' not supported in backend")
+        from ._internal import PadBatchify
+        return PadBatchify(pad_val=self._pad_val, dtype=self._dtype if self._dtype is not None else -1)
+
 def _append_arrs(arrs, use_shared_mem=False, expand=False, batch_axis=0):
     """Internal impl for returning appened arrays as list."""
     _arr = _np if is_np_array() else nd
@@ -331,7 +338,7 @@ class Append(object):
         return _append_arrs(data, use_shared_mem=self._use_shared_mem,
                             expand=self._expand, batch_axis=self._batch_axis)
 
-class Group:
+class Group(object):
     """Wrap multiple batchify functions together. The input functions will be applied
     to the corresponding input fields.
     Each data sample should be a list or tuple containing multiple attributes. The `i`th batchify
@@ -393,7 +400,7 @@ class Group:
         return tuple(ret)
 
 
-class AsList:
+class AsList(object):
     """Simply forward the list of input data.
     This is particularly useful when the Dataset contains textual data
     and in conjonction with the `Group` batchify function.

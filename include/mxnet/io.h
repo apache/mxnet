@@ -186,18 +186,6 @@ class BatchifyFunction {
     virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
     /*! \brief The batchify logic */
     virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) = 0;
-  protected:
-    std::size_t SanityCheck(std::vector<std::vector<NDArray> >& inputs) {
-      auto bs = inputs.size();
-      CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
-      auto out_size = inputs[0].size();
-      // sanity check: each input has same size
-      for (size_t i = 1; i < bs; ++i) {
-          CHECK_EQ(inputs[i].size(), out_size)
-            << i << "-th input size does not match " << out_size;
-      }
-      return out_size;
-    }
 };  // class BatchifyFunction
 
 using BatchifyFunctionPtr = std::shared_ptr<BatchifyFunction>;
