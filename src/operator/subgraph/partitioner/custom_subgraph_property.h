@@ -222,7 +222,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       const auto& idx = g.indexed_graph();
 
       // set isArg/isAux for each null op/param in the graph
-      const std::vector<std::string> aux_state_names = sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      const std::vector<std::string> aux_state_names =
+        sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
       std::unordered_set<std::string> aux_set(aux_state_names.begin(), aux_state_names.end());
       for (unsigned i = 0; i < idx.num_nodes(); i++) {
         nnvm::Node* node = const_cast<nnvm::Node*>(idx[i].source);
@@ -237,13 +238,15 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
 
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
-      CHECK(call_review_subgraph_(review_subgraph_, subgraph_json.c_str(),  subgraph_id, &accept,
-                                  opt_keys_.data(),  opt_vals_.data(), opt_keys_.size(),  &attr_keys,
-                                  &attr_vals, &num_attr,  arg_names.data(), arg_names.size(),
-                                  arg_data.data(), arg_shapes.data(),  arg_dims.data(), arg_types.data(),
-                                  arg_verIDs.data(), arg_dev_type.data(),  arg_dev_id.data(),
-                                  aux_names.data(), aux_names.size(),  aux_data.data(), aux_shapes.data(),
-                                  aux_dims.data(), aux_types.data(), aux_verIDs.data(),
+      CHECK(call_review_subgraph_(review_subgraph_, subgraph_json.c_str(),  subgraph_id,
+                                  &accept, opt_keys_.data(), opt_vals_.data(),
+                                  opt_keys_.size(),  &attr_keys, &attr_vals, &num_attr,
+                                  arg_names.data(), arg_names.size(), arg_data.data(),
+                                  arg_shapes.data(), arg_dims.data(), arg_types.data(),
+                                  arg_verIDs.data(), arg_dev_type.data(),
+                                  arg_dev_id.data(), aux_names.data(), aux_names.size(),
+                                  aux_data.data(), aux_shapes.data(), aux_dims.data(),
+                                  aux_types.data(), aux_verIDs.data(),
                                   aux_dev_type.data(), aux_dev_id.data()))
         << "Error calling review_subgraph for '" << subgraph_prop << "'";
     }
