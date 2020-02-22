@@ -219,7 +219,8 @@ MXReturnValue mySupportedOps(std::string json,
 MXReturnValue myReviewSubgraph(std::string json, int subraph_id, bool* accept,
                                std::unordered_map<std::string, std::string>& options,
                                std::unordered_map<std::string, std::string>& attrs,
-                               std::map<std::string, MXTensor>& args) {
+                               std::map<std::string, MXTensor>& args,
+                               std::map<std::string, MXTensor>& aux) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }

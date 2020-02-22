@@ -718,6 +718,7 @@ typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<bool>&,
 typedef MXReturnValue (*reviewSubgraph_t)(std::string, int, bool*,
                                           std::unordered_map<std::string, std::string>&,
                                           std::unordered_map<std::string, std::string>&,
+                                          std::map<std::string, MXTensor>&,
                                           std::map<std::string, MXTensor>&);
 
 /*!
@@ -926,7 +927,12 @@ typedef int (*partCallReviewSubgraph_t)(reviewSubgraph_t reviewSubgraph, const c
                                         void* const* arg_data, const int64_t* const* arg_shapes,
                                         const int* arg_dims, const int* arg_types,
                                         const size_t* arg_IDs, const char* const* arg_dev_type,
-                                        const int* arg_dev_id);
+                                        const int* arg_dev_id,
+                                        const char* const* aux_names, int num_aux,
+                                        void* const* aux_data, const int64_t* const* aux_shapes,
+                                        const int* aux_dims, const int* aux_types,
+                                        const size_t* aux_IDs, const char* const* aux_dev_type,
+                                        const int* aux_dev_id);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
@@ -1304,7 +1310,12 @@ extern "C" {
                           void* const* arg_data, const int64_t* const* arg_shapes,
                           const int* arg_dims, const int* arg_types,
                           const size_t* arg_IDs, const char* const* arg_dev_type,
-                          const int* arg_dev_id) {
+                          const int* arg_dev_id,
+                          const char* const* aux_names, int num_aux,
+                          void* const* aux_data, const int64_t* const* aux_shapes,
+                          const int* aux_dims, const int* aux_types,
+                          const size_t* aux_IDs, const char* const* aux_dev_type,
+                          const int* aux_dev_id) {
     std::string subgraph_json(json);
     bool accept_bool = false;
     // create map of attributes from list
@@ -1324,13 +1335,24 @@ extern "C" {
             arg_IDs[i], {arg_dev_type[i], arg_dev_id[i]});
       args[arg_names[i]] = tensor;
     }
+    // create a map of named tensors for aux
+    std::map<std::string, MXTensor> aux;
+    for (int i = 0; i < num_aux; i++) {
+      std::vector<int64_t> shapes;
+      for (int j = 0; j < aux_dims[i]; j++)
+        shapes.push_back(aux_shapes[i][j]);
+
+      MXTensor tensor(aux_data[i], shapes, (MXDType)aux_types[i],
+            aux_IDs[i], {aux_dev_type[i], aux_dev_id[i]});
+      aux[aux_names[i]] = tensor;
+    }
 
 
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
     MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool,
-                                          opts, attrs, args);
+                                          opts, attrs, args, aux);
     if (!retval) return retval;
 
     *accept = accept_bool;

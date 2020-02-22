@@ -102,6 +102,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // get input args and arg names
     in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
     in_args_ptr = g.GetAttr<NDArray**>("in_args");
+    in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
+    in_aux_ptr = g.GetAttr<NDArray**>("in_aux");
 
     // convert input args
     arg_names.clear();
@@ -120,9 +122,31 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       arg_dims.push_back(in_arg.shape().ndim());
       arg_types.push_back(in_arg.dtype());
       arg_verIDs.push_back(in_arg.version());
-      const char* ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      arg_dev_type.push_back(ctx_str);
+      const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+      arg_dev_type.push_back(arg_ctx_str);
       arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+    }
+
+    // convert input aux
+    aux_names.clear();
+    aux_data.clear();
+    aux_shapes.clear();
+    aux_dims.clear();
+    aux_types.clear();
+    aux_verIDs.clear();
+    aux_dev_type.clear();
+    aux_dev_id.clear();
+    for (size_t i=0; i < in_aux_names.size(); i++) {
+      aux_names.push_back(in_aux_names[i].c_str());
+      const auto &in_aux = *(in_aux_ptr[i]);
+      aux_data.push_back(in_aux.data().dptr_);
+      aux_shapes.push_back(in_aux.shape().data());
+      aux_dims.push_back(in_aux.shape().ndim());
+      aux_types.push_back(in_aux.dtype());
+      aux_verIDs.push_back(in_aux.version());
+      const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+      aux_dev_type.push_back(aux_ctx_str);
+      aux_dev_id.push_back(in_aux.ctx().real_dev_id());
     }
 
     // remove all graph attrs, some cannot be saved to json
@@ -198,8 +222,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       const auto& idx = g.indexed_graph();
 
       // set isArg/isAux for each null op/param in the graph
-      const std::vector<std::string> aux_names = sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-      std::unordered_set<std::string> aux_set(aux_names.begin(), aux_names.end());
+      const std::vector<std::string> aux_state_names = sym.ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+      std::unordered_set<std::string> aux_set(aux_state_names.begin(), aux_state_names.end());
       for (unsigned i = 0; i < idx.num_nodes(); i++) {
         nnvm::Node* node = const_cast<nnvm::Node*>(idx[i].source);
         // check if this node is input to subgraph
@@ -213,16 +237,14 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
 
       std::string subgraph_json = nnvm::pass::SaveJSON(g);
-
-      CHECK(call_review_subgraph_(review_subgraph_, subgraph_json.c_str(),
-                                  subgraph_id, &accept, opt_keys_.data(),
-                                  opt_vals_.data(), opt_keys_.size(),
-                                  &attr_keys, &attr_vals, &num_attr,
-                                  arg_names.data(), arg_names.size(),
-                                  arg_data.data(), arg_shapes.data(),
-                                  arg_dims.data(), arg_types.data(),
-                                  arg_verIDs.data(), arg_dev_type.data(),
-                                  arg_dev_id.data()))
+      CHECK(call_review_subgraph_(review_subgraph_, subgraph_json.c_str(),  subgraph_id, &accept,
+                                  opt_keys_.data(),  opt_vals_.data(), opt_keys_.size(),  &attr_keys,
+                                  &attr_vals, &num_attr,  arg_names.data(), arg_names.size(),
+                                  arg_data.data(), arg_shapes.data(),  arg_dims.data(), arg_types.data(),
+                                  arg_verIDs.data(), arg_dev_type.data(),  arg_dev_id.data(),
+                                  aux_names.data(), aux_names.size(),  aux_data.data(), aux_shapes.data(),
+                                  aux_dims.data(), aux_types.data(), aux_verIDs.data(),
+                                  aux_dev_type.data(), aux_dev_id.data()))
         << "Error calling review_subgraph for '" << subgraph_prop << "'";
     }
 
@@ -260,16 +282,17 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
-  std::vector<std::string> in_arg_names;
+  std::vector<std::string> in_arg_names, in_aux_names;
   NDArray **in_args_ptr;
-  std::vector<const char*> arg_names;
-  std::vector<void*> arg_data;
-  std::vector<const int64_t*> arg_shapes;
-  std::vector<int> arg_dims;
-  std::vector<int> arg_types;
-  std::vector<size_t> arg_verIDs;
-  std::vector<const char*> arg_dev_type;
-  std::vector<int> arg_dev_id;
+  NDArray **in_aux_ptr;
+  std::vector<const char*> arg_names, aux_names;
+  std::vector<void*> arg_data, aux_data;
+  std::vector<const int64_t*> arg_shapes, aux_shapes;
+  std::vector<int> arg_dims, aux_dims;
+  std::vector<int> arg_types, aux_types;
+  std::vector<size_t> arg_verIDs, aux_verIDs;
+  std::vector<const char*> arg_dev_type, aux_dev_type;
+  std::vector<int> arg_dev_id, aux_dev_id;
 };
 }  // namespace op
 }  // namespace mxnet

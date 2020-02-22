@@ -1343,8 +1343,10 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const char* backend_name,
                          const int dev_type,
                          SymbolHandle* ret_sym_handle,
-                         const mx_uint len,
+                         const mx_uint args_len,
                          NDArrayHandle* in_args_handle,
+                         const mx_uint aux_len,
+                         NDArrayHandle* in_aux_handle,
                          const mx_uint num_options,
                          const char** keys,
                          const char** vals) {
@@ -1353,13 +1355,13 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph g = Symbol2Graph(*s);
-  if (len) {
+  if (args_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
-    mxnet::ShapeVector arg_shapes(len);
-    nnvm::DTypeVector arg_dtypes(len);
-    StorageTypeVector arg_stypes(len);
-    for (mx_uint i = 0; i < len; i++) {
+    mxnet::ShapeVector arg_shapes(args_len);
+    nnvm::DTypeVector arg_dtypes(args_len);
+    StorageTypeVector arg_stypes(args_len);
+    for (mx_uint i = 0; i < args_len; i++) {
       const auto &in_arg = *(in_args_ptr[i]);
       arg_shapes[i] = in_arg.shape();
       arg_dtypes[i] = in_arg.dtype();
@@ -1392,6 +1394,19 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
     g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
   }
+
+  if (aux_len) {
+    std::vector<std::string> aux_names = sym->ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+    NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
+    g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+    g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
+  } else {
+    NDArray **in_aux_ptr = static_cast<NDArray**>(nullptr);
+    std::vector<std::string> aux_names;
+    g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+    g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
+  }
+
   std::vector<std::pair<std::string, std::string>> options_map;
   for (mx_uint i = 0; i < num_options; ++i) {
     options_map.emplace_back(keys[i], vals[i]);
