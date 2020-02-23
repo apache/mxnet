@@ -371,13 +371,11 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rldexp_scalar)
 .set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rldexp_grad>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_fmax)
-.add_alias("_npi_fmax")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_fmax)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmax>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_fmax"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmax"});
 
-NNVM_REGISTER_OP(_backward_broadcast_fmax)
-.add_alias("_backward_npi_fmax")
+NNVM_REGISTER_OP(_backward_npi_fmax)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -392,25 +390,20 @@ NNVM_REGISTER_OP(_backward_broadcast_fmax)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::ge,
                                                                   mshadow_op::lt>);
 
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_fmax_scalar)
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_fmax_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmax>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_fmax_scalar"})
-.add_alias("_FmaxScalar")
-.add_alias("_npi_fmax_scalar");
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmax_scalar"});
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_fmax_scalar)
-.add_alias("_backward_npi_fmax_scalar")
+MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_fmax_scalar)
 .add_argument("scalar", "float", "scalar value")
 .set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ge>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_fmin)
-.add_alias("_npi_fmin")
+MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_fmin)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::fmin>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_fmin"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmin"});
 
-NNVM_REGISTER_OP(_backward_broadcast_fmin)
-.add_alias("_backward_npi_fmin")
+NNVM_REGISTER_OP(_backward_npi_fmin)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -425,14 +418,11 @@ NNVM_REGISTER_OP(_backward_broadcast_fmin)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastBackwardUseIn<cpu, mshadow_op::le,
                                                                   mshadow_op::gt>);
 
-MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_fmin_scalar)
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_fmin_scalar)
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::fmin>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_fmin_scalar"})
-.add_alias("_FminScalar")
-.add_alias("_npi_fmin_scalar");
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_fmin_scalar"});
 
-MXNET_OPERATOR_REGISTER_BINARY(_backward_fmin_scalar)
-.add_alias("_backward_npi_fmin_scalar")
+MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_fmin_scalar)
 .add_argument("scalar", "float", "scalar value")
 .set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::le>);
