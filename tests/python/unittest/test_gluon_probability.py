@@ -21,7 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 import mxnet.gluon.probability as mgp
-from mxnet.gluon.probability import StochasticBlock
+from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal
 from mxnet import np, npx, autograd
@@ -574,7 +574,7 @@ def test_independent():
                 mx_out = net(logit, samples)
                 assert mx_out.shape == batch_shape
 
-
+@with_seed()
 @use_np
 def test_gluon_stochastic_block():
     """In this test case, we generate samples from a Gaussian
@@ -601,6 +601,39 @@ def test_gluon_stochastic_block():
         kl = net.losses[0].asnumpy()
         assert mx_out.shape == loc.shape
         assert kl.shape == loc.shape
+
+@with_seed()
+@use_np
+def test_gluon_stochastic_sequential():
+    class normalBlock(HybridBlock):
+        def hybrid_forward(self, F, x):
+            return (x + 1)
+
+    class stochasticBlock(StochasticBlock):
+        @StochasticBlock.collectLoss
+        def hybrid_forward(self, F, x):
+            self.add_loss(x ** 2)
+            self.add_loss(x - 1)
+            return (x + 1)
+
+    shape = (4, 4)
+    for hybridize in [True, False]:
+        initial_value = np.ones(shape)
+        net = StochasticSequential()
+        net.add(stochasticBlock())
+        net.add(normalBlock())
+        net.add(stochasticBlock())
+        net.add(normalBlock())
+        if hybridize:
+            net.hybridize()
+        mx_out = net(initial_value).asnumpy()
+        assert_almost_equal(mx_out, _np.ones(shape) * 5)
+        accumulated_loss = net.losses
+        assert len(accumulated_loss) == 2
+        assert_almost_equal(accumulated_loss[0][0].asnumpy(), _np.ones(shape))
+        assert_almost_equal(accumulated_loss[0][1].asnumpy(), _np.ones(shape) - 1)
+        assert_almost_equal(accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
+        assert_almost_equal(accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
 
 
 if __name__ == '__main__':
