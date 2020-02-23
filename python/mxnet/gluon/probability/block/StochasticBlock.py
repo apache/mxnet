@@ -26,6 +26,11 @@ from ...utils import _indent
 
 
 class StochasticBlock(HybridBlock):
+    """`StochasticBlock` extends `HybridBlock` to support accumulating loss
+    in the forward phase, which is extremely useful in building Bayesian Neural Network,
+    where the loss function is composed of a classification loss and a KL loss.
+
+    """
     def __init__(self, prefix=None, params=None):
         super(StochasticBlock, self).__init__(prefix=prefix, params=params)
         self._losses = []
@@ -56,8 +61,6 @@ class StochasticBlock(HybridBlock):
         self._losses.extend(out[1])
         for hook in self._forward_hooks.values():
             hook(self, args, out)
-        # if _mx_npx.is_np_array():
-        #         _check_all_np_ndarrays(out)
         return out[0]
 
     @property

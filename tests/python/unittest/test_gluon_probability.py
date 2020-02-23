@@ -21,6 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 import mxnet.gluon.probability as mgp
+from mxnet.gluon.probability import StochasticBlock
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal
 from mxnet import np, npx, autograd
@@ -572,6 +573,34 @@ def test_independent():
                     net.hybridize()
                 mx_out = net(logit, samples)
                 assert mx_out.shape == batch_shape
+
+
+@use_np
+def test_gluon_stochastic_block():
+    """In this test case, we generate samples from a Gaussian
+    parameterized by `loc` and `scale` and accumulate the KL-divergence
+    between it and its prior into the block's loss storage
+    """
+    class dummyBlock(StochasticBlock):
+        @StochasticBlock.collectLoss
+        def hybrid_forward(self, F, loc, scale):
+            qz = mgp.Normal(loc, scale)
+            # prior
+            pz = mgp.Normal(F.np.zeros_like(loc), F.np.ones_like(scale))
+            self.add_loss(mgp.kl_divergence(qz, pz))
+            return qz.sample()
+
+    shape = (4, 4)
+    for hybridize in [True, False]:
+        net = dummyBlock()
+        if hybridize:
+            net.hybridize()
+        loc = np.random.randn(*shape)
+        scale = np.random.rand(*shape)
+        mx_out = net(loc, scale).asnumpy()
+        kl = net.losses[0].asnumpy()
+        assert mx_out.shape == loc.shape
+        assert kl.shape == loc.shape
 
 
 if __name__ == '__main__':

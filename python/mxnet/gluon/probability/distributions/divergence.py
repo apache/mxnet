@@ -101,7 +101,7 @@ class _KL_storage():
 
     @staticmethod
     def _kl_Normal_Normal(p, q):
-        F = getF(p, q)
+        F = p.F
         var_ratio = (p.scale / q.scale) ** 2
         t1 = ((p.loc - q.loc) / q.scale) ** 2
         return 0.5 * (var_ratio + t1 - 1 - F.np.log(var_ratio))
