@@ -46,7 +46,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
            'diff', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount', 'pad', 'nop']
+           'where', 'bincount', 'pad']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -111,6 +111,8 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
     """
     if order != 'C':
         raise NotImplementedError
+    # If the following code (4 lines) regarding ctx is removed
+    # np.zeros((3, 4)) can be as fast as 4.96 us
     if ctx is None:
         ctx = str(current_context())
     else:
@@ -7480,12 +7482,3 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
             raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='minimum')
     return _npi.pad(x, pad_width, mode='constant', constant_value=0)
-
-
-@set_module('mxnet.ndarray.numpy')
-def nop(*args):
-    r"""
-    nop(*args)
-    A dummy function for FFI test.
-    """
-    return _api_internal.nop(*args)

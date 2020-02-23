@@ -37,7 +37,7 @@ namespace runtime {
 class EllipsisObj : public Object {
  public:
   static constexpr const uint32_t _type_index = TypeIndex::kEllipsis;
-  static constexpr const char* _type_key = "vm.Ellipsis";
+  static constexpr const char* _type_key = "MXNet.Ellipsis";
   MXNET_DECLARE_FINAL_OBJECT_INFO(EllipsisObj, Object);
 };
 
@@ -53,7 +53,7 @@ class SliceObj : public Object {
   int64_t step;
 
   static constexpr const uint32_t _type_index = TypeIndex::kSlice;
-  static constexpr const char* _type_key = "vm.Slice";
+  static constexpr const char* _type_key = "MXNet.Slice";
   MXNET_DECLARE_FINAL_OBJECT_INFO(SliceObj, Object);
 };
 
@@ -85,7 +85,7 @@ class IntegerObj: public Object {
  public:
   int64_t value;
   static constexpr const uint32_t _type_index = TypeIndex::kInteger;
-  static constexpr const char* _type_key = "vm.Integer";
+  static constexpr const char* _type_key = "MXNet.Integer";
   MXNET_DECLARE_FINAL_OBJECT_INFO(IntegerObj, Object);
 };
 

@@ -30,8 +30,8 @@ class TypeCode(object):
     FLOAT = 2
     HANDLE = 3
     NULL = 4
-    TVM_TYPE = 5
-    TVM_CONTEXT = 6
+    MXNET_TYPE = 5
+    MXNET_CONTEXT = 6
     ARRAY_HANDLE = 7
     OBJECT_HANDLE = 8
     MODULE_HANDLE = 9

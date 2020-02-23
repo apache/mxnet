@@ -51,9 +51,9 @@ namespace runtime {
 enum TypeIndex  {
   /*! \brief Root object type. */
   kRoot = 0,
-  kVMTensor = 1,
-  kVMClosure = 2,
-  kVMADT = 3,
+  kMXNetTensor = 1,
+  kMXNetClosure = 2,
+  kMXNetADT = 3,
   kRuntimeModule = 4,
   kEllipsis = 5,
   kSlice = 6,

@@ -18,8 +18,8 @@
  */
 
 /*!
- *  Implementation of API functions related to Higher DSL build.
- * \file api_lang.cc
+ * \file _api_internal.cc
+ * \brief Internal functions exposed to python for FFI use only
  */
 // Acknowledgement: This file originates from incubator-tvm
 #include <mxnet/api_registry.h>
@@ -30,7 +30,6 @@
 #include <mxnet/runtime/container.h>
 #include <mxnet/runtime/ffi_helper.h>
 #include <nnvm/c_api.h>
-#include <iostream>
 
 namespace mxnet {
 
@@ -56,6 +55,10 @@ MXNET_REGISTER_GLOBAL("_ADT")
       }
     }
     *ret = ADT(0, data.begin(), data.end());
+});
+
+MXNET_REGISTER_API("_nop")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
 });
 
 }  // namespace mxnet
