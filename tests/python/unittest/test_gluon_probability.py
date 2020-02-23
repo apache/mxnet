@@ -200,15 +200,16 @@ def test_gluon_bernoulli():
 @use_np
 def test_gluon_categorical():
     class TestCategorical(HybridBlock):
-        def __init__(self, func, is_logit=False, batch_shape=None):
+        def __init__(self, func, is_logit=False, batch_shape=None, num_events=None):
             super(TestCategorical, self).__init__()
             self._is_logit = is_logit
             self._func = func
             self._batch_shape = batch_shape
+            self._num_events = num_events
 
         def hybrid_forward(self, F, params, *args):
-            categorical = mgp.Categorical(logit=params, F=F) if self._is_logit else \
-                        mgp.Categorical(prob=params, F=F)
+            categorical = mgp.Categorical(self._num_events, logit=params, F=F) if self._is_logit else \
+                        mgp.Categorical(self._num_events, prob=params, F=F)
             
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
@@ -232,7 +233,7 @@ def test_gluon_categorical():
             param = prob
             if use_logit:
                 param = np.log(param)
-            net = TestCategorical("sample", use_logit, batch_shape)
+            net = TestCategorical("sample", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
@@ -248,7 +249,7 @@ def test_gluon_categorical():
             samples = np.random.choice(event_shape, size=desired_shape)
             if use_logit:
                 param = np.log(param)
-            net = TestCategorical("log_prob", use_logit, batch_shape)
+            net = TestCategorical("log_prob", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param, samples)
@@ -261,6 +262,20 @@ def test_gluon_categorical():
             expect_log_prob = _np.take_along_axis(log_pmf, indices.astype('int'), axis=-1).asnumpy()
             assert_almost_equal(mx_out.asnumpy(), expect_log_prob.squeeze(), atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
+
+    # Test enumerate_support
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            if use_logit:
+                param = np.log(param)
+            net = TestCategorical("enumerate_support", use_logit, batch_shape, event_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param).asnumpy()
+            desired_shape = (event_shape,) + (batch_shape if batch_shape is not None else ())
+            assert mx_out.shape == desired_shape
 
 
 @with_seed()
@@ -325,6 +340,21 @@ def test_gluon_one_hot_categorical():
             mx_out = net(param, samples)
             # Check shape
             assert mx_out.shape == desired_shape
+
+    # Test enumerate support
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            if use_logit:
+                param = np.log(param)
+            net = TestOneHotCategorical("enumerate_support", use_logit, batch_shape, event_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param).asnumpy()
+            desired_shape = batch_shape if batch_shape is not None else ()
+            assert mx_out.shape == (event_shape,) + desired_shape + (event_shape,)
+
             
 
 @with_seed()

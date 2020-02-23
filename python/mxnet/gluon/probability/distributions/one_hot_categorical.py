@@ -13,7 +13,7 @@ class OneHotCategorical(Distribution):
         else:
             raise ValueError("`num_events` should be greater than zero. " +
                              "Received num_events={}".format(num_events))
-        self._categorical = Categorical(prob, logit, _F)
+        self._categorical = Categorical(num_events, prob, logit, _F)
         super(OneHotCategorical, self).__init__(_F, event_dim=1, validate_args=validate_args)
 
     @cached_property
@@ -38,5 +38,13 @@ class OneHotCategorical(Distribution):
         return self.F.npx.one_hot(indices, self.num_events)
     
     def log_prob(self, value):
+        # TODO: The commented implementation will cause error #17661
+        # logit = self.logit
+        # return (value * logit).sum(-1)
         indices = value.argmax(-1)
         return self._categorical.log_prob(indices)
+
+    def enumerate_support(self):
+        F = self.F
+        value = self._categorical.enumerate_support()
+        return self.F.npx.one_hot(value, self.num_events)
