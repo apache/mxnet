@@ -807,6 +807,17 @@ struct mod : public mxnet_op::tunable {
   }
 };
 
+struct fmod : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (b == DType(0)) {
+      return DType(0);
+    } else {
+        return DType(::fmod(static_cast<double>(a), static_cast<double>(b)));
+    }
+  }
+};
+
 template<>
 MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
                                                (mshadow::half::half2_t a,

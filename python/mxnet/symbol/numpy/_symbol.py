@@ -36,7 +36,8 @@ except ImportError:
     from builtins import slice as py_slice
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
-           'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
+           'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
+           'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
@@ -1619,6 +1620,12 @@ def true_divide(x1, x2, out=None):
 @wrap_np_binary_func
 def mod(x1, x2, out=None, **kwargs):
     return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_binary_func
+def fmod(x1, x2, out=None, **kwargs):
+    return _ufunc_helper(x1, x2, _npi.fmod, _np.fmod, _npi.fmod_scalar, out)
 
 
 @set_module('mxnet.symbol.numpy')
