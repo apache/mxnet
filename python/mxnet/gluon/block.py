@@ -1052,22 +1052,9 @@ class HybridBlock(Block):
             but slower.
         """
 
-        self._backend = backend
-        if backend_opts is not None:
-            assert isinstance(backend_opts, dict), \
-            "HybridBlock hybridize requires backend_opts to be a dictionary."
-            self._backend_opts = kwargs
-
-        # do part of hybrize API call
-        self._active = True
-        self._flags = list(kwargs.items())
-        self._clear_cached_op()
-        if self._forward_hooks or self._forward_pre_hooks:
-            warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
-                          'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
-                          .format(block=self))
-        super(HybridBlock, self).hybridize(True, **kwargs)
-
+        # do hybrize API call
+        self.hybridize(True, backend, backend_opts, **kwargs)
+            
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
         if has_symbol:
@@ -1076,7 +1063,6 @@ class HybridBlock(Block):
         if not has_symbol and not has_ndarray:
             raise ValueError('In HybridBlock, there must be one NDArray as input.'
                              ' Please check the type of the args.\n')
-
         if len(ctx_set) > 1:
             raise ValueError('Find multiple contexts in the input, '
                              'After hybridized, the HybridBlock only supports one input '
