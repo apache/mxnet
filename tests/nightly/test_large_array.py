@@ -38,7 +38,7 @@ LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
-LARGE_TENSOR_SHAPE = 4294967296
+LARGE_TENSOR_SHAPE = 2**32
 
 
 def test_nn():
@@ -469,9 +469,9 @@ def test_nn():
         assert res.shape[3] == 2
         assert res.shape[4] == 1
     def check_embedding():
-        data = nd.random_normal(shape=(2**32, 1))
-        weight = nd.random_normal(shape=(2**32, 1))
-        input_dim = 2**32
+        data = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
+        weight = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
+        input_dim = LARGE_TENSOR_SHAPE
         output_dim = 1
 
         out = nd.Embedding(data=data, weight=weight, input_dim=input_dim, output_dim=output_dim)
