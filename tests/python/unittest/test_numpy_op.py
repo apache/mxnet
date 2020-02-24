@@ -7192,6 +7192,17 @@ def test_np_quantile():
         def hybrid_forward(self, F, a, q):
             return F.np.quantile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
+    class TestQuantileScalar(HybridBlock):
+        def __init__(self, q=None, axis=None, interpolation='linear', keepdims=False):
+            super(TestQuantileScalar, self).__init__()
+            self._q = q
+            self._axis = axis
+            self._interpolation = interpolation
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a):
+            return F.np.quantile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+
     flags = [True, False]
     interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
     dtypes = [np.int32, np.int64, np.float16, np.float32, np.float64]
@@ -7207,21 +7218,23 @@ def test_np_quantile():
         if dtype == np.float16 and interpolation == 'linear': continue
         atol = 3e-4 if dtype == np.float16 else 1e-4
         rtol = 3e-2 if dtype == np.float16 else 1e-2
-        test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
-        if hybridize:
-            test_quantile.hybridize()
         a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
         qtype = random.choice(qtypes)
         q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
-        np_out = _np.quantile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
-        mx_out = test_quantile(a, q)
-        assert mx_out.shape == np_out.shape
-        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
-        
         np_q = q.asnumpy()
         if q_scalar and q_shape == ():
             q = q.item()
             np_q = q
+            test_quantile = TestQuantileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        else: 
+            test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+        if hybridize:
+            test_quantile.hybridize()
+        mx_out = test_quantile(a) if (q_scalar and q_shape == ()) else test_quantile(a, q)
+        np_out = _np.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+        
         mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         np_out = _np.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
@@ -7239,7 +7252,17 @@ def test_np_percentile():
 
         def hybrid_forward(self, F, a, q):
             return F.np.percentile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
+    
+    class TestPercentileScalar(HybridBlock):
+        def __init__(self, q=None, axis=None, interpolation='linear', keepdims=False):
+            super(TestPercentileScalar, self).__init__()
+            self._q = q
+            self._axis = axis
+            self._interpolation = interpolation
+            self._keepdims = keepdims
 
+        def hybrid_forward(self, F, a):
+            return F.np.percentile(a, self._q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
 
     flags = [True, False]
     interpolation_options = ['linear', 'lower', 'higher', 'nearest', 'midpoint']
@@ -7258,21 +7281,23 @@ def test_np_percentile():
         if dtype == np.float16 and interpolation == 'linear': continue
         atol = 3e-4 if dtype == np.float16 else 1e-4
         rtol = 3e-2 if dtype == np.float16 else 1e-2
-        test_percentile = TestPercentile(axis=axis, interpolation=interpolation, keepdims=keepdims)
-        if hybridize:
-            test_percentile.hybridize()
         a = np.random.uniform(-10.0, 10.0, size=a_shape).astype(dtype)
         qtype = random.choice(qtypes)
-        q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype) * 100
-        np_out = _np.percentile(a.asnumpy(), q.asnumpy(), axis=axis, interpolation=interpolation, keepdims=keepdims)
-        mx_out = test_percentile(a, q)
-        assert mx_out.shape == np_out.shape
-        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
-
+        q = np.random.uniform(0, 1.0, size=q_shape).astype(qtype)
         np_q = q.asnumpy()
         if q_scalar and q_shape == ():
             q = q.item()
             np_q = q
+            test_percentile = TestPercentileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        else: 
+            test_percentile = TestPercentile(axis=axis, interpolation=interpolation, keepdims=keepdims)
+        if hybridize:
+            test_percentile.hybridize()
+        mx_out = test_percentile(a) if (q_scalar and q_shape == ()) else test_percentile(a, q)
+        np_out = _np.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+        
         mx_out = np.percentile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         np_out = _np.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
