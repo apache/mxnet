@@ -455,5 +455,14 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_fmod_scalar)
 .set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::mod_grad>);
 
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rfmod_scalar)
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Compute<cpu, mshadow_op::rfmod>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_rfmod_scalar"});
+
+MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rfmod_scalar)
+.add_argument("scalar", "float", "scalar value")
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rmod_grad>);
+
 }  // namespace op
 }  // namespace mxnet

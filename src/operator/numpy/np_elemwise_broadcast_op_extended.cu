@@ -155,5 +155,11 @@ NNVM_REGISTER_OP(_npi_fmod_scalar)
 NNVM_REGISTER_OP(_backward_npi_fmod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::mod_grad>);
 
+NNVM_REGISTER_OP(_npi_rfmod_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rfmod>);
+
+NNVM_REGISTER_OP(_backward_npi_rfmod_scalar)
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rmod_grad>);
+
 }  // namespace op
 }  // namespace mxnet

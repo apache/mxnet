@@ -1625,7 +1625,7 @@ def mod(x1, x2, out=None, **kwargs):
 @set_module('mxnet.symbol.numpy')
 @wrap_np_binary_func
 def fmod(x1, x2, out=None, **kwargs):
-    return _ufunc_helper(x1, x2, _npi.fmod, _np.fmod, _npi.fmod_scalar, out)
+    return _ufunc_helper(x1, x2, _npi.fmod, _np.fmod, _npi.fmod_scalar, _npi.rfmod_scalar, out)
 
 
 @set_module('mxnet.symbol.numpy')

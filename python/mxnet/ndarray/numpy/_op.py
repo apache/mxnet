@@ -1194,7 +1194,7 @@ def fmod(x1, x2, out=None, **kwargs):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.fmod, _np.fmod, _npi.fmod_scalar, out)
+    return _ufunc_helper(x1, x2, _npi.fmod, _np.fmod, _npi.fmod_scalar, _npi.rfmod_scalar, out)
 
 
 @set_module('mxnet.ndarray.numpy')
