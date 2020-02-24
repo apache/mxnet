@@ -504,6 +504,13 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
 
+    def check_cumsum():
+        a = nd.random_normal(shape=(LARGE_TENSOR_SHAPE + 1, 1))
+
+        res = nd.cumsum(a=a)
+
+        assert res.shape[0] == LARGE_TENSOR_SHAPE + 1
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
@@ -527,6 +534,7 @@ def test_nn():
     check_embedding()
     check_spatial_transformer()
     check_ravel()
+    check_cumsum()
 
 
 def test_tensor():
