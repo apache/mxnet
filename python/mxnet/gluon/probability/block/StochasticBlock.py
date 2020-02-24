@@ -57,6 +57,7 @@ class StochasticBlock(HybridBlock):
         """Calls forward. Only accepts positional arguments."""
         for hook in self._forward_pre_hooks.values():
             hook(self, args)
+        self._losses = []
         out = self.forward(*args)
         self._losses.extend(out[1])
         for hook in self._forward_hooks.values():
