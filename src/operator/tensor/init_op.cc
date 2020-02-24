@@ -91,6 +91,16 @@ NNVM_REGISTER_OP(_full)
   .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
 .add_arguments(InitOpWithScalarParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_npi_full)
+  .describe("fill target with a scalar value")
+  .set_num_inputs(0)
+  .set_num_outputs(1)
+  .set_attr_parser(ParamParser<InitOpWithScalarParam>)
+  .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpWithScalarParam>)
+  .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpWithScalarParam>)
+  .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
+.add_arguments(InitOpWithScalarParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_arange)
 .describe("Return evenly spaced values within a given interval. Similar to Numpy")
 .set_num_inputs(0)
@@ -145,6 +155,16 @@ NNVM_REGISTER_OP(_linspace)
 .set_attr_parser(ParamParser<LinspaceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
 .set_attr<nnvm::FInferType>("FInferType", InitType<LinspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
+.add_arguments(RangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_linspace)
+.describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LinspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<LinspaceParam>)
 .set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
 .add_arguments(RangeParam::__FIELDS__());
 

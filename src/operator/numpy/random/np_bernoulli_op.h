@@ -34,7 +34,6 @@
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
-#include "../../tensor/init_op.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "./dist_common.h"
 

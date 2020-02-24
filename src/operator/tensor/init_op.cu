@@ -61,6 +61,9 @@ NNVM_REGISTER_OP(_ones)
 NNVM_REGISTER_OP(_full)
 .set_attr<FCompute>("FCompute<gpu>", InitFillWithScalarCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_full)
+.set_attr<FCompute>("FCompute<gpu>", InitFillWithScalarCompute<gpu>);
+
 NNVM_REGISTER_OP(_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
 
@@ -68,6 +71,9 @@ NNVM_REGISTER_OP(_contrib_arange_like)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeLikeParam>);
 
 NNVM_REGISTER_OP(_linspace)
+.set_attr<FCompute>("FCompute<gpu>", LinspaceCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_linspace)
 .set_attr<FCompute>("FCompute<gpu>", LinspaceCompute<gpu>);
 
 NNVM_REGISTER_OP(zeros_like)

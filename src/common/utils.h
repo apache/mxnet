@@ -935,6 +935,17 @@ NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
     profiler_scope = profiler_scope_iter->second;
   }
   return profiler_scope;
+inline int GetDefaultDtype() {
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+inline int GetDefaultDtype(int dtype) {
+  if (dtype != -1) return dtype;
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
 }
 
 inline int GetDefaultDtype() {
