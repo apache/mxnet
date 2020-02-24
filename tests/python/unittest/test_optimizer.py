@@ -87,8 +87,8 @@ def test_sgd():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
 
     for dtype in [np.float16, np.float32]:
@@ -191,8 +191,8 @@ def test_sparse_sgd():
     mom_options = [{}, {'momentum': 0.9}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float32]:
         for params in itertools.product(mom_options, cg_options, rg_options,
@@ -215,7 +215,7 @@ def test_std_sparse_sgd():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
 
     for dtype in [np.float32]:
@@ -238,9 +238,9 @@ def test_nag():
     mom_options = [{}, {'momentum': 0.9}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
 
     for dtype in [np.float16, np.float32]:
@@ -261,12 +261,12 @@ def test_lars():
     opt2 = mx.optimizer.LARS
     shapes = [(3, 4, 5), (10, 4), (7,)]
     eta_options = [{}, {'eta': 0.002}, {'eta': 0.01}]
-    mom_options = [{}, {'momentum': 0.0}, {'momentum': 0.9}]
-    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
-    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mom_options = [{'momentum': 0.0}, {'momentum': 0.9}]
+    cg_options = [{}, {'clip_gradient': 0.4}]
+    rg_options = [{}, {'rescale_grad': 0.14}]
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(eta_options, mom_options, cg_options, rg_options,
@@ -286,15 +286,15 @@ def test_lamb():
     opt2 = mx.optimizer.LAMB
     
     shapes = [(3, 4, 5), (10, 4), (7,)]
-    beta1_options = [{}, {'beta1': 0.5}, {'beta1': 0.7}]
-    beta2_options = [{}, {'beta2': 0.8}, {'beta2': 0.9}]
-    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
-    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    bc_options = [{}, {'bias_correction': False}, {'bias_correction': True}]
-    lb_options = [{}, {'lower_bound': None}, {'lower_bound': 1e-3}]
-    ub_options = [{}, {'upper_bound': None}, {'upper_bound': 10}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
+    beta1_options = [{}, {'beta1': 0.5}]
+    beta2_options = [{}, {'beta2': 0.8}]
+    cg_options = [{}, {'clip_gradient': 0.4}]
+    rg_options = [{}, {'rescale_grad': 0.14}]
+    wd_options = [{}, {'wd': 0.03}]
+    bc_options = [{'bias_correction': False}, {'bias_correction': True}]
+    lb_options = [{'lower_bound': None}, {'lower_bound': 1e-3}]
+    ub_options = [{'upper_bound': None}, {'upper_bound': 10}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
     agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}]
     for dtype in [np.float16, np.float32]:
@@ -318,8 +318,8 @@ def test_sgld():
     ns_options = [1234, 42]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
 
     for seed in ns_options:
@@ -346,8 +346,8 @@ def test_ftml():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
 
     for dtype in [np.float16, np.float32]:
@@ -446,8 +446,8 @@ def test_adam():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(beta1_options, beta2_options, cg_options,
@@ -467,13 +467,13 @@ def test_sparse_adam():
     opt1 = PySparseAdam
     opt2 = mx.optimizer.Adam
     shapes = [(3, 4, 5), (10, 4), (7,)]
-    beta1_options = [{}, {'beta1': 0.5}, {'beta1': 0.7}]
-    beta2_options = [{}, {'beta2': 0.8}, {'beta2': 0.9}]
-    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
-    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    beta1_options = [{}, {'beta1': 0.5}]
+    beta2_options = [{}, {'beta2': 0.8}]
+    cg_options = [{}, {'clip_gradient': 0.4}]
+    rg_options = [{}, {'rescale_grad': 0.14}]
+    wd_options = [{}, {'wd': 0.03}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(beta1_options, beta2_options, cg_options,
@@ -515,8 +515,8 @@ def test_adamax():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(beta1_options, beta2_options, cg_options,
@@ -539,8 +539,8 @@ def test_signum():
     wd_lh_options = [{}, {'wd_lh': 0.015}, {'wd_lh': 0.0}]
     mom_options = [{}, {'momentum': 0.9}]
     lr_options = [{'learning_rate': 0.05},{'learning_rate': 0.01}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(cg_options, rg_options, wd_options,
@@ -561,15 +561,15 @@ def test_rms():
     opt1 = mx.optimizer.RMSProp
     opt2 = mx.optimizer.RMSProp
     shapes = [(3, 4, 5), (10, 4), (7,)]
-    rho_options = [{}, {'rho': 0.5}, {'rho': 0.7}]
-    cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
+    rho_options = [{}, {'rho': 0.5}]
+    cg_options = [{}, {'clip_gradient': 0.4}]
     cw_options = [{}, {'clip_weights': 0.01}]
-    center_options = [{}, {'centered': False}, {'centered': True}]
-    rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mom_options = [{}, {'momentum': 0.0}, {'momentum': 0.9}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    center_options = [{'centered': False}, {'centered': True}]
+    rg_options = [{}, {'rescale_grad': 0.14}]
+    wd_options = [{}, {'wd': 0.03}]
+    mom_options = [{'momentum': 0.0}, {'momentum': 0.9}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         # Reduce foating point compare tolerance to avoid flaky test failure.
@@ -672,12 +672,12 @@ def test_ftrl():
     opt1 = mx.optimizer.Ftrl
     opt2 = mx.optimizer.Ftrl
     shapes = [(3, 4, 5), (10, 4), (7,)]
-    lamda1_options = [{}, {'lamda1': 0.}, {'lamda1': 0.1}]
+    lamda1_options = [{'lamda1': 0.}, {'lamda1': 0.1}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(lamda1_options, cg_options,
@@ -697,12 +697,12 @@ def test_sparse_ftrl():
     opt1 = PySparseFtrl
     opt2 = mx.optimizer.Ftrl
     shapes = [(3, 4, 5), (10, 4), (7,)]
-    lamda1_options = [{}, {'lamda1': 0.}, {'lamda1': 0.1}]
+    lamda1_options = [{'lamda1': 0.}, {'lamda1': 0.1}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(lamda1_options, cg_options,
@@ -722,14 +722,14 @@ def test_nadam():
     opt1 = mx.optimizer.Nadam
     opt2 = mx.optimizer.Nadam
     shapes = [(3, 4, 5), (10, 4), (7,)]
-    beta1_options = [{}, {'beta1': 0.5}, {'beta1': 0.7}]
-    beta2_options = [{}, {'beta2': 0.8}, {'beta2': 0.9}]
+    beta1_options = [{}, {'beta1': 0.5}]
+    beta2_options = [{}, {'beta2': 0.8}]
     schedule_decay_options = [{}, {'schedule_decay': 0.008}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
-    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    mp_options = [{}, {'multi_precision': False}, {'multi_precision': True}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(beta1_options, beta2_options, cg_options,
@@ -818,7 +818,7 @@ def test_adagrad():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.0}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(eps_options, cg_options,
@@ -839,7 +839,7 @@ def test_sparse_adagrad():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.0}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(eps_options, cg_options,
@@ -864,7 +864,7 @@ def test_adadelta():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(rho_options, eps_options, cg_options,
@@ -885,7 +885,7 @@ def test_dcasgd():
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
     wd_options = [{}, {'wd': 0.03}, {'wd': 0.05}, {'wd': 0.07}]
-    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
                    {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float16, np.float32]:
         for params in itertools.product(lamda_options, mom_options, cg_options,
