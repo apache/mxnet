@@ -1054,7 +1054,7 @@ class HybridBlock(Block):
 
         # do hybrize API call
         self.hybridize(True, backend, backend_opts, **kwargs)
-            
+
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
         if has_symbol:
