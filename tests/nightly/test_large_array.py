@@ -38,6 +38,7 @@ LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
+LARGE_TENSOR_SHAPE = 4294967296
 
 
 def test_nn():
@@ -475,7 +476,7 @@ def test_nn():
 
         out = nd.Embedding(data=data, weight=weight, input_dim=input_dim, output_dim=output_dim)
 
-        assert out.shape[0] == 4294967296
+        assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
         assert out.shape[2] == 1
 
