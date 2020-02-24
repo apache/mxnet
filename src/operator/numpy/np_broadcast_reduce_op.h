@@ -28,8 +28,8 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../common/utils.h"
 #include "../nn/moments-inl.h"
-#include "../tensor/init_op.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../../api/operator/op_utils.h"

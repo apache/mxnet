@@ -17,6 +17,7 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 import numpy as np
+from ...util import is_np_default_dtype
 from ...context import current_context
 from . import _internal as _npi
 from . import _api_internal
@@ -777,7 +778,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Drawn samples from the parameterized beta distribution.
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -922,7 +923,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
     array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():

@@ -31,11 +31,11 @@
 #include <string>
 #include <vector>
 #include "../../../api/operator/op_utils.h"
+#include "../../../common/utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
-#include "../../tensor/init_op.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "./dist_common.h"
 
@@ -91,9 +91,9 @@ inline bool NumpyNormalOpType(const nnvm::NodeAttrs &attrs,
   if (otype != -1) {
     (*out_attrs)[0] = otype;
   } else {
-    (*out_attrs)[0] = GetDefaultDtype();
+    (*out_attrs)[0] = mxnet::common::GetDefaultDtype();
   }
-  (*out_attrs)[1] = GetDefaultDtype();
+  (*out_attrs)[1] = mxnet::common::GetDefaultDtype();
   return true;
 }
 

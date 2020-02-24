@@ -17,6 +17,7 @@
 
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
+import numpy as np
 from ...context import current_context
 from ...util import is_np_default_dtype
 from . import _internal as _npi
@@ -598,7 +599,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Drawn samples from the parameterized beta distribution.
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -710,7 +711,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
 
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = _np.float64 if is_np_default_dtype() else _np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():

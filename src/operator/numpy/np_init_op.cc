@@ -84,7 +84,7 @@ NNVM_REGISTER_OP(_npi_zeros)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
-.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpParam>)
 .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<InitOpParam, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .add_arguments(InitOpParam::__FIELDS__());
@@ -95,7 +95,7 @@ NNVM_REGISTER_OP(_npi_ones)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
-.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
 .add_arguments(InitOpParam::__FIELDS__());
 
@@ -105,7 +105,7 @@ NNVM_REGISTER_OP(_npi_identity)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
-.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
 
@@ -204,7 +204,7 @@ NNVM_REGISTER_OP(_npi_arange)
 .set_num_outputs(1)
 .set_attr_parser(RangeParamParser)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyRangeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<RangeParam>)
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
 
@@ -214,7 +214,7 @@ NNVM_REGISTER_OP(_npi_eye)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyEyeParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyEyeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<NumpyEyeParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyEyeParam>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyEyeFill<cpu>)
 .add_arguments(NumpyEyeParam::__FIELDS__());
 
@@ -234,7 +234,7 @@ NNVM_REGISTER_OP(_npi_logspace)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LogspaceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", LogspaceShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<LogspaceParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<LogspaceParam>)
 .set_attr<FCompute>("FCompute<cpu>", LogspaceCompute<cpu>)
 .add_arguments(LogspaceParam::__FIELDS__());
 

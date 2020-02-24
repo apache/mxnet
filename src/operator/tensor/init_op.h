@@ -36,6 +36,7 @@
 #include <algorithm>
 #include <limits>
 #include "../../api/operator/op_utils.h"
+#include "../../common/utils.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -45,19 +46,6 @@
 
 namespace mxnet {
 namespace op {
-
-inline int GetDefaultDtype() {
-  return Imperative::Get()->is_np_default_dtype() ?
-         mshadow::kFloat64 :
-         mshadow::kFloat32;
-}
-
-inline int GetDefaultDtype(int dtype) {
-  if (dtype != -1) return dtype;
-  return Imperative::Get()->is_np_default_dtype() ?
-         mshadow::kFloat64 :
-         mshadow::kFloat32;
-}
 
 struct InitOpParam : public dmlc::Parameter<InitOpParam> {
   mxnet::TShape shape;
@@ -399,7 +387,18 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), num_in);
   CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, GetDefaultDtype(param.dtype));
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
+  return true;
+}
+
+template<typename ParamType, int num_in = 0U>
+inline bool InitNumpyType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), num_in);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::common::GetDefaultDtype(param.dtype));
   return true;
 }
 

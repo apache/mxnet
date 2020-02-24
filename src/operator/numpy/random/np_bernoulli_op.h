@@ -29,11 +29,11 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "../../../common/utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
-#include "../../tensor/init_op.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "./dist_common.h"
 
@@ -79,7 +79,7 @@ inline bool NumpyBernoulliOpType(const nnvm::NodeAttrs &attrs,
                                std::vector<int> *in_attrs,
                                std::vector<int> *out_attrs) {
   const NumpyBernoulliParam &param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
-  int otype = GetDefaultDtype(param.dtype);
+  int otype = mxnet::common::GetDefaultDtype(param.dtype);
   (*out_attrs)[0] = otype;
   return true;
 }

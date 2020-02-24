@@ -988,7 +988,7 @@ def use_np_default_dtype(func):
             return mx.nd.ones(()).dtype
         print(float64_one())
 
-        @np.use_np_shape
+        @np.use_np_default_dtype
         class Float64Tensor(object):
             def __init__(self, data=None):
                 if data is None:
@@ -1037,7 +1037,7 @@ def use_np_default_dtype(func):
                 setattr(func, name, use_np_default_dtype(method))
         return func
     elif callable(func):
-        @wraps_safely(func)
+        @functools.wraps(func)
         def _with_np_default_dtype(*args, **kwargs):
             with np_default_dtype(active=True):
                 return func(*args, **kwargs)

@@ -56,6 +56,7 @@ _NUMPY_DTYPE_DEFAULT_FUNC_LIST = [
     'random.gamma',
     'random.uniform',
     'random.normal',
+    'random.chisquare',
     'true_divide'
 ]
 
@@ -133,6 +134,10 @@ def _add_dtype_workload_random_gamma():
     DtypeOpArgMngr.add_workload('random.gamma', 3)
 
 
+def _add_dtype_workload_random_chisquare():
+    DtypeOpArgMngr.add_workload('random.chisquare', 2, 4)
+
+
 def _add_dtype_workload_true_divide():
     DtypeOpArgMngr.add_workload('true_divide', np.array([1,2], dtype=int), 4)
     DtypeOpArgMngr.add_workload('true_divide', np.array([1,2], dtype=int), 2.0)
@@ -157,7 +162,7 @@ def _prepare_workloads():
     _add_dtype_workload_random_uniform()
     _add_dtype_workload_random_normal()
     _add_dtype_workload_true_divide()
-
+    _add_dtype_workload_random_chisquare()
 
 _prepare_workloads()
 

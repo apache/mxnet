@@ -82,13 +82,22 @@ NNVM_REGISTER_OP(_ones)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_full)
-.add_alias("_npi_full")
   .describe("fill target with a scalar value")
   .set_num_inputs(0)
   .set_num_outputs(1)
   .set_attr_parser(ParamParser<InitOpWithScalarParam>)
   .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpWithScalarParam>)
   .set_attr<nnvm::FInferType>("FInferType", InitType<InitOpWithScalarParam>)
+  .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
+.add_arguments(InitOpWithScalarParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_full)
+  .describe("fill target with a scalar value")
+  .set_num_inputs(0)
+  .set_num_outputs(1)
+  .set_attr_parser(ParamParser<InitOpWithScalarParam>)
+  .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpWithScalarParam>)
+  .set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpWithScalarParam>)
   .set_attr<FCompute>("FCompute<cpu>", InitFillWithScalarCompute<cpu>)
 .add_arguments(InitOpWithScalarParam::__FIELDS__());
 
@@ -140,13 +149,22 @@ Examples::
 .add_arguments(RangeLikeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_linspace)
-.add_alias("_npi_linspace")
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
 .set_num_inputs(0)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<LinspaceParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
 .set_attr<nnvm::FInferType>("FInferType", InitType<LinspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
+.add_arguments(RangeParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_linspace)
+.describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LinspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<LinspaceParam>)
 .set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
 .add_arguments(RangeParam::__FIELDS__());
 
