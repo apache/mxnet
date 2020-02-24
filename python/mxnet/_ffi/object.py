@@ -14,12 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+# pylint: disable=invalid-name
+"""Runtime Object API
+Acknowledgement: This file originates from incubator-tvm"""
+from ._ctypes.function import _set_class_object
+from ._ctypes.object import ObjectBase as _ObjectBase
 
-"""Registering ops in mxnet.numpy for imperative programming."""
+class Object(_ObjectBase):
+    """Base class for all mxnet's runtime objects."""
 
-
-from ..base import _init_np_op_module
-from ..ndarray.register import _make_ndarray_function
-
-_init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
-                   mx_module_name=None, make_op_func=_make_ndarray_function)
+_set_class_object(Object)

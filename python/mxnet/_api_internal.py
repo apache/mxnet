@@ -14,12 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+"""Namespace of internal API
 
-"""Registering ops in mxnet.numpy for imperative programming."""
+The functions in this namespace are automatically exported from C++ side via PackedFunc
+that is registered by "MXNET_REGISTER_*" macro. This way makes calling Python functions from C++
+side very easily.
 
+Each string starts with "_" in the "MXNET_REGISTER_*" macro is an internal API.
 
-from ..base import _init_np_op_module
-from ..ndarray.register import _make_ndarray_function
-
-_init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
-                   mx_module_name=None, make_op_func=_make_ndarray_function)
+Acknowledgement: This file originates from incubator-tvm
+"""

@@ -15,11 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""Registering ops in mxnet.numpy for imperative programming."""
+"""Acknowledgement: This file originates from incubator-tvm"""
 
+import ctypes
+from ... import _global_var
 
-from ..base import _init_np_op_module
-from ..ndarray.register import _make_ndarray_function
-
-_init_np_op_module(root_module_name='mxnet', np_module_name='numpy',
-                   mx_module_name=None, make_op_func=_make_ndarray_function)
+cdef c_make_array(void* handle):
+    return _global_var._np_ndarray_cls(handle=<unsigned long long>handle)
