@@ -20,6 +20,7 @@
 __all__ = ["Transformation", "ComposeTransform", "ExpTransform", "AffineTransform",
            "PowerTransform", "AbsTransform"]
 
+from ..distributions.utils import _clip_prob, cached_property, sum_right_most
 import weakref
 
 
@@ -33,6 +34,7 @@ class Transformation(object):
         
     """
     bijective = False
+    event_dim = 0
 
     def __init__(self, F=None):
         self._inv = None
@@ -89,6 +91,10 @@ class _InverseTransformation(Transformation):
     def inv(self):
         return self._inv
 
+    @property
+    def event_dim(self):
+        return self._inv.event_dim
+
     def __call__(self, x):
         return self._inv._inverse_compute(x)
 
@@ -108,13 +114,17 @@ class ComposeTransform(Transformation):
 
     @property
     def F(self):
-        # FIXME
+        # FIXME: check if all components have the same F
         return self._parts[0].F
 
     @F.setter
     def F(self, value):
         for t in self._parts:
             t.F = value
+
+    @cached_property
+    def event_dim(self):
+        return max(p.event_dim for p in self._parts) if self._parts else 0
 
     @property
     def inv(self):
@@ -132,12 +142,15 @@ class ComposeTransform(Transformation):
             return self.F.np.zeros_like(x)
         result = 0
         x_prime = None
-        # FIXME: handle multivariate cases.
         for t in self._parts[:-1]:
             x_prime = t(x)
-            result = result + t.log_det_jacobian(x, x_prime)
+            result = result + sum_right_most(t.log_det_jacobian(x, x_prime),
+                                             self.event_dim - t.event_dim)
             x = x_prime
-        result = result + self._parts[-1].log_det_jacobian(x, y)
+        t_last = self._parts[-1]
+        result = result + sum_right_most(t.log_det_jacobian(x, y),
+                                         self.event_dim - t_last.event_dim)
+                                        
         return result
     
 
@@ -159,14 +172,15 @@ class ExpTransform(Transformation):
 
 class AffineTransform(Transformation):
     r"""
-    Perform pointwise affine transform: y = loc + scale * x.
+    Perform *pointwise* affine transform: y = loc + scale * x.
     """
     bijective = True
 
-    def __init__(self, loc, scale):
+    def __init__(self, loc, scale, event_dim=0):
         super(AffineTransform, self).__init__()
         self._loc = loc
         self._scale = scale
+        self.event_dim = event_dim
 
     def _forward_compute(self, x):
         return self._loc + self._scale * x
@@ -178,8 +192,9 @@ class AffineTransform(Transformation):
         abs_fn = self.F.np.abs
         log_fn = self.F.np.log
         ones_fn = self.F.np.ones_like
-        # FIXME: handle multivariate cases.
-        return ones_fn(x) * log_fn(abs_fn(self._scale))
+        # element-wise abs(log(dy/dx))
+        value = ones_fn(x) * log_fn(abs_fn(self._scale))
+        return sum_right_most(value, self.event_dim)
 
 
 class PowerTransform(Transformation):
@@ -199,6 +214,36 @@ class PowerTransform(Transformation):
         log_fn = self.F.np.log
         abs_fn = self.F.np.abs
         return log_fn(abs_fn(self._exponent * y / x))
+
+
+class SigmoidTransform(Transformation):
+    bijective = True
+
+    def _forward_compute(self, x):
+        F = self.F
+        return _clip_prob(F.npx.sigmoid(x), F)
+
+    def _inverse_compute(self, y):
+        F = self.F
+        clipped_prob = _clip_prob(y, F)
+        return F.np.log(clipped_prob) - F.np.log1p(-clipped_prob)
+
+    def log_det_jacobian(self, x, y):
+        F = self.F
+        log = F.np.log
+        exp = F.np.exp
+        softplus_fn = lambda x: log(1 + exp(x))
+        return -softplus_fn(-x) - softplus_fn(x)
+
+
+class SoftmaxTransform(Transformation):
+    event_dim = 1
+
+    def _forward_compute(self, x):
+        return self.F.npx.softmax(x, -1)
+
+    def _inverse_compute(self, y):
+        return self.F.log(y)
 
 
 class AbsTransform(Transformation):
