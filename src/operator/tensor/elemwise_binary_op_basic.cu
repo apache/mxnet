@@ -26,7 +26,7 @@
 #include "./elemwise_binary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "./indexing_op.h"
-#include "./elemwise_op.cuh"
+#include "./elemwise_binary_op.cuh"
 
 namespace mxnet {
 namespace op {

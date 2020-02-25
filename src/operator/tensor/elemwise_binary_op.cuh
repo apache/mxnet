@@ -19,12 +19,12 @@
 
 /*!
  *  Copyright (c) 2020 by Contributors
- * \file elemwise_op.cuh
+ * \file elemwise_binary_op.cuh
  * \brief GPU helpers for elementwise operators
  */
 
-#ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_OP_CUH_
-#define MXNET_OPERATOR_TENSOR_ELEMWISE_OP_CUH_
+#ifndef MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_CUH_
+#define MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_CUH_
 
 #include <cuda_runtime.h>
 #include "../operator_common.h"
@@ -39,13 +39,18 @@ namespace op {
 
 namespace {
 
-using common::cuda::VectorizedKernelParams;
 using common::cuda::VectorizedKernelLauncher;
 using common::cuda::VectorizedLoader;
 using common::cuda::VectorizedStorer;
 
+template <typename DType, int NumInputs, int NumOutputs>
+struct VectorizedBinaryKernelParams {
+  const DType* inputs[NumInputs];
+  DType* outputs[NumOutputs];
+};
+
 template <bool aligned, typename DType, typename LType, typename OP, int req>
-__global__ void VectorizedBinaryKernelFwd(const VectorizedKernelParams<DType, 2, 1> params,
+__global__ void VectorizedBinaryKernelFwd(const VectorizedBinaryKernelParams<DType, 2, 1> params,
                                           const index_t N) {
   VectorizedLoader<DType, LType, aligned> loader0(params.inputs[0], N);
   VectorizedLoader<DType, LType, aligned> loader1(params.inputs[1], N);
@@ -78,8 +83,9 @@ __global__ void VectorizedBinaryKernelFwd(const VectorizedKernelParams<DType, 2,
 
 template <bool aligned, typename DType, typename LType,
           typename LOP, typename ROP, int lreq, int rreq>
-__global__ void VectorizedBinaryKernelBwdUseNone(const VectorizedKernelParams<DType, 1, 2> params,
-                                                 const index_t N) {
+__global__ void VectorizedBinaryKernelBwdUseNone(
+    const VectorizedBinaryKernelParams<DType, 1, 2> params,
+    const index_t N) {
   VectorizedLoader<DType, LType, aligned> loader(params.inputs[0], N);
   VectorizedStorer<DType, LType, aligned> lstorer(params.outputs[0], N);
   VectorizedStorer<DType, LType, aligned> rstorer(params.outputs[1], N);
@@ -126,8 +132,9 @@ __global__ void VectorizedBinaryKernelBwdUseNone(const VectorizedKernelParams<DT
 
 template <bool aligned, typename DType, typename LType,
           typename LOP, typename ROP, int lreq, int rreq>
-__global__ void VectorizedBinaryKernelBwdUseIn(const VectorizedKernelParams<DType, 3, 2> params,
-                                                 const index_t N) {
+__global__ void VectorizedBinaryKernelBwdUseIn(
+    const VectorizedBinaryKernelParams<DType, 3, 2> params,
+    const index_t N) {
   VectorizedLoader<DType, LType, aligned> ograd_loader(params.inputs[0], N);
   VectorizedLoader<DType, LType, aligned> linput_loader(params.inputs[1], N);
   VectorizedLoader<DType, LType, aligned> rinput_loader(params.inputs[2], N);
@@ -179,7 +186,7 @@ __global__ void VectorizedBinaryKernelBwdUseIn(const VectorizedKernelParams<DTyp
 template <typename DType, typename OP, int req>
 class VectorizedBinaryFwd {
  public:
-  using ParamType = VectorizedKernelParams<DType, 2, 1>;
+  using ParamType = VectorizedBinaryKernelParams<DType, 2, 1>;
 
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
@@ -193,7 +200,7 @@ class VectorizedBinaryFwd {
 template <typename DType, typename LOP, typename ROP, int lreq, int rreq>
 class VectorizedBinaryBwdUseNone {
  public:
-  using ParamType = VectorizedKernelParams<DType, 1, 2>;
+  using ParamType = VectorizedBinaryKernelParams<DType, 1, 2>;
 
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
@@ -207,7 +214,7 @@ class VectorizedBinaryBwdUseNone {
 template <typename DType, typename LOP, typename ROP, int lreq, int rreq>
 class VectorizedBinaryBwdUseIn {
  public:
-  using ParamType = VectorizedKernelParams<DType, 3, 2>;
+  using ParamType = VectorizedBinaryKernelParams<DType, 3, 2>;
 
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
@@ -309,4 +316,4 @@ void VectorizedBackwardUseInCompute(const nnvm::NodeAttrs &attrs,
 }  // namespace mxnet
 
 #endif  // MXNET_USE_CUDA
-#endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_OP_CUH_
+#endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_CUH_

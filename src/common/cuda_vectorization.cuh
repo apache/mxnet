@@ -142,12 +142,6 @@ class VectorizedStorer : public VectorizedAccessor<DType, LType, aligned> {
   }
 };
 
-template <typename DType, int NumInputs, int NumOutputs>
-struct VectorizedKernelParams {
-  const DType* inputs[NumInputs];
-  DType* outputs[NumOutputs];
-};
-
 namespace {
 
 enum class Alignment {
@@ -162,8 +156,8 @@ int CalcAlignment(const DType* ptr) {
   return ptr_as_number % sizeof(LType);
 }
 
-template <typename LType, typename DType, int N, int M>
-Alignment CheckAlignment(const VectorizedKernelParams<DType, N, M>& params) {
+template <typename LType, typename DType, typename Params>
+Alignment CheckAlignment(const Params& params) {
   int align = -1;
 
   for (const DType* ptr : params.inputs) {
