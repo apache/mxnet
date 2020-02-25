@@ -16,6 +16,10 @@
 # under the License.
 
 import mxnet as mx
+from benchmark.opperf.utils.benchmark_utils import run_performance_test
+from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
+
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 from benchmark.opperf.utils.op_registry_utils import get_all_rearrange_operators, \
     get_all_shape_operators, get_all_expanding_operators, get_all_rounding_operators
@@ -54,6 +58,11 @@ Array Rounding Operators
 4. floor
 5. ceil
 6. trunc
+
+Array Join & Split Operators
+1. concat
+2. split
+3. stack
 
 """
 
@@ -176,3 +185,68 @@ def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     # Run benchmarks
     mx_rounding_op_results = run_op_benchmarks(mx_rounding_ops, dtype, ctx, profiler, warmup, runs)
     return mx_rounding_op_results
+
+
+def run_join_split_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+    """Runs benchmarks with the given context and precision (dtype) for all the
+    join & split operators  in MXNet.
+
+    Parameters
+    ----------
+    ctx: mx.ctx
+        Context to run benchmarks
+    dtype: str, default 'float32'
+        Precision to use for benchmarks
+    profiler: str, default 'native'
+        Type of Profiler to use (native/python)
+    warmup: int, default 25
+        Number of times to run for warmup
+    runs: int, default 100
+        Number of runs to capture benchmark results
+
+    Returns
+    -------
+    Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
+
+    """
+    # backward not supported for all 3 ops - concat, stack, split
+    # concat
+    concat_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "concat")],
+                                                      run_backward=False,
+                                                      dtype=dtype,
+                                                      ctx=ctx,
+                                                      profiler=profiler,
+                                                      inputs=[{"args0":nd.random_normal(shape=(100,100)),
+                                                               "args1":nd.random_normal(shape=(100,100)),
+                                                               "args2":nd.random_normal(shape=(100,100))}
+                                                              ],
+                                                      warmup=warmup,
+                                                      runs=runs)
+
+    # split
+    split_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "split")],
+                                                      run_backward=False,
+                                                      dtype=dtype,
+                                                      ctx=ctx,
+                                                      profiler=profiler,
+                                                      inputs=[{"data": (1024, 1024), "num_outputs": 2},
+                                                              {"data": (10000, 1), "num_outputs": 1},
+                                                              {"data": (10000, 100), "num_outputs": 10}
+                                                              ],
+                                                      warmup=warmup,
+                                                      runs=runs)
+
+    # stack
+    stack_benchmark_res = run_performance_test([getattr(MX_OP_MODULE, "stack")],
+                                                      run_backward=False,
+                                                      dtype=dtype,
+                                                      ctx=ctx,
+                                                      profiler=profiler,
+                                                      inputs=[{"args0":nd.random_normal(shape=(100,100)),
+                                                               "args1":nd.random_normal(shape=(100,100)),
+                                                               "args2":nd.random_normal(shape=(100,100))}
+                                                              ],
+                                                      warmup=warmup,
+                                                      runs=runs)
+    join_split_ops = merge_map_list(concat_benchmark_res + split_benchmark_res + stack_benchmark_res)
+    return mx_join_split_op_results
