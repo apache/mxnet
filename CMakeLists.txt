@@ -756,6 +756,14 @@ if(USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS pslite)
 endif()
 
+if(USE_MKLDNN)
+    add_custom_command(TARGET mxnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
+      COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+endif()
+
 function(BuildTVMOP)
   # scope the variables in BuildTVM.cmake to avoid conflict
   include(cmake/BuildTVM.cmake)
