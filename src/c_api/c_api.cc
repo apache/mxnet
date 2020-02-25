@@ -145,7 +145,7 @@ void CustomFComputeDispatcher(const std::string op_name,
     else if(inputs[i].storage_type() == mxnet::kCSRStorage) {
       in_indices.push_back(inputs[i].aux_data(csr::kIdx).dptr_);
       in_indptr.push_back(inputs[i].aux_data(csr::kIndPtr).dptr_);
-      in_indices_shapes.push_back(inputs[i].aux_shape(rowsparse::kIdx).Size());
+      in_indices_shapes.push_back(inputs[i].aux_shape(csr::kIdx).Size());
       in_indptr_shapes.push_back(inputs[i].aux_shape(csr::kIndPtr).Size());
     }
   }
@@ -246,6 +246,7 @@ void CustomFComputeDispatcher(const std::string op_name,
     CustomStatefulOp* state_op_inst = op.get_instance();
     CHECK(state_op_inst != nullptr)
       << "Error custom stateful operator is null for operator '" << op_name << "'";
+
     // call fcompute function
     CHECK(callFStatefulComp(stateful_forward_flag, state_op_inst,
                             in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
@@ -607,10 +608,10 @@ int MXLoadLib(const char *path) {
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
       // TODO(ziyimu): remove this dense enforce check after supporting sparse tensor
-      CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
-      << "Error input tensors are not dense for custom operator '" << name_str << "'";
+      //CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
+      //<< "Error input tensors are not dense for custom operator '" << name_str << "'";
       // set outputs as dense
-      return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
+      return op::storage_type_assign(out_stypes, mxnet::kCSRStorage,
                                      dispatch_mode, DispatchMode::kFComputeEx);
     };
 

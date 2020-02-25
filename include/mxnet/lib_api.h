@@ -259,10 +259,7 @@ struct MXSparse {
   void set(void *data_ptr, const int64_t* dims, int ndims, void *idx,
           int64_t num_idx, void *idx_ptr = nullptr, int64_t num_idx_ptr = 0) {
     data = data_ptr;
-    data_len = 1;
-    for (int i = 0; i < ndims; i++) {
-      data_len *= dims[i];
-    }
+    data_len = num_idx;
     indices.assign((int64_t*)idx, (int64_t*)idx + num_idx);
     if(idx_ptr) indptr.assign((int64_t*)idx_ptr, (int64_t*)idx_ptr + num_idx_ptr);
   }
@@ -281,8 +278,8 @@ struct MXTensor {
 
   /*! \brief populate internal tensor fields */
   void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
-                 size_t vID, MXContext mx_ctx, MXStorageType stype) {
-    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx; stype = stype;
+                 size_t vID, MXContext mx_ctx, MXStorageType storage_type) {
+    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx; stype = storage_type;
     shape.clear();
     for (int j = 0; j < ndims; j++) {
       shape.push_back(dims[j]);
@@ -1167,10 +1164,12 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
 
+    MXStorageType type;
+    void *data = nullptr;
+    void *data2 = nullptr;
+    MXSparse sparse;
+    MXSparse sparse2;
     for (int i = 0; i < num_in; i++) {
-      MXStorageType type;
-      void *data = nullptr;
-      MXSparse sparse;
       // Dense representation.
       if(!in_indices_shapes) {
         type = kDefaultStorage;
@@ -1193,34 +1192,31 @@ extern "C" {
       inputs[i].setTensor(data, (MXDType)intypes[i], inshapes[i], indims[i],
                           inIDs[i], {indev_type[i], indev_id[i]}, type);
     }
-
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
+
     for (int i = 0; i < num_out; i++) {
-      MXStorageType type;
-      void *data = nullptr;
-      MXSparse sparse;
-      // Dense representation.
+      //MXStorageType type2;
       if(!out_indices_shapes) {
         type = kDefaultStorage;
-        data = outdata[i];
+        data2 = outdata[i];
       }
       // Sparse representation.
       else {
         // To do: remove if else.
         if(!out_indptr_shapes) {
           type = kRowSparseStorage;
-          sparse.set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
+          sparse2.set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
         }
         else {
           type = kCSRStorage;
-          sparse.set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+          sparse2.set(outdata[i], outshapes[i], outdims[i], out_indices[i],
                       out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
-        data = (void*)(&sparse);
+        data2 = (void*)(&sparse2);
       }
 
-      outputs[i].setTensor(data, (MXDType)outtypes[i], outshapes[i], outdims[i],
+      outputs[i].setTensor(data2, (MXDType)outtypes[i], outshapes[i], outdims[i],
                            outIDs[i], {outdev_type[i], outdev_id[i]}, type);
     }
 
