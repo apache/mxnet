@@ -53,8 +53,8 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
   SHAPE_ASSIGN_CHECK(*in_shape,
-                layernorm::kGamma,
-                mxnet::TShape(Shape1(channelCount)));
+                     layernorm::kGamma,
+                     mxnet::TShape(Shape1(channelCount)));
   SHAPE_ASSIGN_CHECK(*in_shape,
                      layernorm::kBeta,
                      mxnet::TShape(Shape1(channelCount)));
