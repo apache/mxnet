@@ -721,7 +721,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
 
     """
     if dtype is None:
-        dtype = _np.float64 if is_np_default_dtype() else _np.float32
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():

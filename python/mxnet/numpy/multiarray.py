@@ -42,7 +42,7 @@ from . import _op as _mx_np_op
 from ..base import check_call, _LIB, NDArrayHandle, c_array
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
 from ..context import Context
-from ..util import _sanity_check_params, set_module, wrap_np_unary_func, wrap_np_binary_func,\
+from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np

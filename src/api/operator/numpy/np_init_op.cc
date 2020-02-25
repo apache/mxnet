@@ -27,6 +27,7 @@
 #include "../utils.h"
 #include "../../../operator/tensor/init_op.h"
 #include "../../../operator/numpy/np_init_op.h"
+#include "../../../common/utils.h"
 
 namespace mxnet {
 
@@ -42,7 +43,7 @@ MXNET_REGISTER_API("_npi.zeros")
     param.shape = TShape(args[0].operator ObjectRef());
   }
   if (args[1].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
