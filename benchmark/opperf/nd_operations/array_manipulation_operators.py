@@ -16,6 +16,8 @@
 # under the License.
 
 import mxnet as mx
+
+from mxnet import nd
 from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.rules.default_params import MX_OP_MODULE
@@ -248,5 +250,5 @@ def run_join_split_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler=
                                                               ],
                                                       warmup=warmup,
                                                       runs=runs)
-    join_split_ops = merge_map_list(concat_benchmark_res + split_benchmark_res + stack_benchmark_res)
+    mx_join_split_op_results = merge_map_list(concat_benchmark_res + split_benchmark_res + stack_benchmark_res)
     return mx_join_split_op_results
