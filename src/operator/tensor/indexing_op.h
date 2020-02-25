@@ -66,8 +66,8 @@ enum QuantizedEmbeddingOpResource {kTempSpace};
 
 
 struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool deterministic;
   DMLC_DECLARE_PARAMETER(SparseEmbeddingParam) {
@@ -89,8 +89,8 @@ struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
 };
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool sparse_grad;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
