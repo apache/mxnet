@@ -125,11 +125,14 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
+    custom_data_int64 = {}
+
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
 
     if int64_tensor == 'on':
         default_inputs = DEFAULTS_INPUTS_LARGE_TENSOR
+        custom_data |= custom_data_int64
     else:
         default_inputs = DEFAULTS_INPUTS
 
@@ -144,19 +147,19 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
         # same for randint (which is the only op that takes only int as input)
         # rest all operators take int as well as float
         if op in int_only and arg_name == "dtype":
-            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
+            arg_values[arg_name] = default_inputs["dtype_int"]
         elif (op.startswith(('random','sample')) or op in float_only) and arg_name == "dtype":
-            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
+            arg_values[arg_name] = default_inputs["dtype_float"]
         elif "NDArray" in arg_type and op == "ravel_multi_index":
-            arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
-        elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
-        elif "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
-        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
-        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
+            arg_values[arg_name] = default_inputs["ravel_data"]
+        elif op in custom_data and arg_name + "_" + op.lower() in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_" + op.lower()]
+        elif "NDArray" in arg_type and arg_name + "_nd" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_nd"]
+        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_4d"]
+        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_3d"]
         elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
             arg_values[arg_name] = default_inputs[arg_name + "_smce"]
         elif arg_name in default_inputs:
