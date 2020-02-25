@@ -116,7 +116,7 @@ inline bool MixedUnaryOpType(const nnvm::NodeAttrs& attrs,
   .set_attr<FCompute>("FCompute<cpu>", UnaryOp::ComputeMixedType<cpu, __kernel$>)         \
   .add_argument(__input_name$, "NDArray-or-Symbol", "The input array.")
 
-#define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_IN(name)            \
+#define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_IN(name)        \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(2)                                                \
   .set_num_outputs(1)                                               \
@@ -124,7 +124,7 @@ inline bool MixedUnaryOpType(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs) {                                    \
       return std::vector<std::string>{"lhs", "rhs"};                \
     })                                                              \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<2, 1>) \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};     \
@@ -133,7 +133,7 @@ inline bool MixedUnaryOpType(const nnvm::NodeAttrs& attrs,
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
 /*! \brief Binary launch */
-#define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_INOUT(name)         \
+#define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_INOUT(name)     \
   NNVM_REGISTER_OP(name)                                            \
   .set_num_inputs(3)                                                \
   .set_num_outputs(1)                                               \
@@ -141,7 +141,7 @@ inline bool MixedUnaryOpType(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs) {                                    \
       return std::vector<std::string>{"lhs", "rhs"};                \
     })                                                              \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>)  \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<3, 1>) \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
     [](const NodeAttrs& attrs){                                     \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};     \
@@ -150,17 +150,17 @@ inline bool MixedUnaryOpType(const nnvm::NodeAttrs& attrs,
   .add_argument("rhs", "NDArray-or-Symbol", "second input")
 
 #define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_IN_CPU(__name$, __kernel$)                    \
-  MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_IN(__name$)                                         \
+  MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_IN(__name$)                                     \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<cpu,  \
                                                                        __kernel$>)            \
 
 #define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_USEIN_BWD_CPU(__name$, __kernel$)             \
-  MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_IN(__name$)                                         \
+  MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_IN(__name$)                                     \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<cpu,  \
                                                                        __kernel$>)            \
 
 #define MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_USEINOUT_BWD_CPU(__name$, __kernel$)             \
-  MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_INOUT(__name$)                                         \
+  MXNET_OPERATOR_REGISTER_UNARY_MIXEDTYPE_BWD_INOUT(__name$)                                     \
   .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<cpu,  \
                                                                                __kernel$>)
 
