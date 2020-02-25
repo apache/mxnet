@@ -131,7 +131,7 @@ def run_optimizer_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     mx_optimizer_ops = get_all_optimizer_operators()
 
     # Run benchmarks
-    mx_optimizer_op_results = run_op_benchmarks(mx_optimizer_ops, dtype, ctx, profiler, warmup, runs)
+    mx_optimizer_op_results = run_op_benchmarks(mx_optimizer_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return merge_map_list(multi_sgd_mom_res + multi_sgd_mom_res + multi_sgd_res + multi_mp_sgd_res + preloaded_multi_mp_sgd_res +\
                           preloaded_multi_sgd_mom_res + preloaded_multi_mp_sgd_res + preloaded_multi_mp_sgd_mom_res +\
                           [mx_optimizer_op_results])
