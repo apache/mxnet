@@ -480,7 +480,7 @@ def test_nn():
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
     def check_rnn():
-        data = nd.random_normal(shape=(2**28, 4, 4))
+        data = nd.random_normal(shape=(LARGE_TENSOR_SHAPE/16, 4, 4))
         parameters = nd.random_normal(shape=(7,))
         state = nd.random_normal(shape=(1, 4, 1))
         mode = 'rnn_relu'
@@ -490,7 +490,7 @@ def test_nn():
         out = nd.RNN(data=data, parameters=parameters, state=state, mode=mode,
                      state_size=state_size, num_layers=num_layers)
 
-        assert out.shape[0] == 268435456
+        assert out.shape[0] == LARGE_TENSOR_SHAPE/16
         assert out.shape[1] == 4
         assert out.shape[2] == 1
         
