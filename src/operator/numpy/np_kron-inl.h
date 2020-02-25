@@ -155,9 +155,9 @@ void KronOpForwardImpl(const OpContext& ctx,
       });
     } else {
       MXNET_NDIM_SWITCH(oshape.ndim(), ndim, {
-        Shape<ndim> ashape_;
-        Shape<ndim> bshape_;
-        Shape<ndim> oshape_;
+        Shape<ndim> ashape_ = oshape.get<ndim>();
+        Shape<ndim> bshape_ = oshape.get<ndim>();
+        Shape<ndim> oshape_ = oshape.get<ndim>();
         int temp = ashape.ndim()-bshape.ndim();
         int s_dim = (temp > 0)?bshape.ndim():ashape.ndim();
         for (int i = 0; i < s_dim; i++) {
@@ -234,9 +234,9 @@ void KronOpBackwardImpl(const OpContext& ctx,
         ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
     } else {
       MXNET_NDIM_SWITCH(oshape.ndim(), ndim, {
-        Shape<ndim> ashape_;
-        Shape<ndim> bshape_;
-        Shape<ndim> oshape_;
+        Shape<ndim> ashape_ = oshape.get<ndim>();
+        Shape<ndim> bshape_ = oshape.get<ndim>();
+        Shape<ndim> oshape_ = oshape.get<ndim>();
         int temp = ashape.ndim()-bshape.ndim();
         int s_dim =  (temp > 0)?bshape.ndim():ashape.ndim();
         for (int i = 0; i < s_dim; i++) {
