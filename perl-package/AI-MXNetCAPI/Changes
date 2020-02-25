@@ -1,4 +1,7 @@
 Revision history for Perl extension AI::MXNetCAPI
+1.5     Sun Feb 16 19:56:17 PST 2020
+        - Runtime features
+        - INT64 Tensor support
 
 1.4     Mon Feb 18 11:54:07 PST 2019
         - Support for 64bit integers

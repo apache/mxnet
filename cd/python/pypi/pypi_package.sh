@@ -18,15 +18,15 @@
 
 set -ex
 
-# variant = cpu, mkl, cu80, cu80mkl, cu100, etc.
+# variant = cpu, native, cu80, cu100, etc.
 export mxnet_variant=${1:?"Please specify the mxnet variant"}
 
 # Due to this PR: https://github.com/apache/incubator-mxnet/pull/14899
-# The setup.py expects that mkldnn_version.h be present in 
+# The setup.py expects that mkldnn_version.h be present in
 # mxnet-build/3rdparty/mkldnn/build/install/include
 # The artifact repository stores this file in the dependencies
 # and CD unpacks it to a directory called cd_misc
-# Nov. 2019 Update: With v1.1, MKL-DNN is renaming to DNNL. Hence changing the prefix of file name. 
+# Nov. 2019 Update: With v1.1, MKL-DNN is renaming to DNNL. Hence changing the prefix of file name.
 if [ -f "cd_misc/dnnl_version.h" ]; then
   mkdir -p 3rdparty/mkldnn/build/install/include
   cp cd_misc/dnnl_version.h 3rdparty/mkldnn/build/install/include/.
@@ -56,7 +56,7 @@ popd
 echo "Building python package with environment:"
 printenv
 echo "-----------------------------------------"
-pip install --user pypandoc
+pip3 install --user pypandoc
 
 # Build wheel file - placed in wheel_build/dist
-python setup.py bdist_wheel
+python3 setup.py bdist_wheel

@@ -60,6 +60,15 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, dtype_s;
+    shape_s << shape;
+    dtype_s << dtype;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
+    // Setting ctx here results in an error.
+  }
 };
 
 struct InitOpWithoutDTypeParam : public dmlc::Parameter<InitOpWithoutDTypeParam> {
@@ -252,7 +261,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
       .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
                   "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-      MXNET_ADD_ALL_TYPES
+      MXNET_ADD_ALL_TYPES_WITH_BOOL
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");

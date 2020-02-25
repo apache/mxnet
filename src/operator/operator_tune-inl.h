@@ -431,6 +431,8 @@ class OperatorTune : public OperatorTuneByType<DType> {
       return mshadow::kFloat64;
     if (type_string == "float16")
       return mshadow::kFloat16;
+    if (type_string == "bfloat16")
+      return mshadow::kBfloat16;
     if (type_string == "int8")
       return mshadow::kInt8;
     if (type_string == "uint8")

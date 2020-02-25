@@ -63,7 +63,7 @@ def _np_all(a, axis=None, keepdims=False, out=None):
     >>> o=np.array(False)
     >>> z=np.all([-1, 4, 5], out=o)
     >>> id(z), id(o), z
-    (28293632, 28293632, array(True)) # may vary  
+    (28293632, 28293632, array(True)) # may vary
     """
     pass
 
@@ -117,6 +117,19 @@ def _np_any(a, axis=None, keepdims=False, out=None):
     True
     >>> id(z), id(o) # identity of z and o              # doctest: +SKIP
     (191614240, 191614240)
+    """
+    pass
+
+
+def _np_sometrue(a, axis=None, keepdims=False, out=None):
+    """
+    Check whether some values are true.
+
+    Refer to `any` for full documentation.
+
+    See Also
+    --------
+    any : equivalent function; see for details.
     """
     pass
 
@@ -1167,6 +1180,17 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=False):
     >>> x = np.array([1, 2, 3], dtype=np.int8)
     >>> np.prod(x).dtype == np.int8
     True
+    """
+    pass
+
+
+def _np_product(a, axis=None, dtype=None, out=None, keepdims=False):
+    """
+    Return the product of array elements over a given axis.
+
+    See Also
+    --------
+    prod : equivalent function; see for details.
     """
     pass
 

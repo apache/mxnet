@@ -84,7 +84,7 @@ extends 'AI::MXNet::Gluon::Data::Vision::DownloadedDataSet';
         Whether to load the training or testing set.
         Defaults to True
     transform : function
-        A user defined callback that transforms each instance. For example
+        A user defined callback that transforms each instance. For example:
 
     transform => sub { my ($data, $label) = @_; return ($data->astype('float32')/255, $label) }
 =cut
@@ -172,7 +172,7 @@ use Mouse;
         Whether to load the training or testing set.
         Defaults to True
     transform : function
-        A user defined callback that transforms each instance. For example
+        A user defined callback that transforms each instance. For example:
 
     transform => sub { my ($data, $label) = @_; return ($data->astype('float32')/255, $label) }
 =cut
@@ -306,7 +306,7 @@ extends 'AI::MXNet::Gluon::Data::RecordFileSet';
 
         If 1, always convert images to colored (RGB).
     transform : function
-        A user defined callback that transforms each instance. For example::
+        A user defined callback that transforms each instance. For example:
 =cut
 has 'flag'      => (is => 'rw', isa => 'Bool', default => 1);
 has 'transform' => (is => 'rw', isa => 'Maybe[CodeRef]');
@@ -421,7 +421,7 @@ method at(Int $idx)
     my $label = $self->items->[$idx][1];
     if(defined $self->transform)
     {
-        return [$self->transform($img, $label)];
+        return [$self->transform->($img, $label)];
     }
     return [$img, $label];
 }

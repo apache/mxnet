@@ -17,7 +17,6 @@
 
 """Utils for registering NumPy array function protocol for mxnet.numpy ops."""
 
-from __future__ import absolute_import
 import functools
 import numpy as _np
 from . import numpy as mx_np  # pylint: disable=reimported
@@ -85,10 +84,12 @@ def with_array_ufunc_protocol(func):
 _NUMPY_ARRAY_FUNCTION_LIST = [
     'all',
     'any',
+    'sometrue',
     'argmin',
     'argmax',
     'around',
     'round',
+    'round_',
     'argsort',
     'sort',
     'append',
@@ -108,6 +109,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'flipud',
     'fliplr',
     'inner',
+    'insert',
     'max',
     'amax',
     'mean',
@@ -119,12 +121,16 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'atleast_2d',
     'atleast_3d',
     'prod',
+    'product',
     'ravel',
     'repeat',
     'reshape',
     'roll',
     'split',
     'array_split',
+    'hsplit',
+    'vsplit',
+    'dsplit',
     'squeeze',
     'stack',
     'std',
@@ -175,7 +181,11 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'empty_like',
     'nan_to_num',
     'isnan',
+    'isfinite',
+    'isposinf',
+    'isneginf',
     'isinf',
+    'pad',
 ]
 
 
@@ -222,6 +232,7 @@ def _register_array_function():
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
     'abs',
+    'fabs',
     'add',
     'arctan2',
     'copysign',

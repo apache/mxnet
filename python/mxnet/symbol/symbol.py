@@ -19,7 +19,6 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
-from __future__ import absolute_import as _abs
 try:
     from __builtin__ import slice as py_slice
 except ImportError:
@@ -29,7 +28,6 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-import sys
 import numpy as _numpy  # pylint: disable=relative-import
 
 from ..attribute import AttrScope
@@ -1212,7 +1210,7 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
@@ -1366,7 +1364,7 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
-    def tojson(self):
+    def tojson(self, remove_amp_cast=True):
         """Saves symbol to a JSON string.
 
         See Also
@@ -1374,7 +1372,12 @@ class Symbol(SymbolBase):
         symbol.load_json : Used to load symbol from JSON string.
         """
         json_str = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToJSON(handle, ctypes.byref(json_str)))
+        else:
+            check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         return py_str(json_str.value)
 
     @staticmethod
@@ -1700,7 +1703,7 @@ class Symbol(SymbolBase):
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
         try:
-            if sys.version_info[0] > 2 and _int64_enabled():
+            if _int64_enabled():
                 check_call(_LIB.MXExecutorSimpleBindEx64(self.handle,
                                                          ctypes.c_int(ctx.device_typeid),
                                                          ctypes.c_int(ctx.device_id),
@@ -2798,7 +2801,11 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        np_dtype = _numpy.dtype(dtype)
+        if np_dtype == _numpy.dtype([('bfloat16', _numpy.uint16)]):
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[np_dtype])
+        else:
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()

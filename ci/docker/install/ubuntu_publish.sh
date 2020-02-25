@@ -49,8 +49,8 @@ apt-get install -y git \
     pkg-config \
     openjdk-8-jdk
 
-curl -o apache-maven-3.3.9-bin.tar.gz http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
-    || curl -o apache-maven-3.3.9-bin.tar.gz https://search.maven.org/remotecontent?filepath=org/apache/maven/apache-maven/3.3.9/apache-maven-3.3.9-bin.tar.gz
+curl -o apache-maven-3.3.9-bin.tar.gz -L http://www.eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+    || curl -o apache-maven-3.3.9-bin.tar.gz -L https://search.maven.org/remotecontent?filepath=org/apache/maven/apache-maven/3.3.9/apache-maven-3.3.9-bin.tar.gz
 
 tar xzf apache-maven-3.3.9-bin.tar.gz
 mkdir /usr/local/maven

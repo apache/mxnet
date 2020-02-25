@@ -19,7 +19,6 @@
 
 """Module for ops not belonging to the official numpy package for imperative programming."""
 
-from __future__ import absolute_import
 from . import _op
 from . import image
 from . import random  # pylint: disable=wildcard-import

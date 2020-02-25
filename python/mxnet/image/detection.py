@@ -18,7 +18,6 @@
 # pylint: disable=unused-import, too-many-lines
 """Read images and perform augmentations for object detection."""
 
-from __future__ import absolute_import, print_function
 
 import json
 import logging

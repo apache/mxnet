@@ -8,6 +8,11 @@ endif()
 
 project(mxnet C CXX)
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+  # Load config.cmake only if mxnet is not compiled as a dependency of another project
+  include(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+endif()
+
 if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
 endif()
@@ -897,7 +902,7 @@ add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EX
 if(BUILD_CYTHON_MODULES)
   include(cmake/BuildCythonModules.cmake)
   add_cython_modules(3) # Build cython module for python3 if python3 is found
-  if((NOT ${PYTHON2_FOUND}) AND (NOT ${PYTHON3_FOUND}))
+  if(NOT ${PYTHON3_FOUND})
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()
