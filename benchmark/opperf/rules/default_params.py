@@ -34,12 +34,15 @@ DEFAULT_DATA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_DTYPE = ['float32', 'int32', 'float32']  # required parameter for amp_cast, cast
 DEFAULT_DTYPE_INT = ['int32', 'int64', 'int32']  # randint works for int* types only
 DEFAULT_DTYPE_FLOAT = ['float16', 'float32', 'float64']  # random_exp works for float* types only
+
 DEFAULT_DATA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 
 # For Binary miscellaneous operators like choose_element0_index
 # argument data must be indexed via an NDArray.
 # NOTE: Data used is DEFAULT_DATA
 DEFAULT_INDEX = [(1, 1024), (1, 1), (1, 100)]
+
+DEFAULT_INDEX_LARGE_TENSOR = [(1, 2**16)]
 
 # For Binary broadcast operators like - broadcast_add/sub/mod/logical_and etc..
 DEFAULT_LHS = [(1024, 1024), (10000, 10), (10000, 1)]
@@ -89,6 +92,10 @@ DEFAULT_BETA_ND_LARGE_TENSOR = [[1.0] * 2**16 + [0.7] * 2**16]
 DEFAULT_LAM_LARGE_TENSOR = [[1.0] * 2**16 + [8.5] * 2**16]
 DEFAULT_K_ND_LARGE_TENSOR = [[20] * 2**16 + [49] * 2**16]
 DEFAULT_P_ND_LARGE_TENSOR = [[0.4] * 2**16 + [0.77] * 2**16]
+DEFAULT_DATA_BILINEAR_LARGE_TENSOR = [(2**32, 1, 1, 1)]
+DEFAULT_GRID_LARGE_TENSOR = [(2**32, 2, 1, 1)]
+DEFAULT_DATA_GRIDGEN_LARGE_TENSOR = [(2**31, 2, 1, 1), (1, 6)]
+DEFAULT_TARGET_SHAPE_LARGE_TENSOR = [(1, 6)]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
@@ -230,6 +237,9 @@ DEFAULT_DELTA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_DATA_4d = [(1, 4, 2, 4), (10, 25, 10, 100)]
 DEFAULT_BLOCK_SIZE = [2, 5]
 
+DEFAULT_DATA_4d_LARGE_TENSOR = [(1, 4, 2, 2**29), (1,2**4,2**4,2**24)]
+DEFAULT_BLOCK_SIZE_LARGE_TENSOR = [2, 4]
+
 # For miscellaneous operators
 DEFAULT_DATA_SQUEEZE = [(1, 1024, 1024), (32, 1, 256, 256)]
 DEFAULT_AXIS_SQUEEZE = [0, 1]
@@ -245,8 +255,6 @@ DEFAULT_A = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_MHS = [(1024,), (10000,), (10000,)]
 DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
-DEFAULT_DATA_4d_LARGE_TENSOR = [(1, 4, 2, 2**29), (1,2**4,2**4,2**24)]
-DEFAULT_BLOCK_SIZE_LARGE_TENSOR = [2, 4]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
@@ -513,7 +521,13 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "dim1": DEFAULT_DIM_1,
                                 "dim2": DEFAULT_DIM_2,
                                 "block_size": DEFAULT_BLOCK_SIZE_LARGE_TENSOR,
-                                "args": DEFAULT_ARGS}
+                                "args": DEFAULT_ARGS,
+                                "index": DEFAULT_INDEX_LARGE_TENSOR,
+                                "grid": DEFAULT_GRID_LARGE_TENSOR,
+                                "data_bilinearsampler": DEFAULT_DATA_BILINEAR_LARGE_TENSOR,
+                                "transform_type": DEFAULT_TRANSFORM_TYPE,
+                                "data_gridgenerator": DEFAULT_DATA_GRIDGEN_LARGE_TENSOR,
+                                "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE_LARGE_TENSOR}
 
 # These are names of MXNet operator parameters that is of type NDArray.
 # We maintain this list to automatically recognize these parameters are to be

@@ -74,5 +74,5 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     mx_nn_basic_ops = get_all_nn_basic_operators()
     
     # Run benchmarks
-    mx_nn_basic_op_results = run_op_benchmarks(mx_nn_basic_ops, dtype, ctx, profiler, warmup, runs)
+    mx_nn_basic_op_results = run_op_benchmarks(mx_nn_basic_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_nn_basic_op_results
