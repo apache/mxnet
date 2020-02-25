@@ -25,7 +25,6 @@ from ...util import _sanity_check_params, set_module
 from ...util import wrap_np_unary_func, wrap_np_binary_func
 from ...context import current_context
 from . import _internal as _npi
-from . import _api_internal
 from ..ndarray import NDArray
 
 
@@ -84,7 +83,7 @@ def shape(a):
 
 
 @set_module('mxnet.ndarray.numpy')
-def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -111,15 +110,10 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
     """
     if order != 'C':
         raise NotImplementedError
-    # If the following code (4 lines) regarding ctx is removed
-    # np.zeros((3, 4)) can be as fast as 4.96 us
     if ctx is None:
-        ctx = str(current_context())
-    else:
-        ctx = str(ctx)
-    if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
-    return _api_internal.zeros(shape, dtype, ctx)
+        ctx = current_context()
+    dtype = _np.float32 if dtype is None else dtype
+    return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1547,7 +1541,21 @@ def tensordot(a, b, axes=2):
            [ 4796.,  5162.],
            [ 4928.,  5306.]])
     """
-    return _api_internal.tensordot(a, b, axes)
+    if _np.isscalar(axes):
+        return _npi.tensordot_int_axes(a, b, axes)
+
+    if len(axes) != 2:
+        raise ValueError('Axes must consist of two arrays.')
+    a_axes_summed, b_axes_summed = axes
+    if _np.isscalar(a_axes_summed):
+        a_axes_summed = (a_axes_summed,)
+    if _np.isscalar(b_axes_summed):
+        b_axes_summed = (b_axes_summed,)
+
+    if len(a_axes_summed) != len(b_axes_summed):
+        raise ValueError('Axes length mismatch')
+
+    return _npi.tensordot(a, b, a_axes_summed, b_axes_summed)
 
 
 @set_module('mxnet.ndarray.numpy')

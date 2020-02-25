@@ -22,7 +22,6 @@ import numpy as np
 from ..ndarray_doc import _build_doc
 from libc.stdint cimport uint32_t, int64_t
 from ..base import _LIB
-from .. import _global_var
 
 include "./base.pyi"
 
@@ -37,10 +36,7 @@ cdef class NDArrayBase:
         if handle is None:
             self.chandle = NULL
         else:
-            if isinstance(handle, (int, long)):
-                ptr = handle
-            else:
-                ptr = handle.value
+            ptr = handle.value
             self.chandle = <SymbolHandle>(ptr)
 
     property handle:
@@ -63,11 +59,20 @@ cdef class NDArrayBase:
         CALL(MXNDArrayFree(self.chandle))
 
     def __reduce__(self):
-        return (_global_var._ndarray_cls, (None,), self.__getstate__())
+        return (_ndarray_cls, (None,), self.__getstate__())
 
-    def _get_handle(self):
-        return <size_t>self.chandle
 
+_ndarray_cls = None
+_np_ndarray_cls = None
+
+def _set_ndarray_class(cls):
+    global _ndarray_cls
+    _ndarray_cls = cls
+
+
+def _set_np_ndarray_class(cls):
+    global _np_ndarray_cls
+    _np_ndarray_cls = cls
 
 def _monitor_callback_wrapper(callback):
     def callback_handle(name, opr_name, arr, _):
@@ -76,7 +81,7 @@ def _monitor_callback_wrapper(callback):
 
 cdef NewArray(NDArrayHandle handle, int stype=-1, int is_np_array=0):
     """Create a new array given handle"""
-    create_array_fn = _global_var._np_ndarray_cls if is_np_array else _global_var._ndarray_cls
+    create_array_fn = _np_ndarray_cls if is_np_array else _ndarray_cls
     return create_array_fn(_ctypes.cast(<unsigned long long>handle, _ctypes.c_void_p), stype=stype)
 
 
