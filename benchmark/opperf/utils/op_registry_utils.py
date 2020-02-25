@@ -125,7 +125,7 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
-    custom_data_int64 = {}
+    custom_data_int64 = {'random_pdf_dirichlet'}
 
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}

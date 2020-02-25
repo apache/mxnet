@@ -61,6 +61,8 @@ DEFAULT_P = [1]
 
 DEFAULT_SHAPE_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_SAMPLE_LARGE_TENSOR = [(2**32,)]
+DEFAULT_DATA_RPD_LARGE_TENSOR = [(2**32 + 1, 5)]
+DEFAULT_ALPHA_RPD_LARGE_TENSOR = [(5,)]
 
 # For operators like - sample_uniform, sample_normal etc..
 # NOTE: There are many overlapping operators in random_* and sample_*,
@@ -96,6 +98,7 @@ DEFAULT_DATA_BILINEAR_LARGE_TENSOR = [(2**32, 1, 1, 1)]
 DEFAULT_GRID_LARGE_TENSOR = [(2**32, 2, 1, 1)]
 DEFAULT_DATA_GRIDGEN_LARGE_TENSOR = [(2**31, 2, 1, 1), (1, 6)]
 DEFAULT_TARGET_SHAPE_LARGE_TENSOR = [(1, 6)]
+DEFAULT_DATA_SM_LARGE_TENSOR = [(2**32,)]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
@@ -143,6 +146,29 @@ DEFAULT_OUTPUT_SIZE = [(64, 16, 1), (32, 8, 1)]
 DEFAULT_KERNEL = [(1, 1, 1), (1, 1, 1)]
 DEFAULT_STRIDE = [(2, 2, 2), (1, 1, 1)]
 
+DEFAULT_DATA_NN_BASIC_LARGE_TENSOR = [(2**32 + 1, 1)]
+DEFAULT_NUM_HIDDEN_LARGE_TENSOR = [(1,)]
+DEFAULT_BIAS_LARGE_TENSOR = [(1,)]
+DEFAULT_FLATTEN_LARGE_TENSOR = [False]
+DEFAULT_GAMMA_LARGE_TENSOR = [(1,)]
+DEFAULT_BETA_LARGE_TENSOR = [(1,)]
+DEFAULT_MOVING_MEAN_LARGE_TENSOR = [(2**32 + 1,)]
+DEFAULT_MOVING_VAR_LARGE_TENSOR = [(2**32 + 1,)]
+DEFAULT_INPUT_DIM_LARGE_TENSOR = [2**32]
+DEFAULT_OUTPUT_DIM_LARGE_TENSOR = [1]
+DEFAULT_KERNEL_SIZE_LARGE_TENSOR = [1]
+DEFAULT_MAX_DISPLACEMENT_LARGE_TENSOR = [1]
+DEFAULT_STRIDE_1_LARGE_TENSOR = [1]
+DEFAULT_STRIDE_2_LARGE_TENSOR = [1]
+DEFAULT_DILATE_LARGE_TENSOR = [[]]
+DEFAULT_PAD_LARGE_TENSOR = [[]]
+DEFAULT_OUTPUT_SIZE_LARGE_TENSOR = [(2, 2, 1)]
+DEFAULT_KERNEL_LARGE_TENSOR = [(1, 1, 1)]
+DEFAULT_PARAMETERS_LARGE_TENSOR = [(7,)]
+DEFAULT_STATE_LARGE_TENSOR = [(1, 4, 1)]
+DEFAULT_STATE_SIZE_LARGE_TENSOR = [1]
+DEFAULT_NUM_LAYERS_LARGE_TENSOR = [1]
+
 # BatchNorm
 DEFAULT_AXIS_BN = [1]
 
@@ -156,40 +182,82 @@ DEFAULT_MODE_L2 = ['channel', 'instance', 'spatial']
 # SVMOutput
 DEFAULT_LABEL_SVM = [(32, 3, 256), (32, 3, 10000)]
 
+DEFAULT_DATA_SVM_LARGE_TENSOR = [(2**29, 2, 2, 2)]
+DEFAULT_LABEL_SVM_LARGE_TENSOR = [(2**29, 2, 2)]
+
 # SoftmaxOutput
 DEFAULT_LABEL_SM = [(32, 3, 256), (32, 3, 10000)]
+
+DEFAULT_DATA_SO_LARGE_TENSOR = [(2**29, 2, 2, 2)]
+DEFAULT_LABEL_SO_LARGE_TENSOR = [(2**29, 2, 2)]
 
 # FullyConnected
 DEFAULT_WEIGHT_FC = [(64, 3 * 256 * 256), (64, 10)]
 
+DEFAULT_DATA_FC_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_WEIGHT_FC_LARGE_TENSOR = [(1, 1)]
+
 # Embedding
 DEFAULT_WEIGHT_EMBEDDING = [(3, 4), (16, 9)]
+
+DEFAULT_WEIGHT_EMBEDDING_LARGE_TENSOR = [(2**32, 1)]
 
 # GroupNorm
 DEFAULT_DATA_GN = [(32, 3, 256, 256), (32, 10, 10000, 10)]
 DEFAULT_BETA_GAMMA_GN = [(1,), (10,)]
 
+DEFAULT_DATA_GN_LARGE_TENSOR = [(2**27, 4, 4, 2)]
+DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR = [(1,)]
+
 # Dropout
 DEFAULT_DATA_DROPOUT = [(32, 3, 256, 256), (10000, 10)]
 DEFAULT_MODE_DROPOUT = ["always"]
+
+DEFAULT_DATA_DROPOUT_LARGE_TENSOR = [(2**32 + 1,)]
 
 # SpatialTransformer
 DEFAULT_DATA_ST = [(32, 3, 256, 6), (256, 3, 10000, 6)]
 DEFAULT_LOC_TAR_ST = [(32, 6), (256, 6)]
 
+DEFAULT_DATA_ST_LARGE_TENSOR = [(2, 2**29, 1, 6)]
+DEFAULT_LOC_TAR_ST_LARGE_TENSOR = [(2, 6)]
+
 # im2col
 DEFAULT_KERNEL_I2C = [(3,), (3, 3)]
 DEFAULT_STRIDE_I2C = [(1,), (1, 1)]
 
+DEFAULT_DATA_I2C_LARGE_TENSOR = [(2**29, 2, 2, 6)]
+DEFAULT_KERNEL_I2C_LARGE_TENSOR = [(1,)]
+DEFAULT_STRIDE_I2C_LARGE_TENSOR = [[]]
+
 # col2im
 DEFAULT_DATA_C2I = [(32, 64, 256), (32, 64, 256)]
+
+DEFAULT_DATA_C2I_LARGE_TENSOR = [(1, 2**30, 4)]
 
 # RNN
 DEFAULT_DATA_RNN = [(32, 4, 4), (512, 10000, 10)]
 DEFAULT_P_RNN = [.5]
 
+DEFAULT_DATA_RNN_LARGE_TENSOR = [(2**28, 4, 4)]
+
 # LRN
 DEFAULT_BETA_LRN = [.2]
+
+DEFAULT_DATA_LRN_LARGE_TENSOR = [(2**27, 4, 4, 2)]
+
+# Correlation
+DEFAULT_DATA1_LARGE_TENSOR = [(2**23, 8, 8, 8)]
+DEFAULT_DATA2_LARGE_TENSOR = [(2**23, 8, 8, 8)]
+
+# For regression operators
+DEFAULT_DATA_REG_LARGE_TENSOR = [(2**29, 2, 2, 2)]
+DEFAULT_LABEL_REG_LARGE_TENSOR = [(2**29, 2, 2, 2)]
+
+# For normalization operators
+DEFAULT_DATA_NORM_LARGE_TENSOR = [(2**29, 2, 2, 2)]
+DEFAULT_GAMMA_NORM_LARGE_TENSOR = [(2,)]
+DEFAULT_BETA_NORM_LARGE_TENSOR = [(2,)]
 
 # For optimizer operators
 DEFAULT_WEIGHT = [(1024, 1024), (10000, 1), (10000, 100)]
@@ -256,6 +324,14 @@ DEFAULT_LHS_FEI = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_MHS = [(1024,), (10000,), (10000,)]
 DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
 
+DEFAULT_DATA_SQUEEZE_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_WSS_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_GSS_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_WDS_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_LHS_FEI_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_RHS_FEI_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_MHS_LARGE_TENSOR = [(2**32,)]
+
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
 DEFAULT_DIM_2 = [1]
@@ -280,10 +356,13 @@ DEFAULT_DATA_3d = [(1024, 100, 100)]
 DEFAULT_LABEL = [(100,100)]
 DEFAULT_DATA_SMCE = [(1024, 1024)]
 DEFAULT_LABEL_SMCE = [(1024,)]
+
 # For NN operators
 DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
 DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'softrelu', 'softsign', 'tanh']
 DEFAULT_LABEL_SOFTMAX = [(1024, 1024), (10000, 1), (10000, 100)]
+
+DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR = [(2**32, 1)]
 
 # For linalg operators
 DEFAULT_A = [(1024, 1024)]
@@ -291,6 +370,11 @@ DEFAULT_B = [(1024, 1024)]
 DEFAULT_C = [(1024, 1024)]
 DEFAULT_A_MT = [(1024, 1035)]
 DEFAULT_AXES = [[0, 1]]
+
+DEFAULT_A_LARGE_TENSOR = [(2**16, 2**16)]
+DEFAULT_B_LARGE_TENSOR = [(2**16, 2**16)]
+DEFAULT_C_LARGE_TENSOR = [(2**16, 2**16)]
+DEFAULT_A_MT_LARGE_TENSOR = [(2**32 + 1, 1)]
 
 # Default Inputs. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
@@ -474,6 +558,9 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
 
 # Default Inputs for Large Tensor. MXNet Op Param Name to Default Input mapping
 DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
+                                "dtype": DEFAULT_DTYPE,
+                                "dtype_int": DEFAULT_DTYPE_INT,
+                                "dtype_float": DEFAULT_DTYPE_FLOAT,
                                 "sample": DEFAULT_SAMPLE_LARGE_TENSOR,
                                 "lhs": DEFAULT_LHS_LARGE_TENSOR,
                                 "rhs": DEFAULT_RHS_LARGE_TENSOR,
@@ -527,7 +614,110 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "data_bilinearsampler": DEFAULT_DATA_BILINEAR_LARGE_TENSOR,
                                 "transform_type": DEFAULT_TRANSFORM_TYPE,
                                 "data_gridgenerator": DEFAULT_DATA_GRIDGEN_LARGE_TENSOR,
-                                "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE_LARGE_TENSOR}
+                                "target_shape_gridgenerator": DEFAULT_TARGET_SHAPE_LARGE_TENSOR,
+                                "data_sample_multinomial": DEFAULT_DATA_SM_LARGE_TENSOR,
+                                "data_random_pdf_dirichlet": DEFAULT_DATA_RPD_LARGE_TENSOR,
+                                "alpha_random_pdf_dirichlet": DEFAULT_ALPHA_RPD_LARGE_TENSOR,
+                                "A": DEFAULT_A_LARGE_TENSOR,
+                                "B": DEFAULT_B_LARGE_TENSOR,
+                                "C": DEFAULT_C_LARGE_TENSOR,
+                                "A_linalg_maketrian": DEFAULT_A_MT_LARGE_TENSOR,
+                                "axes": DEFAULT_AXES,
+                                "act_type_leakyrelu": DEFAULT_ACT_TYPE_LR,
+                                "label_softmax": DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR,
+                                "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION,
+                                "data_squeeze": DEFAULT_DATA_SQUEEZE_LARGE_TENSOR,
+                                "axis_squeeze": DEFAULT_AXIS_SQUEEZE,
+                                "a_min": DEFAULT_A_MIN,
+                                "a_max": DEFAULT_A_MAX,
+                                "weights_sum_sq": DEFAULT_WSS_LARGE_TENSOR,
+                                "grads_sum_sq": DEFAULT_GSS_LARGE_TENSOR,
+                                "wds": DEFAULT_WDS_LARGE_TENSOR,
+                                "eta": DEFAULT_ETA,
+                                "eps": DEFAULT_EPSILON,
+                                "stype": DEFAULT_STYPE,
+                                "a": DEFAULT_A_LARGE_TENSOR,
+                                "lhs_fill_element_0index": DEFAULT_LHS_FEI_LARGE_TENSOR,
+                                "rhs_fill_element_0index": DEFAULT_RHS_FEI_LARGE_TENSOR,
+                                "mhs": DEFAULT_MHS_LARGE_TENSOR,
+                                "data_spatialtransformer": DEFAULT_DATA_ST_LARGE_TENSOR,
+                                "loc_spatialtransformer": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
+                                "target_shape": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
+                                "transform_type_spatialtransformer": DEFAULT_TRANSFORM,
+                                "sampler_type": DEFAULT_SAMPLER,
+                                "data_col2im": DEFAULT_DATA_C2I_LARGE_TENSOR,
+                                "output_size": DEFAULT_OUTPUT_SIZE_LARGE_TENSOR,
+                                "kernel_col2im": DEFAULT_KERNEL_LARGE_TENSOR,
+                                "stride_col2im": DEFAULT_STRIDE,
+                                "data_rnn": DEFAULT_DATA_RNN_LARGE_TENSOR,
+                                "p_rnn": DEFAULT_P_RNN,
+                                "parameters": DEFAULT_PARAMETERS_LARGE_TENSOR,
+                                "state": DEFAULT_STATE_LARGE_TENSOR,
+                                "state_size": DEFAULT_STATE_SIZE_LARGE_TENSOR,
+                                "num_layers": DEFAULT_NUM_LAYERS_LARGE_TENSOR,
+                                "mode_rnn": DEFAULT_MODE,
+                                "data_groupnorm": DEFAULT_DATA_GN_LARGE_TENSOR,
+                                "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
+                                "beta_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
+                                "num_groups": DEFAULT_NUM_GROUPS,
+                                "eps": DEFAULT_EPSILON,
+                                "data_dropout": DEFAULT_DATA_DROPOUT_LARGE_TENSOR,
+                                "mode_dropout": DEFAULT_MODE_DROPOUT,
+                                "p_dropout": DEFAULT_P,
+                                "data_nn_basic": DEFAULT_DATA_NN_BASIC_LARGE_TENSOR,
+                                "num_hidden": DEFAULT_NUM_HIDDEN_LARGE_TENSOR,
+                                "data_fullyconnected": DEFAULT_DATA_FC_LARGE_TENSOR,
+                                "weight_fullyconnected": DEFAULT_WEIGHT_FC_LARGE_TENSOR,
+                                "weight_embedding": DEFAULT_WEIGHT_EMBEDDING_LARGE_TENSOR,
+                                "bias": DEFAULT_BIAS_LARGE_TENSOR,
+                                "flatten": DEFAULT_FLATTEN_LARGE_TENSOR,
+                                "data_batchnorm": DEFAULT_DATA_NN_BASIC_LARGE_TENSOR,
+                                "gamma_batchnorm": DEFAULT_GAMMA_LARGE_TENSOR,
+                                "beta_batchnorm": DEFAULT_BETA_LARGE_TENSOR,
+                                "moving_mean_batchnorm": DEFAULT_MOVING_MEAN_LARGE_TENSOR,
+                                "moving_var_batchnorm": DEFAULT_MOVING_VAR_LARGE_TENSOR,
+                                "axis_batchnorm": DEFAULT_AXIS_BN,
+                                "data_softmaxoutput": DEFAULT_DATA_SO_LARGE_TENSOR,
+                                "label_softmaxoutput": DEFAULT_LABEL_SO_LARGE_TENSOR,
+                                "data_maeregressionoutput": DEFAULT_DATA_REG_LARGE_TENSOR,
+                                "label_maeregressionoutput": DEFAULT_LABEL_REG_LARGE_TENSOR,
+                                "data_logisticregressionoutput": DEFAULT_DATA_REG_LARGE_TENSOR,
+                                "label_logisticregressionoutput": DEFAULT_LABEL_REG_LARGE_TENSOR,
+                                "data_linearregressionoutput": DEFAULT_DATA_REG_LARGE_TENSOR,
+                                "label_linearregressionoutput": DEFAULT_LABEL_REG_LARGE_TENSOR,
+                                "data_svmoutput": DEFAULT_DATA_SVM_LARGE_TENSOR,
+                                "label_svmoutput": DEFAULT_LABEL_SVM_LARGE_TENSOR,
+                                "grad_scale": DEFAULT_GRAD_SCALE,
+                                "normalization": DEFAULT_NORMALIZATION,
+                                "margin": DEFAULT_MARGIN,
+                                "regularization_coefficient": DEFAULT_REG_COEFF,
+                                "data_l2normalization": DEFAULT_DATA_NORM_LARGE_TENSOR,
+                                "mode_l2normalization": DEFAULT_MODE_L2,
+                                "gamma_layernorm": DEFAULT_GAMMA_NORM_LARGE_TENSOR,
+                                "beta_layernorm": DEFAULT_BETA_NORM_LARGE_TENSOR,
+                                "data_instancenorm": DEFAULT_DATA_NORM_LARGE_TENSOR,
+                                "gamma_instancenorm": DEFAULT_GAMMA_NORM_LARGE_TENSOR,
+                                "beta_instancenorm": DEFAULT_DATA_NORM_LARGE_TENSOR,
+                                "input_dim": DEFAULT_INPUT_DIM_LARGE_TENSOR,
+                                "output_dim": DEFAULT_OUTPUT_DIM_LARGE_TENSOR,
+                                "sparse_grad": DEFAULT_SPARSE_GRAD,
+                                "data1": DEFAULT_DATA1_LARGE_TENSOR,
+                                "data2": DEFAULT_DATA2_LARGE_TENSOR,
+                                "kernel_size": DEFAULT_KERNEL_SIZE_LARGE_TENSOR,
+                                "max_displacement": DEFAULT_MAX_DISPLACEMENT_LARGE_TENSOR,
+                                "stride1": DEFAULT_STRIDE_1_LARGE_TENSOR,
+                                "stride2": DEFAULT_STRIDE_2_LARGE_TENSOR,
+                                "data_im2col": DEFAULT_DATA_I2C_LARGE_TENSOR,
+                                "kernel_im2col": DEFAULT_KERNEL_I2C_LARGE_TENSOR,
+                                "stride_im2col": DEFAULT_STRIDE_I2C_LARGE_TENSOR,
+                                "dilate_im2col": DEFAULT_DILATE_LARGE_TENSOR,
+                                "pad_im2col": DEFAULT_PAD_LARGE_TENSOR,
+                                "data_lrn": DEFAULT_DATA_LRN_LARGE_TENSOR,
+                                "alpha_lrn": DEFAULT_ALPHA,
+                                "beta_lrn": DEFAULT_BETA_LRN,
+                                "nsize": DEFAULT_NSIZE,
+                                "data_layernorm": DEFAULT_DATA_NORM_LARGE_TENSOR,
+                                "axis_layernorm": DEFAULT_AXIS}
 
 # These are names of MXNet operator parameters that is of type NDArray.
 # We maintain this list to automatically recognize these parameters are to be
