@@ -140,14 +140,14 @@ inline int GetRnnParamSize(int num_layer,
       size *= 3;
       break;
   }
-  int size1 = (input_size + state_size + 2) * size;  // first layer size
-  int size2 = (state_size * direction + state_size + 2) * size;  // other layers size
+  index_t size1 = (input_size + state_size + 2) * size;  // first layer size
+  index_t size2 = (state_size * direction + state_size + 2) * size;  // other layers size
   if (projection_size.has_value()) {
-    int proj_size = projection_size.value();
+    index_t proj_size = projection_size.value();
     size1 = (input_size + proj_size + 2) * size;
     size2 = (proj_size * direction + proj_size + 2) * size;
   }
-  int param_size = size1 + (num_layer - 1) * size2;
+  index_t param_size = size1 + (num_layer - 1) * size2;
   if (projection_size.has_value()) {
     param_size += projection_size.value() * state_size * num_layer * direction;
   }
