@@ -455,6 +455,19 @@ def test_nn():
         assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps,
                             forward_check_eps)
 
+    def check_col2im():
+        data = nd.random_normal(shape=(1, 2**30, 4))
+        output_size = (2, 2, 1)
+        kernel = (1, 1, 1)
+
+        res = nd.col2im(data=data, output_size=output_size, kernel=kernel)
+
+        assert res.shape[0] == 1
+        assert res.shape[1] == 1073741824
+        assert res.shape[2] == 2
+        assert res.shape[3] == 2
+        assert res.shape[4] == 1
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
@@ -474,6 +487,7 @@ def test_nn():
     check_linear_and_logistic_regression()
     check_l2_normalization()
     check_instance_norm()
+    check_col2im()
 
 
 def test_tensor():

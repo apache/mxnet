@@ -87,6 +87,19 @@ def _add_workload_any():
         OpArgMngr.add_workload('any', d)
 
 
+def _add_workload_sometrue():
+    # check bad element in all positions
+    for i in range(256-7):
+        d = np.array([False] * 256, dtype=bool)[7::]
+        d[i] = True
+        OpArgMngr.add_workload('sometrue', d)
+    # big array test for blocked libc loops
+    for i in list(range(9, 6000, 507)) + [7764, 90021, -10]:
+        d = np.array([False] * 100043, dtype=bool)
+        d[i] = True
+        OpArgMngr.add_workload('sometrue', d)
+
+
 def _add_workload_unravel_index():
     OpArgMngr.add_workload('unravel_index', indices=np.array([2],dtype=_np.int64), shape=(2, 2))
     OpArgMngr.add_workload('unravel_index', np.array([(2*3 + 1)*6 + 4], dtype=_np.int64), (4, 3, 6))
@@ -819,6 +832,10 @@ def _add_workload_round():
     OpArgMngr.add_workload('round', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
 
 
+def _add_workload_round_():
+    OpArgMngr.add_workload('round_', np.array([1.56, 72.54, 6.35, 3.25]), decimals=1)
+
+
 def _add_workload_argsort():
     for dtype in [np.int32, np.float32]:
         a = np.arange(101, dtype=dtype)
@@ -1222,6 +1239,12 @@ def _add_workload_abs():
     OpArgMngr.add_workload('abs', np.random.uniform(size=(11,)).astype(np.float32))
     OpArgMngr.add_workload('abs', np.random.uniform(size=(5,)).astype(np.float64))
     OpArgMngr.add_workload('abs', np.array([np.inf, -np.inf, np.nan]))
+
+
+def _add_workload_fabs():
+    OpArgMngr.add_workload('fabs', np.random.uniform(size=(11,)).astype(np.float32))
+    OpArgMngr.add_workload('fabs', np.random.uniform(size=(5,)).astype(np.float64))
+    OpArgMngr.add_workload('fabs', np.array([np.inf, -np.inf, np.nan]))
 
 
 def _add_workload_add(array_pool):
@@ -2691,10 +2714,12 @@ def _prepare_workloads():
 
     _add_workload_all()
     _add_workload_any()
+    _add_workload_sometrue()
     _add_workload_argmin()
     _add_workload_argmax()
     _add_workload_around()
     _add_workload_round()
+    _add_workload_round_()
     _add_workload_argsort()
     _add_workload_sort()
     _add_workload_append()
@@ -2775,6 +2800,7 @@ def _prepare_workloads():
     _add_workload_meshgrid()
     _add_workload_einsum()
     _add_workload_abs()
+    _add_workload_fabs()
     _add_workload_add(array_pool)
     _add_workload_arctan2()
     _add_workload_copysign()
