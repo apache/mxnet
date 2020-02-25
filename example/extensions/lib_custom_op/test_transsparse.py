@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,16 +17,30 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: gemm_lib relu_lib transsparse_lib
+# coding: utf-8
+# pylint: disable=arguments-differ
 
-gemm_lib:
-	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
+# This test checks dynamic loading of custom library into MXNet
+# and checks end to end compute of a simple 2D gemm custom op
 
-relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
+import mxnet as mx
+import os
 
-transsparse_lib:
-	g++ -shared -fPIC -std=c++11 transsparse_lib.cc -o libtranssparse_lib.so -I ../../../include/mxnet
+#load library
+if (os.name=='posix'):
+    path = os.path.abspath('libtranssparse_lib.so')
+    mx.library.load(path)
+elif (os.name=='nt'):
+    path = os.path.abspath('libtranssparse_lib.dll')
+    mx.library.load(path)
 
-clean:
-	rm -rf libgemm_lib.so librelu_lib.so libtranssparse_lib.so
+a = mx.nd.array([[1,3,0,2,1],[0,1,0,0,0],[0,2,4,5,3]])
+a = a.tostype('csr')
+print(type(a))
+print(a.data.asnumpy())
+print(a.indices.asnumpy())
+print(a.indptr.asnumpy())
+
+# To do: Fix segment fault.
+b = mx.nd.my_transsparse(a)
+print("B Type:", type(b))
