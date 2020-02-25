@@ -2227,6 +2227,8 @@ def empty(shape, dtype=float, order='C', ctx=None):  # pylint: disable=redefined
         Note that this behavior is different from NumPy's `empty` function where `float64`
         is the default value, here you can set your default dtype as 'float32' or 'float64'
         because `float32` is considered as the default data type in deep learning.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     order : {'C'}, optional, default: 'C'
         How to store multi-dimensional data in memory, currently only row-major
         (C-style) is supported.
@@ -2273,7 +2275,9 @@ def array(object, dtype=None, ctx=None):
         An array, any object exposing the array interface, an object whose
         __array__ method returns an array, or any (nested) sequence.
     dtype : data-type, optional
-        The desired data-type for the array. Default is depends on your current default dtype.
+        The desired data-type for the array.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -2367,7 +2371,9 @@ def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type (default is `float32` or 'float64', which depends on your current default dtype).
+        An optional value type,
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that this behavior is different from NumPy's `zeros` function where `float64`
         is the default value, here we can set 'float32' or 'float64' as your default dtype,
         because `float32` is considered as the default data type in deep learning.
@@ -2409,6 +2415,8 @@ def ones(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-o
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
         An optional value type. Default is depend on your current default dtype.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that this behavior is different from NumPy's `ones` function where
         `float64` is the default value.
     order : {'C'}, optional, default: 'C'
@@ -2710,7 +2718,8 @@ def identity(n, dtype=None, ctx=None):
         Number of rows (and columns) in `n` x `n` output.
     dtype : data-type, optional
         Data-type of the output.
-        Default dtype is 'float32' or 'float64', which depends on your current default dtype.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -3083,6 +3092,8 @@ def divide(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is of float32 or
           float64 type, which depends on your current default dtype.
+          When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+          When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Examples
     --------
@@ -3126,6 +3137,8 @@ def true_divide(x1, x2, out=None):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is of float32 or
           float64 type, which depends on your current default dtype.
+          When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+          When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Examples
     --------
@@ -5201,6 +5214,8 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
         and a negative value to a lower diagonal.
     dtype : data-type, optional
         Data-type of the returned array.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Returns
     -------
@@ -6796,8 +6811,10 @@ def average(a, axis=None, weights=None, returned=False, out=None):
         Return the average along the specified axis.
         When returned is True, return a tuple with the average as the first element
         and the sum of the weights as the second element. sum_of_weights is of the same type as retval.
-        If a is integral, the result dtype will be float32 or float64, which depends on your current
-        default dtype, otherwise it will be the same as dtype of a.
+        If a is integral, the result dtype will be current default dtype,
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64;
+        otherwise it will be the same as dtype of a.
 
     Raises
     --------
@@ -6862,8 +6879,10 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
         instead of a single axis or all the axes as before.
     dtype : data-type, optional
         Type to use in computing the mean.
-        For integer inputs, the default is float32 or float64, which depends on your current default dtype ;
-        for floating point inputs, it is the same as the input dtype.
+        For integer inputs, the default is of your current default dtype,
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64;
+        For floating point inputs, it is the same as the input dtype.
     out : ndarray, optional
         Alternate output array in which to place the result. The default is None; if provided,
         it must have the same shape and type as the expected output.
@@ -7045,9 +7064,11 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
         If this is a tuple of ints, a variance is performed over multiple axes,
         instead of a single axis or all the axes as before.
     dtype : data-type, optional
-        Type to use in computing the variance. For arrays of integer type
-        the default is `float32` or 'float64', which depends on your current
-        default dtype; for arrays of float types it is the same as the array type.
+        Type to use in computing the variance.
+        For arrays of integer type, the default is of your current default dtype,
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        For arrays of float types it is the same as the array type.
     out : ndarray, optional
         Alternate output array in which to place the result.  It must have
         the same shape as the expected output, but the type is cast if
@@ -7108,7 +7129,7 @@ def indices(dimensions, dtype=None, ctx=None):
     dimensions : sequence of ints
         The shape of the grid.
     dtype : data-type, optional
-        The desired data-type for the array. Default is `int32`.
+        The desired data-type for the array. Default is `int64`.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -7138,10 +7159,10 @@ def indices(dimensions, dtype=None, ctx=None):
     (2, 2, 3)
     >>> grid[0]        # row indices
     array([[0, 0, 0],
-           [1, 1, 1]], dtype=int32)
+           [1, 1, 1]], dtype=int64)
     >>> grid[1]        # column indices
     array([[0, 0, 0],
-           [1, 1, 1]], dtype=int32)
+           [1, 1, 1]], dtype=int64)
 
     The indices can be used as an index into an array.
 
@@ -7386,7 +7407,8 @@ def hanning(M, ctx=None):
     out : ndarray, shape(M,)
         The window, with the maximum value normalized to one (the value
         one appears only if `M` is odd).
-        Default is 'float32' or 'float64', which depends on your current default dtype.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that you need select numpy.float32 or float64 in this operator.
 
     See Also
@@ -7466,7 +7488,8 @@ def hamming(M, ctx=None):
     out : ndarray, shape(M,)
         The window, with the maximum value normalized to one (the value
         one appears only if `M` is odd).
-        Default is 'float32' or 'float64', which depends on your current default dtype.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that you need select numpy.float32 or float64 in this operator.
 
     See Also
@@ -7547,7 +7570,8 @@ def blackman(M, ctx=None):
     out : ndarray
         The window, with the maximum value normalized to one (the value one
         appears only if the number of samples is odd).
-        Default is 'float32' or 'float64', which depends on your current default dtype.
+        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that you need select numpy.float32 or float64 in this operator.
 
     See Also

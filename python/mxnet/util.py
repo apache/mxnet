@@ -761,7 +761,7 @@ def _set_np_array(active):
     return cur_state
 
 
-def set_np(shape=True, array=True):
+def set_np(shape=True, array=True, dtype=True):
     """Setting NumPy shape and array semantics at the same time.
     It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
@@ -779,7 +779,10 @@ def set_np(shape=True, array=True):
         When this flag is set to `True`, it enables Gluon code flow to use or generate `mxnet.numpy.ndarray`s
         instead of `mxnet.ndarray.NDArray`. For example, a `Block` would create parameters of type
         `mxnet.numpy.ndarray`.
-
+    dtype : bool
+        A boolean value indicating whether the NumPy-dtype semantics should be turned on or off.
+        When this flag is set to `True`, default dtype is float64.
+        When this flag is set to `False`, default dtype is float32.
     Examples
     --------
     >>> import mxnet as mx
@@ -820,6 +823,8 @@ def set_np(shape=True, array=True):
     array(1.)
     >>> np.ones(shape=(2, 0, 3))
     array([], shape=(2, 0, 3))
+    >>> np.ones(shape=()).dtype
+    dtype('float64')
 
     When the `array` flag is `True`, Gluon layers would create parameters and outputs of type `mx.np.ndarray`.
 
@@ -838,11 +843,12 @@ def set_np(shape=True, array=True):
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
     _set_np_array(array)
     set_np_shape(shape)
+    set_np_default_dtype(dtype)
 
 
 def reset_np():
-    """Deactivate NumPy shape and array semantics at the same time."""
-    set_np(shape=False, array=False)
+    """Deactivate NumPy shape and array and deafult dtype semantics at the same time."""
+    set_np(shape=False, array=False, dtype=False)
 
 
 _CUDA_SUCCESS = 0
@@ -936,8 +942,7 @@ class _NumpyDefaultDtypeScope(object):
 
 def np_default_dtype(active=True):
     """Returns an activated/deactivated NumPy-default_dtype scope to be used in 'with' statement
-    and captures code that needs the NumPy default dtype semantics, i.e. default dtype is float64
-    or int64.
+    and captures code that needs the NumPy default dtype semantics. i.e. default dtype is float64.
 
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
@@ -957,27 +962,22 @@ def np_default_dtype(active=True):
     Example::
 
         with mx.np_default_Dtype(active=True):
-            # Default Dtype is 'float64' (or 'int64'), consistent with offical NumPy behavior.
+            # Default Dtype is 'float64', consistent with offical NumPy behavior.
             arr = mx.nd.array([1, 2, 3])
             assert arr.dtype == float64
 
-            grid = mx.nd.indices((2, 3))
-            assert grid.dtype == int64
-
         with mx.np_default_dtype(active=False):
-            # Default Dtype is 'float32' (or 'int32') in the legacy default dtype definition.
+            # Default Dtype is 'float32' in the legacy default dtype definition.
             arr = mx.nd.array([1, 2, 3])
             assert arr.dtype == float32
 
-            grid = mx.nd.indices((2, 3))
-            assert grid.dtype == int32
     """
     return _NumpyDefaultDtypeScope(active)
 
 def use_np_default_dtype(func):
     """A decorator wrapping a function or class with activated NumPy-default_dtype semantics.
     When `func` is a function, this ensures that the execution of the function is scoped with NumPy
-    default dtype semantics, with the support for 64 bit data storage, i.e. 'float64' and ''int64.
+    default dtype semantics, with the support for float64 as default dtype.
     When`func` is a class, it ensures that all the methods, static functions, and properties
     of the class are executed with the NumPy-default_dtype semantics.
 
@@ -1048,7 +1048,7 @@ def use_np_default_dtype(func):
 
 def is_np_default_dtype():
     """Checks whether the NumPy default dtype semantics is currently turned on.
-    In NumPy default dtype semantics, i.e. default dtype is float64 or int64.
+    In NumPy default dtype semantics, default dtype is float64.
 
     Please note that this is designed as an infrastructure for the incoming
     MXNet-NumPy operators. Legacy operators registered in the modules
@@ -1062,10 +1062,11 @@ def is_np_default_dtype():
     Example
     -------
     >>> import mxnet as mx
-    >>> prev_state = mx.set_np_default_dtype(True)
+    >>> from mxnet import npx
+    >>> prev_state = npx.set_np_default_dtype(True)
     >>> print(prev_state)
     False
-    >>> print(mx.is_np_default_dtype())
+    >>> print(npx.is_np_default_dtype())
     True
     """
     curr = ctypes.c_bool()
@@ -1095,10 +1096,11 @@ def set_np_default_dtype(is_np_default_dtype=True):  # pylint: disable=redefined
     Example
     -------
     >>> import mxnet as mx
-    >>> prev_state = mx.set_np_default_dtype(True)
+    >>> from mxnet import npx
+    >>> prev_state = npx.set_np_default_dtype(True)
     >>> print(prev_state)
     False
-    >>> print(mx.is_np_shape())
+    >>> print(npx.is_np_default_dtype())
     True
     """
     global _set_np_default_dtype_logged
