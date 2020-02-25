@@ -26,7 +26,11 @@
 #include <dmlc/omp.h>
 #include <mxnet/io.h>
 #include <mshadow/tensor.h>
+#include <mshadow/extension.h>
+#include <mshadow/extension/slice.h>
 #include "./inst_vector.h"
+
+#include <stack>
 
 namespace mxnet {
 namespace io {
@@ -56,7 +60,7 @@ class GroupBatchify : public BatchifyFunction {
       auto bs = inputs.size();
       CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
       auto out_size = inputs[0].size();
-      CHECK_EQ(out_size, fs_.size()) << "In Sequential BatchifyFunction, Elem size "
+      CHECK_EQ(out_size, fs_.size()) << "In GroupBatchifyFunction, Elem size "
         << out_size << " and batchify function size " << fs_.size() << " must match";
       std::vector<TBlob> ret;
       ret.reserve(out_size);
@@ -230,16 +234,63 @@ class PadBatchify : public BatchifyFunction {
           ret[i] = TBlob(container->dptr_, sshape, cpu::kDevMask, dtype, 0);
           MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
             // fill pad value first
-            auto tc = (mshadow::TensorContainer<mshadow::cpu, 1, DType>*)(container);
-            (*tc) = static_cast<DType>(param_.pad_val);
+            std::fill(ret[i].dptr<DType>(), ret[i].dptr<DType>() + sshape.Size(), 
+                      static_cast<DType>(param_.pad_val));
             DType *ptr = ret[i].dptr<DType>();
             auto asize = ashape.Size();
             // _Pragma("omp parallel for num_threads(bs)")
             for (size_t j = 0; j < bs; ++j) {
+              using namespace mshadow::expr;
+              auto compact_shapes = CompactShapes(ashape, inputs[j][i].shape());
               inputs[j][i].WaitToRead();
-              mshadow::Copy(
-                TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0).FlatTo2D<cpu, DType>(),
-                inputs[j][i].data().FlatTo2D<cpu, DType>());
+              auto& fshape = compact_shapes.first;
+              auto& cshape = compact_shapes.second;
+              switch (fshape.size()) {
+                case 1U: {
+                  mshadow::Tensor<cpu, 1, DType> dst = TBlob(ptr + asize * j, ashape, cpu::kDevMask, dtype, 0).get_with_shape<cpu, 1, DType>(
+                    mshadow::Shape1(fshape[0]));
+                  mshadow::Tensor<cpu, 1, DType> src = inputs[j][i].data().get_with_shape<cpu, 1, DType>(
+                    mshadow::Shape1(cshape[0]));
+                  slice<0>(dst, 0, cshape[0]) = src;
+                  break;
+                }
+                case 2U: {
+                  mshadow::Tensor<cpu, 2, DType> dst = TBlob(ptr + asize * j, ashape, cpu::kDevMask, dtype, 0).get_with_shape<cpu, 2, DType>(
+                    mshadow::Shape2(fshape[0], fshape[1]));
+                  mshadow::Tensor<cpu, 2, DType> src = inputs[j][i].data().get_with_shape<cpu, 2, DType>(
+                    mshadow::Shape2(cshape[0], cshape[1]));
+                  slice<1>(slice<0>(dst, 0, cshape[0]), 0, cshape[1]) = src;
+                  break;
+                }
+                case 3U: {
+                  mshadow::Tensor<cpu, 3, DType> dst = TBlob(ptr + asize * j, ashape, cpu::kDevMask, dtype, 0).get_with_shape<cpu, 3, DType>(
+                    mshadow::Shape3(fshape[0], fshape[1], fshape[2]));
+                  mshadow::Tensor<cpu, 3, DType> src = inputs[j][i].data().get_with_shape<cpu, 3, DType>(
+                    mshadow::Shape3(cshape[0], cshape[1], cshape[2]));
+                  slice<2>(slice<1>(slice<0>(dst, 0, cshape[0]), 0, cshape[1]), 0, cshape[2]) = src;
+                  break;
+                }
+                case 4U: {
+                  mshadow::Tensor<cpu, 4, DType> dst = TBlob(ptr + asize * j, ashape, cpu::kDevMask, dtype, 0).get_with_shape<cpu, 4, DType>(
+                    mshadow::Shape4(fshape[0], fshape[1], fshape[2], fshape[3]));
+                  mshadow::Tensor<cpu, 4, DType> src = inputs[j][i].data().get_with_shape<cpu, 4, DType>(
+                    mshadow::Shape4(cshape[0], cshape[1], cshape[2], cshape[3]));
+                  slice<3>(slice<2>(slice<1>(slice<0>(dst, 0, cshape[0]), 0, cshape[1]), 0, cshape[2]), 0, cshape[3]) = src;
+                  break;
+                }
+                case 5U: {
+                  mshadow::Tensor<cpu, 5, DType> dst = TBlob(ptr + asize * j, ashape, cpu::kDevMask, dtype, 0).get_with_shape<cpu, 5, DType>(
+                    mshadow::Shape5(fshape[0], fshape[1], fshape[2], fshape[3], fshape[4]));
+                  mshadow::Tensor<cpu, 5, DType> src = inputs[j][i].data().get_with_shape<cpu, 5, DType>(
+                    mshadow::Shape5(cshape[0], cshape[1], cshape[2], cshape[3], cshape[4]));
+                  slice<4>(slice<3>(slice<2>(slice<1>(slice<0>(
+                    dst, 0, cshape[0]), 0, cshape[1]), 0, cshape[2]), 0, cshape[3]), 0, cshape[4]) = src;
+                  break;
+                }
+                default: {
+                  LOG(FATAL) << "# dim to pad: " << cshape.size() << " exceeds limit of 5.";
+                }
+              }
             }
           })
       }
@@ -250,6 +301,43 @@ class PadBatchify : public BatchifyFunction {
     PadBatchifyParam param_;
     /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
     dmlc::OMPException omp_exc_;
+
+    std::pair<std::vector<dim_t>, std::vector<dim_t>> CompactShapes(const TShape& ashape, const TShape& ishape) {
+      // squeeze dimensions that do not need pad
+      std::stack<dim_t> dim_stack;
+      std::vector<dim_t> full_shape;
+      std::vector<dim_t> data_shape;
+      for (dim_t k = 0; k < ishape.ndim(); ++k) {
+        if (ishape[k] == ashape[k]) {
+          dim_stack.push(ishape[k]);
+        } else {
+          dim_t ss = 1;
+          while (!dim_stack.empty()) {
+            ss *= dim_stack.top();
+            dim_stack.pop();
+          }
+          if (ss > 1) {
+            full_shape.emplace_back(ss);
+            data_shape.emplace_back(ss);
+          }
+          full_shape.emplace_back(ashape[k]);
+          data_shape.emplace_back(ishape[k]);
+        }
+      }
+      // clear the stack
+      index_t ss = 1;
+      while (!dim_stack.empty()) {
+        ss *= dim_stack.top();
+        dim_stack.pop();
+      }
+      if (ss > 1 || full_shape.empty()) {
+        full_shape.emplace_back(ss);
+        data_shape.emplace_back(ss);
+      }
+      CHECK_EQ(full_shape.size(), data_shape.size());
+      CHECK_GE(data_shape.size(), 1U);
+      return std::make_pair(full_shape, data_shape);
+    }
 };  // class PadBatchify
 
 MXNET_REGISTER_IO_BATCHIFY_FUNCTION(PadBatchify)

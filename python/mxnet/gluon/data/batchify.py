@@ -101,12 +101,11 @@ class Stack(object):
         from ._internal import StackBatchify
         return StackBatchify()
 
-def _pad_arrs_to_max_length(arrs, pad_axis, pad_val, use_shared_mem, dtype):
+def _pad_arrs_to_max_length(arrs, pad_val, use_shared_mem, dtype):
     """Inner Implementation of the Pad batchify
     Parameters
     ----------
     arrs : list
-    pad_axis : int
     pad_val : number
     use_shared_mem : bool, default False
     Returns
@@ -123,24 +122,28 @@ def _pad_arrs_to_max_length(arrs, pad_axis, pad_val, use_shared_mem, dtype):
     else:
         dtype = arrs[0].dtype if dtype is None else dtype
 
-    original_length = [ele.shape[pad_axis] for ele in arrs]
-    max_size = max(original_length)
-
     ret_shape = list(arrs[0].shape)
-    ret_shape[pad_axis] = max_size
+    original_length = []
+    for pad_axis in range(len(ret_shape)):
+        curr_lengths = [ele.shape[pad_axis] for ele in arrs]
+        original_length.append(curr_lengths)
+        max_size = max(curr_lengths)
+        ret_shape[pad_axis] = max_size
     ret_shape = (len(arrs), ) + tuple(ret_shape)
 
     ret = np.full(shape=ret_shape, fill_value=pad_val, dtype=dtype)
 
     for i, arr in enumerate(arrs):
-        if arr.shape[pad_axis] == max_size:
+        if arr.shape == ret_shape[1:]:
             ret[i] = arr
         else:
             slices = [slice(None) for _ in range(arr.ndim)]
-            slices[pad_axis] = slice(0, arr.shape[pad_axis])
-            if slices[pad_axis].start != slices[pad_axis].stop:
-                slices = [slice(i, i + 1)] + slices
-                ret[tuple(slices)] = arr
+            for pad_axis in range(arr.ndim):
+                slices[pad_axis] = slice(0, arr.shape[pad_axis])
+                assert slices[pad_axis].start != slices[pad_axis].stop
+            slices = [slice(i, i + 1)] + slices
+            ret[tuple(slices)] = arr
+
 
     ctx = Context('cpu_shared', 0) if use_shared_mem else cpu()
     ret = _arr.array(ret, ctx=ctx, dtype=dtype)
@@ -153,18 +156,13 @@ class Pad(object):
     """Pad the input ndarrays along the specific padding axis and stack them to get the output.
     Input of the function will be N samples. Each sample should contain a single element that
     can be 1) numpy.ndarray, 2) mxnet.nd.NDArray, 3) list of numbers.
-    You can set the `axis` and `pad_val` to determine the padding axis and
-    value.
-    The arrays will be padded to the largest dimension at `axis` and then
+    You can set the `pad_val` to determine the padding value.
+
+    The arrays will be padded to the largest dimensions(at most 5 dimensions to pad) and then
     stacked to form the final output. In addition, the function will output the original dimensions
     at the `axis` if ret_length is turned on.
     Parameters
     ----------
-    axis : int or tuple, default 0
-        The axis to pad the arrays. The arrays will be padded to the largest dimension at
-        pad_axis. For example, assume the input arrays have shape
-        (10, 8, 5), (6, 8, 5), (3, 8, 5) and the pad_axis is 0. Each input will be padded into
-        (10, 8, 5) and then stacked to form the final output.
     pad_val : float or int, default None
         The padding value.
     ret_length : bool, default False
@@ -199,7 +197,7 @@ class Pad(object):
     >>> import numpy as np
     >>> a = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     >>> b = np.array([[5, 8], [1, 2]])
-    >>> batchify.Pad(axis=1, pad_val=-1)([a, b])
+    >>> batchify.Pad(pad_val=-1)([a, b])
     [[[ 1  2  3  4]
       [ 5  6  7  8]]
      [[ 5  8 -1 -1]
@@ -209,18 +207,14 @@ class Pad(object):
     >>> import mxnet as mx
     >>> a = nd.array([[1, 2, 3, 4], [5, 6, 7, 8]])
     >>> b = nd.array([[5, 8], [1, 2]])
-    >>> batchify.Pad(axis=1, pad_val=-1)([a, b])
+    >>> batchify.Pad(pad_val=-1)([a, b])
     [[[ 1.  2.  3.  4.]
       [ 5.  6.  7.  8.]]
      [[ 5.  8. -1. -1.]
       [ 1.  2. -1. -1.]]]
     <NDArray 2x2x4 @cpu(0)>
     """
-    def __init__(self, axis=0, pad_val=None, ret_length=False, dtype=None, use_shared_mem=False):
-        self._axis = axis
-        assert isinstance(axis, int), 'axis must be an integer! ' \
-                                      'Received axis=%s, type=%s.' % (str(axis),
-                                                                      str(type(axis)))
+    def __init__(self, pad_val=None, ret_length=False, dtype=None, use_shared_mem=False):
         self._pad_val = 0 if pad_val is None else pad_val
         self._ret_length = ret_length
         self._dtype = dtype
@@ -263,8 +257,8 @@ class Pad(object):
                 'and before converting to an NDArray. '
                 'Alternatively you can consider inputting a numpy.ndarray.')
         if isinstance(data[0], (_arr.NDArray, np.ndarray, list)):
-            padded_arr, original_length = _pad_arrs_to_max_length(data, self._axis,
-                                                                  self._pad_val, self._use_shared_mem,
+            padded_arr, original_length = _pad_arrs_to_max_length(data, self._pad_val,
+                                                                  self._use_shared_mem,
                                                                   self._dtype)
             if self._ret_length:
                 return padded_arr, original_length
@@ -369,6 +363,7 @@ class Group(object):
     <NDArray 2 @cpu_shared(0)>
     """
     def __init__(self, fn, *args):
+        self._handle = None
         if isinstance(fn, (list, tuple)):
             assert len(args) == 0, 'Input pattern not understood. The input of Group can be ' \
                                    'Group(A, B, C) or Group([A, B, C]) or Group((A, B, C)). ' \
@@ -399,6 +394,17 @@ class Group(object):
             ret.append(ele_fn([ele[i] for ele in data]))
         return tuple(ret)
 
+    def __mx_handle__(self):
+        if self._handle  is None:
+            from ._internal import GroupBatchify
+            try:
+                mx_fn = [fn.__mx_handle__() for fn in self._fn]
+                self._handle = GroupBatchify(functions=mx_fn)
+            except Exception as e:
+                raise NotImplementedError(
+                    "GroupBatchify requires all internal batchify functions supported by backend."
+                    + str(e))
+        return self._handle
 
 class AsList(object):
     """Simply forward the list of input data.

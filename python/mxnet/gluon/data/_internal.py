@@ -147,15 +147,15 @@ class MXBatchifyFunction(object):
         other.handle = None
 
 
-    def __call__(self, data):
+    def __call__(self, data, num_out=1):
         if isinstance(data[0], NDArray):
             create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
-            num_output = ctypes.c_int(1)
+            num_output = ctypes.c_int(num_out)
             input_arrs = (NDArrayHandle * len(data))()
             for i, d in enumerate(data):
                 input_arrs[i] = d.handle
             input_vars = ctypes.cast(input_arrs, ctypes.POINTER(NDArrayHandle))
-            batch_size = ctypes.c_int(len(data))
+            batch_size = ctypes.c_int(len(data) // num_output.value)
             output_vars = ctypes.POINTER(NDArrayHandle)()
             check_call(_LIB.MXBatchifyFunctionInvoke(self.handle,
                                                      batch_size,
@@ -167,12 +167,11 @@ class MXBatchifyFunction(object):
             if len(out) == 1:
                 out = out[0]
             return out
-        elif isinstance(data[0], tuple):
-            data = zip(*data)
-            return [self.__call__(i) for i in data]
+        elif isinstance(data[0], (list, tuple)):
+            return self.__call__([j for sub in data for j in sub], num_out=len(data[0]))
         else:
             data = [default_array(i) for i in data]
-            return self.__call__(data)
+            return self.__call__(data, num_out=num_out)
 
 def _make_internal_datasets(handle):
     """Create an io iterator by handle."""

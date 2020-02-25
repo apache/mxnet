@@ -512,6 +512,50 @@ def test_mx_data_loader_nopython():
     for _ in dl1:
         pass
 
+def test_batchify_stack():
+    a = np.array([[1, 2, 3, 4], [5, 6, 7, 8]])
+    b = np.array([[5, 6, 7, 8], [1, 2, 3, 4]])
+    bf = mx.gluon.data.batchify.Stack()
+    bf_handle = bf.__mx_handle__()
+    c = bf([a, b])
+    d = bf_handle([a, b])
+    assert c.shape == d.shape
+    assert mx.test_utils.almost_equal(c.asnumpy(), d.asnumpy())
+    assert mx.test_utils.almost_equal(c.asnumpy(), np.stack((a, b)))
+
+def test_batchify_pad():
+    a = np.array([[1, 2, 3, 4], [11, 12, 13, 14]])
+    b = np.array([[4, 5, 6]])
+    c = np.array([[9, 10]])
+    bf = mx.gluon.data.batchify.Pad(pad_val=-1)
+    bf_handle = bf.__mx_handle__()
+    d = bf([a, b, c])
+    e = bf_handle([a, b, c])
+    assert d.shape == e.shape
+    assert mx.test_utils.almost_equal(d.asnumpy(), e.asnumpy())
+    expected = np.array([[[ 1.,  2.,  3.,  4.], [11., 12., 13., 14.]],
+                         [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
+                         [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
+    assert mx.test_utils.almost_equal(d.asnumpy(), expected)
+
+def test_batchify_group():
+    a = [np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), np.array([[1, 2, 3, 4], [11, 12, 13, 14]])]
+    b = [np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), np.array([[4, 5, 6]])]
+    c = [np.array([[1, 2, 3, 4], [5, 6, 7, 8]]), np.array([[9, 10]])]
+    bf = mx.gluon.data.batchify.Group(mx.gluon.data.batchify.Stack(), mx.gluon.data.batchify.Pad(pad_val=-1))
+    bf_handle = bf.__mx_handle__()
+    d = bf([a, b, c])
+    e = bf_handle([a, b, c])
+    assert d[0].shape == e[0].shape
+    assert d[1].shape == e[1].shape
+    assert mx.test_utils.almost_equal(d[0].asnumpy(), e[0].asnumpy())
+    assert mx.test_utils.almost_equal(d[1].asnumpy(), e[1].asnumpy())
+    assert mx.test_utils.almost_equal(d[0].asnumpy(), np.stack((a[0], b[0], c[0])))
+    expected = np.array([[[ 1.,  2.,  3.,  4.], [11., 12., 13., 14.]],
+                         [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
+                         [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
+    assert mx.test_utils.almost_equal(d[1].asnumpy(), expected)
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
