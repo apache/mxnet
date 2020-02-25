@@ -927,22 +927,6 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyShape
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyShape
   (JNIEnv *, jobject, jint, jobject);
 
-/*
- * Class:     org_apache_mxnet_LibInfo
- * Method:    mxIsNumpyDefaultDtype
- * Signature: (Lorg/apache/mxnet/Base/RefInt;)I
- */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxIsNumpyDefaultDtype
-  (JNIEnv *, jobject, jobject);
-
-/*
- * Class:     org_apache_mxnet_LibInfo
- * Method:    mxSetIsNumpyDefaultDtype
- * Signature: (ILorg/apache/mxnet/Base/RefInt;)I
- */
-JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSetIsNumpyDefaultDtype
-  (JNIEnv *, jobject, jint, jobject);
-
 #ifdef __cplusplus
 }
 #endif
