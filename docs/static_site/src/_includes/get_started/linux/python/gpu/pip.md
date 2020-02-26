@@ -63,7 +63,7 @@ $ pip install mxnet-cu80==0.11.0
 <div class="master">
 
 {% highlight bash %}
-$ pip install mxnet-cu101 --pre
+$ pip install --pre mxnet-cu102 -f https://dist.mxnet.io/python/all
 {% endhighlight %}
 
 </div> <!-- End of master-->
