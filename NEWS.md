@@ -39,7 +39,7 @@ MXNet Change Log
       - [Gluon](#gluon)
       - [Symbol](#symbol)
     + [Language Bindings](#language-bindings)
-      - [Pyhton](#python)
+      - [Python](#python)
       - [C/C++](#cc)
       - [Clojure](#clojure)
       - [Julia](#julia)
