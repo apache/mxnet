@@ -468,6 +468,7 @@ def test_nn():
         assert res.shape[2] == 2
         assert res.shape[3] == 2
         assert res.shape[4] == 1
+        
     def check_embedding():
         data = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
         weight = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
@@ -479,6 +480,21 @@ def test_nn():
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
         assert out.shape[2] == 1
+        
+    def check_spatial_transformer():
+        data = nd.random_normal(shape=(2, 2**29, 1, 6))
+        loc = nd.random_normal(shape=(2, 6))
+        transform_type = 'affine'
+        sampler_type = 'bilinear'
+        target_shape = (2, 6)
+
+        res = nd.SpatialTransformer(data=data, loc=loc, transform_type=transform_type,
+                                    sampler_type=sampler_type, target_shape=target_shape)
+
+        assert res.shape[0] == 2
+        assert res.shape[1] == 536870912
+        assert res.shape[2] == 2
+        assert res.shape[3] == 6
 
     check_gluon_embedding()
     check_fully_connected()
@@ -501,6 +517,7 @@ def test_nn():
     check_instance_norm()
     check_col2im()
     check_embedding()
+    check_spatial_transformer()
 
 
 def test_tensor():
