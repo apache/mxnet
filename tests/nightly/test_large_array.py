@@ -510,6 +510,7 @@ def test_nn():
         res = nd.cumsum(a=a)
 
         assert res.shape[0] == LARGE_TENSOR_SHAPE + 1
+        assert type(res[0].asscalar()).__name__ == 'float32'
 
     check_gluon_embedding()
     check_fully_connected()
