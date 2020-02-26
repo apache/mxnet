@@ -6301,6 +6301,36 @@ def test_np_around():
 
 @with_seed()
 @use_np
+def test_np_flatnonzero():
+    class TestFlatnonzero(HybridBlock):
+        def __init__(self):
+            super(TestFlatnonzero, self).__init__()
+
+        def hybrid_forward(self, F, a):
+            return F.np.flatnonzero(a)
+
+    shapes = [(1,), (4, 3), (4, 5), (2, 1), (6, 5, 6), (4, 2, 1, 2),
+              (5, 1, 3, 3), (3, 3, 1, 0),]
+    types = ['int32', 'int64', 'float32', 'float64']
+    hybridizes = [True, False]
+    for hybridize, oneType, shape in itertools.product(hybridizes, types, shapes):
+        rtol, atol = 1e-3, 1e-5
+        test_flatnonzero = TestFlatnonzero()
+        if hybridize:
+            test_flatnonzero.hybridize()
+        x = rand_ndarray(shape, dtype=oneType).as_np_ndarray()
+        np_out = _np.flatnonzero(x.asnumpy())
+        mx_out = test_flatnonzero(x)
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+        mx_out = np.flatnonzero(x)
+        np_out = _np.flatnonzero(x.asnumpy())
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+
+@with_seed()
+@use_np
 def test_np_round():
     class TestRound(HybridBlock):
         def __init__(self, func, decimals):

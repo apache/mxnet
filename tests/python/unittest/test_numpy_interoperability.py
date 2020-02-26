@@ -2222,8 +2222,10 @@ def _add_workload_extract():
     OpArgMngr.add_workload('extract', condition, arr)
 
 
-def _add_workload_flatnonzero():
+def _add_workload_flatnonzero(array_pool):
     x = np.array([-2, -1,  0,  1,  2])
+    OpArgMngr.add_workload('flatnonzero', array_pool['4x1'])
+    OpArgMngr.add_workload('flatnonzero', array_pool['1x2'])
     OpArgMngr.add_workload('flatnonzero', x)
 
 
@@ -2911,7 +2913,7 @@ def _prepare_workloads():
     _add_workload_digitize()
     _add_workload_divmod()
     _add_workload_extract()
-    _add_workload_flatnonzero()
+    _add_workload_flatnonzero(array_pool)
     _add_workload_float_power()
     _add_workload_frexp()
     _add_workload_histogram2d()
