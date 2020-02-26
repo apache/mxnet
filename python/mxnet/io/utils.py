@@ -19,8 +19,11 @@
 from collections import OrderedDict
 
 import numpy as np
+import warnings
 try:
-    import h5py
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        import h5py
 except ImportError:
     h5py = None
 
