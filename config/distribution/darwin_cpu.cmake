@@ -19,7 +19,7 @@ set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
 set(CFLAGS "-mno-avx" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-mno-avx" CACHE STRING "CXXFLAGS")
 
-set(BLAS "apple" CACHE STRING "BLAS Vendor")
+set(USE_BLAS "apple" CACHE STRING "BLAS Vendor")
 
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
