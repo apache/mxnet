@@ -37,19 +37,19 @@ except ImportError:
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
-           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
+           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum',
+           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
-           'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
+           'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
-           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
+           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'where', 'bincount', 'pad']
 
@@ -1255,6 +1255,9 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         else:
             ret = broadcast_to(fill_value, shape).astype(dtype)
         return ret
+    if isinstance(fill_value, bool):
+        fill_value = int(fill_value)
+        dtype = _np.bool if dtype is None else dtype
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
@@ -1299,6 +1302,8 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None):  # pyli
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
+    if isinstance(fill_value, bool):
+        fill_value = int(fill_value)
     return _npi.full_like(a, fill_value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
@@ -2404,6 +2409,32 @@ def cbrt(x, out=None, **kwargs):
 def abs(x, out=None, **kwargs):
     r"""
     Calculate the absolute value element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    absolute : _Symbol
+        An ndarray containing the absolute value of
+        each element in `x`. This is a scalar if `x` is a scalar.
+    """
+    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def fabs(x, out=None, **kwargs):
+    r"""
+    Calculate the absolute value element-wise.
+
+    This function returns the absolute values (positive magnitude) of the
+    data in `x`. Complex values are not handled, use `absolute` to find the
+    absolute values of complex data.
 
     Parameters
     ----------
@@ -5044,6 +5075,24 @@ def around(x, decimals=0, out=None, **kwargs):
 @set_module('mxnet.symbol.numpy')
 def round(x, decimals=0, out=None, **kwargs):
     r"""
+    round(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def round_(x, decimals=0, out=None, **kwargs):
+    r"""
     round_(a, decimals=0, out=None)
     Round an array to the given number of decimals.
 
@@ -6033,6 +6082,44 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
     if (prepend or append):
         raise NotImplementedError('prepend and append options are not supported yet')
     return _npi.diff(a, n=n, axis=axis)
+
+
+@set_module('mxnet.symbol.numpy')
+def ediff1d(ary, to_end=None, to_begin=None):
+    """
+    The differences between consecutive elements of an array.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        If necessary, will be flattened before the differences are taken.
+    to_end : _Symbol or scalar, optional
+        Number(s) to append at the end of the returned differences.
+    to_begin : _Symbol or scalar, optional
+        Number(s) to prepend at the beginning of the returned differences.
+
+    Returns
+    -------
+    ediff1d : _Symbol
+        The differences. Loosely, this is ``ary.flat[1:] - ary.flat[:-1]``.
+    """
+    input_type = (isinstance(to_begin, _Symbol), isinstance(to_end, _Symbol))
+    # case 1: when both `to_begin` and `to_end` are arrays
+    if input_type == (True, True):
+        return _npi.ediff1d(ary, to_begin, to_end, to_begin_arr_given=True, to_end_arr_given=True,
+                            to_begin_scalar=None, to_end_scalar=None)
+    # case 2: only `to_end` is array but `to_begin` is scalar/None
+    elif input_type == (False, True):
+        return _npi.ediff1d(ary, to_end, to_begin_arr_given=False, to_end_arr_given=True,
+                            to_begin_scalar=to_begin, to_end_scalar=None)
+    # case 3: only `to_begin` is array but `to_end` is scalar/None
+    elif input_type == (True, False):
+        return _npi.ediff1d(ary, to_begin, to_begin_arr_given=True, to_end_arr_given=False,
+                            to_begin_scalar=None, to_end_scalar=to_end)
+    # case 4: both `to_begin` and `to_end` are scalar/None
+    else:
+        return _npi.ediff1d(ary, to_begin_arr_given=False, to_end_arr_given=False,
+                            to_begin_scalar=to_begin, to_end_scalar=to_end)
 
 
 @set_module('mxnet.symbol.numpy')

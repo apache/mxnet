@@ -53,7 +53,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
-           'sqrt', 'cbrt', 'abs', 'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
+           'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
@@ -61,11 +61,11 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'minimum', 'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
-           'flip', 'flipud', 'fliplr', 'around', 'round', 'arctan2', 'hypot',
+           'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
            'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum', 'true_divide', 'nonzero',
-           'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'resize', 'matmul',
+           'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount', 'pad']
 
 __all__ += fallback.__all__
@@ -875,6 +875,54 @@ class ndarray(NDArray):
             raise ValueError('trying to add to a readonly ndarray')
         return add(self, other, out=self)
 
+    def __invert__(self):
+        """x.__invert__() <=> ~x"""
+        return invert(self)
+
+    def __and__(self, other):
+        """x.__and__(y) <=> x & y"""
+        return bitwise_and(self, other)
+
+    def __or__(self, other):
+        """x.__or__(y) <=> x | y"""
+        return bitwise_or(self, other)
+
+    def __xor__(self, other):
+        """x.__xor__(y) <=> x ^ y"""
+        return bitwise_xor(self, other)
+
+    def __iand__(self, other):
+        """x.__iand__(y) <=> x &= y"""
+        return bitwise_and(self, other, out=self)
+
+    def __ior__(self, other):
+        """x.__ior__(y) <=> x |= y"""
+        return bitwise_or(self, other, out=self)
+
+    def __ixor__(self, other):
+        """x.__ixor__(y) <=> x ^= y"""
+        return bitwise_xor(self, other, out=self)
+
+    def __round__(self, n=0):
+        """x.__round__(n)"""
+        return round(self, decimals=n)
+
+    def __abs__(self):
+        """x.__abs__()"""
+        return absolute(self)
+
+    def __ceil__(self):
+        """x.__ceil__()"""
+        return ceil(self)
+
+    def __floor__(self):
+        """x.__floor__()"""
+        return floor(self)
+
+    def __trunc__(self):
+        """x.__trunc__()"""
+        return trunc(self)
+
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         return subtract(self, other)
@@ -987,9 +1035,7 @@ class ndarray(NDArray):
 
     def __imatmul__(self, other):
         """x.__imatmul__(y) <=> x @= y"""
-        # TODO(junwu): enable this after PR16990 is merged
-        # return matmul(self, other, out=self)
-        raise NotImplementedError
+        return matmul(self, other, out=self)
 
     def __bool__(self):
         num_elements = self.size
@@ -2312,7 +2358,7 @@ def shape(a):
 
 
 @set_module('mxnet.numpy')
-def zeros(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=redefined-outer-name
+def zeros(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-outer-name
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -3552,6 +3598,41 @@ def abs(x, out=None, **kwargs):
     array([1.2, 1.2])
     """
     return _mx_nd_np.abs(x, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_unary_func
+def fabs(x, out=None, **kwargs):
+    r"""
+    Calculate the absolute value element-wise.
+
+    This function returns the absolute values (positive magnitude) of the
+    data in `x`. Complex values are not handled, use `absolute` to find the
+    absolute values of complex data.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input array.
+    out : ndarray or None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned.
+
+    Returns
+    -------
+    absolute : ndarray
+        An ndarray containing the absolute value of
+        each element in `x`. This is a scalar if `x` is a scalar.
+
+    Examples
+    --------
+    >>> np.fabs(-1)
+    1.0
+    >>> np.fabs(np.array([-1.2, 1.2]))s
+    array([ 1.2,  1.2])
+    """
+    return _mx_nd_np.fabs(x, out=out, **kwargs)
 
 
 @set_module('mxnet.numpy')
@@ -7286,6 +7367,19 @@ def around(x, decimals=0, out=None, **kwargs):
 @set_module('mxnet.numpy')
 def round(x, decimals=0, out=None, **kwargs):
     r"""
+    round(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
+    """
+    return _mx_nd_np.round(x, decimals, out=out, **kwargs)
+
+
+@set_module('mxnet.numpy')
+def round_(x, decimals=0, out=None, **kwargs):
+    r"""
     round_(a, decimals=0, out=None)
     Round an array to the given number of decimals.
 
@@ -7293,7 +7387,7 @@ def round(x, decimals=0, out=None, **kwargs):
     --------
     around : equivalent function; see for details.
     """
-    return _mx_nd_np.around(x, decimals, out=out, **kwargs)
+    return _mx_nd_np.round_(x, decimals, out=out, **kwargs)
 
 
 @set_module('mxnet.numpy')
@@ -8729,6 +8823,46 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
     if (prepend or append):
         raise NotImplementedError('prepend and append options are not supported yet')
     return _mx_nd_np.diff(a, n=n, axis=axis)
+
+
+@set_module('mxnet.numpy')
+def ediff1d(ary, to_end=None, to_begin=None):
+    """
+    The differences between consecutive elements of an array.
+
+    Parameters
+    ----------
+    ary : ndarray
+        If necessary, will be flattened before the differences are taken.
+    to_end : ndarray or scalar, optional
+        Number(s) to append at the end of the returned differences.
+    to_begin : ndarray or scalar, optional
+        Number(s) to prepend at the beginning of the returned differences.
+
+    Returns
+    -------
+    ediff1d : ndarray
+        The differences. Loosely, this is ``ary.flat[1:] - ary.flat[:-1]``.
+
+    Examples
+    --------
+    >>> x = np.array([1, 2, 4, 7, 0])
+    >>> np.ediff1d(x)
+    array([ 1.,  2.,  3., -7.])
+
+    >>> np.ediff1d(x, to_begin=-99, to_end=np.array([88, 99]))
+    rray([-99.,   1.,   2.,   3.,  -7.,  88.,  99.])
+
+    The returned array is always 1D.
+
+    >>> y = np.array([[1, 2, 4], [1, 6, 24]])
+    >>> np.ediff1d(y)
+    array([ 1.,  2., -3.,  5., 18.])
+
+    >>> np.ediff1d(x, to_begin=y)
+    array([ 1.,  2.,  4.,  1.,  6., 24.,  1.,  2.,  3., -7.])
+    """
+    return _mx_nd_np.ediff1d(ary, to_end=to_end, to_begin=to_begin)
 
 
 @set_module('mxnet.numpy')

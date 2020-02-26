@@ -121,6 +121,19 @@ def _np_any(a, axis=None, keepdims=False, out=None):
     pass
 
 
+def _np_sometrue(a, axis=None, keepdims=False, out=None):
+    """
+    Check whether some values are true.
+
+    Refer to `any` for full documentation.
+
+    See Also
+    --------
+    any : equivalent function; see for details.
+    """
+    pass
+
+
 def _np_cumsum(a, axis=None, dtype=None, out=None):
     """
     Return the cumulative sum of the elements along a given axis.

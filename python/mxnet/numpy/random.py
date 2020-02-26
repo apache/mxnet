@@ -684,7 +684,7 @@ def weibull(a, size=None, ctx=None, out=None):
     return _mx_nd_np.random.weibull(a, size=size, ctx=ctx, out=out)
 
 
-def pareto(a, size=None):
+def pareto(a, size=None, ctx=None, out=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
 
     Parameters
@@ -716,7 +716,7 @@ def pareto(a, size=None):
     where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution
     is a power law distribution. Pareto created it to describe the wealth in the economy.
     """
-    return _mx_nd_np.random.pareto(a, size)
+    return _mx_nd_np.random.pareto(a, size=size, ctx=ctx, out=out)
 
 
 def power(a, size=None):

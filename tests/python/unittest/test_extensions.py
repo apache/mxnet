@@ -27,6 +27,7 @@ from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_context
 
+base_path = os.path.join(os.path.dirname(__file__), "../../..")
 def check_platform():
     return platform.machine() not in ['x86_64', 'AMD64']
 
@@ -38,8 +39,8 @@ def test_custom_op():
         lib = 'libcustomop_lib.so'
         if os.path.exists(lib):
             fname = lib
-        elif os.path.exists('build/'+lib):
-            fname = 'build/'+lib
+        elif os.path.exists(os.path.join(base_path,'build/'+lib)):
+            fname = os.path.join(base_path,'build/'+lib)
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
@@ -104,9 +105,9 @@ def test_subgraph():
         if os.path.exists(lib):
             # plain make build, when run in the CI
             fname = lib
-        elif os.path.exists('build/'+lib):
+        elif os.path.exists(os.path.join(base_path, 'build/'+lib)):
             # plain cmake build when run in the CI
-            fname = 'build/'+lib
+            fname = os.path.join(base_path, 'build/'+lib)
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
