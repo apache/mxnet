@@ -5914,6 +5914,8 @@ def test_np_full():
     configs = [
         ((3, 4), 2.0),
         ((0, 3), 2.0),
+        ((2, 3), True),
+        ((3, 0), False),
         ((3, 4), np.array(2.0)),
         ((0, 3), np.array(2.0)),
         ((2, 3), np.array([1, 2, 3], dtype=np.float32)),
@@ -5923,7 +5925,7 @@ def test_np_full():
     ]
 
     rtol, atol = 1e-3, 1e-5
-    dtypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    dtypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']
     for shape, fill_value in configs:
         for hybridize in [True, False]:
             for dtype in dtypes:
@@ -5964,7 +5966,7 @@ def test_np_full_like():
     if StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
         return
 
-    dtypes = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8']
+    dtypes = ['float64', 'float32', 'float16', 'int64', 'int32', 'int8', 'bool']
     shapes = [
         (),
         (1,),
@@ -5977,11 +5979,11 @@ def test_np_full_like():
         (3, 3, 1, 0),
     ]
     # numpy.full_like operator in py2 cannot handle shape like (5, 0, 3) properly
-    fill_values = [0, 1, 2, 3, 4, 5, 6]
+    fill_values = [0, 1, 2, 3, 4, 5, 6, True, False]
     flags = [True, False]
     for fill_value, dtype, shape, hybridize in itertools.product(
         fill_values, dtypes, shapes, flags):
-        param_dtype= _np.random.choice(dtypes)
+        param_dtype = _np.random.choice(dtypes)
         a = np.random.uniform(low=0, high=100, size=shape, dtype='float64').astype(dtype)
         test = TestFullLike(fill_value, param_dtype, npx.current_context())
         expected_ret = _np.full_like(a.asnumpy(), fill_value=fill_value, dtype=param_dtype)
