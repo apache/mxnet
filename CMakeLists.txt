@@ -8,6 +8,11 @@ endif()
 
 project(mxnet C CXX)
 
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+  # Load config.cmake only if mxnet is not compiled as a dependency of another project
+  include(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+endif()
+
 if(__CMAKE_CROSSCOMPILING_OVERRIDE)
   set(CMAKE_CROSSCOMPILING ${__CMAKE_CROSSCOMPILING})
 endif()
@@ -82,6 +87,12 @@ message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERA
 project(mxnet C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
+  include(CheckLanguage)
+  check_language(CUDA)
+  if (NOT CMAKE_CUDA_COMPILER_LOADED AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
+    set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
+    message(WARNING "CMAKE_CUDA_COMPILER guessed: ${CMAKE_CUDA_COMPILER}")
+  endif()
   enable_language(CUDA)
   set(CMAKE_CUDA_STANDARD 11)
   include(CheckCXXCompilerFlag)
@@ -588,7 +599,6 @@ if(USE_CUDA)
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
-
   find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand
     OPTIONAL_COMPONENTS nvToolsExt nvrtc)
 
@@ -750,6 +760,14 @@ if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS pslite)
+endif()
+
+if(USE_MKLDNN)
+    add_custom_command(TARGET mxnet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
+      COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
 endif()
 
 function(BuildTVMOP)

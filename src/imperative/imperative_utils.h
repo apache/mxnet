@@ -956,7 +956,8 @@ inline void SetupOpExec(
 
 inline Engine::OprHandle CreateEngineOp(
     const Context& default_ctx,
-    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs) {
+    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs,
+    const char* opr_names) {
   CHECK_GT(execs.size(), 0);
   std::vector<Engine::VarHandle> use_vars, mutate_vars;
 
@@ -1005,7 +1006,7 @@ inline Engine::OprHandle CreateEngineOp(
   };
 
   return Engine::Get()->NewOperator(
-      exec_fun, use_vars, mutate_vars, FnProperty::kNormal);
+      exec_fun, use_vars, mutate_vars, FnProperty::kNormal, opr_names);
 }
 
 inline void CreateEngineOpSeg(
@@ -1019,11 +1020,13 @@ inline void CreateEngineOpSeg(
     std::vector<EngineOprSeg> *opr_segs) {
   size_t seg_start = start_nid;
   std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
+  std::string opr_names;
   for (size_t nid = start_nid; nid < end_nid; ++nid) {
     const auto& node = idx[nid];
     if (node.source->is_variable()) continue;
     if (skip_plus_node.size() && skip_plus_node[nid]) continue;
     auto& exec = execs[nid];
+    const auto &op_name = node.source->op()->name;
     bool is_async = exec->exec_type() != ExecType::kSync;
     bool valid = exec->out_array.size() > 0;
 
@@ -1035,25 +1038,30 @@ inline void CreateEngineOpSeg(
       auto& seg = (*opr_segs)[seg_start];
       if (seg_execs.size()) {
         seg = EngineOprSeg{false, nid};
-        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_names.c_str()));
       } else {
         seg = EngineOprSeg{true, nid, nullptr};
       }
       seg_start = nid;
       seg_execs.clear();
+      opr_names.clear();
     }
 
     seg_execs.push_back(exec);
+    if (opr_names.size()) opr_names += ",";
+    opr_names += op_name;
 
     auto& seg = (*opr_segs)[nid];
     if (!valid) {
       seg = EngineOprSeg{false, nid + 1, nullptr};
       seg_execs.clear();
+      opr_names.clear();
       seg_start = nid + 1;
     } else if (is_async) {
       seg = EngineOprSeg{false, nid + 1};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_names.c_str()));
       seg_execs.clear();
+      opr_names.clear();
       seg_start = nid + 1;
     }
   }
@@ -1062,7 +1070,7 @@ inline void CreateEngineOpSeg(
     auto& seg = (*opr_segs)[seg_start];
     if (seg_execs.size()) {
       seg = EngineOprSeg{false, end_nid};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_names.c_str()));
     } else {
       seg = EngineOprSeg{true, end_nid, nullptr};
     }

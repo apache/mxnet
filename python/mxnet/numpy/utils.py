@@ -23,6 +23,7 @@ import numpy as onp
 
 __all__ = ['float16', 'float32', 'float64', 'uint8', 'int32', 'int8', 'int64',
            'bool', 'bool_', 'pi', 'inf', 'nan', 'PZERO', 'NZERO', 'newaxis', 'finfo',
+           'e', 'NINF', 'PINF', 'NAN', 'NaN',
            '_STR_2_DTYPE_']
 
 float16 = onp.float16
@@ -40,6 +41,11 @@ inf = onp.inf
 nan = onp.nan
 PZERO = onp.PZERO
 NZERO = onp.NZERO
+NINF = onp.NINF
+PINF = onp.PINF
+e = onp.e
+NAN = onp.NAN
+NaN = onp.NaN
 
 newaxis = None
 finfo = onp.finfo

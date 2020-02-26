@@ -259,8 +259,6 @@ class GraphExecutor : public Executor {
   bool prefer_bulk_execution_;
   // cached segment operator
   std::vector<CachedSegOpr> cached_seg_opr_;
-  // cached segment operator name (needs a longer lifecycle than cached_seg_opr_)
-  std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
   // subgraph property name

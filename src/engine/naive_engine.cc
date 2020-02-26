@@ -55,7 +55,7 @@ class NaiveEngine final : public Engine {
     std::vector<VarHandle> const_vars;
     std::vector<VarHandle> mutable_vars;
     FnProperty prop;
-    const char* opr_name;
+    std::string opr_name;
     /*! \brief indicate whether to profile this operator */
     bool profiling{false};
     /*! \brief operator execution statistics */
@@ -108,7 +108,7 @@ class NaiveEngine final : public Engine {
     opr->const_vars = const_vars;
     opr->mutable_vars = mutable_vars;
     opr->prop = prop;
-    opr->opr_name = opr_name;
+    opr->opr_name = opr_name ? std::string(opr_name) : std::string();
     return opr;
   }
 
@@ -127,7 +127,8 @@ class NaiveEngine final : public Engine {
           if (profiler->AggregateEnabled()) {
             attrs.reset(new profiler::ProfileOperator::Attributes());
           }
-          opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
+          opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name.c_str(),
+                                                               attrs.release()));
           opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
         }
         opr->fn(ctx, on_complete);
@@ -140,11 +141,11 @@ class NaiveEngine final : public Engine {
       opr->mutable_vars,
       opr->prop,
       priority,
-      opr->opr_name);
+      opr->opr_name.c_str());
   }
 
 /*!
- * \brief NaiveEngine's PushAsync was intentionally synchronous. 
+ * \brief NaiveEngine's PushAsync was intentionally synchronous.
  * User should not make any assumption about execution order when using async interface of any engine.
  */
   void PushAsync(AsyncFn exec_fun,
@@ -176,7 +177,7 @@ class NaiveEngine final : public Engine {
       if (profiler->AggregateEnabled()) {
         attrs.reset(new profiler::ProfileOperator::Attributes());
       }
-      opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
+      opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name.c_str(), attrs.release()));
       opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
