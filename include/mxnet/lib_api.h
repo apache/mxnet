@@ -362,7 +362,7 @@ struct MXTensor {
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
-typedef void* (*rng_caller_t)(void*, char*);
+typedef double (*rng_caller_t)(void*, char*);
 
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;

@@ -183,9 +183,10 @@ void CustomFComputeDispatcher(const std::string op_name,
 
   auto rng_caller = [&](char *rand_type) {
     LOG(INFO) << "rng_caller called";
-    typename RandGenerator<cpu, double>::Impl genImpl(pgen, 1);
+    typename mxnet::common::random::RandGenerator<cpu, double>::Impl genImpl(pgen, 1);
+    std::string rand_str(rand_type);
     double ret;
-    if (rand_type == "rand")
+    if (rand_str == "rand")
        ret = reinterpret_cast<double>(genImpl.rand());
     return ret;
   };
