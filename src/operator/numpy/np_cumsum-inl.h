@@ -62,12 +62,12 @@ struct cumsum_forward {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
                                   OType *out,
-                                  const index_t *in,
+                                  const IType *in,
                                   const index_t middle,
                                   const index_t trailing) {
     index_t left = i / trailing, right = i % trailing;
     index_t offset = left * middle * trailing + right;
-    const index_t *lane_in = in + offset;
+    const IType *lane_in = in + offset;
     OType *lane_out = out + offset;
     lane_out[0] = OType(lane_in[0]);
     for (index_t j = 1; j < middle; ++j) {
@@ -126,14 +126,14 @@ void CumsumForward(const nnvm::NodeAttrs& attrs,
 struct cumsum_backward {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
-                                  index_t *igrad,
+                                  IType *igrad,
                                   const OType *ograd,
                                   const index_t middle,
                                   const index_t trailing) {
     index_t left = i / trailing, right = i % trailing;
     index_t offset = left * middle * trailing + right;
     const OType *lane_ograd = ograd + offset;
-    index_t *lane_igrad = igrad + offset;
+    IType *lane_igrad = igrad + offset;
     lane_igrad[(middle - 1) * trailing] = index_t(lane_ograd[(middle - 1) * trailing]);
     for (index_t j = middle - 2; j >= 0; --j) {
       lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + index_t(lane_ograd[j * trailing]);
