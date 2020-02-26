@@ -562,6 +562,8 @@ def test_nn():
             assert out.shape[1] == 4
             assert out.shape[2] == 1
 
+            assert type(out[0, 0, 0].asscalar()).__name__ == 'float32'
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
