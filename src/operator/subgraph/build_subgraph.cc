@@ -33,7 +33,7 @@
 #define DEBUG_SUBGRAPH 0
 
 namespace nnvm {
-NodePtr CreateVariableNode(const std::string& name);
+ObjectPtr CreateVariableNode(const std::string& name);
 }
 
 namespace mxnet {
@@ -71,7 +71,7 @@ void CreateSimpleGraph(const nnvm::Graph& g,
                        std::vector<BiDirectedNodePtr>* simple_nodes) {
   const auto& indexed_graph = g.indexed_graph();
   simple_nodes->reserve(indexed_graph.num_nodes());
-  DFSVisit(g.outputs, [&](const nnvm::NodePtr& node) {
+  DFSVisit(g.outputs, [&](const nnvm::ObjectPtr& node) {
     BiDirectedNodePtr sn = BiDirectedNode::Create();
     sn->node = node.get();
     for (size_t i = 0; i < sn->node->inputs.size(); ++i) {
@@ -558,8 +558,27 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     } else {
       ++(it->second);
     }
-    nnvm::NodePtr n = nnvm::CreateVariableNode(var_name + std::to_string(name_count_map[var_name]));
+    nnvm::ObjectPtr n = nnvm::CreateVariableNode(
+        var_name + std::to_string(name_count_map[var_name]));
+    // set attribute for subgraph input to indicate if it is from an arg/param to model
+    if (e->node->is_variable())
+      n->attrs.dict["isArg"] = "True";
+    else
+      n->attrs.dict["isArg"] = "False";
     *e = nnvm::NodeEntry{n, 0, 0};
+  }
+}
+
+/*!
+ * \brief This function reattaches the original input nodes that were cut
+ * by CutGraphInputs. This function is used when subgraphs are rejected, it
+ * reattaches the subgraph back to the main graph where it was cut earlier.
+ */
+void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
+                         std::vector<nnvm::NodeEntry> *orig_entries) {
+  for (size_t i = 0; i < input_entries.size(); ++i) {
+    nnvm::NodeEntry *e = input_entries[i];
+    *e = orig_entries->at(i);
   }
 }
 
@@ -594,7 +613,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
     sym.outputs[i] = *output_entries[i];
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  nnvm::NodePtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
+  nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
   // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
   // In that case, subgraph node is not created and graph is not modified
   if (n) {
@@ -620,6 +639,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
         sn->outputs[n.get()].push_back(i);
       }
     }
+  } else {
+    ReattachGraphInputs(input_entries, &orig_input_entries);
   }
 #if DEBUG_SUBGRAPH
   if (n)

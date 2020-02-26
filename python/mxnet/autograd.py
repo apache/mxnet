@@ -17,8 +17,6 @@
 
 # coding: utf-8
 """Autograd for NDArray."""
-from __future__ import absolute_import
-from __future__ import division
 
 from array import array
 from threading import Lock
@@ -360,6 +358,8 @@ def get_symbol(x):
     Symbol
         The retrieved Symbol.
     """
+    assert isinstance(x, NDArray), \
+       "get_symbol: Invalid argument type, expecting %s, got %s"%(NDArray, type(x))
     hdl = SymbolHandle()
     check_call(_LIB.MXAutogradGetSymbol(x.handle, ctypes.byref(hdl)))
     return Symbol(hdl)

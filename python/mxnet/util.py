@@ -17,10 +17,7 @@
 """general utility functions"""
 
 import ctypes
-import os
-import sys
 import functools
-import itertools
 import inspect
 import threading
 
@@ -35,15 +32,8 @@ _np_ufunc_default_kwargs = {
     'subok': True,
 }
 
-
-def makedirs(d):
-    """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
-    available in Python2"""
-    if sys.version_info[0] < 3:
-        from distutils.dir_util import mkpath
-        mkpath(d)
-    else:
-        os.makedirs(d, exist_ok=True)  # pylint: disable=unexpected-keyword-arg
+_set_np_shape_logged = False
+_set_np_array_logged = False
 
 
 def get_gpu_count():
@@ -87,13 +77,16 @@ def set_np_shape(active):
     >>> print(mx.is_np_shape())
     True
     """
+    global _set_np_shape_logged
     if active:
-        import logging
-        logging.info('NumPy-shape semantics has been activated in your code. '
-                     'This is required for creating and manipulating scalar and zero-size '
-                     'tensors, which were not supported in MXNet before, as in the official '
-                     'NumPy library. Please DO NOT manually deactivate this semantics while '
-                     'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+        if not _set_np_shape_logged:
+            import logging
+            logging.info('NumPy-shape semantics has been activated in your code. '
+                         'This is required for creating and manipulating scalar and zero-size '
+                         'tensors, which were not supported in MXNet before, as in the official '
+                         'NumPy library. Please DO NOT manually deactivate this semantics while '
+                         'using `mxnet.numpy` and `mxnet.numpy_extension` modules.')
+            _set_np_shape_logged = True
     elif is_np_array():
         raise ValueError('Deactivating NumPy shape semantics while NumPy array semantics is still'
                          ' active is not allowed. Please consider calling `npx.reset_np()` to'
@@ -234,17 +227,6 @@ def np_shape(active=True):
     return _NumpyShapeScope(active)
 
 
-def wraps_safely(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS):
-    """This function is safe version of `functools.wraps` in Python2 which skips wrapping functions
-    for the attributes that do not exist."""
-    if sys.version_info[0] > 2:
-        return functools.wraps(wrapped)
-    else:
-        return functools.wraps(wrapped,
-                               assigned=itertools.ifilter(
-                                   functools.partial(hasattr, wrapped), assigned))
-
-
 def use_np_shape(func):
     """A decorator wrapping a function or class with activated NumPy-shape semantics.
     When `func` is a function, this ensures that the execution of the function is scoped with NumPy
@@ -309,7 +291,7 @@ def use_np_shape(func):
                 setattr(func, name, use_np_shape(method))
         return func
     elif callable(func):
-        @wraps_safely(func)
+        @functools.wraps(func)
         def _with_np_shape(*args, **kwargs):
             with np_shape(active=True):
                 return func(*args, **kwargs)
@@ -493,7 +475,7 @@ def use_np_array(func):
                 setattr(func, name, use_np_array(method))
         return func
     elif callable(func):
-        @wraps_safely(func)
+        @functools.wraps(func)
         def _with_np_array(*args, **kwargs):
             with np_array(active=True):
                 return func(*args, **kwargs)
@@ -614,7 +596,7 @@ def wrap_np_unary_func(func):
     Function
         A function wrapped with proper error handling.
     """
-    @wraps_safely(func)
+    @functools.wraps(func)
     def _wrap_np_unary_func(x, out=None, **kwargs):
         if len(kwargs) != 0:
             for key, value in kwargs.items():
@@ -647,7 +629,7 @@ def wrap_np_binary_func(func):
     Function
         A function wrapped with proper error handling.
     """
-    @wraps_safely(func)
+    @functools.wraps(func)
     def _wrap_np_binary_func(x1, x2, out=None, **kwargs):
         if len(kwargs) != 0:
             for key, value in kwargs.items():
@@ -678,11 +660,14 @@ def _set_np_array(active):
     -------
         A bool value indicating the previous state of NumPy array semantics.
     """
+    global _set_np_array_logged
     if active:
-        import logging
-        logging.info('NumPy array semantics has been activated in your code. This allows you'
-                     ' to use operators from MXNet NumPy and NumPy Extension modules as well'
-                     ' as MXNet NumPy `ndarray`s.')
+        if not _set_np_array_logged:
+            import logging
+            logging.info('NumPy array semantics has been activated in your code. This allows you'
+                         ' to use operators from MXNet NumPy and NumPy Extension modules as well'
+                         ' as MXNet NumPy `ndarray`s.')
+            _set_np_array_logged = True
     cur_state = is_np_array()
     _NumpyArrayScope._current.value = _NumpyArrayScope(active)
     return cur_state

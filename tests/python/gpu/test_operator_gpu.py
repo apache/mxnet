@@ -30,7 +30,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
@@ -47,14 +47,12 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_tvm_op import *
-from test_library_loading import *
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
 del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
-
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
@@ -271,6 +269,36 @@ def test_fft():
 def _make_ndarrays(input_list, ctx=mx.gpu(0)):
     return [mx.nd.array(arr, dtype=arr.dtype, ctx=ctx) for arr in input_list]
 
+def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
+    values_arr = [np.random.rand(*shape).astype(dtype) * 10. for shape in shapes]
+    mx_vals = _make_ndarrays(values_arr, ctx=ctx)
+    sum_sq = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    sum_sq2 = mx.nd.multi_sum_sq(*mx_vals, num_arrays=len(shapes))
+    # checks that operator is deterministic
+    assert np.array_equal(sum_sq.asnumpy(), sum_sq2.asnumpy())
+
+    ref_sum_sq = mx.nd.array([(v.astype('float32') ** 2).sum() for v in values_arr],
+                             dtype='float32', ctx=ctx)
+    assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
+
+@with_seed()
+def test_multi_sum_sq():
+    min_nparam = 100
+    max_nparam = 120
+    min_dim = 50000
+    max_dim = 100000
+    max_ndim = 1
+
+    dtypes = ['float16','float32', 'float64']
+    for ctx in [mx.gpu(0)]:
+        for dtype in dtypes:
+            nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
+            shapes = [np.random.randint(min_dim, max_dim + 1, size=max_ndim) for i in range(nparam)]
+            low_tol = ctx == mx.cpu(0) and ('float16'in [dtype])
+            tol1 = 1e-3 if low_tol else 1e-5
+            tol2 = 1e-6 if low_tol else 1e-7
+            check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2)
+
 def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
     weights_arr = [np.random.rand(*shape).astype(w_dtype) * 10. for shape in shapes]
     grads_arr = [np.random.rand(*shape).astype(g_dtype) for shape in shapes]
@@ -421,6 +449,7 @@ def test_preloaded_multi_sgd():
                 nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
                 check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
+
 
 @with_seed()
 def test_batchnorm_with_type():
@@ -730,6 +759,8 @@ def _conv_with_num_streams(seed):
                 print('Failing conv size = {}'.format(size))
                 raise
 
+
+@unittest.skip("skipping for now due to severe flakiness")
 @with_seed()
 def test_convolution_multiple_streams():
     for num_streams in [1, 2]:
@@ -2516,321 +2547,6 @@ def test_arange_like_dtype():
         out = mod.forward(is_train=False)
         for v in out:
             assert v.dtype == t
-
-@with_seed()
-def check_multihead_attention_selfatt(dtype):
-    def convert_weight(F, q_weight, k_weight, v_weight, num_heads):
-        q_weight = F.reshape(q_weight, shape=(num_heads, -1, 0), reverse=True)
-        k_weight = F.reshape(k_weight, shape=(num_heads, -1, 0), reverse=True)
-        v_weight = F.reshape(v_weight, shape=(num_heads, -1, 0), reverse=True)
-        all_weights = F.concat(q_weight, k_weight, v_weight, dim=-2)
-        all_weights = F.reshape(all_weights, shape=(-1, 0), reverse=True)
-        return all_weights
-
-    def convert_bias(F, q_bias, k_bias, v_bias, num_heads):
-        q_bias = F.reshape(q_bias, shape=(num_heads, -1))
-        k_bias = F.reshape(k_bias, shape=(num_heads, -1))
-        v_bias = F.reshape(v_bias, shape=(num_heads, -1))
-        all_bias = F.stack(q_bias, k_bias, v_bias, axis=1)
-        all_bias = F.reshape(all_bias, shape=(-1,))
-        return all_bias
-
-    batch_size = 2
-    qkv_length = 7  # length of a sequence
-    qkv_dim = 9     # dimension of encoding
-    num_heads = 3   # number of attention head
-    head_dim = 5    # head size
-    out_dim = 13 * num_heads
-    qkv_units = num_heads * head_dim
-
-    arg_params = {
-        'qkv': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'q_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'k_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'v_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'q_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
-        'k_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
-        'v_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
-        'out_weight': mx.nd.array(np.random.rand(*(out_dim, qkv_units)).astype(dtype) * 0.1, dtype=dtype),
-        'out_bias': mx.nd.array(np.random.rand(*(out_dim,)).astype(dtype) * 0.1, dtype=dtype),
-        }
-
-    qkv = mx.sym.Variable('qkv')
-    sonde = mx.sym.Variable('sonde')
-    q_weight = mx.sym.Variable('q_weight')
-    k_weight = mx.sym.Variable('k_weight')
-    v_weight = mx.sym.Variable('v_weight')
-    q_bias = mx.sym.Variable('q_bias')
-    k_bias = mx.sym.Variable('k_bias')
-    v_bias = mx.sym.Variable('v_bias')
-    out_weight = mx.sym.Variable('out_weight')
-    out_bias = mx.sym.Variable('out_bias')
-    qkv_weight = convert_weight(mx.sym, q_weight, k_weight, v_weight, num_heads)
-    qkv_bias = convert_bias(mx.sym, q_bias, k_bias, v_bias, num_heads)
-    qkv = mx.sym.transpose(qkv, axes=(1, 0, 2))
-    qkv_proj = mx.sym.FullyConnected(qkv, weight=qkv_weight, bias=qkv_bias, flatten=False,
-                                     num_hidden=qkv_units * 3, no_bias=False)
-    att_score = mx.sym.contrib.interleaved_matmul_selfatt_qk(
-            qkv_proj, heads=num_heads)
-    att_score = att_score + sonde
-    weighted_value = mx.sym.contrib.interleaved_matmul_selfatt_valatt(
-            qkv_proj, att_score, heads=num_heads)
-    output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
-                                   num_hidden=out_dim, no_bias=False)
-    output = mx.sym.transpose(output, axes=(1, 0, 2))
-    output = mx.sym.Group([output, att_score])
-    executor = output.simple_bind(ctx=mx.gpu(0),
-                                  qkv=(batch_size, qkv_length, qkv_dim),
-                                  q_weight=(qkv_units, qkv_dim),
-                                  q_bias=(qkv_units,),
-                                  k_weight=(qkv_units, qkv_dim),
-                                  k_bias=(qkv_units,),
-                                  v_weight=(qkv_units, qkv_dim),
-                                  v_bias=(qkv_units,),
-                                  type_dict={'qkv': dtype,
-                                             'q_weight': dtype,
-                                             'k_weight': dtype,
-                                             'v_weight': dtype,
-                                             'q_bias': dtype,
-                                             'k_bias': dtype,
-                                             'v_bias': dtype,
-                                             'sonde': dtype},
-                                  grad_req='write', force_rebind=True)
-    output_shape = executor.outputs[0].shape
-    output_grads = np.random.rand(*output_shape).astype(dtype) * 0.1
-    executor.copy_params_from(arg_params, {})
-    executor.arg_dict['sonde'][:] = 0.
-    executor.arg_dict['sonde'].wait_to_read()
-    executor.forward(is_train=True)
-    output_opti = executor.outputs[0].asnumpy()
-    att_score_opti = executor.outputs[1].asnumpy()
-    executor.backward([mx.nd.array(output_grads, dtype=dtype),
-                       mx.nd.zeros(att_score_opti.shape, dtype=dtype)])
-    grads_opti = {k: v.asnumpy() for k, v in executor.grad_dict.items()}
-    qkv = mx.sym.Variable('qkv')
-    sonde = mx.sym.Variable('sonde')
-    q_weight = mx.sym.Variable('q_weight')
-    k_weight = mx.sym.Variable('k_weight')
-    v_weight = mx.sym.Variable('v_weight')
-    q_bias = mx.sym.Variable('q_bias')
-    k_bias = mx.sym.Variable('k_bias')
-    v_bias = mx.sym.Variable('v_bias')
-    out_weight = mx.sym.Variable('out_weight')
-    out_bias = mx.sym.Variable('out_bias')
-
-    q = mx.sym.FullyConnected(qkv, weight=q_weight, bias=q_bias, flatten=False,
-                              num_hidden=qkv_units, no_bias=False)
-    k = mx.sym.FullyConnected(qkv, weight=k_weight, bias=k_bias, flatten=False,
-                              num_hidden=qkv_units, no_bias=False)
-    v = mx.sym.FullyConnected(qkv, weight=v_weight, bias=v_bias, flatten=False,
-                              num_hidden=qkv_units, no_bias=False)
-    q = mx.sym.reshape(q, shape=(0, 0, num_heads, -1))
-    q = mx.sym.transpose(q, axes=(0, 2, 1, 3))
-    q = mx.sym.reshape(q, shape=(-1, 0, 0), reverse=True)
-    k = mx.sym.reshape(k, shape=(0, 0, num_heads, -1))
-    k = mx.sym.transpose(k, axes=(0, 2, 1, 3))
-    k = mx.sym.reshape(k, shape=(-1, 0, 0), reverse=True)
-    q = mx.sym.contrib.div_sqrt_dim(q)
-    att_score = mx.sym.batch_dot(q, k, transpose_b=True)
-    att_score = att_score + sonde
-    v = mx.sym.reshape(v, shape=(0, 0, num_heads, -1))
-    v = mx.sym.transpose(v, axes=(0, 2, 1, 3))
-    v = mx.sym.reshape(v, shape=(-1, 0, 0), reverse=True)
-    weighted_value = mx.sym.batch_dot(att_score, v)
-    weighted_value = mx.sym.reshape(weighted_value, shape=(-1, num_heads, 0, 0),
-                                    reverse=True)
-    weighted_value = mx.sym.transpose(weighted_value, axes=(0, 2, 1, 3))
-    weighted_value = mx.sym.reshape(weighted_value, shape=(0, 0, -1))
-    output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
-                                   num_hidden=out_dim, no_bias=False)
-    output = mx.sym.Group([output, att_score])
-    executor = output.simple_bind(ctx=mx.gpu(0),
-                                  qkv=(batch_size, qkv_length, qkv_dim),
-                                  type_dict={'qkv': dtype},
-                                  grad_req='write', force_rebind=True)
-    executor.copy_params_from(arg_params, {})
-    executor.arg_dict['sonde'][:] = 0.
-    executor.arg_dict['sonde'].wait_to_read()
-    executor.forward(is_train=True)
-    output_orig = executor.outputs[0].asnumpy()
-    att_score_orig = executor.outputs[1].asnumpy()
-    executor.backward([mx.nd.array(output_grads, dtype=dtype),
-                       mx.nd.zeros(att_score_orig.shape, dtype=dtype)])
-    grads_orig = {k : v.asnumpy() for k, v in executor.grad_dict.items()}
-    assert_allclose(att_score_orig, att_score_opti, rtol=1e-2, atol=1e-3)
-    assert_allclose(output_orig, output_opti, rtol=1e-2, atol=1e-3)
-
-    for k in grads_opti.keys():
-        assert(grads_orig[k].dtype == grads_opti[k].dtype)
-        assert(grads_orig[k].shape == grads_opti[k].shape)
-        assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
-
-def test_multihead_attention_selfatt():
-    for dtype in ['float16', 'float32']:
-        check_multihead_attention_selfatt(dtype=dtype)
-
-def check_multihead_attention_encdec(dtype):
-    def convert_weight(F, k_weight, v_weight, num_heads):
-        k_weight = F.reshape(k_weight, shape=(num_heads, -1, 0), reverse=True)
-        v_weight = F.reshape(v_weight, shape=(num_heads, -1, 0), reverse=True)
-        all_weights = F.concat(k_weight, v_weight, dim=-2)
-        all_weights = F.reshape(all_weights, shape=(-1, 0), reverse=True)
-        return all_weights
-
-    def convert_bias(F, k_bias, v_bias, num_heads):
-        k_bias = F.reshape(k_bias, shape=(num_heads, -1))
-        v_bias = F.reshape(v_bias, shape=(num_heads, -1))
-        all_bias = F.stack(k_bias, v_bias, axis=1)
-        all_bias = F.reshape(all_bias, shape=(-1,))
-        return all_bias
-
-    batch_size = 2
-    qkv_length = 7  # length of a sequence
-    qkv_dim = 9     # dimension of encoding
-    num_heads = 3   # number of attention head
-    head_dim = 5    # head size
-    out_dim = 13 * num_heads
-    qkv_units = num_heads * head_dim
-
-    arg_params = {
-        'q': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'kv': mx.nd.array(np.random.rand(*(batch_size, qkv_length, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'q_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'k_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'v_weight': mx.nd.array(np.random.rand(*(qkv_units, qkv_dim)).astype(dtype) * 0.1, dtype=dtype),
-        'q_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
-        'k_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
-        'v_bias': mx.nd.array(np.random.rand(*(qkv_units,)).astype(dtype) * 0.1, dtype=dtype),
-        'out_weight': mx.nd.array(np.random.rand(*(out_dim, qkv_units)).astype(dtype) * 0.1, dtype=dtype),
-        'out_bias': mx.nd.array(np.random.rand(*(out_dim,)).astype(dtype) * 0.1, dtype=dtype),
-        }
-
-    q = mx.sym.Variable('q')
-    kv = mx.sym.Variable('kv')
-    sonde = mx.sym.Variable('sonde')
-    q_weight = mx.sym.Variable('q_weight')
-    k_weight = mx.sym.Variable('k_weight')
-    v_weight = mx.sym.Variable('v_weight')
-    q_bias = mx.sym.Variable('q_bias')
-    k_bias = mx.sym.Variable('k_bias')
-    v_bias = mx.sym.Variable('v_bias')
-    out_weight = mx.sym.Variable('out_weight')
-    out_bias = mx.sym.Variable('out_bias')
-    kv_weight = convert_weight(mx.sym, k_weight, v_weight, num_heads)
-    kv_bias = convert_bias(mx.sym, k_bias, v_bias, num_heads)
-    kv = mx.sym.transpose(kv, axes=(1, 0, 2))
-    kv_proj = mx.sym.FullyConnected(kv, weight=kv_weight, bias=kv_bias, flatten=False,
-                                    num_hidden=qkv_units * 2, no_bias=False)
-    q = mx.sym.transpose(q, axes=(1, 0, 2))
-    q_proj = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
-                                   num_hidden=qkv_units, no_bias=False)
-    att_score = mx.sym.contrib.interleaved_matmul_encdec_qk(
-            q_proj, kv_proj, heads=num_heads) 
-    att_score = att_score + sonde
-    weighted_value = mx.sym.contrib.interleaved_matmul_encdec_valatt(
-            kv_proj, att_score, heads=num_heads)
-    output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
-                                   num_hidden=out_dim, no_bias=False)
-    output = mx.sym.transpose(output, axes=(1, 0, 2))
-    output = mx.sym.Group([output, att_score])
-    executor = output.simple_bind(ctx=mx.gpu(0),
-                                  q=(batch_size, qkv_length, qkv_dim),
-                                  kv=(batch_size, qkv_length, qkv_dim),
-                                  q_weight=(qkv_units, qkv_dim),
-                                  q_bias=(qkv_units,),
-                                  k_weight=(qkv_units, qkv_dim),
-                                  k_bias=(qkv_units,),
-                                  v_weight=(qkv_units, qkv_dim),
-                                  v_bias=(qkv_units,),
-                                  out_weight=(out_dim, qkv_units),
-                                  out_bias=(out_dim,),
-                                  type_dict={'q': dtype,
-                                             'kv': dtype,
-                                             'q_weight': dtype,
-                                             'q_bias': dtype,
-                                             'k_weight': dtype,
-                                             'k_bias': dtype,
-                                             'v_weight': dtype,
-                                             'v_bias': dtype,
-                                             'out_weight': dtype,
-                                             'out_bias': dtype,
-                                              },
-                                  grad_req='write', force_rebind=True)
-    output_shape = executor.outputs[0].shape
-    output_grads = np.random.rand(*output_shape).astype(dtype) * 0.1
-    executor.copy_params_from(arg_params, {})
-    executor.arg_dict['sonde'][:] = 0.
-    executor.arg_dict['sonde'].wait_to_read()
-    executor.forward(is_train=True)
-    output_opti = executor.outputs[0].asnumpy()
-    att_score_opti = executor.outputs[1].asnumpy()
-    executor.backward([mx.nd.array(output_grads, dtype=dtype), mx.nd.zeros(att_score_opti.shape, dtype=dtype)])
-
-    grads_opti = {k: v.asnumpy() for k, v in executor.grad_dict.items()}
-
-    q = mx.sym.Variable('q')
-    kv = mx.sym.Variable('kv')
-    sonde = mx.sym.Variable('sonde')
-    q_weight = mx.sym.Variable('q_weight')
-    k_weight = mx.sym.Variable('k_weight')
-    v_weight = mx.sym.Variable('v_weight')
-    q_bias = mx.sym.Variable('q_bias')
-    k_bias = mx.sym.Variable('k_bias')
-    v_bias = mx.sym.Variable('v_bias')
-    out_weight = mx.sym.Variable('out_weight')
-    out_bias = mx.sym.Variable('out_bias')
-
-    q = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
-                              num_hidden=qkv_units, no_bias=False)
-    k = mx.sym.FullyConnected(kv, weight=k_weight, bias=k_bias, flatten=False,
-                              num_hidden=qkv_units, no_bias=False)
-    v = mx.sym.FullyConnected(kv, weight=v_weight, bias=v_bias, flatten=False,
-                              num_hidden=qkv_units, no_bias=False)
-    q = mx.sym.reshape(q, shape=(0, 0, num_heads, -1))
-    q = mx.sym.transpose(q, axes=(0, 2, 1, 3))
-    q = mx.sym.reshape(q, shape=(-1, 0, 0), reverse=True)
-    k = mx.sym.reshape(k, shape=(0, 0, num_heads, -1))
-    k = mx.sym.transpose(k, axes=(0, 2, 1, 3))
-    k = mx.sym.reshape(k, shape=(-1, 0, 0), reverse=True)
-    q = mx.sym.contrib.div_sqrt_dim(q)
-    att_score = mx.sym.batch_dot(q, k, transpose_b=True)
-    att_score = att_score + sonde
-    v = mx.sym.reshape(v, shape=(0, 0, num_heads, -1))
-    v = mx.sym.transpose(v, axes=(0, 2, 1, 3))
-    v = mx.sym.reshape(v, shape=(-1, 0, 0), reverse=True)
-    weighted_value = mx.sym.batch_dot(att_score, v)
-    weighted_value = mx.sym.reshape(weighted_value, shape=(-1, num_heads, 0, 0),
-                                    reverse=True)
-    weighted_value = mx.sym.transpose(weighted_value, axes=(0, 2, 1, 3))
-    weighted_value = mx.sym.reshape(weighted_value, shape=(0, 0, -1))
-    output = mx.sym.FullyConnected(weighted_value, weight=out_weight, bias=out_bias, flatten=False,
-                                   num_hidden=out_dim, no_bias=False)
-    output = mx.sym.Group([output, att_score])
-    executor = output.simple_bind(ctx=mx.gpu(0),
-                                  q=(batch_size, qkv_length, qkv_dim),
-                                  kv=(batch_size, qkv_length, qkv_dim),
-                                  type_dict={'q': dtype,
-                                             'kv': dtype},
-                                  grad_req='write', force_rebind=True)
-    executor.copy_params_from(arg_params, {})
-    executor.arg_dict['sonde'][:] = 0.
-    executor.arg_dict['sonde'].wait_to_read()
-    executor.forward(is_train=True)
-    output_orig = executor.outputs[0].asnumpy()
-    att_score_orig = executor.outputs[1].asnumpy()
-    executor.backward([mx.nd.array(output_grads, dtype=dtype), mx.nd.zeros(att_score_orig.shape, dtype=dtype)])
-    grads_orig = {k : v.asnumpy() for k, v in executor.grad_dict.items()}
-    assert_allclose(att_score_orig, att_score_opti, rtol=1e-2, atol=1e-3)
-    assert_allclose(output_orig, output_opti, rtol=1e-2, atol=1e-3)
-
-    for k in grads_opti.keys():
-        assert(grads_orig[k].dtype == grads_opti[k].dtype)
-        assert(grads_orig[k].shape == grads_opti[k].shape)
-        assert_allclose(grads_orig[k], grads_opti[k], rtol=1e-2, atol=1e-3)
-
-def test_multihead_attention_encdec():
-    for dtype in ['float16', 'float32']:
-        check_multihead_attention_encdec(dtype=dtype)
 
 if __name__ == '__main__':
     import nose

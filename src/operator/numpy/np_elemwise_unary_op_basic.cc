@@ -82,22 +82,27 @@ NNVM_REGISTER_OP(_np_copy)
   .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, __kernel$>)                  \
   .add_argument(__input_name$, "NDArray-or-Symbol", "The input array.")
 
-bool NumpyUnaryLogicOpType(const nnvm::NodeAttrs& attrs,
-                           std::vector<int>* in_attrs,
-                           std::vector<int>* out_attrs) {
+bool NumpyUnaryBoolOpType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int>* in_attrs,
+                          std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
+
   if (in_attrs->at(0) == -1) return false;
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kBool);
+  if (out_attrs->at(0) == -1) {
+    out_attrs->at(0) = mshadow::kBool;
+  } else if (out_attrs->at(0) != mshadow::kBool) {
+    LOG(FATAL) << "TypeError: the `out` parameter should be a boolean array";
+  }
   return true;
 }
 
-#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(__name$, __input_name$, __kernel$)      \
+#define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(__name$, __input_name$, __kernel$)       \
   NNVM_REGISTER_OP(__name$)                                                               \
   .set_num_inputs(1)                                                                      \
   .set_num_outputs(1)                                                                     \
   .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)                       \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyUnaryLogicOpType)                        \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyUnaryBoolOpType)                         \
   .set_attr<nnvm::FInplaceOption>("FInplaceOption",                                       \
     [](const NodeAttrs& attrs){                                                           \
       return std::vector<std::pair<int, int> >{{0, 0}};                                   \
@@ -167,6 +172,20 @@ The floor of the scalar x is the largest integer i, such that i <= x.
 Example::
    floor([-1.7, -1.5, -0.2, 0.2, 1.5, 1.7, 2.0]) = [-2., -2., -1.,  0.,  1.,  1.,  2.]
 )code" ADD_FILELINE)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// bitwise_not
+NNVM_REGISTER_OP(_npi_bitwise_not)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"x"};
+})
+.set_attr<FCompute>("FCompute<cpu>", UnaryOp::ComputeInt<cpu, mshadow_op::bitwise_not>)
+.add_argument("x", "NDArray-or-Symbol", "The input array.")
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // trunc
@@ -270,7 +289,27 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY(_npi_expm1, "x", mshadow_op::expm1)
 
 
 // logical_not
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_LOGIC(_npi_logical_not, "x", mshadow_op::np_logical_not)
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(_npi_logical_not, "x", mshadow_op::np_logical_not)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// isnan
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(_npi_isnan, "x", mshadow_op::isnan)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// isinf
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(_npi_isinf, "x", mshadow_op::isinf)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// isposinf
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(_npi_isposinf, "x", mshadow_op::isposinf)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// isneginf
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(_npi_isneginf, "x", mshadow_op::isneginf)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
+
+// isfinite
+MXNET_OPERATOR_REGISTER_NUMPY_UNARY_BOOL(_npi_isfinite, "x", mshadow_op::isfinite)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // sin

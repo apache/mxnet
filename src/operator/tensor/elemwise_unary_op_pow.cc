@@ -25,6 +25,7 @@
 #include "elemwise_unary_op.h"
 #include "./elemwise_binary_op-inl.h"
 #include "../nn/mkldnn/mkldnn_ops-inl.h"
+#include "../../nnvm/node_op_util.h"
 
 namespace mxnet {
 namespace op {
@@ -47,7 +48,7 @@ MXNET_OPERATOR_REGISTER_BINARY(_backward_reciprocal)
 .set_attr<FCompute>("FCompute<cpu>",
   ElemwiseBinaryOp::Compute<cpu, unary_bwd<mshadow_op::reciprocal_grad> >)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     // ograds[0]: dL/dxgrad
     // inputs[0]: dL/dy
     // inputs[1]: x
@@ -120,7 +121,34 @@ The storage type of ``square`` output depends upon the input storage type:
 #endif
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_square,
-                                               unary_bwd<mshadow_op::square_grad>);
+                                               unary_bwd<mshadow_op::square_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    // ograds[0]: head_grad_grads (dL/dxgrad)
+    // inputs[0]: dL/dy
+    // inputs[1]: x (ElemwiseGradUseIn)
+    // f(x) = y = x^2
+    // f'(x) = 2*x
+    // f''(x) = 2
+    auto dldy = n->inputs[0];
+    auto x = n->inputs[1];
+    auto dydx_mul_dldy = nnvm::NodeEntry{n};  // f'(x) * head_grads
+    auto op = mxnet::util::NodeOpGen{n};
+
+    auto dydx = op.div(dydx_mul_dldy, dldy);
+
+    std::unordered_map<std::string, std::string> args = {{"scalar", "2.0"}};
+    auto ones_like = MakeNode("ones_like", n->attrs.name + "_backward_ones_like",
+                         {n->inputs[1]}, nullptr, &n);
+    auto d2ydx2 = op.mul(2.0, nnvm::NodeEntry{ones_like});
+    auto d2ydx2_mul_dldy = op.mul(d2ydx2, dldy);
+
+    std::vector<nnvm::NodeEntry> ret;
+
+    ret.emplace_back(op.mul(ograds[0], dydx));
+    ret.emplace_back(op.mul(ograds[0], d2ydx2_mul_dldy));
+    return ret;
+  });
 
 // sqrt
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(sqrt, cpu, mshadow_op::square_root)
@@ -145,7 +173,7 @@ The storage type of ``sqrt`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_sqrt,
                                                   unary_bwd<mshadow_op::square_root_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : f(x) = x^1/2
@@ -194,7 +222,33 @@ The storage type of ``rsqrt`` output is always dense
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rsqrt"});
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(
-  _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>);
+  _backward_rsqrt, unary_bwd<mshadow_op::reciprocal_square_root_grad>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // NodeEntry{n} : y_grad * f'(x)
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : x
+      // ograds[0] : head_grad_grads (dL/dxgrad)
+      // f(x) = 1/(x^1/2)
+      // f'(x) = -1/(2*x^3/2)
+      // f''(x) = f'(x) * -3/(2*x) = 3/(4 * x^5/2)
+      auto dydx = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto two_x = op.mul(2.0, x);
+      auto r_two_x = op.reciprocal(two_x);
+      auto neg_r_two_x = op.negative(r_two_x);
+      auto three_by_two_neg_r_x = op.mul(3.0, neg_r_two_x);
+      auto x_grad_grad = op.mul(three_by_two_neg_r_x, dydx_mul_grad_x);
+      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], x_grad_grad));
+      return ret;
+  });
 
 // cbrt
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(cbrt, cpu, mshadow_op::cube_root)
@@ -219,7 +273,7 @@ The storage type of ``cbrt`` output depends upon the input storage type:
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_cbrt,
                                                   unary_bwd<mshadow_op::cube_root_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // NodeEntry{n} : y_grad * f'(x)
       // n->inputs[0] : y_grad
       // n->inputs[1] : f(x) = x^1/3
@@ -273,7 +327,33 @@ Example::
 MXNET_OPERATOR_REGISTER_BINARY(_backward_rcbrt)
 .set_attr<FCompute>("FCompute<cpu>",
                     ElemwiseBinaryOp::Compute<cpu,
-                      unary_bwd<mshadow_op::reciprocal_cube_root_grad>>);
+                      unary_bwd<mshadow_op::reciprocal_cube_root_grad>>)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // NodeEntry{n} : y_grad * f'(x)
+      // n->inputs[0] : y_grad
+      // n->inputs[1] : x
+      // ograds[0] : head_grad_grads (dL/dxgrad)
+      // f(x) = 1/(x^1/3)
+      // f'(x) = -1/(3*x^4/3)
+      // f''(x) = f'(x) * -4/(3*x) = 4/(9 * x^7/3)
+      auto dydx = n->inputs[0];
+      auto x = n->inputs[1];
+      auto dydx_mul_grad_x = nnvm::NodeEntry{n};
+      auto op = mxnet::util::NodeOpGen{n};
+
+      auto three_x = op.mul(3.0, x);
+      auto r_three_x = op.reciprocal(three_x);
+      auto neg_r_three_x = op.negative(r_three_x);
+      auto four_by_three_neg_r_x = op.mul(4.0, neg_r_three_x);
+      auto x_grad_grad = op.mul(four_by_three_neg_r_x, dydx_mul_grad_x);
+      auto x_grad = op.div(dydx_mul_grad_x, dydx);
+
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(op.mul(ograds[0], x_grad));
+      ret.emplace_back(op.mul(ograds[0], x_grad_grad));
+      return ret;
+  });
 
 }  // namespace op
 }  // namespace mxnet

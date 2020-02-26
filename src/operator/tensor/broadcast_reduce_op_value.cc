@@ -32,6 +32,41 @@ DMLC_REGISTER_PARAMETER(BroadcastAxesParam);
 DMLC_REGISTER_PARAMETER(BroadcastToParam);
 DMLC_REGISTER_PARAMETER(BroadcastLikeParam);
 
+template<typename DType>
+void BroadcastAxisKer(DType* src,
+                      DType* dst,
+                      index_t outer,
+                      index_t inner,
+                      index_t size) {
+#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (index_t i = 0; i < outer * size; i++) {
+    const index_t m = i / size;
+    const index_t n = i % size;
+    void* offset = reinterpret_cast<void*>(dst + m * size * inner + n * inner);
+    memcpy(offset, reinterpret_cast<void*>(src + m * inner), inner * sizeof (DType));
+  }
+}
+
+inline void BroadcastAxisComputeCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  const BroadcastAxesParam& param = nnvm::get<BroadcastAxesParam>(attrs.parsed);
+  if (param.axis.ndim() == 1 && inputs[0].shape_[param.axis[0]] == 1 && req[0] == kWriteTo) {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      auto dst = outputs[0].dptr<DType>();
+      auto src = inputs[0].dptr<DType>();
+      index_t outer = inputs[0].shape_.ProdShape(0, param.axis[0]);
+      index_t inner = inputs[0].shape_.ProdShape(param.axis[0], inputs[0].shape_.ndim());
+      BroadcastAxisKer(src, dst, outer, inner, param.size[0]);
+    });
+  } else {
+    BroadcastComputeImpl<cpu>(attrs, ctx, inputs, req, outputs, inputs[0].shape_);
+  }
+}
+
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_axis)
 .add_alias("broadcast_axes")
 .describe(R"code(Broadcasts the input array over particular axes.
@@ -59,7 +94,7 @@ Example::
 .set_attr_parser(ParamParser<BroadcastAxesParam>)
 .add_arguments(BroadcastAxesParam::__FIELDS__())
 .set_attr<mxnet::FInferShape>("FInferShape", BroadcastAxesShape)
-.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", BroadcastAxisComputeCPU);
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .describe(R"code(Broadcasts the input array to a new shape.
@@ -104,7 +139,7 @@ NNVM_REGISTER_OP(broadcast_like)
     })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
+  [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds))
         return MakeZeroGradNodes(n, ograds);

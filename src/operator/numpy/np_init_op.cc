@@ -34,6 +34,8 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyEyeParam);
 DMLC_REGISTER_PARAMETER(IndicesOpParam);
 DMLC_REGISTER_PARAMETER(LogspaceParam);
+DMLC_REGISTER_PARAMETER(FullLikeOpParam);
+DMLC_REGISTER_PARAMETER(AtleastNDParam);
 
 inline bool NumpyIndicesShape(const nnvm::NodeAttrs& attrs,
                               mxnet::ShapeVector* in_shapes,
@@ -97,29 +99,82 @@ NNVM_REGISTER_OP(_npi_identity)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_np_zeros_like)
-.set_num_inputs(1)
-.set_num_outputs(1)
-.set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
-  [](const NodeAttrs& attrs) {
-    return std::vector<uint32_t>(1, 0);
-  })
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a"};
-  })
-.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
-.add_argument("a", "NDArray-or-Symbol",
-              "The shape and data-type of a define these same attributes of the returned array.");
+template<int NDim>
+inline bool AtleastNDShape(const nnvm::NodeAttrs& attrs,
+                           std::vector<mxnet::TShape> *in_attrs,
+                           std::vector<mxnet::TShape> *out_attrs) {
+  auto &param = nnvm::get<AtleastNDParam>(attrs.parsed);
 
-NNVM_REGISTER_OP(_np_ones_like)
+  CHECK_EQ(in_attrs->size(), param.num_args);
+  CHECK_EQ(out_attrs->size(), param.num_args);
+
+  for (int i = 0; i < param.num_args; ++i) {
+    auto &shape = in_attrs->at(i);
+    if (shape.ndim() < NDim) {
+      mxnet::TShape new_shape(NDim, 1);
+      if (NDim == 2) {
+        if (shape.ndim() == 1) {
+          new_shape[1] = shape[0];
+        }
+      } else if (NDim == 3) {
+        if (shape.ndim() == 1) {
+          new_shape[1] = shape[0];
+        } else if (shape.ndim() == 2) {
+          new_shape[0] = shape[0];
+          new_shape[1] = shape[1];
+        }
+      }
+      SHAPE_ASSIGN_CHECK(*out_attrs, i, new_shape);
+    } else {
+      SHAPE_ASSIGN_CHECK(*out_attrs, i, shape);
+    }
+  }
+
+  return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
+}
+
+#define NNVM_REGISTER_ATLEAST_ND(N)                                       \
+NNVM_REGISTER_OP(_np_atleast_##N##d)                                      \
+.set_attr_parser(ParamParser<AtleastNDParam>)                             \
+.set_num_inputs(                                                          \
+[](const NodeAttrs& attrs) {                                              \
+  auto &param = nnvm::get<AtleastNDParam>(attrs.parsed);                  \
+  return param.num_args;                                                  \
+})                                                                        \
+.set_num_outputs(                                                         \
+[](const NodeAttrs& attrs) {                                              \
+  auto &param = nnvm::get<AtleastNDParam>(attrs.parsed);                  \
+  return param.num_args;                                                  \
+})                                                                        \
+.set_attr<std::string>("key_var_num_args", "num_args")                    \
+.set_attr<nnvm::FListInputNames>("FListInputNames",                       \
+[](const nnvm::NodeAttrs& attrs) {                                        \
+  int num_args = nnvm::get<AtleastNDParam>(attrs.parsed).num_args;        \
+  std::vector<std::string> ret;                                           \
+  for (int i = 0; i < num_args; i++) {                                    \
+    ret.push_back(std::string("ary") + std::to_string(i));                \
+  }                                                                       \
+  return ret;                                                             \
+})                                                                        \
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<-1, -1>)           \
+.set_attr<mxnet::FInferShape>("FInferShape", AtleastNDShape<N>)           \
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                \
+.set_attr<FCompute>("FCompute<cpu>", AtleastNDCompute<cpu>)               \
+.add_argument("arys", "NDArray-or-Symbol[]", "List of input arrays")      \
+.add_arguments(AtleastNDParam::__FIELDS__())                              \
+
+NNVM_REGISTER_ATLEAST_ND(1);
+
+NNVM_REGISTER_ATLEAST_ND(2);
+
+NNVM_REGISTER_ATLEAST_ND(3);
+
+NNVM_REGISTER_OP(_npi_full_like)
 .set_num_inputs(1)
 .set_num_outputs(1)
+.set_attr_parser(ParamParser<FullLikeOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
-.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<nnvm::FInferType>("FInferType", FullLikeOpType<FullLikeOpParam>)
 .set_attr<nnvm::FIgnoreInputs>("FIgnoreInputs",
   [](const NodeAttrs& attrs) {
     return std::vector<uint32_t>(1, 0);
@@ -128,10 +183,11 @@ NNVM_REGISTER_OP(_np_ones_like)
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
   })
-.set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 1>)
+.set_attr<FCompute>("FCompute<cpu>", FullLikeOpCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("a", "NDArray-or-Symbol",
-              "The shape and data-type of a define these same attributes of the returned array.");
+              "The shape and data-type of a define these same attributes of the returned array.")
+.add_arguments(FullLikeOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_arange)
 .set_num_inputs(0)

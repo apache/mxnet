@@ -483,7 +483,7 @@ class NDArray {
    */
   NDArray Copy(Context ctx) const;
   /*!
-   * \brief Do a synchronize copy from a continugous CPU memory region.
+   * \brief Do a synchronize copy from a contiguous CPU memory region.
    *
    *  This function will call WaitToWrite before the copy is performed.
    *  This is useful to copy data from existing memory region that are
@@ -500,7 +500,7 @@ class NDArray {
   void SyncCopyFromNDArray(const NDArray &src, int i = -1, int j = -1);
 
   /*!
-   * \brief Do a synchronize copy to a continugous CPU memory region.
+   * \brief Do a synchronize copy to a contiguous CPU memory region.
    *
    *  This function will call WaitToRead before the copy is performed.
    *  This is useful to copy data from existing memory region that are
@@ -769,6 +769,12 @@ class NDArray {
    * It doesn't affect the data of the original NDArray.
    */
   NDArray Reorder2Default() const;
+
+    /*
+   * This creates a new NDArray using f32 with the reordered data.
+   * It doesn't affect the data of the original NDArray.
+   */
+  NDArray Reorder2DefaultFloatFormat() const;
 
   void InvalidateMKLDNNData();
 

@@ -22,19 +22,26 @@ permalink: /get_started/ubuntu_setup
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Installing MXNet on Ubuntu
+# Installing MXNet from source on Ubuntu
 
-The following installation instructions are for installing MXNet on computers running **Ubuntu 16.04**. Support for later versions of Ubuntu is [not yet available](#contributions).
-<hr>
+The following installation instructions are for building MXNet from source on
+computers running **Ubuntu 16.04** or higher. For instructions to build MXNet
+from source on other platforms, see the general [Build From Source
+guide](build_from_source).
+
+Instead of building from source, you can install a binary version of MXNet. For
+that, please follow the information at [Get Started](get_started).
+
+Building MXNet from source is a two-step process:
+
+1. Build the shared library from the MXNet C++ source code.
+2. (optional) Install the supported language-specific packages for MXNet.
 
 ## Contents
 
 * [CUDA Dependencies](#cuda-dependencies)
-* [Quick Installation](#quick-installation)
-    * [Python](#install-mxnet-for-python)
-    * [pip Packages](#pip-package-availability)
-* [Build from Source](#build-mxnet-from-source)
-* [Installing Language Packages](#installing-language-packages-for-mxnet)
+* [Build the MXNet shared library from source](#build-mxnet-from-source)
+* [Install Language Packages](#installing-language-packages-for-mxnet)
     * [R](#install-the-mxnet-package-for-r)
     * [Julia](#install-the-mxnet-package-for-julia)
     * [Scala](#install-the-mxnet-package-for-scala)
@@ -56,223 +63,91 @@ Then download [cuDNN 7.1.4](https://developer.nvidia.com/cudnn).
 Unzip the file and change to the cuDNN root directory. Move the header and libraries to your local CUDA Toolkit folder:
 
 ```bash
-    tar xvzf cudnn-9.2-linux-x64-v7.1
-    sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
-    sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
-    sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
-    sudo ldconfig
+tar xvzf cudnn-9.2-linux-x64-v7.1
+sudo cp -P cuda/include/cudnn.h /usr/local/cuda/include
+sudo cp -P cuda/lib64/libcudnn* /usr/local/cuda/lib64
+sudo chmod a+r /usr/local/cuda/include/cudnn.h /usr/local/cuda/lib64/libcudnn*
+sudo ldconfig
 ```
 
 <hr>
 
-
-## Quick Installation
-
-### Install MXNet for Python
-
-#### Dependencies
-
-The following scripts will install Ubuntu 16.04 dependencies for MXNet Python development.
-
-```bash
-wget https://raw.githubusercontent.com/apache/incubator-mxnet/master/ci/docker/install/ubuntu_core.sh
-wget https://raw.githubusercontent.com/apache/incubator-mxnet/master/ci/docker/install/ubuntu_python.sh
-sudo ./ubuntu_core.sh
-sudo ./ubuntu_python.sh
-```
-
-Using the latest MXNet with CUDA 9.2 package is recommended for the fastest training speeds with MXNet.
-
-**Recommended for training:**
-```bash
-pip install mxnet-cu92
-```
-
-**Recommended for inference:**
-```bash
-pip install mxnet-cu92mkl
-```
-
-Alternatively, you can use the table below to select the package that suits your purpose.
-
-| MXNet Version | Basic | CUDA | MKL-DNN | CUDA/MKL-DNN |
-|-|-|-|-|-|
-| Latest | mxnet | mxnet-cu92 | mxnet-mkl | mxnet-cu92mkl |
-
-
-#### pip Package Availability
-
-The following table presents the pip packages that are recommended for each version of MXNet.
-
-![pip package table](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.4.0.png)
-
-To install an older version of MXNet with one of the packages in the previous table add `==` with the version you require. For example for version 1.1.0 of MXNet with CUDA 8, you would use `pip install mxnet-cu80==1.1.0`.
-
-<hr>
-
-
-## Build MXNet from Source
-
-You can build MXNet from source, and then you have the option of installing language-specific bindings, such as Scala, Java, Julia, R or Perl. This is a two-step process:
-
-1. Build the shared library from the MXNet C++ source code.
-2. (optional) Install the supported language-specific packages for MXNet. Be sure to check that section first, as some scripts may be available to handle all of the dependencies, MXNet build, and language bindings for you. Here they are again for quick access:
-
-* [R](#install-the-mxnet-package-for-r)
-* [Julia](#install-the-mxnet-package-for-julia)
-* [Scala](#install-the-mxnet-package-for-scala)
-* [Java](#install-the-mxnet-package-for-java)
-* [Perl](#install-the-mxnet-package-for-perl)
-
-**Note:** To change the compilation options for your build, edit the ```make/config.mk``` file prior to building MXNet. More information on this is mentioned in the different language package instructions.
-
-### Build the Shared Library
-
-#### Quick MXNet Build
-You can quickly build MXNet from source with the following script found in the `/docs/install` folder:
-
-```bash
-cd docs/install
-./install_mxnet_ubuntu_python.sh
-```
-
-Or you can go through a manual process described next.
-
-#### Manual MXNet Installation
+## Build the MXNet shared library from source
 
 It is recommended that you review the general [build from source](build_from_source) instructions before continuing.
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
 **Step 1:** Install prerequisite packages.
-```bash
-    sudo apt-get update
-    sudo apt-get install -y build-essential git ninja-build ccache
-```
-
-**For Ubuntu 18.04 and CUDA builds you need to update CMake**
 
 ```bash
-#!/usr/bin/env bash
-set -exuo pipefail
-sudo apt remove --purge --auto-remove cmake
-
-# Update CMAKE for correct cuda autotedetection: https://github.com/clab/dynet/issues/1457
-version=3.14
-build=0
-mkdir -p ~/tmp
-cd ~/tmp
-wget https://cmake.org/files/v$version/cmake-$version.$build.tar.gz
-tar -xzvf cmake-$version.$build.tar.gz
-cd cmake-$version.$build/
-./bootstrap
-make -j$(nproc)
-sudo make install
+sudo apt-get update
+sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
 ```
 
+Instead of `libopenblas-dev` you may also choose a different math library.
+Further information is provided in the source guide's [Math Library
+Selection](build_from_source#math-library-selection) section.
 
-**Step 2:** Install a Math Library.
+`libopencv-dev` is an optional dependency. You can delete it from above `apt-get
+install` line and build MXNet without OpenCV support by setting `USE_OPENCV` to
+`OFF` in the configuration file described below.
 
-Details on the different math libraries are found in the build from source guide's [Math Library Selection](build_from_source#math-library-selection) section.
+Note: CMake 3.13 or higher is required. If you are running an older version of
+CMake, you will see an error message like `CMake 3.13 or higher is required. You
+are running version 3.10.2` during Step 3. In that case please update CMake on
+your system. You can download and install latest CMake from https://cmake.org or
+via `pip3` with `pip3 install --user --upgrade "cmake>=3.13.2"`. If `pip3` is
+not available on your system, you can install it via `sudo apt-get install -y
+python3-pip`. After installing cmake with `pip3`, it is usually available at
+`~/.local/bin/cmake` or directly as `cmake`.
 
-For OpenBLAS use:
-
-```bash
-    sudo apt-get install -y libopenblas-dev
-```
-
-For other libraries, visit the [Math Library Selection](build_from_source#math-library-selection) section.
-
-**Step 3:** Install OpenCV.
-
-*MXNet* uses [OpenCV](http://opencv.org/) for efficient image loading and augmentation operations.
-
-```bash
-    sudo apt-get install -y libopencv-dev
-```
-
-**Step 4:** Download MXNet sources and build MXNet core shared library.
-
-If building on CPU and using OpenBLAS:
+**Step 2:** Download MXNet sources and configure
 
 Clone the repository:
 
 ```bash
-    git clone --recursive https://github.com/apache/incubator-mxnet.git
-    cd incubator-mxnet
+git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
+cd mxnet
+cp config/linux.cmake config.cmake  # or config/linux_gpu.cmake for build with CUDA
 ```
 
-Build with CMake and ninja, without GPU and without MKL.
+Please edit the config.cmake file based on your needs. The file contains a
+series of `set(name value CACHE TYPE "Description")` entries. You can change the
+values of the respective `value`.
+
+For a GPU-enabled build make sure you have installed the [CUDA dependencies
+first](#cuda-dependencies)). When building a GPU-enabled build on a machine
+without GPU, MXNet build can't autodetect your GPU architecture and will target
+all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
+`config.cmake` to your desired cuda architecture to speed up the build.
+
+To (optionally) build with MKL math library, please install MKL first based on
+the guide in [Math Library Selection](build_from_source#math-library-selection).
+
+**Step 3:** Build MXNet core shared library.
 
 ```bash
-    rm -rf build
-    mkdir -p build && cd build
-    cmake -GNinja \
-        -DUSE_CUDA=OFF \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_BUILD_TYPE=Release \
-    ..
-    ninja
+rm -rf build
+mkdir -p build && cd build
+cmake ..
+cmake --build .
 ```
 
-If building on CPU and using MKL and MKL-DNN (make sure MKL is installed according to [Math Library Selection](build_from_source#math-library-selection) and [MKL-DNN README](https://mxnet.apache.org/api/python/docs/tutorials/performance/backend/mkldnn/mkldnn_readme.html)):
+Specify `cmake --build . --parallel N` to set the number of parallel compilation
+jobs. Default is derived from CPUs available.
 
-```bash
-    rm -rf build
-    mkdir -p build && cd build
-    cmake -GNinja \
-        -DUSE_CUDA=OFF \
-        -DUSE_MKL_IF_AVAILABLE=ON \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_BUILD_TYPE=Release \
-    ..
-    ninja
-```
-
-If building on GPU (make sure you have installed the [CUDA dependencies first](#cuda-dependencies)):
-Cuda 10.1 in Ubuntu 18.04 builds fine but is not currently tested in CI.
-
-```bash
-    rm -rf build
-    mkdir -p build && cd build
-    cmake -GNinja \
-        -DUSE_CUDA=ON \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        -DCMAKE_BUILD_TYPE=Release \
-    ..
-    ninja
-```
-
-*Note* - You can explore and use more compilation options as they are delcared in the top of `CMakeLists.txt` and also review common [usage examples](build_from_source#usage-examples).
-Optionally, you can also use a higher level, scripted version of the above with an editable CMake options file by doing the
-following:
-
-```bash
-cp cmake/cmake_options.yml .
-# Edit cmake_options.yml in the MXNet root to your taste
-$EDITOR cmake_options.yml
-# Launch a local CMake build
-./dev_menu.py build
-```
-
-Building from source creates a library called ```libmxnet.so``` in the `build` folder in your MXNet project root.
-
-After building the MXNet library, you may install language bindings.
+After a successful build, you will find the `libmxnet.so` in the `build` folder
+in your MXNet project root. `libmxnet.so` is required to install language
+bindings described in the next section.
 
 <hr>
 
 
 ## Installing Language Packages for MXNet
 
-After you have installed the MXNet core library. You may install MXNet interface packages for the programming language of your choice:
+After you have installed the MXNet core library. You may install MXNet interface
+packages for the programming language of your choice:
 - [Python](#install-mxnet-for-python)
 - [C++](#install-the-mxnet-package-for-c&plus;&plus;)
 - [Clojure](#install-the-mxnet-package-for-clojure)
@@ -289,19 +164,22 @@ After you have installed the MXNet core library. You may install MXNet interface
 To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:
 
 ```bash
-$ cd python
-$ pip install -e .
+cd python
+pip install --user -e .
 ```
 
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these changes will be reflected in the package installed.
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means
+that if you edit the source files, these changes will be reflected in the
+package installed.
 
 #### Optional Python Packages
 
-You may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and examples.
+You may optionally install ```graphviz``` library that is used for visualizing network graphs you build on MXNet. You
+may also install [Jupyter Notebook](http://jupyter.readthedocs.io/) which is used for running MXNet tutorials and
+examples.
 
 ```bash
-sudo pip install graphviz==0.8.4 \
-                 jupyter
+pip install --user graphviz==0.8.4 jupyter
 ```
 <hr>
 
@@ -338,47 +216,58 @@ tar xvf julia-10.tar.gz
 ```
 
 Test Julia.
+
 ```bash
 cd julia-1.0.3/bin
 julia -e 'using InteractiveUtils; versioninfo()'
 ```
 
 If you're still getting the old version, remove it.
+
 ```bash
 sudo apt remove julia
 ```
 
 Update your PATH to have Julia's new location. Add this to your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile`.
+
 ```bash
 export PATH=~/julia/julia-1.0.3/bin:$PATH
 ```
 
 Validate your PATH.
+
 ```bash
 echo $PATH
 ```
 
 Validate Julia works and is the expected version.
+
 ```bash
 julia -e 'using InteractiveUtils; versioninfo()'
 ```
 
 #### Setup Your MXNet-Julia Environment
 
-**For each of the following environment variables, add the commands to your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile` to make them persist.**
+**For each of the following environment variables, add the commands to your `.zshrc`, `.bashrc`, `.profile`
+or `.bash_profile` to make them persist.**
 
 Create a `julia-depot` folder and environment variable.
+
 ```bash
 mkdir julia-depot
 export JULIA_DEPOT_PATH=$HOME/julia/julia-depot
 ```
 
-To use the Julia binding with an existing `libmxnet` installation, set the `MXNET_HOME` environment variable to the MXNet source root. For example:
+To use the Julia binding with an existing `libmxnet` installation, set the `MXNET_HOME` environment variable to the
+MXNet source root. For example:
+
 ```bash
 export MXNET_HOME=$HOME/incubator-mxnet
 ```
 
-Now set the `LD_LIBRARY_PATH` environment variable to where `libmxnet.so` is found. If you can't find it, you might have skipped the building MXNet step. Go back and [build MXNet](#build-the-shared-library) first. For example:
+Now set the `LD_LIBRARY_PATH` environment variable to where `libmxnet.so` is found. If you can't find it, you might
+have skipped the building MXNet step. Go back and [build MXNet](#build-the-shared-library) first. For example:
+
 ```bash
 export LD_LIBRARY_PATH=$HOME/incubator-mxnet/lib:$LD_LIBRARY_PATH
 ```
@@ -388,7 +277,8 @@ Verify the location of `libjemalloc.so` and set the `LD_PRELOAD` environment var
 export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so:$LD_PRELOAD
 ```
 
-With all of these updates, here's an example of what you might want to have in your `.zshrc`, `.bashrc`, `.profile` or `.bash_profile`.
+With all of these updates, here's an example of what you might want to have in your `.zshrc`, `.bashrc`, `.profile`
+or `.bash_profile`.
 
 ```
 export PATH=$HOME/bin:$HOME/.local/bin:$HOME/julia/julia-1.0.3/bin:$PATH
@@ -406,56 +296,44 @@ julia --color=yes --project=./ -e \
 	   Pkg.develop(PackageSpec(name="MXNet", path = joinpath(ENV["MXNET_HOME"], "julia")))'
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation]({{'/api/julia'|relative_url}}).
-<hr>
+For more details about installing and using MXNet with Julia, see the
+[MXNet Julia documentation]({{'/api/julia'|relative_url}}).
 
+<hr>
 
 ### Install the MXNet Package for Perl
 
-Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library). After you build the shared library, run the following command from the MXNet source root directory to build the MXNet Perl package:
+Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library).
+After you build the shared library, run the following command from the MXNet source root directory to build the MXNet
+Perl package:
 
 ```bash
-    sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
-    cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
+sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
+cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
 
-    MXNET_HOME=${PWD}
-    export LD_LIBRARY_PATH=${MXNET_HOME}/lib
-    export PERL5LIB=${HOME}/perl5/lib/perl5
+MXNET_HOME=${PWD}
+export LD_LIBRARY_PATH=${MXNET_HOME}/lib
+export PERL5LIB=${HOME}/perl5/lib/perl5
 
-    cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
-    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make install
+cd ${MXNET_HOME}/perl-package/AI-MXNetCAPI/
+perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+make install
 
-    cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
-    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make install
+cd ${MXNET_HOME}/perl-package/AI-NNVMCAPI/
+perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+make install
 
-    cd ${MXNET_HOME}/perl-package/AI-MXNet/
-    perl Makefile.PL INSTALL_BASE=${HOME}/perl5
-    make install
+cd ${MXNET_HOME}/perl-package/AI-MXNet/
+perl Makefile.PL INSTALL_BASE=${HOME}/perl5
+make install
 ```
 <hr>
 
 
 ### Install the MXNet Package for R
 
-Building *MXNet* from source is a 2 step process.
-1. Build the *MXNet* core shared library, `libmxnet.so`, from source.
-2. Build the R bindings.
-
-#### Quick MXNet-R Installation
-You can quickly build MXNet-R with the following two scripts found in the `/docs/install` folder:
-
-```bash
-git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
-cd mxnet/docs/install
-./install_mxnet_ubuntu_python.sh
-./install_mxnet_ubuntu_r.sh
-```
-
-Or you can go through a manual process described next.
-
-#### Manual MXNet-R Installation
+Before you build MXNet for R from source code, you must complete
+[building the shared library](#build-the-shared-library).
 
 **Minimum Requirements**
 1. [GCC 4.8](https://gcc.gnu.org/gcc-4.8/) or later to compile C++ 11.
@@ -465,51 +343,43 @@ Or you can go through a manual process described next.
 
 **Build the MXNet core shared library**
 
-**Step 1** Install build tools and git.
-```bash
-$ sudo apt-get update
-$ sudo apt-get install -y build-essential git
-```
+**Step 1** Install R, cran-devtools and dependencies
 
-**Step 2** Install OpenBLAS.
-
-*MXNet* uses [BLAS](https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms) and [LAPACK](https://en.wikipedia.org/wiki/LAPACK) libraries for accelerated numerical computations on CPU machine. There are several flavors of BLAS/LAPACK libraries - [OpenBLAS](https://www.openblas.net/), [ATLAS](http://math-atlas.sourceforge.net/) and [MKL](https://software.intel.com/en-us/intel-mkl). In this step we install OpenBLAS. You can choose to install ATLAS or MKL.
-```bash
-$ sudo apt-get install -y libopenblas-dev liblapack-dev
-```
-
-**Step 3** Install OpenCV.
-
-*MXNet* uses [OpenCV](https://opencv.org/) for efficient image loading and augmentation operations.
-```bash
-$ sudo apt-get install -y libopencv-dev
-```
-
-**Step 4** Download MXNet sources and build MXNet core shared library. You can clone the repository as described in the following code block, or you may try the [download links](download) for your desired MXNet version.
+To install R and the devtools, run
 
 ```bash
-$ git clone --recursive https://github.com/apache/incubator-mxnet
-$ cd incubator-mxnet
-$ echo "USE_OPENCV = 1" >> ./config.mk
-$ echo "USE_BLAS = openblas" >> ./config.mk
-$ make -j $(nproc)
+sudo apt-get update
+sudo apt-get install -y r-base-core r-cran-devtools libcairo2-dev libxml2-dev
 ```
 
-*Note* - USE_OPENCV and USE_BLAS are make file flags to set compilation options to use OpenCV and BLAS library. You can explore and use more compilation options in `make/config.mk`.
+`libxml2-dev` is required for the `roxygen2` dependency and `libcairo2-dev` is
+required for the suggested `imager` dependency.
 
-<br/>
-
-**Step 5** Make and install the MXNet-R bindings.
+To generate documentation, it is also required to install `roxygen2`.
 
 ```bash
-$ make rpkg
+R
+> install.packages("roxygen2")
+> Would you like to use a personal library instead?  (y/n) y
+> Would you like to create a personal library ... to install packages into?  (y/n) y
 ```
+
+Note: To successfully complete the next step, you need a personal R library. If
+you were able to run `install.packages("roxygen2")` above, you either had
+already, or you have successfully created a personal library just now.
+
+**Step 2** Make and install the MXNet-R bindings.
+
+```bash
+make -f R-package/Makefile rpkg
+```
+
 #### Verify MXNet-R Installation
 
 You can verify your MXNet-R installation as follows:
 
 ```bash
-sudo -i R
+R
 ```
 
 At the R prompt enter the following:
@@ -538,7 +408,8 @@ To use the MXNet-Scala package, you can acquire the Maven package as a dependenc
 
 Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the
+[MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
 <hr>
 
 ### Install the MXNet Package for Java
@@ -547,12 +418,14 @@ To use the MXNet-Java package, you can acquire the Maven package as a dependency
 
 Further information is in the [MXNet-Java Setup Instructions](java_setup).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the
+[MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead.
 <hr>
 
 ## Contributions
 
-You are more than welcome to contribute easy installation scripts for other operating systems and programming languages. See the [community contributions page]({{'/community/contribute'|relative_url}}) for further information.
+You are more than welcome to contribute easy installation scripts for other operating systems and programming languages.
+See the [community contributions page]({{'/community/contribute'|relative_url}}) for further information.
 
 ## Next Steps
 

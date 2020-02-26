@@ -246,6 +246,11 @@ List of Contributors
 * [Caner Turkmen](https://github.com/canerturkmen)
 * [Disi A](https://github.com/adis300)
 * [Vandana Kannan](https://github.com/vandanavk)
+* [Guanxin Qiao](https://github.com/guanxinq)
+* [dithyrambe](https://github.com/dithyrambe)
+* [Piljae Chae](https://github.com/IHateMint)
+* [Oliver Kowalke](https://github.com/olk)
+* [Connor Goggins](https://github.com/connorgoggins)
 
 Label Bot
 ---------
@@ -256,6 +261,6 @@ Label Bot
     - @mxnet-label-bot remove [specify comma separated labels here]
     - @mxnet-label-bot update [specify comma separated labels here]  
       (i.e. @mxnet-label-bot update [Bug, Python])
-  
+
   - Available label names which are supported: [Labels](https://github.com/apache/incubator-mxnet/labels)
   - For further details: [My Wiki Page](https://cwiki.apache.org/confluence/display/MXNET/Machine+Learning+Based+GitHub+Bot)

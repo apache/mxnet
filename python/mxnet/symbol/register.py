@@ -17,7 +17,6 @@
 
 # pylint: disable=unused-import
 """Register backend ops in mxnet.symbol namespace."""
-from __future__ import absolute_import
 import os as _os
 import ctypes
 import numpy as _np
@@ -27,7 +26,7 @@ from ._internal import SymbolBase, _symbol_creator
 from ..attribute import AttrScope
 from ..base import mx_uint, check_call, _LIB, py_str
 from ..symbol_doc import _build_doc
-from ..base import _Null, _init_op_module, _is_np_op
+from ..base import _Null, _init_op_module, _is_np_op, _output_is_list
 from ..name import NameManager
 # pylint: enable=unused-import
 
@@ -144,6 +143,7 @@ def _generate_symbol_function_code(handle, op_name, func_name, signature_only=Fa
     signature = ndsignature + signature
 
     is_np_op = _is_np_op(op_name)
+    output_is_list = _output_is_list(op_name)
     verify_symbol_fn = _verify_np_symbol.__name__ if is_np_op else _verify_legacy_symbol.__name__
     code = []
     if arr_name:
@@ -161,8 +161,12 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
-            dtype_name, dtype_name, dtype_name))
+        if _np.dtype(kwargs['%s']).names:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
+        else:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
+                dtype_name, dtype_name, dtype_name,
+                dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
     if not hasattr(AttrScope._current, "value"):
@@ -191,8 +195,8 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             key_var_num_args, key_var_num_args))
 
             code.append("""
-    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s)"""%(
-        handle.value, str(is_np_op)))
+    return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s, %s)"""%(
+                handle.value, str(is_np_op), str(output_is_list)))
     else:
         code.append("""
 def %s(%s):"""%(func_name, ', '.join(signature)))
@@ -238,14 +242,18 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                     code.append("""
     if %s is not _Null:
         _keys.append('%s')
-        _vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        if _np.dtype(%s).names:
+            _vals.append(_np.dtype(%s).names[0])
+        else:
+            _vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
+                                                  dtype_name, dtype_name))
 
             code.append("""
     if not hasattr(NameManager._current, "value"):
         NameManager._current.value = NameManager()
     name = NameManager._current.value.get(name, '%s')
-    return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name, %s)"""%(
-        func_name.lower(), handle.value, str(is_np_op)))
+    return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name, %s, %s)"""%(
+        func_name.lower(), handle.value, str(is_np_op), str(output_is_list)))
 
     if signature_only:
         code.append("""

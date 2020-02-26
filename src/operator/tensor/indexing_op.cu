@@ -33,7 +33,6 @@ namespace op {
 
 /*! \brief If there are out-of-bound indices, out will be assigned to 1.
  */
-
 struct is_valid_check {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, char* out, const DType* data,
@@ -239,10 +238,10 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   const dim_t row_length = output.shape()[1];
   const dim_t data_size = static_cast<dim_t>(data.shape_.Size());
   // temp resource declarations
-  dim_t* lookup_table = NULL;
-  void* temp_storage = NULL;
-  dim_t* sorted_data = NULL;
-  dim_t* original_idx = NULL;
+  dim_t* lookup_table = nullptr;
+  void* temp_storage = nullptr;
+  dim_t* sorted_data = nullptr;
+  dim_t* original_idx = nullptr;
   // calculate number of bytes for temp resources
   size_t lookup_table_bytes = num_rows * sizeof(dim_t);
   size_t sorted_data_storage_bytes = data_size * sizeof(dim_t);
@@ -253,7 +252,7 @@ void SparseEmbeddingDeterministicKernelLaunch(const OpContext& ctx,
   IType* data_ptr = data.dptr<IType>();
   size_t *null_ptr = nullptr;
   // unique operations will be applied on sorted data
-  cub::DeviceSelect::Unique(NULL, unique_workspace_bytes, sorted_data, sorted_data,
+  cub::DeviceSelect::Unique(nullptr, unique_workspace_bytes, sorted_data, sorted_data,
     null_ptr, data_size, Stream<gpu>::GetStream(s));
   // One more space reserved for unique count
   size_t temp_workspace_bytes = std::max(unique_workspace_bytes,
@@ -387,8 +386,8 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
   MSHADOW_TYPE_SWITCH(data.type_flag_, IType, {
     MSHADOW_SGL_DBL_TYPE_SWITCH(ograd.type_flag_, DType, {
       MSHADOW_IDX_TYPE_SWITCH(output.aux_type(kIdx), RType, {
-        dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
+        dim_t* prefix_sum = nullptr;
+        void* d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(d_temp_storage,
                                       temp_storage_bytes,
@@ -433,6 +432,71 @@ inline void SparseEmbeddingOpBackwardRspImpl<gpu>(const bool deterministic,
         Kernel<AddTakeGradRspGPUKernel, gpu>::Launch(s, num_threads, grad_data, prefix_sum,
             data.dptr<IType>(), ograd.dptr<DType>(), row_length);
       });
+    });
+  });
+}
+
+/*
+ * \brief check if any of the indices is out of bound
+ * \param s the stream
+ * \param idx_ptr the indices on the stream
+ * \param N the number of indices in an axis
+ * \param M the number of axises to exmaine
+ * \param mshape the array that stores shape for each dimension
+ * \param is_valid_dim_ptr the temparary workspace that contains out-of-bound indices
+ */
+template<typename DType>
+void GatherNDCheckBoundGPU(mshadow::Stream<gpu> *s, const DType* idx_ptr, index_t N,
+                          index_t M, const mshadow::Shape<10> mshape, DType* is_valid_dim_ptr) {
+  using namespace mxnet_op;
+  Kernel<set_zero, gpu>::Launch(s, M, is_valid_dim_ptr);
+  Kernel<is_valid_check_gather_nd, gpu>::Launch(s, M, is_valid_dim_ptr, idx_ptr, N, mshape);
+
+  std::vector<DType> is_valid_dim(M);
+  CUDA_CALL(cudaMemcpyAsync(is_valid_dim.data(), is_valid_dim_ptr, sizeof(DType)*M,
+                            cudaMemcpyDeviceToHost, mshadow::Stream<gpu>::GetStream(s)));
+  CUDA_CALL(cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(s)));
+  for (int m = 0; m < M; m++) {
+    if (is_valid_dim[m] > mshape[m] - 1 || is_valid_dim[m] < - mshape[m]) {
+      LOG(FATAL)<< "IndexError: index " << is_valid_dim[m] << " is out of bounds for axis "
+        << m << " with size " << mshape[m];
+    }
+  }
+}
+
+void GatherNDForwardGPU(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  const mxnet::TShape& dshape = inputs[0].shape_;
+  const mxnet::TShape& ishape = inputs[1].shape_;
+  int M = ishape[0];
+  int N = ishape.Size() / M;
+  int K = dshape.ProdShape(M, dshape.ndim());
+  mshadow::Shape<10> strides;
+  mshadow::Shape<10> mshape;
+  for (int i = M-1, stride = K; i >= 0; stride *= dshape[i], --i) {
+    strides[i] = stride;
+    mshape[i] = dshape[i];
+  }
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+      // check whether indices are out of bound
+      IType* idx_ptr = inputs[1].dptr<IType>();
+      Tensor<gpu, 1, IType> workspace =
+        ctx.requested[0].get_space_typed<gpu, 1, IType>(Shape1(M), s);
+      IType* is_valid_dim_ptr = reinterpret_cast<IType*>(workspace.dptr_);
+      GatherNDCheckBoundGPU(s, idx_ptr, N, M, mshape, is_valid_dim_ptr);
+      Kernel<gather_nd, gpu>::Launch(
+        s, N, req[0], N, M, K, strides, mshape, outputs[0].dptr<DType>(),
+        inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
     });
   });
 }
@@ -486,8 +550,8 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         // check out-of-bound indices
         IType min = 0;
@@ -813,7 +877,7 @@ NNVM_REGISTER_OP(one_hot)
 .set_attr<FCompute>("FCompute<gpu>", OneHotOpForward<gpu>);
 
 NNVM_REGISTER_OP(gather_nd)
-.set_attr<FCompute>("FCompute<gpu>", GatherNDForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", GatherNDForwardGPU);
 
 NNVM_REGISTER_OP(scatter_nd)
 .set_attr<FCompute>("FCompute<gpu>", ScatterNDForward<gpu>);

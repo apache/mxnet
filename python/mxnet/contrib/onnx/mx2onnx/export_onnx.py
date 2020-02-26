@@ -47,10 +47,6 @@
 # pylint: disable=invalid-name,too-many-locals,no-self-use,too-many-arguments,
 # pylint: disable=maybe-no-member,too-many-nested-blocks
 """MXNet to ONNX graph converter functions"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 import logging
 import json
 

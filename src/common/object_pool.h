@@ -133,7 +133,11 @@ struct ObjectPoolAllocatable {
 template <typename T>
 ObjectPool<T>::~ObjectPool() {
   for (auto i : allocated_) {
+#ifdef _MSC_VER
+    _aligned_free(i);
+#else
     free(i);
+#endif
   }
 }
 
@@ -188,7 +192,7 @@ void ObjectPool<T>::AllocateChunk() {
   void* new_chunk_ptr;
 #ifdef _MSC_VER
   new_chunk_ptr = _aligned_malloc(kPageSize, kPageSize);
-  CHECK(new_chunk_ptr != NULL) << "Allocation failed";
+  CHECK(new_chunk_ptr != nullptr) << "Allocation failed";
 #else
   int ret = posix_memalign(&new_chunk_ptr, kPageSize, kPageSize);
   CHECK_EQ(ret, 0) << "Allocation failed";

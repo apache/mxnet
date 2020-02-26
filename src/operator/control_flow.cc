@@ -471,7 +471,7 @@ static OpStatePtr CreateForeachState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-ForeachGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+ForeachGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_foreach"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
@@ -761,7 +761,7 @@ static bool WhileLoopType(const nnvm::NodeAttrs& attrs,
   std::vector<int> func_in_type;
   extract_by_loc(*in_type, params.cond_input_locs, &cond_in_type);
   extract_by_loc(*in_type, params.func_input_locs, &func_in_type);
-  std::vector<int> cond_out_type = {0};
+  std::vector<int> cond_out_type = {-1};
   CHECK(params.sync_in_out(in_type, out_type, is_udf));
   bool succ_0 = InferSubgraphDataType(*attrs.subgraphs[0], &cond_in_type, &cond_out_type);
   CHECK(params.sync_in_out(in_type, out_type, is_udf));
@@ -826,7 +826,7 @@ static OpStatePtr CreateWhileLoopState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-WhileLoopGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+WhileLoopGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_while_loop"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;
@@ -1079,7 +1079,7 @@ static OpStatePtr CreateCondState(const NodeAttrs& attrs,
 }
 
 static std::vector<nnvm::NodeEntry>
-CondGradient(const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+CondGradient(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   ElemwiseGradUseInOut fgrad{"_backward_cond"};
   std::vector<nnvm::NodeEntry> entries = fgrad(n, ograds);
   entries[0].node->attrs.subgraphs = n->attrs.subgraphs;

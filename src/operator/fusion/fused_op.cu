@@ -17,6 +17,9 @@
  * under the License.
  */
 
+// Additional use of MXNET_USE_CUDA is not needed to guard a '.cu' file.
+#if MXNET_ENABLE_CUDA_RTC
+
 #include <sys/stat.h>
 #include <nvrtc.h>
 #include <cuda.h>
@@ -50,6 +53,8 @@ inline std::string mshadowTypeToString(int type) {
       return "int";
     case mshadow::kInt64:
       return "long long";
+    case mshadow::kBool:
+      return "bool";
     default:
       LOG(FATAL) << "Unknown type enum " << type;
   }
@@ -72,6 +77,8 @@ inline int mshadowTypeToVectorLength(int type) {
       return 1;
     case mshadow::kInt64:
       return 1;
+    case mshadow::kBool:
+      return 4 / sizeof(bool);
     default:
       LOG(FATAL) << "Unknown type enum " << type;
   }
@@ -156,7 +163,7 @@ void AddPointerAndShape(const TBlob& data,
                         std::vector<std::vector<int>>* shapes,
                         mshadow::Stream<gpu> * s) {
   using namespace mshadow;
-  MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
     Tensor<gpu, 1, DType> tensor = data.FlatTo1D<gpu, DType>(s);
     ptrs->push_back(tensor.dptr_);
     AddShape(data.shape_, shapes);
@@ -476,7 +483,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
       code += "op::store_add_index(vec_" + var_name + ", i, " + var_name + ", " +
               var_name + "_shape);\n";
     } else if (req[counter] == kNullOp) {
-      // NULL req, do not do anything
+      // nullptr req, do not do anything
     } else {
       LOG(FATAL) << "Encountered unexpected req.";
     }
@@ -582,18 +589,17 @@ CUfunction FusedOp::CompileCode(const std::string &code,
                                   &code_with_header[0],                      // buffer
                                   (kernel_name + "_kernel.cu").c_str(),      // name
                                   0,                                         // num headers
-                                  NULL,                                      // headers
-                                  NULL));                                    // include names
+                                  nullptr,                                      // headers
+                                  nullptr));                                    // include names
 
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
-                          "--std=c++11",
-                          "-default-device"};
+                          "--std=c++11"};
     const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
     nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    3,        // num options
+                                                    2,        // num options
                                                     opts);    // options
     CHECK_EQ(compileResult, NVRTC_SUCCESS)
         << "NVRTC Compilation failed. Please set environment variable MXNET_USE_FUSION to 0.\n"
@@ -647,7 +653,9 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
     in_ndims->push_back(blob.ndim());
     in_shapes.push_back(blob.shape_);
     initialized_ = initialized_ && blob.type_flag_ == inputs_[counter].dtype;
+    initialized_ = initialized_ && blob.ndim() == inputs_[counter].ndim;
     inputs_[counter].dtype = blob.type_flag_;
+    inputs_[counter].ndim = blob.ndim();
     *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
   }
 
@@ -657,7 +665,9 @@ void FusedOp::CheckShapesAndTypes(const std::vector<TBlob> &inputs,
     out_ndims->push_back(blob.ndim());
     out_shapes.push_back(blob.shape_);
     initialized_ = initialized_ && blob.type_flag_ == outputs_[counter].dtype;
+    initialized_ = initialized_ && blob.ndim() == outputs_[counter].ndim;
     outputs_[counter].dtype = blob.type_flag_;
+    outputs_[counter].ndim = blob.ndim();
     *nvec = max(*nvec, mshadowTypeToVectorLength(blob.type_flag_));
   }
 
@@ -713,7 +723,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
     kernel_functions_[fusion::kGeneral] = CompileCode(code, attrs.name, dev_id);
     if (check_shape_args_.size() > 0) {
       const auto& code = GenerateCode(req, in_dtypes, out_dtypes, in_ndims, out_ndims,
-                           node_shapes, node_dtypes, nvec, attrs.name, NULL);
+                           node_shapes, node_dtypes, nvec, attrs.name, nullptr);
       kernel_functions_[fusion::kShapeOptimized] = CompileCode(code, attrs.name, dev_id);
     }
     initialized_ = true;
@@ -787,3 +797,5 @@ NNVM_REGISTER_OP(_FusedOp)
 .set_attr<FCompute>("FCompute<gpu>", FusedOpForwardGPU);
 
 }  // namespace mxnet
+
+#endif  // MXNET_ENABLE_CUDA_RTC

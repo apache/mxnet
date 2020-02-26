@@ -20,7 +20,6 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
-from __future__ import print_function
 import re
 
 __all__ = ['RNN', 'LSTM', 'GRU']
@@ -126,7 +125,7 @@ class _RNNLayer(HybridBlock):
     def _collect_params_with_prefix(self, prefix=''):
         if prefix:
             prefix += '.'
-        pattern = re.compile(r'(l|r)(\d)_(i2h|h2h)_(weight|bias)\Z')
+        pattern = re.compile(r'(l|r)(\d)_(i2h|h2h|h2r)_(weight|bias)\Z')
         def convert_key(m, bidirectional): # for compatibility with old parameter format
             d, l, g, t = [m.group(i) for i in range(1, 5)]
             if bidirectional:

@@ -243,8 +243,14 @@ NDArray NDArray::MKLDNNDataReshape(const mxnet::TShape &shape) const {
 
 NDArray NDArray::Reshape(const mxnet::TShape &shape) const {
   CHECK(!is_none()) << "NDArray is not initialized";
-  CHECK_GE(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape size is larger current shape";
+  if (Imperative::Get()->is_np_shape()) {
+    CHECK_EQ(shape_.Size(), shape.Size())
+        << "NDArray.Reshape: target shape must have the same size as "
+        << "current shape.";
+  } else {
+    CHECK_GE(shape_.Size(), shape.Size())
+        << "NDArray.Reshape: target shape size is larger than the current shape";
+  }
   NDArray ret = this->Detach();
   // If the shape doesn't change, we can just return it now.
   if (ret.shape_ == shape)
@@ -293,10 +299,9 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
   NDArray ret = this->Slice(begin, end);
   if (!Imperative::Get()->is_recording()) return ret;
-  // fake a slice_axis op
+  // fake a slice op
   nnvm::NodeAttrs attrs;
-  attrs.op = nnvm::Op::Get("slice_axis");
-  attrs.dict.insert({"axis", "0"});
+  attrs.op = nnvm::Op::Get("slice");
   attrs.dict.insert({"begin", std::to_string(begin)});
   attrs.dict.insert({"end", std::to_string(end)});
   attrs.op->attr_parser(&attrs);
@@ -524,10 +529,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData(const mkldnn::memory::desc &desc) c
 
 const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     const mkldnn::memory::desc &new_desc) const {
-  if (new_desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-    return nullptr;
-  }
   CHECK(storage_type() == kDefaultStorage);
 
   const mkldnn::memory *mem = GetMKLDNNData();
@@ -609,6 +610,20 @@ void NDArray::Reorder2DefaultAsync() const {
     FnProperty::kNormal, 0, "Reorder2Default");
 }
 
+// now just support bf16->fp32
+NDArray NDArray::Reorder2DefaultFloatFormat() const {
+  CHECK(storage_type() == kDefaultStorage && IsView() == false);
+  if (dtype() !=  mshadow::kBfloat16) {
+    return Reorder2Default();
+  }
+  NDArray ret(shape(), ctx(), false, mshadow::DataType<float>::kFlag);
+  auto src_mem = GetMKLDNNData();
+  auto dst_mem = ret.GetMKLDNNData();
+  ReorderTo(src_mem, dst_mem);
+
+  return ret;
+}
+
 void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars(1, this->var());
@@ -685,7 +700,7 @@ void NDArray::CopyFrom(const mkldnn::memory &mem) {
     ptr_->Reorder2Default();
 
   const mkldnn::memory *this_mem = GetMKLDNNData();
-  MKLDNNCopy(mem, this_mem);
+  MKLDNNMemoryCopy(mem, this_mem);
 }
 
 mkldnn::memory *NDArray::CreateMKLDNNData(const mkldnn::memory::desc &desc) {
@@ -1196,7 +1211,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
     return;
   }
   CHECK(from.shape() == to.shape())
-      << "operands shape mismatch"
+      << "operands shape mismatch "
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";

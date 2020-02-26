@@ -95,7 +95,7 @@ static void LeakyReLUComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), expected);
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNLeakyReluForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNLeakyReluForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     MKLDNN_OPCHECK_RUN(LeakyReLUCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -111,7 +111,7 @@ void LeakyReLUGradComputeExCPU(const nnvm::NodeAttrs& attrs,
   if (SupportMKLDNNLeakyRelu(param, inputs[0])) {
     std::vector<NDArray> in_data{inputs[0], inputs[1]};
     MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-    MKLDNNLeakyReluBackward(attrs, ctx, in_data, req[0], outputs[0]);
+    MKLDNNRun(MKLDNNLeakyReluBackward, attrs, ctx, in_data, req, outputs);
     MKLDNN_OPCHECK_RUN(LeakyReLUGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -199,13 +199,26 @@ The following modified ReLU Activation functions are supported:
 .add_argument("gamma", "NDArray-or-Symbol", "Input data to activation function.")
 .add_arguments(LeakyReLUParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (index == 1 && var->attrs.dict.find("__init__") == var->attrs.dict.end()) {
         var->attrs.dict["__init__"] = "[\"Constant\", {\"value\": 0.25}]";
       }
     });
 
 NNVM_REGISTER_OP(_backward_LeakyReLU)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
+  if (param.act_type == leakyrelu::kPReLU) {
+    // forward has 2 inputs and 1 output
+    return 2 + 2 * 1;
+  } else if (param.act_type == leakyrelu::kRReLU) {
+    // forward has 1 input and 2 outputs
+    return 1 + 2 * 2;
+  } else {
+    // forward has 1 input and 1 output
+    return 1 + 2 * 1;
+  }
+})
 .set_num_outputs([](const NodeAttrs& attrs) {
   const LeakyReLUParam& param = nnvm::get<LeakyReLUParam>(attrs.parsed);
   return param.act_type == leakyrelu::kPReLU ? 2 : 1;

@@ -61,6 +61,7 @@ def test_mkldnn_model():
     except:  # pylint: disable=bare-except
         assert 0, "test_mkldnn_model exception in bind and execution"
 
+@with_seed(1234)
 def test_mkldnn_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
@@ -71,8 +72,9 @@ def test_mkldnn_ndarray_slice():
     y = net(x)
 
     # trigger computation on ndarray slice
-    assert_almost_equal(y[0].asnumpy()[0, 0, 0], 0.3376348)
+    assert_almost_equal(y[0].asnumpy()[0, 0, 0], np.array(0.056331709))
 
+@with_seed(1234)
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
     with net.name_scope():
@@ -94,8 +96,8 @@ def test_mkldnn_engine_threading():
     # below line triggers different execution thread
     for _ in loader:
         y = net(mx.nd.array(np.ones(X))).asnumpy()
-        # output should be 016711406 (non-mkldnn mode output)
-        assert_almost_equal(y[0, 0, 0, 0], 0.016711406)
+        # output should be 056331709 (non-mkldnn mode output)
+        assert_almost_equal(y[0, 0, 0, 0], np.array(0.056331709))
         break
 
 @with_seed()

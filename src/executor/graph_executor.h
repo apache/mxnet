@@ -58,7 +58,7 @@ class GraphExecutor : public Executor {
  public:
   using Executor::MonitorCallback;
 
-  GraphExecutor();
+  explicit GraphExecutor(const nnvm::Symbol& symbol);
   virtual ~GraphExecutor();
   void Forward(bool is_train) override;
   void PartialForward(bool is_train, int step, int *step_left) override;
@@ -259,14 +259,15 @@ class GraphExecutor : public Executor {
   bool prefer_bulk_execution_;
   // cached segment operator
   std::vector<CachedSegOpr> cached_seg_opr_;
-  // cached segment operator name (needs a longer lifecycle than cached_seg_opr_)
-  std::unordered_set<std::string> cached_seg_opr_names_;
   // verbose logging
   bool log_verbose_ = false;
   // subgraph property name
   std::string subgraph_property_;
   // ref of engine
   std::shared_ptr<Engine> engine_ref_;
+  // Unoptimized copy of the symbol for sharing with
+  // child executors
+  nnvm::Symbol symbol_;
 };
 
 }  // namespace exec

@@ -283,7 +283,7 @@ class SubgraphProperty {
    * \param sym the symbol to create subgraph node
    * \param subgraph_id subgraph id
    */
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol& sym,
+  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                            const int subgraph_id = 0) const {
     CHECK_EQ(GetPropertyType(), kCreate);
     LOG(FATAL) << "Not implement CreateSubgraphNode() for this subgraph property.";
@@ -297,7 +297,7 @@ class SubgraphProperty {
    * \param subgraph_selector the selector used for creating this subgraph
    * \param subgraph_id subgraph id
    */
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol& sym,
+  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                            const SubgraphSelectorPtr& subgraph_selector,
                                            const int subgraph_id = 0) const {
     return CreateSubgraphNode(sym, subgraph_id);
@@ -310,7 +310,7 @@ class SubgraphProperty {
    * \param subgraph_selector The selector used for selecting this node set
    * \param subgraph_id subgraph id
    */
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol& sym,
+  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                            const SubgraphSelectorV2Ptr& subgraph_selector,
                                            const int subgraph_id = 0) const {
     CHECK_EQ(GetPropertyType(), kCreate);
@@ -339,7 +339,7 @@ class SubgraphProperty {
    * \param subgraph_node the subgraph node to connect output
    * \param output_entries external output entries depending on this subgraph node
    */
-  virtual void ConnectSubgraphOutputs(const nnvm::NodePtr subgraph_node,
+  virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                                       std::vector<nnvm::NodeEntry*>* output_entries) const {
     for (size_t i = 0; i < output_entries->size(); ++i) {
       *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
@@ -352,7 +352,7 @@ class SubgraphProperty {
    * \param input_entries input entries inside subgraph
    * \param orig_input_entries input entries outside subgraph
    */
-  virtual void ConnectSubgraphInputs(const nnvm::NodePtr subgraph_node,
+  virtual void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
                                      std::vector<nnvm::NodeEntry*>* input_entries,
                                      std::vector<nnvm::NodeEntry>* orig_input_entries) const {
     subgraph_node->inputs = *orig_input_entries;
@@ -517,6 +517,15 @@ class SubgraphBackendRegistry {
     CHECK(it != backend_map_.end())
         << "Subgraph backend " << name << " is not found in SubgraphBackendRegistry";
     auto prop = it->second->RegisterSubgraphProperty(fn());
+    return SubgraphPropertyEntry(prop);
+  }
+
+  SubgraphPropertyEntry __REGISTER_CUSTOM_PROPERTY__(const std::string& name,
+                                                     SubgraphPropertyPtr cprop) {
+    auto it = backend_map_.find(name);
+    CHECK(it != backend_map_.end())
+        << "Subgraph backend " << name << " is not found in SubgraphBackendRegistry";
+    auto prop = it->second->RegisterSubgraphProperty(cprop);
     return SubgraphPropertyEntry(prop);
   }
 

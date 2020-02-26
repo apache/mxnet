@@ -140,6 +140,8 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kBfloat16:
+      return "bfloat16";
     case mshadow::kInt8:
       return "int8";
     case mshadow::kUint8:
@@ -359,12 +361,36 @@ inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch)
   return true;
 }
 
+inline std::vector<nnvm::NodeEntry>CreateNodeEntries(
+  nnvm::ObjectPtr pNode,
+  const std::vector<nnvm::NodeEntry>* pOgrads = nullptr,
+  const std::vector<nnvm::NodeEntry>* pInputs = nullptr) {
+  if (pOgrads)
+    pNode->inputs.insert(pNode->inputs.end(), pOgrads->begin(), pOgrads->end());
+
+  if (pInputs)
+    pNode->inputs.insert(pNode->inputs.end(), pInputs->begin(), pInputs->end());
+
+  if (!pNode->is_variable()) {
+    CHECK_EQ(pNode->num_inputs(), pNode->inputs.size())
+      << "Number of inputs to operator " << pNode->op()->name << " (" << pNode->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << pNode->attrs.name << " (" << pNode->inputs.size() << ").";
+  }
+
+  std::vector<nnvm::NodeEntry> ret;
+  for (uint32_t i = 0; i < pNode->num_outputs(); ++i)
+    ret.emplace_back(nnvm::NodeEntry{pNode, i, 0});
+
+  return ret;
+}
+
 // make a new node with operator op_name. Inputs are not filled.
-inline nnvm::NodePtr MakeNode(
+inline nnvm::ObjectPtr MakeNode(
     const char* op_name, const std::string& name,
-    std::vector<nnvm::NodeEntry> const * inputs,
-    std::unordered_map<std::string, std::string> const * dict,
-    nnvm::NodePtr const * fwd_node) {
+    std::vector<nnvm::NodeEntry> const * inputs = nullptr,
+    std::unordered_map<std::string, std::string> const * dict = nullptr,
+    nnvm::ObjectPtr const * fwd_node = nullptr) {
   auto p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
   p->attrs.name = name;
@@ -376,35 +402,38 @@ inline nnvm::NodePtr MakeNode(
   if (p->op()->attr_parser != nullptr) {
     p->op()->attr_parser(&(p->attrs));
   }
+  if (inputs != nullptr) {
+    CHECK_EQ(p->num_inputs(), p->inputs.size())
+      << "Number of inputs to operator " << op_name << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << name << " (" << p->inputs.size() << ").";
+  }
   return p;
 }
 
-inline nnvm::NodePtr MakeNode(
+inline nnvm::ObjectPtr MakeNode(
     const char* op_name, const std::string& name,
     const std::vector<nnvm::NodeEntry>& inputs,
     std::unordered_map<std::string, std::string> const * dict,
-    nnvm::NodePtr const * fwd_node) {
+    nnvm::ObjectPtr const * fwd_node) {
   return MakeNode(op_name, name, &inputs, dict, fwd_node);
 }
 
 
 // quick helper to make node
 inline std::vector<nnvm::NodeEntry> MakeGradNode(
-    const char* op_name, const nnvm::NodePtr& n,
+    const char* op_name, const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     &inputs, &dict, &n);
-  std::vector<nnvm::NodeEntry> ret;
-  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(p, i, 0);
-  }
-  return ret;
+
+  return CreateNodeEntries(p);
 }
 
 // quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
 inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
-    const nnvm::NodePtr& n,
+    const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < n->num_inputs(); ++i) {
@@ -438,7 +467,7 @@ inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
 // make gradient node that doesn't add to objective.
 // i.e. igrads are always zero when ograds are zero.
 inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
-    const char* op_name, const nnvm::NodePtr& n,
+    const char* op_name, const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {
@@ -446,13 +475,8 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
     return MakeZeroGradNodes(n, ograds);
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
                     nullptr, &dict, &n);
-  p->inputs.insert(p->inputs.end(), ograds.begin(), ograds.end());
-  p->inputs.insert(p->inputs.end(), inputs.begin(), inputs.end());
-  std::vector<nnvm::NodeEntry> ret;
-  for (uint32_t i = 0; i < p->num_outputs(); ++i) {
-    ret.emplace_back(p, i, 0);
-  }
-  return ret;
+
+  return CreateNodeEntries(p, &ograds, &inputs);
 }
 
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */
@@ -561,6 +585,24 @@ class OpSignature {
       case mkldnn_format_kind_rnn_packed:
         hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.format;
         eles.push_back(desc.data.format_desc.rnn_packed_desc.format);
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.n_parts;
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.n_parts);
+        for (int i = 0; i < desc.data.format_desc.rnn_packed_desc.n_parts; ++i) {
+          hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.parts[i];
+          hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.part_pack_size[i];
+          hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.pack_part[i];
+          eles.push_back(desc.data.format_desc.rnn_packed_desc.parts[i]);
+          eles.push_back(desc.data.format_desc.rnn_packed_desc.part_pack_size[i]);
+          eles.push_back(desc.data.format_desc.rnn_packed_desc.pack_part[i]);
+        }
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.n;
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.ldb;
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.offset_compensation;
+        hash = hash * 2 + desc.data.format_desc.rnn_packed_desc.size;
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.n);
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.ldb);
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.offset_compensation);
+        eles.push_back(desc.data.format_desc.rnn_packed_desc.size);
         break;
       default:
       // nothing need to add
@@ -604,6 +646,11 @@ class OpSignature {
 
   void AddSign(int val) {
     hash = hash * 2 + val;
+    eles.push_back(val);
+  }
+
+  void AddSign(float val) {
+    hash = dmlc::HashCombine(hash, val);
     eles.push_back(val);
   }
 

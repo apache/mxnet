@@ -20,7 +20,7 @@
 
 mxnet_variant=${1:?"Please specify the mxnet variant as the first parameter"}
 
-case ${mxnet_variant} in 
+case ${mxnet_variant} in
     cu80*)
     echo "nvidia/cuda:8.0-cudnn7-runtime-ubuntu16.04"
     ;;
@@ -36,10 +36,13 @@ case ${mxnet_variant} in
     cu101*)
     echo "nvidia/cuda:10.1-cudnn7-runtime-ubuntu16.04"
     ;;
+    cu102*)
+    echo "nvidia/cuda:10.2-cudnn7-runtime-ubuntu16.04"
+    ;;
     cpu)
     echo "ubuntu:16.04"
     ;;
-    mkl)
+    native)
     echo "ubuntu:16.04"
     ;;
     *)

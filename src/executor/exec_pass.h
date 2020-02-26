@@ -41,7 +41,7 @@ namespace mxnet {
 namespace exec {
 
 template <typename Attr>
-using FAccessSubgraphAttr = std::function<std::tuple<const nnvm::NodePtr,
+using FAccessSubgraphAttr = std::function<std::tuple<const nnvm::ObjectPtr,
                                           std::vector<Attr>,
                                           std::vector<Attr>>
                               (const NodeAttrs& attrs)>;
@@ -52,7 +52,7 @@ using FAccessSubgraphStorageType = FAccessSubgraphAttr<int>;
 
 template <typename Attr>
 using FProvideSubgraphAttr = std::function<void (const NodeAttrs& attrs,
-                                                 const std::vector<nnvm::NodePtr> &nodes,
+                                                 const std::vector<nnvm::ObjectPtr> &nodes,
                                                  const std::vector<std::vector<Attr>> &in_attrs,
                                                  const std::vector<std::vector<Attr>> &out_attrs)>;
 using FProvideSubgraphShape = FProvideSubgraphAttr<mxnet::TShape>;
@@ -220,6 +220,11 @@ Graph FusePointwiseForward(Graph&& g);
  * \return graph with fused pointwise operations in the backward pass
  */
 Graph FusePointwiseBackward(Graph&& g);
+
+/*!
+ * \brief Issue a one-time warning that fusion is not possible for this platform or build.
+ */
+void WarnFusionNotSupported();
 
 /*!
  * \brief Infer shapes in the graph given the information.

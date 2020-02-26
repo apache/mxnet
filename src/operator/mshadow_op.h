@@ -299,6 +299,52 @@ struct mixed_mul {
     return static_cast<double>(a) * b;
   }
 };
+
+struct mixed_power {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(math::pow(a, b));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(math::pow(a, b));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(math::pow(a, b));
+  }
+};
+
+struct mixed_rpower {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return static_cast<mshadow::half::half_t>(math::pow(b, a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return static_cast<float>(math::pow(b, a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return static_cast<double>(math::pow(b, a));
+  }
+};
 #endif
 
 MXNET_BINARY_MATH_OP_NC_WITH_BOOL(mul, a * b);
@@ -312,6 +358,18 @@ MXNET_BINARY_MATH_OP_NC_WITH_BOOL(minus, a - b);
 MXNET_UNARY_MATH_OP(negation, -a);
 
 MXNET_UNARY_MATH_OP(reciprocal, 1.0f / math::id(a));
+
+struct bitwise_not : public mxnet_op::tunable {
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    return ~static_cast<int64_t>(a);
+  }
+
+  MSHADOW_XINLINE static bool Map(bool a) {
+    return !a;
+  }
+};
 
 MXNET_UNARY_MATH_OP(reciprocal_grad, -1.0f / math::sqr(a));
 
@@ -560,7 +618,11 @@ MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_xor, (a || b) && !(a && b) ? DType(1) : DType(0));
 
+MXNET_BINARY_MATH_OP(bitwise_and, static_cast<int64_t>(a) & static_cast<int64_t>(b));
+
 MXNET_BINARY_MATH_OP(bitwise_xor, static_cast<int64_t>(a) ^ static_cast<int64_t>(b));
+
+MXNET_BINARY_MATH_OP(bitwise_or, static_cast<int64_t>(a) | static_cast<int64_t>(b));
 
 MXNET_UNARY_MATH_OP(square_root, math::sqrt(a));
 
@@ -618,6 +680,46 @@ struct fix : public mxnet_op::tunable {
     auto floor = math::floor(a);
     auto ceil = math::ceil(a);
     return DType((floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil);
+  }
+};
+
+/*! \brief used to determine whether a number is Not A Number*/
+struct isnan : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsNan(a);
+  }
+};
+
+/*! \brief used to determine whether a number is infinite*/
+struct isinf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a);
+  }
+};
+
+/*! \brief used to determine whether a number is finite*/
+struct isfinite : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return !IsNan(a) && !IsInf(a);
+  }
+};
+
+/*! \brief used to determine whether a number is positive infinity*/
+struct isposinf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a) && a > 0;
+  }
+};
+
+/*! \brief used to determine whether a number is negative infinity*/
+struct isneginf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a) && a < 0;
   }
 };
 
@@ -1038,6 +1140,14 @@ struct minimum : public mxnet_op::tunable {
     } else {
       return DType(a < b ? a : b);
     }
+  }
+};
+
+/*! \brief boolean any/all kernel that determines whether elem is NonZero */
+struct NonZero {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return (a != DType(0));
   }
 };
 

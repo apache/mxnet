@@ -23,7 +23,7 @@
 // This job executes a "generic" (CD) release job.
 // The pipeline to be executed is defined by the "RELEASE_JOB_TYPE" pipeline parameter.
 // This is the path (relative to the CD directory) to a directory containing the following file groovy script
-// `Jenkins_pipeline.groovy`. 
+// `Jenkins_pipeline.groovy`.
 // See `cd` directory README for more details.
 
 // timeout of each step in minutes
@@ -40,10 +40,10 @@ pipeline {
     string(defaultValue: "master", description: "Git Commit to Build", name: "COMMIT_ID")
 
     // Using string instead of choice parameter to keep the changes to the parameters minimal to avoid
-    // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on 
+    // any disruption caused by different COMMIT_ID values chaning the job parameter configuration on
     // Jenkins.
     string(defaultValue: "mxnet_lib/static", description: "Pipeline to build", name: "RELEASE_JOB_TYPE")
-    string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    string(defaultValue: "cpu,native,cu90,cu92,cu100,cu101,cu102", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
   }
 
@@ -91,11 +91,11 @@ pipeline {
           // Add new job types here
           def valid_job_types = [
             "mxnet_lib/static",
-            "mxnet_lib/dynamic", 
+            "mxnet_lib/dynamic",
             "python/pypi",
             "python/docker"
           ]
-          
+
           // Convert mxnet variants to a list
           def mxnet_variants = params.MXNET_VARIANTS.trim().split(',').inject([]) { list, item ->
             list << item.trim()
@@ -116,7 +116,7 @@ pipeline {
 
           // Extract the pipelines for the variants
           def pipelines = [:]
-          
+
           for (variant in mxnet_variants) {
             pipelines << ["${variant}": custom_steps.get_pipeline(variant)]
           }

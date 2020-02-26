@@ -34,10 +34,10 @@ namespace util {
 
 class NodeOpGen {
  private:
-    const nnvm::NodePtr &dependent_node;
+    const nnvm::ObjectPtr &dependent_node;
 
  public:
-    explicit NodeOpGen(const nnvm::NodePtr &dependent_node) : dependent_node{dependent_node} {}
+    explicit NodeOpGen(const nnvm::ObjectPtr &dependent_node) : dependent_node{dependent_node} {}
 
     nnvm::NodeEntry mul(const nnvm::NodeEntry &lhs, const nnvm::NodeEntry &rhs) {
         return nnvm::NodeEntry{mxnet::op::MakeNode("elemwise_mul",
@@ -66,6 +66,24 @@ class NodeOpGen {
     nnvm::NodeEntry square(const nnvm::NodeEntry &x) {
         return nnvm::NodeEntry{mxnet::op::MakeNode("square",
                                                    dependent_node->attrs.name + "_square",
+                                                   {x}, nullptr, &dependent_node)};
+    }
+
+    nnvm::NodeEntry reciprocal(const nnvm::NodeEntry &x) {
+        return nnvm::NodeEntry{mxnet::op::MakeNode("reciprocal",
+                                                   dependent_node->attrs.name + "_reciprocal",
+                                                   {x}, nullptr, &dependent_node)};
+    }
+
+    nnvm::NodeEntry negative(const nnvm::NodeEntry &x) {
+        return nnvm::NodeEntry{mxnet::op::MakeNode("negative",
+                                                   dependent_node->attrs.name + "_negative",
+                                                   {x}, nullptr, &dependent_node)};
+    }
+
+    nnvm::NodeEntry ones_like(const nnvm::NodeEntry &x) {
+        return nnvm::NodeEntry{mxnet::op::MakeNode("ones_like",
+                                                   dependent_node->attrs.name + "_oneslike",
                                                    {x}, nullptr, &dependent_node)};
     }
 };

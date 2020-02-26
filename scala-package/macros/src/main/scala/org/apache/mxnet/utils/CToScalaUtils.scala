@@ -56,7 +56,8 @@ private[mxnet] object CToScalaUtils {
       case "string" => "String"
       case "boolean" | "booleanorNone" => types("bool")
       case "tupleof<int>"| "tupleof<long>" | "tupleof<float>" | "tupleof<double>" |
-           "tupleof<intorNone>" | "tupleof<>" | "ptr" | "" => "Any"
+           "tupleof<intorNone>" | "tupleof<tupleof<int>>" | "tupleof<Shape(tuple)>" |
+           "tupleof<>" | "ptr" | "" => "Any"
       case default => throw new IllegalArgumentException(
         s"Invalid type for args: $default\nString argType: $argType\nargName: $argName")
     }

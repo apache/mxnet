@@ -86,8 +86,8 @@ void SGDMomStdUpdateDnsRspDnsImpl<gpu>(const SGDMomParam& param,
         nnvm::dim_t num_rows = weight.shape_[0];
         nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
 
-        nnvm::dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
+        nnvm::dim_t* prefix_sum = nullptr;
+        void* d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(d_temp_storage,
                                       temp_storage_bytes,
@@ -183,8 +183,8 @@ void AdamStdUpdateDnsRspDnsImpl<gpu>(const AdamParam& param,
         DType* out_data = out->dptr<DType>();
         const nnvm::dim_t num_rows = weight.shape_[0];
         const nnvm::dim_t row_length = weight.shape_.ProdShape(1, weight.ndim());
-        nnvm::dim_t* prefix_sum = NULL;
-        void* d_temp_storage = NULL;
+        nnvm::dim_t* prefix_sum = nullptr;
+        void* d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(d_temp_storage,
                                       temp_storage_bytes,
@@ -276,6 +276,18 @@ NNVM_REGISTER_OP(ftrl_update)
 
 NNVM_REGISTER_OP(_sparse_adagrad_update)
 .set_attr<FComputeEx>("FComputeEx<gpu>", AdagradUpdateEx<gpu>);
+
+NNVM_REGISTER_OP(lamb_update_phase1)
+.set_attr<FCompute>("FCompute<gpu>", LambUpdatePhaseOne<gpu>);
+
+NNVM_REGISTER_OP(lamb_update_phase2)
+.set_attr<FCompute>("FCompute<gpu>", LambUpdatePhaseTwo<gpu>);
+
+NNVM_REGISTER_OP(mp_lamb_update_phase1)
+.set_attr<FCompute>("FCompute<gpu>", MPLambUpdatePhaseOne<gpu>);
+
+NNVM_REGISTER_OP(mp_lamb_update_phase2)
+.set_attr<FCompute>("FCompute<gpu>", MPLambUpdatePhaseTwo<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -39,6 +39,57 @@ static inline float GetScale(const NDArray& data, float min, float max) {
   return data_range / MaxAbs(min, max);
 }
 
+class MKLDNNQuantizedElemwiseAddFwd {
+ public:
+  mkldnn::sum::primitive_desc fwd_pd;
+
+  MKLDNNQuantizedElemwiseAddFwd(
+               const mkldnn::memory::desc &output_desc,
+               const std::vector<float> &scales,
+               const std::vector<mkldnn::memory::desc> &data_md)
+      : fwd_pd(output_desc, scales, data_md, CpuEngine::Get()->get_engine()) {
+    fwd_ = std::make_shared<mkldnn::sum>(fwd_pd);
+    data_.resize(data_md.size());
+  }
+
+  const mkldnn::sum &GetFwd() const { return *fwd_; }
+
+ private:
+  std::shared_ptr<mkldnn::sum> fwd_;
+  std::vector<std::shared_ptr<mkldnn::memory>> data_;
+  std::shared_ptr<mkldnn::memory> out_;
+};
+
+static MKLDNNQuantizedElemwiseAddFwd &GetQuantizedElemwiseAddForward(
+    const mkldnn::memory::desc &output_desc, const std::vector<float> &scales,
+    const std::vector<NDArray> &in_data, const std::vector<NDArray> &out_data,
+    const std::vector<mkldnn::memory::desc> &data_md) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<OpSignature,
+              MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature,
+              MKLDNNQuantizedElemwiseAddFwd, OpHash> fwds;
+#endif
+  OpSignature key;
+  key.AddSign(in_data);
+  key.AddSign(in_data[quantized_elemwise_add_enum::kAMin].data().dptr<float>()[0]);
+  key.AddSign(in_data[quantized_elemwise_add_enum::kAMax].data().dptr<float>()[0]);
+  key.AddSign(in_data[quantized_elemwise_add_enum::kBMin].data().dptr<float>()[0]);
+  key.AddSign(in_data[quantized_elemwise_add_enum::kBMax].data().dptr<float>()[0]);
+  key.AddSign(out_data);
+  key.AddSign(out_data[quantized_elemwise_add_enum::kMin].data().dptr<float>()[0]);
+  key.AddSign(out_data[quantized_elemwise_add_enum::kMax].data().dptr<float>()[0]);
+
+  auto it = fwds.find(key);
+  if (it == fwds.end()) {
+    MKLDNNQuantizedElemwiseAddFwd fwd(output_desc, scales, data_md);
+    it = AddToCache(&fwds, key, fwd);
+  }
+  return it->second;
+}
+
+
 static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, const OpContext& ctx,
                                               const std::vector<NDArray>& in_data,
                                               const std::vector<OpReqType>& req,
@@ -166,16 +217,17 @@ static void MKLDNNQuantizedElemwiseAddForward(const nnvm::NodeAttrs& attrs, cons
   auto output_desc = mkldnn::memory::desc(i_dims,
                                           output_data_type,
                                           mkldnn::memory::format_tag::any);
-  mkldnn::sum::primitive_desc pdesc(output_desc, scales, in_desc, engine);
+  MKLDNNQuantizedElemwiseAddFwd &fwd = GetQuantizedElemwiseAddForward(output_desc, scales,
+                                                                      in_data, out_data, in_desc);
   auto mem = CreateMKLDNNMem(out_data[quantized_elemwise_add_enum::kOut],
-                             pdesc.dst_desc(),
+                             fwd.fwd_pd.dst_desc(),
                              req[0],
                              &in_data[0]);
   mkldnn_args_map_t args({{MKLDNN_ARG_MULTIPLE_SRC,  *dataA_mem},
                           {MKLDNN_ARG_MULTIPLE_SRC + 1,  *dataB_mem},
                           {MKLDNN_ARG_DST, *mem.second}});
   MKLDNNStream *stream = MKLDNNStream::Get();
-  stream->RegisterPrimArgs(mkldnn::sum(pdesc), args);
+  stream->RegisterPrimArgs(fwd.GetFwd(), args);
   CommitOutput(out_data[quantized_elemwise_add_enum::kOut], mem);
   stream->Submit();
 

@@ -24,6 +24,7 @@
  */
 
 #include <vector>
+#include <set>
 #include "./np_matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 
@@ -37,6 +38,8 @@ DMLC_REGISTER_PARAMETER(NumpyRot90Param);
 DMLC_REGISTER_PARAMETER(NumpyReshapeParam);
 DMLC_REGISTER_PARAMETER(NumpyXReshapeParam);
 DMLC_REGISTER_PARAMETER(NumpyDiagParam);
+DMLC_REGISTER_PARAMETER(NumpyDiagonalParam);
+DMLC_REGISTER_PARAMETER(NumpyDiagflatParam);
 
 
 bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
@@ -66,8 +69,14 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape ret(ndim, -1);
 
   if (ndim_is_known(param.axes)) {
-    CHECK_EQ(ndim, param.axes.ndim());
+    CHECK_EQ(ndim, param.axes.ndim())
+        << "The number of axes does not match the dimension of the tensor. axes = "
+        << param.axes << ", input tensor shape = " << shp;
     mxnet::TShape axes = common::CanonicalizeAxes(param.axes);
+    std::set<dim_t> axes_set(axes.begin(), axes.end());
+    CHECK_EQ(axes_set.size(), axes.ndim()) << "ValueError: Repeated axis in transpose."
+                                           << " param.axes = "
+                                           << param.axes;
     if (ndim_is_known(shp)) {
       for (int i = 0; i < ndim; ++i) {
         ret[i] = shp[axes[i]];
@@ -102,7 +111,7 @@ NNVM_REGISTER_OP(_np_transpose)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyTransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(n->attrs.parsed);
     if (ndim_is_known(param.axes)) {
       mxnet::TShape axes = mxnet::TShape(param.axes.ndim(), -1);
@@ -116,9 +125,9 @@ NNVM_REGISTER_OP(_np_transpose)
       }
       std::ostringstream os;
       os << axes;
-      return MakeNonlossGradNode("transpose", n, ograds, {}, {{"axes", os.str()}});
+      return MakeNonlossGradNode("_np_transpose", n, ograds, {}, {{"axes", os.str()}});
     } else {
-      return MakeNonlossGradNode("transpose", n, ograds, {},
+      return MakeNonlossGradNode("_np_transpose", n, ograds, {},
                                  std::unordered_map<std::string, std::string>());
     }
   })
@@ -232,7 +241,7 @@ bool NumpyXReshapeInferShape(const mxnet::TShape& src,
       } else if (proposed_dim == -3) {
         // skip the source dimension if and only if it is one
         CHECK_EQ(src[src_inx], 1)
-          <<"-3 index should only be used to skip dimension size 1";
+          << "-3 index should only be used to skip dimension size 1";
         src_inx++;
       } else if (proposed_dim == -4) {
         // copy all remaining dims from source
@@ -346,7 +355,6 @@ bool NumpyXReshapeShape(const nnvm::NodeAttrs& attrs,
 
 NNVM_REGISTER_OP(_np_reshape)
 .describe(R"code()code" ADD_FILELINE)
-.add_alias("_npi_reshape")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReshapeParam>)
@@ -372,6 +380,7 @@ NNVM_REGISTER_OP(_np_reshape)
 
 NNVM_REGISTER_OP(_npx_reshape)
 .describe(R"code()code" ADD_FILELINE)
+.add_alias("_npi_reshape")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyXReshapeParam>)
@@ -456,6 +465,59 @@ NNVM_REGISTER_OP(_np_squeeze)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_squeeze"})
 .add_argument("a", "NDArray-or-Symbol", "data to squeeze")
 .add_arguments(SqueezeParam::__FIELDS__());
+
+bool HStackShape(const nnvm::NodeAttrs& attrs,
+                 mxnet::ShapeVector *in_shape,
+                 mxnet::ShapeVector *out_shape) {
+  using namespace mshadow;
+  ConcatParam param_ = nnvm::get<ConcatParam>(attrs.parsed);
+  CHECK_EQ(in_shape->size(), static_cast<size_t>(param_.num_args));
+  mxnet::TShape dshape;
+  dim_t size = 0;
+  bool has_unknown_dim_size = false;
+  int axis = (*in_shape)[0].ndim() > 1 ? 1 : 0;
+  param_.dim = axis;
+  for (int i = 0; i < param_.num_args; ++i) {
+    // scalor tensor is treated as one dimensional vector
+    if ((*in_shape)[i].ndim() == 0) {
+      (*in_shape)[i] = mxnet::TShape(1, 1);
+    }
+    mxnet::TShape &tmp = (*in_shape)[i];
+    if (tmp.ndim() > 0) {
+      CheckAxis(axis, tmp.ndim());
+      if (!mxnet::dim_size_is_known(tmp, axis)) {
+        has_unknown_dim_size = true;
+      } else {
+        size += tmp[axis];
+      }
+      tmp[axis] = -1;
+      shape_assign(&dshape, tmp);
+    }
+  }
+
+  mxnet::TShape tmp = (*out_shape)[0];
+  if (tmp.ndim() > 0) {
+    axis = CheckAxis(param_.dim, tmp.ndim());
+    tmp[axis] = -1;
+    shape_assign(&dshape, tmp);
+  }
+
+  if (dshape.ndim() == -1) return false;
+  CHECK_NE(dshape.ndim(), 0) << "zero-dimensional arrays cannot be concatenated";
+
+  for (int i = 0; i < param_.num_args; ++i) {
+    CHECK(shape_assign(&(*in_shape)[i], dshape))
+        << "Incompatible input shape: expected " << dshape << ", got " << (*in_shape)[i];
+  }
+
+  if (!has_unknown_dim_size) {
+    dshape[axis] = size;
+  }
+  CHECK(shape_assign(&(*out_shape)[0], dshape))
+      << "Incompatible output shape: expected " << dshape << ", got " << (*out_shape)[0];
+
+  return shape_is_known(dshape);
+}
 
 bool DStackShape(const nnvm::NodeAttrs& attrs,
                  mxnet::ShapeVector *in_shape,
@@ -602,7 +664,7 @@ bool NumpyConcatenateShape(const nnvm::NodeAttrs& attrs,
 
 struct NumpyConcatGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     CHECK_EQ(ograds.size(), 1);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -977,6 +1039,44 @@ NNVM_REGISTER_OP(_backward_np_vstack)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyVstackBackward<cpu>);
 
+NNVM_REGISTER_OP(_npi_hstack)
+.describe(R"code(Stack tensors horizontally (in second dimension))code" ADD_FILELINE)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+    std::vector<std::string> ret;
+    for (int i = 0; i < params.num_args; ++i) {
+      ret.push_back(std::string("data") + std::to_string(i));
+    }
+    return ret;
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"out"};
+})
+.set_attr<std::string>("key_var_num_args", "num_args")
+.set_attr<nnvm::FInferType>("FInferType", ConcatType)
+.set_attr<mxnet::FInferShape>("FInferShape", HStackShape)
+.set_attr<FCompute>("FCompute<cpu>", HStackCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", NumpyConcatGrad{"_backward_np_hstack"})
+.add_argument("data", "NDArray-or-Symbol[]", "List of arrays to concatenate")
+.add_arguments(ConcatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_hstack)
+.set_num_outputs([](const NodeAttrs& attrs) {
+  const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
+  return params.num_args;
+})
+.set_attr_parser(ParamParser<ConcatParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", HStackGradCompute<cpu>);
+
 NNVM_REGISTER_OP(_npi_dstack)
 .describe(R"code(Stack tensors in sequence depthwise (in third dimension))code" ADD_FILELINE)
 .set_num_inputs([](const NodeAttrs& attrs) {
@@ -1067,7 +1167,7 @@ NNVM_REGISTER_OP(_np_roll)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyRollCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyRollParam& param = nnvm::get<NumpyRollParam>(n->attrs.parsed);
      if (!param.shift.has_value()) {
        LOG(FATAL) << "roll missing 1 required positional argument: 'shift'.";
@@ -1168,7 +1268,7 @@ Other axes remain in their original order.
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyMoveaxisShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyMoveaxisParam& param = nnvm::get<NumpyMoveaxisParam>(n->attrs.parsed);
      std::ostringstream os1;
      os1 << param.source;
@@ -1241,7 +1341,7 @@ NNVM_REGISTER_OP(_npi_rot90)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<mxnet::FCompute>("FCompute<cpu>", NumpyRot90Compute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
      const NumpyRot90Param& param = nnvm::get<NumpyRot90Param>(n->attrs.parsed);
      std::ostringstream os1;
      os1 << param.k;
@@ -1263,6 +1363,8 @@ inline bool HSplitOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_attrs->size(), 1U);
   mxnet::TShape dshape = in_attrs->at(split_enum::kData);
+  CHECK_GE(dshape.ndim(), 1U)
+    << "ValueError: hsplit only works on arrays of 1 or more dimensions";
   if (!mxnet::ndim_is_known(dshape)) return false;
   int real_axis;
   if (dshape.ndim() > 1) {
@@ -1303,6 +1405,36 @@ NNVM_REGISTER_OP(_npi_hsplit_backward)
 })
 .set_attr<FCompute>("FCompute<cpu>", HSplitOpBackward<cpu>);
 
+inline bool DSplitOpShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector* in_attrs,
+                          mxnet::ShapeVector* out_attrs) {
+  using namespace mshadow;
+  CHECK_EQ(in_attrs->size(), 1U);
+  mxnet::TShape dshape = in_attrs->at(split_enum::kData);
+  if (!mxnet::ndim_is_known(dshape)) return false;
+  CHECK(dshape.ndim() >= 3) << "ValueError: dsplit only works on arrays of 3 or more dimensions";
+  return SplitOpShapeImpl(attrs, in_attrs, out_attrs, 2);
+}
+
+NNVM_REGISTER_OP(_npi_dsplit)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(1)
+.set_num_outputs(SplitNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"data"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", DSplitOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SplitOpType)
+.set_attr<FCompute>("FCompute<cpu>", SplitOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(SplitParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_np_diag)
 .set_attr_parser(ParamParser<NumpyDiagParam>)
 .set_num_inputs(1)
@@ -1324,6 +1456,96 @@ NNVM_REGISTER_OP(_backward_np_diag)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpBackward<cpu>);
+
+NNVM_REGISTER_OP(_np_diagonal)
+.set_attr_parser(ParamParser<NumpyDiagonalParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagonalOpShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyDiagonalOpType)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diagonal"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyDiagonalParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_diagonal)
+.set_attr_parser(ParamParser<NumpyDiagonalParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpBackward<cpu>);
+
+NNVM_REGISTER_OP(_np_diagflat)
+.set_attr_parser(ParamParser<NumpyDiagflatParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagflatOpShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyDiagflatOpType)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagflatOpForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diagflat"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyDiagflatParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_np_diagflat)
+.set_attr_parser(ParamParser<NumpyDiagflatParam>)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagflatOpBackward<cpu>);
+
+bool NumpyDiagIndicesFromShape(const nnvm::NodeAttrs& attrs,
+                               mxnet::ShapeVector* in_attrs,
+                               mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  const mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::shape_is_known(ishape)) return false;
+  CHECK_GE(ishape.ndim(), 2) << "ValueError: Input array should be at least 2d";
+
+  int size = ishape[0];
+  for (int i = 1; i < ishape.ndim(); i++) {
+    CHECK_EQ(ishape[i], size) << "ValueError: All dimensions of "
+                                 "input must be of equal length";
+  }
+
+  mxnet::TShape oshape(2, -1);
+  oshape[0] = ishape.ndim();
+  oshape[1] = size;
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return shape_is_known(out_attrs->at(0));
+}
+
+bool NumpyDiagIndicesFromType(const nnvm::NodeAttrs& attrs,
+                              std::vector<int> *in_attrs,
+                              std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
+  return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
+}
+
+NNVM_REGISTER_OP(_npi_diag_indices_from)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+    [](const NodeAttrs &attrs) {
+    return std::vector<std::string>{"data"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagIndicesFromShape)
+.set_attr<nnvm::FInferType>("FInferType", NumpyDiagIndicesFromType)
+.set_attr<FCompute>("FCompute<cpu>", NumpyDiagIndicesFromForward<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray");
 
 }  // namespace op
 }  // namespace mxnet

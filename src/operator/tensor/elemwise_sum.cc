@@ -42,7 +42,7 @@ struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
 DMLC_REGISTER_PARAMETER(ElementWiseSumParam);
 
 std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
-    const nnvm::NodePtr& n,
+    const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   // identity constraints in the beginning for easier shape inference.
   const nnvm::Op* copy_op =
@@ -50,7 +50,7 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
   CHECK_EQ(ograds.size(), 1);
   std::vector<nnvm::NodeEntry> ret;
   for (size_t i = 0; i < n->inputs.size(); ++i) {
-    nnvm::NodePtr node = nnvm::Node::Create();
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     node->attrs.op = copy_op;
     node->inputs = {ograds[0]};
     ret.emplace_back(std::move(node));
@@ -125,7 +125,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
 #if MXNET_USE_MKLDNN == 1
   } else if (IsMKLDNNData(inputs)) {
-    MKLDNNSumForward(attrs, ctx, inputs, req[0], outputs[0]);
+    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
   } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
     FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
 #endif

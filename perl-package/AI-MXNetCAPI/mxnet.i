@@ -194,7 +194,7 @@ XS(py_zip) {
 %}
 
 /*! \brief manually define unsigned int */
-typedef unsigned int mx_uint;
+typedef uint32_t mx_uint;
 /*! \brief manually define float */
 typedef float mx_float;
 // all the handles are simply void *
@@ -273,6 +273,14 @@ struct NDArrayOpInfo {
  *  \return error info
  */
 const char *MXGetLastError();
+
+/*!
+ * \brief Get list of features supported on the runtime
+ * \param libFeature pointer to array of LibFeature
+ * \param size of the array
+ * \return 0 when success, -1 when failure happens.
+ */
+int MXLibInfoFeatures(const LibFeature **libFeature, size_t *size);
 
 //-------------------------------------
 // Part 0: Global State setups
@@ -384,8 +392,8 @@ int MXNDArrayCreateNone(NDArrayHandle *out);
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-int MXNDArrayCreate(const mx_uint *in,
-                              mx_uint ndim,
+int MXNDArrayCreate(const uint32_t *in,
+                              uint32_t in,
                               int dev_type,
                               int dev_id,
                               int delay_alloc,
@@ -403,13 +411,34 @@ int MXNDArrayCreate(const mx_uint *in,
  * \param out the returning handle
  * \return 0 when success, -1 when failure happens
  */
-int MXNDArrayCreateEx(const mx_uint *in,
-                              mx_uint ndim,
+int MXNDArrayCreateEx(const uint32_t *in,
+                              uint32_t in,
                               int dev_type,
                               int dev_id,
                               int delay_alloc,
                               int dtype,
                               NDArrayHandle *out);
+/*!
+ * \brief create a NDArray with specified shape and data type
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param shape the pointer to int64_t shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *    the narray is first mutated
+ * \param dtype data type of created array
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayCreateEx64(const int64_t *in,
+                                  int ndim,
+                                  int dev_type,
+                                  int dev_id,
+                                  int delay_alloc,
+                                  int dtype,
+                                  NDArrayHandle *out);
 /*!
  * \brief create an empty sparse NDArray with specified shape and data type
  * \param storage_type the storage type of the ndarray
@@ -428,19 +457,48 @@ int MXNDArrayCreateEx(const mx_uint *in,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayCreateSparseEx(int storage_type,
-                                      const mx_uint *in,
-                                      mx_uint ndim,
+                                      const uint32_t *in,
+                                      uint32_t in,
                                       int dev_type,
                                       int dev_id,
                                       int delay_alloc,
                                       int dtype,
-                                      mx_uint num_aux,
+                                      uint32_t in,
                                       int *in,
-                                      mx_uint *in,
-                                      const mx_uint *in,
+                                      uint32_t *in,
+                                      const uint32_t *in,
                                       NDArrayHandle *out);
-
-
+/*!
+ * \brief create an empty sparse NDArray with specified shape and data type
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param storage_type the storage type of the ndarray
+ * \param shape the pointer to the shape
+ * \param ndim the dimension of the shape
+ * \param dev_type device type, specify device we want to take
+ * \param dev_id the device id of the specific device
+ * \param delay_alloc whether to delay allocation until
+ *        the narray is first mutated
+ * \param dtype data type of created array
+ * \param num_aux the number of aux data to support this ndarray
+ * \param aux_type data type of the aux data for the created array
+ * \param aux_ndims the dimension of the shapes of aux data
+ * \param aux_shape the shapes of aux data
+ * \param out the returning handle
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayCreateSparseEx64(int storage_type,
+                                        const int64_t *in,
+                                        int ndim,
+                                        int dev_type,
+                                        int dev_id,
+                                        int delay_alloc,
+                                        int dtype,
+                                        uint32_t in,
+                                        int *in,
+                                        int *in,
+                                        const int64_t *in,
+                                        NDArrayHandle *out);
 /*!
  * \brief create a NDArray handle that is loaded from raw bytes.
  * \param buf the head of the raw bytes
@@ -470,7 +528,7 @@ int MXNDArraySaveRawBytes(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArraySave(const char* fname,
-                            mx_uint num_args,
+                            uint32_t in,
                             NDArrayHandle* in,
                             const char** in);
 /*!
@@ -483,9 +541,9 @@ int MXNDArraySave(const char* fname,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayLoad(const char* fname,
-                            mx_uint *out_size,
+                            uint32_t *out_size,
                             NDArrayHandle** out_array,
-                            mx_uint *out_size,
+                            uint32_t *out_size,
                             const char*** out_array);
 
 /*!
@@ -504,13 +562,13 @@ int MXNDArrayLoad(const char* fname,
  */
 int MXNDArrayLoadFromBuffer(const void *in,
                             size_t size,
-                            mx_uint *out_size,
+                            uint32_t *out_size,
                             NDArrayHandle** out_array,
-                            mx_uint *out_size,
+                            uint32_t *out_size,
                             const char*** out_array);
 
 /*!
- * \brief Perform a synchronize copy from a continugous CPU memory region.
+ * \brief Perform a synchronized copy from a contiguous CPU memory region.
  *
  *  This function will call WaitToWrite before the copy is performed.
  *  This is useful to copy data from existing memory region that are
@@ -524,7 +582,7 @@ int MXNDArraySyncCopyFromCPU(NDArrayHandle handle,
                                        const void *in,
                                        size_t size);
 /*!
- * \brief Perform a synchronize copy to a continugous CPU memory region.
+ * \brief Perform a synchronized copy to a contiguous CPU memory region.
  *
  *  This function will call WaitToRead before the copy is performed.
  *  This is useful to copy data from existing memory region that are
@@ -589,9 +647,24 @@ int MXNDArrayFree(NDArrayHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArraySlice(NDArrayHandle handle,
-                             mx_uint slice_begin,
-                             mx_uint slice_end,
+                             uint32_t in,
+                             uint32_t in,
                              NDArrayHandle *out);
+/*!
+ * \brief Slice the NDArray along axis 0.
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param handle the handle to the NDArray
+ * \param slice_begin The beginning index of slice
+ * \param slice_end The ending index of slice
+ * \param out The NDArrayHandle of sliced NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArraySlice64(NDArrayHandle handle,
+                               int64_t in,
+                               int64_t in,
+                               NDArrayHandle *out);
+
 /*!
  * \brief Index the NDArray along axis 0.
  * \param handle the handle to the NDArray
@@ -600,8 +673,20 @@ int MXNDArraySlice(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayAt(NDArrayHandle handle,
-                          mx_uint idx,
+                          uint32_t in,
                           NDArrayHandle *out);
+/*!
+ * \brief Index the NDArray along axis 0.
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param handle the handle to the NDArray
+ * \param idx the index
+ * \param out The NDArrayHandle of output NDArray
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayAt64(NDArrayHandle handle,
+                            int64_t in,
+                            NDArrayHandle *out);
 /*!
  * \brief get the storage type of the array
  */
@@ -644,6 +729,18 @@ int MXNDArrayGetShapeEx(NDArrayHandle handle,
                                 int *out_dim,
                                 const int **out_pdata);
 /*!
+ * \brief get the shape of the array
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param handle the handle to the narray
+ * \param out_dim the output dimension
+ * \param out_pdata pointer holder to get data pointer of the shape
+ * \return 0 when success, -1 when failure happens
+ */
+int MXNDArrayGetShapeEx64(NDArrayHandle handle,
+                                    int *out_dim,
+                                    const int64_t **out_pdata);
+/*!
  * \brief get the content of the data in NDArray
  * \param handle the handle to the ndarray
  * \param out_pdata pointer holder to get pointer of data
@@ -667,16 +764,40 @@ int MXNDArrayGetDType(NDArrayHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXNDArrayGetAuxType(NDArrayHandle handle,
-                                  mx_uint i,
+                                  uint32_t in,
                                   int *out);
+/*!
+ * \brief get the type of the ith aux data in NDArray
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param handle the handle to the narray
+ * \param i the index of the aux data
+ * \param out_type pointer holder to get type of aux data
+ * \return 0 when success, -1 when failure happens
+ */
+// int MXNDArrayGetAuxType64(NDArrayHandle handle,
+//                                    int64_t i,
+//                                    int *out);
+
 /*!
  * \brief Get a deep copy of the ith aux data blob
  * in the form of an NDArray of default storage type.
  * This function blocks. Do not use it in performance critical code.
  */
 int MXNDArrayGetAuxNDArray(NDArrayHandle handle,
-                                     mx_uint i,
+                                     uint32_t in,
                                      NDArrayHandle *out);
+/*!
+ * \brief Get a deep copy of the ith aux data blob
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * in the form of an NDArray of default storage type.
+ * This function blocks. Do not use it in performance critical code.
+ */
+// int MXNDArrayGetAuxNDArray64(NDArrayHandle handle,
+//                                       int64_t i,
+//                                       NDArrayHandle *out);
+
 /*!
  * \brief Get a deep copy of the data blob
  * in the form of an NDArray of default storage type.
@@ -735,7 +856,7 @@ int MXNDArrayGetGradState(NDArrayHandle handle, int *out);
  * \param out_array the output function array
  * \return 0 when success, -1 when failure happens
  */
-int MXListFunctions(mx_uint *out_size,
+int MXListFunctions(uint32_t *out_size,
                               FunctionHandle **out_array);
 /*!
  * \brief get the function handle by name
@@ -760,7 +881,7 @@ int MXGetFunction(const char *name,
 int MXFuncGetInfo(FunctionHandle fun,
                             const char **name,
                             const char **description,
-                            mx_uint *num_args,
+                            uint32_t *num_args,
                             const char ***arg_names,
                             const char ***arg_type_infos,
                             const char ***arg_descriptions
@@ -776,9 +897,9 @@ int MXFuncGetInfo(FunctionHandle fun,
  * \sa MXFuncInvoke
  */
 int MXFuncDescribe(FunctionHandle fun,
-                             mx_uint *out,
-                             mx_uint *out,
-                             mx_uint *out,
+                             uint32_t *out,
+                             uint32_t *out,
+                             uint32_t *out,
                              int *out);
 /*!
  * \brief invoke a function, the array size of passed in arguments
@@ -792,7 +913,7 @@ int MXFuncDescribe(FunctionHandle fun,
  */
 int MXFuncInvoke(FunctionHandle fun,
                            NDArrayHandle *in,
-                           mx_float *in,
+                           float *in,
                            NDArrayHandle *in);
 /*!
  * \brief invoke a function, the array size of passed in arguments
@@ -809,7 +930,7 @@ int MXFuncInvoke(FunctionHandle fun,
  */
 int MXFuncInvokeEx(FunctionHandle fun,
                              NDArrayHandle *in,
-                             mx_float *in,
+                             float *in,
                              NDArrayHandle *in,
                              int num_params,
                              char **keys,
@@ -893,9 +1014,9 @@ int MXAutogradIsTraining(bool* out);
  * \param var_handles variable NDArrays
  * \return 0 when success, -1 when failure happens
  */
-int MXAutogradMarkVariables(mx_uint num_var,
+int MXAutogradMarkVariables(uint32_t in,
                                       NDArrayHandle *in,
-                                      mx_uint *in,
+                                      uint32_t *in,
                                       NDArrayHandle *in);
 /*!
  * \brief compute the gradient of outputs w.r.t variables
@@ -903,7 +1024,7 @@ int MXAutogradMarkVariables(mx_uint num_var,
  * \param output_handles output NDArrays
  * \return 0 when success, -1 when failure happens
  */
-int MXAutogradComputeGradient(mx_uint num_output,
+int MXAutogradComputeGradient(uint32_t in,
                                         NDArrayHandle* in);
 /*!
  * \brief compute the gradient of outputs w.r.t variabels
@@ -913,7 +1034,7 @@ int MXAutogradComputeGradient(mx_uint num_output,
  * \param retain_graph whether to keep the graph after backward
  * \return 0 when success, -1 when failure happens
  */
-int MXAutogradBackward(mx_uint num_output,
+int MXAutogradBackward(uint32_t in,
                                  NDArrayHandle* in,
                                  NDArrayHandle* in,
                                  int retain_graph);
@@ -927,10 +1048,10 @@ int MXAutogradBackward(mx_uint num_output,
  * \param is_train whether to do backward for training or inference
  * \return 0 when success, -1 when failure happens
  */
-int MXAutogradBackwardEx(mx_uint num_output,
+int MXAutogradBackwardEx(uint32_t in,
                                    NDArrayHandle *in,
                                    NDArrayHandle *in,
-                                   mx_uint num_variables,
+                                   uint32_t in,
                                    NDArrayHandle *in,
                                    int retain_graph,
                                    int create_graph,
@@ -995,7 +1116,7 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
  * \param out_array the output operator name array.
  * \return 0 when success, -1 when failure happens
  */
-int MXListAllOpNames(mx_uint *out_size,
+int MXListAllOpNames(uint32_t *out_size,
                                const char ***out_array);
 /*!
  * \brief list all the available AtomicSymbolEntry
@@ -1003,7 +1124,7 @@ int MXListAllOpNames(mx_uint *out_size,
  * \param out_array the output AtomicSymbolCreator array
  * \return 0 when success, -1 when failure happens
  */
-int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+int MXSymbolListAtomicSymbolCreators(uint32_t *out_size,
                                                AtomicSymbolCreator **out_array);
 
 /*!
@@ -1033,7 +1154,7 @@ int MXSymbolGetAtomicSymbolName(AtomicSymbolCreator in,
 int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator in,
                                           const char **name,
                                           const char **description,
-                                          mx_uint *num_args,
+                                          uint32_t *num_args,
                                           const char ***arg_names,
                                           const char ***arg_type_infos,
                                           const char ***arg_descriptions,
@@ -1049,7 +1170,7 @@ int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator in,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolCreateAtomicSymbol(AtomicSymbolCreator in,
-                                         mx_uint num_param,
+                                         uint32_t in,
                                          const char **keys,
                                          const char **vals,
                                          SymbolHandle *out);
@@ -1067,7 +1188,7 @@ int MXSymbolCreateVariable(const char *name, SymbolHandle *out);
  * \param out pointer to the created symbol handle
  * \return 0 when success, -1 when failure happens
  */
-int MXSymbolCreateGroup(mx_uint num_symbols,
+int MXSymbolCreateGroup(uint32_t in,
                                   SymbolHandle *in,
                                   SymbolHandle *out);
 /*!
@@ -1167,7 +1288,7 @@ int MXSymbolSetAttr(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolListAttr(SymbolHandle symbol,
-                               mx_uint *out_size,
+                               uint32_t *out_size,
                                const char*** out_array2);
 /*!
  * \brief Get all attributes from symbol, excluding descendents.
@@ -1177,7 +1298,7 @@ int MXSymbolListAttr(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolListAttrShallow(SymbolHandle symbol,
-                                      mx_uint *out_size,
+                                      uint32_t *out_size,
                                       const char*** out_array2);
 /*!
  * \brief List arguments in the symbol.
@@ -1187,7 +1308,7 @@ int MXSymbolListAttrShallow(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolListArguments(SymbolHandle symbol,
-                                    mx_uint *out_size,
+                                    uint32_t *out_size,
                                     const char ***out_array);
 /*!
  * \brief List returns in the symbol.
@@ -1197,7 +1318,7 @@ int MXSymbolListArguments(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolListOutputs(SymbolHandle symbol,
-                                  mx_uint *out_size,
+                                  uint32_t *out_size,
                                   const char ***out_array);
 /*!
  * \brief Get a symbol that contains all the internals.
@@ -1223,8 +1344,10 @@ int MXSymbolGetChildren(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolGetOutput(SymbolHandle symbol,
-                                mx_uint index,
+                                mx_uint in,
                                 SymbolHandle *out);
+int MXSymbolGetNumOutputs(SymbolHandle symbol,
+                                    uint32_t *out);
 /*!
  * \brief List auxiliary states in the symbol.
  * \param symbol the symbol
@@ -1233,7 +1356,7 @@ int MXSymbolGetOutput(SymbolHandle symbol,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
-                                          mx_uint *out_size,
+                                          uint32_t *out_size,
                                           const char ***out_array);
 /*!
  * \brief Compose the symbol on other symbols.
@@ -1251,7 +1374,7 @@ int MXSymbolListAuxiliaryStates(SymbolHandle symbol,
  */
 int MXSymbolCompose(SymbolHandle sym,
                               const char *name,
-                              mx_uint num_args,
+                              uint32_t in,
                               const char** in,
                               SymbolHandle* in);
 /*!
@@ -1264,7 +1387,7 @@ int MXSymbolCompose(SymbolHandle sym,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolGrad(SymbolHandle sym,
-                           mx_uint num_wrt,
+                           uint32_t in,
                            const char** in,
                            SymbolHandle* out);
 /*!
@@ -1290,20 +1413,59 @@ int MXSymbolGrad(SymbolHandle sym,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShapeEx(SymbolHandle sym,
-                         mx_uint num_args,
+                         uint32_t in,
                          const char** in,
-                         const mx_uint *in,
+                         const uint32_t *in,
                          const int *in,
-                         mx_uint *in_shape_size,
+                         uint32_t *in_shape_size,
                          const int **in_shape_ndim,
                          const int ***in_shape_data,
-                         mx_uint *out_shape_size,
+                         uint32_t *out_shape_size,
                          const int **out_shape_ndim,
                          const int ***out_shape_data,
-                         mx_uint *aux_shape_size,
+                         uint32_t *aux_shape_size,
                          const int **aux_shape_ndim,
                          const int ***aux_shape_data,
                          int *out);
+/*!
+ * \brief infer shape of unknown input shapes given the known one.
+ *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param sym symbol handle
+ * \param num_args number of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of each input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of each output shape.
+ * \param out_shape_data returning array of pointers to head of the output shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of each auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXSymbolInferShapeEx64(SymbolHandle sym,
+                                     uint32_t in,
+                                     const char** in,
+                                     const int64_t *in,
+                                     const int64_t *in,
+                                     size_t *in_shape_size,
+                                     const int **in_shape_ndim,
+                                     const int64_t ***in_shape_data,
+                                     size_t *out_shape_size,
+                                     const int **out_shape_ndim,
+                                     const int64_t ***out_shape_data,
+                                     size_t *aux_shape_size,
+                                     const int **aux_shape_ndim,
+                                     const int64_t ***aux_shape_data,
+                                     int *out);
+
 /*!
  * \brief partially infer shape of unknown input shapes given the known one.
  *
@@ -1329,20 +1491,61 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferShapePartialEx(SymbolHandle sym,
-                                mx_uint num_args,
+                                uint32_t in,
                                 const char** in,
-                                const mx_uint *in,
+                                const uint32_t *in,
                                 const int *in,
-                                mx_uint *in_shape_size,
+                                uint32_t *in_shape_size,
                                 const int **in_shape_ndim,
                                 const int ***in_shape_data,
-                                mx_uint *out_shape_size,
+                                uint32_t *out_shape_size,
                                 const int **out_shape_ndim,
                                 const int ***out_shape_data,
-                                mx_uint *aux_shape_size,
+                                uint32_t *aux_shape_size,
                                 const int **aux_shape_ndim,
                                 const int ***aux_shape_data,
                                 int *out);
+/*!
+ * \brief partially infer shape of unknown input shapes given the known one.
+ *
+ *  Return partially inferred results if not all shapes could be inferred.
+ *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ *
+ * \param sym symbol handle
+ * \param num_args number of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_ind_ptr the head pointer of the rows in CSR
+ * \param arg_shape_data the content of the CSR
+ * \param in_shape_size sizeof the returning array of in_shapes
+ * \param in_shape_ndim returning array of shape dimensions of each input shape.
+ * \param in_shape_data returning array of pointers to head of the input shape.
+ * \param out_shape_size sizeof the returning array of out_shapes
+ * \param out_shape_ndim returning array of shape dimensions of each output shape.
+ * \param out_shape_data returning array of pointers to head of the output shape.
+ * \param aux_shape_size sizeof the returning array of aux_shapes
+ * \param aux_shape_ndim returning array of shape dimensions of each auxiliary shape.
+ * \param aux_shape_data returning array of pointers to head of the auxiliary shape.
+ * \param complete whether infer shape completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXSymbolInferShapePartialEx64(SymbolHandle sym,
+                                            uint32_t in,
+                                            const char** in,
+                                            const int64_t *in,
+                                            const int64_t *in,
+                                            size_t *in_shape_size,
+                                            const int **in_shape_ndim,
+                                            const int64_t ***in_shape_data,
+                                            size_t *out_shape_size,
+                                            const int **out_shape_ndim,
+                                            const int64_t ***out_shape_data,
+                                            size_t *aux_shape_size,
+                                            const int **aux_shape_ndim,
+                                            const int64_t ***aux_shape_data,
+                                            int *out);
 
 /*!
  * \brief infer type of unknown input types given the known one.
@@ -1363,16 +1566,76 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
  * \return 0 when success, -1 when failure happens
  */
 int MXSymbolInferType(SymbolHandle sym,
-                                mx_uint num_args,
+                                uint32_t in,
                                 const char** in,
                                 const int *in,
-                                mx_uint *in_type_size,
+                                uint32_t *in_type_size,
                                 const int **in_type_data,
-                                mx_uint *out_type_size,
+                                uint32_t *out_type_size,
                                 const int **out_type_data,
-                                mx_uint *aux_type_size,
+                                uint32_t *aux_type_size,
                                 const int **aux_type_data,
                                 int *out);
+/*!
+ * \brief partially infer type of unknown input types given the known one.
+ *
+ *  Return partially inferred results if not all types could be inferred.
+ *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
+ *
+ * \param sym symbol handle
+ * \param num_args numbe of input arguments.
+ * \param keys the key of keyword args (optional)
+ * \param arg_type_data the content of the CSR
+ * \param in_type_size sizeof the returning array of in_types
+ * \param in_type_data returning array of pointers to head of the input type.
+ * \param out_type_size sizeof the returning array of out_types
+ * \param out_type_data returning array of pointers to head of the output type.
+ * \param aux_type_size sizeof the returning array of aux_types
+ * \param aux_type_data returning array of pointers to head of the auxiliary type.
+ * \param complete whether infer type completes or more information is needed.
+ * \return 0 when success, -1 when failure happens
+ */
+int MXSymbolInferTypePartial(SymbolHandle sym,
+                                       uint32_t in,
+                                       const char** in,
+                                       const int *in,
+                                       uint32_t *in_type_size,
+                                       const int **in_type_data,
+                                       uint32_t *out_type_size,
+                                       const int **out_type_data,
+                                       uint32_t *aux_type_size,
+                                       const int **aux_type_data,
+                                       int *out);
+/*!
+ * \brief Generate atomic symbol (able to be composed) from a source symbol
+ * \param sym_handle source symbol
+ * \param ret_sym_handle returned atomic symbol
+ */
+int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *out);
+
+/*!
+ * \brief Partitions symbol for given backend, potentially creating subgraphs
+ * \param sym_handle symbol to be partitioned
+ * \param dev_type context device type
+ * \param backend_name backend name
+ * \param ret_sym_handle partitioned symbol returned
+ * \param len number of args
+ * \param in_args_handle args array
+ * \param num_options number of key value pairs
+ * \param keys keys for options
+ * \param vals values corresponding to keys
+ */
+int MXOptimizeForBackend(SymbolHandle sym_handle,
+                                   const char* in,
+                                   const int dev_type,
+                                   SymbolHandle* in,
+                                   const mx_uint in,
+                                   NDArrayHandle* in,
+                                   const mx_uint in,
+                                   const char** keys,
+                                   const char** vals);
+
 //--------------------------------------------
 // Part 4: Executor interface
 //--------------------------------------------
@@ -1407,7 +1670,7 @@ int MXExecutorForward(ExecutorHandle handle, int is_train);
  * \return 0 when success, -1 when failure happens
  */
 int MXExecutorBackward(ExecutorHandle handle,
-                                 mx_uint len,
+                                 uint32_t in,
                                  NDArrayHandle *in);
 
 /*!
@@ -1421,7 +1684,7 @@ int MXExecutorBackward(ExecutorHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXExecutorBackwardEx(ExecutorHandle handle,
-                                   mx_uint len,
+                                   uint32_t in,
                                    NDArrayHandle *in,
                                    int is_train);
 
@@ -1434,7 +1697,7 @@ int MXExecutorBackwardEx(ExecutorHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXExecutorOutputs(ExecutorHandle handle,
-                                mx_uint *out_size,
+                                uint32_t *out_size,
                                 NDArrayHandle **out_array);
 
 /*!
@@ -1455,11 +1718,11 @@ int MXExecutorOutputs(ExecutorHandle handle,
 int MXExecutorBind(SymbolHandle symbol_handle,
                              int dev_type,
                              int dev_id,
-                             mx_uint len,
+                             uint32_t in,
                              NDArrayHandle *in,
                              NDArrayHandle *in,
-                             mx_uint *in,
-                             mx_uint aux_states_len,
+                             uint32_t *in,
+                             uint32_t aux_states_len,
                              NDArrayHandle *in,
                              ExecutorHandle *out);
 /*!
@@ -1486,15 +1749,15 @@ int MXExecutorBind(SymbolHandle symbol_handle,
 int MXExecutorBindX(SymbolHandle symbol_handle,
                               int dev_type,
                               int dev_id,
-                              mx_uint num_map_keys,
+                              uint32_t in,
                               const char** in,
                               const int* in,
                               const int* in,
-                              mx_uint len,
+                              uint32_t in,
                               NDArrayHandle *in,
                               NDArrayHandle *in,
-                              mx_uint *in,
-                              mx_uint aux_states_len,
+                              uint32_t *in,
+                              uint32_t in,
                               NDArrayHandle *in,
                               ExecutorHandle *out);
 /*!
@@ -1522,15 +1785,15 @@ int MXExecutorBindX(SymbolHandle symbol_handle,
 int MXExecutorBindEX(SymbolHandle symbol_handle,
                                int dev_type,
                                int dev_id,
-                               mx_uint num_map_keys,
+                               uint32_t in,
                                const char** in,
                                const int* in,
                                const int* in,
-                               mx_uint len,
+                               uint32_t in,
                                NDArrayHandle *in,
                                NDArrayHandle *in,
-                               mx_uint *in,
-                               mx_uint aux_states_len,
+                               uint32_t *in,
+                               uint32_t in,
                                NDArrayHandle *in,
                                ExecutorHandle shared_exec,
                                ExecutorHandle *out);
@@ -1538,38 +1801,73 @@ int MXExecutorBindEX(SymbolHandle symbol_handle,
 int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
                            int dev_type,
                            int dev_id,
-                           const mx_uint num_g2c_keys,
+                           const uint32_t in, // num_g2c_keys,
                            const char** in, // g2c_keys,
                            const int* in, // g2c_dev_types,
                            const int* in, // g2c_dev_ids,
-                           const mx_uint provided_grad_req_list_len,
+                           const uint32_t in, // provided_grad_req_list_len,
                            const char** in, // provided_grad_req_names,
                            const char** in, // provided_grad_req_types,
-                           const mx_uint num_provided_arg_shapes,
+                           const uint32_t in, //  num_provided_arg_shapes,
                            const char** in, // provided_arg_shape_names,
                            const int* in, // provided_arg_shape_data,
-                           const mx_uint* in, // provided_arg_shape_idx,
-                           const mx_uint num_provided_arg_dtypes,
+                           const uint32_t* in, // provided_arg_shape_idx,
+                           const uint32_t in, // num_provided_arg_dtypes,
                            const char** in, // provided_arg_dtype_names,
                            const int* in, // provided_arg_dtypes,
-                           const mx_uint num_provided_arg_stypes,
+                           const uint32_t in, // num_provided_arg_stypes,
                            const char** in, // provided_arg_stype_names,
                            const int* in, // provided_arg_stypes,
-                           const mx_uint num_shared_arg_names,
+                           const uint32_t in, // num_shared_arg_names,
                            const char** in, // shared_arg_name_list,
                            int* shared_buffer_len,
                            const char** shared_buffer_name_list,
                            NDArrayHandle* shared_buffer_handle_list,
                            const char*** updated_shared_buffer_name_list,
                            NDArrayHandle** updated_shared_buffer_handle_list,
-                           mx_uint* num_in_args,
+                           uint32_t* num_in_args,
                            NDArrayHandle** in_args,
                            NDArrayHandle** arg_grads,
-                           mx_uint* num_aux_states,
+                           uint32_t* num_aux_states,
                            NDArrayHandle** aux_states,
                            ExecutorHandle shared_exec_handle,
                            ExecutorHandle* out
 );
+
+int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
+                                     int dev_type,
+                                     int dev_id,
+                                     const uint32_t in, // num_g2c_keys,
+                                     const char** in, // g2c_keys,
+                                     const int* in, // g2c_dev_types,
+                                     const int* in, // g2c_dev_ids,
+                                     const uint32_t in, // provided_grad_req_list_len,
+                                     const char** in, // provided_grad_req_names,
+                                     const char** in, // provided_grad_req_types,
+                                     const uint32_t in, // num_provided_arg_shapes,
+                                     const char** in, // provided_arg_shape_names,
+                                     const int64_t* in, // provided_arg_shape_data,
+                                     const uint32_t* in, // provided_arg_shape_idx,
+                                     const uint32_t in, // num_provided_arg_dtypes,
+                                     const char** in, // provided_arg_dtype_names,
+                                     const int* in, // provided_arg_dtypes,
+                                     const uint32_t in, // num_provided_arg_stypes,
+                                     const char** in, // provided_arg_stype_names,
+                                     const int* in, // provided_arg_stypes,
+                                     const uint32_t in, // num_shared_arg_names,
+                                     const char** in, // shared_arg_name_list,
+                                     int* shared_buffer_len,
+                                     const char** shared_buffer_name_list,
+                                     NDArrayHandle* shared_buffer_handle_list,
+                                     const char*** updated_shared_buffer_name_list,
+                                     NDArrayHandle** updated_shared_buffer_handle_list,
+                                     uint32_t* num_in_args,
+                                     NDArrayHandle** in_args,
+                                     NDArrayHandle** arg_grads,
+                                     uint32_t* num_aux_states,
+                                     NDArrayHandle** aux_states,
+                                     ExecutorHandle shared_exec_handle,
+                                     ExecutorHandle* out);
 
 /*!
  * \brief Return a new executor with the same symbol and shared memory,
@@ -1596,21 +1894,26 @@ int MXExecutorReshapeEx(int partial_shaping,
                         int allow_up_sizing,
                         int dev_type,
                         int dev_id,
-                        mx_uint num_map_keys,
+                        uint32_t in,
                         const char** in,
                         const int* in,
                         const int* in,
-                        const mx_uint num_provided_arg_shapes,
+                        const uint32_t in,
                         const char** in,
                         const int* in,
-                        const mx_uint* in,
-                        mx_uint* couple_out_size,
+                        const uint32_t* in,
+                        uint32_t* couple_out_size,
                         NDArrayHandle** out_first_array,
                         NDArrayHandle** out_second_array,
-                        mx_uint* out_size,
+                        uint32_t* out_size,
                         NDArrayHandle** out_array,
                         ExecutorHandle shared_exec,
                         ExecutorHandle *out);
+ /*!
+  * \brief get optimized graph from graph executor
+  */
+int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
+                                            SymbolHandle *out);
 
 /*!
  * \brief set a call back to notify the completion of operation
@@ -1628,7 +1931,7 @@ int MXExecutorSetMonitorCallback(ExecutorHandle handle,
  * \param out_array the output iteratos entries
  * \return 0 when success, -1 when failure happens
  */
-int MXListDataIters(mx_uint *out_size,
+int MXListDataIters(uint32_t *out_size,
                               DataIterCreator **out_array);
 /*!
  * \brief Init an iterator, init with parameters
@@ -1641,7 +1944,7 @@ int MXListDataIters(mx_uint *out_size,
  * \return 0 when success, -1 when failure happens
  */
 int MXDataIterCreateIter(DataIterCreator handle,
-                                   mx_uint num_param,
+                                   uint32_t in,
                                    const char **keys,
                                    const char **vals,
                                    DataIterHandle *out);
@@ -1659,7 +1962,7 @@ int MXDataIterCreateIter(DataIterCreator handle,
 int MXDataIterGetIterInfo(DataIterCreator creator,
                                     const char **name,
                                     const char **description,
-                                    mx_uint *num_args,
+                                    uint32_t *num_args,
                                     const char ***arg_names,
                                     const char ***arg_type_infos,
                                     const char ***arg_descriptions);
@@ -1728,7 +2031,7 @@ int MXDataIterGetLabel(DataIterHandle handle,
  * \param keys environment keys
  * \param vals environment values
  */
-int MXInitPSEnv(mx_uint num_vars,
+int MXInitPSEnv(uint32_t in,
                           const char **keys,
                           const char **vals);
 
@@ -1755,7 +2058,7 @@ int MXKVStoreFree(KVStoreHandle handle);
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStoreSetGradientCompression(KVStoreHandle handle,
-                                              mx_uint num_params,
+                                              uint32_t in,
                                               const char** keys,
                                               const char** vals);
 
@@ -1769,7 +2072,7 @@ int MXKVStoreSetGradientCompression(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStoreInitEx(KVStoreHandle handle,
-                              mx_uint num,
+                              uint32_t in,
                               const char** in,
                               NDArrayHandle* in);
  /*!
@@ -1782,7 +2085,7 @@ int MXKVStoreInitEx(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStorePushEx(KVStoreHandle handle,
-                              mx_uint num,
+                              uint32_t in,
                               const char** in,
                               NDArrayHandle* in,
                               int priority);
@@ -1796,7 +2099,7 @@ int MXKVStorePushEx(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStorePullEx(KVStoreHandle handle,
-                              mx_uint num,
+                              uint32_t in,
                               const char** in,
                               NDArrayHandle* in,
                               int priority);
@@ -1813,7 +2116,7 @@ int MXKVStorePullEx(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStorePullRowSparse(KVStoreHandle handle,
-                                     mx_uint num,
+                                     uint32_t in,
                                      const int* in,
                                      NDArrayHandle* in,
                                      NDArrayHandle* in,
@@ -1831,7 +2134,7 @@ int MXKVStorePullRowSparse(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStorePullRowSparseEx(KVStoreHandle handle,
-                                       mx_uint num,
+                                       uint32_t in,
                                        const char** in,
                                        NDArrayHandle* in,
                                        NDArrayHandle* in,
@@ -1848,7 +2151,7 @@ int MXKVStorePullRowSparseEx(KVStoreHandle handle,
  * \return 0 when success, -1 when failure happens
  */
 int MXKVStorePullWithSparseEx(KVStoreHandle handle,
-                                        mx_uint num,
+                                        uint32_t in,
                                         const char** in,
                                         NDArrayHandle* in,
                                         int priority,
@@ -2093,7 +2396,7 @@ int MXRecordIOReaderSeek(RecordIOHandle handle, size_t pos);
 /**
  * \brief Create a MXRtc object
 */
-int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
+int MXRtcCreate(char* name, uint32_t in, uint32_t in,
                           char** in, char** in,
                           NDArrayHandle* in, NDArrayHandle* in,
                           char* kernel, RtcHandle *out);
@@ -2101,14 +2404,15 @@ int MXRtcCreate(char* name, mx_uint num_input, mx_uint num_output,
 /**
  * \brief Run cuda kernel
 */
-int MXRtcPush(RtcHandle handle, mx_uint num_input, mx_uint num_output,
+int MXRtcPush(RtcHandle handle, uint32_t in, uint32_t in,
                         NDArrayHandle* in, NDArrayHandle* in,
-                        mx_uint gridDimX,
-                        mx_uint gridDimY,
-                        mx_uint gridDimZ,
-                        mx_uint blockDimX,
-                        mx_uint blockDimY,
-                        mx_uint blockDimZ);
+                        uint32_t in, // gridDimX,
+                        uint32_t in, // gridDimY,
+                        uint32_t in, // gridDimZ,
+                        uint32_t in, // blockDimX,
+                        uint32_t in, // blockDimY,
+                        uint32_t in // blockDimZ
+);
 
 /**
  * \brief Delete a MXRtc object
@@ -2164,7 +2468,11 @@ int MXRtcCudaKernelFree(CudaKernelHandle handle);
  * \param shared_mem size of dynamically allocated shared memory
  */
 int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** cuda_kernel_args,
-                                  mx_uint grid_dim_x, mx_uint grid_dim_y,
-                                  mx_uint grid_dim_z, mx_uint block_dim_x,
-                                  mx_uint block_dim_y, mx_uint block_dim_z,
-                                  mx_uint shared_mem);
+                                  uint32_t in, // grid_dim_x,
+                                  uint32_t in, // grid_dim_y,
+                                  uint32_t in, // grid_dim_z,
+                                  uint32_t in, // block_dim_x,
+                                  uint32_t in, // block_dim_y,
+                                  uint32_t in, // block_dim_z,
+                                  uint32_t in // shared_mem
+);

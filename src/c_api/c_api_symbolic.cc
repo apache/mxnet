@@ -386,7 +386,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
     const std::string &subg_name = it->second;
     std::vector<nnvm::NodeEntry *> input_entries;
     DFSVisit(s->outputs, [&subg_attr, &subg_name, &input_entries]
-             (nnvm::NodePtr n) {
+             (nnvm::ObjectPtr n) {
       // If the node itself isn't in the subgraph, we ignore it.
       auto it = n->attrs.dict.find(subg_attr);
       if (it == n->attrs.dict.end() || it->second != subg_name)
@@ -431,7 +431,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
 void ConvertShapeAttrToNumPyCompatible(nnvm::Graph* g) {
   if (Imperative::Get()->is_np_shape()
     && (!g->HasAttr("is_np_shape") || !g->GetAttr<int>("is_np_shape"))) {
-    DFSVisit(g->outputs, [](nnvm::NodePtr n) {
+    DFSVisit(g->outputs, [](nnvm::ObjectPtr n) {
       if (n->is_variable()) {
         auto it = n->attrs.dict.find("__shape__");
         if (it != n->attrs.dict.end()) {
@@ -692,6 +692,27 @@ inline void SymbolInferShape(const char** keys,
   *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
 }
 
+/*!
+ * \brief Executor for Symbol Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=0 (by default)
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapeEx(SymbolHandle sym,
                          uint32_t num_args,
                          const char** keys,
@@ -729,6 +750,27 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
   API_END();
 }
 
+/*!
+ * \brief Executor for Symbol Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapeEx64(SymbolHandle sym,
                            uint32_t num_args,
                            const char** keys,
@@ -791,6 +833,27 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
                             &succ);
 }
 
+/*!
+ * \brief Executor for Symbol Partial Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=0 (by default)
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapePartialEx(SymbolHandle sym,
                                 uint32_t num_args,
                                 const char** keys,
@@ -816,6 +879,27 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
                               &succ);
 }
 
+/*!
+ * \brief Executor for Symbol Partial Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapePartialEx64(SymbolHandle sym,
                                   uint32_t num_args,
                                   const char** keys,
@@ -925,6 +1009,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
                      const char *quantized_dtype,
                      const bool calib_quantize,
                      const char *quantize_mode,
+                     const char *quantize_granularity,
                      mx_uint* out_num_calib_names,
                      const char ***out_calib_names) {
   nnvm::Symbol *s = new nnvm::Symbol();
@@ -946,12 +1031,14 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   }
   std::string quantized_type(quantized_dtype);
   std::string quantized_mode(quantize_mode);
+  std::string quantized_granularity(quantize_granularity);
   g.attrs["excluded_nodes"] = std::make_shared<nnvm::any>(std::move(excluded_node_names));
   g.attrs["excluded_ops"] = std::make_shared<nnvm::any>(std::move(excluded_op));
   g.attrs["offline_params"] = std::make_shared<nnvm::any>(std::move(offline));
   g.attrs["quantized_dtype"] = std::make_shared<nnvm::any>(std::move(quantized_type));
   g.attrs["target_ctx"] = std::make_shared<nnvm::any>(target_dev);
   g.attrs["quantize_mode"] = std::make_shared<nnvm::any>(std::move(quantized_mode));
+  g.attrs["quantize_granularity"] = std::make_shared<nnvm::any>(std::move(quantized_granularity));
   g = ApplyPass(std::move(g), "QuantizeGraph");
   const auto& calib_nodes = g.GetAttr<std::vector<std::string>>("calib_nodes");
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
@@ -1007,13 +1094,13 @@ static void _SetInputDTypes(
 // if model_params is provided the function will dtype of only model params.
 // if model_params is empty, the function will dtype of all nodes which had
 // a prior dtype set.
-// args is a const_reference vector of NodePtrs. NodePtrs are immutable but
+// args is a const_reference vector of ObjectPtrs. ObjectPtrs are immutable but
 // the Nodes they are pointing will be mutated in this function
 static void _UpdateSymDTypeAttrs(
     const std::unordered_map<std::string, int>& node_name_dtype_map,
     const std::unordered_map<std::string, int>& node_without_dtype_map,
     const std::unordered_set<std::string>& model_params,
-    const std::vector<nnvm::NodePtr>& args) {
+    const std::vector<nnvm::ObjectPtr>& args) {
   const std::string dtype_keyword = "__dtype__";
 
   // Update args to have the right dtype attrs
@@ -1135,6 +1222,8 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_syms"] =
       std::make_shared<nnvm::any>(std::move(excluded_syms));
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
+  g.attrs["data_name_types"] = std::make_shared<nnvm::any>(kwargs);
+  g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
 
   g = ApplyPass(std::move(g), "ReducePrecision");
   // Need to run type inference since it is possible that inferred
@@ -1163,7 +1252,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   result_sym->outputs = g.outputs;
   *ret_sym_handle = result_sym;
   nnvm::Symbol *ret_sym = static_cast<nnvm::Symbol *>(*ret_sym_handle);
-  const std::vector<nnvm::NodePtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
+  const std::vector<nnvm::ObjectPtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
 
   // update symbol dtype attrs using the node name -> dtype mapping, if dtype is already set
   // in the symbol, else set dtype for the model_params

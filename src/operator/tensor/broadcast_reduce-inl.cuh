@@ -368,9 +368,10 @@ static inline uint64_t calc_num_load(const int X, const int Y, const int* stride
 }
 
 template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small, const mxnet::TShape& big, const mxnet::TShape* lhs,
-  const mxnet::TShape* rhs) {
-
+ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
+                                           const mxnet::TShape& big,
+                                           const mxnet::TShape* lhs,
+                                           const mxnet::TShape* rhs) {
   ReduceImplConfig<ndim> config;
 
   diff(small.get<ndim>(), big.get<ndim>(), &config.rshape, &config.rstride);
@@ -378,7 +379,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small, const mxn
   config.M = config.rshape.Size();
 
   bool multiOp = false;
-  if (lhs != NULL) {
+  if (lhs != nullptr) {
     CHECK_NOTNULL(rhs);
     diff(small.get<ndim>(), lhs->get<ndim>(), &config.lhs_shape,
       &config.lhs_stride);
@@ -617,13 +618,13 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, NULL, NULL);
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
   if (safe_acc) {
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, NULL, NULL);
+        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
         ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
           stream, small, req, big, workspace, config);
       });
@@ -631,6 +632,16 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
   } else {
     ReduceImpl<Reducer, ndim, DType, DType, DType, OP>(stream, small, req, big, workspace, config);
   }
+}
+
+template<typename Reducer, int ndim, typename DType, typename OP, bool safe_acc = false>
+void ReduceBool(Stream<gpu> *s, const TBlob& small, const OpReqType req,
+                const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
+  if (req == kNullOp) return;
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
+  ReduceImplConfig<ndim> config =
+    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+  ReduceImpl<Reducer, ndim, bool, DType, bool, OP>(stream, small, req, big, workspace, config);
 }
 
 template <typename Reducer, int ndim, typename DType, typename OP>
@@ -652,7 +663,7 @@ template<int ndim, typename DType>
 size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
                            const mxnet::TShape& big) {
   if (req == kNullOp) return 0;
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, NULL, NULL);
+  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, nullptr, nullptr);
   return config.workspace_size;
 }
 

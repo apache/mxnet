@@ -31,6 +31,7 @@
 
 #include <vector>
 #include <functional>
+#include <string>
 
 #include "./base.h"
 #include "./ndarray.h"
@@ -328,7 +329,7 @@ using FQuantizable = std::function<QuantizeType (const NodeAttrs& attrs)>;
  * \brief Register a quantized node creation function based on the attrs of the node
  * \note Register under "FQuantizedOp" for non-quantized operators
  */
-using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
+using FQuantizedOp = std::function<nnvm::ObjectPtr (const NodeAttrs& attrs)>;
 
 /*!
  * \brief Register a function to determine if the output of a quantized operator
@@ -344,7 +345,8 @@ using FNeedRequantize = std::function<bool (const NodeAttrs& attrs)>;
  * which can handle fp32 inputs directly.
  */
 using FAvoidQuantizeInput = std::function<bool (const NodeAttrs& attrs,
-                                                size_t index)>;
+                                                const size_t index,
+                                                const std::string quantize_granularity)>;
 
 /*!
  * \brief Register a function to determine if the input of a quantized operator

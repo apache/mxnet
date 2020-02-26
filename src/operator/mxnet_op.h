@@ -210,6 +210,7 @@ inline int get_num_threads<cpu>(const int N) {
     }                                                      \
     break;                                                 \
   case mshadow::kFloat16:                                  \
+  case mshadow::kBfloat16:                                 \
     {                                                      \
       typedef mshadow::half::half_t DType;                 \
       {__VA_ARGS__}                                        \
@@ -599,6 +600,7 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("float32", mshadow::kFloat32) \
   .add_enum("float64", mshadow::kFloat64) \
   .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
   .add_enum("uint8", mshadow::kUint8) \
   .add_enum("int8", mshadow::kInt8) \
   .add_enum("int32", mshadow::kInt32) \
@@ -609,6 +611,7 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("float32", mshadow::kFloat32) \
   .add_enum("float64", mshadow::kFloat64) \
   .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
   .add_enum("uint8", mshadow::kUint8) \
   .add_enum("int8", mshadow::kInt8) \
   .add_enum("int32", mshadow::kInt32) \
@@ -1148,6 +1151,29 @@ struct set_to_int : public tunable {
  */
 using set_zero = set_to_int<0>;
 using set_one  = set_to_int<1>;
+
+/*!
+ * \brief Set to immediate scalar value kernel
+ * \tparam val Scalar immediate
+ */
+template<bool val>
+struct set_to_bool : public tunable {
+  // mxnet_op version (when used directly with Kernel<>::Launch()) */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    out[i] = DType(val);
+  }
+  // mshadow_op version (when used with op_with_req<>)
+  MSHADOW_XINLINE static int Map() {
+    return val;
+  }
+};
+
+/*!
+ * \brief Special-case kernel shortcut for setting to true and false
+ */
+using set_true = set_to_bool<true>;
+using set_false = set_to_bool<false>;
 }  // namespace mxnet_op
 
 }  // namespace op

@@ -34,13 +34,6 @@ def get_pipeline(mxnet_variant, build_fn) {
 
       stage('Test') {
         def tests = [:]
-        tests["${mxnet_variant}: Python 2"] = {
-          stage("${mxnet_variant}: Python 2") {
-            timeout(time: max_time, unit: 'MINUTES') {
-              unittest_py2(mxnet_variant)
-            }
-          }
-        }
         tests["${mxnet_variant}: Python 3"] = {
           stage("${mxnet_variant}: Python 3") {
             timeout(time: max_time, unit: 'MINUTES') {
@@ -55,13 +48,6 @@ def get_pipeline(mxnet_variant, build_fn) {
             stage("${mxnet_variant}: Quantization Python 3") {
               timeout(time: max_time, unit: 'MINUTES') {
                 test_gpu_quantization_py3(mxnet_variant)
-              }
-            }
-          }
-          tests["${mxnet_variant}: Quantization Python 2"] = {
-            stage("${mxnet_variant}: Python 2") {
-              timeout(time: max_time, unit: 'MINUTES') {
-                test_gpu_quantization_py2(mxnet_variant)
               }
             }
           }
@@ -82,7 +68,7 @@ def get_pipeline(mxnet_variant, build_fn) {
 // Returns a string of comma separated resources to be stashed b/w stages
 // E.g. the libmxnet library and any other dependencies
 def get_stash(mxnet_variant) {
-  def deps = mxnet_variant.endsWith('mkl') ? mx_mkldnn_deps : mx_deps
+  def deps = mxnet_variant.endsWith('native') ? mx_native_deps : mx_deps
   return "${libmxnet}, ${licenses}, ${deps}"
 }
 
@@ -119,30 +105,6 @@ def unittest_py3(mxnet_variant) {
   }
 }
 
-// Runs unit tests using python 2
-def unittest_py2(mxnet_variant) {
-  def node_label = get_jenkins_node_label(mxnet_variant)
-  node(node_label) {
-    ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      def image = get_environment(mxnet_variant)
-      def use_nvidia_docker = mxnet_variant.startsWith('cu')
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
-      ci_utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant} python", use_nvidia_docker)
-    }
-  }
-}
-
-// Tests quantization in P3 instance using Python 2
-def test_gpu_quantization_py2(mxnet_variant) {
-  node(NODE_LINUX_GPU_P3) {
-    ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      def image = get_environment(mxnet_variant)
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
-      ci_utils.docker_run(image, "unittest_ubuntu_python2_quantization_gpu", true)
-    }
-  }
-}
-
 // Tests quantization in P3 instance using Python 3
 def test_gpu_quantization_py3(mxnet_variant) {
   node(NODE_LINUX_GPU_P3) {
@@ -158,7 +120,7 @@ def test_gpu_quantization_py3(mxnet_variant) {
 def push(mxnet_variant) {
   node(NODE_LINUX_CPU) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      def deps = (mxnet_variant.endsWith('mkl')? mx_mkldnn_deps : mx_deps).replaceAll(',', '')
+      def deps = (mxnet_variant.endsWith('native')? mx_native_deps : mx_deps).replaceAll(',', '')
       ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       cd_utils.push_artifact(libmxnet, mxnet_variant, libtype, licenses, deps)
     }

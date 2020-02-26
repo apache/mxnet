@@ -29,6 +29,7 @@
 #include "mkldnn_conv-inl.h"
 #include "../../nn/mkldnn/mkldnn_act-inl.h"
 #include "../../tensor/matrix_op-inl.h"
+#include "mkldnn_common.h"
 
 namespace mxnet {
 namespace op {
@@ -45,13 +46,13 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   NDArray update_weight = NDArray(weight->storage_type(), weight->shape(),
                                   weight->ctx(), true, weight->dtype());
   NDArray update_bias = NDArray(beta.storage_type(), beta.shape(), beta.ctx(),
-                                true, beta.dtype());
+                                true, weight->dtype());
   const DType *weight_ptr = weight->data().dptr<DType>();
   const DType *bias_ptr = no_bias ? nullptr : bias->data().dptr<DType>();
-  const DType *gamma_ptr = gamma.data().dptr<DType>();
-  const DType *beta_ptr = beta.data().dptr<DType>();
-  const DType *mean_ptr = mean.data().dptr<DType>();
-  const DType *var_ptr = variance.data().dptr<DType>();
+  const float *gamma_ptr = gamma.data().dptr<float>();
+  const float *beta_ptr = beta.data().dptr<float>();
+  const float *mean_ptr = mean.data().dptr<float>();
+  const float *var_ptr = variance.data().dptr<float>();
   DType *update_weight_ptr = update_weight.data().dptr<DType>();
   DType *update_bias_ptr = update_bias.data().dptr<DType>();
   size_t channel = gamma.shape()[0];
@@ -60,16 +61,16 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     const DType *p1 = weight_ptr + c * offset;
     DType *p2 = update_weight_ptr + c * offset;
-    DType alpha = (param->fix_gamma ? static_cast<DType>(1.0f) : gamma_ptr[c]) /
-                  sqrt(var_ptr[c] + param->eps);
+    float alpha = (param->fix_gamma ? 1.0f : gamma_ptr[c]) / sqrt(var_ptr[c] + param->eps);
 
     if (bias_ptr)
-      update_bias_ptr[c] = beta_ptr[c] + alpha * (bias_ptr[c] - mean_ptr[c]);
+      update_bias_ptr[c] =
+          static_cast<DType>(beta_ptr[c] + alpha * (static_cast<float>(bias_ptr[c]) - mean_ptr[c]));
     else
-      update_bias_ptr[c] = beta_ptr[c] - alpha * mean_ptr[c];
+      update_bias_ptr[c] = static_cast<DType>(beta_ptr[c] - alpha * mean_ptr[c]);
 
     for (size_t k = 0; k < offset; ++k) {
-      p2[k] = p1[k] * alpha;
+      p2[k] = static_cast<DType>(static_cast<float>(p1[k]) * alpha);
     }
   }
   *weight = update_weight;
@@ -79,101 +80,6 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
 static inline size_t GetInSumIndex(const MKLDNNConvFusionParam &param) {
   return 2 + (param.full_conv_param.conv_param.no_bias ? 0 : 1) +
          (param.full_conv_param.mkldnn_param.with_bn ? 4 : 0);
-}
-
-template <typename DType>
-static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *bias,
-                                          const float data_scale, bool weight_channelwise_scale) {
-  std::vector<float> weight_scales;
-  const DType *weight_ptr = weight.data().dptr<DType>();
-  const DType *bias_ptr = bias? bias->data().dptr<DType>() : nullptr;
-  size_t channel = weight.shape()[0];
-
-  // TODO(Zhennan): Handle the case weight is not in dims 4.
-  size_t offset = weight.shape()[1] * weight.shape()[2] * weight.shape()[3];
-  std::vector<DType> weight_c_min(channel, MaxValue<DType>());
-  std::vector<DType> weight_c_max(channel, MinValue<DType>());
-  for (int c = 0; c < static_cast<int>(channel); ++c) {
-    const DType *p1 = weight_ptr + c * offset;
-    for (size_t k = 0; k < offset; ++k) {
-      if (weight_c_min[c] > p1[k])
-        weight_c_min[c] = p1[k];
-      if (weight_c_max[c] < p1[k])
-        weight_c_max[c] = p1[k];
-    }
-  }
-
-  if (weight_channelwise_scale) {
-    weight_scales.resize(channel);
-#pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-    for (int c = 0; c < static_cast<int>(channel); ++c) {
-      float scale = GetQuantizeScale(mshadow::kInt8, weight_c_min[c], weight_c_max[c]);
-      if (bias_ptr) {
-        // avoid overflow on bias
-        // TODO(zhennan): mkldnn has bug to handle INT_MAX in bias, so set the maximum value of bias
-        // to INT_MAX / 2.
-        float scale_max =
-            static_cast<float>(bias_ptr[c] > 0 ? MaxValue<int32_t>() : MinValue<int32_t>()) / 2 /
-            bias_ptr[c] / data_scale;
-        scale = Min(scale, scale_max);
-      }
-      weight_scales[c] = scale;
-    }
-  } else {
-    DType total_min = weight_c_min[0];
-    DType total_max = weight_c_max[0];
-    for (size_t c = 0; c < channel; ++c) {
-      if (total_min > weight_c_min[c]) total_min = weight_c_min[c];
-      if (total_max < weight_c_max[c]) total_max = weight_c_max[c];
-    }
-    weight_scales.resize(3);
-    weight_scales[0] = GetQuantizeScale(mshadow::kInt8, total_min, total_max);
-    weight_scales[1] = total_min;
-    weight_scales[2] = total_max;
-  }
-  return weight_scales;
-}
-
-static void ConvertWeightBias2MKLDNN(const MKLDNNConvFullParam &param,
-                                     mkldnn::convolution_forward::primitive_desc fwd_pd,
-                                     NDArray *weight, NDArray *bias, bool has_bias,
-                                     float data_scale, const std::vector<float> &weight_scales) {
-  MKLDNNStream *stream = MKLDNNStream::Get();
-  const auto new_weight = NDArray(fwd_pd.weights_desc());
-  const auto conv_weights_memory = new_weight.GetMKLDNNData();
-  mkldnn::primitive_attr weight_attr;
-  if (weight_scales.size()) {
-    const int weight_mask = (weight_scales.size()) == 1 ? 0 : 1;
-    weight_attr.set_output_scales(weight_mask, weight_scales);
-  }
-  auto default_weights_memory = GetWeights(*weight, param.conv_param.num_group);
-  if (default_weights_memory == nullptr) default_weights_memory = weight->GetMKLDNNData();
-  const auto weight_reorder_pd =
-      mkldnn::reorder::primitive_desc(*default_weights_memory, *conv_weights_memory, weight_attr);
-  MKLDNNStream::Get()->RegisterPrimArgs(
-      mkldnn::reorder(weight_reorder_pd),
-      {{MKLDNN_ARG_FROM, *default_weights_memory}, {MKLDNN_ARG_TO, *conv_weights_memory}});
-  NDArray new_bias;
-  if (has_bias && data_scale) {
-    std::vector<float> bias_scales(weight_scales.size());
-    for (size_t c = 0; c < weight_scales.size(); ++c) {
-      bias_scales[c] = weight_scales[c] * data_scale;
-    }
-    new_bias = NDArray(fwd_pd.bias_desc());
-    const auto conv_bias_memory = new_bias.GetMKLDNNData();
-    const int bias_mask = (bias_scales.size()) == 1 ? 0 : 1;
-    mkldnn::primitive_attr bias_attr;
-    bias_attr.set_output_scales(bias_mask, bias_scales);
-    auto bias_weights_memory = bias->GetMKLDNNData();
-    const auto bias_reorder_pd =
-        mkldnn::reorder::primitive_desc(*bias_weights_memory, *conv_bias_memory, bias_attr);
-    MKLDNNStream::Get()->RegisterPrimArgs(
-        mkldnn::reorder(bias_reorder_pd),
-        {{MKLDNN_ARG_FROM, *bias_weights_memory}, {MKLDNN_ARG_TO, *conv_bias_memory}});
-  }
-  stream->Submit();
-  *weight = new_weight;
-  if (has_bias && data_scale) *bias = new_bias;
 }
 
 class SgMKLDNNConvOperator {
@@ -278,7 +184,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
                                                   CpuEngine::Get()->get_engine(),
                                                   out_mkl_mem->get_data_handle()));
         MKLDNNStream::Get()->RegisterMem(tmp_mem);
-        mxnet::MKLDNNCopy(*in_mkl_mem, tmp_mem.get());
+        MKLDNNMemoryCopy(*in_mkl_mem, tmp_mem.get());
         output = NDArray(tmp_mem);
       }
     }
@@ -318,10 +224,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
 
     // Update weight and bias after bn fusion.
     if (mkldnn_param.with_bn) {
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_gamma].dtype());
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_beta].dtype());
-      CHECK_EQ(inputs[in_weight].dtype(), inputs[in_var].dtype());
-      MSHADOW_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
+      MKLDNN_REAL_TYPE_SWITCH(inputs[in_weight].dtype(), DType, {
         UpdateConvWeightBias<DType>(&cached_weight_, &cached_bias_,
                                     conv_param.no_bias, inputs[in_gamma],
                                     inputs[in_beta], inputs[in_mean],
@@ -343,7 +246,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
         weight_channelwise_scale = true;
       }
       data_scale_ = GetQuantizeScale(data.dtype(), cached_data_min_, cached_data_max_);
-      MSHADOW_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
+      MKLDNN_REAL_TYPE_SWITCH(cached_weight_.dtype(), DType, {
         weight_scales_ = GetWeightScales<DType>(cached_weight_, has_bias ? &cached_bias_ : nullptr,
                                                 data_scale_, weight_channelwise_scale);
       });
@@ -396,8 +299,13 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
     fwd_.reset(new MKLDNNConvForward(
         full_conv_param, ctx.is_train, data, cached_weight_,
         has_bias ? &cached_bias_ : nullptr, output));
-    ConvertWeightBias2MKLDNN(full_conv_param, fwd_->GetPd(), &cached_weight_, &cached_bias_,
-                             has_bias, data_scale_, weight_scales_);
+    mkldnn::memory::desc bias_md;
+    if (has_bias) bias_md = fwd_->GetPd().bias_desc();
+    ConvertWeightBias2MKLDNN(&cached_weight_, &cached_bias_, has_bias,
+                             fwd_->GetPd().weights_desc(),
+                             has_bias ? & bias_md : nullptr,
+                             full_conv_param.conv_param.num_group,
+                             data_scale_, weight_scales_);
     args_[MKLDNN_ARG_SRC] = *data.GetMKLDNNData();
     args_[MKLDNN_ARG_WEIGHTS] = *cached_weight_.GetMKLDNNData();
     if (has_bias) args_[MKLDNN_ARG_BIAS] = *cached_bias_.GetMKLDNNData();
@@ -416,7 +324,7 @@ void SgMKLDNNConvOperator::Forward(const OpContext &ctx,
       mkldnn_mem_ptr new_out_mem(new mkldnn::memory(data_md, CpuEngine::Get()->get_engine(),
                                                     output_mem->get_data_handle()));
       MKLDNNStream::Get()->RegisterMem(new_out_mem);
-      mxnet::MKLDNNCopy(*tmp_out_mem, new_out_mem.get());
+      MKLDNNMemoryCopy(*tmp_out_mem, new_out_mem.get());
       output = NDArray(new_out_mem);
     }
   }
@@ -502,7 +410,7 @@ static void SgMKLDNNConvParamParser(nnvm::NodeAttrs *attrs) {
   CHECK_EQ(attrs->subgraphs.size(), 1);
   auto subgraph_sym = attrs->subgraphs[0];
   bool with_act = false;
-  DFSVisit(subgraph_sym->outputs, [&](const nnvm::NodePtr &node) {
+  DFSVisit(subgraph_sym->outputs, [&](const nnvm::ObjectPtr &node) {
     if (node->is_variable()) return;
     auto &node_name = node->op()->name;
     if (node_name == "BatchNorm") {
@@ -733,9 +641,9 @@ std::vector<std::pair<int, int>> SgMKLDNNConvInplaceOption(
   }
 }
 
-nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
+nnvm::ObjectPtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
   CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
       << "Quantized Convolution of MKL-DNN only supports 2D kernel currently."
@@ -751,7 +659,8 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   return node;
 }
 
-bool SgMKLDNNAvoidQuantizeInput(const NodeAttrs &attrs, size_t index) {
+bool SgMKLDNNAvoidConvQuantizeInput(const NodeAttrs &attrs, const size_t index,
+                                    const std::string quantize_granularity) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   std::unordered_set<size_t> avoid_indice;
   size_t idx = 0;
@@ -800,7 +709,7 @@ NNVM_REGISTER_OP(_sg_mkldnn_conv)
 })
 .set_attr<FQuantizedOp>("FQuantizedOp", SgMKLDNNConvQuantizedOp)
 .set_attr<FNeedRequantize>("FNeedRequantize", [](const NodeAttrs& attrs) { return true; })
-.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidQuantizeInput);
+.set_attr<FAvoidQuantizeInput>("FAvoidQuantizeInput", SgMKLDNNAvoidConvQuantizeInput);
 
 }  // namespace op
 }  // namespace mxnet

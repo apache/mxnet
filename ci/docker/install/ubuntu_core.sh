@@ -21,6 +21,8 @@
 # the whole docker cache for the image
 
 set -ex
+# FIXME(larroy) enable in a different PR
+#perl -pi -e 's/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/' /etc/apt/sources.list
 apt-get update || true
 
 # Avoid interactive package installers such as tzdata.
@@ -41,6 +43,10 @@ apt-get install -y \
     libopencv-dev \
     libturbojpeg \
     libzmq3-dev \
+    libtinfo-dev \
+    zlib1g-dev \
+    libedit-dev \
+    libxml2-dev \
     ninja-build \
     software-properties-common \
     sudo \
@@ -49,15 +55,14 @@ apt-get install -y \
     wget
 
 # Use libturbojpeg package as it is correctly compiled with -fPIC flag
-# https://github.com/HaxeFoundation/hashlink/issues/147 
+# https://github.com/HaxeFoundation/hashlink/issues/147
 ln -s /usr/lib/x86_64-linux-gnu/libturbojpeg.so.0.1.0 /usr/lib/x86_64-linux-gnu/libturbojpeg.so
 
 
-# Note: we specify an exact cmake version to work around a cmake 3.10 CUDA 10 issue.
-# Reference: https://github.com/clab/dynet/issues/1457
+# CMake 3.13.2+ is required
 mkdir /opt/cmake && cd /opt/cmake
-wget -nv https://cmake.org/files/v3.12/cmake-3.12.4-Linux-x86_64.sh
-sh cmake-3.12.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
+wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh
+sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
 ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
-rm cmake-3.12.4-Linux-x86_64.sh
+rm cmake-3.13.5-Linux-x86_64.sh
 cmake --version

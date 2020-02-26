@@ -87,7 +87,7 @@ The storage type of ``relu`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_relu, unary_bwd<mshadow_op::relu_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       std::vector<nnvm::NodeEntry> ret;
       // ograds[0]: dL/dxgrad
       // inputs[0]: dL/dy
@@ -123,7 +123,7 @@ The storage type of ``sigmoid`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sigmoid,
                                                unary_bwd<mshadow_op::sigmoid_grad>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // n->inputs[0] : y_grad
       // n->inputs[1] : f(x) = sigmoid(x)
       // ograds[0] : head_grads
@@ -208,13 +208,11 @@ static void CopyEx(const nnvm::NodeAttrs& attrs,
   const auto in_stype = inputs[0].storage_type();
   const auto out_stype = outputs[0].storage_type();
   if (inputs[0].IsMKLDNNData()) {
-    MKLDNNCopy(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   } else if (in_stype == kDefaultStorage && out_stype == kDefaultStorage) {
-    // This happens if inputs are supposed to be in MKLDNN format
-    // but MKLDNN doesn't support the data type or the shape. We're
-    // forced to convert it to the default format.
-    FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    if (req[0] != kNullOp && req[0] != kWriteInplace)
+      FallBackCompute(UnaryOp::IdentityCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
 #endif  // MXNET_USE_MKLDNN == 1
@@ -370,7 +368,7 @@ The storage type of ``make_loss`` output depends upon the input storage type:
     return std::vector<bool>{true};
   })
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> ret;
     ret.emplace_back(MakeNode("ones_like", n->attrs.name + "_backward",
                      &(n->inputs), nullptr, &n));
@@ -398,7 +396,7 @@ NNVM_REGISTER_OP(_identity_with_attr_like_rhs)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<FInferStorageType>("FInferStorageType", IdentityAttrLikeRhsStorageType)
 .set_attr<nnvm::FGradient>(
-    "FGradient",  [](const nnvm::NodePtr& n,
+    "FGradient",  [](const nnvm::ObjectPtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
       std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
@@ -537,7 +535,7 @@ Negative indices are supported, and `None` can be used for either `lhs_end` or `
     return ret;
   })
 .set_attr<nnvm::FGradient>(
-    "FGradient",  [](const nnvm::NodePtr& n,
+    "FGradient",  [](const nnvm::ObjectPtr& n,
                      const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds)) return MakeZeroGradNodes(n, ograds);
       std::vector<nnvm::NodeEntry> lhs = MakeGradNode("_backward_copy", n, ograds,
@@ -565,6 +563,7 @@ void ShapeComputeCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(shape_array)
+.add_alias("_npx_shape_array")
 .describe(R"code(Returns a 1D int64 array containing the shape of data.
 
 Example::
@@ -723,7 +722,7 @@ The storage type of ``abs`` output depends upon the input storage type:
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_abs, unary_bwd<mshadow_op::sign>)
 .set_attr<nnvm::FGradient>("FGradient",
-    [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // ograds[0]: dL/dxgrad
       // inputs[0]: dL/dy
       // inputs[1]: x

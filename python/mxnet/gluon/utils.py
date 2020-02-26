@@ -18,10 +18,9 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
-from __future__ import absolute_import
 
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
-           'check_sha1', 'download']
+           'check_sha1', 'download', 'replace_file']
 
 import os
 import sys
@@ -70,30 +69,18 @@ def split_data(data, num_slice, batch_axis=0, even_split=True):
             "uneven partitioning of data."%(
                 str(data.shape), num_slice, batch_axis, num_slice))
 
-    step = size // num_slice
-
-    # If size < num_slice, make fewer slices
-    if not even_split and size < num_slice:
-        step = 1
-        num_slice = size
-
-    if batch_axis == 0:
-        slices = [data[i*step:(i+1)*step] if i < num_slice - 1 else data[i*step:size]
-                  for i in range(num_slice)]
-    elif even_split:
-        if is_np_array():
-            slices = _mx_np.split(data, indices_or_sections=num_slice, axis=batch_axis)
-        else:
-            slices = ndarray.split(data, num_outputs=num_slice, axis=batch_axis)
+    n_each_section, extras = divmod(size, num_slice)
+    section_sizes = [0] + (extras * [n_each_section + 1] +
+                           (num_slice - extras) * [n_each_section])
+    div_points = np.array(section_sizes).cumsum()
+    if is_np_array():
+        slices = _mx_np.split(data, indices_or_sections=list(div_points[1: -1]), axis=batch_axis)
     else:
-        if is_np_array():
-            indices = [step * i for i in range(1, num_slice)]
-            slices = _mx_np.split(data, indices_or_sections=indices, axis=batch_axis)
-        else:
-            slices = [ndarray.slice_axis(data, batch_axis, i*step, (i+1)*step)
-                      if i < num_slice - 1 else
-                      ndarray.slice_axis(data, batch_axis, i*step, size)
-                      for i in range(num_slice)]
+        slices = []
+        for i in range(num_slice):
+            st = div_points[i]
+            end = div_points[i + 1]
+            slices.append(ndarray.slice_axis(data, axis=batch_axis, begin=st, end=end))
     return slices
 
 
@@ -209,8 +196,14 @@ def check_sha1(filename, sha1_hash):
 
 if not sys.platform.startswith('win32'):
     # refer to https://github.com/untitaker/python-atomicwrites
-    def _replace_atomic(src, dst):
-        """Implement atomic os.replace with linux and OSX. Internal use only"""
+    def replace_file(src, dst):
+        """Implement atomic os.replace with linux and OSX.
+
+        Parameters
+        ----------
+        src : source file path
+        dst : destination file path
+        """
         try:
             os.rename(src, dst)
         except OSError:
@@ -232,11 +225,9 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
-
     def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""
-        if not isinstance(x, text_type):
+        if not isinstance(x, str):
             return x.decode(sys.getfilesystemencoding())
         return x
 
@@ -252,11 +243,17 @@ else:
             finally:
                 raise OSError(msg)
 
-    def _replace_atomic(src, dst):
+    def replace_file(src, dst):
         """Implement atomic os.replace with windows.
+
         refer to https://docs.microsoft.com/en-us/windows/desktop/api/winbase/nf-winbase-movefileexw
         The function fails when one of the process(copy, flush, delete) fails.
-        Internal use only"""
+
+        Parameters
+        ----------
+        src : source file path
+        dst : destination file path
+        """
         _handle_errors(ctypes.windll.kernel32.MoveFileExW(
             _str_to_unicode(src), _str_to_unicode(dst),
             _windows_default_flags | _MOVEFILE_REPLACE_EXISTING
@@ -264,7 +261,7 @@ else:
 
 
 def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_ssl=True):
-    """Download an given URL
+    """Download a given URL
 
     Parameters
     ----------
@@ -310,7 +307,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
-            os.makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
         while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703
@@ -330,7 +327,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
                 # delete the temporary file
                 if not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
                     # atmoic operation in the same file system
-                    _replace_atomic('{}.{}'.format(fname, random_uuid), fname)
+                    replace_file('{}.{}'.format(fname, random_uuid), fname)
                 else:
                     try:
                         os.remove('{}.{}'.format(fname, random_uuid))

@@ -34,7 +34,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxOutputParam);
 struct SoftmaxOutputGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
   std::vector<nnvm::NodeEntry> out_data(n->num_outputs());
   for (uint32_t i = 0; i < out_data.size(); ++i) {
@@ -44,7 +44,7 @@ struct SoftmaxOutputGrad {
   heads.push_back(out_data[softmaxout_enum::kOut]);
   heads.push_back(n->inputs[softmaxout_enum::kLabel]);
 
-  nnvm::NodePtr gnode = nnvm::Node::Create();
+  nnvm::ObjectPtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
   gnode->control_deps.emplace_back(n);
   gnode->attrs = n->attrs;
@@ -144,7 +144,7 @@ void SoftmaxOutputComputeExCPU(const nnvm::NodeAttrs &attrs,
   const SoftmaxOutputParam &param = nnvm::get<SoftmaxOutputParam>(attrs.parsed);
   if (SupportMKLDNN(inputs[0]) && !ctx.is_train && SupportMKLDNNSoftmaxOutput(param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNSoftmaxOutputForward(attrs, ctx, inputs, req, outputs);
+    MKLDNNRun(MKLDNNSoftmaxOutputForward, attrs, ctx, inputs, req, outputs);
     MKLDNN_OPCHECK_RUN(SoftmaxOutputCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -258,6 +258,7 @@ NNVM_REGISTER_OP(SoftmaxOutput)
 NNVM_REGISTER_OP(SoftmaxOutput).add_alias("Softmax");
 
 NNVM_REGISTER_OP(_backward_SoftmaxOutput)
+.set_num_inputs(2)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", [](const NodeAttrs& attrs){

@@ -53,6 +53,12 @@ NNVM_REGISTER_OP(_npi_vstack)
 NNVM_REGISTER_OP(_backward_np_vstack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyVstackBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_hstack)
+.set_attr<FCompute>("FCompute<gpu>", HStackCompute<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_hstack)
+.set_attr<FCompute>("FCompute<gpu>", HStackGradCompute<gpu>);
+
 NNVM_REGISTER_OP(_npi_dstack)
 .set_attr<FCompute>("FCompute<gpu>", DStackCompute<gpu>);
 
@@ -115,6 +121,9 @@ NNVM_REGISTER_OP(_npi_hsplit)
 NNVM_REGISTER_OP(_npi_hsplit_backward)
 .set_attr<FCompute>("FCompute<gpu>", HSplitOpBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_dsplit)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpForward<gpu>);
+
 NNVM_REGISTER_OP(_npx_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
@@ -123,6 +132,21 @@ NNVM_REGISTER_OP(_np_diag)
 
 NNVM_REGISTER_OP(_backward_np_diag)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_np_diagonal)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_diagonal)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_np_diagflat)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpForward<gpu>);
+
+NNVM_REGISTER_OP(_backward_np_diagflat)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_npi_diag_indices_from)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagIndicesFromForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

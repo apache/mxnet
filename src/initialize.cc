@@ -47,11 +47,11 @@ void win_err(char **err) {
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
-        NULL,
+        nullptr,
         dw,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         reinterpret_cast<char*>(err),
-        0, NULL);
+        0, nullptr);
 }
 #else
 #include <dlfcn.h>
@@ -209,6 +209,7 @@ void LibraryInitializer::atfork_child() {
 #if MXNET_USE_OPENCV && !__APPLE__
   cv::setNumThreads(mp_cv_num_threads_);
 #endif  // MXNET_USE_OPENCV
+  engine::OpenMP::Get()->initialize_process();
   engine::OpenMP::Get()->set_thread_max(1);
   engine::OpenMP::Get()->set_enabled(false);
   Engine::Get()->Start();
@@ -218,6 +219,7 @@ void LibraryInitializer::atfork_child() {
 
 void LibraryInitializer::install_pthread_atfork_handlers() {
 #ifndef _WIN32
+  engine::OpenMP::Get()->initialize_process();  // force omp to set its atfork handler first
   pthread_atfork(pthread_atfork_prepare, pthread_atfork_parent, pthread_atfork_child);
 #endif
 }

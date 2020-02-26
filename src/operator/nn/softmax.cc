@@ -41,16 +41,32 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
-  // It seems MKLDNN softmax doesn't support training.
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportMKLDNNSoftmax(param, inputs[0], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-    MKLDNNSoftmaxForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNSoftmaxForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     auto fn = SoftmaxCompute<cpu, mxnet_op::softmax_fwd>;
     MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
     return;
   }
   FallBackCompute(SoftmaxCompute<cpu, mxnet_op::softmax_fwd>, attrs, ctx,
+                  inputs, req, outputs);
+}
+
+static void SoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
+  const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
+  if (SupportMKLDNNSoftmax(param, inputs[1], outputs[0])) {
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNNRun(MKLDNNSoftmaxBackward, attrs, ctx, inputs, req, outputs);
+    auto fn = SoftmaxGradCompute<cpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>;
+    MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
+    return;
+  }
+  FallBackCompute(SoftmaxGradCompute<cpu, op::mshadow_op::mul, mxnet_op::softmax_bwd>, attrs, ctx,
                   inputs, req, outputs);
 }
 
@@ -71,6 +87,21 @@ inline static bool SoftmaxStorageType(const nnvm::NodeAttrs& attrs,
 
   return MKLDNNStorageType(attrs, dev_mask, true, dispatch_mode, in_attrs,
                            out_attrs);
+}
+
+inline static bool SoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
+                                      const int dev_mask,
+                                      DispatchMode* dispatch_mode,
+                                      std::vector<int> *in_attrs,
+                                      std::vector<int> *out_attrs) {
+  bool support = true;
+  if (softmax_use_length(attrs) || softmax_has_dtype_override(attrs)) {
+    support = false;
+  }
+
+  CHECK_EQ(in_attrs->size(), SoftmaxGradOpNumInputs(attrs));
+  CHECK_EQ(out_attrs->size(), softmax_use_length(attrs) ? 2U : 1U);
+  return MKLDNNStorageType(attrs, dev_mask, support, dispatch_mode, in_attrs, out_attrs);
 }
 #endif
 
@@ -147,8 +178,12 @@ NNVM_REGISTER_OP(_backward_softmax)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", SoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<SoftmaxParam>)
+#if MXNET_USE_MKLDNN == 1
+.set_attr<bool>("TIsMKLDNN", true)
+.set_attr<FComputeEx>("FComputeEx<cpu>", SoftmaxGradComputeExCPU)
+.set_attr<FInferStorageType>("FInferStorageType", SoftmaxGradStorageType)
+#endif
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
-
 }  // namespace op
 }  // namespace mxnet

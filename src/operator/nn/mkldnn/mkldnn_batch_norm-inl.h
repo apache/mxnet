@@ -147,11 +147,12 @@ static MKLDNNBNForward &GetBNForward(const BatchNormParam& param,
 }
 
 template <typename DType>
-void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
-                            const std::vector<NDArray>   &in_data,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<NDArray>   &out_data,
-                            const std::vector<NDArray>   &aux_states) {
+void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                            const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
+                            const std::vector<NDArray> &outputs) {
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  const std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
+  const std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   mkldnn::normalization_flags flags = _GetFlags(in_data,
                                                 aux_states,
@@ -159,7 +160,7 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
                                                 ctx.is_train && !param.use_global_stats);
   const NDArray &data = in_data[batchnorm::kData];
   auto &fwd = GetBNForward<DType>(param, ctx, data, flags);
-  const NDArray &out = out_data[batchnorm::kOut];
+  const NDArray &out = outputs[batchnorm::kOut];
 
   // for output memory
   auto out_mem = const_cast<NDArray &>(out).CreateMKLDNNData(fwd.GetPd().dst_desc());
@@ -173,24 +174,24 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
     CHECK_EQ(beta.storage_type(), mxnet::kDefaultStorage);
 
     const mkldnn::memory &weight_mem = fwd.GetWeight();
-    DType* weight_buf = reinterpret_cast<DType *>(weight_mem.get_data_handle());
+    float* weight_buf = reinterpret_cast<float *>(weight_mem.get_data_handle());
 
     nnvm::dim_t channels_ = data.shape()[1];
-    CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(DType) * 2);
-    DType* weight_ptr = gamma.data().dptr<DType>();
-    DType* bias_ptr = beta.data().dptr<DType>();
+    CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(float) * 2);
+    float* weight_ptr = gamma.data().dptr<float>();
+    float* bias_ptr = beta.data().dptr<float>();
     if (!param.fix_gamma) {
       memcpy(weight_buf, weight_ptr, sizeof(weight_buf[0]) * channels_);
       memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
       for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = static_cast<DType>(1.0f);
-        weight_ptr[i] = static_cast<DType>(1.0f);
+        weight_buf[i] = 1.0f;
+        weight_ptr[i] = 1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     } else {
       for (int i = 0; i < channels_; i++) {
-        weight_buf[i] = static_cast<DType>(1.0f);
+        weight_buf[i] = 1.0f;
         weight_buf[channels_ + i] = bias_ptr[i];  // bias
       }
     }
@@ -201,10 +202,10 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
     net_args[MKLDNN_ARG_DST] = *out_mem;
 
     if (!ctx.is_train || param.use_global_stats) {
-      DType* omean    = out_data[batchnorm::kMean].data().dptr<DType>();
-      DType* ovar     = out_data[batchnorm::kVar].data().dptr<DType>();
-      DType* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<DType>();
-      DType* invar    = aux_states[batchnorm::kMovingVar].data().dptr<DType>();
+      float* omean    = outputs[batchnorm::kMean].data().dptr<float>();
+      float* ovar     = outputs[batchnorm::kVar].data().dptr<float>();
+      float* inmean   = aux_states[batchnorm::kMovingMean].data().dptr<float>();
+      float* invar    = aux_states[batchnorm::kMovingVar].data().dptr<float>();
       // to align with origin implmentation: batch_norm.cc: L164
       for (int i = 0; i < channels_; i++) {
         omean[i] = inmean[i];
@@ -215,14 +216,14 @@ void MKLDNNBatchNormForward(const OpContext &ctx, const BatchNormParam &param,
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
     } else {  // training
-      const NDArray &outMean  = out_data[batchnorm::kMean];
-      const NDArray &outVar   = out_data[batchnorm::kVar];
+      const NDArray &outMean  = outputs[batchnorm::kMean];
+      const NDArray &outVar   = outputs[batchnorm::kVar];
       net_args[MKLDNN_ARG_MEAN] = *(outMean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(outVar.GetMKLDNNData());
       MKLDNNStream::Get()->RegisterPrimArgs(fwd.GetFwd(), net_args);
       MKLDNNStream::Get()->Submit();
 
-      DType* ovar = outVar.data().dptr<DType>();
+      float* ovar = outVar.data().dptr<float>();
       for (int i = 0; i < channels_; i++) {
         ovar[i] = VARIANCE_TO_INVSTD(ovar[i], param.eps);
       }
@@ -278,18 +279,25 @@ static MKLDNNBNBackward &GetBNBackward(
 }
 
 template <typename DType>
-void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
-                             const std::vector<NDArray>    &out_grad,
-                             const std::vector<NDArray>    &in_data,
-                             const std::vector<NDArray>    &out_data,
-                             const std::vector<OpReqType>  &req,
-                             const std::vector<NDArray>    &in_grad,
-                             const std::vector<NDArray>    &aux_states) {
+void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
+                             const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
+                             const std::vector<NDArray> &outputs) {
+  CHECK_EQ(inputs.size(), 8U);
+  const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  std::vector<NDArray> out_grad(1);
+  std::vector<NDArray> out_data(3);
+  std::vector<NDArray> in_data(3);
+  std::vector<NDArray> aux_states(2);
+  out_grad[0] = inputs[0];
+  out_data[batchnorm::kMean] = inputs[1];
+  out_data[batchnorm::kVar] = inputs[2];
+  in_data[batchnorm::kData] = inputs[3];
+  in_data[batchnorm::kGamma] = inputs[4];
+  in_data[batchnorm::kBeta] = inputs[5];
+  aux_states[batchnorm::kMovingMean] = inputs[6];
+  aux_states[batchnorm::kMovingVar] = inputs[7];
+  const std::vector<NDArray> &in_grad = outputs;
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
-  CHECK_EQ(out_grad.size(), 1U);
-  CHECK_EQ(in_data.size(), 3U);
-  CHECK_EQ(out_data.size(), 3U);
-  CHECK_EQ(in_grad.size(), 3U);
   mkldnn::normalization_flags flags = _GetFlags(in_data,
                                                 aux_states,
                                                 param,

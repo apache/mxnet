@@ -36,7 +36,7 @@ pipeline {
 
   parameters {
     // Release parameters
-    string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    string(defaultValue: "cpu,native,cu90,cu92,cu100,cu101,cu102", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
   }
 

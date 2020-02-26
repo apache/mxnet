@@ -19,7 +19,7 @@
 
 # This script builds the static library of libtiff that can be used as dependency of mxnet/opencv.
 set -ex
-TIFF_VERSION="4.0.10"
+TIFF_VERSION="4.0.9"
 if [[ ! -f $DEPS_PATH/lib/libtiff.a ]]; then
     # download and build libtiff
     >&2 echo "Building libtiff..."

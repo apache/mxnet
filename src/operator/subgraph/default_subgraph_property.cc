@@ -55,9 +55,9 @@ class ContainOpSelector: public SubgraphSelector {
 class DefaultSubgraphProperty: public SubgraphProperty {
  public:
   static SubgraphPropertyPtr Create() { return std::make_shared<DefaultSubgraphProperty>(); }
-  virtual nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                            const int subgraph_id = 0) const {
-    nnvm::NodePtr n = nnvm::Node::Create();
+    nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_CachedOp");
     n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));

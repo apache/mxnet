@@ -36,10 +36,26 @@
 #include "../operator/fusion/fused_op.h"
 #include "../operator/operator_common.h"
 
-#if MXNET_USE_CUDA
-
 namespace mxnet {
 namespace exec {
+
+void WarnFusionNotSupported() {
+  static bool issued_warning = false;
+  if (!issued_warning) {
+    issued_warning = true;
+#if defined(_WIN32)
+    LOG(WARNING) << "Omitting dynamic fused op creation- not enabled on Windows.  "
+                 << "Unset env var MXNET_USE_FUSION=1 to quiet this message.";
+#else
+    LOG(WARNING) << "Omitting dynamic fused op creation- needs MXNet lib built with "
+                   << "USE_CUDA=1 and ENABLE_CUDA_RTC=1.  Unset env var MXNET_USE_FUSION=1 "
+                   << "to quiet this message.";
+#endif  // defined(_WIN32)
+  }
+}
+
+#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+
 namespace {
   bool IsFusionCompatible(nnvm::Node* n) {
     using namespace mxnet::fusion;
@@ -78,7 +94,7 @@ namespace {
     return false;
   }
 
-  nnvm::NodePtr CreateSubgraphNode(const Graph& subgraph, size_t inputs_size) {
+  nnvm::ObjectPtr CreateSubgraphNode(const Graph& subgraph, size_t inputs_size) {
     nnvm::Symbol subgraph_sym;
     auto node = nnvm::Node::Create();
     subgraph_sym.outputs = subgraph.outputs;
@@ -117,7 +133,7 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     // replug inputs of node out of subgraph to be output of the subgraph node
     // if it was a node in the subgraph
     DFSVisit(g.outputs,
-        [&subgraph_node, &subgraph_set, &sub_outputs_in_main](const nnvm::NodePtr node) {
+        [&subgraph_node, &subgraph_set, &sub_outputs_in_main](const nnvm::ObjectPtr node) {
       if (!subgraph_set.count(node.get())) {
         for (auto &e : node->inputs) {
           auto it = sub_outputs_in_main.find(e);
@@ -139,11 +155,11 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     }
     // move control dependencies between nodes of the subgraph and out of the subgraph
     // to a dependencies between the subgraph node and the nodes out of the subgraph
-    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::NodePtr& node) {
+    DFSVisit(subgraph.outputs, [&subgraph_node, &subgraph_set](const nnvm::ObjectPtr& node) {
       if (subgraph_set.count(node.get())) {
         auto it = node->control_deps.begin();
         static auto& is_fusion = Op::GetAttr<exec::TIsFusionHelper>("TIsFusionHelper");
-        std::vector<nnvm::NodePtr> new_control_deps;
+        std::vector<nnvm::ObjectPtr> new_control_deps;
         // Use the first control dependency to get the inferattr helper
         if (it != node->control_deps.end()) {
           if (subgraph_set.count(it->get())) {
@@ -174,7 +190,7 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
 
     std::ostringstream name_oss;
     // the name of the new node will be the concatenation of all the node names in the subgraph
-    DFSVisit(subgraph.outputs, [&name_oss](const nnvm::NodePtr n) {
+    DFSVisit(subgraph.outputs, [&name_oss](const nnvm::ObjectPtr n) {
       if (n->op() != nullptr) {
         name_oss << n->op()->name << "_";
       }
@@ -184,7 +200,7 @@ Graph ReplaceSubgraphsPointwise(Graph&& g, const std::vector<NodeRawPtrSet>& sub
     subgraph_node->attrs.name = subgraph_name;
 
     const auto& index = subgraph.indexed_graph();
-    DFSVisit(g.outputs, [&subgraph_node, &subgraph_set, &index](const nnvm::NodePtr& node) {
+    DFSVisit(g.outputs, [&subgraph_node, &subgraph_set, &index](const nnvm::ObjectPtr& node) {
       for (auto &e : node->control_deps) {
         if (subgraph_set.count(e.get())) {
           uint32_t node_id = index.node_id(e.get());
@@ -228,7 +244,7 @@ void AddInputsOnlyCompatible(const Graph &g,
     }
   }
   std::vector<std::vector<nnvm::Node*> > to_add(subsets->size());
-  DFSVisit(g.outputs, [&is_compatible, &node2setidx, &to_add](const nnvm::NodePtr& n) {
+  DFSVisit(g.outputs, [&is_compatible, &node2setidx, &to_add](const nnvm::ObjectPtr& n) {
     const auto& it = node2setidx.find(n.get());
     if (it != node2setidx.end()) {
       for (auto& e : n->inputs) {
@@ -257,7 +273,7 @@ void AddInputsOnlyCompatible(const Graph &g,
                      [&node](const nnvm::NodeEntry& n) {
                        return n.node.get() != node;
                      });
-        DFSVisit(_heads, [&make_cycle, &node](const nnvm::NodePtr& n) {
+        DFSVisit(_heads, [&make_cycle, &node](const nnvm::ObjectPtr& n) {
           if (n.get() == node)
             make_cycle = true;
         });
@@ -292,7 +308,7 @@ Graph FusePointwiseBackward(Graph &&g) {
   fg.outputs.insert(fg.outputs.begin(), g.outputs.begin(),
                     g.outputs.begin() + num_forward_outputs);
   std::unordered_set<nnvm::Node*> exclusion_set;
-  DFSVisit(fg.outputs, [&exclusion_set](const nnvm::NodePtr& n) {
+  DFSVisit(fg.outputs, [&exclusion_set](const nnvm::ObjectPtr& n) {
     exclusion_set.insert(n.get());
   });
   auto subsets = GetCompatibleSubsets(g, [&exclusion_set](nnvm::Node* n) {
@@ -304,8 +320,8 @@ Graph FusePointwiseBackward(Graph &&g) {
   ret.outputs = g.outputs;
   return ret;
 }
+#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
 
 }  // namespace exec
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA
