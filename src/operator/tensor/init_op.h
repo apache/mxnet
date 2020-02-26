@@ -297,7 +297,6 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
   }
-
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream shape_s, dtype_s, value_s;
     shape_s << shape;
