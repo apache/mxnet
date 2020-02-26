@@ -142,6 +142,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'transpose',
     'unique',
     'unravel_index',
+    'flatnonzero',
     'diag_indices_from',
     'delete',
     'var',

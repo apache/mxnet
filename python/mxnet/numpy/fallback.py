@@ -38,7 +38,6 @@ __all__ = [
     'digitize',
     'divmod',
     'extract',
-    'flatnonzero',
     'float_power',
     'frexp',
     'heaviside',
@@ -124,7 +123,6 @@ cov = onp.cov
 digitize = onp.digitize
 divmod = onp.divmod
 extract = onp.extract
-flatnonzero = onp.flatnonzero
 float_power = onp.float_power
 frexp = onp.frexp
 heaviside = onp.heaviside

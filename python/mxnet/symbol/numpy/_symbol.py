@@ -43,7 +43,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_',
+           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_', 'flatnonzero',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
@@ -4662,6 +4662,32 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
         return _npi.unravel_index_fallback(indices, shape=shape)
     else:
         raise NotImplementedError('Don not support column-major (Fortran-style) order at this moment')
+
+
+def flatnonzero(a):
+    r"""
+    Return indices that are non-zero in the flattened version of a.
+
+    This is equivalent to np.nonzero(np.ravel(a))[0].
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array, containing the indices of the elements of `a.ravel()`
+        that are non-zero.
+
+    See Also
+    --------
+    nonzero : Return the indices of the non-zero elements of the input array.
+    ravel : Return a 1-D array containing the elements of the input array.
+    """
+    out = _npi.nonzero(ravel(a))
+    return out.reshape(-1,)
 
 
 def diag_indices_from(arr):
