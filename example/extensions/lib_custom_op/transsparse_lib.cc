@@ -59,22 +59,8 @@ void transpose(MXTensor src, MXTensor dst) {
 	B->indices[index] = i;
       }
     }
-    B->indptr.assign(rowPtr.begin(), rowPtr.begin() + w + 1);
+    memcpy(B->indptr, rowPtr.data(), sizeof(int64_t) * (w + 1));
   }
-  // To do: Remove test.
-  /*
-  std::cout << "#### Print B" << std::endl;
-  float *Bval = (float*) (B->data);
-  for(int i = 0; i < 9; i++) 
-    std::cout << Bval[i] << " ";
-  std::cout << std::endl;
-  for(auto i: B->indices)
-    std::cout << i << " ";
-  std::cout << std::endl;
-  for(auto i: B->indptr)
-    std::cout << i << " ";
-  std::cout << std::endl;
-  */
 }
 
 MXReturnValue forward(std::map<std::string, std::string> attrs,

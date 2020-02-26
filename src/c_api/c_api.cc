@@ -130,6 +130,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
     in_data.push_back(inputs[i].data().dptr_);
+    // To do: remove. ndims = 2. 3*5. 
     in_shapes.push_back(inputs[i].shape().data());
     in_dims.push_back(inputs[i].shape().ndim());
     in_types.push_back(inputs[i].dtype());
@@ -151,6 +152,8 @@ void CustomFComputeDispatcher(const std::string op_name,
   }
 
   for (size_t i = 0; i < outputs.size(); i++) {
+    // To do: remove hardcode.
+    outputs[i].CheckAndAlloc({mshadow::Shape1(5 + 1), mshadow::Shape1(9)});
     out_data.push_back(outputs[i].data().dptr_);
     out_shapes.push_back(outputs[i].shape().data());
     out_dims.push_back(outputs[i].shape().ndim());
@@ -168,7 +171,7 @@ void CustomFComputeDispatcher(const std::string op_name,
     else if(outputs[i].storage_type() == mxnet::kCSRStorage) {
       out_indices.push_back(outputs[i].aux_data(csr::kIdx).dptr_);
       out_indptr.push_back(outputs[i].aux_data(csr::kIndPtr).dptr_);
-      out_indices_shapes.push_back(outputs[i].aux_shape(rowsparse::kIdx).Size());
+      out_indices_shapes.push_back(outputs[i].aux_shape(csr::kIdx).Size());
       out_indptr_shapes.push_back(outputs[i].aux_shape(csr::kIndPtr).Size());
     }
   }
@@ -239,7 +242,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                     in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
-
+  
   if (state_ptr != nullptr) {
     // retrieve op state object created from CreateOpState
     CustomStatefulOpWrapper& op = state_ptr->get_state<CustomStatefulOpWrapper>();

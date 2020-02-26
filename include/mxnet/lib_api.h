@@ -250,18 +250,26 @@ struct MXSparse {
   // To store aux data for sparse.
   // For CSR, indices stores the col index of non-zero values.
   // For row sparse, indices store row index of rows which have non-zero values.
-  std::vector<int64_t> indices;
+  int64_t* indices;
+  int64_t indices_len;
 
   // For CSR, indptr gives the start and end index of data for each row.
   // For row sparse, indptr is empty. 
-  std::vector<int64_t> indptr;
+  int64_t* indptr;
+  int64_t indptr_len;
 
   void set(void *data_ptr, const int64_t* dims, int ndims, void *idx,
           int64_t num_idx, void *idx_ptr = nullptr, int64_t num_idx_ptr = 0) {
     data = data_ptr;
     data_len = num_idx;
-    indices.assign((int64_t*)idx, (int64_t*)idx + num_idx);
-    if(idx_ptr) indptr.assign((int64_t*)idx_ptr, (int64_t*)idx_ptr + num_idx_ptr);
+
+    indices = (int64_t*)idx;
+    indices_len = num_idx;
+
+    if(idx_ptr) {
+      indptr = (int64_t*)idx_ptr;
+      indptr_len = num_idx_ptr;
+    }
   }
 };
 
@@ -1219,7 +1227,7 @@ extern "C" {
       outputs[i].setTensor(data2, (MXDType)outtypes[i], outshapes[i], outdims[i],
                            outIDs[i], {outdev_type[i], outdev_id[i]}, type);
     }
-
+    
     OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
 
     return fcomp(attrs, inputs, outputs, res);
