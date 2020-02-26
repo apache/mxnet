@@ -163,7 +163,8 @@ Also there are some optional functions you can specify:
                 bool* accept,
                 std::unordered_map<std::string, std::string>& options,
                 std::unordered_map<std::string, std::string>& attrs,
-                std::map<std::string, MXTensor>& args)
+                std::map<std::string, MXTensor>& args,
+                std::map<std::string, MXTensor>& aux)
 
 Let’s take a closer look at those registry functions:
 
