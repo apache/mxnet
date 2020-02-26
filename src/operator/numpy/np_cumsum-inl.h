@@ -126,17 +126,17 @@ void CumsumForward(const nnvm::NodeAttrs& attrs,
 struct cumsum_backward {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
-                                  IType *igrad,
+                                  index_t *igrad,
                                   const OType *ograd,
                                   const index_t middle,
                                   const index_t trailing) {
     index_t left = i / trailing, right = i % trailing;
     index_t offset = left * middle * trailing + right;
     const OType *lane_ograd = ograd + offset;
-    IType *lane_igrad = igrad + offset;
-    lane_igrad[(middle - 1) * trailing] = IType(lane_ograd[(middle - 1) * trailing]);
+    index_t *lane_igrad = igrad + offset;
+    lane_igrad[(middle - 1) * trailing] = index_t(lane_ograd[(middle - 1) * trailing]);
     for (index_t j = middle - 2; j >= 0; --j) {
-      lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + IType(lane_ograd[j * trailing]);
+      lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + index_t(lane_ograd[j * trailing]);
     }
   }
 };
@@ -157,10 +157,10 @@ void CumsumBackwardImpl(const OpContext& ctx,
     }
   }
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(igrad.type_flag_, IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(igrad.type_flag_, index_t, {
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
       Kernel<cumsum_backward, xpu>::Launch(
-        s, igrad.Size() / middle, igrad.dptr<IType>(),
+        s, igrad.Size() / middle, igrad.dptr<index_t>(),
         ograd.dptr<OType>(), middle, trailing);
     });
   });
