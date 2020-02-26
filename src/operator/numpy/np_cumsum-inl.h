@@ -62,12 +62,12 @@ struct cumsum_forward {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
                                   OType *out,
-                                  const IType *in,
+                                  const index_t *in,
                                   const index_t middle,
                                   const index_t trailing) {
     index_t left = i / trailing, right = i % trailing;
     index_t offset = left * middle * trailing + right;
-    const IType *lane_in = in + offset;
+    const index_t *lane_in = in + offset;
     OType *lane_out = out + offset;
     lane_out[0] = OType(lane_in[0]);
     for (index_t j = 1; j < middle; ++j) {
@@ -98,11 +98,11 @@ void CumsumForwardImpl(const OpContext& ctx,
   }
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.type_flag_, IType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(in.type_flag_, index_t, {
     MSHADOW_TYPE_SWITCH(out.type_flag_, OType, {
       Kernel<cumsum_forward, xpu>::Launch(
         s, out.Size() / middle, out.dptr<OType>(),
-        in.dptr<IType>(), middle, trailing);
+        in.dptr<index_t>(), middle, trailing);
     });
   });
 }
