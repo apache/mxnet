@@ -1915,6 +1915,19 @@ def _add_workload_diff():
         OpArgMngr.add_workload('diff', x, n=n)
 
 
+def _add_workload_ediff1d():
+    x = np.array([1, 3, 6, 7, 1])
+    OpArgMngr.add_workload('ediff1d', x)
+    OpArgMngr.add_workload('ediff1d', x, 2, 4)
+    OpArgMngr.add_workload('ediff1d', x, x, 3)
+    OpArgMngr.add_workload('ediff1d', x, x, x)
+    OpArgMngr.add_workload('ediff1d', np.array([1.1, 2.2, 3.0, -0.2, -0.1]))
+    x = np.random.randint(5, size=(5, 0, 4))
+    OpArgMngr.add_workload('ediff1d', x)
+    OpArgMngr.add_workload('ediff1d', x, 2, 4)
+    OpArgMngr.add_workload('ediff1d', x, x, 3)
+    OpArgMngr.add_workload('ediff1d', x, x, x)
+
 def _add_workload_resize():
     OpArgMngr.add_workload('resize', np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]], dtype=np.int32), (5, 1))
     OpArgMngr.add_workload('resize', np.eye(3), 3)
@@ -2866,6 +2879,7 @@ def _prepare_workloads():
     _add_workload_where()
     _add_workload_shape()
     _add_workload_diff()
+    _add_workload_ediff1d()
     _add_workload_quantile()
     _add_workload_percentile()
     _add_workload_resize()
