@@ -528,6 +528,9 @@ def test_nn():
         assert out.shape[0] == LARGE_TENSOR_SHAPE + 1
         assert out.shape[1] == 1
 
+        # Trigger lazy evaluation of the output NDArray and ensure that it has been filled
+        assert type(out[0, 0].asscalar()).__name__ == 'float32'
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
