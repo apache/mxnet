@@ -87,7 +87,7 @@ sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.optimize_for(x, backend='myPart')
 ```
 
-In the Gluon hybridize flow, the model is actually hybridized during the first inference, rather than immediately when calling hybridize. This hybridize-based flow is useful if a user expects to run inference immediately after hybridizing. But for users than just want to partition but not run a whole forward pass, the `optimize_for` API combines the hybrdize/forward APIs but does not run a forward pass. After calling `optimize_for` users can `export` thier model immediately without running a forward pass. 
+In the Gluon hybridize flow, the model is actually hybridized during the first inference, rather than immediately when calling `hybridize`. This hybridize-based flow is useful if a user expects to run inference immediately after hybridizing. But for users than just want to partition but not run a whole forward pass, the `optimize_for` API combines the hybrdize/forward APIs but does not run a forward pass. After calling `optimize_for` users can `export` their model immediately without running a forward pass. 
 
 ### Using a Custom Partitioner Library
 
@@ -97,7 +97,7 @@ Partitioning APIs in MXNet are available in both Symbol and Gluon APIs. For the 
 optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
-The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and takes a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before partitioning, and passed to the backend to use during compilation. The `ctx` argument is optional and takes a device context to infer storage types. It also take any other user-specified options that will be passed to the backend partitioning APIs.
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before partitioning, and passed to the backend to use during compilation. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend partitioning APIs.
 
 For the Gluon API, the `hybridize` API can be called on HybridBlocks to partition the internal CachedOp Symbol.
 
@@ -107,7 +107,7 @@ hybridize(backend=None, backend_opts=None, **kwargs)
 
 The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which backend that will partition the model. The `backend_opts` takes other user-specified options that will be passed to the backend partitioning APIs. The actual partitioning takes place during the forward pass.
 
-If you just want to partition the HybridBlock but not run a complete forward pass, you can use `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
+If you just want to partition the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
 ```
 optimize_for(x, backend=None, backend_opts=None, **kwargs)
@@ -131,7 +131,7 @@ block(x)
 
 There are several essential building blocks for making a custom partitioner:
 
-* [initialize](./subgraph_lib.cc#L242):
+* [initialize](./subgraph_lib.cc#L261):
     * This function is the library initialization function necessary for any dynamic libraries. It lets you check if the user is using a compatible version of MXNet. Note that this `version` parameter is passed from MXNet when library is loaded.
 
             MXReturnValue initialize(int version)
@@ -144,7 +144,7 @@ There are several essential building blocks for making a custom partitioner:
                 std::vector<bool>& ids,
                 std::unordered_map<std::string, std::string>& options)
 
-* [REGISTER_PARTITIONER(my_part_name)](./subgraph_lib.cc#L238):
+* [REGISTER_PARTITIONER(my_part_name)](./subgraph_lib.cc#L257):
     * This macro registers the custom partitioner and its properties to MXNet by its name. Notice that a partitioner can have multiple partitioning strategies. This enables multiple *passes* to be run in a single partitioning call from the user. The first argument to `addStrategy` is a user-specified name. The second argument is the `supportedOps` function. The third argument is the name of the subgraph operator to create for each subgraph created during partitioning (see below for more info about subgraph operators). The `setReviewSubgraph` API registers a callback function that is called for each subgraph created during partitioning (more on this below). Notice that the first argument to this function is the strategy to associate with and the second argument is the `reviewSubgraph` function.
 
             REGISTER_PARTITIONER(my_part_name)
@@ -154,7 +154,7 @@ There are several essential building blocks for making a custom partitioner:
 
 Also there are some optional functions you can specify:
 
-* [reviewSubgraph](./subgraph_lib.cc#L220):
+* [reviewSubgraph](./subgraph_lib.cc#L219):
     * This function provides an opportunity to accept/reject a subgraph after MXNet partitions it. It also allows specifying custom attributes on the subgraph (ie. user-generated IDs). If you do not register this function, subgraphs will be accepted by default. 
 
             MXReturnValue reviewSubgraph(
