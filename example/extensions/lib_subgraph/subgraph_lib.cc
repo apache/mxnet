@@ -204,7 +204,7 @@ MXReturnValue mySupportedOps(std::string json,
         dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
     }
 
-    //check if op dtype is float
+    //check if op dtype is float, and if option was specified to require float types
     if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
@@ -233,14 +233,17 @@ MXReturnValue myReviewSubgraph(std::string json, int subraph_id, bool* accept,
       std::cout << kv.second.data<float>()[i] << ", ";
     std::cout << "]" << std::endl;
   }
+
+  // check if option `reqArgs` was specified, and if so check if args were provided
   if(options.count("reqArgs") > 0 && args.size() == 0) {
     *accept = false;
     std::cout << "rejecting subgraph since args were not provided" << std::endl;
     return MX_SUCCESS;
   }
-  
-  if(options.find("reject") != options.end() &&
-     options["reject"].compare("True") == 0) {
+
+  // check if option `reject` was specified, and if so check if value is 'True'
+  if(options.count("reject") > 0 && options["reject"].compare("True") == 0) {
+    // if specified, reject the subgraph. this is only used for testing
     *accept = false;
     std::cout << "rejecting subgraph" << std::endl;
   } else {

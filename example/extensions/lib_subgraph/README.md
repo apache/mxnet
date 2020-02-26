@@ -78,28 +78,54 @@ sym, _, _ = mx.model.load_checkpoint('mymodel', 0)
 # Symbol/Module flow
 sym2 = sym.optimize_for("myPart")
 
-# Gluon flow
+# Gluon flow 1
 sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.hybridize(backend='myPart')
+
+# Gluon flow 2
+sym_block = nn.SymbolBlock(sym, inputs)
+sym_block.optimize_for(x, backend='myPart')
 ```
+
+In the Gluon hybridize flow, the model is actually hybridized during the first inference, rather than immediately when calling hybridize. This hybridize-based flow is useful if a user expects to run inference immediately after hybridizing. But for users than just want to partition but not run a whole forward pass, the `optimize_for` API combines the hybrdize/forward APIs but does not run a forward pass. After calling `optimize_for` users can `export` thier model immediately without running a forward pass. 
 
 ### Using a Custom Partitioner Library
 
 Partitioning APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, the `optimize_for` API can be called on Symbol objects to return a partitioned Symbol.
 
 ```
-optimize_for(backend, args=None, ctx=None, **kwargs)
+optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
-The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` argument is optional and takes a list of NDArray or dict of str to NDArray. It is used to infer shapes and types and before partitioning. The `ctx` argument is optional and takes a device context to infer storage types. It also take any other user-specified options that will be passed to the backend partitioning APIs.
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and takes a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before partitioning, and passed to the backend to use during compilation. The `ctx` argument is optional and takes a device context to infer storage types. It also take any other user-specified options that will be passed to the backend partitioning APIs.
 
 For the Gluon API, the `hybridize` API can be called on HybridBlocks to partition the internal CachedOp Symbol.
 
 ```
-hybridize(backend=None, backend_opts=None)
+hybridize(backend=None, backend_opts=None, **kwargs)
 ```
 
-When the `hybridize` function is called, Gluon will convert the program’s execution into the style used in symbolic programming. The `backend` argument is a string that identifies which backend to partition the model for. The `backend_opts` takes other user-specified options that will be passed to the backend partitioning APIs.
+The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which backend that will partition the model. The `backend_opts` takes other user-specified options that will be passed to the backend partitioning APIs. The actual partitioning takes place during the forward pass.
+
+If you just want to partition the HybridBlock but not run a complete forward pass, you can use `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
+
+```
+optimize_for(x, backend=None, backend_opts=None, **kwargs)
+```
+
+When the `optimize_for` API is called on a HybridBlock it partitions immediately. This lets users export the partitioned model without running a complete forward pass.
+
+```
+block.optimize_for(x, backend='myPart')
+block.export('partitioned')
+```
+
+But you can also use `optimize_for` in place of `hybridize` and run inference immediately after too.
+
+```
+block.optimize_for(x, backend='myPart')
+block(x)
+```
 
 ### Writing A Custom Partitioner
 
@@ -141,7 +167,7 @@ Also there are some optional functions you can specify:
 
 Let’s take a closer look at those registry functions:
 
-* **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of booleans, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `true` for the node ID in the `ids` array. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
+* **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of booleans, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `true` for the index in the `ids` array corresponding to the node ID. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
 
 * **reviewSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The 4th argument is the map of options specified by the user. The 5th argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. The last argument is the map of params/weights/args to the model and the associated names. For inputs the the subgraph that come directly from the params/weights of the model, you can look up the name of the input in this map to get the actual tensor values.
 
