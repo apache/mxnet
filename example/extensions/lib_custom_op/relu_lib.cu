@@ -44,6 +44,8 @@ MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
                          OpResource res) {
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
+    int random = res.get_randint();
+    std::cout << random << std::endl;
     for (int i=0; i<inputs[0].size(); i++) {
         out_data[i] = in_data[i] > 0 ? in_data[i] : 0;
     }

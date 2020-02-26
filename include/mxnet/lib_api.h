@@ -362,6 +362,8 @@ struct MXTensor {
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
+typedef void* (*rng_caller_t)(void*, char*);
+
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
 #else
@@ -374,9 +376,11 @@ typedef void* (*xpu_malloc_t)(void*, int);
 class OpResource {
  public:
   OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
-             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream)
+             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream,
+             rng_caller_t rng_caller_nocap, void* rng_caller)
     : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
-      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream) {}
+      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream),
+      rng_caller_nocap(rng_caller_nocap), rng_caller(rng_caller) {}
 
   /*! \brief allocate cpu memory controlled by MXNet */
   void* alloc_cpu(int size) {
@@ -393,6 +397,10 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
+  int gen_randint() {
+    return reinterpret_cast<int>(rng_caller_nocap(rng_caller, "rand"));
+  }
+
  private:
   /*! \brief allocation lambda function */
   xpu_malloc_t cpu_malloc, gpu_malloc;
@@ -400,6 +408,9 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
+
+  rng_caller_t rng_caller_nocap;
+  void* rng_caller;
 };
 
 /*!
@@ -875,7 +886,8 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              size_t* outIDs, const char** outdev_type,
                              int* outdev_id, int num_out,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream);
+                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
+                             rng_caller_t rng_caller_nocap, void* rng_caller);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
@@ -1103,7 +1115,8 @@ extern "C" {
                   const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
                   size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream) {
+                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
+                  rng_caller_t rng_caller_nocap, void* rng_caller) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1124,7 +1137,8 @@ extern "C" {
                            outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream,
+                   rng_caller_nocap, rng_caller);
 
     return fcomp(attrs, inputs, outputs, res);
   }
@@ -1209,7 +1223,7 @@ extern "C" {
                            outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, NULL, NULL);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {

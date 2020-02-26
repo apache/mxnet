@@ -177,6 +177,25 @@ void CustomFComputeDispatcher(const std::string op_name,
     return static_cast<void*>((*gpualloc)(size));
   };
 
+  // custom random number generator
+  mxnet::common::random::RandGenerator<cpu, double> *pgen =
+    ctx.requested[1].get_parallel_random<cpu, double>();
+
+  auto rng_caller = [&](char *rand_type) {
+    LOG(INFO) << "rng_caller called";
+    typename RandGenerator<cpu, double>::Impl genImpl(pgen, 1);
+    double ret;
+    if (rand_type == "rand")
+       ret = reinterpret_cast<double>(genImpl.rand());
+    return ret;
+  };
+
+  typedef decltype(rng_caller) type_rng_caller;
+  auto rng_caller_nocap = [](void *rng_call, char *rand_type) {
+      type_rng_caller* rngcaller = static_cast<type_rng_caller*>(rng_call);
+      return (*rngcaller)(rand_type);
+  };
+
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
   void *cuda_stream = nullptr;
 #if MXNET_USE_CUDA
@@ -202,7 +221,8 @@ void CustomFComputeDispatcher(const std::string op_name,
                     in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
-                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream))
+                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                    rng_caller_nocap, &rng_caller))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -353,7 +373,7 @@ int MXLoadLib(const char *path) {
     /*
      * Below are a series of lambda functions that will be registered in the NNVM op registration
      * Each one has the standard MXNet signature and converts to types supported by externally
-     * registered operators. 
+     * registered operators.
      */
 
     // lambda function to call parse attributes
@@ -617,7 +637,7 @@ int MXLoadLib(const char *path) {
     };
 
     auto resc_req = [=](const NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace, ResourceRequest::kParallelRandom};
     };
 
     // library author should implement and return a 'state' which points to an instance
