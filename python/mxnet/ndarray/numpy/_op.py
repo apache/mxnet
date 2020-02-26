@@ -158,8 +158,12 @@ def ones(shape, dtype=None, order='C', ctx=None):  # pylint: disable=redefined-o
     if order != 'C':
         raise NotImplementedError
     if ctx is None:
-        ctx = current_context()
-    return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.ones(shape, dtype, ctx)
 
 
 # pylint: disable=too-many-arguments, redefined-outer-name
@@ -366,8 +370,6 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
     if isinstance(fill_value, NDArray):
         if dtype is None:
             ret = broadcast_to(fill_value, shape)
@@ -377,8 +379,13 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
         dtype = _np.bool if dtype is None else dtype
-    dtype = _np.float32 if dtype is None else dtype
-    return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.full(shape, dtype, fill_value, ctx, out)
 # pylint: enable=too-many-arguments, redefined-outer-name
 
 

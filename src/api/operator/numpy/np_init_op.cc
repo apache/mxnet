@@ -326,4 +326,62 @@ MXNET_REGISTER_API("_npi.logspace")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.ones")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_ones");
+  nnvm::NodeAttrs attrs;
+  op::InitOpParam param;
+  if (args[0].type_code() == kDLInt) {
+    param.shape = TShape(1, args[0].operator int64_t());
+  } else {
+    param.shape = TShape(args[0].operator ObjectRef());
+  }
+  if (args[1].type_code() == kNull) {
+    param.dtype = mxnet::common::GetDefaultDtype();
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  if (args[2].type_code() != kNull) {
+    attrs.dict["ctx"] = args[2].operator std::string();
+  }
+  int num_outputs = 0;
+  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.full")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_full");
+  nnvm::NodeAttrs attrs;
+  op::InitOpWithScalarParam param;
+  if (args[0].type_code() == kDLInt) {
+    param.shape = TShape(1, args[0].operator int64_t());
+  } else {
+    param.shape = TShape(args[0].operator ObjectRef());
+  }
+  if (args[1].type_code() == kNull) {
+    param.dtype = mxnet::common::GetDefaultDtype();
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+  }
+  param.value = args[2].operator double();
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  if (args[3].type_code() != kNull) {
+    attrs.dict["ctx"] = args[3].operator std::string();
+  }
+  int num_outputs = 0;
+  NDArray** outputs = nullptr;
+  if (args[4].type_code() != kNull) {
+    num_outputs = 1;
+    outputs = new NDArray*[1]{args[4].operator mxnet::NDArray*()};
+  }
+  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, outputs);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet

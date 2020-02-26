@@ -297,6 +297,17 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, dtype_s, value_s;
+    shape_s << shape;
+    dtype_s << dtype;
+    value_s << value;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["value"] = value_s.str();
+    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
+    // Setting ctx here results in an error.
+  }
 };
 
 /*! \brief Parse keyword arguments as PType arguments and save to parsed */
