@@ -112,6 +112,78 @@ def test_gluon_normal():
 
 @with_seed()
 @use_np
+def test_gluon_gumbel():
+    class TestGumbel(HybridBlock):
+        def __init__(self, func):
+            super(TestGumbel, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, loc, scale, *args):
+            normal = mgp.Gumbel(loc, scale, F)
+            return getattr(normal, self._func)(*args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestGumbel("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        import torch
+        from torch.distributions import Gumbel
+        np_out = ss.gumbel_r(loc=loc.asnumpy(),
+                        scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestGumbel("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.gumbel_r(loc.asnumpy(),
+                        scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestGumbel("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.gumbel_r(loc.asnumpy(),
+                        scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestGumbel("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale).asnumpy()
+        np_out = ss.gumbel_r(loc.asnumpy(),
+                        scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_bernoulli():
     class TestBernoulli(HybridBlock):
         def __init__(self, func, is_logit=False):
@@ -195,6 +267,64 @@ def test_gluon_bernoulli():
             pass
         else:
             assert False
+
+
+@with_seed()
+@use_np
+def test_relaxed_bernoulli():
+    class TestRelaxedBernoulli(HybridBlock):
+        def __init__(self, func, is_logit=False):
+            super(TestRelaxedBernoulli, self).__init__()
+            self._is_logit = is_logit
+            self._func = func
+
+        def hybrid_forward(self, F, params, *args):
+            relaxed_bernoulli = mgp.RelaxedBernoulli(T=1.0, logit=params, F=F) if self._is_logit else \
+                        mgp.RelaxedBernoulli(T=1.0, prob=params, F=F)
+            
+            if self._func == "sample":
+                return relaxed_bernoulli.sample()
+
+            if (len(args) == 0):
+                out = getattr(relaxed_bernoulli, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
+            return getattr(relaxed_bernoulli, self._func)(*args)
+
+    def prob_to_logit(prob):
+        return np.log(prob) - np.log1p(-prob)
+
+    shapes = [(), (1,), (2, 3), 6]
+    # Test sampling
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        prob = np.random.uniform(size=shape)
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        param.attach_grad()
+        net = TestRelaxedBernoulli("sample", use_logit)
+        if hybridize:
+            net.hybridize()
+        with autograd.record():
+            mx_out = net(param)
+        mx_out.backward()
+        desired_shape = (shape,) if isinstance(shape, int) else shape
+        assert param.grad.shape == desired_shape
+
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        prob = np.random.uniform(size=shape)
+        sample = np.random.uniform(0.1, 0.9, size=shape)
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestRelaxedBernoulli("log_prob", use_logit)
+        if hybridize:
+            net.hybridize()
+        mx_out = net(param, sample).asnumpy()
+        desired_shape = (shape,) if isinstance(shape, int) else shape
+        assert mx_out.shape == desired_shape
 
 
 @with_seed()

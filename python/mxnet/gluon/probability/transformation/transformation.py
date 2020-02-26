@@ -18,7 +18,7 @@
 # coding: utf-8
 """Transformation Classes"""
 __all__ = ["Transformation", "ComposeTransform", "ExpTransform", "AffineTransform",
-           "PowerTransform", "AbsTransform"]
+           "PowerTransform", "AbsTransform", 'SigmoidTransform', 'SoftmaxTransform']
 
 from ..distributions.utils import _clip_prob, cached_property, sum_right_most
 import weakref

@@ -27,7 +27,7 @@ from .utils import getF
 
 
 class Normal(ExponentialFamily):
-    r"""Create a normal distribution object.
+    r"""Create a Normal distribution object.
 
     Parameters
     ----------

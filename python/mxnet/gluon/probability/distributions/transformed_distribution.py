@@ -63,5 +63,12 @@ class TransformedDistribution(Distribution):
         # FIXME: handle multivariate cases.
         log_prob = log_prob + self._base_dist.log_prob(y)
         return log_prob
-        
+
+    def cdf(self, value):
+        # FIXME: implement transformed distribution CDF.
+        raise NotImplementedError
+
+    def icdf(self, value):
+        # FIXME: implement transformed distribution ICDF.
+        raise NotImplementedError
 

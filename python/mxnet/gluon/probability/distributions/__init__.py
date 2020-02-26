@@ -31,6 +31,10 @@ from .independent import *
 
 from .bernoulli import *
 
+from .relaxed_bernoulli import *
+
+from .gumbel import *
+
 from .categorical import *
 
 from .one_hot_categorical import *
