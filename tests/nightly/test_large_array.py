@@ -495,6 +495,14 @@ def test_nn():
         assert res.shape[1] == 536870912
         assert res.shape[2] == 2
         assert res.shape[3] == 6
+        
+    def check_ravel():
+        data = nd.random_normal(shape=(2, LARGE_TENSOR_SHAPE))
+        shape = (2, 10)
+
+        out = nd.ravel_multi_index(data=data, shape=shape)
+
+        assert out.shape[0] == LARGE_TENSOR_SHAPE
 
     check_gluon_embedding()
     check_fully_connected()
@@ -518,6 +526,7 @@ def test_nn():
     check_col2im()
     check_embedding()
     check_spatial_transformer()
+    check_ravel()
 
 
 def test_tensor():
