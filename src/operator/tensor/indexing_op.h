@@ -1447,8 +1447,8 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());
