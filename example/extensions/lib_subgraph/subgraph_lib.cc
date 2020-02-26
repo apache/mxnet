@@ -216,7 +216,7 @@ MXReturnValue mySupportedOps(std::string json,
   return MX_SUCCESS;
 }
 
-MXReturnValue myReviewSubgraph(std::string json, int subraph_id, bool* accept,
+MXReturnValue myReviewSubgraph(std::string json, int subgraph_id, bool* accept,
                                std::unordered_map<std::string, std::string>& options,
                                std::unordered_map<std::string, std::string>& attrs,
                                std::map<std::string, MXTensor>& args,

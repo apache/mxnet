@@ -159,7 +159,7 @@ Also there are some optional functions you can specify:
 
             MXReturnValue reviewSubgraph(
                 std::string json,
-                int subraph_id,
+                int subgraph_id,
                 bool* accept,
                 std::unordered_map<std::string, std::string>& options,
                 std::unordered_map<std::string, std::string>& attrs,
@@ -169,7 +169,7 @@ Let’s take a closer look at those registry functions:
 
 * **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of booleans, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `true` for the index in the `ids` array corresponding to the node ID. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
 
-* **reviewSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The 4th argument is the map of options specified by the user. The 5th argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. The last argument is the map of params/weights/args to the model and the associated names. For inputs the the subgraph that come directly from the params/weights of the model, you can look up the name of the input in this map to get the actual tensor values.
+* **reviewSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments, unique for each subgraph in the model). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The 4th argument is the map of options specified by the user. The 5th argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. The last argument is the map of params/weights/args to the model and the associated names. For inputs the the subgraph that come directly from the params/weights of the model, you can look up the name of the input in this map to get the actual tensor values.
 
 ### Writing A Custom Subgraph Operator
 
