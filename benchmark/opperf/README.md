@@ -73,7 +73,8 @@ python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-
 
 3. **dtype** : By default, `float32`. You can override and set the global dtype for all operator benchmarks. Example: --dtype float64.
 
-4. **profiler** : By default, 'native'. You can override and set the global profiler for all operator benchmarks. Example: --profiler 'python'.
+4. **profiler** : `native` or `python`. By default, 'native'. You can override and set the global profiler for all operator benchmarks. Example: --profiler 'python'.
+Native profiler uses MXNet C++ based built-in profiler. Python profiler uses Python package time. Generally, native profiler is used by developers and python profiler is used by users.
 
 ## Usecase 2 - Run benchmarks for all the operators in a specific category
 
