@@ -35,7 +35,7 @@ DEFAULT_DTYPE = ['float32', 'int32', 'float32']  # required parameter for amp_ca
 DEFAULT_DTYPE_INT = ['int32', 'int64', 'int32']  # randint works for int* types only
 DEFAULT_DTYPE_FLOAT = ['float16', 'float32', 'float64']  # random_exp works for float* types only
 
-DEFAULT_DATA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_DATA_LARGE_TENSOR = [(2**16, 2**16)]
 
 # For Binary miscellaneous operators like choose_element0_index
 # argument data must be indexed via an NDArray.
@@ -59,10 +59,14 @@ DEFAULT_HIGH = [5]
 DEFAULT_K = [1]
 DEFAULT_P = [1]
 
-DEFAULT_SHAPE_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_SHAPE_LARGE_TENSOR = [(2**16, 2**16)]#, (2**32, 1), (2**25, 2**7)]
 DEFAULT_SAMPLE_LARGE_TENSOR = [(2**32,)]
 DEFAULT_DATA_RPD_LARGE_TENSOR = [(2**32 + 1, 5)]
-DEFAULT_ALPHA_RPD_LARGE_TENSOR = [(5,)]
+DEFAULT_ALPHA_RPD_LARGE_TENSOR = [(2**32,)]
+DEFAULT_SAMPLE_RPE_LARGE_TENSOR = [(1, 2**32)]
+DEFAULT_LAM_RPE_LARGE_TENSOR = [(1,)]
+DEFAULT_SAMPLE_RPG_LARGE_TENSOR = [(1, 2**32 + 1)]
+DEFAULT_ALPHA_RPG_LARGE_TENSOR = [(1,)]
 
 # For operators like - sample_uniform, sample_normal etc..
 # NOTE: There are many overlapping operators in random_* and sample_*,
@@ -91,7 +95,7 @@ DEFAULT_MU_ND_LARGE_TENSOR = [[2.0] * 2**16 + [2.5] * 2**16]
 DEFAULT_SIGMA_LARGE_TENSOR = [[1.0] * 2**16 + [3.7] * 2**16]
 DEFAULT_ALPHA_ND_LARGE_TENSOR = [[0.0] * 2**16 + [2.5] * 2**16]
 DEFAULT_BETA_ND_LARGE_TENSOR = [[1.0] * 2**16 + [0.7] * 2**16]
-DEFAULT_LAM_LARGE_TENSOR = [[1.0] * 2**16 + [8.5] * 2**16]
+DEFAULT_LAM_ND_LARGE_TENSOR = [[1.0] * 2**16 + [8.5] * 2**16]
 DEFAULT_K_ND_LARGE_TENSOR = [[20] * 2**16 + [49] * 2**16]
 DEFAULT_P_ND_LARGE_TENSOR = [[0.4] * 2**16 + [0.77] * 2**16]
 DEFAULT_DATA_BILINEAR_LARGE_TENSOR = [(2**32, 1, 1, 1)]
@@ -99,6 +103,9 @@ DEFAULT_GRID_LARGE_TENSOR = [(2**32, 2, 1, 1)]
 DEFAULT_DATA_GRIDGEN_LARGE_TENSOR = [(2**31, 2, 1, 1), (1, 6)]
 DEFAULT_TARGET_SHAPE_LARGE_TENSOR = [(1, 6)]
 DEFAULT_DATA_SM_LARGE_TENSOR = [(2**32,)]
+DEFAULT_SHAPE_SE_LARGE_TENSOR = [(1,)]
+DEFAULT_LAM_SE_LARGE_TENSOR = [(2**32 + 1,)]
+DEFAULT_SHAPE_SU_LARGE_TENSOR = [(2**32,)]
 
 # For reduction operators
 # NOTE: Data used is DEFAULT_DATA
@@ -573,7 +580,9 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "sigma": DEFAULT_SIGMA_LARGE_TENSOR,
                                 "alpha_nd": DEFAULT_ALPHA_ND_LARGE_TENSOR,
                                 "beta_nd": DEFAULT_BETA_ND_LARGE_TENSOR,
-                                "lam_nd": DEFAULT_LAM_LARGE_TENSOR,
+                                "lam_nd": DEFAULT_LAM_ND_LARGE_TENSOR,
+                                "lam_random_pdf_exponential": DEFAULT_LAM_RPE_LARGE_TENSOR,
+                                "sample_random_pdf_exponential": DEFAULT_SAMPLE_RPE_LARGE_TENSOR,
                                 "k": DEFAULT_K,
                                 "p": DEFAULT_P,
                                 "k_nd": DEFAULT_K_ND_LARGE_TENSOR,
@@ -618,6 +627,40 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "data_sample_multinomial": DEFAULT_DATA_SM_LARGE_TENSOR,
                                 "data_random_pdf_dirichlet": DEFAULT_DATA_RPD_LARGE_TENSOR,
                                 "alpha_random_pdf_dirichlet": DEFAULT_ALPHA_RPD_LARGE_TENSOR,
+                                "sample_random_pdf_gamma": DEFAULT_SAMPLE_RPG_LARGE_TENSOR,
+                                "alpha_random_pdf_gamma": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "beta_random_pdf_gamma": DEFAULT_BETA_LARGE_TENSOR,
+                                "sample_random_pdf_generalized_negative_binomial": DEFAULT_SAMPLE_RPG_LARGE_TENSOR,
+                                "mu_random_pdf_generalized_negative_binomial": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "alpha_random_pdf_generalized_negative_binomial": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "sample_random_pdf_negative_binomial": DEFAULT_SAMPLE_RPG_LARGE_TENSOR,
+                                "k_random_pdf_negative_binomial": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "p_random_pdf_negative_binomial": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "sample_random_pdf_normal": DEFAULT_SAMPLE_RPG_LARGE_TENSOR,
+                                "mu_random_pdf_normal": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "sigma_random_pdf_normal": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "sample_random_pdf_poisson": DEFAULT_SAMPLE_RPG_LARGE_TENSOR,
+                                "lam_random_pdf_poisson": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "sample_random_pdf_uniform": DEFAULT_SAMPLE_RPG_LARGE_TENSOR,
+                                "low_random_pdf_uniform": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "high_random_pdf_uniform": DEFAULT_ALPHA_RPG_LARGE_TENSOR,
+                                "shape_sample_exponential": DEFAULT_SHAPE_SE_LARGE_TENSOR,
+                                "lam_sample_exponential": DEFAULT_LAM_SE_LARGE_TENSOR,
+                                "mu_sample_normal": DEFAULT_LAM_SE_LARGE_TENSOR,
+                                "sigma_sample_normal": DEFAULT_LAM_SE_LARGE_TENSOR,
+                                "shape_sample_poisson": DEFAULT_LAM_SE_LARGE_TENSOR,
+                                "lam_sample_poisson": DEFAULT_SHAPE_SE_LARGE_TENSOR,
+                                "shape_sample_uniform": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "low_sample_uniform": DEFAULT_LAM_SE_LARGE_TENSOR,
+                                "high_sample_uniform": DEFAULT_LAM_SE_LARGE_TENSOR,
+                                "alpha_sample_gamma": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "beta_sample_gamma": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "mu_sample_generalized_negative_binomial": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "shape_sample_generalized_negative_binomial": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "alpha_sample_generalized_negative_binomial": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "shape_sample_negative_binomial": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "k_sample_negative_binomial": DEFAULT_SHAPE_SU_LARGE_TENSOR,
+                                "p_sample_negative_binomial": DEFAULT_SHAPE_SU_LARGE_TENSOR,
                                 "A": DEFAULT_A_LARGE_TENSOR,
                                 "B": DEFAULT_B_LARGE_TENSOR,
                                 "C": DEFAULT_C_LARGE_TENSOR,
@@ -732,3 +775,4 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
                           "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
                           "grads_sum_sq", "mhs", "data1", "data2", "loc", "parameters", "state"]
+

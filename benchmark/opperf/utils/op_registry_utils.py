@@ -125,7 +125,7 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
-    custom_data_int64 = {'random_pdf_dirichlet'}
+    custom_data_int64 = {'random_pdf_dirichlet', 'random_pdf_exponential', 'random_pdf_gamma', 'random_pdf_generalized_negative_binomial', 'random_pdf_negative_binomial', 'random_pdf_normal', 'random_pdf_poisson', 'random_pdf_uniform', 'sample_exponential', 'sample_normal', 'sample_poisson', 'sample_uniform', 'sample_gamma', 'sample_generalized_negative_binomial', 'sample_negative_binomial'}
 
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
@@ -170,7 +170,13 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
             # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
             # Ex: axis in sum is shape, axis in sort is int.
             arg_values[arg_name] = default_inputs[arg_name + "_shape"]
-
+    #print(list(arg_values.keys()))
+    for key in arg_values:
+        print(key + ": ")
+        if type(arg_values[key][0]).__name__ == 'list' and len(arg_values[key][0]) > 50:
+            print([arg_values[key][0][:20]])
+        else:
+            print(arg_values[key])
     # Number of different inputs we want to use to test
     # the operator
     num_input_combinations = max([len(value) for value in arg_values.values()])
