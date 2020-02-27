@@ -235,10 +235,14 @@ enum MXReturnValue {
 struct MXTensor {
   MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
   MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), shape(oth.shape),
-    dtype(oth.dtype), verID(oth.verID), ctx(oth.ctx) {}
+    dtype(oth.dtype), verID(oth.verID), ctx(oth.ctx) {
+    setDLTensor();
+  }
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {
+    setDLTensor();
+  }
 
   /*! \brief populate internal tensor fields */
   void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
