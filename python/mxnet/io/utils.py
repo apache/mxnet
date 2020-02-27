@@ -18,8 +18,8 @@
 """utility functions for io.py"""
 from collections import OrderedDict
 
-import numpy as np
 import warnings
+import numpy as np
 try:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
