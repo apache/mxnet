@@ -505,12 +505,14 @@ def test_nn():
         assert out.shape[0] == LARGE_TENSOR_SHAPE
 
     def check_cumsum():
-        a = nd.random_normal(shape=(LARGE_TENSOR_SHAPE + 1, 1))
+        a = nd.ones((LARGE_X, SMALL_Y))
+        axis = 1
 
-        res = nd.cumsum(a=a)
+        res = nd.cumsum(a=a, axis=axis)
 
-        assert res.shape[0] == LARGE_TENSOR_SHAPE + 1
-        assert type(res[0].asscalar()).__name__ == 'float32'
+        assert res.shape[0] == LARGE_X
+        assert res.shape[1] == SMALL_Y
+        assert res[0][SMALL_Y - 1] == 50.
 
     check_gluon_embedding()
     check_fully_connected()
