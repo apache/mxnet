@@ -369,7 +369,7 @@ union RandomType {
     double d;
 };
 
-typedef RandomType (*rng_caller_t)(void*, char*);
+typedef RandomType (*rng_caller_t)(void*, const char*);
 
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
@@ -404,7 +404,7 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
-  int gen_randint() {
+  int get_randint() {
     RandomType ret = rng_caller_nocap(rng_caller, "rand");
     return ret.i;
   }

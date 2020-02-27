@@ -71,6 +71,9 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
     unsigned k = inputs[0].shape[1];
     unsigned m = inputs[1].shape[1];
 
+    int random = res.get_randint();
+    std::cout << random << std::endl;
+
     gemm(A, B, C, n, k, m);
   }
   return MX_SUCCESS;

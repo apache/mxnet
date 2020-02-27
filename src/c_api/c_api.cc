@@ -181,7 +181,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   mxnet::common::random::RandGenerator<cpu, double> *pgen =
     ctx.requested[1].get_parallel_random<cpu, double>();
 
-  auto rng_caller = [&](char *rand_type) {
+  auto rng_caller = [&](const char *rand_type) {
     LOG(INFO) << "rng_caller called";
     typename mxnet::common::random::RandGenerator<cpu, double>::Impl genImpl(pgen, 1);
     std::string rand_str(rand_type);
@@ -194,7 +194,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   };
 
   typedef decltype(rng_caller) type_rng_caller;
-  auto rng_caller_nocap = [](void *rng_call, char *rand_type) {
+  auto rng_caller_nocap = [](void *rng_call, const char *rand_type) {
       type_rng_caller* rngcaller = static_cast<type_rng_caller*>(rng_call);
       return (*rngcaller)(rand_type);
   };
