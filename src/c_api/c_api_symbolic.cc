@@ -1357,7 +1357,8 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   nnvm::Graph g = Symbol2Graph(*s);
   const auto& indexed_graph = g.indexed_graph();
   const auto& mutable_nodes = indexed_graph.mutable_input_nodes();
-  size_t num_forward_inputs = sym->ListInputs(nnvm::Symbol::kAll).size();
+  std::vector<std::string> input_names = sym->ListInputNames(nnvm::Symbol::kAll);
+  size_t num_forward_inputs = input_names.size();
   if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
@@ -1369,13 +1370,15 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     for (size_t i = 0; i < num_forward_inputs; ++i) {
       const uint32_t nid = indexed_graph.input_nodes().at(i);
       if (mutable_nodes.count(nid)) {
-        CHECK_LT(aux_top, aux_len);
+        CHECK_LT(aux_top, aux_len)
+          << "Cannot find aux '" << input_names[i] << "' in provided aux to optimize_for";
         const auto &in_arg = *(in_aux_ptr[aux_top++]);
         arg_shapes[i] = in_arg.shape();
         arg_dtypes[i] = in_arg.dtype();
         arg_stypes[i] = in_arg.storage_type();
       } else {
-        CHECK_LT(args_top, args_len);
+        CHECK_LT(args_top, args_len)
+          << "Cannot find arg '" << input_names[i] << "' in provided args to optimize_for";
         const auto &in_arg = *(in_args_ptr[args_top++]);
         arg_shapes[i] = in_arg.shape();
         arg_dtypes[i] = in_arg.dtype();
