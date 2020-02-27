@@ -129,7 +129,7 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all NN loss operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_loss_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, warmup=warmup, runs=runs))
-    
+
     # Run all Miscellaneous operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_misc_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, warmup=warmup, runs=runs))
 
