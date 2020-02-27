@@ -248,7 +248,7 @@ def python_profile(func):
     @functools.wraps(func)
     def python_profile_it(*args, **kwargs):
         runs = args[1]
-        modified_args = (args[0], 1, args[2])
+        modified_args = (args[0], 1)
         times = []
 
         for _ in range(runs):
