@@ -134,9 +134,9 @@ struct cumsum_backward {
     index_t offset = left * middle * trailing + right;
     const OType *lane_ograd = ograd + offset;
     IType *lane_igrad = igrad + offset;
-    lane_igrad[(middle - 1) * trailing] = index_t(lane_ograd[(middle - 1) * trailing]);
+    lane_igrad[(middle - 1) * trailing] = IType(lane_ograd[(middle - 1) * trailing]);
     for (index_t j = middle - 2; j >= 0; --j) {
-      lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + index_t(lane_ograd[j * trailing]);
+      lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + IType(lane_ograd[j * trailing]);
     }
   }
 };
