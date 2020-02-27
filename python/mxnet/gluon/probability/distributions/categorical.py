@@ -25,7 +25,7 @@ from .utils import prob2logit, logit2prob, getF, cached_property
 from .constraint import Simplex, Real
 
 
-# FIXME: Finish implementation
+# FIXME: Finish broadcast_to
 class Categorical(Distribution):
     """Create a categorical distribution object.
 
@@ -128,11 +128,11 @@ class Categorical(Distribution):
             logit = self.logit
         else:
             if isinstance(size, int):
-                logit = F.np.broadcast_to(self.logit, (size) + (-2,))
+                logit = F.np.broadcast_to(self.logit, (size,) + (-2,))
             else:
                 logit = F.np.broadcast_to(self.logit, size + (-2,))
-        gumbel_noise = F.np.random.gumbel(F.np.zeros_like(logit))
-        return F.np.argmax(gumbel_noise + logit, axis=-1)
+        gumbel_samples = F.np.random.gumbel(logit)
+        return F.np.argmax(gumbel_samples, axis=-1)
 
     def enumerate_support(self):
         num_events = self.num_events

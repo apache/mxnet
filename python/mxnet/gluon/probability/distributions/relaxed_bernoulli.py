@@ -105,9 +105,7 @@ class RelaxedBernoulli(TransformedDistribution):
                        'logit': Real()}
 
     def __init__(self, T, prob=None, logit=None, F=None, validate_args=None):
-        _F = F if F is not None else getF(prob, logit)
         base_dist = _LogitRelaxedBernoulli(T, prob, logit, F, validate_args)
-
         super(RelaxedBernoulli, self).__init__(base_dist, SigmoidTransform())
 
     @property

@@ -375,6 +375,8 @@ def test_gluon_categorical():
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            eps = _np.finfo('float32').eps
+            prob = np.clip(prob, eps, 1 - eps)
             param = prob
             desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
             samples = np.random.choice(event_shape, size=desired_shape)
@@ -459,6 +461,8 @@ def test_gluon_one_hot_categorical():
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            eps = _np.finfo('float32').eps
+            prob = np.clip(prob, eps, 1 - eps)
             param = prob
             desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
             samples = np.random.choice(event_shape, size=desired_shape)
@@ -486,6 +490,53 @@ def test_gluon_one_hot_categorical():
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == (event_shape,) + desired_shape + (event_shape,)
 
+
+@with_seed()
+@use_np
+def test_relaxed_one_hot_categorical():
+    class TestRelaxedOneHotCategorical(HybridBlock):
+        def __init__(self, func, is_logit=False, batch_shape=None, num_events=None):
+                super(TestRelaxedOneHotCategorical, self).__init__()
+                self._is_logit = is_logit
+                self._func = func
+                self._batch_shape = batch_shape
+                self._num_events = num_events
+
+        def hybrid_forward(self, F, params, *args):
+            categorical = mgp.RelaxedOneHotCategorical(T=1.0, num_events=self._num_events, logit=params, F=F) \
+                            if self._is_logit else \
+                            mgp.RelaxedOneHotCategorical(T=1.0, num_events=self._num_events, prob=params, F=F)
+            if self._func == "sample":
+                return categorical.sample(self._batch_shape)
+            if (len(args) == 0):
+                out = getattr(categorical, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
+            return getattr(categorical, self._func)(*args)
+
+    event_shapes = [2, 5, 10]
+    batch_shapes = [None, (2, 3), (4, 0, 5)]
+    sample_shapes = [(), (2,), (3, 4)]
+
+    # Test sampling
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            if use_logit:
+                param = np.log(param)
+            param.attach_grad()
+            net = TestRelaxedOneHotCategorical("sample", use_logit, batch_shape, event_shape)
+            if hybridize:
+                net.hybridize()
+            with autograd.record():
+                mx_out = net(param)
+            mx_out.backward()
+            desired_shape = batch_shape if batch_shape is not None else ()
+            assert mx_out.shape == desired_shape + (event_shape,)
+            assert param.grad.shape == param.shape
             
 
 @with_seed()

@@ -78,7 +78,7 @@ def prob2logit(prob, binary=True, F=None):
         return F.np.log(_clipped_prob) - F.np.log1p(-_clipped_prob)
     # The clipped prob would cause numerical error in the categorical case,
     # no idea about the reason behind.
-    return F.np.log(prob)
+    return F.np.log(_clipped_prob)
 
 
 def logit2prob(logit, binary=True, F=None):

@@ -39,6 +39,8 @@ from .categorical import *
 
 from .one_hot_categorical import *
 
+from .relaxed_one_hot_categorical import *
+
 from .transformed_distribution import *
 
 from .divergence import *
