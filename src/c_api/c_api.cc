@@ -187,8 +187,8 @@ void CustomFComputeDispatcher(const std::string op_name,
     std::string rand_str(rand_type);
     RandomType ret;
     if (rand_str == "rand") {
-      LOG(INFO) << "rng_caller if";
       ret.i = genImpl.rand();
+      LOG(INFO) << "rng_caller rand returns " << ret.i;
     }
     return ret;
   };
@@ -244,7 +244,8 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
-                            cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream))
+                            cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                            rng_caller_nocap, &rng_caller))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
   }
 }

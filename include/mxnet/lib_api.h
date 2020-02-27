@@ -918,7 +918,8 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      size_t* outIDs, const char** outdev_type,
                                      int* outdev_id, int num_out,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                                     xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream);
+                                     xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
+                                     rng_caller_t rng_caller_nocap, void* rng_caller);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
@@ -1216,7 +1217,8 @@ extern "C" {
                           const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
                           size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream) {
+                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
+                          rng_caller_t rng_caller_nocap, void* rng_caller) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     for (int i = 0; i < num_in; i++) {
@@ -1231,7 +1233,7 @@ extern "C" {
                            outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, NULL, NULL);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, rng_caller_nocap, rng_caller);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
