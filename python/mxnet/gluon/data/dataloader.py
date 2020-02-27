@@ -23,6 +23,7 @@ __all__ = ['DataLoader']
 
 import pickle
 import logging
+import warnings
 import io
 import sys
 import signal
@@ -637,12 +638,12 @@ class DataLoader(object):
         else:
             self._batchify_fn = batchify_fn
 
-        if try_nopython is not False:
+        if not try_nopython and try_nopython is not None:
             # check for capability to use mx backend threadedLoader
             use_mx_iter, mx_iter_args = _check_mx_loader_capability(
                 self._dataset, self._batch_sampler, self._batchify_fn)
             if not use_mx_iter:
-                if try_nopython is True:
+                if try_nopython:
                     warnings.warn(mx_iter_args)
         else:
             use_mx_iter = False
