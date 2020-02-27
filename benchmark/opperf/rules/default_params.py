@@ -353,10 +353,15 @@ DEFAULT_X = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Y = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_COND = [(1024,), (10000,), (10000,)]
 DEFAULT_DEPTH = [0]
+
+#DEFAULT_INDICES_LARGE_TENSOR = [(1, 2)]
+
 # For ravel_multi_index op, ndim(shape) = 2; hence data NDArray's first dim = 2
 # First dimension of input of ravel operator should match shape parameter dimension
 # DEFAULT_SHAPE is reused for ravel_multi_index op
 RAVEL_DATA = [(2, 1024)]
+
+RAVEL_DATA_LARGE_TENSOR = [(2, 2**32)]
 
 # For loss operators
 DEFAULT_DATA_3d = [(1024, 100, 100)]
@@ -686,6 +691,9 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "eta": DEFAULT_ETA,
                                 "eps": DEFAULT_EPSILON,
                                 "stype": DEFAULT_STYPE,
+                                "indices": DEFAULT_INDICES,
+                                "depth": DEFAULT_DEPTH,
+                                "ravel_data": RAVEL_DATA_LARGE_TENSOR,
                                 "a": DEFAULT_A_LARGE_TENSOR,
                                 "lhs_fill_element_0index": DEFAULT_LHS_FEI_LARGE_TENSOR,
                                 "rhs_fill_element_0index": DEFAULT_RHS_FEI_LARGE_TENSOR,
