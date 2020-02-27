@@ -362,6 +362,7 @@ DEFAULT_DEPTH = [0]
 RAVEL_DATA = [(2, 1024)]
 
 RAVEL_DATA_LARGE_TENSOR = [(2, 2**32)]
+DEFAULT_X_LARGE_TENSOR = [(2**32, 1)]
 
 # For loss operators
 DEFAULT_DATA_3d = [(1024, 100, 100)]
@@ -692,7 +693,13 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "eps": DEFAULT_EPSILON,
                                 "stype": DEFAULT_STYPE,
                                 "indices": DEFAULT_INDICES,
+                                "begin": DEFAULT_BEGIN,
+                                "end": DEFAULT_END,
+                                "shape_like": DEFAULT_DATA_LARGE_TENSOR,
                                 "depth": DEFAULT_DEPTH,
+                                "condition": DEFAULT_X_LARGE_TENSOR,
+                                "x": DEFAULT_X_LARGE_TENSOR,
+                                "y": DEFAULT_X_LARGE_TENSOR,
                                 "ravel_data": RAVEL_DATA_LARGE_TENSOR,
                                 "a": DEFAULT_A_LARGE_TENSOR,
                                 "lhs_fill_element_0index": DEFAULT_LHS_FEI_LARGE_TENSOR,
