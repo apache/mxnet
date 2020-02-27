@@ -364,6 +364,11 @@ DEFAULT_LABEL = [(100,100)]
 DEFAULT_DATA_SMCE = [(1024, 1024)]
 DEFAULT_LABEL_SMCE = [(1024,)]
 
+DEFAULT_LABEL_LARGE_TENSOR = [(1, 1)]
+DEFAULT_DATA_CTCLOSS = [(2**32, 1, 1)]
+DEFAULT_DATA_SMCE_LARGE_TENSOR = [(2**32 + 1, 1)]
+DEFAULT_LABEL_SMCE_LARGE_TENSOR = [(2**32 + 1,)]
+
 # For NN operators
 DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
 DEFAULT_ACT_TYPE_ACTIVATION = ['relu', 'sigmoid', 'softrelu', 'softsign', 'tanh']
@@ -619,6 +624,8 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "block_size": DEFAULT_BLOCK_SIZE_LARGE_TENSOR,
                                 "args": DEFAULT_ARGS,
                                 "index": DEFAULT_INDEX_LARGE_TENSOR,
+                                "data_smce": DEFAULT_DATA_SMCE_LARGE_TENSOR,
+                                "label_smce": DEFAULT_LABEL_SMCE_LARGE_TENSOR,
                                 "grid": DEFAULT_GRID_LARGE_TENSOR,
                                 "data_bilinearsampler": DEFAULT_DATA_BILINEAR_LARGE_TENSOR,
                                 "transform_type": DEFAULT_TRANSFORM_TYPE,
@@ -683,6 +690,7 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "lhs_fill_element_0index": DEFAULT_LHS_FEI_LARGE_TENSOR,
                                 "rhs_fill_element_0index": DEFAULT_RHS_FEI_LARGE_TENSOR,
                                 "mhs": DEFAULT_MHS_LARGE_TENSOR,
+                                "data_softmax": DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR,
                                 "data_spatialtransformer": DEFAULT_DATA_ST_LARGE_TENSOR,
                                 "loc_spatialtransformer": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
                                 "target_shape": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
@@ -692,6 +700,10 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "output_size": DEFAULT_OUTPUT_SIZE_LARGE_TENSOR,
                                 "kernel_col2im": DEFAULT_KERNEL_LARGE_TENSOR,
                                 "stride_col2im": DEFAULT_STRIDE,
+                                "data_ctcloss": DEFAULT_DATA_CTCLOSS,
+                                "label_ctcloss": DEFAULT_LABEL_LARGE_TENSOR,
+                                "data_ctc_loss": DEFAULT_DATA_CTCLOSS,
+                                "label_ctc_loss": DEFAULT_LABEL_LARGE_TENSOR,
                                 "data_rnn": DEFAULT_DATA_RNN_LARGE_TENSOR,
                                 "p_rnn": DEFAULT_P_RNN,
                                 "parameters": DEFAULT_PARAMETERS_LARGE_TENSOR,

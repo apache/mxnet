@@ -125,7 +125,7 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
-    custom_data_int64 = {'random_pdf_dirichlet', 'random_pdf_exponential', 'random_pdf_gamma', 'random_pdf_generalized_negative_binomial', 'random_pdf_negative_binomial', 'random_pdf_normal', 'random_pdf_poisson', 'random_pdf_uniform', 'sample_exponential', 'sample_normal', 'sample_poisson', 'sample_uniform', 'sample_gamma', 'sample_generalized_negative_binomial', 'sample_negative_binomial'}
+    custom_data_int64 = {'random_pdf_dirichlet', 'random_pdf_exponential', 'random_pdf_gamma', 'random_pdf_generalized_negative_binomial', 'random_pdf_negative_binomial', 'random_pdf_normal', 'random_pdf_poisson', 'random_pdf_uniform', 'sample_exponential', 'sample_normal', 'sample_poisson', 'sample_uniform', 'sample_gamma', 'sample_generalized_negative_binomial', 'sample_negative_binomial', 'CTCLoss', 'ctc_loss'}
 
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
