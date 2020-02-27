@@ -214,7 +214,7 @@ NNVM_REGISTER_OP(_npi_arange)
 .set_num_outputs(1)
 .set_attr_parser(RangeParamParser)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyRangeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<RangeParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
 
