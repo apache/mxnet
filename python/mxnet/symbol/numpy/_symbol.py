@@ -43,13 +43,13 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_',
+           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_', 'flatnonzero',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
-           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
+           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'where', 'bincount', 'pad']
 
@@ -1255,6 +1255,9 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         else:
             ret = broadcast_to(fill_value, shape).astype(dtype)
         return ret
+    if isinstance(fill_value, bool):
+        fill_value = int(fill_value)
+        dtype = _np.bool if dtype is None else dtype
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
@@ -1299,6 +1302,8 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None):  # pyli
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
+    if isinstance(fill_value, bool):
+        fill_value = int(fill_value)
     return _npi.full_like(a, fill_value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
@@ -4659,6 +4664,32 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
         raise NotImplementedError('Don not support column-major (Fortran-style) order at this moment')
 
 
+def flatnonzero(a):
+    r"""
+    Return indices that are non-zero in the flattened version of a.
+
+    This is equivalent to np.nonzero(np.ravel(a))[0].
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array, containing the indices of the elements of `a.ravel()`
+        that are non-zero.
+
+    See Also
+    --------
+    nonzero : Return the indices of the non-zero elements of the input array.
+    ravel : Return a 1-D array containing the elements of the input array.
+    """
+    out = _npi.nonzero(ravel(a))
+    return out.reshape(-1,)
+
+
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
@@ -6077,6 +6108,44 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
     if (prepend or append):
         raise NotImplementedError('prepend and append options are not supported yet')
     return _npi.diff(a, n=n, axis=axis)
+
+
+@set_module('mxnet.symbol.numpy')
+def ediff1d(ary, to_end=None, to_begin=None):
+    """
+    The differences between consecutive elements of an array.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        If necessary, will be flattened before the differences are taken.
+    to_end : _Symbol or scalar, optional
+        Number(s) to append at the end of the returned differences.
+    to_begin : _Symbol or scalar, optional
+        Number(s) to prepend at the beginning of the returned differences.
+
+    Returns
+    -------
+    ediff1d : _Symbol
+        The differences. Loosely, this is ``ary.flat[1:] - ary.flat[:-1]``.
+    """
+    input_type = (isinstance(to_begin, _Symbol), isinstance(to_end, _Symbol))
+    # case 1: when both `to_begin` and `to_end` are arrays
+    if input_type == (True, True):
+        return _npi.ediff1d(ary, to_begin, to_end, to_begin_arr_given=True, to_end_arr_given=True,
+                            to_begin_scalar=None, to_end_scalar=None)
+    # case 2: only `to_end` is array but `to_begin` is scalar/None
+    elif input_type == (False, True):
+        return _npi.ediff1d(ary, to_end, to_begin_arr_given=False, to_end_arr_given=True,
+                            to_begin_scalar=to_begin, to_end_scalar=None)
+    # case 3: only `to_begin` is array but `to_end` is scalar/None
+    elif input_type == (True, False):
+        return _npi.ediff1d(ary, to_begin, to_begin_arr_given=True, to_end_arr_given=False,
+                            to_begin_scalar=None, to_end_scalar=to_end)
+    # case 4: both `to_begin` and `to_end` are scalar/None
+    else:
+        return _npi.ediff1d(ary, to_begin_arr_given=False, to_end_arr_given=False,
+                            to_begin_scalar=to_begin, to_end_scalar=to_end)
 
 
 @set_module('mxnet.symbol.numpy')

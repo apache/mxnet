@@ -65,7 +65,7 @@ $ pip install mxnet==0.11.0
 <div class="master">
 
 {% highlight bash %}
-$ pip install mxnet --pre
+$ pip install --pre mxnet -f https://dist.mxnet.io/python/all
 {% endhighlight %}
 
 </div> <!-- End of master-->
