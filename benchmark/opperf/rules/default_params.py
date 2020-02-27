@@ -73,10 +73,6 @@ DEFAULT_DATA_GRIDGEN = [(32, 2, 256, 256), (256, 6)]
 DEFAULT_TARGET_SHAPE = [(256, 6)]
 DEFAULT_DATA_SM = [(32, 32), (64, 64)]
 
-# For reduction operators
-# NOTE: Data used is DEFAULT_DATA
-DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
-
 # For sorting and searching operators
 # NOTE: Data used is DEFAULT_DATA
 DEFAULT_AXIS = [0]
@@ -284,7 +280,6 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p": DEFAULT_P,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
-                   "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS,
                    "weight": DEFAULT_WEIGHT,
                    "weight32": DEFAULT_WEIGHT,

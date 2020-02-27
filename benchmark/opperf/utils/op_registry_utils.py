@@ -173,15 +173,9 @@ def prepare_op_inputs(op, arg_params):
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
             elif op in ops_dim1 and arg_name + "_dim1" in DEFAULTS_INPUTS:
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_dim1"]
-            # default case
+            #default case
             elif arg_name in DEFAULTS_INPUTS:
                 arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
-            elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
-                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
-            elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
-                # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
-                # Ex: axis in sum is shape, axis in sort is int.
-                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator
