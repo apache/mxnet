@@ -287,9 +287,9 @@ inline void MultiLAMB(const nnvm::NodeAttrs& attrs,
     std::vector<TBlob> weights_for_norm;
     int position_weights = 0;
     if (!std::is_same<DType, MPDType>::value)
-	position_weights = input_stride - 1;
+      position_weights = input_stride - 1;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
-        weights_for_norm.emplace_back(inputs[index * input_stride + position_weights]);
+      weights_for_norm.emplace_back(inputs[index * input_stride + position_weights]);
     }
 
     // Calculate amount of temporary storage (temp_g, r1, r2, block_to_tensor, block_to_chunk)
