@@ -1369,17 +1369,17 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     for (size_t i = 0; i < num_forward_inputs; ++i) {
       const uint32_t nid = indexed_graph.input_nodes().at(i);
       if (mutable_nodes.count(nid)) {
-	CHECK_LT(aux_top, aux_len);
-	const auto &in_arg = *(in_aux_ptr[aux_top++]);
-	arg_shapes[i] = in_arg.shape();
-	arg_dtypes[i] = in_arg.dtype();
-	arg_stypes[i] = in_arg.storage_type();
+        CHECK_LT(aux_top, aux_len);
+        const auto &in_arg = *(in_aux_ptr[aux_top++]);
+        arg_shapes[i] = in_arg.shape();
+        arg_dtypes[i] = in_arg.dtype();
+        arg_stypes[i] = in_arg.storage_type();
       } else {
-	CHECK_LT(args_top, args_len);
-	const auto &in_arg = *(in_args_ptr[args_top++]);
-	arg_shapes[i] = in_arg.shape();
-	arg_dtypes[i] = in_arg.dtype();
-	arg_stypes[i] = in_arg.storage_type();
+        CHECK_LT(args_top, args_len);
+        const auto &in_arg = *(in_args_ptr[args_top++]);
+        arg_shapes[i] = in_arg.shape();
+        arg_dtypes[i] = in_arg.dtype();
+        arg_stypes[i] = in_arg.storage_type();
       }
     }
 
