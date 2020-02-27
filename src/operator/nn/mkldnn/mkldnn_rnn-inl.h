@@ -441,6 +441,18 @@ class MKLDNNRnnOp {
             const std::vector<NDArray> &outputs);
 };
 
+inline bool SupportMKLDNNRnn(const int input_dtype) {
+  if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+    return true;
+  }
+  return false;
+}
+
+inline bool SupportMKLDNNRnn(const RNNParam &param, const int input_dtype) {
+  if (param.projection_size.has_value()) return false;
+  return SupportMKLDNNRnn(input_dtype);
+}
+
 }  // namespace op
 }  // namespace mxnet
 
