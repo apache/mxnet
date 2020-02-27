@@ -303,6 +303,8 @@ DEFAULT_D_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_V_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_Z_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_G_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_R1_LARGE_TENSOR = [(1,)]
+DEFAULT_R2_LARGE_TENSOR = [(1,)]
 DEFAULT_DELTA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 
 # For rearrange operators
@@ -595,6 +597,8 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "mean" : DEFAULT_MEAN_LARGE_TENSOR,
                                 "var" : DEFAULT_VAR_LARGE_TENSOR,
                                 "mom" : DEFAULT_MOM_LARGE_TENSOR,
+                                "r1": DEFAULT_R1_LARGE_TENSOR,
+                                "r2": DEFAULT_R2_LARGE_TENSOR,
                                 "n" : DEFAULT_N_LARGE_TENSOR,
                                 "d" : DEFAULT_D_LARGE_TENSOR,
                                 "v" : DEFAULT_V_LARGE_TENSOR,
@@ -604,6 +608,7 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "lr" : DEFAULT_LR,
                                 "lrs" : DEFAULT_LRS,
                                 "wds" : DEFAULT_LRS,
+                                "wd": DEFAULT_LR,
                                 "gamma1" : DEFAULT_GAMMA_1,
                                 "gamma2" : DEFAULT_GAMMA_2,
                                 "epsilon" : DEFAULT_EPSILON,
