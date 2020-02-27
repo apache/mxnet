@@ -362,7 +362,14 @@ struct MXTensor {
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
-typedef double (*rng_caller_t)(void*, char*);
+union RandomType {
+    int i;
+    int64_t l;
+    float f;
+    double d;
+};
+
+typedef RandomType (*rng_caller_t)(void*, char*);
 
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
@@ -398,7 +405,8 @@ class OpResource {
   }
 
   int gen_randint() {
-    return reinterpret_cast<int>(rng_caller_nocap(rng_caller, "rand"));
+    RandomType ret = rng_caller_nocap(rng_caller, "rand");
+    return ret.i;
   }
 
  private:
