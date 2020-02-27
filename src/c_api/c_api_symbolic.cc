@@ -1355,22 +1355,37 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph g = Symbol2Graph(*s);
-  if (args_len) {
+  const auto& indexed_graph = g.indexed_graph();
+  const auto& mutable_nodes = indexed_graph.mutable_input_nodes();
+  size_t num_forward_inputs = sym->ListInputs(nnvm::Symbol::kAll).size();
+  if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
     Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
-    mxnet::ShapeVector arg_shapes(args_len);
-    nnvm::DTypeVector arg_dtypes(args_len);
-    StorageTypeVector arg_stypes(args_len);
-    for (mx_uint i = 0; i < args_len; i++) {
-      const auto &in_arg = *(in_args_ptr[i]);
-      arg_shapes[i] = in_arg.shape();
-      arg_dtypes[i] = in_arg.dtype();
-      arg_stypes[i] = in_arg.storage_type();
+    mxnet::ShapeVector arg_shapes(args_len + aux_len);
+    nnvm::DTypeVector arg_dtypes(args_len + aux_len);
+    StorageTypeVector arg_stypes(args_len + aux_len);
+    size_t args_top = 0, aux_top = 0;
+    for (size_t i = 0; i < num_forward_inputs; ++i) {
+      const uint32_t nid = indexed_graph.input_nodes().at(i);
+      if (mutable_nodes.count(nid)) {
+	CHECK_LT(aux_top, aux_len);
+	const auto &in_arg = *(in_aux_ptr[aux_top++]);
+	arg_shapes[i] = in_arg.shape();
+	arg_dtypes[i] = in_arg.dtype();
+	arg_stypes[i] = in_arg.storage_type();
+      } else {
+	CHECK_LT(args_top, args_len);
+	const auto &in_arg = *(in_args_ptr[args_top++]);
+	arg_shapes[i] = in_arg.shape();
+	arg_dtypes[i] = in_arg.dtype();
+	arg_stypes[i] = in_arg.storage_type();
+      }
     }
-    const auto& indexed_graph = g.indexed_graph();
-    const auto num_forward_inputs = indexed_graph.input_nodes().size();
+
     g.attrs["context"] = std::make_shared<nnvm::any>(
         exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
+    std::cout << "inferring shapes in optimize_for: " << arg_shapes.size() << std::endl;
     // infer shapes
     g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
     // infer dtypes
@@ -1388,24 +1403,22 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     std::vector<std::string> arg_names = sym->ListInputNames(nnvm::Symbol::kReadOnlyArgs);
     g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
     g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
+
+    std::vector<std::string> aux_names = sym->ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+    g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+    g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
   } else {
     NDArray **in_args_ptr = static_cast<NDArray**>(nullptr);
     std::vector<std::string> arg_names;
     g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
     g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
-  }
 
-  if (aux_len) {
-    std::vector<std::string> aux_names = sym->ListInputNames(nnvm::Symbol::kAuxiliaryStates);
-    NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
-    g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
-    g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
-  } else {
     NDArray **in_aux_ptr = static_cast<NDArray**>(nullptr);
     std::vector<std::string> aux_names;
     g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
     g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
   }
+
 
   std::vector<std::pair<std::string, std::string>> options_map;
   for (mx_uint i = 0; i < num_options; ++i) {
