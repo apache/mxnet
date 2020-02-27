@@ -618,8 +618,13 @@ def identity(n, dtype=None, ctx=None):
     if n < 0:
         raise ValueError("Input 'n' cannot be negative")
     if ctx is None:
-        ctx = current_context()
-    return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    shape = (n, n)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.identity(shape, dtype, ctx)
 
 
 # pylint: disable=redefined-outer-name

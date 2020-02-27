@@ -412,4 +412,26 @@ MXNET_REGISTER_API("_npi.arange")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.identity")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_identity");
+  nnvm::NodeAttrs attrs;
+  op::InitOpParam param;
+  param.shape = TShape(args[0].operator ObjectRef());
+  if (args[1].type_code() == kNull) {
+    param.dtype = mxnet::common::GetDefaultDtype();
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  if (args[2].type_code() != kNull) {
+    attrs.dict["ctx"] = args[2].operator std::string();
+  }
+  int num_outputs = 0;
+  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet
