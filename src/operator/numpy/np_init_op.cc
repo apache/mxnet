@@ -105,7 +105,7 @@ NNVM_REGISTER_OP(_npi_identity)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
-.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
 .set_attr<FCompute>("FCompute<cpu>", IdentityCompute<cpu>)
 .add_arguments(InitOpParam::__FIELDS__());
 
