@@ -563,6 +563,8 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         this rule may result in the last element of `out` being greater
         than `stop`.
     """
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
     if ctx is None:
         ctx = str(current_context())
     else:
