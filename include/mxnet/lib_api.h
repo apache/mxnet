@@ -234,7 +234,8 @@ enum MXReturnValue {
  */
 struct MXTensor {
   MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
-
+  MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), shape(oth.shape),
+    dtype(oth.dtype), verID(oth.verID), ctx(oth.ctx) {}
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
   : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
@@ -407,6 +408,8 @@ class OpResource {
  */
 /*! \brief Macro to help passing serialized subgraph through attribute dict */
 #define SUBGRAPH_SYM_JSON "subgraph_sym_json"
+#define MX_DTYPE "__dtype__"
+#define MX_SHAPE "__shape__"
 
 /*! \brief Types of JSON objects */
 enum JsonType {ERR, STR, NUM, LIST, MAP};

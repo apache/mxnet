@@ -1385,7 +1385,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
 
     g.attrs["context"] = std::make_shared<nnvm::any>(
         exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
-    std::cout << "inferring shapes in optimize_for: " << arg_shapes.size() << std::endl;
+
     // infer shapes
     g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
     // infer dtypes
