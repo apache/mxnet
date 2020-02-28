@@ -141,7 +141,7 @@ class IntImmNode : public PrimExprNode {
   int64_t value;
 
   static constexpr const char* _type_key = "IntImm";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(IntImmNode, PrimExprNode);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(IntImmNode, PrimExprNode)
 };
 
 /*!
@@ -186,7 +186,7 @@ class FloatImmNode : public PrimExprNode {
   double value;
 
   static constexpr const char* _type_key = "FloatImm";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(FloatImmNode, PrimExprNode);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(FloatImmNode, PrimExprNode)
 };
 
 /*!

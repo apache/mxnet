@@ -42,7 +42,7 @@ class ArrayNode : public Object {
   std::vector<ObjectRef> data;
 
   static constexpr const char* _type_key = "Array";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(ArrayNode, Object);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(ArrayNode, Object)
 };
 
 /*!

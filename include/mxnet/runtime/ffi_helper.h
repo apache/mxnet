@@ -38,7 +38,7 @@ class EllipsisObj : public Object {
  public:
   static constexpr const uint32_t _type_index = TypeIndex::kEllipsis;
   static constexpr const char* _type_key = "MXNet.Ellipsis";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(EllipsisObj, Object);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(EllipsisObj, Object)
 };
 
 inline ObjectRef CreateEllipsis() {
@@ -54,7 +54,7 @@ class SliceObj : public Object {
 
   static constexpr const uint32_t _type_index = TypeIndex::kSlice;
   static constexpr const char* _type_key = "MXNet.Slice";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(SliceObj, Object);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(SliceObj, Object)
 };
 
 class Slice : public ObjectRef {
@@ -74,7 +74,7 @@ class Slice : public ObjectRef {
   // constant to represent None.
   static constexpr int64_t kNoneValue = std::numeric_limits<int64_t>::min();
 
-  MXNET_DEFINE_OBJECT_REF_METHODS(Slice, ObjectRef, SliceObj);
+  MXNET_DEFINE_OBJECT_REF_METHODS(Slice, ObjectRef, SliceObj)
 };
 
 int64_t inline SliceNoneValue() {
@@ -86,7 +86,7 @@ class IntegerObj: public Object {
   int64_t value;
   static constexpr const uint32_t _type_index = TypeIndex::kInteger;
   static constexpr const char* _type_key = "MXNet.Integer";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(IntegerObj, Object);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(IntegerObj, Object)
 };
 
 class Integer: public ObjectRef {
@@ -96,7 +96,7 @@ class Integer: public ObjectRef {
     data->value = value;
     data_ = std::move(data);
   }
-  MXNET_DEFINE_OBJECT_REF_METHODS(Integer, ObjectRef, IntegerObj);
+  MXNET_DEFINE_OBJECT_REF_METHODS(Integer, ObjectRef, IntegerObj)
 };
 
 //  Helper functions for fast FFI implementations
