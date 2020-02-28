@@ -355,8 +355,6 @@ DEFAULT_Y = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_COND = [(1024,), (10000,), (10000,)]
 DEFAULT_DEPTH = [0]
 
-#DEFAULT_INDICES_LARGE_TENSOR = [(1, 2)]
-
 # For ravel_multi_index op, ndim(shape) = 2; hence data NDArray's first dim = 2
 # First dimension of input of ravel operator should match shape parameter dimension
 # DEFAULT_SHAPE is reused for ravel_multi_index op
