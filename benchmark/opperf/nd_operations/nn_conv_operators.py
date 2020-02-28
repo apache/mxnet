@@ -80,9 +80,9 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     global_pool_types = [0, 1]
 
     standard_data_list_pool1d = [(32, 3, 256), (32, 3, 64)]
-    int64_tensor_data_list_pool1d = [(1, 1, 2**32), (2**31, 1, 3)]
+    int64_tensor_data_list_pool1d = [(1, 1, 2**32)]
     standard_data_list_pool2d = [(32, 3, 256, 256), (32, 3, 64, 64)]
-    int64_tensor_data_list_pool2d = [(2**29, 1, 3, 3), (2**28, 1, 4, 4)]
+    int64_tensor_data_list_pool2d = [(2**28, 1, 4, 4)]
     standard_data_list_roipool = [(32, 3, 256, 256), (32, 3, 64, 64)]
     int64_tensor_data_list_roipool = [(32, 3, 2**13, 2**13)]
 
@@ -176,9 +176,9 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
     """
 
     standard_data_list_conv1d = [(32, 3, 256), (32, 3, 64)]
-    int64_tensor_data_list_conv1d = [(2**30, 1, 4), (2**31, 1, 3)]
+    int64_tensor_data_list_conv1d = [(2**30, 1, 4)]
     standard_data_list_conv2d = [(32, 3, 256, 256), (32, 3, 64, 64)]
-    int64_tensor_data_list_conv2d = [(2**29, 1, 3, 3), (2**28, 1, 4, 4)]
+    int64_tensor_data_list_conv2d = [(2**28, 1, 4, 4)]
 
     if int64_tensor == 'on':
         data_list_conv1d = int64_tensor_data_list_conv1d
@@ -258,9 +258,9 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
     """
 
     standard_data_list_conv1d_transpose = [(32, 3, 256), (32, 3, 64)]
-    int64_tensor_data_list_conv1d_transpose = [(2**30, 1, 4), (2**31, 1, 3)]
+    int64_tensor_data_list_conv1d_transpose = [(2**30, 1, 4)]
     standard_data_list_conv2d_transpose = [(32, 3, 256, 256), (32, 3, 64, 64)]
-    int64_tensor_data_list_conv2d_transpose = [(2**29, 1, 3, 3), (2**28, 1, 4, 4)]
+    int64_tensor_data_list_conv2d_transpose = [(2**28, 1, 4, 4)]
 
     if int64_tensor == 'on':
         data_list_conv1d_transpose = int64_tensor_data_list_conv1d_transpose
