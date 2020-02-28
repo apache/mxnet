@@ -264,9 +264,9 @@ class RandomResizedCrop(HybridBlock):
         if isinstance(size, numeric_types):
             size = (size, size)
         if isinstance(scale, numeric_types):
-            area = (scale, 1.0)
+            scale = (scale, 1.0)
         self._kwargs = {'width': size[0], 'height': size[1],
-                        'area': area, 'ratio': ratio,
+                        'area': scale, 'ratio': ratio,
                         'interp': interpolation, 'max_trial': 10}
 
     def hybrid_forward(self, F, x):
