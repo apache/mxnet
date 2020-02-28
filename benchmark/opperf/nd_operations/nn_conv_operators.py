@@ -117,7 +117,7 @@ def run_pooling_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                                                 runs=runs)
                 # Run ROI Pooling performance runs
                 roipool_benchmark_res = []
-                for roipool_data in [(32, 3, 256, 256), (32, 3, 64, 64)]:
+                for roipool_data in [(32, 3, 2**13, 2**13)]:
                     roipool_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "ROIPooling")],
                                                                 run_backward=True,
                                                                 dtype=dtype,
