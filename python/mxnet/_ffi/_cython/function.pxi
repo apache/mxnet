@@ -18,6 +18,7 @@
 """Acknowledgement: This file originates from incubator-tvm"""
 
 import ctypes
+import numpy as onp
 import traceback
 from ...ndarray._internal import NDArrayBase
 from numbers import Number, Integral
@@ -58,6 +59,11 @@ cdef inline int make_arg(object arg,
     elif isinstance(arg, ctypes.c_void_p):
         value[0].v_handle = c_handle(arg)
         tcode[0] = kHandle
+    elif isinstance(arg, type):
+        tstr = c_str(onp.dtype(arg).name)
+        value[0].v_str = tstr
+        tcode[0] = kStr
+        temp_args.append(tstr)
     else:
         raise TypeError("Don't know how to handle type %s" % type(arg))
     return 0

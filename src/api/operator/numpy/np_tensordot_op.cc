@@ -21,6 +21,7 @@
  * \file np_tensordot_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_tensordot_op.cc
  */
+#include <mxnet/api_registry.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_tensordot_op-inl.h"
 

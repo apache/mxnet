@@ -31,6 +31,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
+#include "../../api/operator/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -55,6 +56,17 @@ struct CumsumParam : public dmlc::Parameter<CumsumParam> {
                 " are summed. If dtype is not specified, it defaults to the dtype of a,"
                 " unless a has an integer dtype with a precision less than that of the"
                 " default platform integer. In that case, the default platform integer is used.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s;
+    axis_s << axis;
+    dtype_s << dtype;
+    (*dict)["axis"] = axis_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = String2MXNetTypeWithBool(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
   }
 };
 

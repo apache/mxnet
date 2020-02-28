@@ -21,6 +21,7 @@ Function configuration API.
 Acknowledgement: This file originates from incubator-tvm
 """
 import ctypes
+import numpy as onp
 from numbers import Number, Integral
 
 from ...base import get_last_ffi_error, _LIB
@@ -66,6 +67,9 @@ def _make_mxnet_args(args, temp_args):
         elif isinstance(arg, ctypes.c_void_p):
             values[i].v_handle = arg
             type_codes[i] = TypeCode.HANDLE
+        elif isinstance(arg, type):
+            values[i].v_str = c_str(onp.dtype(arg).name)
+            type_codes[i] = TypeCode.STR
         else:
             raise TypeError("Don't know how to handle type %s" % type(arg))
     return values, type_codes, num_args

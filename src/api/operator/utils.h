@@ -24,10 +24,6 @@
 #ifndef MXNET_API_OPERATOR_UTILS_H_
 #define MXNET_API_OPERATOR_UTILS_H_
 
-#include <mxnet/runtime/ffi_helper.h>
-#include <mxnet/runtime/container.h>
-#include <mxnet/runtime/packed_func.h>
-#include <mxnet/api_registry.h>
 #include <mxnet/base.h>
 #include <nnvm/c_api.h>
 #include <vector>
@@ -43,6 +39,7 @@ void SetInOut(std::vector<NDArray*>* ndinputs,
               int infered_num_outputs,
               int num_visible_outputs,
               NDArray** out_array);
+
 
 template<typename T>
 std::vector<NDArray*> Invoke(const nnvm::Op* op,
@@ -67,6 +64,8 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
   return ndoutputs;
 }
+
+std::string String2MXNetTypeWithBool(int dtype);
 
 }  // namespace mxnet
 
