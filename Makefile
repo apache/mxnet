@@ -99,7 +99,7 @@ CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
-	CFLAGS += -g -Werror
+	CFLAGS += -g -Werror -D_GLIBCXX_ASSERTIONS
 	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
