@@ -36,10 +36,10 @@ NNVM_REGISTER_OP(_backward_image_random_crop)
 .set_attr<FCompute>("FCompute<gpu>", RandomCropOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_image_random_resized_crop)
-.set_attr<FCompute>("FCompute<gpu>", RandomReSizedCropOpForward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", RandomResizedCropOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_image_random_resized_crop)
-.set_attr<FCompute>("FCompute<gpu>", RandomReSizedCropOpBackward<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", RandomResizedCropOpBackward<gpu>);
 }  // namespace image
 }  // namespace op
 }  // namespace mxnet
