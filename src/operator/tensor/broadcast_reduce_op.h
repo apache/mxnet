@@ -34,6 +34,7 @@
 #include "../elemwise_op_common.h"
 #include "./elemwise_binary_broadcast_op.h"
 #include "../mxnet_op.h"
+#include <sys/time.h>
 
 namespace mxnet {
 namespace op {
@@ -180,6 +181,16 @@ struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
       .describe("Axes to copy from the second input array");
   }
 };
+
+bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs,
+                         int ord);
+
+bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs,
+                             int ord);
 
 /*
  * Check whether the axis is within the legal range.
@@ -1298,10 +1309,30 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
+    struct timeval start,stop;
+  gettimeofday(&start,NULL);
+
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   CHECK(param.ord == 1 || param.ord == 2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
 
+  bool is_last_dim = false;
+  
+  if(param.axis.has_value()) {
+    mxnet::TShape axes(param.axis.value());
+    if (axes.ndim() == 1 && (axes[0] == inputs[0].shape_.ndim() - 1 || axes[0] == -1)) {
+      is_last_dim = true;
+    }
+  }
+  if(param.ord == 1 && is_last_dim && param.keepdims == false && req[0] == kWriteTo) {
+
+    if(MKLDNNLpNormCompute(inputs, req, outputs, param.ord)) {
+      gettimeofday(&stop,NULL);
+      LOG(INFO)<<inputs[0].shape_<< "MKLDNNLpNormCompute oshape "<< outputs[0].shape_<<" ord "<<param.ord 
+                                  << " Lx cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+      return;
+    }
+  }
   mxnet::TShape small;
   if (param.keepdims) {
     small = outputs[0].shape_;
@@ -1331,6 +1362,10 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
         ctx, inputs, req, outputs, small);
     }
   }
+
+     gettimeofday(&stop,NULL);
+   LOG(INFO)<<inputs[0].shape_<< " oshape "<< outputs[0].shape_<<" ord "<<param.ord << " Lx cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+
 }
 
 template<int req>
@@ -1357,6 +1392,8 @@ struct norm_backward_broadcast {
       in_stride *= in_shape[iter];
       out_stride *= out_shape[iter];
     }
+    // if(in_shape[0] == 1024)
+    //   LOG(INFO) << "in_shape[0] "<< in_shape[0] <<" i " << i << " out_idx "<<out_idx; 
     KERNEL_ASSIGN(igrad[i], req, ograd[out_idx] * mshadow_op::sign::Map(data[i]));
   }
 };
@@ -1372,7 +1409,27 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   if (req[0] == kNullOp) return;
 
+  struct timeval start,stop;
+  gettimeofday(&start,NULL);
+
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  bool is_last_dim = false;
+  if(param.axis.has_value()) {
+    mxnet::TShape axes(param.axis.value());
+    if (axes.ndim() == 1 && (axes[0] == outputs[0].shape_.ndim() - 1 || axes[0] == -1)) {
+      is_last_dim = true;
+    }
+  }
+
+  if(param.ord == 1 && is_last_dim && param.keepdims == false && req[0] == kWriteTo) {
+
+    if(MKLDNNLpNormGradCompute(inputs, req, outputs, param.ord)) {
+      gettimeofday(&stop,NULL);
+      LOG(INFO)<< "MKLDNNLpNormGradCompute in1 shape " <<inputs[1].shape_ <<" Lx backward cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+      return;
+    }
+  }
+
   mxnet::TShape small;
   if (param.keepdims) {
     small = inputs[0].shape_;
@@ -1394,6 +1451,7 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
         out_shape[i] = 1;
       }
     }
+
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, OType, {
         if (dst_shape.ndim() == 2) {
@@ -1424,6 +1482,9 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
         }
       });
     });
+   gettimeofday(&stop,NULL);
+   LOG(INFO)<< " in1 shape " <<inputs[1].shape_ <<" Lx backward cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+
   } else if (param.ord == 2) {
     ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
                                                                 req, outputs);

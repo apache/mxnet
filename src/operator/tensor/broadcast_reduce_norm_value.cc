@@ -28,12 +28,70 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(NormParam);
 
+bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs,
+                         int ord) {
+  auto& in_data = inputs[0];
+  int axis =  in_data.shape_.ndim() - 1;                
+  auto shape = in_data.shape_;
+  float* pin_data = (float*)in_data.dptr<float>();
+
+  const size_t last_dim = shape[axis];
+  auto stride = outputs[0].Size();
+  float* pout_data = (float*)outputs[0].dptr<float>();
+
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (size_t i = 0; i < stride; i++)
+  {
+      pout_data[i] = 0;
+  }
+  
+  #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for(size_t i = 0; i < stride; i++) {
+    for (size_t j = 0; j < last_dim; j++) {
+      pout_data[i] += std::abs(pin_data[i*last_dim + j]);
+    }
+  }
+  return true;                  
+}
+
+bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs,
+                             int ord) {
+                           
+  auto&  in_grad = inputs[0];
+  auto&  in_data = inputs[1];
+  auto&  out_grad = outputs[0];
+  auto shape = in_grad.shape_;
+  auto stride = in_grad.Size();
+  float* pin_grad = (float*)in_grad.dptr<float>();
+  float* psrc_data = (float*)in_data.dptr<float>();
+
+  int axis =  out_grad.shape_.ndim() - 1;                
+  const size_t last_dim = out_grad.shape_[axis];
+  auto oSize = out_grad.Size();
+  float* pout_grad = (float*)out_grad.dptr<float>();
+
+  #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for(size_t i = 0; i < stride; i++) {
+    for (size_t j = 0; j < last_dim; j++) {
+      pout_grad[i*last_dim + j] = psrc_data[i*last_dim + j] >0 ? pin_grad[i] : -pin_grad[i];
+    }
+  }
+  return true;                  
+}
+
 template<>
 void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<NDArray>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
+  struct timeval start,stop;
+  gettimeofday(&start,NULL);
+
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -55,6 +113,9 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
+   gettimeofday(&stop,NULL);
+   LOG(INFO)<<inputs[0].shape()<< " oshape "<< outputs[0].shape()<< "L2Ex cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+
 }
 
 NNVM_REGISTER_OP(norm)
