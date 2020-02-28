@@ -3764,10 +3764,9 @@ def test_npx_sample_n():
         def hybrid_forward(self, F, param1, param2):
             op = getattr(F.npx.random, self._op_name, None)
             assert op is not None
-            # return param1 + param2 + op(batch_shape=self._shape)
             return op(param1, param2, batch_shape=self._shape)
 
-    batch_shapes = [(10,), (2, 3), 6, (), None]
+    batch_shapes = [(10,), (2, 3), 6, ()]
     event_shapes = [(), (2,), (2,2)]
     dtypes = ['float16', 'float32', 'float64']
     op_names = ['uniform_n', 'normal_n']
