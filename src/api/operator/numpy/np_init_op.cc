@@ -393,6 +393,8 @@ MXNET_REGISTER_API("_npi.arange")
   param.start = args[0].operator double();
   if (args[1].type_code() != kNull) {
     param.stop = args[1].operator double();
+  } else {
+    param.stop = dmlc::nullopt;
   }
   param.step = args[2].operator double();
   param.repeat = 1;
