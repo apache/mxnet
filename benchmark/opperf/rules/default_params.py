@@ -332,12 +332,13 @@ DEFAULT_MHS = [(1024,), (10000,), (10000,)]
 DEFAULT_RHS_FEI = [(1024,), (10000,), (10000,)]
 
 DEFAULT_DATA_SQUEEZE_LARGE_TENSOR = [(2**32, 1)]
+DEFAULT_AXIS_SQUEEZE_LARGE_TENSOR = [1]
 DEFAULT_WSS_LARGE_TENSOR = [(2**32, 1)]
 DEFAULT_GSS_LARGE_TENSOR = [(2**32, 1)]
 DEFAULT_WDS_LARGE_TENSOR = [(2**32, 1)]
-DEFAULT_LHS_FEI_LARGE_TENSOR = [(2**32, 1)]
-DEFAULT_RHS_FEI_LARGE_TENSOR = [(2**32, 1)]
-DEFAULT_MHS_LARGE_TENSOR = [(2**32,)]
+DEFAULT_LHS_FEI_LARGE_TENSOR = [(2, 2**32 + 1)]
+DEFAULT_RHS_FEI_LARGE_TENSOR = [(2,)]
+DEFAULT_MHS_LARGE_TENSOR = [(2,)]
 
 # For swapaxis operator
 DEFAULT_DIM_1 = [0]
@@ -670,7 +671,7 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "label_softmax": DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR,
                                 "act_type_activation": DEFAULT_ACT_TYPE_ACTIVATION,
                                 "data_squeeze": DEFAULT_DATA_SQUEEZE_LARGE_TENSOR,
-                                "axis_squeeze": DEFAULT_AXIS_SQUEEZE,
+                                "axis_squeeze": DEFAULT_AXIS_SQUEEZE_LARGE_TENSOR,
                                 "a_min": DEFAULT_A_MIN,
                                 "a_max": DEFAULT_A_MAX,
                                 "weights_sum_sq": DEFAULT_WSS_LARGE_TENSOR,
@@ -683,6 +684,7 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "lhs_fill_element_0index": DEFAULT_LHS_FEI_LARGE_TENSOR,
                                 "rhs_fill_element_0index": DEFAULT_RHS_FEI_LARGE_TENSOR,
                                 "mhs": DEFAULT_MHS_LARGE_TENSOR,
+                                "lrs_multi_lars": DEFAULT_WSS_LARGE_TENSOR,
                                 "data_spatialtransformer": DEFAULT_DATA_ST_LARGE_TENSOR,
                                 "loc_spatialtransformer": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
                                 "target_shape": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
