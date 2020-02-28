@@ -204,8 +204,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
                                                               "dilate": (1,),
                                                               "pad": (0,),
                                                               "num_filter": 1,
-                                                              "layout": 'NCW'}
-                                                         ],
+                                                              "layout": 'NCW'}],
                                                      warmup=warmup,
                                                      runs=runs)
     # Conv2D Benchmarks
@@ -223,8 +222,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
                                                               "dilate": (1, 1),
                                                               "pad": (0, 0),
                                                               "num_filter": 1,
-                                                              "layout": 'NCHW'}
-                                                         ],
+                                                              "layout": 'NCHW'}],
                                                      warmup=warmup,
                                                      runs=runs)
     # Prepare combined results
@@ -287,8 +285,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
                                                                             "pad": (0,),
                                                                             "num_filter": 1,
                                                                             "no_bias": False,
-                                                                            "layout": 'NCW'}
-                                                                          ],
+                                                                            "layout": 'NCW'}],
                                                                    warmup=warmup,
                                                                    runs=runs)
         # Conv2DTranspose Benchmarks
@@ -307,8 +304,7 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
                                                                             "pad": (0, 0),
                                                                             "num_filter": 1,
                                                                             "no_bias": False,
-                                                                            "layout": 'NCHW'}
-                                                                          ],
+                                                                            "layout": 'NCHW'}],
                                                                    warmup=warmup,
                                                                    runs=runs)
     # Prepare combined results
