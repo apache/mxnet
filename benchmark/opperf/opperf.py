@@ -119,8 +119,10 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     # Run all Miscellaneous operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_misc_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
-    # Run all Linear Algebra operations benchmarks with default input values
-    mxnet_operator_benchmark_results.append(run_linalg_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
+    # Linear Algebra operators do not work with int64 tensor data. Issue tracked here: https://github.com/apache/incubator-mxnet/issues/17716
+    if int64_tensor == 'off':
+        # Run all Linear Algebra operations benchmarks with default input values
+        mxnet_operator_benchmark_results.append(run_linalg_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
     # ****************************** PREPARE FINAL RESULTS ********************************
     final_benchmark_result_map = merge_map_list(mxnet_operator_benchmark_results)

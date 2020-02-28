@@ -801,5 +801,6 @@ PARAMS_OF_TYPE_NDARRAY = ["lhs", "rhs", "data", "base", "exp", "sample",
                           "v", "z", "g", "delta", "args", "indices", "shape_like", "y",
                           "x", "condition", "a", "index", "raveL_data", "label", "grid",
                           "A", "B", "C", "r1", "r2", "rois", "lrs", "wds", "weights_sum_sq",
-                          "grads_sum_sq", "mhs", "data1", "data2", "loc", "parameters", "state"]
+                          "grads_sum_sq", "mhs", "data1", "data2", "loc", "parameters", "state",
+                          "state_cell"]
 
