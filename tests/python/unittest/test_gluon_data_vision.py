@@ -233,6 +233,13 @@ def test_transformer():
 def test_random_crop():
     x = mx.nd.ones((245, 480, 3), dtype='uint8')
     y = mx.nd.image.random_crop(x, width=100, height=100)
+    assert y.shape == (100, 100, 3)
+
+@with_seed()
+def test_random_resize_crop():
+    x = mx.nd.ones((245, 480, 3), dtype='uint8')
+    y = mx.nd.image.random_resized_crop(x, width=100, height=100)
+    assert y.shape == (100, 100, 3)
 
 @with_seed()
 def test_hybrid_transformer():
@@ -258,7 +265,7 @@ def test_hybrid_transformer():
 @with_seed()
 def test_random_transforms():
     from mxnet.gluon.data.vision import transforms
-    
+
     tmp_t = transforms.Compose([transforms.Resize(300), transforms.RandomResizedCrop(224)])
     transform = transforms.Compose([transforms.RandomApply(tmp_t, 0.5)])
 

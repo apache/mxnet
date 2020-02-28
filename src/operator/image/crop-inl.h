@@ -234,6 +234,22 @@ inline Tuple<int> GetSourceSize(const TShape& in_shape) {
   return ret;
 }
 
+inline Tuple<int> ScaleDown(const Tuple<int>& src_shape, const Tuple<int>& shape) {
+  float sw = src_shape[0];
+  float sh = src_shape[1];
+  float w = shape[0];
+  float h = shape[1];
+  if (sh < h) {
+    w = w * sh / h;
+    h = sh;
+  }
+  if (sw < w) {
+    w = sw;
+    h = h * sw / w;
+  }
+  return Tuple<int>({int(w), int(h)});
+}
+
 inline bool RandomCropShape(const nnvm::NodeAttrs& attrs,
                              std::vector<TShape> *in_attrs,
                              std::vector<TShape> *out_attrs) {
@@ -272,25 +288,13 @@ inline bool RandomCropShape(const nnvm::NodeAttrs& attrs,
 
   // temp output
   auto src_shape = GetSourceSize(ishape);
-  int sw = src_shape[0];
-  int sh = src_shape[1];
-  // scale down crop size if it's larger than image size
-  float w = param.width;
-  float h = param.height;
-  if (sh < h) {
-    w = w * sh / h;
-    h = sh;
-  }
-  if (sw < w) {
-    w = sw;
-    h = h * sw / w;
-  }
+  auto scaled_shape = ScaleDown(src_shape, Tuple<int>({param.width, param.height}));
   if (ishape.ndim() == 3) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape(
-      {static_cast<int>(h), static_cast<int>(w), ishape[C]}));
+      {scaled_shape[1], scaled_shape[0], ishape[C]}));
   } else {
     SHAPE_ASSIGN_CHECK(*out_attrs, 1, TShape(
-      {ishape[N], static_cast<int>(h), static_cast<int>(w), ishape[kC]}));
+      {ishape[N], scaled_shape[1], scaled_shape[0], ishape[kC]}));
   }
   return true;
 }
@@ -304,7 +308,7 @@ inline void RandomCropOpForward(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(outputs.size(), 2U) << "out, temp";
   CHECK_EQ(inputs.size(), 1U);
   const RandomCropParam& param = nnvm::get<RandomCropParam>(attrs.parsed);
-  
+
   const TShape& dshape = inputs[0].shape_;
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
@@ -348,6 +352,144 @@ inline void RandomCropOpBackward(const nnvm::NodeAttrs &attrs,
     mshadow::Shape1(4), ctx.get_stream<cpu>());
   auto ptr = workspace.dptr_;
   CropBackwardImpl<xpu>(ptr[0], ptr[1], ptr[2], ptr[3], inputs, outputs, ctx, req);
+}
+
+struct RandomResizedCropParam : public dmlc::Parameter<RandomResizedCropParam> {
+  int width;
+  int height;
+  Tuple<float> area;
+  Tuple<float> ratio;
+  int interp;
+  int max_trial;
+  DMLC_DECLARE_PARAMETER(RandomResizedCropParam) {
+    DMLC_DECLARE_FIELD(width)
+    .describe("The target image width");
+    DMLC_DECLARE_FIELD(height)
+    .describe("The target image height.");
+    DMLC_DECLARE_FIELD(area).set_default(Tuple<float>({0.08f, 1.f}))
+    .describe("Range of cropping area percentage.");
+    DMLC_DECLARE_FIELD(ratio).set_default(Tuple<float>({3 / 4.f, 4 / 3.f}))
+    .describe("Range of aspect ratio of the randomly cropped area.");
+    DMLC_DECLARE_FIELD(interp)
+    .set_default(1)
+    .describe("Interpolation method for resizing. By default uses bilinear interpolation"
+        "Options are INTER_NEAREST - a nearest-neighbor interpolation"
+        "INTER_LINEAR - a bilinear interpolation"
+        "INTER_AREA - resampling using pixel area relation"
+        "INTER_CUBIC - a bicubic interpolation over 4x4 pixel neighborhood"
+        "INTER_LANCZOS4 - a Lanczos interpolation over 8x8 pixel neighborhood"
+        "Note that the GPU version only support bilinear interpolation(1)");
+    DMLC_DECLARE_FIELD(max_trial).set_default(10)
+    .describe("Max trial before fallback to center crop.");
+  }
+};
+
+inline bool RandomResizedCropShape(const nnvm::NodeAttrs& attrs,
+                                 mxnet::ShapeVector *in_attrs,
+                                 mxnet::ShapeVector *out_attrs) {
+  const RandomResizedCropParam& param = nnvm::get<RandomResizedCropParam>(attrs.parsed);
+  ResizeParam resize_param;
+  resize_param.size = mxnet::Tuple<int>({param.width, param.height});
+  resize_param.keep_ratio = false;
+  resize_param.interp = param.interp;
+  return ResizeShapeImpl(resize_param, in_attrs, out_attrs);
+}
+
+template<typename xpu>
+inline void CropResizeImpl(const OpContext &ctx,
+                           const std::vector<TBlob> &inputs,
+                           const std::vector<OpReqType> &req,
+                           const std::vector<TBlob> &outputs,
+                           int x0, int y0, int crop_width, int crop_height,
+                           int resize_width, int resize_height, int interp) {
+  auto& dshape = inputs[0].shape_;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+    if (dshape.ndim() == 3) {
+      Tensor<xpu, 3, DType> workspace = ctx.requested[1].get_space_typed<xpu, 3, DType>(
+         mshadow::Shape3(crop_height, crop_width, dshape[C]), s);
+      std::vector<TBlob> temp_out = {TBlob(workspace)};
+      CropImpl<xpu>(x0, y0, crop_width, crop_height, inputs, temp_out, ctx, req);
+      ResizeParam rparam;
+      rparam.interp = interp;
+      rparam.keep_ratio = false;
+      rparam.size = Tuple<int>({resize_width, resize_height});
+      ResizeImplWrapper<xpu>(rparam, ctx, temp_out, outputs);
+    } else if (dshape.ndim() == 4) {
+      Tensor<xpu, 4, DType> workspace = ctx.requested[1].get_space_typed<xpu, 4, DType>(
+         mshadow::Shape4(dshape[N], crop_height, crop_width, dshape[kC]), s);
+      std::vector<TBlob> temp_out = {TBlob(workspace)};
+      CropImpl<xpu>(x0, y0, crop_width, crop_height, inputs, temp_out, ctx, req);
+      ResizeParam rparam;
+      rparam.interp = interp;
+      rparam.keep_ratio = false;
+      rparam.size = Tuple<int>({resize_width, resize_height});
+      ResizeImplWrapper<xpu>(rparam, ctx, temp_out, outputs);
+    } else {
+      LOG(FATAL) << "Crop only supports image with 3 or 4 dims, given " << dshape.ndim();
+    }
+  });
+}
+
+template<typename xpu>
+inline void RandomResizedCropOpForward(const nnvm::NodeAttrs &attrs,
+                                     const OpContext &ctx,
+                                     const std::vector<TBlob> &inputs,
+                                     const std::vector<OpReqType> &req,
+                                     const std::vector<TBlob> &outputs) {
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(inputs.size(), 1U);
+  const RandomResizedCropParam& param = nnvm::get<RandomResizedCropParam>(attrs.parsed);
+  auto src_size = GetSourceSize(inputs[0].shape_);
+  int64_t src_area = src_size[0] * src_size[1];
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  Random<cpu> *prnd = ctx.requested[0].get_random<cpu, real_t>(s);
+  for (int i = 0; i < param.max_trial; ++i) {
+    float target_area = std::uniform_real_distribution<float>(
+      param.area[0], param.area[1])(prnd->GetRndEngine()) * src_area;
+    float log_ratio_low = std::log(param.ratio[0]);
+    float log_ratio_high = std::log(param.ratio[1]);
+    float new_ratio = std::exp(std::uniform_real_distribution<float>(
+      log_ratio_low, log_ratio_high)(prnd->GetRndEngine()));
+    int new_w = static_cast<int>(std::round(std::sqrt(target_area * new_ratio)));
+    int new_h = static_cast<int>(std::round(std::sqrt(target_area / new_ratio)));
+    if (new_w <= src_size[0] && new_h <= src_size[1]) {
+      int x0 = std::uniform_real_distribution<float>(0, 1)(
+        prnd->GetRndEngine()) * (src_size[0] - new_w);
+      int y0 = std::uniform_real_distribution<float>(0, 1)(
+        prnd->GetRndEngine()) * (src_size[1] - new_h);
+      if (new_w == param.width && new_h == param.height) {
+        // no need to resize
+        CropImpl<xpu>(x0, y0, new_w, new_h, inputs, outputs, ctx, req);
+      } else {
+        CropResizeImpl<xpu>(ctx, inputs, req, outputs, x0, y0,
+                            new_w, new_h, param.width, param.height, param.interp);
+      }
+      return;
+    }
+  }
+  // fallback to center crop
+  auto scaled_shape = ScaleDown(src_size, Tuple<int>({param.width, param.height}));
+  int x0 = (scaled_shape[0] - param.width) / 2;
+  int y0 = (scaled_shape[1] - param.height) / 2;
+  if (scaled_shape[0] == param.width && scaled_shape[1] == param.height) {
+    // no need to resize
+    CropImpl<xpu>(x0, y0, scaled_shape[0], scaled_shape[1], inputs, outputs, ctx, req);
+  } else {
+    CropResizeImpl<xpu>(ctx, inputs, req, outputs, x0, y0,
+                        scaled_shape[0], scaled_shape[1],
+                        param.width, param.height, param.interp);
+  }
+}
+
+template<typename xpu>
+inline void RandomResizedCropOpBackward(const nnvm::NodeAttrs &attrs,
+                                      const OpContext &ctx,
+                                      const std::vector<TBlob> &inputs,
+                                      const std::vector<OpReqType> &req,
+                                      const std::vector<TBlob> &outputs) {
+  CHECK_EQ(outputs.size(), 1U);
+  LOG(FATAL) << "Backward for RandomSizedCropOp not implemented";
 }
 }  // namespace image
 }  // namespace op
