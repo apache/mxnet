@@ -59,83 +59,76 @@ def run_gemm_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
-    # Benchmark tests for dot and batch_dot operators
-    if int64_tensor == "on":
-        dot_benchmark_res = run_performance_test(
-            [getattr(MX_OP_MODULE, "dot")], run_backward=True,
-            dtype=dtype, ctx=ctx,
-            inputs=[{"lhs": (2**16, 2**16),
-                     "rhs": (2**16, 2**16)},
-                    {"lhs": (4, 2**30),
-                     "rhs": (4, 2**30),
-                     "transpose_b": True},
-                    {"lhs": (2**28, 16),
-                     "rhs": (16, 2**28),
-                     "transpose_a": True,
-                     "transpose_b": True}],
-            warmup=warmup, runs=runs, profiler=profiler)
+    standard_inputs_dot = [{"lhs": (1024, 1024),
+                            "rhs": (1024, 1024)},
+                           {"lhs": (1000, 10),
+                            "rhs": (1000, 10),
+                            "transpose_b": True},
+                           {"lhs": (1000, 1),
+                            "rhs": (100, 1000),
+                            "transpose_a": True,
+                            "transpose_b": True}]
+    int64_tensor_inputs_dot = [{"lhs": (2**16, 2**16),
+                                "rhs": (2**16, 2**16)},
+                               {"lhs": (4, 2**30),
+                                "rhs": (4, 2**30),
+                                "transpose_b": True},
+                               {"lhs": (2**28, 16),
+                                "rhs": (16, 2**28),
+                                "transpose_a": True,
+                                "transpose_b": True}]
+    standard_inputs_batch_dot = [{"lhs": (32, 1024, 1024),
+                                  "rhs": (32, 1024, 1024)},
+                                 {"lhs": (32, 1000, 10),
+                                  "rhs": (32, 1000, 10),
+                                  "transpose_b": True},
+                                 {"lhs": (32, 1000, 1),
+                                  "rhs": (32, 100, 1000),
+                                  "transpose_a": True,
+                                  "transpose_b": True}]
+    int64_tensor_inputs_batch_dot = [{"lhs": (1, 2**16, 2**16),
+                                      "rhs": (1, 2**16, 2**16)},
+                                     {"lhs": (1, 4, 2**30),
+                                      "rhs": (1, 4, 2**30),
+                                      "transpose_b": True},
+                                     {"lhs": (1, 2**28, 16),
+                                      "rhs": (1, 16, 2**28),
+                                      "transpose_a": True,
+                                      "transpose_b": True}]
+    standard_inputs_khatri_rao = [{"args": [(32, 32), (32, 32)]},
+                                  {"args": [(64, 64), (64, 64)]}]
+    int64_tensor_inputs_khatri_rao = [{"args": [(2**32, 1), (2**32, 1)]}]
 
-        batch_dot_benchmark_res = run_performance_test(
-            [getattr(MX_OP_MODULE, "batch_dot")], run_backward=True,
-            dtype=dtype, ctx=ctx,
-            inputs=[{"lhs": (1, 2**16, 2**16),
-                     "rhs": (1, 2**16, 2**16)},
-                    {"lhs": (1, 4, 2**30),
-                     "rhs": (1, 4, 2**30),
-                     "transpose_b": True},
-                    {"lhs": (1, 2**28, 16),
-                     "rhs": (1, 16, 2**28),
-                     "transpose_a": True,
-                     "transpose_b": True}],
-            warmup=warmup, runs=runs, profiler=profiler)
-         # Operator khatri_rao is not yet implemented for GPU
-        khatri_rao_benchmark_res = []
-        if ctx != mx.gpu():
-            # Benchmark tests for khatri_rao operator
-            khatri_rao_benchmark_res = run_performance_test(
-                [getattr(MX_OP_MODULE, "khatri_rao")], run_backward=False,
-                dtype=dtype, ctx=ctx,
-                inputs=[{"args": [(32, 32), (32, 32)]},
-                        {"args": [(64, 64), (64, 64)]}],
-                warmup=warmup, runs=runs, profiler=profiler)
+    if int64_tensor == 'on':
+        inputs_dot = int64_tensor_inputs_dot
+        inputs_batch_dot = int64_tensor_inputs_batch_dot
+        inputs_khatri_rao = int64_tensor_inputs_khatri_rao
     else:
-        dot_benchmark_res = run_performance_test(
-            [getattr(MX_OP_MODULE, "dot")], run_backward=True,
-            dtype=dtype, ctx=ctx,
-            inputs=[{"lhs": (1024, 1024),
-                     "rhs": (1024, 1024)},
-                    {"lhs": (1000, 10),
-                     "rhs": (1000, 10),
-                     "transpose_b": True},
-                    {"lhs": (1000, 1),
-                     "rhs": (100, 1000),
-                     "transpose_a": True,
-                     "transpose_b": True}],
-            warmup=warmup, runs=runs, profiler=profiler)
+        inputs_dot = standard_inputs_dot
+        inputs_batch_dot = standard_inputs_batch_dot
+        inputs_khatri_rao = standard_inputs_khatri_rao
 
-        batch_dot_benchmark_res = run_performance_test(
-            [getattr(MX_OP_MODULE, "batch_dot")], run_backward=True,
-            dtype=dtype, ctx=ctx,
-            inputs=[{"lhs": (32, 1024, 1024),
-                     "rhs": (32, 1024, 1024)},
-                    {"lhs": (32, 1000, 10),
-                     "rhs": (32, 1000, 10),
-                     "transpose_b": True},
-                    {"lhs": (32, 1000, 1),
-                     "rhs": (32, 100, 1000),
-                     "transpose_a": True,
-                     "transpose_b": True}],
-            warmup=warmup, runs=runs, profiler=profiler)
+    # Benchmark tests for dot and batch_dot operators
+    dot_benchmark_res = run_performance_test(
+        [getattr(MX_OP_MODULE, "dot")], run_backward=True,
+        dtype=dtype, ctx=ctx,
+        inputs=inputs_dot,
+        warmup=warmup, runs=runs, profiler=profiler)
+
+    batch_dot_benchmark_res = run_performance_test(
+        [getattr(MX_OP_MODULE, "batch_dot")], run_backward=True,
+        dtype=dtype, ctx=ctx,
+        inputs=inputs_batch_dot,
+        warmup=warmup, runs=runs, profiler=profiler)
         # Operator khatri_rao is not yet implemented for GPU
-        khatri_rao_benchmark_res = []
-        if ctx != mx.gpu():
-            # Benchmark tests for khatri_rao operator
-            khatri_rao_benchmark_res = run_performance_test(
-                [getattr(MX_OP_MODULE, "khatri_rao")], run_backward=False,
-                dtype=dtype, ctx=ctx,
-                inputs=[{"args": [(32, 32), (32, 32)]},
-                        {"args": [(64, 64), (64, 64)]}],
-                warmup=warmup, runs=runs, profiler=profiler)
+    khatri_rao_benchmark_res = []
+    if ctx != mx.gpu():
+        # Benchmark tests for khatri_rao operator
+        khatri_rao_benchmark_res = run_performance_test(
+            [getattr(MX_OP_MODULE, "khatri_rao")], run_backward=False,
+            dtype=dtype, ctx=ctx,
+            inputs=inputs_khatri_rao,
+            warmup=warmup, runs=runs, profiler=profiler)
 
     # Prepare combined results for GEMM operators
     mx_gemm_op_results = merge_map_list(dot_benchmark_res + batch_dot_benchmark_res + khatri_rao_benchmark_res)
