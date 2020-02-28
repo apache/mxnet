@@ -638,7 +638,7 @@ class DataLoader(object):
         else:
             self._batchify_fn = batchify_fn
 
-        if not try_nopython and try_nopython is not None:
+        if try_nopython or try_nopython is None:
             # check for capability to use mx backend threadedLoader
             use_mx_iter, mx_iter_args = _check_mx_loader_capability(
                 self._dataset, self._batch_sampler, self._batchify_fn)
@@ -649,7 +649,8 @@ class DataLoader(object):
             use_mx_iter = False
 
         if use_mx_iter:
-            logging.info("Using MXNet backend ThreadedDataLoader...")
+            logging.info("Using MXNet backend ThreadedDataLoader with {} workers \
+                instead of python dataloader.".format(self._num_workers))
             self._mx_iter = MXThreadedDataLoader(
                 num_workers=self._num_workers,
                 pin_memory=self._pin_memory,
