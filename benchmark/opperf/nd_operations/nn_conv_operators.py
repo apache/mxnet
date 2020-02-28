@@ -177,15 +177,31 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
 
     standard_data_list_conv1d = [(32, 3, 256), (32, 3, 64)]
     int64_tensor_data_list_conv1d = [(2**30, 1, 4)]
+    standard_weight_conv1d = (1, 3, 3)
+    int64_tensor_weight_conv1d = (1, 1, 1)
+    standard_kernel_conv1d = (3,)
+    int64_tensor_kernel_conv1d = (1,)
     standard_data_list_conv2d = [(32, 3, 256, 256), (32, 3, 64, 64)]
     int64_tensor_data_list_conv2d = [(2**28, 1, 4, 4)]
+    standard_weight_conv2d = (1, 3, 3, 3)
+    int64_tensor_weight_conv2d = (1, 1, 1, 1)
+    standard_kernel_conv2d = (3, 3)
+    int64_tensor_kernel_conv2d = (1, 1)
 
     if int64_tensor == 'on':
         data_list_conv1d = int64_tensor_data_list_conv1d
+        weight_conv1d = int64_tensor_weight_conv1d
+        kernel_conv1d = int64_tensor_kernel_conv1d
         data_list_conv2d = int64_tensor_data_list_conv2d
+        weight_conv2d = int64_tensor_weight_conv2d
+        kernel_conv2d = int64_tensor_kernel_conv2d
     else:
         data_list_conv1d = standard_data_list_conv1d
+        weight_conv1d = standard_weight_conv1d
+        kernel_conv1d = standard_kernel_conv1d
         data_list_conv2d = standard_data_list_conv2d
+        weight_conv2d = standard_weight_conv2d
+        kernel_conv2d = standard_kernel_conv2d
 
     conv1d_benchmark_res = []
     conv2d_benchmark_res = []
@@ -197,9 +213,9 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
                                                      ctx=ctx,
                                                      profiler=profiler,
                                                      inputs=[{"data": conv_data,
-                                                              "weight": (1, 1, 3),
+                                                              "weight": weight_conv1d,
                                                               "bias": (1,),
-                                                              "kernel": (3,),
+                                                              "kernel": kernel_conv1d,
                                                               "stride": (1,),
                                                               "dilate": (1,),
                                                               "pad": (0,),
@@ -215,9 +231,9 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
                                                      ctx=ctx,
                                                      profiler=profiler,
                                                      inputs=[{"data": conv_data,
-                                                              "weight": (1, 1, 3, 3),
+                                                              "weight": weight_conv2d,
                                                               "bias": (1,),
-                                                              "kernel": (3, 3),
+                                                              "kernel": kernel_conv2d,
                                                               "stride": (1, 1),
                                                               "dilate": (1, 1),
                                                               "pad": (0, 0),
@@ -230,7 +246,7 @@ def run_convolution_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler
     return mx_conv_op_results
 
 
-def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='native', int64_tensor='off', dtype='float32', warmup=10, runs=50):
+def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='native', int64_tensor='off', dtype='float32', warmup=25, runs=100):
     """Runs benchmarks with the given context, precision (dtype), and input data size (int64_tensor) for all the transpose convolution
     operators in MXNet.
 
@@ -257,29 +273,44 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
 
     standard_data_list_conv1d_transpose = [(32, 3, 256), (32, 3, 64)]
     int64_tensor_data_list_conv1d_transpose = [(2**30, 1, 4)]
+    standard_weight_conv1d_transpose = (3, 1, 3)
+    int64_tensor_weight_conv1d_transpose = (1, 1, 1)
+    standard_kernel_conv1d_transpose = (3,)
+    int64_tensor_kernel_conv1d_transpose = (1,)
     standard_data_list_conv2d_transpose = [(32, 3, 256, 256), (32, 3, 64, 64)]
     int64_tensor_data_list_conv2d_transpose = [(2**28, 1, 4, 4)]
+    standard_weight_conv2d_transpose = (3, 1, 3, 3)
+    int64_tensor_weight_conv2d_transpose = (1, 1, 1, 1)
+    standard_kernel_conv2d_transpose = (3, 3)
+    int64_tensor_kernel_conv2d_transpose = (1, 1)
 
     if int64_tensor == 'on':
         data_list_conv1d_transpose = int64_tensor_data_list_conv1d_transpose
+        weight_conv1d_transpose = int64_tensor_weight_conv1d_transpose
+        kernel_conv1d_transpose = int64_tensor_kernel_conv1d_transpose
         data_list_conv2d_transpose = int64_tensor_data_list_conv2d_transpose
+        weight_conv2d_transpose = int64_tensor_weight_conv2d_transpose
+        kernel_conv2d_transpose = int64_tensor_kernel_conv2d_transpose
     else:
         data_list_conv1d_transpose = standard_data_list_conv1d_transpose
+        weight_conv1d_transpose = standard_weight_conv1d_transpose
+        kernel_conv1d_transpose = standard_kernel_conv1d_transpose
         data_list_conv2d_transpose = standard_data_list_conv2d_transpose
+        weight_conv2d_transpose = standard_weight_conv2d_transpose
+        kernel_conv2d_transpose = standard_kernel_conv2d_transpose
 
     # Conv1DTranspose Benchmarks
     conv1d_transpose_benchmark_res = []
-    if int64_tensor == 'on':
-        for conv_data in data_list_conv1d_transpose:
-            conv1d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
+    for conv_data in data_list_conv1d_transpose:
+        conv1d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
                                                                    run_backward=True,
                                                                    dtype=dtype,
                                                                    ctx=ctx,
                                                                    profiler=profiler,
                                                                    inputs=[{"data": conv_data,
-                                                                            "weight": (1, 1, 3),
+                                                                            "weight": weight_conv1d_transpose,
                                                                             "bias": (1,),
-                                                                            "kernel": (3,),
+                                                                            "kernel": kernel_conv1d_transpose,
                                                                             "stride": (1,),
                                                                             "dilate": (1,),
                                                                             "pad": (0,),
@@ -288,18 +319,18 @@ def run_transpose_convolution_operators_benchmarks(ctx=mx.cpu(), profiler='nativ
                                                                             "layout": 'NCW'}],
                                                                    warmup=warmup,
                                                                    runs=runs)
-        # Conv2DTranspose Benchmarks
-        conv2d_transpose_benchmark_res = []
-        for conv_data in data_list_conv2d_transpose:
-            conv2d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
+    # Conv2DTranspose Benchmarks
+    conv2d_transpose_benchmark_res = []
+    for conv_data in data_list_conv2d_transpose:
+        conv2d_transpose_benchmark_res += run_performance_test([getattr(MX_OP_MODULE, "Deconvolution")],
                                                                    run_backward=True,
                                                                    dtype=dtype,
                                                                    ctx=ctx,
                                                                    profiler=profiler,
                                                                    inputs=[{"data": conv_data,
-                                                                            "weight": (1, 1, 3, 3),
+                                                                            "weight": weight_conv2d_transpose,
                                                                             "bias": (1,),
-                                                                            "kernel": (3, 3),
+                                                                            "kernel": kernel_conv2d_transpose,
                                                                             "stride": (1, 1),
                                                                             "pad": (0, 0),
                                                                             "num_filter": 1,
