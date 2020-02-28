@@ -141,7 +141,6 @@ DEFAULT_ALPHA = [.001]
 DEFAULT_NSIZE = [3]
 DEFAULT_PARAMETERS = [(7,), (104,)]
 DEFAULT_STATE = [(1, 4, 1), (2, 10000, 4)]
-DEFAULT_MODE = ["rnn_relu", "rnn_tanh"]
 DEFAULT_STATE_SIZE = [1, 4]
 DEFAULT_NUM_LAYERS = [1, 2]
 DEFAULT_NUM_GROUPS = [1, 10]
@@ -245,12 +244,6 @@ DEFAULT_STRIDE_I2C_LARGE_TENSOR = [[]]
 DEFAULT_DATA_C2I = [(32, 64, 256), (32, 64, 256)]
 
 DEFAULT_DATA_C2I_LARGE_TENSOR = [(1, 2**30, 4)]
-
-# RNN
-DEFAULT_DATA_RNN = [(32, 4, 4), (512, 10000, 10)]
-DEFAULT_P_RNN = [.5]
-
-DEFAULT_DATA_RNN_LARGE_TENSOR = [(2**28, 4, 4)]
 
 # LRN
 DEFAULT_BETA_LRN = [.2]
@@ -512,13 +505,10 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "output_size": DEFAULT_OUTPUT_SIZE,
                    "kernel_col2im": DEFAULT_KERNEL,
                    "stride_col2im": DEFAULT_STRIDE,
-                   "data_rnn": DEFAULT_DATA_RNN,
-                   "p_rnn": DEFAULT_P_RNN,
                    "parameters": DEFAULT_PARAMETERS,
                    "state": DEFAULT_STATE,
                    "state_size": DEFAULT_STATE_SIZE,
                    "num_layers": DEFAULT_NUM_LAYERS,
-                   "mode_rnn": DEFAULT_MODE,
                    "data_groupnorm": DEFAULT_DATA_GN,
                    "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN,
                    "beta_groupnorm": DEFAULT_BETA_GAMMA_GN,
@@ -731,13 +721,10 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "label_ctcloss": DEFAULT_LABEL_LARGE_TENSOR,
                                 "data_ctc_loss": DEFAULT_DATA_CTCLOSS,
                                 "label_ctc_loss": DEFAULT_LABEL_LARGE_TENSOR,
-                                "data_rnn": DEFAULT_DATA_RNN_LARGE_TENSOR,
-                                "p_rnn": DEFAULT_P_RNN,
                                 "parameters": DEFAULT_PARAMETERS_LARGE_TENSOR,
                                 "state": DEFAULT_STATE_LARGE_TENSOR,
                                 "state_size": DEFAULT_STATE_SIZE_LARGE_TENSOR,
                                 "num_layers": DEFAULT_NUM_LAYERS_LARGE_TENSOR,
-                                "mode_rnn": DEFAULT_MODE,
                                 "data_groupnorm": DEFAULT_DATA_GN_LARGE_TENSOR,
                                 "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
                                 "beta_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,

@@ -20,6 +20,10 @@ import mxnet as mx
 from benchmark.opperf.utils.op_registry_utils import get_all_nn_basic_operators
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
+from benchmark.opperf.utils.benchmark_utils import run_performance_test
+from benchmark.opperf.utils.common_utils import merge_map_list
+from benchmark.opperf.rules.default_params import MX_OP_MODULE
+
 """Performance benchmark tests for MXNet NDArray basic NN Operators.
 
 1. FullyConnected
@@ -70,9 +74,71 @@ def run_nn_basic_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     """
 
+    standard_data_list = [(1024, 4, 4)]
+    int64_tensor_data_list = [(2**28, 4, 4)]
+
+    if int64_tensor == 'on':
+        data_list = int64_tensor_data_list
+    else:
+        data_list = standard_data_list
+
+    for data in data_list:
+        rnn_relu_benchmark = run_performance_test([getattr(MX_OP_MODULE, "RNN")],
+                                                  run_backward=True,
+                                                  dtype=dtype,
+                                                  ctx=ctx,
+                                                  profiler=profiler,
+                                                  inputs=[{"data": data,
+                                                           "parameters": (7,),
+                                                           "state": (1, 4, 1),
+                                                           "mode": "rnn_relu",
+                                                           "state_size": 1,
+                                                           "num_layers": 1}],
+                                                  warmup=warmup,
+                                                  runs=runs)
+        rnn_tanh_benchmark = run_performance_test([getattr(MX_OP_MODULE, "RNN")],
+                                                  run_backward=True,
+                                                  dtype=dtype,
+                                                  ctx=ctx,
+                                                  profiler=profiler,
+                                                  inputs=[{"data": data,
+                                                           "parameters": (7,),
+                                                           "state": (1, 4, 1),
+                                                           "mode": "rnn_tanh",
+                                                           "state_size": 1,
+                                                           "num_layers": 1}],
+                                                  warmup=warmup,
+                                                  runs=runs)
+        rnn_lstm_benchmark = run_performance_test([getattr(MX_OP_MODULE, "RNN")],
+                                                  run_backward=True,
+                                                  dtype=dtype,
+                                                  ctx=ctx,
+                                                  profiler=profiler,
+                                                  inputs=[{"data": data,
+                                                           "parameters": (28,),
+                                                           "state": (1, 4, 1),
+                                                           "state_cell": (1, 4, 1),
+                                                           "mode": "lstm",
+                                                           "state_size": 1,
+                                                           "num_layers": 1}],
+                                                  warmup=warmup,
+                                                  runs=runs)
+        rnn_gru_benchmark = run_performance_test([getattr(MX_OP_MODULE, "RNN")],
+                                                 run_backward=True,
+                                                 dtype=dtype,
+                                                 ctx=ctx,
+                                                 profiler=profiler,
+                                                 inputs=[{"data": data,
+                                                          "parameters": (21,),
+                                                          "state": (1, 4, 1),
+                                                          "mode": "gru",
+                                                          "state_size": 1,
+                                                          "num_layers": 1}],
+                                                 warmup=warmup,
+                                                 runs=runs)
     # Fetch all NN Basic Operators
     mx_nn_basic_ops = get_all_nn_basic_operators()
     
     # Run benchmarks
     mx_nn_basic_op_results = run_op_benchmarks(mx_nn_basic_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
-    return mx_nn_basic_op_results
+    return merge_map_list(rnn_relu_benchmark + rnn_tanh_benchmark + rnn_lstm_benchmark + rnn_gru_benchmark + [mx_nn_basic_op_results])

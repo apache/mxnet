@@ -120,7 +120,7 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
 
     # For ops with args that need to change shape/value for different ops
     custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian',
-                   'SpatialTransformer', 'col2im', 'RNN', 'GroupNorm', 'Dropout', 'FullyConnected',
+                   'SpatialTransformer', 'col2im', 'GroupNorm', 'Dropout', 'FullyConnected',
                    'SoftmaxOutput', 'LinearRegressionOutput', 'BatchNorm', 'LogisticRegressionOutput',
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
@@ -356,7 +356,7 @@ def get_all_nn_basic_operators():
     nn_basic_ops = ['FullyConnected', 'Dropout', 'BatchNorm', 'SoftmaxOutput', 'LinearRegressionOutput',
                     'LogisticRegressionOutput', 'MAERegressionOutput', 'SVMOutput', 'L2Normalization',
                     'LayerNorm', 'InstanceNorm', 'Embedding', 'Correlation', 'SpatialTransformer', 'im2col',
-                    'col2im', 'GroupNorm', 'RNN', 'LRN']
+                    'col2im', 'GroupNorm', 'LRN']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
