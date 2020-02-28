@@ -649,8 +649,8 @@ class DataLoader(object):
             use_mx_iter = False
 
         if use_mx_iter:
-            logging.info("Using MXNet backend ThreadedDataLoader with {} workers \
-                instead of python dataloader.".format(self._num_workers))
+            logging.info("Using MXNet backend ThreadedDataLoader with {} workers "
+                "instead of python dataloader.".format(self._num_workers))
             self._mx_iter = MXThreadedDataLoader(
                 num_workers=self._num_workers,
                 pin_memory=self._pin_memory,

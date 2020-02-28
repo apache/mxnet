@@ -121,7 +121,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     std::vector<std::vector<NDArray> > inputs(batch_size);
     std::vector<int> is_scalars;
     // #pragma omp parallel for num_threads(param_.num_workers)
-    // const auto engine = Engine::Get();
     for (size_t i = 0; i < real_batch_size; ++i) {
       // omp_exc_.Run([&] {
       auto idx = idx_ptrs[i];
@@ -170,8 +169,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     IIterator<DataBatch> *sampler_;
     /*! \brief pointer to batchify function */
     BatchifyFunctionPtr batchify_fn_;
-    /*! \brief engine variable */
-    std::vector<Engine::VarHandle> vars_;
     /*! \brief OMPException obj to store and rethrow exceptions from omp blocks*/
     dmlc::OMPException omp_exc_;
 };  // class ThreadedDataLoader
