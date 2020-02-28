@@ -621,7 +621,7 @@ def identity(n, dtype=None, ctx=None):
         ctx = str(current_context())
     else:
         ctx = str(ctx)
-    shape = (n, n)
+    shape = (n, n)  # pylint: disable=redefined-outer-name
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
     return _api_internal.identity(shape, dtype, ctx)
