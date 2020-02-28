@@ -303,6 +303,8 @@ DEFAULT_D_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_V_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_Z_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 DEFAULT_G_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
+DEFAULT_R1_LARGE_TENSOR = [(1,)]
+DEFAULT_R2_LARGE_TENSOR = [(1,)]
 DEFAULT_DELTA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 
 # For rearrange operators
@@ -354,16 +356,27 @@ DEFAULT_X = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_Y = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_COND = [(1024,), (10000,), (10000,)]
 DEFAULT_DEPTH = [0]
+
+#DEFAULT_INDICES_LARGE_TENSOR = [(1, 2)]
+
 # For ravel_multi_index op, ndim(shape) = 2; hence data NDArray's first dim = 2
 # First dimension of input of ravel operator should match shape parameter dimension
 # DEFAULT_SHAPE is reused for ravel_multi_index op
 RAVEL_DATA = [(2, 1024)]
+
+RAVEL_DATA_LARGE_TENSOR = [(2, 2**32)]
+DEFAULT_X_LARGE_TENSOR = [(2**32, 1)]
 
 # For loss operators
 DEFAULT_DATA_3d = [(1024, 100, 100)]
 DEFAULT_LABEL = [(100,100)]
 DEFAULT_DATA_SMCE = [(1024, 1024)]
 DEFAULT_LABEL_SMCE = [(1024,)]
+
+DEFAULT_LABEL_LARGE_TENSOR = [(1, 1)]
+DEFAULT_DATA_CTCLOSS = [(2**32, 1, 1)]
+DEFAULT_DATA_SMCE_LARGE_TENSOR = [(2**32 + 1, 1)]
+DEFAULT_LABEL_SMCE_LARGE_TENSOR = [(2**32 + 1,)]
 
 # For NN operators
 DEFAULT_ACT_TYPE_LR = ['leaky', 'elu', 'selu', 'gelu']
@@ -596,6 +609,8 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "mean" : DEFAULT_MEAN_LARGE_TENSOR,
                                 "var" : DEFAULT_VAR_LARGE_TENSOR,
                                 "mom" : DEFAULT_MOM_LARGE_TENSOR,
+                                "r1": DEFAULT_R1_LARGE_TENSOR,
+                                "r2": DEFAULT_R2_LARGE_TENSOR,
                                 "n" : DEFAULT_N_LARGE_TENSOR,
                                 "d" : DEFAULT_D_LARGE_TENSOR,
                                 "v" : DEFAULT_V_LARGE_TENSOR,
@@ -605,6 +620,7 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "lr" : DEFAULT_LR,
                                 "lrs" : DEFAULT_LRS,
                                 "wds" : DEFAULT_LRS,
+                                "wd": DEFAULT_LR,
                                 "gamma1" : DEFAULT_GAMMA_1,
                                 "gamma2" : DEFAULT_GAMMA_2,
                                 "epsilon" : DEFAULT_EPSILON,
@@ -620,6 +636,8 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "block_size": DEFAULT_BLOCK_SIZE_LARGE_TENSOR,
                                 "args": DEFAULT_ARGS,
                                 "index": DEFAULT_INDEX_LARGE_TENSOR,
+                                "data_smce": DEFAULT_DATA_SMCE_LARGE_TENSOR,
+                                "label_smce": DEFAULT_LABEL_SMCE_LARGE_TENSOR,
                                 "grid": DEFAULT_GRID_LARGE_TENSOR,
                                 "data_bilinearsampler": DEFAULT_DATA_BILINEAR_LARGE_TENSOR,
                                 "transform_type": DEFAULT_TRANSFORM_TYPE,
@@ -680,11 +698,21 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "eta": DEFAULT_ETA,
                                 "eps": DEFAULT_EPSILON,
                                 "stype": DEFAULT_STYPE,
+                                "indices": DEFAULT_INDICES,
+                                "begin": DEFAULT_BEGIN,
+                                "end": DEFAULT_END,
+                                "shape_like": DEFAULT_DATA_LARGE_TENSOR,
+                                "depth": DEFAULT_DEPTH,
+                                "condition": DEFAULT_X_LARGE_TENSOR,
+                                "x": DEFAULT_X_LARGE_TENSOR,
+                                "y": DEFAULT_X_LARGE_TENSOR,
+                                "ravel_data": RAVEL_DATA_LARGE_TENSOR,
                                 "a": DEFAULT_A_LARGE_TENSOR,
                                 "lhs_fill_element_0index": DEFAULT_LHS_FEI_LARGE_TENSOR,
                                 "rhs_fill_element_0index": DEFAULT_RHS_FEI_LARGE_TENSOR,
                                 "mhs": DEFAULT_MHS_LARGE_TENSOR,
                                 "lrs_multi_lars": DEFAULT_WSS_LARGE_TENSOR,
+                                "data_softmax": DEFAULT_LABEL_SOFTMAX_LARGE_TENSOR,
                                 "data_spatialtransformer": DEFAULT_DATA_ST_LARGE_TENSOR,
                                 "loc_spatialtransformer": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
                                 "target_shape": DEFAULT_LOC_TAR_ST_LARGE_TENSOR,
@@ -694,6 +722,10 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "output_size": DEFAULT_OUTPUT_SIZE_LARGE_TENSOR,
                                 "kernel_col2im": DEFAULT_KERNEL_LARGE_TENSOR,
                                 "stride_col2im": DEFAULT_STRIDE,
+                                "data_ctcloss": DEFAULT_DATA_CTCLOSS,
+                                "label_ctcloss": DEFAULT_LABEL_LARGE_TENSOR,
+                                "data_ctc_loss": DEFAULT_DATA_CTCLOSS,
+                                "label_ctc_loss": DEFAULT_LABEL_LARGE_TENSOR,
                                 "data_rnn": DEFAULT_DATA_RNN_LARGE_TENSOR,
                                 "p_rnn": DEFAULT_P_RNN,
                                 "parameters": DEFAULT_PARAMETERS_LARGE_TENSOR,
