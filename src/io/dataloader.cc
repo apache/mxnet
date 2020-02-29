@@ -120,12 +120,12 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
     std::vector<int> is_scalars;
-    // #pragma omp parallel for num_threads(param_.num_workers)
+    #pragma omp parallel for num_threads(param_.num_workers)
     for (size_t i = 0; i < real_batch_size; ++i) {
       // omp_exc_.Run([&] {
       auto idx = idx_ptrs[i];
       std::vector<int> is_temp;
-      inputs[i] = datasets[i]_->GetItem(idx, is_temp);
+      inputs[i] = datasets[i % param_.num_workers]_->GetItem(idx, is_temp);
       if (i == 0) {
         is_scalars = is_temp;
       }
