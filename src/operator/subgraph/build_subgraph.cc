@@ -568,9 +568,9 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
       n->attrs.dict["isArg"] = "False";
     }
     // pass down other attributes if available
-    if(e->node->attrs.dict.count("__dtype__") > 0)
+    if (e->node->attrs.dict.count("__dtype__") > 0)
       n->attrs.dict["__dtype__"] = e->node->attrs.dict["__dtype__"];
-    if(e->node->attrs.dict.count("__shape__") > 0)
+    if (e->node->attrs.dict.count("__shape__") > 0)
       n->attrs.dict["__shape__"] = e->node->attrs.dict["__shape__"];
 
     *e = nnvm::NodeEntry{n, 0, 0};

@@ -33,6 +33,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <map>
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../include/mxnet/lib_api.h"
@@ -251,7 +252,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                                   aux_dev_type.data(), aux_dev_id.data()))
         << "Error calling review_subgraph for '" << subgraph_prop << "'";
 
-      if(num_attr > 0) {
+      if (num_attr > 0) {
         // set user specified attributes
         for (int i=0; i < num_attr; i++) {
           user_attrs[attr_keys[i]] = attr_vals[i];
@@ -271,7 +272,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
 
       // set user specified attributes
-      for(auto attr : user_attrs)
+      for (auto attr : user_attrs)
         n->attrs.dict[attr.first] = attr.second;
 
       return n;
