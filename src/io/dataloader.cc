@@ -66,9 +66,6 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
   }
   // destructor
   virtual ~ThreadedDataLoader(void) {
-    for (size_t i = 0; i < vars_.size(); ++i) {
-      Engine::Get()->DeleteVariable([](mxnet::RunContext ctx) {}, Context::CPU(), vars_[i]);
-    }
   }
   // constructor
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
@@ -86,13 +83,14 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     }
     param_.num_workers = std::max(1, threadget);
     // dataset_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
+    auto dataset = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
     datasets_.clear();
     datasets_.reserve(param_.num_workers);
     datasets_.emplace_back(dataset);
     for (int i = 1; i < param_.num_workers; ++i) {
       datasets_.emplace_back(DatasetPtr(dataset->Clone()));
     }
-    dataset_len_ = datasets[0]_->GetLen();
+    dataset_len_ = datasets_[0]->GetLen();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
     batchify_fn_ = *static_cast<BatchifyFunctionPtr*>(reinterpret_cast<void*>(param_.batchify_fn));
     this->BeforeFirst();
@@ -125,7 +123,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       // omp_exc_.Run([&] {
       auto idx = idx_ptrs[i];
       std::vector<int> is_temp;
-      inputs[i] = datasets[i % param_.num_workers]_->GetItem(idx, is_temp);
+      inputs[i] = datasets_[i % param_.num_workers]->GetItem(idx, is_temp);
       if (i == 0) {
         is_scalars = is_temp;
       }

@@ -819,7 +819,6 @@ OpStatePtr CachedOp::NaiveForward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& inputs,
     const std::vector<NDArray*>& outputs) {
-  static const auto cached_op = nnvm::Op::Get("_NaiveCachedOp");
 
   CHECK_EQ(inputs.size(), num_inputs());
 
@@ -877,9 +876,9 @@ OpStatePtr CachedOp::NaiveForward(
 
     
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-    NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
+    imperative::NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
                   std::move(array_reqs), std::move(ref_count), &states,
-                  dispatch_modes, false, &shapes, false, false);
+                  dispatch_modes, false, &shapes, nullptr, false);
     {
       auto state_ptr = GetCachedOpState(default_ctx);
       auto& state = state_ptr.get_state<CachedOpState>();
@@ -1415,71 +1414,5 @@ NNVM_REGISTER_OP(_backward_CachedOp)
 .set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
-
-NNVM_REGISTER_OP(_NaiveCachedOp)
-.set_num_inputs([](const NodeAttrs& attrs) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->num_inputs();
-  })
-.set_num_outputs([](const NodeAttrs& attrs) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->num_outputs();
-  })
-.set_attr_parser(CachedOpParamParser)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
-    return op->Gradient(n, ograds);
-  })
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->ListForwardInputNames();
-  })
-.set_attr<nnvm::FListOutputNames>("FListOutputNames",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op->ListForwardOutputNames();
-  })
-.set_attr<FCreateOpState>("FCreateOpState", CreateCachedOpState)
-.set_attr<mxnet::FInferShape>("FInferShape",
-  [](const nnvm::NodeAttrs& attrs,
-     mxnet::ShapeVector *in_shapes,
-     mxnet::ShapeVector *out_shapes) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpShapeHelper(op->GetForwardSym(), in_shapes, out_shapes);
-  })
-.set_attr<nnvm::FInferType>("FInferType",
-  [](const nnvm::NodeAttrs& attrs,
-     std::vector<int> *in_types,
-     std::vector<int> *out_types) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpTypeHelper(op->GetForwardSym(), in_types, out_types);
-  })
-.set_attr<FInferStorageType>("FInferStorageType",
-  [](const nnvm::NodeAttrs& attrs,
-     const int dev_mask,
-     DispatchMode* dispatch_mode,
-     std::vector<int>* in_stypes,
-     std::vector<int>* out_stypes) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpStorageTypeHelper(op->GetForwardSym(),
-                                                  dev_mask, dispatch_mode,
-                                                  in_stypes, out_stypes);
-  })
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpForward)
-.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpForward)
-.set_attr<nnvm::FMutateInputs>("FMutateInputs",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpMutableInputsHelper(op->GetForwardSym());
-  })
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const nnvm::NodeAttrs& attrs) {
-    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
-    return op::DefaultSubgraphOpResourceRequestHelper(op->GetForwardSym());
-  })
-.set_attr<FExecType>("FExecType", ExecType::kNoEngine)
-.add_argument("data", "NDArray-or-Symbol[]", "input data list");
 
 }  // namespace mxnet

@@ -575,7 +575,7 @@ class LazyTransformDataset : public Dataset {
 
     LazyTransformDataset(const LazyTransformDataset& other) {
       this->param_ = other.param_;
-      this->cached_op_ = CachedOpPtr(new CachedOp(other->sym_, other->flags_));
+      this->cached_op_ = CachedOpPtr(new CachedOp(other.cached_op_->sym_, other.cached_op_->flags_));
       // LOG(INFO) << "Create new cachedop" << this->cached_op_->num_inputs() << " " << this->cached_op_->num_outputs();
       this->base_data_ = other.base_data_;
     }
