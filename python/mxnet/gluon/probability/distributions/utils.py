@@ -18,11 +18,21 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Distribution utilities"""
-__all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property']
+__all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter']
 
 from functools import update_wrapper
 from .... import nd, sym, np
 
+def sample_n_shape_converter(size):
+    """Convert `size` to the proper format for performing sample_n.
+    """
+    if size == ():
+        size = None
+    else:
+        if isinstance(size, int):
+            size = (size,)
+        size = (-2,) + size
+    return size
 
 def getF(*params):
     """Get running mode from parameters,

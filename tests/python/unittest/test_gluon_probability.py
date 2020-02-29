@@ -112,6 +112,34 @@ def test_gluon_normal():
 
 @with_seed()
 @use_np
+def test_gluon_gamma():
+    class TestGamma(HybridBlock):
+        def __init__(self, func):
+            super(TestGamma, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, shape, scale, *args):
+            normal = mgp.Gamma(shape, scale, F)
+            return getattr(normal, self._func)(*args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        alpha = np.random.uniform(0.5, 1.5, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestGamma("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(alpha, scale, samples).asnumpy()
+        np_out = ss.gamma(a=alpha.asnumpy(), loc=0, scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_gumbel():
     class TestGumbel(HybridBlock):
         def __init__(self, func):

@@ -17,34 +17,7 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Distribution classes."""
+"""Dirichlet Distribution."""
+# __all__ = ['dirichlet']
 
-from .distribution import *
-
-from .exp_family import *
-
-from .normal import *
-
-from .gamma import *
-
-from .half_normal import *
-
-from .independent import *
-
-from .bernoulli import *
-
-from .relaxed_bernoulli import *
-
-from .gumbel import *
-
-from .categorical import *
-
-from .one_hot_categorical import *
-
-from .relaxed_one_hot_categorical import *
-
-from .transformed_distribution import *
-
-from .divergence import *
-
-from .utils import *
+from .distribution import Distribution

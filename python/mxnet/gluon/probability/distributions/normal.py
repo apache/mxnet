@@ -86,9 +86,7 @@ class Normal(ExponentialFamily):
         Tensor
             Samples from Normal distribution.
         """
-        return self.F.np.random.normal(self.loc,
-                                       self.scale,
-                                       size)
+        return self.F.np.random.normal(self.loc, self.scale, size)
 
     def sample_n(self, batch_size=None):
         r"""Generate samples of (batch_size + broadcast(loc, scale).shape)
@@ -104,9 +102,7 @@ class Normal(ExponentialFamily):
         Tensor
             Samples from Normal distribution.
         """
-        return self.F.npx.random.normal_n(self.loc,
-                                          self.scale,
-                                          batch_size)
+        return self.F.npx.random.normal_n(self.loc, self.scale, batch_size)
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
