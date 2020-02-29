@@ -1327,9 +1327,8 @@ extern "C" {
     bool accept_bool = false;
     // create map of attributes from list
     std::unordered_map<std::string, std::string> opts;
-    for (int i = 0; i < num_opts; i++) {
+    for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
-    }
 
     // create a map of named tensors for args
     std::map<std::string, MXTensor> args;

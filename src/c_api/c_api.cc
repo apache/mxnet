@@ -192,7 +192,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   if (fcomp_fp != nullptr) {
     // convert attributes to vector of char*
     std::vector<const char*> attr_keys, attr_vals;
-    for (auto kv : attrs->dict) {
+    for (auto &kv : attrs->dict) {
       attr_keys.push_back(kv.first.c_str());
       attr_vals.push_back(kv.second.c_str());
     }
@@ -360,7 +360,7 @@ int MXLoadLib(const char *path) {
     auto attr_parser = [=](const NodeAttrs* attrs) {
       // convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs->dict) {
+      for (auto &kv : attrs->dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -387,7 +387,7 @@ int MXLoadLib(const char *path) {
     auto num_inputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -405,7 +405,7 @@ int MXLoadLib(const char *path) {
     auto num_outputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -424,7 +424,7 @@ int MXLoadLib(const char *path) {
     auto num_inouts = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -444,7 +444,7 @@ int MXLoadLib(const char *path) {
                             mxnet::ShapeVector *out_shape) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -515,7 +515,7 @@ int MXLoadLib(const char *path) {
                             std::vector<int> *out_type) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -543,7 +543,7 @@ int MXLoadLib(const char *path) {
     auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -628,7 +628,7 @@ int MXLoadLib(const char *path) {
                                const std::vector<int>& in_types) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
