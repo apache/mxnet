@@ -214,6 +214,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                                              const int subgraph_id = 0) const {
     int accept = 1;
     int num_attr = 0;
+    std::map<std::string, std::string> user_attrs;
     char** attr_keys = nullptr;
     char** attr_vals = nullptr;
     if (review_subgraph_) {
@@ -249,6 +250,18 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                                   aux_types.data(), aux_verIDs.data(),
                                   aux_dev_type.data(), aux_dev_id.data()))
         << "Error calling review_subgraph for '" << subgraph_prop << "'";
+
+      if(num_attr > 0) {
+        // set user specified attributes
+        for (int i=0; i < num_attr; i++) {
+          user_attrs[attr_keys[i]] = attr_vals[i];
+          call_free_(attr_vals[i]);
+          call_free_(attr_keys[i]);
+        }
+        // free memory used by custom op to allocate attributes
+        call_free_(attr_vals);
+        call_free_(attr_keys);
+      }
     }
 
     if (accept) {
@@ -256,15 +269,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       n->attrs.op = Op::Get(subgraph_op_name);
       n->attrs.name = "_op" + std::to_string(subgraph_id);
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
+
       // set user specified attributes
-      for (int i=0; i < num_attr; i++) {
-        n->attrs.dict[attr_keys[i]] = attr_vals[i];
-        call_free_(attr_vals[i]);
-        call_free_(attr_keys[i]);
-      }
-      // free memory used by custom op to allocate attributes
-      call_free_(attr_vals);
-      call_free_(attr_keys);
+      for(auto attr : user_attrs)
+        n->attrs.dict[attr.first] = attr.second;
+
       return n;
     } else {
       return nullptr;
