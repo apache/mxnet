@@ -40,6 +40,7 @@ inline bool NumpyReduceAxesBoolType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(NumpyReduceAxesBoolParam);
 
 NNVM_REGISTER_OP(_np_any)
+.add_alias("_np_sometrue")
 .set_attr_parser(ParamParser<NumpyReduceAxesBoolParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

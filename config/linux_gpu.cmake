@@ -27,11 +27,11 @@
 #  Next modify the according entries, and then compile by
 #
 #  $ mkdir build; cd build
-#  $ cmake -C ../config.cmake ..
-#  $ cmake --build . --parallel 8
+#  $ cmake ..
+#  $ cmake --build .
 #
-# You can increase the --parallel 8 argument to match the number of processor
-# cores of your computer.
+# Specify `cmake --build . --parallel N` to set the number of parallel compilation jobs.
+# Default is derived from CPUs available.
 #
 #-------------------------------------------------------------------------------
 
@@ -73,6 +73,8 @@ set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 #---------------------
 # Compilers
 #--------------------
+set(CMAKE_GENERATOR "Ninja" CACHE STRING "Build Tool Generator used by CMake")
+
 # Compilers are usually autodetected. Uncomment and modify the next 3 lines to
 # choose manually:
 

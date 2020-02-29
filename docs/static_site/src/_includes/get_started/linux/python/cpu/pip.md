@@ -15,7 +15,7 @@ $ pip install mxnet-mkl
 
 </div> <!-- End of v1-6-0 -->
 
-<div class="v1-5-0">
+<div class="v1-5-1">
 {% highlight bash %}
 $ pip install mxnet==1.5.1
 {% endhighlight %}
@@ -28,7 +28,7 @@ in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 $ pip install mxnet-mkl==1.5.1
 {% endhighlight %}
 
-</div> <!-- End of v1-5-0 -->
+</div> <!-- End of v1-5-1 -->
 
 <div class="v1-4-1">
 
@@ -118,7 +118,7 @@ $ pip install mxnet==0.11.0
 <div class="master">
 
 {% highlight bash %}
-$ pip install mxnet --pre
+$ pip install --pre mxnet -f https://dist.mxnet.io/python/all
 {% endhighlight %}
 
 MKL-DNN enabled pip packages are optimized for Intel hardware. You can find
@@ -126,7 +126,7 @@ performance numbers
 in the <a href="https://mxnet.io/api/faq/perf#intel-cpu">MXNet tuning guide</a>.
 
 {% highlight bash %}
-$ pip install mxnet-mkl --pre
+$ pip install --pre mxnet-mkl -f https://dist.mxnet.io/python/all
 {% endhighlight %}
 
 </div> <!-- End of master-->

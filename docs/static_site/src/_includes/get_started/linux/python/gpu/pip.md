@@ -7,12 +7,12 @@ $ pip install mxnet-cu102
 
 </div> <!-- End of v1-6-0 -->
 
-<div class="v1-5-0">
+<div class="v1-5-1">
 {% highlight bash %}
 $ pip install mxnet-cu101==1.5.1
 {% endhighlight %}
 
-</div> <!-- End of v1-5-0 -->
+</div> <!-- End of v1-5-1 -->
 <div class="v1-4-1">
 
 {% highlight bash %}
@@ -70,7 +70,7 @@ $ pip install mxnet-cu80==0.11.0
 <div class="master">
 
 {% highlight bash %}
-$ pip install mxnet-cu101 --pre
+$ pip install --pre mxnet-cu102 -f https://dist.mxnet.io/python/all
 {% endhighlight %}
 
 </div> <!-- End of master-->

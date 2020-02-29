@@ -38,6 +38,7 @@ LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
+LARGE_TENSOR_SHAPE = 2**32
 
 
 def test_nn():
@@ -455,6 +456,64 @@ def test_nn():
         assert_almost_equal(out, out_nd.asnumpy(), forward_check_eps,
                             forward_check_eps)
 
+    def check_col2im():
+        data = nd.random_normal(shape=(1, 2**30, 4))
+        output_size = (2, 2, 1)
+        kernel = (1, 1, 1)
+
+        res = nd.col2im(data=data, output_size=output_size, kernel=kernel)
+
+        assert res.shape[0] == 1
+        assert res.shape[1] == 1073741824
+        assert res.shape[2] == 2
+        assert res.shape[3] == 2
+        assert res.shape[4] == 1
+        
+    def check_embedding():
+        data = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
+        weight = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
+        input_dim = LARGE_TENSOR_SHAPE
+        output_dim = 1
+
+        out = nd.Embedding(data=data, weight=weight, input_dim=input_dim, output_dim=output_dim)
+
+        assert out.shape[0] == LARGE_TENSOR_SHAPE
+        assert out.shape[1] == 1
+        assert out.shape[2] == 1
+        
+    def check_spatial_transformer():
+        data = nd.random_normal(shape=(2, 2**29, 1, 6))
+        loc = nd.random_normal(shape=(2, 6))
+        transform_type = 'affine'
+        sampler_type = 'bilinear'
+        target_shape = (2, 6)
+
+        res = nd.SpatialTransformer(data=data, loc=loc, transform_type=transform_type,
+                                    sampler_type=sampler_type, target_shape=target_shape)
+
+        assert res.shape[0] == 2
+        assert res.shape[1] == 536870912
+        assert res.shape[2] == 2
+        assert res.shape[3] == 6
+        
+    def check_ravel():
+        data = nd.random_normal(shape=(2, LARGE_TENSOR_SHAPE))
+        shape = (2, 10)
+
+        out = nd.ravel_multi_index(data=data, shape=shape)
+
+        assert out.shape[0] == LARGE_TENSOR_SHAPE
+
+    def check_cumsum():
+        a = nd.ones((LARGE_X, SMALL_Y))
+        axis = 1
+
+        res = nd.cumsum(a=a, axis=axis)
+
+        assert res.shape[0] == LARGE_X
+        assert res.shape[1] == SMALL_Y
+        assert res[0][SMALL_Y - 1] == 50.
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
@@ -474,6 +533,11 @@ def test_nn():
     check_linear_and_logistic_regression()
     check_l2_normalization()
     check_instance_norm()
+    check_col2im()
+    check_embedding()
+    check_spatial_transformer()
+    check_ravel()
+    check_cumsum()
 
 
 def test_tensor():

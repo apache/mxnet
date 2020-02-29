@@ -52,10 +52,12 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
-
-  in_shape->at(layernorm::kGamma) = mxnet::TShape(Shape1(channelCount));
-  in_shape->at(layernorm::kBeta) = mxnet::TShape(Shape1(channelCount));
-
+  SHAPE_ASSIGN_CHECK(*in_shape,
+                     layernorm::kGamma,
+                     mxnet::TShape(Shape1(channelCount)));
+  SHAPE_ASSIGN_CHECK(*in_shape,
+                     layernorm::kBeta,
+                     mxnet::TShape(Shape1(channelCount)));
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
   mxnet::TShape moments_shape(dshape.begin(), dshape.end());

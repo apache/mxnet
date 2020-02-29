@@ -10,7 +10,7 @@ jobs:
         uses: actions/checkout@v2
       - name: Install Dependencies
         run: |
-          brew install nasm automake ninja libtool
+          brew install nasm automake ninja libtool cmake pkgconfig protobuf
       - name: Build project
         run: |
           git --version
