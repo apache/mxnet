@@ -20,7 +20,7 @@ from operator import itemgetter
 from mxnet import runtime
 import mxnet as mx
 
-from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
+from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, DEFAULTS_INPUTS_LARGE_TENSOR, MX_OP_MODULE
 
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
@@ -109,7 +109,7 @@ def prepare_op_inputs(arg_params, arg_values):
     return inputs
 
 
-def prepare_op_inputs(op, arg_params):
+def prepare_op_inputs(op, arg_params, int64_tensor):
     inputs = []
 
     # 4d tensor is needed only by following two ops
@@ -120,13 +120,26 @@ def prepare_op_inputs(op, arg_params):
 
     # For ops with args that need to change shape/value for different ops
     custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian',
-                   'SpatialTransformer', 'col2im', 'RNN', 'GroupNorm', 'Dropout', 'FullyConnected',
+                   'SpatialTransformer', 'col2im', 'GroupNorm', 'Dropout', 'FullyConnected',
                    'SoftmaxOutput', 'LinearRegressionOutput', 'BatchNorm', 'LogisticRegressionOutput',
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
+    custom_data_int64 = {'random_pdf_dirichlet', 'random_pdf_exponential', 'random_pdf_gamma',
+                         'random_pdf_generalized_negative_binomial', 'random_pdf_negative_binomial',
+                         'random_pdf_normal', 'random_pdf_poisson', 'random_pdf_uniform', 'sample_exponential',
+                         'sample_normal', 'sample_poisson', 'sample_uniform', 'sample_gamma',
+                         'sample_generalized_negative_binomial', 'sample_negative_binomial', 'CTCLoss',
+                         'ctc_loss', 'multi_lars'}
+
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
+
+    if int64_tensor == 'on':
+        default_inputs = DEFAULTS_INPUTS_LARGE_TENSOR
+        custom_data |= custom_data_int64
+    else:
+        default_inputs = DEFAULTS_INPUTS
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -137,29 +150,29 @@ def prepare_op_inputs(op, arg_params):
         # same for randint (which is the only op that takes only int as input)
         # rest all operators take int as well as float
         if op in int_only and arg_name == "dtype":
-            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
+            arg_values[arg_name] = default_inputs["dtype_int"]
         elif (op.startswith(('random','sample')) or op in float_only) and arg_name == "dtype":
-            arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
+            arg_values[arg_name] = default_inputs["dtype_float"]
         elif "NDArray" in arg_type and op == "ravel_multi_index":
-            arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
-        elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
-        elif "NDArray" in arg_type and arg_name + "_nd" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
-        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
-        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
+            arg_values[arg_name] = default_inputs["ravel_data"]
+        elif op in custom_data and arg_name + "_" + op.lower() in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_" + op.lower()]
+        elif "NDArray" in arg_type and arg_name + "_nd" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_nd"]
+        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_4d"]
+        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_3d"]
         elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
-        elif arg_name in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
-        elif "float" in arg_type and arg_name + "_float" in DEFAULTS_INPUTS:
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_float"]
-        elif "Shape" in arg_type and arg_name + "_shape" in DEFAULTS_INPUTS:
+            arg_values[arg_name] = default_inputs[arg_name + "_smce"]
+        elif arg_name in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name]
+        elif "float" in arg_type and arg_name + "_float" in default_inputs:
+            arg_values[arg_name] = default_inputs[arg_name + "_float"]
+        elif "Shape" in arg_type and arg_name + "_shape" in default_inputs:
             # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
             # Ex: axis in sum is shape, axis in sort is int.
-            arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_shape"]
+            arg_values[arg_name] = default_inputs[arg_name + "_shape"]
 
     # Number of different inputs we want to use to test
     # the operator
@@ -340,7 +353,7 @@ def get_all_nn_basic_operators():
     nn_basic_ops = ['FullyConnected', 'Dropout', 'BatchNorm', 'SoftmaxOutput', 'LinearRegressionOutput',
                     'LogisticRegressionOutput', 'MAERegressionOutput', 'SVMOutput', 'L2Normalization',
                     'LayerNorm', 'InstanceNorm', 'Embedding', 'Correlation', 'SpatialTransformer', 'im2col',
-                    'col2im', 'GroupNorm', 'RNN', 'LRN']
+                    'col2im', 'GroupNorm', 'LRN']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()

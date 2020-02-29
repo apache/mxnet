@@ -37,7 +37,7 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 from benchmark.opperf.custom_operations.custom_operations import CustomAddOneProp
 
 
-def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the miscellaneous
     operators in MXNet.
 
@@ -49,6 +49,8 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -59,6 +61,48 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     Dictionary of results. Key -> Name of the operator, Value -> Benchmark results.
 
     """
+
+    standard_inputs_array_ops = [{"args": [(1024, 1024)],
+                                  "num_arrays": 1},
+                                 {"args": [(10000, 1)],
+                                  "num_arrays": 1},
+                                 {"args": [(10000, 10)],
+                                  "num_arrays": 1}]
+    int64_tensor_inputs_array_ops = [{"args": [(2**32, 1)],
+                                      "num_arrays":1}]
+    standard_inputs_add_n = [{"args": [(1024, 1024)]},
+                             {"args": [(10000, 1)]},
+                             {"args": [(10000, 10)]}]
+    int64_tensor_inputs_add_n = [{"args": [(2**16, 2**16)]}]
+    standard_inputs_upsampling = [{"args": (32, 3, 256, 256),
+                                   "scale": 2,
+                                   "sample_type": "nearest"},
+                                  {"args": (32, 3, 10000, 1),
+                                   "scale": 4,
+                                   "sample_type": "nearest"}]
+    int64_tensor_inputs_upsampling = [{"args": (2**32 + 1, 1, 1, 1),
+                                       "scale": 2,
+                                       "sample_type": "nearest"}]
+    standard_inputs_custom = [{"args": [(1024, 1024)],
+                               "op_type": "CustomAddOne"},
+                              {"args": [(10000, 1)],
+                               "op_type": "CustomAddOne"},
+                              {"args": [(10000, 10)],
+                               "op_type": "CustomAddOne"}]
+    int64_tensor_inputs_custom = [{"args": [(2**32 + 1, 1)],
+                                   "op_type": "CustomAddOne"}]
+
+    if int64_tensor == 'on':
+        inputs_array_ops = int64_tensor_inputs_array_ops
+        inputs_add_n = int64_tensor_inputs_add_n
+        inputs_upsampling = int64_tensor_inputs_upsampling
+        inputs_custom = int64_tensor_inputs_custom
+    else:
+        inputs_array_ops = standard_inputs_array_ops
+        inputs_add_n = standard_inputs_add_n
+        inputs_upsampling = standard_inputs_upsampling
+        inputs_custom = standard_inputs_custom
+
     # Individual tests for ops with positional args
     array_ops_benchmark = run_performance_test([getattr(MX_OP_MODULE, "reset_arrays"),
                                                 getattr(MX_OP_MODULE, "multi_all_finite"),
@@ -67,12 +111,7 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                                dtype=dtype,
                                                ctx=ctx,
                                                profiler=profiler,
-                                               inputs=[{"args": [(1024, 1024)],
-                                                        "num_arrays": 1},
-                                                       {"args": [(10000, 1)],
-                                                        "num_arrays": 1},
-                                                       {"args": [(10000, 10)],
-                                                        "num_arrays": 1}],
+                                               inputs=inputs_array_ops,
                                                warmup=warmup,
                                                runs=runs)
     add_n_benchmark = run_performance_test([getattr(MX_OP_MODULE, "add_n")],
@@ -80,9 +119,7 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                            dtype=dtype,
                                            ctx=ctx,
                                            profiler=profiler,
-                                           inputs=[{"args": [(1024, 1024)]},
-                                                   {"args": [(10000, 1)]},
-                                                   {"args": [(10000, 10)]}],
+                                           inputs=inputs_add_n,
                                            warmup=warmup,
                                            runs=runs)
     # There are currently issus with UpSampling with bilinear interpolation.
@@ -92,12 +129,7 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                                 dtype=dtype,
                                                 ctx=ctx,
                                                 profiler=profiler,
-                                                inputs=[{"args": (32, 3, 256, 256),
-                                                         "scale": 2,
-                                                         "sample_type": "nearest"},
-                                                        {"args": (32, 3, 10000, 1),
-                                                         "scale": 4,
-                                                         "sample_type": "nearest"}],
+                                                inputs=inputs_upsampling,
                                                 warmup=warmup,
                                                 runs=runs)
     # Create and register CustomAddOne operator for use in Custom op testing
@@ -108,17 +140,12 @@ def run_mx_misc_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
                                             dtype=dtype,
                                             ctx=ctx,
                                             profiler=profiler,
-                                            inputs=[{"args": [(1024, 1024)],
-                                                     "op_type": "CustomAddOne"},
-                                                    {"args": [(10000, 1)],
-                                                     "op_type": "CustomAddOne"},
-                                                    {"args": [(10000, 10)],
-                                                     "op_type": "CustomAddOne"}],
+                                            inputs=inputs_custom,
                                             warmup=warmup,
                                             runs=runs)
 
     # Fetch remaining Miscellaneous Operators
     mx_misc_ops = get_remaining_miscellaneous_operators()
     # Run benchmarks
-    mx_misc_op_results = run_op_benchmarks(mx_misc_ops, dtype, ctx, profiler, warmup, runs)
+    mx_misc_op_results = run_op_benchmarks(mx_misc_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return merge_map_list(array_ops_benchmark + add_n_benchmark + upsampling_benchmark + custom_benchmark + [mx_misc_op_results])
