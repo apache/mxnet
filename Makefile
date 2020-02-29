@@ -223,11 +223,15 @@ ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/x86_64-linux-gnu/liblapack.a))
+ifeq (,$(wildcard /usr/lib/x86_64-linux-gnu/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.dylib))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
 endif
 endif
 endif

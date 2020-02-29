@@ -71,6 +71,10 @@ struct nrmlp {
   /*! \brief do stable reduction into dst */
   template<typename AType, typename DType>
   MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers, volatile DType src, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     if (src != 0) {
       DType src_abs = abs::Map(src);
       if (scale < src_abs) {
@@ -81,6 +85,7 @@ struct nrmlp {
         sum_of_powers = sum_of_powers + AType(lp_power(static_cast<double>(src_abs / scale), lp));
       }
     }
+#pragma GCC diagnostic pop
   }
 
   /*! \brief combine the results of two reducers */
@@ -111,9 +116,14 @@ struct nrmlp {
   /*! \brief finalize reduction result */
   template<typename DType>
   MSHADOW_XINLINE void Finalize(volatile DType& sum_of_powers, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     if (lp != 0.0) {
       sum_of_powers = scale * DType(lp_power(static_cast<double>(sum_of_powers), 1.0 / lp));
     }
+#pragma GCC diagnostic pop
   }
 
   /*!

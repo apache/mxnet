@@ -173,7 +173,7 @@ class ADTObj : public Object, public InplaceArrayBase<ADTObj, ObjectRef> {
 
   static constexpr const uint32_t _type_index = TypeIndex::kMXNetADT;
   static constexpr const char* _type_key = "MXNet.ADT";
-  MXNET_DECLARE_FINAL_OBJECT_INFO(ADTObj, Object);
+  MXNET_DECLARE_FINAL_OBJECT_INFO(ADTObj, Object)
 
  private:
   /*!
@@ -273,7 +273,7 @@ class ADT : public ObjectRef {
     return ADT(0, std::forward<Args>(args)...);
   }
 
-  MXNET_DEFINE_OBJECT_REF_METHODS(ADT, ObjectRef, ADTObj);
+  MXNET_DEFINE_OBJECT_REF_METHODS(ADT, ObjectRef, ADTObj)
 };
 
 }  // namespace runtime
