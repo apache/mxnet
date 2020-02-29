@@ -69,6 +69,7 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
     np.bool_: 7,
+    np.dtype([('bfloat16', np.uint16)]): 12,
 }
 
 _DTYPE_MX_TO_NP = {
@@ -81,6 +82,7 @@ _DTYPE_MX_TO_NP = {
     5: np.int8,
     6: np.int64,
     7: np.bool_,
+    12: np.dtype([('bfloat16', np.uint16)]),
 }
 
 _STORAGE_TYPE_STR_TO_ID = {
@@ -165,13 +167,17 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
             raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
                             "larger than 2^31 elements. Please build with flag " +
                             "USE_INT64_TENSOR_SIZE=1")
+        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
+            dtype_type = np.dtype(dtype)
+        else:
+            dtype_type = np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreateEx(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
             ctypes.byref(hdl)))
     return hdl
 
@@ -4989,6 +4995,7 @@ class DLDataType(ctypes.Structure):
         "int32": (0, 32, 1),
         "int64": (0, 64, 1),
         "bool": (1, 1, 1),
+        "uint8": (1, 8, 1),
         "uint32": (1, 32, 1),
         "uint64": (1, 64, 1),
         'float16': (2, 16, 1),
@@ -5025,7 +5032,7 @@ def dl_managed_tensor_deleter(dl_managed_tensor_handle):
     ctypes.pythonapi.Py_DecRef(pyobj)
 
 
-def from_numpy(ndarray, zero_copy=True):
+def from_numpy(ndarray, zero_copy=True, array_cls=NDArray):
     """Returns an MXNet's ndarray backed by numpy's ndarray.
     When `zero_copy` is set to be true,
     this API consumes numpy's ndarray and produces MXNet's ndarray
@@ -5037,10 +5044,11 @@ def from_numpy(ndarray, zero_copy=True):
     ----------
     ndarray: numpy.ndarray
         input data
-
     zero_copy: bool
         Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
         This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+    array_cls: ndarray class type
+        The class type of the output array.
 
     Returns
     -------
@@ -5084,4 +5092,4 @@ def from_numpy(ndarray, zero_copy=True):
     c_obj = _make_dl_managed_tensor(ndarray)
     handle = NDArrayHandle()
     check_call(_LIB.MXNDArrayFromDLPackEx(ctypes.byref(c_obj), True, ctypes.byref(handle)))
-    return NDArray(handle=handle)
+    return array_cls(handle=handle)
