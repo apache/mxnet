@@ -815,6 +815,85 @@ OpStatePtr CachedOp::Forward(
   return op_state;
 }
 
+OpStatePtr CachedOp::NaiveForward(
+    const std::shared_ptr<CachedOp>& op_ptr,
+    const std::vector<NDArray*>& inputs,
+    const std::vector<NDArray*>& outputs) {
+  static const auto cached_op = nnvm::Op::Get("_NaiveCachedOp");
+
+  CHECK_EQ(inputs.size(), num_inputs());
+
+  Context default_ctx = inputs[0]->ctx();
+  {
+    auto state_ptr = GetCachedOpState(default_ctx);
+    auto& state = state_ptr.get_state<CachedOpState>();
+
+    const auto& idx = state.info.fwd_graph.indexed_graph();
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      CHECK_EQ(inputs[i]->ctx(), default_ctx)
+          << "CachedOp requires all inputs to live on the same context. But "
+          << idx[idx.input_nodes()[0]].source->attrs.name
+          << " is on " << default_ctx << " while "
+          << idx[idx.input_nodes()[i]].source->attrs.name
+          << " is on " << inputs[i]->ctx();
+    }
+  }
+
+  OpStatePtr op_state;
+  try {
+    // Initialize
+    bool recording = false;
+    op_state = OpStatePtr::Create<DynamicRuntime>();
+    auto& runtime = op_state.get_state<DynamicRuntime>();
+    {
+      auto state_ptr = GetCachedOpState(default_ctx);
+      auto& state = state_ptr.get_state<CachedOpState>();
+      std::lock_guard<std::mutex> lock(state.mutex);
+      SetForwardGraph(&state.info, recording, inputs);
+      runtime.info.fwd_graph = state.info.fwd_graph;
+    }
+    nnvm::Graph& g = runtime.info.fwd_graph;
+    const auto& idx = g.indexed_graph();
+    auto& buff = runtime.buff;
+    auto& states = runtime.op_states;
+
+    // Allocate entries
+    buff.resize(idx.num_node_entries());
+    states.resize(idx.num_nodes());
+    std::vector<NDArray*> arrays;
+    arrays.reserve(buff.size());
+    for (auto& buffered_array : buff) {
+      arrays.push_back(&buffered_array);
+    }
+    std::vector<OpReqType> array_reqs(arrays.size(), kWriteTo);
+    const auto& dispatch_modes = g.GetAttr<DispatchModeVector>("dispatch_mode");
+    const std::string& graph_type = recording ? FULL : FORWARD;
+    std::vector<uint32_t> ref_count =
+      g.GetAttr<std::vector<uint32_t> >(AddPrefix(graph_type, REF_COUNT));
+    for (size_t i = 0; i < idx.num_node_entries(); ++i) {
+      if (ref_count[i] == 0) array_reqs[i] = kNullOp;
+    }
+    CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+
+    
+    mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+    NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
+                  std::move(array_reqs), std::move(ref_count), &states,
+                  dispatch_modes, false, &shapes, false, false);
+    {
+      auto state_ptr = GetCachedOpState(default_ctx);
+      auto& state = state_ptr.get_state<CachedOpState>();
+      auto copied_shape = shapes;
+      std::lock_guard<std::mutex> lock(state.mutex);
+      state.info.fwd_graph.attrs["shape"] = std::make_shared<dmlc::any>(std::move(copied_shape));
+    }
+    g.attrs["shape"] = std::make_shared<dmlc::any>(std::move(shapes));
+  } catch (const dmlc::Error& e) {
+    throw e;
+  }
+  return op_state;
+}
+
 void CachedOp::DynamicBackward(
     const bool retain_graph,
     const OpStatePtr& op_state,
@@ -1336,5 +1415,71 @@ NNVM_REGISTER_OP(_backward_CachedOp)
 .set_attr<FExecType>("FExecType", op::DefaultSubgraphOpExecType)
 .set_attr<bool>("TIsLayerOpBackward", true)
 .set_attr<bool>("TIsBackward", true);
+
+NNVM_REGISTER_OP(_NaiveCachedOp)
+.set_num_inputs([](const NodeAttrs& attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->num_inputs();
+  })
+.set_num_outputs([](const NodeAttrs& attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->num_outputs();
+  })
+.set_attr_parser(CachedOpParamParser)
+.set_attr<nnvm::FGradient>("FGradient",
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(n->attrs.parsed);
+    return op->Gradient(n, ograds);
+  })
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const nnvm::NodeAttrs& attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->ListForwardInputNames();
+  })
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+  [](const nnvm::NodeAttrs& attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op->ListForwardOutputNames();
+  })
+.set_attr<FCreateOpState>("FCreateOpState", CreateCachedOpState)
+.set_attr<mxnet::FInferShape>("FInferShape",
+  [](const nnvm::NodeAttrs& attrs,
+     mxnet::ShapeVector *in_shapes,
+     mxnet::ShapeVector *out_shapes) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op::DefaultSubgraphOpShapeHelper(op->GetForwardSym(), in_shapes, out_shapes);
+  })
+.set_attr<nnvm::FInferType>("FInferType",
+  [](const nnvm::NodeAttrs& attrs,
+     std::vector<int> *in_types,
+     std::vector<int> *out_types) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op::DefaultSubgraphOpTypeHelper(op->GetForwardSym(), in_types, out_types);
+  })
+.set_attr<FInferStorageType>("FInferStorageType",
+  [](const nnvm::NodeAttrs& attrs,
+     const int dev_mask,
+     DispatchMode* dispatch_mode,
+     std::vector<int>* in_stypes,
+     std::vector<int>* out_stypes) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op::DefaultSubgraphOpStorageTypeHelper(op->GetForwardSym(),
+                                                  dev_mask, dispatch_mode,
+                                                  in_stypes, out_stypes);
+  })
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", CachedOpForward)
+.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", CachedOpForward)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+  [](const nnvm::NodeAttrs& attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op::DefaultSubgraphOpMutableInputsHelper(op->GetForwardSym());
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const nnvm::NodeAttrs& attrs) {
+    const CachedOpPtr& op = nnvm::get<CachedOpPtr>(attrs.parsed);
+    return op::DefaultSubgraphOpResourceRequestHelper(op->GetForwardSym());
+  })
+.set_attr<FExecType>("FExecType", ExecType::kNoEngine)
+.add_argument("data", "NDArray-or-Symbol[]", "input data list");
 
 }  // namespace mxnet

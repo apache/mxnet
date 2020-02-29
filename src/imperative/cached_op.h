@@ -388,6 +388,10 @@ class CachedOp {
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
+  virtual OpStatePtr NaiveForward(
+      const std::shared_ptr<CachedOp>& op_ptr,
+      const std::vector<NDArray*>& inputs,
+      const std::vector<NDArray*>& outputs);
   virtual void Backward(
       const bool retain_graph,
       const OpStatePtr& state,

@@ -412,8 +412,7 @@ inline void PushFCompute(const FCompute& fn,
   CHECK(exec_type == ExecType::kSync);
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushSync(
-    [=](RunContext rctx) {
+  const auto& run = [=](RunContext rctx) {
       std::vector<TBlob> input_blobs, output_blobs;
       // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
       std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
@@ -445,8 +444,15 @@ inline void PushFCompute(const FCompute& fn,
       if (is_gpu && !rctx.is_bulk) {
         rctx.get_stream<gpu>()->Wait();
       }
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
+    };
+  if (exec_type == ExecType::kNoEngine) {
+    // execute without engine
+    run(RunContext{ctx, nullptr, nullptr, false});
+  } else {
+    Engine::Get()->PushSync(
+    run, ctx, read_vars, write_vars, FnProperty::kNormal,
     0, op->name.c_str());
+  }
 }
 
 inline void PushFComputeEx(const FComputeEx& fn,
@@ -496,6 +502,8 @@ inline void PushFComputeEx(const FComputeEx& fn,
 
   if (exec_type == ExecType::kCrossDeviceCopy) {
     run(RunContext{ctx, nullptr, nullptr, false});
+  } else if (exec_type == ExecType::kNoEngine) {
+    run(RunContext{ctx, nullptr, nullptr, false}); 
   } else {
     CHECK(exec_type == ExecType::kSync);
     Engine::Get()->PushSync(run, ctx, read_vars, write_vars, FnProperty::kNormal,
@@ -561,7 +569,7 @@ inline void PushOperator(const OpStatePtr& state,
 
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
-    if (exec_type == ExecType::kSubgraphExec) {
+    if (exec_type == ExecType::kSubgraphExec || exec_type == ExecType::kNoEngine) {
       RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
@@ -616,7 +624,7 @@ inline void PushOperator(const OpStatePtr& state,
         }
       };
 
-    if (exec_type == ExecType::kSubgraphExec) {
+    if (exec_type == ExecType::kSubgraphExec || exec_type == ExecType::kNoEngine) {
       RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {

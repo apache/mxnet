@@ -85,14 +85,14 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       threadget = omp_get_num_threads();
     }
     param_.num_workers = std::max(1, threadget);
-    dataset_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
-    // datasets_.clear();
-    // datasets_.reserve(param_.num_workers);
-    // datasets_.emplace_back(dataset);
-    // for (int i = 1; i < param_.num_workers; ++i) {
-    //   datasets_.emplace_back(DatasetPtr(dataset->Clone()));
-    // }
-    dataset_len_ = dataset_->GetLen();
+    // dataset_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
+    datasets_.clear();
+    datasets_.reserve(param_.num_workers);
+    datasets_.emplace_back(dataset);
+    for (int i = 1; i < param_.num_workers; ++i) {
+      datasets_.emplace_back(DatasetPtr(dataset->Clone()));
+    }
+    dataset_len_ = datasets[0]_->GetLen();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
     batchify_fn_ = *static_cast<BatchifyFunctionPtr*>(reinterpret_cast<void*>(param_.batchify_fn));
     this->BeforeFirst();
@@ -125,7 +125,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       // omp_exc_.Run([&] {
       auto idx = idx_ptrs[i];
       std::vector<int> is_temp;
-      inputs[i] = dataset_->GetItem(idx, is_temp);
+      inputs[i] = datasets[i]_->GetItem(idx, is_temp);
       if (i == 0) {
         is_scalars = is_temp;
       }
@@ -162,7 +162,8 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     /*! \brief output */
     TBlobBatch out_;
     /*! \brief pointer to dataset */
-    DatasetPtr dataset_;
+    // DatasetPtr dataset_;
+    std::vector<DatasetPtr> datasets_;
     /*! \brief dataset length */
     int64_t dataset_len_;
     /*! \brief pointer to sampler iterator */
