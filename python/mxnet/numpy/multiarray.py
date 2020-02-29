@@ -199,6 +199,8 @@ _set_np_ndarray_class(_np_ndarray_cls)
 
 _NUMPY_ARRAY_FUNCTION_DICT = {}
 _NUMPY_ARRAY_UFUNC_DICT = {}
+_FALLBACK_ARRAY_FUNCTION_WARNED_RECORD = {}
+_FALLBACK_ARRAY_UFUNC_WARNED_RECORD = {}
 
 
 @set_module('mxnet.numpy')
@@ -272,6 +274,11 @@ class ndarray(NDArray): # pylint: disable=invalid-name
                                      .format(name)
                 onp_op = _get_np_op(name)
                 new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
+                if onp_op not in _FALLBACK_ARRAY_UFUNC_WARNED_RECORD:
+                    import logging
+                    logging.warning("np.%s is a fallback operator, "
+                                    "which is actually using official numpy's implementation", name)
+                    _FALLBACK_ARRAY_UFUNC_WARNED_RECORD[onp_op] = True
                 out = onp_op(*new_inputs, **kwargs)
                 return _as_mx_np_array(out, ctx=inputs[0].ctx)
             else:
@@ -286,6 +293,7 @@ class ndarray(NDArray): # pylint: disable=invalid-name
         this function.
         """
         mx_np_func = _NUMPY_ARRAY_FUNCTION_DICT.get(func, None)
+        func_name = func.__name__
         if mx_np_func is None:
             # try to fallback to official NumPy op
             if is_recording():
@@ -298,6 +306,9 @@ class ndarray(NDArray): # pylint: disable=invalid-name
             if cur_ctx is None:
                 raise ValueError('Unknown context for the input ndarrays. It is probably a bug. Please'
                                  ' create an issue on GitHub.')
+            new_kwargs = {}
+            for k, v in kwargs.items():
+                new_kwargs[k] = v.asnumpy() if isinstance(v, ndarray) else v
             if func not in _FALLBACK_ARRAY_FUNCTION_WARNED_RECORD:
                 import logging
                 logging.warning("np.%s is a fallback operator, "
