@@ -793,7 +793,7 @@ MSHADOW_XINLINE bool MaxValue<bool>(void) {
 /*! \brief maximum value of uint32_t */
 template<>
 MSHADOW_XINLINE uint32_t MaxValue<uint32_t>(void) {
-  return -1;
+  return 0xFFFFFFFF;
 }
 
 /*!

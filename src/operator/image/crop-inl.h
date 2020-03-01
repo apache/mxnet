@@ -477,7 +477,7 @@ inline void RandomResizedCropOpForward(const nnvm::NodeAttrs &attrs,
   auto scaled_shape = ScaleDown(src_size, Tuple<int>({param.width, param.height}));
   int x0 = (param.width - scaled_shape[0]) / 2;
   int y0 = (param.height - scaled_shape[1]) / 2;
-  CHECK(x0 > 0 && y0 > 0) << "Invalid center crop: " << x0 << ", " << y0;
+  CHECK(x0 >= 0 && y0 >= 0) << "Invalid center crop: " << x0 << ", " << y0;
   if (scaled_shape[0] == param.width && scaled_shape[1] == param.height) {
     // no need to resize
     CropImpl<xpu>(x0, y0, scaled_shape[0], scaled_shape[1], inputs, outputs, ctx, req);
