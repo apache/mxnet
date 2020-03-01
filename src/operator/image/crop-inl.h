@@ -406,7 +406,7 @@ inline void CropResizeImpl(const OpContext &ctx,
                            int resize_width, int resize_height, int interp) {
   auto& dshape = inputs[0].shape_;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  CHECK(x0 > 0 && y0 > 0 && crop_width > 0 && crop_height > 0 && resize_width > 0 && resize_height > 0)
+  CHECK(x0 >= 0 && y0 >= 0 && crop_width > 0 && crop_height > 0 && resize_width > 0 && resize_height > 0)
     << "Invalid crop resize arguments: " << x0 << ", " << y0 << ", " << crop_width << ", " << crop_height
     << ", " << resize_width << ", " << resize_height;
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
