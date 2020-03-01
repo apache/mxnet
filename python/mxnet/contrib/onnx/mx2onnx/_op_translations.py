@@ -950,6 +950,31 @@ def convert_concat(node, **kwargs):
     )
     return [concat_node]
 
+@mx_op.register("_zeros")
+@mx_op.register("_ones")
+@mx_op.register("_full")
+def convert_full(node, **kwargs):
+    """Map MXNet's _zeros, _ones and _full operators attributes to onnx's
+    tensors and return the created node.
+    """
+    # ToDo: Use Constant or ConstantOfShape, when Issue #15101 is resolved?
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    del input_nodes
+
+    # Convert "0"s dimensions to "1"s. This is a workaround for the case, where
+    # mxnet symbols can broadcast "0"s, while ONNX can only broadcast over "1"s
+    shape = convert_string_to_list(attrs["shape"])
+    shape = tuple(dim if dim else 1 for dim in shape)
+
+    value = {
+        '_zeros': 0.0,
+        '_ones': 1.0,
+        '_full': eval(attrs.get('value', '0')),
+    }[node['op']]
+    dtype = attrs.get('dtype')
+    data = np.full(shape, value, dtype)
+
+    return create_helper_tensor_node(data, name, kwargs)
 
 @mx_op.register("transpose")
 def convert_transpose(node, **kwargs):
