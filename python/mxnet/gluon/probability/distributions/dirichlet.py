@@ -18,6 +18,53 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Dirichlet Distribution."""
-# __all__ = ['dirichlet']
+__all__ = ['Dirichlet']
 
-from .distribution import Distribution
+from .exp_family import ExponentialFamily
+from .constraint import Positive, Simplex
+from .utils import getF
+
+class Dirichlet(ExponentialFamily):
+    has_grad = False
+    support = Simplex()
+    arg_constraints = {'alpha', Positive()}
+
+    def __init__(self, alpha, F=None, validate_args=None):
+        _F = F if F is not None else getF(alpha)
+        self.alpha = alpha
+        super(Dirichlet, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
+    
+    def sample(self, size=None):
+        F = self.F
+        if size is None:
+            size = ()
+            alpha = self.alpha
+        else:
+            if isinstance(size, int):
+                alpha = F.np.broadcast_to(self.alpha, (size,) + (-2,))
+            else:
+                alpha = F.np.broadcast_to(self.alpha, size + (-2,))
+        gamma_samples = F.np.random.gamma(alpha, 1)
+        s = gamma_samples.sum(-1, keepdims=True)
+        return gamma_samples / s
+
+    def log_prob(self, value):
+        F = self.F
+        lgamma = F.npx.gammaln
+        log = F.np.log
+        alpha = self.alpha
+        return (log(value) * (alpha - 1.0)).sum(-1) + lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)
+
+    @property
+    def mean(self):
+        alpha = self.alpha
+        return alpha / alpha.sum(-1, keepdims=True)
+
+    @property
+    def variance(self):
+        a = self.alpha
+        s = a.sum(-1, True)
+        return a * (s - a) / ((s + 1) * s ** 2)
+
+
+        

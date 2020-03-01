@@ -46,11 +46,30 @@ class Gamma(ExponentialFamily):
         b = 1 / self.scale
         return a * log_fn(b) + (a - 1) * log_fn(value) - b * value - lgamma(a)
 
+    def broadcast_to(self, batch_shape):
+        new_instance = self.__new__(type(self))
+        F = self.F
+        new_instance.shape = F.np.broadcast_to(self.shape, batch_shape)
+        new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
+        super(Gamma, new_instance).__init__(F=F,
+                                             event_dim=self.event_dim,
+                                             validate_args=False)
+        new_instance._validate_args = self._validate_args
+        return new_instance
+
     def sample(self, size=None):
         return self.F.np.random.gamma(self.shape, self.scale, size)
 
     def sample_n(self, size=None):
         return self.F.np.random.gamma(self.shape, self.scale, sample_n_shape_converter(size))
+
+    @property
+    def mean(self):
+        return self.shape * self.scale
+
+    @property
+    def variance(self):
+        return self.shape * (self.scale ** 2)
 
     def entropy(self):
         # TODO: require computing derivative of gammaln(shape)

@@ -119,8 +119,14 @@ def test_gluon_gamma():
             self._func = func
 
         def hybrid_forward(self, F, shape, scale, *args):
-            normal = mgp.Gamma(shape, scale, F)
-            return getattr(normal, self._func)(*args)
+            gamma = mgp.Gamma(shape, scale, F)
+            if (len(args) == 0):
+                out = getattr(gamma, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
+            return getattr(gamma, self._func)(*args)
 
     shapes = [(), (1,), (2, 3), 6]
 
@@ -135,6 +141,74 @@ def test_gluon_gamma():
         mx_out = net(alpha, scale, samples).asnumpy()
         np_out = ss.gamma(a=alpha.asnumpy(), loc=0, scale=scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test `mean` and `var`
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        for func in ['mean', 'variance']:
+            alpha = np.random.uniform(0.5, 1.5, shape)
+            scale = np.random.uniform(0.5, 1.5, shape)
+            net = TestGamma(func)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(alpha, scale).asnumpy()
+            ss_gamma = ss.gamma(a=alpha.asnumpy(), loc=0, scale=scale.asnumpy())
+            if func == 'mean':
+                np_out = ss_gamma.mean()
+            else:
+                np_out = ss_gamma.var()
+            assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                rtol=1e-3, use_broadcast=False)
+
+                        
+@with_seed()
+@use_np
+def test_gluon_dirichlet():
+    class TestDirichlet(HybridBlock):
+        def __init__(self, func):
+            super(TestDirichlet, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, alpha, *args):
+            dirichlet = mgp.Dirichlet(alpha, F)
+            if (len(args) == 0):
+                out = getattr(dirichlet, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
+            return getattr(dirichlet, self._func)(*args)
+
+    event_shapes = [2, 5, 10]
+    batch_shapes = [None, (2, 3)] # Temporarily remove case (4, 0, 5) due to zero-dim sum issue.
+
+    # Test sampling
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        for hybridize in [True, False]:
+            desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
+            alpha = np.random.uniform(size=desired_shape)
+            net = TestDirichlet("sample")
+            if hybridize:
+                net.hybridize()
+            mx_out = net(alpha).asnumpy()
+            # Check shape
+            assert mx_out.shape == desired_shape
+            # Check simplex
+            assert_almost_equal(mx_out.sum(-1), _np.ones_like(mx_out.sum(-1)), atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test log_prob
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes[:1]):
+        for hybridize in [True, False]:
+            desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
+            alpha = np.random.uniform(size=desired_shape)
+            np_samples = _np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape)
+            net = TestDirichlet("log_prob")
+            if hybridize:
+                net.hybridize()
+            mx_out = net(alpha, np.array(np_samples)).asnumpy()
+            np_out = ss.dirichlet(alpha=alpha.asnumpy()).logpdf(np_samples)
+            assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
 

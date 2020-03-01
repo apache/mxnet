@@ -27,6 +27,8 @@ from .normal import *
 
 from .gamma import *
 
+from .dirichlet import *
+
 from .half_normal import *
 
 from .independent import *
