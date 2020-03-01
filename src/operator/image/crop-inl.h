@@ -104,6 +104,8 @@ inline void CropImpl(int x,
                       const OpContext &ctx,
                       const std::vector<OpReqType> &req) {
   using namespace mshadow;
+  CHECK_GT(width, 0) << "width <= 0";
+  CHECK_GT(height, 0) << "height <= 0";
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
   MXNET_NDIM_SWITCH(data.ndim(), ndim, {
@@ -404,6 +406,9 @@ inline void CropResizeImpl(const OpContext &ctx,
                            int resize_width, int resize_height, int interp) {
   auto& dshape = inputs[0].shape_;
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  CHECK(x0 > 0 && y0 > 0 && crop_width > 0 && crop_height > 0 && resize_width > 0 && resize_height > 0)
+    << "Invalid crop resize arguments: " << x0 << ", " << y0 << ", " << crop_width << ", " << crop_height
+    << ", " << resize_width << ", " resize_height;
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     if (dshape.ndim() == 3) {
       Tensor<xpu, 3, DType> workspace = ctx.requested[1].get_space_typed<xpu, 3, DType>(
