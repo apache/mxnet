@@ -262,7 +262,8 @@ class ImageRecordDataset(dataset.RecordFileDataset):
 
     def __mx_handle__(self):
         from .._internal import ImageRecordFileDataset as _ImageRecordFileDataset
-        return _ImageRecordFileDataset(rec_file=self.filename, idx_file=self.idx_file)
+        return _ImageRecordFileDataset(rec_file=self.filename, idx_file=self.idx_file,
+                                       flag=self._flag)
 
 
 class ImageFolderDataset(dataset.Dataset):

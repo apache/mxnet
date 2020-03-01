@@ -241,7 +241,7 @@ class ImageRecordFileDataset : public Dataset {
       }
 #if MXNET_USE_OPENCV
       cv::Mat buf(1, size, CV_8U, s);
-      cv::Mat res = cv::imdecode(buf, -1);
+      cv::Mat res = cv::imdecode(buf, param_.flag);
       CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
       const int n_channels = res.channels();
       NDArray ret;
