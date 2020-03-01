@@ -141,6 +141,8 @@ struct ImageRecordFileDatasetParam : public dmlc::Parameter<ImageRecordFileDatas
             .describe("The absolute path of record file.");
         DMLC_DECLARE_FIELD(idx_file)
             .describe("The path of the idx file.");
+        DMLC_DECLARE_FIELD(flag).set_default(1)
+            .describe("If 1, always convert to colored, if 0 always convert to grayscale.");
     }
 };  // struct ImageRecordFileDatasetParam
 
