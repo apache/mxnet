@@ -139,13 +139,12 @@ class StackBatchify : public BatchifyFunction {
           MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
             DType *ptr = ret[i].dptr<DType>();
             auto asize = ashape.Size();
-            // _Pragma("omp parallel for num_threads(bs)")
+            _Pragma("omp parallel for num_threads(bs)")
             for (size_t j = 0; j < bs; ++j) {
               inputs[j][i].WaitToRead();
               mshadow::Copy(
                 TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0).FlatTo2D<cpu, DType>(),
                 inputs[j][i].data().FlatTo2D<cpu, DType>());
-              // std::memcpy(ptr + asize * j, inputs[j][i].data().dptr<DType>(), asize * sizeof(DType));
             }
           })
       }
@@ -238,7 +237,7 @@ class PadBatchify : public BatchifyFunction {
                       static_cast<DType>(param_.pad_val));
             DType *ptr = ret[i].dptr<DType>();
             auto asize = ashape.Size();
-            // _Pragma("omp parallel for num_threads(bs)")
+            _Pragma("omp parallel for num_threads(bs)")
             for (size_t j = 0; j < bs; ++j) {
               using namespace mshadow::expr;
               auto compact_shapes = CompactShapes(ashape, inputs[j][i].shape());
