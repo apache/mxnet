@@ -408,7 +408,7 @@ inline void CropResizeImpl(const OpContext &ctx,
   Stream<xpu> *s = ctx.get_stream<xpu>();
   CHECK(x0 > 0 && y0 > 0 && crop_width > 0 && crop_height > 0 && resize_width > 0 && resize_height > 0)
     << "Invalid crop resize arguments: " << x0 << ", " << y0 << ", " << crop_width << ", " << crop_height
-    << ", " << resize_width << ", " resize_height;
+    << ", " << resize_width << ", " << resize_height;
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     if (dshape.ndim() == 3) {
       Tensor<xpu, 3, DType> workspace = ctx.requested[1].get_space_typed<xpu, 3, DType>(
@@ -475,8 +475,9 @@ inline void RandomResizedCropOpForward(const nnvm::NodeAttrs &attrs,
   }
   // fallback to center crop
   auto scaled_shape = ScaleDown(src_size, Tuple<int>({param.width, param.height}));
-  int x0 = (scaled_shape[0] - param.width) / 2;
-  int y0 = (scaled_shape[1] - param.height) / 2;
+  int x0 = (param.width - scaled_shape[0]) / 2;
+  int y0 = (param.height - scaled_shape[1]) / 2;
+  CHECK(x0 > 0 && y0 > 0) << "Invalid center crop: " << x0 << ", " << y0;
   if (scaled_shape[0] == param.width && scaled_shape[1] == param.height) {
     // no need to resize
     CropImpl<xpu>(x0, y0, scaled_shape[0], scaled_shape[1], inputs, outputs, ctx, req);
