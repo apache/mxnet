@@ -878,7 +878,7 @@ OpStatePtr CachedOp::NaiveForward(
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     imperative::NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
                   std::move(array_reqs), std::move(ref_count), &states,
-                  dispatch_modes, false, &shapes, nullptr, false);
+                  dispatch_modes, false, &shapes, nullptr, false, true);
     {
       auto state_ptr = GetCachedOpState(default_ctx);
       auto& state = state_ptr.get_state<CachedOpState>();
