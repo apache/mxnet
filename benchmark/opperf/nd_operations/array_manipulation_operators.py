@@ -69,7 +69,7 @@ Array Join & Split Operators
 """
 
 
-def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
     rearrange operators in MXNet.
 
@@ -81,6 +81,8 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -99,7 +101,7 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     return mx_rearrange_op_results
 
 
-def run_shape_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_shape_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
     array shape operators  in MXNet.
 
@@ -111,6 +113,8 @@ def run_shape_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nati
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -129,7 +133,7 @@ def run_shape_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nati
     return mx_shape_op_results
 
 
-def run_expanding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_expanding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
     array expanding operators  in MXNet.
 
@@ -141,6 +145,8 @@ def run_expanding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -159,7 +165,7 @@ def run_expanding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     return mx_expanding_op_results
 
 
-def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
     array rounding operators  in MXNet.
 
@@ -171,6 +177,8 @@ def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -189,7 +197,7 @@ def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     return mx_rounding_op_results
 
 
-def run_join_split_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
+def run_join_split_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
     """Runs benchmarks with the given context and precision (dtype) for all the
     join & split operators  in MXNet.
 
@@ -201,6 +209,8 @@ def run_join_split_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler=
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100

@@ -20,7 +20,7 @@ from operator import itemgetter
 from mxnet import runtime
 import mxnet as mx
 
-from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, MX_OP_MODULE
+from benchmark.opperf.rules.default_params import DEFAULTS_INPUTS, DEFAULTS_INPUTS_LARGE_TENSOR, MX_OP_MODULE
 
 
 def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_backward=True):
@@ -109,7 +109,7 @@ def prepare_op_inputs(arg_params, arg_values):
     return inputs
 
 
-def prepare_op_inputs(op, arg_params):
+def prepare_op_inputs(op, arg_params, int64_tensor):
     inputs = []
 
     # 4d tensor is needed by following ops
@@ -120,16 +120,29 @@ def prepare_op_inputs(op, arg_params):
 
     # For ops with args that need to change shape/value for different ops
     custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian',
-                   'SpatialTransformer', 'col2im', 'RNN', 'GroupNorm', 'Dropout', 'FullyConnected',
+                   'SpatialTransformer', 'col2im', 'GroupNorm', 'Dropout', 'FullyConnected',
                    'SoftmaxOutput', 'LinearRegressionOutput', 'BatchNorm', 'LogisticRegressionOutput',
                    'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
+
+    custom_data_int64 = {'random_pdf_dirichlet', 'random_pdf_exponential', 'random_pdf_gamma',
+                         'random_pdf_generalized_negative_binomial', 'random_pdf_negative_binomial',
+                         'random_pdf_normal', 'random_pdf_poisson', 'random_pdf_uniform', 'sample_exponential',
+                         'sample_normal', 'sample_poisson', 'sample_uniform', 'sample_gamma',
+                         'sample_generalized_negative_binomial', 'sample_negative_binomial', 'CTCLoss',
+                         'ctc_loss', 'multi_lars'}
 
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
 
     # following ops need atleast 1 dim of size 1
     ops_dim1 = ['broadcast_axis', 'broadcast_like', 'broadcast_to', 'broadcast_axes']
+
+    if int64_tensor == 'on':
+        default_inputs = DEFAULTS_INPUTS_LARGE_TENSOR
+        custom_data |= custom_data_int64
+    else:
+        default_inputs = DEFAULTS_INPUTS
 
     # Prepare op to default input mapping
     arg_values = {}
@@ -356,7 +369,7 @@ def get_all_nn_basic_operators():
     nn_basic_ops = ['FullyConnected', 'Dropout', 'BatchNorm', 'SoftmaxOutput', 'LinearRegressionOutput',
                     'LogisticRegressionOutput', 'MAERegressionOutput', 'SVMOutput', 'L2Normalization',
                     'LayerNorm', 'InstanceNorm', 'Embedding', 'Correlation', 'SpatialTransformer', 'im2col',
-                    'col2im', 'GroupNorm', 'RNN', 'LRN']
+                    'col2im', 'GroupNorm', 'LRN']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
