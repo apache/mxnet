@@ -950,6 +950,73 @@ def convert_concat(node, **kwargs):
     )
     return [concat_node]
 
+@mx_op.register('_rnn_param_concat')
+def convert_rnn_param_concat(node, **kwargs):
+    """Map MXNet's _rnn_param_concat operator attributes to onnx's Concat
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get("dim"))
+
+    # mxnet RNN node and ONNX RNN/LSTM/GRU nodes
+    # use different ways to store their parameters
+
+    # The conversion between these formats is broken into 2 steps
+    # The first step (performed here in _rnn_param_concat) regroups the
+    # flattened parameters according to the table below.
+    # The second step corrects the shapes and orders of gates and is
+    # performed and described in more detail in the RNN node
+
+    # mxnet            [ONNX] -> ONNX (group)
+    # i2h_weights [W (+  WB)] -> W    (input weights)
+    # h2h_weights [R (+  RB)] -> R    (recurrence weights)
+    # i2h_biases [Wb (+ WBb)] -> B = [Wb + Rb (+ WBb + RBb)]
+    # h2h_biases [Rb (+ RBb)] ->      (biases)
+
+    split = len(input_nodes) // 2
+    weights, biases = input_nodes[:split], input_nodes[split:]
+    i2h_weights = weights[::2]
+    h2h_weights = weights[1::2]
+    i2h_biases = biases[::2]
+    h2h_biases = biases[1::2]
+    reordered_biases = [
+        bias
+        for pair in zip(i2h_biases, h2h_biases)
+        for bias in pair
+    ]
+
+    # The order of mxnet parameters in the inputs is:
+    # [
+    #     '{}{}_{}_{}'.format(d, l, g, t)
+    #     for t in ['weight', 'bias']
+    #     for l in range(num_layers)
+    #     for d in ['l', 'r'][:num_directions]
+    #     for g in ['i2h', 'h2h']
+    # ]
+
+    w = onnx.helper.make_node(
+        "Concat",
+        inputs=i2h_weights,
+        outputs=[name + "__W"],
+        axis=axis,
+        name=name + "__W"
+    )
+    r = onnx.helper.make_node(
+        "Concat",
+        inputs=h2h_weights,
+        outputs=[name + "__R"],
+        axis=axis,
+        name=name + "__R"
+    )
+    b = onnx.helper.make_node(
+        "Concat",
+        inputs=reordered_biases,
+        outputs=[name + "__B"],
+        axis=axis,
+        name=name + "__B"
+    )
+    return [w, r, b]
+
 @mx_op.register("_zeros")
 @mx_op.register("_ones")
 @mx_op.register("_full")
