@@ -28,6 +28,7 @@
 
 #include "./inst_vector.h"
 #include "./iter_prefetcher.h"
+#include "../profiler/custom_op_profiler.h"
 
 namespace mxnet {
 namespace io {
@@ -118,6 +119,10 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     // __getitem__
     std::vector<std::vector<NDArray> > inputs(batch_size);
     std::vector<int> is_scalars;
+    bool profiling = profiler::Profiler::Get()->IsProfiling(profiler::Profiler::kImperative);
+    if (profiling) {
+      profiler::CustomOpProfiler::Get()->OnCustomBegin("MXThreadedDataLoaderGetItems");
+    }
     #pragma omp parallel for num_threads(param_.num_workers)
     for (size_t i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
@@ -129,6 +134,9 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
         }
       });
     }
+    if (profiling) {
+      profiler::CustomOpProfiler::Get()->OnCustomEnd();
+    }
     omp_exc_.Rethrow();
 
     // pad to normal batch size
@@ -137,7 +145,13 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     }
 
     // batchify
+    if (profiling) {
+      profiler::CustomOpProfiler::Get()->OnCustomBegin("MXThreadedDataLoaderBatchify");
+    }
     auto batched_data = batchify_fn_->Batchify(inputs);
+    if (profiling) {
+      profiler::CustomOpProfiler::Get()->OnCustomEnd();
+    }
     for (size_t i = 0; i < is_scalars.size(); ++i) {
       if (is_scalars[i] == 1) {
         CHECK_EQ(batched_data[i].ndim(), 2);
