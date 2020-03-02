@@ -84,7 +84,7 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
             xs = setup(nd=nd)
 
         args = {name: x for name, x in zip(input_names, xs)}
-        ys_sym = sym.bind(mx.cpu(), args=args).forward()
+        ys_sym = sym.bind(mx.context.current_context(), args=args).forward()
 
         ys_sym_np = [y.asnumpy() for y in ys_sym]
         _all_same(ys_np, ys_sym_np)
@@ -105,7 +105,7 @@ def _dc_empty_setup(*, nd):
 
 def test_dc_no_inputs_single_output():
     def f(*, nd):
-        a = nd.arange(10, ctx=mx.cpu(0))
+        a = nd.arange(10)
         b = a + nd.arange(a.shape[0])
         c = b - 1
         return [c]
@@ -115,7 +115,7 @@ def test_dc_no_inputs_single_output():
 
 def test_dc_no_inputs_reshape():
     def f(*, nd):
-        a = nd.arange(10, ctx=mx.cpu(0))
+        a = nd.arange(10)
         b = a + nd.arange(a.shape[0])
         c = b.reshape((5, 2))
         d = b.reshape((2, 5))
@@ -127,7 +127,7 @@ def test_dc_no_inputs_reshape():
 
 def test_dc_no_inputs_slice():
     def f(*, nd):
-        a = nd.arange(10, ctx=mx.cpu(0))
+        a = nd.arange(10)
         b = a[:5]
         if nd is mx.nd:
             c = nd.concat(b, b, dim=0)
@@ -140,7 +140,7 @@ def test_dc_no_inputs_slice():
 
 def test_dc_no_inputs_subset_of_output():
     def f(*, nd):
-        a = nd.arange(10, ctx=mx.cpu(0))
+        a = nd.arange(10)
         if nd is mx.nd:
             b, c = mx.nd.split(a, 2, axis=0)
         else:
@@ -215,14 +215,14 @@ def test_dc_inplace_special_case():
 ###############################################################################
 @raises(MXNetError)  # Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
 def test_dc_input_part_of_output():
-    a = mx.np.arange(10, ctx=mx.cpu(0))
+    a = mx.np.arange(10)
     with dc.context():
         b = a + 1
     dc.get_symbol([a], [a, b])
 
 
 def test_dc_get_symbol_called_twice():
-    a = mx.np.arange(10, ctx=mx.cpu(0))
+    a = mx.np.arange(10)
     with dc.context():
         b = a + 1
     sym1 = dc.get_symbol([a], [b], input_names=['my_input1'])
@@ -235,13 +235,13 @@ def test_dc_get_symbol_called_twice():
 
 def test_dc_no_inputs_context_switch():
     def f(*, nd):
-        a = nd.arange(10, ctx=mx.cpu(0))
+        a = nd.arange(10)
         if nd is mx.nd:
             b = a.as_in_context(mx.cpu(1))
-            c = (b - 1).as_in_context(mx.cpu(0))
+            c = (b - 1).as_in_context(mx.context.current_context())
         else:
             b = a.as_in_ctx(mx.cpu(1))
-            c = (b - 1).as_in_ctx(mx.cpu(0))
+            c = (b - 1).as_in_ctx(mx.context.current_context())
         return [c]
 
     _assert_dc(_dc_empty_setup, f)
@@ -251,10 +251,10 @@ def test_dc_context_switch():
     def f(a, *, nd):
         if nd is mx.nd:
             b = a.as_in_context(mx.cpu(1))
-            c = (b - 1).as_in_context(mx.cpu(0))
+            c = (b - 1).as_in_context(mx.context.current_context())
         else:
             b = a.as_in_ctx(mx.cpu(1))
-            c = (b - 1).as_in_ctx(mx.cpu(0))
+            c = (b - 1).as_in_ctx(mx.context.current_context())
         return [c]
 
     _assert_dc(_dc_simple_setup, f)
@@ -312,7 +312,7 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
 
 
 def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
-    return [nd.ones(shape=shape, ctx=mx.cpu())]
+    return [nd.ones(shape=shape, ctx=mx.context.current_context())]
 
 
 def test_dc_hybridblock():
@@ -350,7 +350,7 @@ def test_dc_hybridblock_deferred_init_no_infer_shape():
 
     net = MyBlock()
     net.initialize()
-    data = mx.nd.ones(shape=(8, 10), ctx=mx.cpu())
+    data = mx.nd.ones(shape=(8, 10), ctx=mx.context.current_context())
     net(data)  # Raises RuntimeError
 
 
