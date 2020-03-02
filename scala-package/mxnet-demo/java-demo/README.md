@@ -120,5 +120,5 @@ sudo apt install libopencv-imgcodecs3.4
 
 Is there any other version available?
 
-You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.6.0-SNAPSHOT~~).
+You can find nightly release version from [here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.7.0-SNAPSHOT~~).
 Please keep the same version in the pom file or [other versions in here](https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~~~) to run this demo.

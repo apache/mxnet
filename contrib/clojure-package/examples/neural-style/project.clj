@@ -20,6 +20,6 @@
   :plugins [[lein-cljfmt "0.5.7"]]
   :repositories [["vendredi" {:url "https://repository.hellonico.info/repository/hellonico/"}]]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.6.0-SNAPSHOT"]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.7.0-SNAPSHOT"]
                  [origami "4.0.0-3"]]
   :main neural-style.core)
