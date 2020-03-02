@@ -271,7 +271,7 @@ def test_dc_astype():
 ###############################################################################
 # Gluon
 ###############################################################################
-def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True):
+def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True):
     """Compare results of deferred compute and normal imperative mode.
 
     Parameters
@@ -285,6 +285,8 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True):
         only be called once.
     numpy : bool
         If True, use mx.np. Otherwise mx.nd.
+    autograd : bool
+        Wrap in autograd
 
     """
     nd = mx.np if numpy else mx.nd
@@ -296,7 +298,14 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True):
     net.hybridize()
     if setup_is_deterministic:
         xs = setup(nd=nd)
-    ys_hybrid = net(*xs)
+
+    if autograd:
+        with mx.autograd.record():
+            ys_hybrid = net(*xs)
+        mx.autograd.backward(ys_hybrid)
+        [p.grad() for p in net.collect_params().values()]
+    else:
+        ys_hybrid = net(*xs)
     ys_hybrid_np = [y.asnumpy() for y in ys_hybrid]
 
     _all_same(ys_np, ys_hybrid_np)

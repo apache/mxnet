@@ -28,7 +28,7 @@ from collections import OrderedDict, defaultdict
 import numpy as np
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer, np_symbol, _deferred_compute as dc
+from .. import symbol, ndarray, initializer, np_symbol, autograd, _deferred_compute as dc
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -949,7 +949,7 @@ class HybridBlock(Block):
             else:
                 arg_names = ['data{}'.format(i) for i, ele in enumerate(real_args)]
 
-            with dc.context():
+            with autograd.pause(), dc.context():
                 out = super().__call__(*args)
             flatten_out, self._out_format = _flatten(out, "output")
 
