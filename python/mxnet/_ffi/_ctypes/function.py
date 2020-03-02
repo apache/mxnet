@@ -114,7 +114,8 @@ class FunctionBase(object):
             raise get_last_ffi_error()
         _ = temp_args
         _ = args
-        return RETURN_SWITCH[ret_tcode.value](ret_val)
+        return (RETURN_SWITCH[ret_tcode.value](ret_val) if ret_tcode.value != TypeCode.PYARG
+                else RETURN_SWITCH[ret_tcode.value](ret_val, args)) 
 
 
 _CLASS_OBJECT = None

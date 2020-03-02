@@ -32,6 +32,7 @@
 #include <mxnet/runtime/container.h>
 #include <mxnet/runtime/ffi_helper.h>
 #include <mxnet/runtime/data_type.h>
+#include <mxnet/runtime/py_arg.h>
 #include <mxnet/node/container.h>
 #include <mxnet/ir/expr.h>
 #include <mxnet/ndarray.h>
@@ -687,6 +688,11 @@ class MXNetRetValue : public MXNetPODValue_ {
   MXNetRetValue& operator=(::mxnet::NDArray* value) {
     this->SwitchToPOD(kNDArrayHandle);
     value_.v_handle = reinterpret_cast<void*>(value);
+    return *this;
+  }
+  MXNetRetValue& operator=(const PythonArg& value) {
+    this->SwitchToPOD(kPyArg);
+    value_.v_int64 = value.offset();
     return *this;
   }
   template<typename T,

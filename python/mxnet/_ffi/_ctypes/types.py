@@ -38,7 +38,7 @@ class TypeCode(object):
     FUNC_HANDLE = 10
     STR = 11
     BYTES = 12
-    NDARRAY_CONTAINER = 13
+    PYARG = 13
     NDARRAYHANDLE = 14
     EXT_BEGIN = 15
 
@@ -54,5 +54,6 @@ RETURN_SWITCH = {
     TypeCode.INT: lambda x: x.v_int64,
     TypeCode.FLOAT: lambda x: x.v_float64,
     TypeCode.NULL: lambda x: None,
-    TypeCode.NDARRAYHANDLE: lambda x: _global_var._np_ndarray_cls(handle=NDArrayHandle(x.v_handle))
+    TypeCode.NDARRAYHANDLE: lambda x: _global_var._np_ndarray_cls(handle=NDArrayHandle(x.v_handle)),
+    TypeCode.PYARG: lambda x, args: args[x.v_int64],
 }

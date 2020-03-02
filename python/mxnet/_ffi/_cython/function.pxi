@@ -69,9 +69,13 @@ cdef inline int make_arg(object arg,
     return 0
 
 
-cdef inline object make_ret(MXNetValue value, int tcode):
+cdef inline object make_ret(MXNetValue value, int tcode, tuple args):
     """convert result to return value."""
-    if tcode == kNull:
+    if tcode == kNDArrayHandle:
+        return c_make_array(value.v_handle)
+    elif tcode == kPyArg:
+        return args[value.v_int64]
+    elif tcode == kNull:
         return None
     elif tcode == kInt:
         return value.v_int64
@@ -81,8 +85,6 @@ cdef inline object make_ret(MXNetValue value, int tcode):
         return py_str(value.v_str)
     elif tcode == kHandle:
         return ctypes_handle(value.v_handle)
-    elif tcode == kNDArrayHandle:
-        return c_make_array(value.v_handle)
     raise ValueError("Unhandled type code %d" % tcode)
 
 
@@ -166,4 +168,4 @@ cdef class FunctionBase:
         cdef MXNetValue ret_val
         cdef int ret_tcode
         FuncCall(self.chandle, args, &ret_val, &ret_tcode)
-        return make_ret(ret_val, ret_tcode)
+        return make_ret(ret_val, ret_tcode, args)

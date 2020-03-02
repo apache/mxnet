@@ -35,6 +35,7 @@ void SetAttrDict<double>(nnvm::NodeAttrs* attrs) {
 
 void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+  using namespace runtime;
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   NDArray* inputs[] = {lhs, rhs};
@@ -42,11 +43,16 @@ void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
 }
 
 void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+  using namespace runtime;
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   attrs.parsed = rhs;
@@ -56,11 +62,16 @@ void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
 }
 
 void UFuncHelper(double lhs, NDArray* rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+  using namespace runtime;
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   attrs.parsed = lhs;
@@ -70,7 +81,11 @@ void UFuncHelper(double lhs, NDArray* rhs, NDArray* out,
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
 }
 
 void UFuncHelper(runtime::MXNetArgs args,

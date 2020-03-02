@@ -57,7 +57,11 @@ MXNET_REGISTER_API("_npi.cumsum")
   NDArray** out = outputs[0] == nullptr ? nullptr : outputs;
   int num_outputs = outputs[0] != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
 });
 
 }  // namespace mxnet
