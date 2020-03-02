@@ -499,6 +499,7 @@ inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
                         const Tensor<cpu, 1, IndexType>& index,
                         const Tensor<cpu, 2, DType> &src) {
   const int K = dst.shape_[0];
+#pragma omp parallel for
   for (index_t y = 0; y < index.size(0); ++y) {
     int j = index[y];
     if (clip) {
