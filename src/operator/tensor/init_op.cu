@@ -61,6 +61,9 @@ NNVM_REGISTER_OP(_ones)
 NNVM_REGISTER_OP(_full)
 .set_attr<FCompute>("FCompute<gpu>", InitFillWithScalarCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_full)
+.set_attr<FCompute>("FCompute<gpu>", InitFillWithScalarCompute<gpu>);
+
 NNVM_REGISTER_OP(_arange)
 .set_attr<FCompute>("FCompute<gpu>", RangeCompute<gpu, RangeParam>);
 

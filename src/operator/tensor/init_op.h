@@ -292,7 +292,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
     DMLC_DECLARE_FIELD(dtype)
       .set_default(-1)
       .add_enum("None", -1)
-      MXNET_ADD_ALL_TYPES
+      MXNET_ADD_ALL_TYPES_WITH_BOOL
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
