@@ -282,7 +282,7 @@ DEFAULT_LRS = [(0.1,0.1)]
 DEFAULT_LR = [0.1,0.5,0.9]
 DEFAULT_RHO = [0.1,0.5,0.9]
 DEFAULT_MOMENTUM = [0.1,0.5,0.9]
-DEFAULT_EPSILON = [1e-08]
+DEFAULT_EPSILON = [1e-05]
 DEFAULT_BETA_1 = [0.1, 0.5, 0.9]
 DEFAULT_BETA_2 = [0.1, 0.5, 0.9]
 DEFAULT_T = [1, 5]
@@ -611,8 +611,8 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "lrs" : DEFAULT_LRS,
                                 "wds" : DEFAULT_LRS,
                                 "wd": DEFAULT_LR,
-                                "gamma1" : DEFAULT_GAMMA_1,
-                                "gamma2" : DEFAULT_GAMMA_2,
+                                "rho" : DEFAULT_RHO,
+                                "momentum" : DEFAULT_MOMENTUM,
                                 "epsilon" : DEFAULT_EPSILON,
                                 "beta1" : DEFAULT_BETA_1,
                                 "beta2" : DEFAULT_BETA_2,
