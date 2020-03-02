@@ -274,7 +274,7 @@ class Random<cpu, DType> {
   /*! \brief use c++11 random engine. */
   std::mt19937 rnd_engine_;
   /*! \brief random number seed used in random engine */
-  uint64t rseed_;
+  uint64_t rseed_;
 
 #else
 
