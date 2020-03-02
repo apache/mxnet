@@ -55,7 +55,7 @@ class Random<cpu, DType> {
 #if MSHADOW_IN_CXX11
     rnd_engine_.seed(seed);
 #endif
-    this->rseed_ = static_cast<unsigned>(seed);
+    this->rseed_ = static_cast<uint64_t>(seed);
   }
   /*!
    * \brief get random seed used in random generator
@@ -274,7 +274,7 @@ class Random<cpu, DType> {
   /*! \brief use c++11 random engine. */
   std::mt19937 rnd_engine_;
   /*! \brief random number seed used in random engine */
-  unsigned rseed_;
+  uint64t rseed_;
 
 #else
 
@@ -404,7 +404,7 @@ class Random<gpu, DType> {
     // Now set the seed.
     curandStatus_t status;
     status = curandSetPseudoRandomGeneratorSeed(gen_, static_cast<uint64_t>(seed));
-    this->rseed_ = static_cast<unsigned>(seed);
+    this->rseed_ = static_cast<uint64_t>(seed);
     CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "Set CURAND seed failed.";
   }
   /*!
