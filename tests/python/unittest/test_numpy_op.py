@@ -41,7 +41,6 @@ from mxnet.numpy_op_signature import _get_builtin_op
 from mxnet.test_utils import is_op_runnable, has_tvm_ops
 from mxnet.operator import get_all_registered_operators
 
-
 @with_seed()
 @use_np
 def test_np_tensordot():
@@ -559,14 +558,15 @@ def test_np_matmul():
 @use_np
 def test_np_sum():
     class TestSum(HybridBlock):
-        def __init__(self, axis=None, dtype=None, keepdims=False):
+        def __init__(self, axis=None, dtype=None, keepdims=False, initial=None):
             super(TestSum, self).__init__()
             self._axis = axis
             self._dtype = dtype
             self._keepdims = keepdims
+            self._initial = initial
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+            return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims, initial=self._initial)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -576,58 +576,60 @@ def test_np_sum():
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     is_windows = sys.platform.startswith('win')
-    for hybridize in [False, True]:
-        for keepdims in [True, False]:
-            for axis in ([i for i in range(in_data_dim)] + [(), None]):
-                for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']:
-                    for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
-                        if (is_int(dtype) and not is_int(itype)) or (is_windows and is_int(itype))\
-                                or (itype == 'bool' and\
-                                    (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
-                            continue
-                        # test gluon
-                        test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
-                        if hybridize:
-                            test_sum.hybridize()
-                        if is_int(itype):
-                            x = _np.random.randint(-128, 128, shape, dtype=itype)
-                            x = np.array(x)
-                        elif itype == 'bool':
-                            x = _np.random.randint(0, 2, shape) < 1
-                            x = np.array(x, dtype='bool')
-                        else:
-                            x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
-                        expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
-                        expected_ret = expected_ret.astype(dtype)
-                        if itype == 'bool':
-                            if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
-                                y = test_sum(x)
-                                assert y.dtype == expected_ret.dtype
-                                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
-                                                    use_broadcast=False)
-                            continue
+    for hybridize, initial, keepdims, axis, itype, dtype in itertools.product([False, True], \
+            [None, 1.1], [True, False], ([i for i in range(in_data_dim)] + [(), None]), \
+            ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool'], \
+            ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']):
+        if (is_int(dtype) and not is_int(itype)) or \
+           (itype == 'bool' and \
+            (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
+            continue
+        if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
+            continue
+        if not (has_tvm_ops() and initial == None):
+            continue
+        # test gluon
+        test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
+        if hybridize:
+            test_sum.hybridize()
+        if is_int(itype):
+            x = np.random.uniform(-128, 128, size=shape).astype(itype)
+        elif itype == 'bool':
+            x = _np.random.randint(0, 2, shape) < 1
+            x = np.array(x, dtype='bool')
+        else:
+            x = np.random.uniform(-1.0, 1.0, size=shape).astype(itype)
+        expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, initial=initial)
+        expected_ret = expected_ret.astype(dtype)
+        if itype == 'bool':
+            if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
+                y = test_sum(x)
+                assert y.dtype == expected_ret.dtype
+                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
+                                    use_broadcast=False)
+            continue
 
-                        x.attach_grad()
-                        with mx.autograd.record():
-                            y = test_sum(x)
-                        assert y.shape == expected_ret.shape
-                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
+        x.attach_grad()
+        with mx.autograd.record():
+            y = test_sum(x)
+        assert y.shape == expected_ret.shape
+        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
 
-                        y.backward()
-                        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
+        y.backward()
+        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
 
-                        # test numeric
-                        if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x").as_np_ndarray()
-                            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
-                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                                   numeric_eps=1e-3, rtol=1e-2, atol=1e-3, dtype=_np.float32)
+        # test numeric
+        if itype == 'float32' and dtype == 'float32':
+            x_sym = mx.sym.Variable("x").as_np_ndarray()
+            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                   numeric_eps=1e-3, rtol=1e-2, atol=1e-3, dtype=_np.float32)
 
-                        # test imperative
-                        mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
-                        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        # test imperative
+        mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
+        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims, initial=initial).astype(dtype)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
@@ -957,6 +959,8 @@ def test_np_mean():
                 for itype, dtype in itertools.product(ft_types, [None] + ft_types + it_types):
                     if dtype == 'bool':
                         continue
+                    if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
+                        continue
                     # test gluon
                     test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)
                     if hybridize:
@@ -991,6 +995,8 @@ def test_np_mean():
 
                 for itype, dtype in itertools.product(it_types, [None] + ft_types + it_types):
                     if dtype == 'bool':
+                        continue
+                    if (itype == 'float16' or dtype == 'float16') and has_tvm_ops():
                         continue
                     # test gluon
                     test_mean = TestMean(axis=axis, dtype=dtype, keepdims=keepdims)

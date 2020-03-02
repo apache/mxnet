@@ -31,6 +31,8 @@
  */
 
 #if MXNET_USE_TVM_OP
+#include <tvm/runtime/packed_func.h>
+#include "../tvmop/op_module.h"
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
@@ -77,6 +79,7 @@ TBlob PrependAxes(const TBlob& src, const int dst_ndim);
 void TVMOpReduce(const OpContext& ctx,
                  const TBlob& input,
                  const dmlc::optional<mxnet::Tuple<int>>& axis,
+                 const dmlc::optional<double> initial,
                  const TBlob& output,
                  const OpReqType req,
                  const std::string& reducer_name) {
@@ -119,8 +122,39 @@ void TVMOpReduce(const OpContext& ctx,
   func_name << reducer_name << "_"
             << (ctx.run_ctx.ctx.dev_type == mxnet::Context::DeviceType::kCPU ? "cpu" : "gpu")
             << "reduce1st_dim_" << reduce1st_dim
-            << "req_" << (req == kWriteTo ? "kWriteTo" : "kAddTo");
-  tvm::runtime::TVMOpModule::Get()->Call(func_name.str(), ctx, {input_tvm, output_tvm, output_tvm});
+            << "req_" << (req == kWriteTo ? "kWriteTo" : "kAddTo")
+            << "initial_" << (initial.has_value() ? "True" : "False");
+
+  if (initial.has_value()) {
+      std::vector<int> type_codes;
+      std::vector<TVMValue> values;
+      const size_t num_args = 4;  // initial scalar
+      type_codes.resize(num_args);
+      values.resize(num_args);
+
+      // input tensor setup
+      type_codes[0] = kTVMDLTensorHandle;
+      values[0].v_handle = const_cast<DLTensor*>(&(input_tvm.dltensor()));
+
+      // scalar param setup
+      type_codes[1] = kDLFloat;
+      values[1].v_float64 = initial.value();
+
+      // output tensor setup
+      type_codes[2] = kTVMDLTensorHandle;
+      values[2].v_handle = const_cast<DLTensor*>(&(output_tvm.dltensor()));
+
+      // output tensor setup
+      type_codes[3] = kTVMDLTensorHandle;
+      values[3].v_handle = const_cast<DLTensor*>(&(output_tvm.dltensor()));
+
+      tvm::runtime::TVMArgs tvm_args(&values[0], &type_codes[0], 4);
+      tvm::runtime::TVMOpModule::Get()->CallEx(func_name.str(), ctx, \
+                                               {input_tvm, output_tvm, output_tvm}, tvm_args);
+  } else {
+      tvm::runtime::TVMOpModule::Get()->Call(func_name.str(), ctx, \
+                                             {input_tvm, output_tvm, output_tvm});
+  }
 #else
   LOG(FATAL) << "Please add USE_TVM_OP=1 as a compile flag to enable TVM-generated kernels.";
 #endif  // MXNET_USE_TVM_OP
@@ -138,6 +172,7 @@ NNVM_REGISTER_OP(_np_sum)
     return std::vector<std::string>{"a"};
   })
 .add_argument("a", "NDArray-or-Symbol", "The input")
+.add_argument("init", "double", "Initial scalar input")
 .add_arguments(NumpyReduceAxesParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesCompute<cpu, mshadow_op::sum, true>)
 .set_attr<FResourceRequest>("FResourceRequest",
