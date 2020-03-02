@@ -140,11 +140,15 @@ class Dataset {
     */
     virtual uint64_t GetLen(void) const = 0;
     /*! 
-    *  \brief Get the ndarray items given index in dataset
-    *  \param idx the integer index for required data
+    *  \brief Create a copy of dataset for threaded worker
     */
     virtual Dataset* Clone(void) const = 0;
-    virtual std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) = 0;
+    /*! 
+    *  \brief Get the ndarray items given index in dataset
+    *  \param idx the integer index for required data
+    *  \param ret the returned ndarray items
+    */
+    virtual bool GetItem(uint64_t idx, std::vector<NDArray>& ret) = 0;
     // virtual destructor
     virtual ~Dataset(void) {}
 };  // class Dataset
@@ -185,7 +189,7 @@ class BatchifyFunction {
     /*! \brief Init */
     virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) = 0;
     /*! \brief The batchify logic */
-    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) = 0;
+    virtual bool Batchify(std::vector<std::vector<NDArray> >& inputs, std::vector<NDArray>& outputs) = 0;
 };  // class BatchifyFunction
 
 using BatchifyFunctionPtr = std::shared_ptr<BatchifyFunction>;

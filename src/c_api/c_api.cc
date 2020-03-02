@@ -1720,7 +1720,11 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
   mxnet::TShape shape = db.data[1].shape();
-  if (shape.ndim() > 1 && shape[1] == 1) {
+  if (shape.Size() < 1) {
+    // it's possible that label is not available and not required
+    // but we need to bypass the invalid copy
+    *pndarray = NDArray(TShape({1}), mxnet::Context::CPU(0));
+  } else if (shape.ndim() > 1 && shape[1] == 1) {
     *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
   } else {
     *pndarray = db.data[1];
@@ -1841,12 +1845,12 @@ int MXDatasetGetLen(DatasetHandle handle, uint64_t *out) {
 int MXDatasetGetItems(DatasetHandle handle,
                       uint64_t index,
                       int* num_outputs,
-                      NDArrayHandle **outputs,
-                      NDArrayHandle *is_scalar) {
+                      NDArrayHandle **outputs) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
-  std::vector<int> is_temp;
-  auto res = (*static_cast<DatasetPtr*>(handle))->GetItem(index, is_temp);
+  std::vector<NDArray> res;
+  CHECK((*static_cast<DatasetPtr*>(handle))->GetItem(index, res))
+    << "Error getting item at index: " << index;
   std::vector<NDArray*> ndoutputs;
   ndoutputs.reserve(res.size());
   if (*outputs == nullptr) {
@@ -1871,10 +1875,6 @@ int MXDatasetGetItems(DatasetHandle handle,
     }
     *outputs = dmlc::BeginPtr(ret->ret_handles);
   }
-
-  auto pndarray = new NDArray(TShape({*num_outputs}), Context::CPU(0), false, kInt32);
-  pndarray->SyncCopyFromCPU(dmlc::BeginPtr(is_temp), (*num_outputs));
-  *is_scalar = pndarray;
   API_END();
 }
 
@@ -1937,20 +1937,24 @@ int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
     }
     ndinputs.emplace_back(tmp);
   }
-  auto res = (*static_cast<BatchifyFunctionPtr*>(handle))->Batchify(ndinputs);
+  std::vector<NDArray> res;
+  CHECK((*static_cast<BatchifyFunctionPtr*>(handle))->Batchify(ndinputs, res))
+    << "Error call batchify with " << ndinputs.size() << " inputs";
   std::vector<NDArray*> ndoutputs;
   ndoutputs.reserve(res.size());
   if (*outputs == nullptr) {
-    for (int i = 0; i < num_output; ++i) ndoutputs.push_back(new NDArray(res[i], 0));
+    for (int i = 0; i < num_output; ++i) ndoutputs.push_back(new NDArray());
   } else {
     CHECK_EQ(num_output, res.size())
         << "MXBatchifyFunctionInvoke expects " << res.size() << " outputs, but "
         << num_output << " was given.";
     for (int i = 0; i < num_output; ++i) {
       ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
-      ndoutputs[i]->SyncCopyFromNDArray(NDArray(res[i], 0));
     }
   }
+
+  // copy ndarrays
+  for (int i = 0; i < num_output; ++i) *(ndoutputs[i]) = res[i];
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();

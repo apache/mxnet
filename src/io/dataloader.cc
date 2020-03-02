@@ -127,11 +127,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     for (size_t i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
         auto idx = idx_ptrs[i];
-        std::vector<int> is_temp;
-        inputs[i] = datasets_[i % param_.num_workers]->GetItem(idx, is_temp);
-        if (i == 0) {
-          is_scalars = is_temp;
-        }
+        CHECK(datasets_[i % param_.num_workers]->GetItem(idx, inputs[i])) << "Error getting data # " << idx;
       });
     }
     if (profiling) {
@@ -148,19 +144,15 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     if (profiling) {
       profiler::CustomOpProfiler::Get()->OnCustomBegin("MXThreadedDataLoaderBatchify");
     }
-    auto batched_data = batchify_fn_->Batchify(inputs);
+    CHECK(batchify_fn_->Batchify(inputs, batched_buffer_)) << "Error call batchify inside dataloader";
     if (profiling) {
       profiler::CustomOpProfiler::Get()->OnCustomEnd();
     }
-    for (size_t i = 0; i < is_scalars.size(); ++i) {
-      if (is_scalars[i] == 1) {
-        CHECK_EQ(batched_data[i].ndim(), 2);
-        batched_data[i] = batched_data[i].reshape(
-          TShape({static_cast<dim_t>(batched_data[i].Size())}));
-      }
+    out_.batch_size = batched_buffer_.size();
+    out_.data.resize(batched_buffer_.size());
+    for (size_t i = 0; i < batched_buffer_.size(); ++i) {
+      out_.data[i] = batched_buffer_[i].data();
     }
-    out_.batch_size = batched_data.size();
-    out_.data = batched_data;
     out_.num_batch_padd = samples.num_batch_padd;
     return true;
   }
@@ -174,6 +166,8 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     ThreadedDataLoaderParam param_;
     /*! \brief output */
     TBlobBatch out_;
+    /*! \brief batched buffer */
+    std::vector<NDArray> batched_buffer_;
     /*! \brief pointer to dataset */
     // DatasetPtr dataset_;
     std::vector<DatasetPtr> datasets_;

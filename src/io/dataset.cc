@@ -30,7 +30,6 @@
 #include <mxnet/tensor_blob.h>
 
 #include "../imperative/cached_op.h"
-#include "../imperative/cached_op_threadsafe.h"
 
 #include <string>
 #include <vector>
@@ -94,10 +93,8 @@ class RecordFileDataset : public Dataset {
       return idx_.size();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
-      is_scalar.resize(1);
-      is_scalar[0] = 0;
-      std::vector<NDArray> ret(1);
+    bool GetItem(uint64_t idx, std::vector<NDArray>& ret) {
+      ret.resize(1);
       size_t pos = idx_[static_cast<size_t>(idx)];
       {
         std::lock_guard<std::mutex> lck(mutex_);
@@ -109,7 +106,7 @@ class RecordFileDataset : public Dataset {
           ret[0].SyncCopyFromCPU(buf, size);
         }
       }
-      return ret;
+      return true;
     };
 
   private:
@@ -150,7 +147,7 @@ DMLC_REGISTER_PARAMETER(ImageRecordFileDatasetParam);
 
 #if MXNET_USE_OPENCV
 template<int n_channels>
-NDArray SwapImageChannels(cv::Mat &img) {
+void SwapImageChannels(cv::Mat &img, NDArray& arr) {
   int swap_indices[n_channels]; // NOLINT(*)
   if (n_channels == 1) {
     swap_indices[0] = 0;
@@ -166,7 +163,11 @@ NDArray SwapImageChannels(cv::Mat &img) {
   }
 
   TShape arr_shape = TShape({img.rows, img.cols, n_channels});
-  NDArray arr(arr_shape, mxnet::Context::CPU(0), true, mshadow::kUint8);
+  if (arr.is_none() || arr.shape() != arr_shape || arr.ctx() != mxnet::Context::CPU(0) ||
+      arr.dtype() != mshadow::kUint8 || arr.storage_type() != kDefaultStorage) {
+    arr = NDArray(arr_shape, mxnet::Context::CPU(0), false, mshadow::kUint8);
+  }
+  // arr = NDArray(arr_shape, mxnet::Context::CPU(0), false, mshadow::kUint8);
   auto ptr = static_cast<uint8_t*>(arr.data().dptr_);
 
   // swap channels while copying elements into buffer
@@ -181,7 +182,6 @@ NDArray SwapImageChannels(cv::Mat &img) {
       buffer_data += n_channels;
     }
   }
-  return arr;
 }
 #endif
 
@@ -214,48 +214,49 @@ class ImageRecordFileDataset : public Dataset {
       return base_->GetLen();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
+    bool GetItem(uint64_t idx, std::vector<NDArray>& ret) {
       CHECK_LT(idx, GetLen());
-      auto out = base_->GetItem(idx, is_scalar);
-      CHECK_EQ(out.size(), 1U) << "RecordFileDataset should return size 1 NDArray vector";
-      uint8_t *s = reinterpret_cast<uint8_t*>(out[0].data().dptr_);
-      size_t size = out[0].shape().Size();
+      std::vector<NDArray> raw;
+      if (!base_->GetItem(idx, raw)) return false;
+      CHECK_EQ(raw.size(), 1U) << "RecordFileDataset should return size 1 NDArray vector";
+      uint8_t *s = reinterpret_cast<uint8_t*>(raw[0].data().dptr_);
+      size_t size = raw[0].shape().Size();
       CHECK_GT(size, sizeof(IRHeader)) << "Invalid size of bytes from Record File";
       IRHeader header;
       std::memcpy(&header, s, sizeof(header));
       size -= sizeof(header);
       s += sizeof(header);
       NDArray label = NDArray(Context::CPU(), mshadow::default_type_flag);
-      is_scalar.resize(2);
-      is_scalar[0] = 0;
       if (header.flag > 0) {
-        label.ReshapeAndAlloc(TShape({header.flag}));
+        auto label_shape = header.flag <= 1 ? TShape(0, 1) : TShape({header.flag});
+        label.ReshapeAndAlloc(label_shape);
         label.SyncCopyFromCPU(s, header.flag);
         s += sizeof(float) * header.flag;
         size -= sizeof(float) * header.flag;
-        is_scalar[1] = header.flag <= 1;
       } else {
-        label.ReshapeAndAlloc(TShape({1}));
+        // label is a scalar with ndim() == 0
+        label.ReshapeAndAlloc(TShape(0, 1));
         label.SyncCopyFromCPU(&header.label, 1);
-        is_scalar[1] = 1;
       }
+      ret.resize(2);
+      ret[1] = label;
 #if MXNET_USE_OPENCV
       cv::Mat buf(1, size, CV_8U, s);
       cv::Mat res = cv::imdecode(buf, param_.flag);
       CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
       const int n_channels = res.channels();
-      NDArray ret;
       if (n_channels == 1) {
-        ret = SwapImageChannels<1>(res);
+        SwapImageChannels<1>(res, ret[0]);
       } else if (n_channels == 3) {
-        ret = SwapImageChannels<3>(res);
+        SwapImageChannels<3>(res, ret[0]);
       } else if (n_channels == 4) {
-        ret = SwapImageChannels<4>(res);
+        SwapImageChannels<4>(res, ret[0]);
       }
-      return std::vector<NDArray>({ret, label});
+      return true;
 #else
     LOG(FATAL) << "Opencv is needed for image decoding.";
 #endif
+    return false;  // should not reach here
     };
 
   private:
@@ -311,27 +312,26 @@ class ImageSequenceDataset : public Dataset {
       return img_list_.size();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
-      is_scalar.resize(1);
-      is_scalar[0] = 0;
+    bool GetItem(uint64_t idx, std::vector<NDArray>& ret) {
 #if MXNET_USE_OPENCV
       CHECK_LT(idx, img_list_.size())
         << "GetItem index: " << idx << " out of bound: " << img_list_.size();
       cv::Mat res = cv::imread(img_list_[idx], param_.flag);
       CHECK(!res.empty()) << "Decoding failed. Invalid image file.";
       const int n_channels = res.channels();
-      NDArray ret;
+      ret.resize(1);
       if (n_channels == 1) {
-        ret = SwapImageChannels<1>(res);
+        SwapImageChannels<1>(res, ret[0]);
       } else if (n_channels == 3) {
-        ret = SwapImageChannels<3>(res);
+        SwapImageChannels<3>(res, ret[0]);
       } else if (n_channels == 4) {
-        ret = SwapImageChannels<4>(res);
+        SwapImageChannels<4>(res, ret[0]);
       }
-      return std::vector<NDArray>({ret});
+      return true;
 #else
     LOG(FATAL) << "Opencv is needed for image decoding.";
 #endif
+    return false;
     };
 
   private:
@@ -380,23 +380,25 @@ class NDArrayDataset : public Dataset {
       return size_;
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
-      is_scalar.resize(1);
+    bool GetItem(uint64_t idx, std::vector<NDArray>& rets) {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
-      NDArray ret = data_.Slice(idx, idx + 1);
+      rets.resize(1);
+      auto& ret = rets[0];
+      ret = data_.Slice(idx, idx + 1);
       if (ret.shape().ndim() > 1) {
         // remove first dim to be consistent with numpy
         TShape new_shape;
         new_shape.assign(ret.shape().begin() + 1, ret.shape().end());
         ret = ret.Reshape(new_shape);
-        is_scalar[0] = 0;
       } else {
         if (data_.shape().ndim() == 1) {
-          is_scalar[0] = 1;
+          // scalar
+          TShape new_shape(0, 1);
+          ret = ret.Reshape(new_shape);
         }
       }
-      return std::vector<NDArray>({ret});
+      return true;
     };
 
   private:
@@ -457,21 +459,17 @@ class GroupDataset : public Dataset {
       return size_;
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
+    bool GetItem(uint64_t idx, std::vector<NDArray>& ret) {
       CHECK_LT(idx, size_)
         << "GetItem index: " << idx << " out of bound: " << size_;
-      std::vector<NDArray> ret;
-      is_scalar.clear();
+      ret.clear();
       for (auto child : childs_) {
-        std::vector<int> temp_scalar;
-        auto v = child->GetItem(idx, temp_scalar);
-        ret.insert(ret.end(), v.begin(), v.end());
-        for (size_t j = 0; j < v.size(); ++j) {
-          is_scalar.emplace_back(temp_scalar[j]);
-        }
+        std::vector<NDArray> temp_ret;
+        if (!child->GetItem(idx, temp_ret)) return false;
+        ret.insert(ret.end(), temp_ret.begin(), temp_ret.end());
       }
-      return ret;
-    };
+      return true;
+    }
 
   private:
     /*! \brief parameters */
@@ -520,13 +518,13 @@ class IndexedDataset : public Dataset {
       return param_.indices.ndim();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
+    bool GetItem(uint64_t idx, std::vector<NDArray>& ret) {
       CHECK_GT(param_.indices.ndim(), idx) << "IndexError: " << idx
         << " from total: " << param_.indices.ndim();
       auto new_idx = param_.indices[idx];
       CHECK_GT(base_data_->GetLen(), new_idx) << "IndexError: " << new_idx
         << " from original dataset with size: " << base_data_->GetLen();
-      return base_data_->GetItem(new_idx, is_scalar);
+      return base_data_->GetItem(new_idx, ret);
     };
 
   private:
@@ -568,8 +566,6 @@ struct LazyTransformDatasetParam : public dmlc::Parameter<LazyTransformDatasetPa
 
 DMLC_REGISTER_PARAMETER(LazyTransformDatasetParam);
 
-typedef dmlc::ThreadLocalStore<CachedOpPtr> CachedOpStore;
-
 class LazyTransformDataset : public Dataset {
   public:
     LazyTransformDataset() {
@@ -595,13 +591,13 @@ class LazyTransformDataset : public Dataset {
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
       auto op = *static_cast<CachedOpPtr*>(reinterpret_cast<void*>(param_.cached_op));
-      cached_op_ = CachedOpPtr(new CachedOpThreadSafe(op->sym_, op->flags_));
+      cached_op_ = CachedOpPtr(new CachedOp(op->sym_, op->flags_));
       base_data_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
 
       // use first item to calculate size info
       CHECK_GT(GetLen(), 0) << "LazyTransformDataset expect the base dataset to have at least 1 item";
-      std::vector<int> is_scalar;
-      auto inputs = base_data_->GetItem(0, is_scalar);
+      std::vector<NDArray> inputs;
+      CHECK(base_data_->GetItem(0, inputs));
       // check output size
       CHECK_EQ(param_.scalar_outputs.ndim(), cached_op_->num_outputs())
         << "Output scalar info size: " << param_.scalar_outputs.ndim() << " vs. output size: "
@@ -638,9 +634,9 @@ class LazyTransformDataset : public Dataset {
       return base_data_->GetLen();
     }
 
-    std::vector<NDArray> GetItem(uint64_t idx, std::vector<int> &is_scalar) {
-      auto inputs = base_data_->GetItem(idx, is_scalar);
-      std::vector<NDArray> outputs;
+    bool GetItem(uint64_t idx, std::vector<NDArray>& outputs) {
+      std::vector<NDArray> inputs;
+      if (!base_data_->GetItem(idx, inputs)) return false;
       outputs.reserve(num_outputs_);
       outputs.resize(cached_op_->num_outputs());
       for (auto i : pass_through_indices_) {
@@ -664,7 +660,7 @@ class LazyTransformDataset : public Dataset {
         inputs[i].WaitToRead();
       }
       cached_op_->NaiveForward(cached_op_, ndinputs, ndoutputs);
-      return outputs;
+      return true;
     }
 
   private:

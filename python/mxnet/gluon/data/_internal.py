@@ -79,8 +79,7 @@ class MXDataset(Dataset):
         check_call(_LIB.MXDatasetGetItems(self.handle,
                                           ctypes.c_uint64(idx),
                                           ctypes.byref(num_output),
-                                          ctypes.byref(output_vars),
-                                          ctypes.byref(is_scalars)))
+                                          ctypes.byref(output_vars)))
         out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
                                        False) for i in range(num_output.value)]
         nd_isscalar = create_ndarray_fn(is_scalars).asnumpy()

@@ -56,14 +56,14 @@ class GroupBatchify : public BatchifyFunction {
       }
     }
 
-    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+    virtual bool Batchify(std::vector<std::vector<NDArray> >& inputs, std::vector<NDArray>& outputs) {
       auto bs = inputs.size();
       CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
       auto out_size = inputs[0].size();
       CHECK_EQ(out_size, fs_.size()) << "In GroupBatchifyFunction, Elem size "
         << out_size << " and batchify function size " << fs_.size() << " must match";
-      std::vector<TBlob> ret;
-      ret.reserve(out_size);
+      outputs.resize(out_size);
+      std::vector<NDArray> tmp;
       for (size_t i = 0; i < out_size; ++i) {
         std::vector<std::vector<NDArray> > inp;
         inp.reserve(inputs.size());
@@ -71,9 +71,10 @@ class GroupBatchify : public BatchifyFunction {
             std::vector<NDArray> curr({inputs[j][i]});
             inp.emplace_back(curr);
         }
-        ret.emplace_back(fs_[i]->Batchify(inp)[0]);
+        if (!fs_[i]->Batchify(inp, tmp)) return false;
+        outputs[i] = tmp[0];
       }
-      return ret;
+      return true;
     }
 
   private:
@@ -109,10 +110,10 @@ class StackBatchify : public BatchifyFunction {
       param_.InitAllowUnknown(kwargs);
     }
 
-    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+    virtual bool Batchify(std::vector<std::vector<NDArray> >& inputs, std::vector<NDArray>& outputs) {
       auto out_size = SanityCheck(inputs);
       auto bs = inputs.size();
-      std::vector<TBlob> ret(out_size);
+      outputs.resize(out_size);
       for (size_t i = 0; i < out_size; ++i) {
           // Process i-th output
           mxnet::TShape ashape = inputs[0][i].shape();
@@ -133,22 +134,35 @@ class StackBatchify : public BatchifyFunction {
 
           // ret[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
           int dtype = inputs[0][i].dtype();
-          auto container = new TBlobContainer();
-          container->resize(sshape, dtype);
-          ret[i] = TBlob(container->dptr_, sshape, cpu::kDevMask, dtype, 0);
-          MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
-            DType *ptr = ret[i].dptr<DType>();
-            auto asize = ashape.Size();
-            _Pragma("omp parallel for num_threads(bs)")
-            for (size_t j = 0; j < bs; ++j) {
-              inputs[j][i].WaitToRead();
-              mshadow::Copy(
-                TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0).FlatTo2D<cpu, DType>(),
-                inputs[j][i].data().FlatTo2D<cpu, DType>());
+          // auto container = new TBlobContainer();
+          // container->resize(sshape, dtype);
+          // ret[i] = TBlob(container->dptr_, sshape, cpu::kDevMask, dtype, 0);
+          if (!outputs[i].is_none() && outputs[i].ctx() == mxnet::Context::CPU(0) && outputs[i].dtype() == dtype && outputs[i].storage_type() == kDefaultStorage) {
+            if (outputs[i].shape() != sshape) {
+              // realloc
+              outputs[i].ReshapeAndAlloc(sshape);
             }
-          })
+          } else {
+            outputs[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
+          }
+          _Pragma("omp parallel for num_threads(bs)")
+          for (size_t j = 0; j < bs; ++j) {
+            inputs[j][i].WaitToRead();
+            outputs[i].Slice(j, j + 1).SyncCopyFromNDArray(inputs[j][i]);
+          }
+          // MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
+          //   DType *ptr = ret[i].dptr<DType>();
+          //   auto asize = ashape.Size();
+          //   _Pragma("omp parallel for num_threads(bs)")
+          //   for (size_t j = 0; j < bs; ++j) {
+          //     inputs[j][i].WaitToRead();
+          //     mshadow::Copy(
+          //       TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0).FlatTo2D<cpu, DType>(),
+          //       inputs[j][i].data().FlatTo2D<cpu, DType>());
+          //   }
+          // })
       }
-      return ret;
+      return true;
     }
   private:
     /*! \brief parameters */
@@ -200,11 +214,11 @@ class PadBatchify : public BatchifyFunction {
       param_.InitAllowUnknown(kwargs);
     }
 
-    virtual std::vector<TBlob> Batchify(std::vector<std::vector<NDArray> >& inputs) {
+    virtual bool Batchify(std::vector<std::vector<NDArray> >& inputs, std::vector<NDArray>& outputs) {
       auto bs = inputs.size();
       CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
       auto out_size = inputs[0].size();
-      std::vector<TBlob> ret(out_size);
+      outputs.resize(out_size);
       for (size_t i = 0; i < out_size; ++i) {
           // Process i-th output
           mxnet::TShape ashape = inputs[0][i].shape();
@@ -228,14 +242,19 @@ class PadBatchify : public BatchifyFunction {
           }
 
           int dtype = param_.dtype > -1 ? param_.dtype : inputs[0][i].dtype();
-          auto container = new TBlobContainer();
-          container->resize(sshape, dtype);
-          ret[i] = TBlob(container->dptr_, sshape, cpu::kDevMask, dtype, 0);
+          if (!outputs[i].is_none() && outputs[i].ctx() == mxnet::Context::CPU(0) && outputs[i].dtype() == dtype && outputs[i].storage_type() == kDefaultStorage) {
+            if (outputs[i].shape() != sshape) {
+              // realloc
+              outputs[i].ReshapeAndAlloc(sshape);
+            }
+          } else {
+            outputs[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
+          }
           MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
             // fill pad value first
-            std::fill(ret[i].dptr<DType>(), ret[i].dptr<DType>() + sshape.Size(), 
+            std::fill(outputs[i].data().dptr<DType>(), outputs[i].data().dptr<DType>() + sshape.Size(), 
                       static_cast<DType>(param_.pad_val));
-            DType *ptr = ret[i].dptr<DType>();
+            DType *ptr = outputs[i].data().dptr<DType>();
             auto asize = ashape.Size();
             _Pragma("omp parallel for num_threads(bs)")
             for (size_t j = 0; j < bs; ++j) {
@@ -293,7 +312,7 @@ class PadBatchify : public BatchifyFunction {
             }
           })
       }
-      return ret;
+      return true;
     }
   private:
     /*! \brief parameters */
