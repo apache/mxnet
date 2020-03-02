@@ -52,14 +52,17 @@ void transpose(MXTensor src, MXTensor dst) {
       rowPtr[i] += rowPtr[i - 1];
     }
     // Get the dst sparse matrix.
+    B->m_col_idx.resize(A->data_len);
+    B->m_row_ptr.resize(w + 1);
+    B->m_data.resize(A->data_len);
     for(int i = 0; i < h; i++) {
       for(int j = A->indptr[i]; j < A->indptr[i + 1]; j++) {
         int index = rowPtr[A->indices[j] + 1]++;
-	Bval[index] = Aval[j];
-	B->indices[index] = i;
+	B->m_data[index] = Aval[j];
+	B->m_col_idx[index] = i;
       }
     }
-    memcpy(B->indptr, rowPtr.data(), sizeof(int64_t) * (w + 1));
+    memcpy(B->m_row_ptr.data(), rowPtr.data(), sizeof(int64_t) * (w + 1));
   }
 }
 

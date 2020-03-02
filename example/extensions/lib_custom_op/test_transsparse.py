@@ -41,7 +41,6 @@ print(a.data.asnumpy())
 print(a.indices.asnumpy())
 print(a.indptr.asnumpy())
 
-# To do: Fix segment fault.
 b = mx.nd.my_transsparse(a)
 print("B Type:", type(b))
 print(b.data.asnumpy())

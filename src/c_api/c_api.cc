@@ -121,16 +121,15 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
 
-  // Extra data for sparse representation.
-  std::vector<void*> in_indices, out_indices;
-  std::vector<void*> in_indptr, out_indptr;
-  std::vector<int64_t> in_indices_shapes, out_indices_shapes;
-  std::vector<int64_t> in_indptr_shapes, out_indptr_shapes;
+  // Extra data for sparse inputs.
+  std::vector<void*> in_indices;
+  std::vector<void*> in_indptr;
+  std::vector<int64_t> in_indices_shapes;
+  std::vector<int64_t> in_indptr_shapes;
 
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
     in_data.push_back(inputs[i].data().dptr_);
-    // To do: remove. ndims = 2. 3*5. 
     in_shapes.push_back(inputs[i].shape().data());
     in_dims.push_back(inputs[i].shape().ndim());
     in_types.push_back(inputs[i].dtype());
@@ -151,9 +150,12 @@ void CustomFComputeDispatcher(const std::string op_name,
     }
   }
 
+  // Extra data for sparse outputs.
+  // To do: fix data type.
+  std::vector<std::vector<float>> tmp_data;
+  std::vector<std::vector<int64_t>> col_index, row_ptr;
+
   for (size_t i = 0; i < outputs.size(); i++) {
-    // To do: remove hardcode.
-    outputs[i].CheckAndAlloc({mshadow::Shape1(5 + 1), mshadow::Shape1(9)});
     out_data.push_back(outputs[i].data().dptr_);
     out_shapes.push_back(outputs[i].shape().data());
     out_dims.push_back(outputs[i].shape().ndim());
@@ -163,17 +165,15 @@ void CustomFComputeDispatcher(const std::string op_name,
     out_dev_type.push_back(ctx_str);
     out_dev_id.push_back(outputs[i].ctx().real_dev_id());
 
-    // To do: Find ways to handle out dimenson is unknown for sparse.
     if(outputs[i].storage_type() == mxnet::kRowSparseStorage) {
-      out_indices.push_back(outputs[i].aux_data(rowsparse::kIdx).dptr_);
-      out_indices_shapes.push_back(outputs[i].aux_shape(rowsparse::kIdx).Size());
+      tmp_data.push_back(std::vector<float>());
+      col_index.push_back(std::vector<int64_t>());
     }
     else if(outputs[i].storage_type() == mxnet::kCSRStorage) {
-      out_indices.push_back(outputs[i].aux_data(csr::kIdx).dptr_);
-      out_indptr.push_back(outputs[i].aux_data(csr::kIndPtr).dptr_);
-      out_indices_shapes.push_back(outputs[i].aux_shape(csr::kIdx).Size());
-      out_indptr_shapes.push_back(outputs[i].aux_shape(csr::kIndPtr).Size());
-    }
+      tmp_data.push_back(std::vector<float>());
+      col_index.push_back(std::vector<int64_t>());
+      row_ptr.push_back(std::vector<int64_t>());
+    } 
   }
 
   // get memory resource and mxnet backend streams
@@ -237,12 +237,11 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
-                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
-                    in_indices_shapes.data(), out_indices_shapes.data(), 
-                    in_indptr_shapes.data(), out_indptr_shapes.data()))
+                    in_indices.data(), in_indptr.data(), in_indices_shapes.data(), 
+		    in_indptr_shapes.data(), tmp_data, col_index, row_ptr))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
-  
+
   if (state_ptr != nullptr) {
     // retrieve op state object created from CreateOpState
     CustomStatefulOpWrapper& op = state_ptr->get_state<CustomStatefulOpWrapper>();
@@ -259,10 +258,36 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                            in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
-                            in_indices_shapes.data(), out_indices_shapes.data(),
-                            in_indptr_shapes.data(), out_indptr_shapes.data()))
+                            in_indices.data(), in_indptr.data(),
+                            in_indices_shapes.data(), in_indptr_shapes.data(),
+			    tmp_data, col_index, row_ptr))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
+  }
+  
+  /*
+  std::cout << "Check Here:" << std::endl;
+  for(int i = 0; i < tmp_data[0].size(); i++)
+    std::cout << tmp_data[0][i] << " ";
+  std::cout << std::endl;
+  for(int i = 0; i < col_index[0].size(); i++)
+    std::cout << col_index[0][i] << " ";
+  std::cout << std::endl;
+  for(int i = 0; i < row_ptr[0].size(); i++)
+    std::cout << row_ptr[0][i] << " ";
+  std::cout << std::endl;
+  */
+  // Alloc space for sparse output and copy data to saprse NDArray.
+  for (size_t i = 0; i < outputs.size(); i++) {
+    if (outputs[i].storage_type() == mxnet::kDefaultStorage) continue;  
+    if (outputs[i].storage_type() == mxnet::kRowSparseStorage) {
+      outputs[i].CheckAndAlloc({mshadow::Shape1(col_index[i].size())});
+    }
+    else if (outputs[i].storage_type() == mxnet::kCSRStorage) {
+      outputs[i].CheckAndAlloc({mshadow::Shape1(row_ptr[i].size()), mshadow::Shape1(col_index[i].size())});
+      memcpy(outputs[i].aux_data(csr::kIndPtr).dptr_, row_ptr[i].data(), sizeof(int64_t) * row_ptr[i].size());
+    }
+    memcpy(outputs[i].data().dptr_, tmp_data[i].data(), sizeof(float) * tmp_data[i].size());
+    memcpy(outputs[i].aux_data(csr::kIdx).dptr_, col_index[i].data(), sizeof(int64_t) * col_index[i].size());
   }
 }
 
@@ -610,11 +635,8 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
-      // TODO(ziyimu): remove this dense enforce check after supporting sparse tensor
-      //CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
-      //<< "Error input tensors are not dense for custom operator '" << name_str << "'";
-      // set outputs as dense
-      return op::storage_type_assign(out_stypes, mxnet::kCSRStorage,
+      return op::storage_type_assign(out_stypes,
+		                     static_cast<mxnet::NDArrayStorageType>(in_stypes->at(0)),
                                      dispatch_mode, DispatchMode::kFComputeEx);
     };
 
