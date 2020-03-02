@@ -88,13 +88,13 @@ class Normal(ExponentialFamily):
         """
         return self.F.np.random.normal(self.loc, self.scale, size)
 
-    def sample_n(self, batch_size=None):
+    def sample_n(self, size=None):
         r"""Generate samples of (batch_size + broadcast(loc, scale).shape)
         from the normal distribution parameterized by `self._loc` and `self._scale`
 
         Parameters
         ----------
-        batch_size : Tuple, Scalar, or None
+        size : Tuple, Scalar, or None
             Size of independent batch to be generated from the distribution.
 
         Returns

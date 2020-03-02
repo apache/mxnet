@@ -24,6 +24,7 @@ from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
 from .utils import getF
 
+# FIXME: Implement `entropy()`.
 class Dirichlet(ExponentialFamily):
     has_grad = False
     support = Simplex()
@@ -65,6 +66,3 @@ class Dirichlet(ExponentialFamily):
         a = self.alpha
         s = a.sum(-1, True)
         return a * (s - a) / ((s + 1) * s ** 2)
-
-
-        

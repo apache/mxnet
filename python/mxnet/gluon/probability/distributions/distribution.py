@@ -94,7 +94,7 @@ class Distribution(object):
         """
         raise NotImplementedError
 
-    def sample_n(self, n):
+    def sample_n(self, size):
         r"""
         Generate samples of (n + parameter_shape) from the distribution.
         """
