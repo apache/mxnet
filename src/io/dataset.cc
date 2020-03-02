@@ -30,6 +30,7 @@
 #include <mxnet/tensor_blob.h>
 
 #include "../imperative/cached_op.h"
+#include "../imperative/cached_op_threadsafe.h"
 
 #include <string>
 #include <vector>
@@ -576,7 +577,7 @@ class LazyTransformDataset : public Dataset {
       this->pass_through_indices_ = other.pass_through_indices_;
       this->use_input_indices_ = other.use_input_indices_;
       this->num_outputs_ = other.num_outputs_;
-      this->cached_op_ = CachedOpPtr(new CachedOp(other.cached_op_->sym_, other.cached_op_->flags_));
+      this->cached_op_ = CachedOpPtr(new CachedOpThreadSafe(other.cached_op_->sym_, other.cached_op_->flags_));
       // LOG(INFO) << "Create new cachedop" << this->cached_op_->num_inputs() << " " << this->cached_op_->num_outputs();
       this->base_data_ = other.base_data_;
     }
