@@ -61,7 +61,7 @@ class Random<cpu, DType> {
    * \brief get random seed used in random generator
    * \return seed in unsigned
    */
-  inline unsigned GetSeed() const {
+  inline uint64_t GetSeed() const {
     return rseed_;
   }
   /*!
@@ -411,7 +411,7 @@ class Random<gpu, DType> {
     * \brief get random seed used in random generator
     * \return seed in unsigned
     */
-  inline unsigned GetSeed() const {
+  inline uint64_t GetSeed() const {
     return rseed_;
   }
   /*!
@@ -474,7 +474,7 @@ class Random<gpu, DType> {
   uniform(Shape<dim> shape);
 
  private:
-  unsigned rseed_;
+  uint64_t rseed_;
   inline void GenGaussian(float *dptr, size_t size, float mu, float sigma) {
     curandStatus_t status;
     status = curandGenerateNormal(gen_, dptr, size, mu, sigma);

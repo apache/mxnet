@@ -1337,7 +1337,7 @@ class RNNOp {
       // Create Dropout descriptors
       if (param_.p > 0) {
          Random<xpu, unsigned> *prnd = ctx.requested[2].get_random<xpu, unsigned>(s);
-         uint64_t rng_seed = (uint64_t) prnd->GetSeed();
+         uint64_t rng_seed = prnd->GetSeed();
          // reset dropout descriptor if rng seed changed.
          bool reset = seed_ != rng_seed;
          seed_ = rng_seed;
