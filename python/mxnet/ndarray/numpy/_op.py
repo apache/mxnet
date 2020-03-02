@@ -989,7 +989,9 @@ def add(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), not supported yet.
     """
-    return _ufunc_helper(x1, x2, _npi.add, _np.add, _npi.add_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.add(x1, x2, out=out)
+    return _api_internal.add(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')

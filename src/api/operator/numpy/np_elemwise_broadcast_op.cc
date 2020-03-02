@@ -18,41 +18,22 @@
  */
 
 /*!
- * \file np_init_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy/np_init_op.cc
+ * \file np_elemwise_broadcast_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_elemwise_broadcast_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
-#include "../../../operator/tensor/init_op.h"
+#include "../ufunc_helper.h"
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.zeros")
+MXNET_REGISTER_API("_npi.add")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_zeros");
-  nnvm::NodeAttrs attrs;
-  op::InitOpParam param;
-  if (args[0].type_code() == kDLInt) {
-    param.shape = TShape(1, args[0].operator int64_t());
-  } else {
-    param.shape = TShape(args[0].operator ObjectRef());
-  }
-  if (args[1].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
-  }
-  attrs.parsed = std::move(param);
-  attrs.op = op;
-  SetAttrDict<op::InitOpParam>(&attrs);
-  if (args[2].type_code() != kNull) {
-    attrs.dict["ctx"] = args[2].operator std::string();
-  }
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
+  const nnvm::Op* op = Op::Get("_npi_add");
+  const nnvm::Op* op_scalar = Op::Get("_npi_add_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
 });
 
 }  // namespace mxnet

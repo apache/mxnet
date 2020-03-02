@@ -33,13 +33,14 @@ inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args,
   const nnvm::Op* op = Op::Get("_npi_tensordot_int_axes");
   op::TensordotIntAxesParam param;
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
   param.axes = args[2].operator int();
+  attrs.op = op;
   // we directly copy TensordotIntAxesParam, which is trivially-copyable
   attrs.parsed = param;
+  SetAttrDict<op::TensordotIntAxesParam>(&attrs);
   int num_outputs = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke<op::TensordotIntAxesParam>(op, &attrs, 2, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 }
 
@@ -49,7 +50,6 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
   const nnvm::Op* op = Op::Get("_npi_tensordot");
   op::TensordotParam param;
   nnvm::NodeAttrs attrs;
-  attrs.op = op;
   ADT adt = Downcast<ADT, ObjectRef>(args[2].operator ObjectRef());
   if (const IntegerObj* lop = adt[0].as<IntegerObj>()) {
     param.a_axes_summed = Tuple<int>(1, lop->value);
@@ -58,10 +58,12 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
     param.a_axes_summed = Tuple<int>(adt[0]);
     param.b_axes_summed = Tuple<int>(adt[1]);
   }
+  attrs.op = op;
   attrs.parsed = std::move(param);
+  SetAttrDict<op::TensordotParam>(&attrs);
   int num_outputs = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke<op::TensordotParam>(op, &attrs, 2, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 }
 

@@ -48,6 +48,7 @@ MXNET_REGISTER_API("_npi.cumsum")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
+  SetAttrDict<op::CumsumParam>(&attrs);
   // inputs
   NDArray* inputs[] = {args[0].operator NDArray*()};
   int num_inputs = 1;
@@ -55,7 +56,7 @@ MXNET_REGISTER_API("_npi.cumsum")
   NDArray* outputs[] = {args[3].operator NDArray*()};
   NDArray** out = outputs[0] == nullptr ? nullptr : outputs;
   int num_outputs = outputs[0] != nullptr;
-  auto ndoutputs = Invoke<op::CumsumParam>(op, &attrs, num_inputs, inputs, &num_outputs, out);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });
 
