@@ -339,7 +339,6 @@ FUNC(MKLDNN_ARG_DIFF_##NAME, ARGS.at(MKLDNN_ARG_##NAME).get_desc(), HANDLE)
 void MKLDNNRnnForward::SetNewDataMem(void* x, void* hx, void* cx,
                                      void* y, void* hy, void* cy,
                                      const int dtype) {
-  using dims = mkldnn::memory::dims;
   using desc = mkldnn::memory::desc;
   using format_tag = mkldnn::memory::format_tag;
   auto& cpu_engine = CpuEngine::Get()->get_engine();
@@ -632,7 +631,6 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
                        const std::vector<NDArray> &inputs,
                        const std::vector<OpReqType> &req,
                        const std::vector<NDArray> &outputs) {
-  using memory = mkldnn::memory;
   using format_tag = mkldnn::memory::format_tag;
 
   // In the `autograd.record()` context, RNNOp is required to run into
