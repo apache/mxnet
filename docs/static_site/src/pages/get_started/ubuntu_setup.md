@@ -130,7 +130,7 @@ the guide in [Math Library Selection](build_from_source#math-library-selection).
 ```bash
 rm -rf build
 mkdir -p build && cd build
-cmake ..
+cmake -GNinja ..
 cmake --build .
 ```
 
