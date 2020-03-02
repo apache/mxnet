@@ -259,6 +259,7 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "initial is not supported yet";
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -415,6 +416,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_NE(outputs[0].type_flag_, kBool) << "reduce operators do not support gradient calculation "
                                             "for input tensors of boolean type.";
+  if (outputs[0].shape_.Size() == 0) return;
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   TShape small;
   if (param.keepdims) {
