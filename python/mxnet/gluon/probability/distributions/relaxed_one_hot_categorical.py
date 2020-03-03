@@ -98,16 +98,24 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Parameters
         ----------
         value : Tensor
-            samples from Categorical distribution
+            samples from Relaxed Categorical distribution
         
         Returns
         -------
         Tensor
             log-likelihood of `value`
         """
-        # y = self.logit - value * self.T
-        # TODO: finish log_prob
-        raise NotImplementedError
+        from math import lgamma
+        F = self.F
+        K = self.num_events # Python scalar
+        log = F.np.log
+        exp = F.np.exp
+        logit = self.logit
+        y = logit - value * self.T
+        log_sum_exp = log(exp(y).sum(-1, keepdims=True))
+        log_scale = lgamma(K) - log(self.T) * (-(K - 1))
+        return (y - log_sum_exp).sum(-1) + log_scale
+
 
     def sample(self, size=None):
         F = self.F

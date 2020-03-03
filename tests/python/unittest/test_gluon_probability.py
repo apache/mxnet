@@ -214,6 +214,57 @@ def test_gluon_dirichlet():
 
 @with_seed()
 @use_np
+def test_gluon_beta():
+    class TestBeta(HybridBlock):
+        def __init__(self, func):
+            super(TestBeta, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, alpha, beta, *args):
+            beta_dist = mgp.Beta(alpha, beta, F)
+            if (len(args) == 0):
+                out = getattr(beta_dist, self._func)
+                if callable(out):
+                    return out()
+                else:
+                    return out
+            return getattr(beta_dist, self._func)(*args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        alpha = np.random.uniform(0.5, 1.5, shape)
+        beta = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestBeta("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(alpha, beta, samples).asnumpy()
+        np_out = ss.beta(alpha.asnumpy(), beta.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test `mean` and `var`
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        for func in ['mean', 'variance']:
+            alpha = np.random.uniform(0.5, 1.5, shape)
+            beta = np.random.uniform(0.5, 1.5, shape)
+            net = TestBeta(func)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(alpha, beta).asnumpy()
+            ss_beta = ss.beta(alpha.asnumpy(), beta.asnumpy())
+            if func == 'mean':
+                np_out = ss_beta.mean()
+            else:
+                np_out = ss_beta.var()
+            assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_gumbel():
     class TestGumbel(HybridBlock):
         def __init__(self, func):
@@ -619,7 +670,7 @@ def test_relaxed_one_hot_categorical():
             return getattr(categorical, self._func)(*args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3), (4, 0, 5)]
+    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
@@ -639,7 +690,26 @@ def test_relaxed_one_hot_categorical():
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == desired_shape + (event_shape,)
             assert param.grad.shape == param.shape
-            
+
+    # Test log_prob
+    for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            eps = _np.finfo('float32').eps
+            prob = np.clip(prob, eps, 1 - eps)
+            param = prob
+            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            # Samples from a Relaxed One-hot Categorical lie on a simplex.
+            samples = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=desired_shape))
+            if use_logit:
+                param = np.log(param)
+            net = TestRelaxedOneHotCategorical("log_prob", use_logit, batch_shape, event_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param, samples)
+            # Check shape
+            assert mx_out.shape == desired_shape    
+
 
 @with_seed()
 @use_np
