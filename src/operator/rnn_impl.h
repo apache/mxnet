@@ -145,7 +145,7 @@ void LstmForwardTraining(DType* ws,
   const int total_layers = D * L;
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, H));
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
-  const int b_size = 2 * H * 4;
+  const index_t b_size = 2 * H * 4;
   const index_t r_size = D * T * N * H * 6;
   const index_t y_offset = T * N * H * 5;
   const index_t cell_size = N * H;
@@ -298,7 +298,7 @@ void LstmForwardInference(DType* ws,
   const int total_layers = D * L;
   Tensor<cpu, 3, DType> hx(hx_ptr, Shape3(total_layers, N, P ? P : H));
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
-  const int b_size = 2 * H * 4;
+  const index_t b_size = 2 * H * 4;
   const index_t cell_size = N * H;
   const index_t projection_size = (P ? P : H) * N;
   DType* y_tmp_ptr = ws + (T + 1) * cell_size * 4 + cell_size * 2;
@@ -553,7 +553,7 @@ void LstmBackward(DType* ws,
   Tensor<cpu, 3, DType> cx(cx_ptr, Shape3(total_layers, N, H));
   Tensor<cpu, 3, DType> dhx(dhx_ptr, Shape3(total_layers, N, H));
   Tensor<cpu, 3, DType> dcx(dcx_ptr, Shape3(total_layers, N, H));
-  const int b_size = 2 * H * 4;
+  const index_t b_size = 2 * H * 4;
   const index_t r_size = D * T * N * H * 6;
   const index_t y_offset = T * N * H * 5;
   const index_t w_size1 = (I + H) * H * 4;      // first layer

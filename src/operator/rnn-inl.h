@@ -122,7 +122,7 @@ struct RNNParam : public dmlc::Parameter<RNNParam> {
   }
 };
 
-inline int GetRnnParamSize(int num_layer,
+inline index_t GetRnnParamSize(int num_layer,
                            index_t input_size,
                            int state_size,
                            int direction,
