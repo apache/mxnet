@@ -27,30 +27,30 @@
 #include "lib_api.h"
 
 void transpose(MXTensor src, MXTensor dst) {
-  typedef MXSparse DType;
-  DType* A = src.data<DType>();
-  DType* B = dst.data<DType>(); 
-  
+  MXInSparse* A = src.data<MXInSparse>();
+  MXOutSparse* B = dst.data<MXOutSparse>(); 
+
   std::vector<int64_t> shape = src.shape;
   int64_t h = shape[0];
   int64_t w = shape[1];
-
   if(src.stype == kRowSparseStorage) {
     //To do: add implementation. 
   }
   else if(src.stype == kCSRStorage) {
     // To do: fix type.
     float *Aval = (float*) (A->data);
-    float *Bval = (float*) (B->data);
     std::vector<int64_t> rowPtr(w + 2, 0);
+
     // count column
     for(int i = 0; i < A->data_len; i++) {
       rowPtr[A->indices[i] + 2]++;
     }
+
     // Accumulated sum
     for(int i = 2; i < rowPtr.size(); i++) {
       rowPtr[i] += rowPtr[i - 1];
     }
+
     // Get the dst sparse matrix.
     B->m_col_idx.resize(A->data_len);
     B->m_row_ptr.resize(w + 1);
