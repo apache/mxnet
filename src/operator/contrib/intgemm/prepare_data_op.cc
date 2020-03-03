@@ -93,13 +93,11 @@ void PrepareDataOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out.type_flag_, mshadow::kInt8);
   CHECK(in.CheckContiguous());
   CHECK(out.CheckContiguous());
-  size_t size = in.shape_.Size();
-  CHECK_EQ(size % 16, 0) << "intgemm PrepareData requires the size be a multiple of 16.";
 
   const float *A = in.dptr<float>();
   int8_t *quantA = out.dptr<int8_t>();
   const float multiplier = 127.0 / *inputs[1].dptr<float>();
-  ::intgemm::Int8::Quantize(A, quantA, multiplier, size);
+  ::intgemm::Int8::Quantize(A, quantA, multiplier, in.shape_.Size());
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_prepare_data)

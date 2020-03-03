@@ -81,12 +81,37 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out.type_flag_, mshadow::kFloat32);
   CHECK(in.CheckContiguous());
   CHECK(out.CheckContiguous());
-  size_t size = in.shape_.Size();
-  CHECK_EQ(size % (512 / 8 / sizeof(float)), 0) <<
-    "The total size of the input must be a multiple of 16.";
+
+  const std::size_t size = in.shape_.Size();
+  // Doesn't make sense to take MaxAbsolute of nothing.
+  CHECK_GE(size, 1U);
 
   const float *data = in.dptr<float>();
-  KERNEL_ASSIGN(*out.dptr<float>(), req[0], ::intgemm::MaxAbsolute(data, data + size));
+  // To maintain alignment, be a multiple of AVX512 register size.
+  const std::size_t kMultiple = 512 / 8 / sizeof(float);
+  CHECK_EQ(reinterpret_cast<intptr_t>(data) % kMultiple, 0) << "Data must be aligned to " << kMultiple << ".";
+
+#ifdef _OPENMP
+  float result = 0.0f;
+  // Every thread needs some work to do.  Should probably be more aggressive than this.
+  int threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+  threads = std::min<int>(threads, (size + kMultiple - 1) / kMultiple);
+  #pragma omp parallel num_threads(threads)
+  {
+    std::size_t num = omp_get_thread_num();
+    std::size_t thread_count = omp_get_num_threads();
+    std::size_t begin = ((num * size) / thread_count) & ~(kMultiple - 1);
+    std::size_t end = (((num + 1) * size) / thread_count) & ~(kMultiple - 1);
+    // Last thread gets the overhang.
+    if (num == thread_count - 1) end = size;
+    float local_result = ::intgemm::MaxAbsolute(data + begin, data + end);
+    #pragma omp critical
+    result = std::max(result, local_result);
+  }
+#else
+  float result = ::intgemm::MaxAbsolute(data, data + size);
+#endif
+  KERNEL_ASSIGN(*out.dptr<float>(), req[0], result);
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_maxabsolute)
