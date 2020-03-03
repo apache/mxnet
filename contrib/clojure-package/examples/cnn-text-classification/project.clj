@@ -19,6 +19,6 @@
   :description "CNN text classification with MXNet"
   :plugins [[lein-cljfmt "0.5.7"]]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.6.0-SNAPSHOT"]]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.7.0-SNAPSHOT"]]
   :pedantic? :skip
   :main cnn-text-classification.classifier)
