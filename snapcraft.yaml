@@ -16,7 +16,7 @@
 # under the License.
 
 name: mxnet
-version: '1.6.0'
+version: '1.7.0'
 summary: MXNet is a deep learning framework designed for efficiency and flexibility.
 description: |
   MXNet is a deep learning framework designed for both efficiency and 
