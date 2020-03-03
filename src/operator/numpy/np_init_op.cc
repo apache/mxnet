@@ -84,7 +84,7 @@ NNVM_REGISTER_OP(_npi_zeros)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<InitOpParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", InitShape<InitOpParam>)
-.set_attr<nnvm::FInferType>("FInferType", InitType<InitOpParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<InitOpParam>)
 .set_attr<FInferStorageType>("FInferStorageType", InitStorageType<InitOpParam, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", FillCompute<cpu, 0>)
 .add_arguments(InitOpParam::__FIELDS__());
@@ -214,7 +214,7 @@ NNVM_REGISTER_OP(_npi_arange)
 .set_num_outputs(1)
 .set_attr_parser(RangeParamParser)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyRangeShape)
-.set_attr<nnvm::FInferType>("FInferType", InitType<RangeParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<RangeParam>)
 .set_attr<FCompute>("FCompute<cpu>", RangeCompute<cpu, RangeParam>)
 .add_arguments(RangeParam::__FIELDS__());
 
