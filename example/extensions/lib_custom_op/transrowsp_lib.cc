@@ -34,11 +34,27 @@ void transpose(MXTensor src, MXTensor dst) {
   int64_t h = shape[0];
   int64_t w = shape[1];
   if(src.stype == kRowSparseStorage) {
-    //To do: add implementation. 
-    std::vector<float> t_data{1,0,4,0,0,2,0,0,0,0,3,0,5,0,0};
-    std::vector<int64_t> t_idx{0,1,2};
-    B->m_data = t_data;
-    B->m_col_idx = t_idx;
+    std::map<int, std::vector<float>> mp;
+    float *Aval = (float*) (A->data);
+    for(int i = 0; i < A->data_len; i++) {
+      int row = i / w;
+      int col = i % w;
+      row = A->indices[row];
+      if(Aval[i] != 0) {
+        if(mp.find(col) == mp.end()) {
+          mp[col] = std::vector<float>(h, 0);
+          mp[col][row] = Aval[i];
+        }
+        else {
+          mp[col][row] = Aval[i];
+        }
+      }
+    }
+
+    for(auto i : mp) {
+      B->m_col_idx.push_back(i.first);
+      B->m_data.insert(B->m_data.end(), i.second.begin(), i.second.end());
+    }
   }
 }
 

@@ -238,7 +238,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
                     in_indices.data(), in_indptr.data(), in_indices_shapes.data(), 
-		    in_indptr_shapes.data(), tmp_data, col_index, row_ptr))
+                    in_indptr_shapes.data(), tmp_data, col_index, row_ptr))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -260,22 +260,10 @@ void CustomFComputeDispatcher(const std::string op_name,
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
                             in_indices.data(), in_indptr.data(),
                             in_indices_shapes.data(), in_indptr_shapes.data(),
-			    tmp_data, col_index, row_ptr))
+                            tmp_data, col_index, row_ptr))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
   }
   
-  /*
-  std::cout << "Check Here:" << std::endl;
-  for(int i = 0; i < tmp_data[0].size(); i++)
-    std::cout << tmp_data[0][i] << " ";
-  std::cout << std::endl;
-  for(int i = 0; i < col_index[0].size(); i++)
-    std::cout << col_index[0][i] << " ";
-  std::cout << std::endl;
-  for(int i = 0; i < row_ptr[0].size(); i++)
-    std::cout << row_ptr[0][i] << " ";
-  std::cout << std::endl;
-  */
   // Alloc space for sparse output and copy data to saprse NDArray.
   for (size_t i = 0; i < outputs.size(); i++) {
     if (outputs[i].storage_type() == mxnet::kDefaultStorage) continue;  
@@ -637,7 +625,7 @@ int MXLoadLib(const char *path) {
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
       return op::storage_type_assign(out_stypes,
-		                     static_cast<mxnet::NDArrayStorageType>(in_stypes->at(0)),
+                                     static_cast<mxnet::NDArrayStorageType>(in_stypes->at(0)),
                                      dispatch_mode, DispatchMode::kFComputeEx);
     };
 

@@ -947,10 +947,10 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
                              xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
                              void** in_indices, void** in_indptr, 
-			     int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-			     std::vector<std::vector<float>>& tmp_data, 
-			     std::vector<std::vector<int64_t>>& col_idx,
-			     std::vector<std::vector<int64_t>>& row_ptr);
+                             int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
+                             std::vector<std::vector<float>>& tmp_data, 
+                             std::vector<std::vector<int64_t>>& col_idx,
+                             std::vector<std::vector<int64_t>>& row_ptr);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
@@ -976,7 +976,7 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
                                      void** in_indices, void** in_indptr,
                                      int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-				     std::vector<std::vector<float>>& tmp_data,
+                                     std::vector<std::vector<float>>& tmp_data,
                                      std::vector<std::vector<int64_t>>& col_idx,
                                      std::vector<std::vector<int64_t>>& row_ptr);
 
@@ -1185,8 +1185,8 @@ extern "C" {
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
                   xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
                   void** in_indices, void** in_indptr, 
-		  int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-		  std::vector<std::vector<float>>& tmp_data,
+                  int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
+                  std::vector<std::vector<float>>& tmp_data,
                   std::vector<std::vector<int64_t>>& col_idx,
                   std::vector<std::vector<int64_t>>& row_ptr) {
     // create map of attributes from list
@@ -1203,20 +1203,20 @@ extern "C" {
     for (int i = 0; i < num_in; i++) {
       // Dense representation.
       if(!in_indices_shapes) {
-	inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
+        inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                            inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
-	MXStorageType type;
-	if(!in_indptr_shapes) {
+        MXStorageType type;
+        if(!in_indptr_shapes) {
           type = kRowSparseStorage;
-	  in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
+          in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
         }
         else {
           type = kCSRStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i],
-                      in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
+                           in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
         }
         inputs[i].setTensor((void*)(&in_sparse[i]), (MXDType)intypes[i], inshapes[i], indims[i],
                             inIDs[i], {indev_type[i], indev_id[i]}, type);
@@ -1230,15 +1230,15 @@ extern "C" {
 
     for (int i = 0; i < num_out; i++) {
       if(col_idx.empty()) {
-	outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+        outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
-	out_sparse.push_back(MXOutSparse(tmp_data[0], col_idx[0], row_ptr[0]));
-	MXStorageType type = row_ptr.empty() ? kRowSparseStorage : kCSRStorage;
-	outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]}, type);
+        out_sparse.push_back(MXOutSparse(tmp_data[0], col_idx[0], row_ptr[0]));
+        MXStorageType type = row_ptr.empty() ? kRowSparseStorage : kCSRStorage;
+        outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
+                             outIDs[i], {outdev_type[i], outdev_id[i]}, type);
       }
     }
 
@@ -1315,7 +1315,7 @@ extern "C" {
                           xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
                           void** in_indices, void** in_indptr, 
                           int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-			  std::vector<std::vector<float>>& tmp_data,
+                          std::vector<std::vector<float>>& tmp_data,
                           std::vector<std::vector<int64_t>>& col_idx,
                           std::vector<std::vector<int64_t>>& row_ptr) {
     // create a vector of tensors for inputs
@@ -1327,7 +1327,7 @@ extern "C" {
       // Dense representation.
       if(!in_indices_shapes) {
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
+                            inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
@@ -1339,7 +1339,7 @@ extern "C" {
         else {
           type = kCSRStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i],
-                      in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
+                           in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
         }
         inputs[i].setTensor((void*)(&in_sparse[i]), (MXDType)intypes[i], inshapes[i], indims[i],
                             inIDs[i], {indev_type[i], indev_id[i]}, type);
@@ -1354,14 +1354,14 @@ extern "C" {
     for (int i = 0; i < num_out; i++) {
       if(col_idx.empty()) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
         out_sparse.push_back(MXOutSparse(tmp_data[0], col_idx[0], row_ptr[0]));
         MXStorageType type = row_ptr.empty() ? kRowSparseStorage : kCSRStorage;
         outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]}, type);
+                             outIDs[i], {outdev_type[i], outdev_id[i]}, type);
       }
     }
 

@@ -35,6 +35,7 @@ elif (os.name=='nt'):
     mx.library.load(path)
 
 a = mx.nd.array([[1,2,3],[0,0,0],[4,0,5],[0,0,0],[0,0,0]])
+# a = mx.nd.array([[1,3,0,2,1],[0,1,0,0,0],[0,2,4,5,3]])
 a = a.tostype('row_sparse')
 print("--------Input CSR Array---------")
 print("data:", a.data.asnumpy())
