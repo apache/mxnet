@@ -23,7 +23,7 @@
             ;;; so if you run into trouble please delete the `lein-juptyter` plugin
             [lein-jupyter "0.1.16" :exclusions [org.clojure/tools.nrepl org.clojure/clojure org.codehaus.plexus/plexus-utils org.clojure/tools.reader]]]
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.6.0-SNAPSHOT"]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.7.0-SNAPSHOT"]
                  [cheshire "5.8.1"]
                  [clojure-csv/clojure-csv "2.0.1"]]
   :pedantic? :skip
