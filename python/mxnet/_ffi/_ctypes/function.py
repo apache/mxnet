@@ -21,8 +21,8 @@ Function configuration API.
 Acknowledgement: This file originates from incubator-tvm
 """
 import ctypes
-import numpy as onp
 from numbers import Number, Integral
+import numpy as onp
 
 from ...base import get_last_ffi_error, _LIB
 from ..base import c_str
@@ -115,7 +115,7 @@ class FunctionBase(object):
         _ = temp_args
         _ = args
         return (RETURN_SWITCH[ret_tcode.value](ret_val) if ret_tcode.value != TypeCode.PYARG
-                else RETURN_SWITCH[ret_tcode.value](ret_val, args)) 
+                else RETURN_SWITCH[ret_tcode.value](ret_val, args))
 
 
 _CLASS_OBJECT = None

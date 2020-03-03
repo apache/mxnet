@@ -28,6 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"

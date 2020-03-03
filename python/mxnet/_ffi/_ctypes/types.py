@@ -32,14 +32,11 @@ class TypeCode(object):
     NULL = 4
     MXNET_TYPE = 5
     MXNET_CONTEXT = 6
-    ARRAY_HANDLE = 7
-    OBJECT_HANDLE = 8
-    MODULE_HANDLE = 9
-    FUNC_HANDLE = 10
-    STR = 11
-    BYTES = 12
-    PYARG = 13
-    NDARRAYHANDLE = 14
+    OBJECT_HANDLE = 7
+    STR = 8
+    BYTES = 9
+    PYARG = 10
+    NDARRAYHANDLE = 11
     EXT_BEGIN = 15
 
 

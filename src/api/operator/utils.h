@@ -27,6 +27,7 @@
 #include <mxnet/base.h>
 #include <nnvm/c_api.h>
 #include <vector>
+#include <string>
 #include "../../imperative/imperative_utils.h"
 
 namespace mxnet {

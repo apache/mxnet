@@ -7690,5 +7690,4 @@ def cumsum(a, axis=None, dtype=None, out=None):
     array([[ 1,  3,  6],
            [ 4,  9, 15]])
     """
-    # return _npi.cumsum(a, axis=axis, dtype=dtype, out=out)
     return _api_internal.cumsum(a, axis, dtype, out)

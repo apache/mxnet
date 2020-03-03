@@ -417,7 +417,6 @@ class MXNetPODValue_ {
   }
   operator void*() const {
     if (type_code_ == kNull) return nullptr;
-    if (type_code_ == kArrayHandle) return value_.v_handle;
     MXNET_CHECK_TYPE_CODE(type_code_, kHandle);
     return value_.v_handle;
   }
@@ -521,11 +520,6 @@ class MXNetArgValue : public MXNetPODValue_ {
     MXNET_CHECK_TYPE_CODE(type_code_, kNDArrayHandle);
     return reinterpret_cast<::mxnet::NDArray*>(value_.v_handle);
   }
-  operator PackedFunc() const {
-    if (type_code_ == kNull) return PackedFunc();
-    MXNET_CHECK_TYPE_CODE(type_code_, kFuncHandle);
-    return *ptr<PackedFunc>();
-  }
   template<typename FType>
   operator TypedPackedFunc<FType>() const {
     return TypedPackedFunc<FType>(operator PackedFunc());
@@ -598,11 +592,6 @@ class MXNetRetValue : public MXNetPODValue_ {
   operator MXNetDataType() const {
     return MXNetDataType(operator DLDataType());
   }
-  operator PackedFunc() const {
-    if (type_code_ == kNull) return PackedFunc();
-    MXNET_CHECK_TYPE_CODE(type_code_, kFuncHandle);
-    return *ptr<PackedFunc>();
-  }
   template<typename FType>
   operator TypedPackedFunc<FType>() const {
     return TypedPackedFunc<FType>(operator PackedFunc());
@@ -669,10 +658,6 @@ class MXNetRetValue : public MXNetPODValue_ {
     SwitchToObject(kObjectHandle, std::move(other));
     return *this;
   }
-  MXNetRetValue& operator=(PackedFunc f) {
-    this->SwitchToClass(kFuncHandle, f);
-    return *this;
-  }
   template<typename FType>
   MXNetRetValue& operator=(const TypedPackedFunc<FType>& f) {
     return operator=(f.packed());
@@ -723,7 +708,6 @@ class MXNetRetValue : public MXNetPODValue_ {
   /*! \return The value field, if the data is POD */
   const MXNetValue& value() const {
     CHECK(type_code_ != kObjectHandle &&
-          type_code_ != kFuncHandle &&
           type_code_ != kStr) << "MXNetRetValue.value can only be used for POD data";
     return value_;
   }
@@ -745,10 +729,6 @@ class MXNetRetValue : public MXNetPODValue_ {
       }
       case kBytes: {
         SwitchToClass<std::string>(kBytes, other);
-        break;
-      }
-      case kFuncHandle: {
-        SwitchToClass<PackedFunc>(kFuncHandle, other);
         break;
       }
       case kObjectHandle: {
@@ -798,7 +778,6 @@ class MXNetRetValue : public MXNetPODValue_ {
     if (type_code_ == kNull) return;
     switch (type_code_) {
       case kStr: delete ptr<std::string>(); break;
-      case kFuncHandle: delete ptr<PackedFunc>(); break;
       case kObjectHandle: {
         static_cast<Object*>(value_.v_handle)->DecRef();
         break;
@@ -863,7 +842,6 @@ inline const char* TypeCode2Str(int type_code) {
     case kBytes: return "bytes";
     case kHandle: return "handle";
     case kNull: return "NULL";
-    case kFuncHandle: return "FunctionHandle";
     case kObjectHandle: return "ObjectCell";
     default: LOG(FATAL) << "unknown type_code="
                         << static_cast<int>(type_code); return "";
@@ -1018,10 +996,6 @@ class MXNetArgsSetter {
     values_[i].v_handle = value;
     type_codes_[i] = kHandle;
   }
-  void operator()(size_t i, DLTensor* value) const {
-    values_[i].v_handle = value;
-    type_codes_[i] = kArrayHandle;
-  }
   void operator()(size_t i, const char* value) const {
     values_[i].v_str = value;
     type_codes_[i] = kStr;
@@ -1043,10 +1017,6 @@ class MXNetArgsSetter {
   void operator()(size_t i, const MXNetByteArray& value) const {  // NOLINT(*)
     values_[i].v_handle = const_cast<MXNetByteArray*>(&value);
     type_codes_[i] = kBytes;
-  }
-  void operator()(size_t i, const PackedFunc& value) const {  // NOLINT(*)
-    values_[i].v_handle = const_cast<PackedFunc*>(&value);
-    type_codes_[i] = kFuncHandle;
   }
   template<typename FType>
   void operator()(size_t i, const TypedPackedFunc<FType>& value) const {  // NOLINT(*)

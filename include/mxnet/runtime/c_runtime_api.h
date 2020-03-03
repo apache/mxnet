@@ -47,14 +47,11 @@ typedef enum {
   kNull = 4U,
   kMXNetType = 5U,
   kMXNetContext = 6U,
-  kArrayHandle = 7U,
-  kObjectHandle = 8U,
-  kModuleHandle = 9U,
-  kFuncHandle = 10U,
-  kStr = 11U,
-  kBytes = 12U,
-  kPyArg = 13U,
-  kNDArrayHandle = 14U,
+  kObjectHandle = 7U,
+  kStr = 8U,
+  kBytes = 9U,
+  kPyArg = 10U,
+  kNDArrayHandle = 11U,
   // Extension codes for other frameworks to integrate MXNet PackedFunc.
   // To make sure each framework's id do not conflict, use first and
   // last sections to mark ranges.
