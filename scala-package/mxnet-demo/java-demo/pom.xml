@@ -27,7 +27,7 @@
     <properties>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <mxnet.version>[1.6.0-SNAPSHOT, )</mxnet.version>
+        <mxnet.version>[1.7.0-SNAPSHOT, )</mxnet.version>
         <mxnet.scalaprofile>2.11</mxnet.scalaprofile>
     </properties>
 
@@ -41,7 +41,7 @@
                 </repository>
             </repositories>
             <properties>
-                <mxnet.version>[1.6.0-SNAPSHOT, )</mxnet.version>
+                <mxnet.version>[1.7.0-SNAPSHOT, )</mxnet.version>
             </properties>
         </profile>
         <profile>

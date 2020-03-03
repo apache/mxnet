@@ -1,7 +1,7 @@
 Package: mxnet
 Type: Package
 Title: MXNet: A Flexible and Efficient Machine Learning Library for Heterogeneous Distributed Systems
-Version: 1.6.0
+Version: 1.7.0
 Date: 2017-06-27
 Author: Tianqi Chen, Qiang Kou, Tong He, Anirudh Acharya <https://github.com/anirudhacharya>
 Maintainer: Qiang Kou <qkou@qkou.info>
