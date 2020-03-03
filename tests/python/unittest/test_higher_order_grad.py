@@ -548,6 +548,7 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
     computed_grads = []
     head_grads = []
 
+
     # Perform compute.
     with autograd.record():
         y = op(x)
@@ -570,6 +571,193 @@ def check_nth_order_unary(x, op, grad_ops, orders, rtol=None, atol=None):
         assert_almost_equal(
             expected_grad, computed_grad.asnumpy(), rtol=rtol, atol=atol)
 
+@with_seed()
+def test_elemwise_sub():
+    def sub(inputs):
+        return nd.elemwise_sub(inputs[0], inputs[1])
+    def grad_op(inputs):
+        return  [nd.ones_like(inputs[0]), nd.negative(nd.ones_like(inputs[1]))]
+    def grad_grad_op(inputs):
+        return  [nd.zeros_like(inputs[0]),  nd.zeros_like(inputs[1])]
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        x, y = random_arrays(shape, shape)
+        check_nth_order_binary([x, y], sub, [grad_op, grad_grad_op], [1,  2])
+
+@with_seed()
+def test_elemwise_mul():
+    def mul(inputs):
+        return nd.elemwise_mul(inputs[0], inputs[1])
+    def grad_op(inputs):
+        return  [inputs[1], inputs[0]]
+    def grad_grad_op(inputs):
+        return [nd.zeros_like(inputs[0]) ,nd.zeros_like(inputs[1])]
+
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        x, y = random_arrays(shape, shape)
+        check_nth_order_binary([x, y], mul, [grad_op, grad_grad_op], [1,  2])
+
+@with_seed()
+def test_power():
+    def power(inputs):
+        return nd.power(inputs[0], inputs[1])
+
+    def grad_op(inputs):
+        x, y = inputs
+        return  [y * nd.power(x, y - 1), nd.power(x, y) * nd.log(x)]
+
+    def grad_grad_op(inputs):
+        x, y = inputs
+        return   [y * (y - 1) * nd.power(x, y - 2), nd.power(x, y) * (nd.log(x) ** 2)]
+
+    def grad_grad_grad_op(inputs):
+        x, y = inputs
+        return   [y * (y - 1) * (y - 2) * nd.power(x, y - 3), nd.power(x, y) * (nd.log(x) ** 3)]
+
+    low = 1.0
+    high = 3.0
+    for dim in range(1, 5):
+        shape = rand_shape_nd(dim)
+        x = nd.random.uniform(low, high, shape)
+        y = nd.random.uniform(low, high, shape)
+        check_nth_order_binary([x, y], power, [grad_op, grad_grad_op, grad_grad_grad_op], [1, 2, 3])
+
+def autograd_grad_ex(heads, variables, head_grads=None, retain_graph=None, create_graph=False,
+            train_mode=True):
+    """ If some variables don't in the path of computing heads, we the heads grad of them to zero instead of throwing exceptions.
+
+    The autograd.grad requires user knows which variables involved to compute the heads grad of them. That's fine for first order grad,
+    but for higher order grad, the variables used to compute the heads, may not used to computer their higher order grad.
+    It's impossible to ask user to know the formulas of every order grad.
+
+    E.g. we use such code to compute 2-nd order gradient:
+      with autograd.record():
+          z = op(x, y)
+          head_grad = nd.ones_like(z)
+          dz_dx, _  = autograd.grad(heads=z, variables=[x, y], head_grads=head_grad,
+                              create_graph=True, retain_graph=True)
+          d2z_d2x, _  = autograd.grad(heads=dz_dx, variables=[x, y], head_grads=head_grad,
+                              create_graph=True, retain_graph=True)
+    If z = x * y, because d2z_d2x = 0, MXNET will report the input is unreachable from the output.
+    But it seems in that case MXNET returns zeros is more reasonable.
+    """
+    # xxx: only consider one head currently
+    argument_names =  autograd.get_symbol(heads).list_arguments()
+
+    # XXX: in some cases, a variable may has more than one outputs, we need a other way ot get  the name of various.
+    # But in the unittest, it is fine
+    variable_names = [autograd.get_symbol(variable).list_outputs()[0] for variable in variables]
+    involved_variable_indexes = []
+    involved_variables = []
+    for i in range(0, len(variables)):
+        if variable_names[i] in argument_names:
+            involved_variables.append(variables[i])
+            involved_variable_indexes.append(i)
+
+    if involved_variables:
+        partial_grads = autograd.grad(heads, involved_variables, head_grads, retain_graph, create_graph, train_mode)
+    else:
+        partial_grads = []
+
+    grads = []
+    partial_grads_index = 0
+    for i in range(0, len(variables)):
+       if i in involved_variable_indexes:
+           grads.append(partial_grads[partial_grads_index])
+           partial_grads_index += 1
+       else:
+           grads.append(nd.zeros_like(variables[i]))
+    return grads
+
+
+def check_second_order_binary(inputs, op, grad_grad_op, rtol=None, atol=None, equal_nan=None):
+    check_nth_order_binary(inputs, op, grad_grad_op, 2, rtol, atol)
+
+def check_nth_order_binary(inputs, op, grad_ops, orders, rtol=None, atol=None):
+    """Assert n-th order autograd gradient against expected gradient.
+
+    Multiple order of gradients can be checked by passing list of
+    function computing the particular order gradient and passing the corresponding list of order.
+    Note
+    ----
+    1. Orders should always be monotonically increasing.
+    2. Elements of grads_ops should correspond to elements of orders
+    i.e. grads_op = [grad_op, grad_grad_grad_op] should be passed with
+         orders = [1, 3]
+
+    Parameters
+    ----------
+    inputs : tuple of mxnet.NDArray (x, y)
+        Input Array.
+    op : Callable (x,y) -> z
+        Operation to perform on Input Array.
+    grad_ops : Callable or List of Callable
+        Function (x,y) -> (n_grad_x, n_grad_y) to compute and assert gradient of given order.
+    orders : int or List of int
+        Order/s to assert expected and computed gradients.
+
+    Returns
+    -------
+    None
+
+    """
+    if isinstance(orders, int):
+        orders = [orders]
+        grad_ops = [grad_ops]
+
+    assert all(i < j for i, j in zip(orders[0:-1], orders[1:])), \
+        "orders should be monotonically increasing"
+    assert len(set(orders)) == len(orders), \
+        "orders should have unique elements"
+    highest_order = max(orders)
+
+    inputs = [nd.array(input) for input in inputs]
+    for input in inputs:
+        input.attach_grad()
+
+    expected_grads = [grad_op(inputs) for grad_op in grad_ops]
+    computed_grads = []
+    head_grads = [[]]
+
+    # Perform compute.
+    with autograd.record():
+        z = op(inputs)
+        heads = [z for _ in inputs]
+        for current_order in range(1, highest_order+1):
+            grads = []
+            new_head_grads = []
+            new_heads = []
+            for i in range(0, len(heads)):
+                head = heads[i]
+                head_grad = nd.random.normal(shape=head.shape)
+                new_head_grads.append(head_grad.asnumpy())
+                grads.append(autograd_grad_ex(heads=head, variables=inputs, head_grads=head_grad,
+                                              create_graph=True, retain_graph=True)[i])
+                # If we only use once auto grad with head_grads = head_grad in every iteration,
+                # in the i-th iteration, we use head = derivative_(i-1) * head_grad_(i-1)
+                # but in the expected computed, we use  head = derivative_(i-1)
+                # why it is woks in the check_nth_order_unary?
+                # Because most of them defined gradient of the first gradient (derivative_(1) * head_grad_(1)) of the function,
+                # and in the gradient function, they manually defined derivative_(i-1) and use it to computed derivative_(1) * head_grad_(1).
+                # It maybe a wrong approach.
+                new_heads.append(autograd_grad_ex(heads=head, variables=inputs, head_grads=nd.ones_like(head),
+                                              create_graph=True, retain_graph=True)[i])
+            heads = new_heads
+            if current_order in orders:
+                computed_grads.append(grads)
+            head_grads.append(new_head_grads)
+
+    # Validate all the gradients.
+    for order, grad_list, computed_grad_list in \
+            zip(orders, expected_grads, computed_grads):
+        # Compute expected values.
+        # keep as numpy value and use dot mul
+        expected_grad_list = [grad.asnumpy() for grad in grad_list]
+        for expected_grad, head_grad, computed_grad in zip(expected_grad_list, head_grads[order], computed_grad_list):
+            expected_grad *= head_grad
+            assert_almost_equal(expected_grad, computed_grad.asnumpy(), rtol=rtol, atol=atol)
 
 def arange_shape_like(y):
     shape = y.shape
