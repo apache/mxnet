@@ -87,7 +87,7 @@ inline bool UnravelOpShape(const nnvm::NodeAttrs& attrs,
     return true;
   }
   if ((*out_attrs)[0].ndim() > 0) {
-    mxnet::TShape &out_shape = (*out_attrs)[0];
+    const mxnet::TShape &out_shape = (*out_attrs)[0];
     CHECK_EQ((*out_attrs)[0].ndim(), 2)
       << "Output of unravel operator must be two-dimensional.";
     CHECK_EQ((*out_attrs)[0][0], shape.ndim())
@@ -164,8 +164,9 @@ void UnravelForward(const nnvm::NodeAttrs& attrs,
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
     Tensor<xpu, 1, OType> in = inputs[0].FlatTo1D<xpu, OType>(s);
     Tensor<xpu, 1, OType> out = outputs[0].FlatTo1D<xpu, OType>(s);
-    mxnet_op::Kernel<unravel_index, xpu>::Launch(s, in.shape_.Size(), in.shape_.Size(), shape.ndim(),
-                                                 work.dptr_, out.dptr_, in.dptr_);
+    mxnet_op::Kernel<unravel_index, xpu>::Launch(
+        s, in.shape_.Size(), in.shape_.Size(), shape.ndim(),
+        work.dptr_, out.dptr_, in.dptr_);
   });
 }
 

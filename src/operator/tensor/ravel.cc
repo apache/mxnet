@@ -71,7 +71,7 @@ Examples::
    unravel_index(B, shape=(7,6)) = [[[3,6,6],[1,1,2]],
                                     [[4,5,1],[4,5,3]]]
    unravel_index(B, shape=(-1,6)) = [[[3,6,6],[1,1,2]],
-                                    [[4,5,1],[4,5,3]]]
+                                     [[4,5,1],[4,5,3]]]
 
 )code" ADD_FILELINE)
 .set_num_inputs(1)
