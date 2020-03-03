@@ -8397,6 +8397,19 @@ def test_ravel():
       c = mx.sym.unravel_index(a, shape=shape2)
       check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
 
+
+@with_seed()
+def test_unravel_index():
+    unravel_shape = (2, 10)
+    unravel_size = np.prod(unravel_shape)
+    for shape in [(10,), (2, 10), (3, 4, 5)]:
+        a = np.random.randint(0, unravel_size, size=shape)
+        b = np.stack(np.unravel_index(a, shape=unravel_shape), 0)
+        a_mx = mx.nd.array(a)
+        b_mx = mx.nd.unravel_index(a_mx, shape=unravel_shape)
+        assert_array_equal(b, b_mx.asnumpy())
+
+
 def test_context_num_gpus():
     try:
         # Note: the test is run both on GPU and CPU hosts, so that we can not assert
