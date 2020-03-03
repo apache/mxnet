@@ -93,7 +93,7 @@ inline bool NumpyNormalOpType(const nnvm::NodeAttrs &attrs,
   } else {
     (*out_attrs)[0] = mxnet::common::GetDefaultDtype();
   }
-  (*out_attrs)[1] = mxnet::common::GetDefaultDtype();
+  (*out_attrs)[1] = mshadow::kFloat32;
   return true;
 }
 
