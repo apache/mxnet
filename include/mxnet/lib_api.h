@@ -362,20 +362,25 @@ struct MXTensor {
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
-union RandomType {
-    int i;
-    int64_t l;
-    float f;
-    double d;
-};
-
-typedef RandomType (*rng_caller_t)(void*, const char*);
-
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
 #else
   typedef void* mx_stream_t;
 #endif
+
+/*! \brief union to hold random number generator return type from MXNet */
+union RandomRetType {
+    int32_t i;
+    int64_t l;
+    float f;
+    double d;
+};
+
+/*! \brief enum to hold random number generator call types from MXNet */
+enum RandomGenType {RNG_RAND, RNG_RAND64, RNG_UNIFORM, RNG_NORMAL};
+
+/*! \brief function to call MXNet backend random number generator */
+typedef RandomRetType (*rng_caller_t)(void*, RandomGenType, int);
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
@@ -404,9 +409,14 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
-  int get_randint() {
-    RandomType ret = rng_caller_nocap(rng_caller, "rand");
+  int32_t get_randint(int seed = 1) {
+    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_RAND, seed);
     return ret.i;
+  }
+
+  int64_t get_randint64(int seed = 1) {
+    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_RAND64, seed);
+    return ret.l;
   }
 
  private:
@@ -1233,7 +1243,8 @@ extern "C" {
                            outIDs[i], {outdev_type[i], outdev_id[i]});
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, rng_caller_nocap, rng_caller);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream,
+                   rng_caller_nocap, rng_caller);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
