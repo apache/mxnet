@@ -88,29 +88,4 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
   return ndoutputs;
 }
 
-std::string String2MXNetTypeWithBool(int dtype) {
-  switch (dtype) {
-    case mshadow::kFloat32:
-      return "float32";
-    case mshadow::kFloat64:
-      return "float64";
-    case mshadow::kFloat16:
-      return "float16";
-    case mshadow::kUint8:
-      return "uint8";
-    case mshadow::kInt8:
-      return "int8";
-    case mshadow::kInt32:
-      return "int32";
-    case mshadow::kInt64:
-      return "int64";
-    case mshadow::kBool:
-      return "bool";
-    default:
-      LOG(FATAL) << "Unknown type enum " << dtype;
-  }
-  LOG(FATAL) << "should not reach here ";
-  return 0;
-}
-
 }  // namespace mxnet

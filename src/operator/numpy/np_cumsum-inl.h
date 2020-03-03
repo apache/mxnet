@@ -32,7 +32,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include "../../api/operator/utils.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {

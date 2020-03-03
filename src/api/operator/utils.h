@@ -48,8 +48,6 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
                              int* num_outputs,
                              NDArray** outputs);
 
-std::string String2MXNetTypeWithBool(int dtype);
-
 template<typename T>
 void SetAttrDict(nnvm::NodeAttrs* attrs) {
   if (Imperative::Get()->is_recording()) {
