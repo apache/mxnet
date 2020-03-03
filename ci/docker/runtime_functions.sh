@@ -529,6 +529,20 @@ build_ubuntu_cpu_cmake_asan() {
     make -j $(nproc) mlp_cpu
 }
 
+build_ubuntu_cpu_gcc8_werror() {
+    set -ex
+    cd /work/build
+    export CXX=g++-8
+    export CC=gcc-8
+    cmake \
+        -DUSE_CUDA=OFF \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        -GNinja /work/mxnet
+    ninja
+}
+
 build_ubuntu_cpu_clang39() {
     set -ex
     cd /work/build
