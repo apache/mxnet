@@ -2,9 +2,7 @@ Run the following command:
 
 <div class="v1-6-0">
 
-{% highlight bash %}
-$ pip install mxnet
-{% endhighlight %}
+Windows pip packages for MXNet 1.6 are not yet available.
 
 </div> <!-- End of v1-6-0 -->
 <div class="v1-5-1">
