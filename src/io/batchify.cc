@@ -29,6 +29,7 @@
 #include <mshadow/extension.h>
 #include <mshadow/extension/slice.h>
 #include "./inst_vector.h"
+#include "../ndarray/ndarray_function.h"
 
 #include <stack>
 
@@ -145,22 +146,17 @@ class StackBatchify : public BatchifyFunction {
           } else {
             outputs[i] = NDArray(sshape, mxnet::Context::CPU(0), false, inputs[0][i].dtype());
           }
-          _Pragma("omp parallel for num_threads(bs)")
-          for (size_t j = 0; j < bs; ++j) {
-            inputs[j][i].WaitToRead();
-            outputs[i].Slice(j, j + 1).SyncCopyFromNDArray(inputs[j][i]);
-          }
-          // MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
-          //   DType *ptr = ret[i].dptr<DType>();
-          //   auto asize = ashape.Size();
-          //   _Pragma("omp parallel for num_threads(bs)")
-          //   for (size_t j = 0; j < bs; ++j) {
-          //     inputs[j][i].WaitToRead();
-          //     mshadow::Copy(
-          //       TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0).FlatTo2D<cpu, DType>(),
-          //       inputs[j][i].data().FlatTo2D<cpu, DType>());
-          //   }
-          // })
+          MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
+            _Pragma("omp parallel for num_threads(bs)")
+            for (size_t j = 0; j < bs; ++j) {
+              // inputs[j][i].WaitToRead();
+              DType *ptr = outputs[i].data().dptr<DType>();
+              auto asize = ashape.Size();
+              RunContext rctx{outputs[i].ctx(), nullptr, nullptr, false};
+              auto dst = TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0);
+              mxnet::ndarray::Copy<cpu, cpu>(inputs[j][i].data(), &dst, Context::CPU(), Context::CPU(), rctx);
+            }
+          })
       }
       return true;
     }
@@ -260,7 +256,7 @@ class PadBatchify : public BatchifyFunction {
             for (size_t j = 0; j < bs; ++j) {
               using namespace mshadow::expr;
               auto compact_shapes = CompactShapes(ashape, inputs[j][i].shape());
-              inputs[j][i].WaitToRead();
+              // inputs[j][i].WaitToRead();
               auto& fshape = compact_shapes.first;
               auto& cshape = compact_shapes.second;
               switch (fshape.size()) {

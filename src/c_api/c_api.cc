@@ -1934,6 +1934,7 @@ int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
     tmp.reserve(num_output);
     for (int j = 0; j < num_output; ++j) {
       tmp.emplace_back(*reinterpret_cast<NDArray*>(inputs[pos++]));
+      tmp.back().WaitToRead();
     }
     ndinputs.emplace_back(tmp);
   }

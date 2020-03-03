@@ -31,6 +31,7 @@
 
 #include "../imperative/cached_op.h"
 #include "../imperative/cached_op_threadsafe.h"
+#include "../ndarray/ndarray_function.h"
 
 #include <string>
 #include <vector>
@@ -96,6 +97,7 @@ class RecordFileDataset : public Dataset {
 
     bool GetItem(uint64_t idx, std::vector<NDArray>& ret) {
       ret.resize(1);
+      auto& out = ret[0];
       size_t pos = idx_[static_cast<size_t>(idx)];
       {
         std::lock_guard<std::mutex> lck(mutex_);
@@ -103,8 +105,11 @@ class RecordFileDataset : public Dataset {
         if (reader_->NextRecord(&read_buff_)) {
           const char *buf = read_buff_.c_str();
           const size_t size = read_buff_.size();
-          ret[0] = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
-          ret[0].SyncCopyFromCPU(buf, size);
+          out = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
+          TBlob dst = out.data();
+          RunContext rctx{Context::CPU(), nullptr, nullptr, false};
+          mxnet::ndarray::Copy<cpu, cpu>(TBlob((void*)buf, out.shape(), cpu::kDevMask, out.dtype(), 0),
+                                  &dst, Context::CPU(), Context::CPU(), rctx);
         }
       }
       return true;
@@ -228,16 +233,20 @@ class ImageRecordFileDataset : public Dataset {
       size -= sizeof(header);
       s += sizeof(header);
       NDArray label = NDArray(Context::CPU(), mshadow::default_type_flag);
+      TBlob dst = label.data();
+      RunContext rctx{Context::CPU(), nullptr, nullptr, false};
       if (header.flag > 0) {
         auto label_shape = header.flag <= 1 ? TShape(0, 1) : TShape({header.flag});
         label.ReshapeAndAlloc(label_shape);
-        label.SyncCopyFromCPU(s, header.flag);
+        mxnet::ndarray::Copy<cpu, cpu>(TBlob((void*)s, label.shape(), cpu::kDevMask, label.dtype(), 0),
+                                  &dst, Context::CPU(), Context::CPU(), rctx);
         s += sizeof(float) * header.flag;
         size -= sizeof(float) * header.flag;
       } else {
         // label is a scalar with ndim() == 0
         label.ReshapeAndAlloc(TShape(0, 1));
-        label.SyncCopyFromCPU(&header.label, 1);
+        mxnet::ndarray::Copy<cpu, cpu>(TBlob((void*)(&header.label), label.shape(), cpu::kDevMask, label.dtype(), 0),
+                                  &dst, Context::CPU(), Context::CPU(), rctx);
       }
       ret.resize(2);
       ret[1] = label;
