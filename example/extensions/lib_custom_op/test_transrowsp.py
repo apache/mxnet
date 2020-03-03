@@ -28,36 +28,33 @@ import os
 
 #load library
 if (os.name=='posix'):
-    path = os.path.abspath('libtranssparse_lib.so')
+    path = os.path.abspath('libtransrowsp_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('libtranssparse_lib.dll')
+    path = os.path.abspath('libtransrowsp_lib.dll')
     mx.library.load(path)
 
-a = mx.nd.array([[1,3,0,2,1],[0,1,0,0,0],[0,2,4,5,3]])
-a = a.tostype('csr')
+a = mx.nd.array([[1,2,3],[0,0,0],[4,0,5],[0,0,0],[0,0,0]])
+a = a.tostype('row_sparse')
 print("--------Input CSR Array---------")
 print("data:", a.data.asnumpy())
 print("indices:", a.indices.asnumpy())
-print("indptr:", a.indptr.asnumpy())
 
 print("--------Start NDArray Compute---------")
-b = mx.nd.my_transsparse(a)
+b = mx.nd.my_transrowsp(a)
 print("Compute Results:")
 print("data:", b.data.asnumpy())
 print("indices:", b.indices.asnumpy())
-print("indptr:", b.indptr.asnumpy())
 
 print("Stateful Compute Result:")
-c = mx.nd.state_transsparse(a, test_kw=100)
+c = mx.nd.state_transrowsp(a, test_kw=100)
 print("data:", c.data.asnumpy())
 print("indices:", c.indices.asnumpy())
-print("indptr:", c.indptr.asnumpy())
 
 print("--------start symbolic compute--------")
 d = mx.sym.Variable('d')
-e = mx.sym.my_transsparse(d)
-f = mx.sym.state_transsparse(d, test_kw=200)
+e = mx.sym.my_transrowsp(d)
+f = mx.sym.state_transrowsp(d, test_kw=200)
 
 exe = e.bind(ctx=mx.cpu(),args={'d':a})
 exe2 = f.bind(ctx=mx.cpu(),args={'d':a})
@@ -65,12 +62,9 @@ out = exe.forward()
 print("Compute Results:")
 print("data:", out[0].data.asnumpy())
 print("indices:", out[0].indices.asnumpy())
-print("indptr:", out[0].indptr.asnumpy())
 
 out2 = exe2.forward()
 out2 = exe2.forward()
 print("Stateful Compute Result:")
 print("data:", out2[0].data.asnumpy())
 print("indices:", out2[0].indices.asnumpy())
-print("indptr:", out2[0].indptr.asnumpy())
-

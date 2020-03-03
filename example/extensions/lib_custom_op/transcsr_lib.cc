@@ -33,10 +33,7 @@ void transpose(MXTensor src, MXTensor dst) {
   std::vector<int64_t> shape = src.shape;
   int64_t h = shape[0];
   int64_t w = shape[1];
-  if(src.stype == kRowSparseStorage) {
-    //To do: add implementation. 
-  }
-  else if(src.stype == kCSRStorage) {
+  if(src.stype == kCSRStorage) {
     // To do: fix type.
     float *Aval = (float*) (A->data);
     std::vector<int64_t> rowPtr(w + 2, 0);
@@ -125,7 +122,7 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-REGISTER_OP(my_transsparse)
+REGISTER_OP(my_transcsr)
 .setForward(forward, "cpu")
 .setBackward(backward, "cpu")
 .setParseAttrs(parseAttrs)
@@ -134,9 +131,9 @@ REGISTER_OP(my_transsparse)
 
 /* ------------------------------------------------------------------------- */
 
-class MyStatefulTransSparse : public CustomStatefulOp {
+class MyStatefulTransCSR : public CustomStatefulOp {
  public:
-  explicit MyStatefulTransSparse(int count) : count(count) {}
+  explicit MyStatefulTransCSR(int count) : count(count) {}
 
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
@@ -153,7 +150,7 @@ class MyStatefulTransSparse : public CustomStatefulOp {
     return backward(attrs, inputs, outputs, op_res);
   }
 
-  ~MyStatefulTransSparse() {}
+  ~MyStatefulTransCSR() {}
 
  private:
   int count;
@@ -164,7 +161,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs["test_kw"]) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulTransSparse(count);
+  *op_inst = new MyStatefulTransCSR(count);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
@@ -175,7 +172,7 @@ MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-REGISTER_OP(state_transsparse)
+REGISTER_OP(state_transcsr)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferShape(inferShape)

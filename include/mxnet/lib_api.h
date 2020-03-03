@@ -262,7 +262,9 @@ struct MXInSparse {
   void set(void *data_ptr, const int64_t* dims, int ndims, void *idx,
           int64_t num_idx, void *idx_ptr = nullptr, int64_t num_idx_ptr = 0) {
     data = data_ptr;
-    data_len = num_idx;
+    // If CSR, num of non-zero value is num_idx,
+    // If row sparse, num of value is num_idx * width.
+    data_len = idx_ptr ? num_idx : num_idx * dims[1];
 
     indices = (int64_t*)idx;
     indices_len = num_idx;

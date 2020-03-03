@@ -281,13 +281,14 @@ void CustomFComputeDispatcher(const std::string op_name,
     if (outputs[i].storage_type() == mxnet::kDefaultStorage) continue;  
     if (outputs[i].storage_type() == mxnet::kRowSparseStorage) {
       outputs[i].CheckAndAlloc({mshadow::Shape1(col_index[i].size())});
+      memcpy(outputs[i].aux_data(rowsparse::kIdx).dptr_, col_index[i].data(), sizeof(int64_t) * col_index[i].size());
     }
     else if (outputs[i].storage_type() == mxnet::kCSRStorage) {
       outputs[i].CheckAndAlloc({mshadow::Shape1(row_ptr[i].size()), mshadow::Shape1(col_index[i].size())});
       memcpy(outputs[i].aux_data(csr::kIndPtr).dptr_, row_ptr[i].data(), sizeof(int64_t) * row_ptr[i].size());
+      memcpy(outputs[i].aux_data(csr::kIdx).dptr_, col_index[i].data(), sizeof(int64_t) * col_index[i].size());
     }
     memcpy(outputs[i].data().dptr_, tmp_data[i].data(), sizeof(float) * tmp_data[i].size());
-    memcpy(outputs[i].aux_data(csr::kIdx).dptr_, col_index[i].data(), sizeof(int64_t) * col_index[i].size());
   }
 }
 
