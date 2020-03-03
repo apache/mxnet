@@ -101,7 +101,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
-  <version>[1.6.0-SNAPSHOT,)</version>
+  <version>[1.7.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
@@ -113,7 +113,7 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
-  <version>[1.6.0-SNAPSHOT,)</version>
+  <version>[1.7.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
@@ -124,11 +124,11 @@ Also, add the dependency which corresponds to your platform to the ```dependenci
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-osx-x86_64-cpu</artifactId>
-  <version>[1.6.0-SNAPSHOT,)</version>
+  <version>[1.7.0-SNAPSHOT,)</version>
 </dependency>
 ```
 
-**Note:** ```<version>[1.6.0-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.6.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
+**Note:** ```<version>[1.7.0-SNAPSHOT,)</version>``` indicates that we will fetch packages with version 1.7.0 or higher. This will always ensure that the pom.xml is able to fetch the latest and greatest jar files from Maven Snapshot repository.
 
 Build From Source
 -----------------
@@ -186,7 +186,7 @@ Adding the following configuration in `pom.xml`
 <dependency>
   <groupId>org.apache.mxnet</groupId>
   <artifactId>mxnet-full_2.11-INTERNAL</artifactId>
-  <version>1.6.0</version>
+  <version>1.7.0</version>
   <scope>system</scope>
   <systemPath>path_to_jar/mxnet-full_2.11-INTERNAL.jar</systemPath>
 </dependency>

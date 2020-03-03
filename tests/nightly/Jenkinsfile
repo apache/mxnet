@@ -18,7 +18,7 @@
 //
 //This is a Jenkinsfile for nightly tests. The format and some functions have been picked up from the top-level Jenkinsfile
 
-mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/nnvm/lib/libnnvm.a'
+mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so'
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately

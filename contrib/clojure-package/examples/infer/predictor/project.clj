@@ -20,6 +20,6 @@
   :plugins [[lein-cljfmt "0.5.7"]]
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/tools.cli "0.4.1"]
-                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.6.0-SNAPSHOT"]]
+                 [org.apache.mxnet.contrib.clojure/clojure-mxnet "1.7.0-SNAPSHOT"]]
   :main ^:skip-aot infer.predictor-example
   :profiles {:uberjar {:aot :all}})

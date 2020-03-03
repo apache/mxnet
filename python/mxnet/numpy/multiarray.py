@@ -76,10 +76,11 @@ _NDARRAY_UNSUPPORTED_INDEXING = -1
 _NDARRAY_BASIC_INDEXING = 0
 _NDARRAY_ADVANCED_INDEXING = 1
 _NDARRAY_EMPTY_TUPLE_INDEXING = 2
-_NDARRAY_BOOLEAN_INDEXING = 3
-_NDARRAY_INT_BOOLEAN_INDEXING = 4
-_NDARRAY_SLICE_BOOLEAN_INDEXING = 5
 
+# Return code for 0-d boolean array handler
+_NDARRAY_NO_ZERO_DIM_BOOL_ARRAY = -1
+_NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE = 0
+_NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE = 1
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -418,121 +419,43 @@ class ndarray(NDArray):
         value_nd = self._prepare_value_nd(value, bcast_shape=vshape, squeeze_axes=new_axes)
         self._scatter_set_nd(value_nd, idcs)
 
-    def _check_boolean_indexing_type(self, key):
-        """Check boolean indexing type arr[bool, :, :], arr[1, bool, 4], or arr[:, bool, :]
-           return bool_type, bool_position"""
-
-        dim = len(key)
-        rest_int = True
-        rest_full_slice = True
-        pos = None
-        for idx in range(dim):
-            if isinstance(key[idx], _np.ndarray) and key[idx].dtype == _np.bool_:
-                key[idx] = array(key[idx], dtype='bool', ctx=self.ctx)
-            if isinstance(key[idx], ndarray) and key[idx].dtype == _np.bool_:
-                pos = idx
-            elif isinstance(key[idx], integer_types):
-                rest_full_slice = False
-            elif isinstance(key[idx], py_slice) and key[idx] == slice(None, None, None):
-                rest_int = False
-            # not arr[:, bool, :] format slicing or not arr[3,bool,4]
-            else:
-                raise TypeError('ndarray boolean indexing does not support slicing '
-                                'with key {} of type {}'.format(idx, type(idx))
-                                )
-
-        if rest_int:
-            return _NDARRAY_INT_BOOLEAN_INDEXING, pos
-        elif rest_full_slice:
-            return _NDARRAY_SLICE_BOOLEAN_INDEXING, pos
-        raise NotImplementedError("Do not support {} as key for boolean indexing".format(key))
-
-    @staticmethod
-    def _calculate_new_idx(key, shape, mask_pos, mask_ndim): # pylint: disable=redefined-outer-name
-        new_idx = 0
-        step = 1
-        for idx in range(len(key)-1, mask_pos, -1):
-            new_idx += key[idx]*step
-            step *= shape[idx+mask_ndim-1]
-        return new_idx
-
-    def _get_np_boolean_indexing(self, key):
-        if not isinstance(key, tuple):
-            key = (key,)
-        bool_type, pos = self._check_boolean_indexing_type(key)
-
-        from functools import reduce
-        mask_shape = key[pos].shape
-        mask_ndim = len(mask_shape)
-        ndim = len(self.shape)  # pylint: disable=redefined-outer-name, unused-variable
-        for i in range(mask_ndim):
-            if key[pos].shape[i] != self.shape[pos + i]:
-                raise IndexError('boolean index did not match indexed array along axis {};'
-                                 ' size is {} but corresponding boolean size is {}'
-                                 .format(pos + i, self.shape[pos + i], key[pos].shape[i]))
-        remaining_idces = pos + mask_ndim
-        remaining_shapes = self.shape[remaining_idces:]
-        mask = _reshape_view(key[pos], -1)
-
-        if bool_type == _NDARRAY_SLICE_BOOLEAN_INDEXING:
-            data = _reshape_view(self, -1, *remaining_shapes)
-            # if mask is at the begining, then the scale is one
-            scale = reduce(lambda x, y: x * y, self.shape[:pos], 1)
-            keys = mask if scale == 1 else _reshape_view(_npi.stack(*[mask for i in range(scale)]), -1)
-            all_shapes = self.shape[:pos] + remaining_shapes
-            return _reshape_view(_npi.boolean_mask(data, keys), -1, *all_shapes)
-
-        elif bool_type == _NDARRAY_INT_BOOLEAN_INDEXING:
-            out = self
-            for idx in range(pos):
-                out = out[key[idx]]
-            data = _reshape_view(out, -1, *remaining_shapes)
-            after_mask = _reshape_view(_npi.boolean_mask(data, mask), -1, *remaining_shapes)
-            if pos == len(key) - 1:
-                return after_mask
-            # check boundary
-            for idx in range(pos+1, len(key)):
-                if key[idx] >= self.shape[idx+mask_ndim-1]:
-                    raise IndexError('index {} on a dimension of {}'
-                                     .format(key[idx], self.shape[idx+mask_ndim-1]))
-            implicit_idces = len(key)+mask_ndim-1 # idces not explictly shown in the key
-            implicit_shape = self.shape[implicit_idces:]
-            new_dim = reduce(lambda x, y: x * y, self.shape[pos+mask_ndim:implicit_idces], 1)
-            new_idx = self._calculate_new_idx(key, self.shape, pos, mask_ndim)
-            after_reshape = _reshape_view(after_mask, -1, new_dim, *implicit_shape)
-            return _reshape_view(_npi.take(after_reshape, array([new_idx]), axis=1), -1, *implicit_shape)
-
-        raise NotImplementedError("This boolean indexing type is not supported.")
+    # pylint: disable=redefined-outer-name
+    def _get_np_boolean_indexing(self, key, ndim, shape):
+        """
+        There are two types of boolean indices (which are equivalent,
+        for the most part though). This function will handle single
+        boolean indexing for higher speed.
+        If this is not the case, it is instead expanded into (multiple)
+        integer array indices and will be handled by advanced indexing.
+        """
+        key_shape = key.shape
+        key_ndim = len(key_shape)
+        if ndim < key_ndim:
+            raise IndexError('too many indices, whose ndim = {}, for array with ndim = {}'
+                             .format(key_ndim, ndim))
+        for i in range(key_ndim):
+            if key_shape[i] != shape[i]:
+                raise IndexError('boolean index did not match indexed array along dimension {};'
+                                 ' dimension is {} but corresponding boolean dimension is {}'
+                                 .format(i, shape[i], key_shape[i]))
+        remaining_dims = shape[key_ndim:]
+        data = _reshape_view(self, -1, *remaining_dims)
+        key = _reshape_view(key, -1)
+        return _reshape_view(_npi.boolean_mask(data, key), -1, *remaining_dims)
 
     def _set_np_boolean_indexing(self, key, value):
-        if not isinstance(key, tuple):
-            key = (key,)
-        bool_type, pos = self._check_boolean_indexing_type(key)
-
-        mask = key[pos]
-        mask_shape = mask.shape
-        mask_ndim = len(mask_shape)
-        for i in range(mask_ndim):
-            if mask_shape[i] != self.shape[pos + i]:
-                raise IndexError('boolean index did not match indexed array along axis {};'
-                                 ' size is {} but corresponding boolean size is {}'
-                                 .format(pos + i, self.shape[pos + i], mask_shape[i]))
-
-        data = self # when bool_type == _NDARRAY_SLICE_BOOLEAN_INDEXING
-        if bool_type == _NDARRAY_INT_BOOLEAN_INDEXING:
-            if pos != len(key) - 1:
-                raise NotImplementedError('only support boolean array at the end of the idces '
-                                          'when it is mixed with integers')
-            for idx in range(pos):
-                data = data[key[idx]]
-                pos -= 1
-
+        """
+        There are two types of boolean indices (which are equivalent,
+        for the most part though). This function will handle single boolean assign for higher speed.
+        If this is not the case, it is instead expanded into (multiple)
+        integer array indices and will be handled by advanced assign.
+        """
         if isinstance(value, numeric_types):
-            _npi.boolean_mask_assign_scalar(data=data, mask=mask,
+            _npi.boolean_mask_assign_scalar(data=self, mask=key,
                                             value=int(value) if isinstance(value, bool) else value,
-                                            start_axis=pos, out=data)
+                                            start_axis=0, out=self)
         elif isinstance(value, ndarray):
-            _npi.boolean_mask_assign_tensor(data=data, mask=mask, value=value, start_axis=pos, out=data)
+            _npi.boolean_mask_assign_tensor(data=self, mask=key, value=value, start_axis=0, out=self)
         else:
             raise NotImplementedError('type %s is not supported.'%(type(value)))
 
@@ -671,12 +594,14 @@ class ndarray(NDArray):
         >>> x = np.array([1., -1., -2., 3])
         >>> x[x < 0]
         array([-1., -2.])
+
+        For more imformation related to boolean indexing, please refer to
+        https://docs.scipy.org/doc/numpy-1.17.0/reference/arrays.indexing.html.
         """
-        # handling possible boolean indexing first
         ndim = self.ndim  # pylint: disable=redefined-outer-name
         shape = self.shape  # pylint: disable=redefined-outer-name
         if isinstance(key, bool): # otherwise will be treated as 0 and 1
-            key = array(key, dtype=_np.bool)
+            key = array(key, dtype=_np.bool, ctx=self.ctx)
         if isinstance(key, list):
             try:
                 new_key = _np.array(key)
@@ -687,11 +612,15 @@ class ndarray(NDArray):
         if isinstance(key, _np.ndarray) and key.dtype == _np.bool_:
             key = array(key, dtype='bool', ctx=self.ctx)
 
-        if ndim == 0:
-            if isinstance(key, ndarray) and key.dtype == _np.bool:
-                pass # will handle by function for boolean indexing
-            elif key != ():
-                raise IndexError('scalar tensor can only accept `()` as index')
+        # Handle single boolean index of matching dimensionality and size first for higher speed
+        # If the boolean array is mixed with other idices, it is instead expanded into (multiple)
+        # integer array indices and will be handled by advanced indexing.
+        # Come before the check self.dim == 0 as it also handle the 0-dim case.
+        if isinstance(key, ndarray) and key.dtype == _np.bool_:
+            return self._get_np_boolean_indexing(key, ndim, shape)
+
+        if ndim == 0 and key != ():
+            raise IndexError('scalar tensor can only accept `()` as index')
         # Handle simple cases for higher speed
         if isinstance(key, tuple) and len(key) == 0:
             return self
@@ -716,17 +645,33 @@ class ndarray(NDArray):
             elif key.step == 0:
                 raise ValueError("slice step cannot be zero")
 
-        key_before_expaned = key
-        key = indexing_key_expand_implicit_axes(key, self.shape)
+        # For 0-d boolean indices: A new axis is added,
+        # but at the same time no axis is "used". So if we have True,
+        # we add a new axis (a bit like with np.newaxis). If it is
+        # False, we add a new axis, but this axis has 0 entries.
+        # prepend is defined to handle this case.
+        # prepend = _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY/-1 means there is no 0-d boolean scalar
+        # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE/0 means an zero dim must be expanded
+        # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE/1 means a new axis must be prepended
+        key, prepend = indexing_key_expand_implicit_axes(key, self.shape)
         indexing_dispatch_code = get_indexing_dispatch_code(key)
-        if indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
-            return self._get_np_basic_indexing(key)
-        elif indexing_dispatch_code == _NDARRAY_EMPTY_TUPLE_INDEXING:
+        if indexing_dispatch_code == _NDARRAY_EMPTY_TUPLE_INDEXING:
+            # won't be affected by zero-dim boolean indices
             return self._get_np_empty_tuple_indexing(key)
+        elif indexing_dispatch_code == _NDARRAY_BASIC_INDEXING:
+            if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
+                return empty((0,) + self._get_np_basic_indexing(key).shape,
+                             dtype=self.dtype, ctx=self.ctx)
+            if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE:
+                key = (_np.newaxis,) + key
+            return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
+                return empty((0,) + self._get_np_adanced_indexing(key).shape,
+                             dtype=self.dtype, ctx=self.ctx)
+            if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE:
+                key = (_np.newaxis,) + key
             return self._get_np_advanced_indexing(key)
-        elif indexing_dispatch_code == _NDARRAY_BOOLEAN_INDEXING:
-            return self._get_np_boolean_indexing(key_before_expaned)
         else:
             raise RuntimeError
 
@@ -777,16 +722,25 @@ class ndarray(NDArray):
         >>> x
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]])
+
+        For imformation related to boolean indexing, please refer to
+        https://docs.scipy.org/doc/numpy-1.17.0/reference/arrays.indexing.html.
         """
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
         if isinstance(key, bool): # otherwise will be treated as 0 and 1
             key = array(key, dtype=_np.bool)
+
+        # Handle single boolean assign of matching dimensionality and size first for higher speed
+        # If the boolean array is mixed with other idices, it is instead expanded into (multiple)
+        # integer array indices and will be handled by advanced assign.
+        # Come before the check self.dim == 0 as it also handle the 0-dim case.
+        if isinstance(key, ndarray) and key.dtype == _np.bool:
+            return self._set_np_boolean_indexing(key, value)
+
         # handle basic and advanced indexing
         if self.ndim == 0:
-            if isinstance(key, ndarray) and key.dtype == _np.bool:
-                pass # will be handled by boolean indexing
-            elif not isinstance(key, tuple) or len(key) != 0:
+            if not isinstance(key, tuple) or len(key) != 0:
                 raise IndexError('scalar tensor can only accept `()` as index')
             if isinstance(value, numeric_types):
                 self._full(value)
@@ -801,8 +755,18 @@ class ndarray(NDArray):
             else:
                 raise ValueError('setting an array element with a sequence.')
         else:
-            key_before_expaned = key
-            key = indexing_key_expand_implicit_axes(key, self.shape)
+            # For 0-d boolean indices: A new axis is added,
+            # but at the same time no axis is "used". So if we have True,
+            # we add a new axis (a bit like with np.newaxis). If it is
+            # False, we add a new axis, but this axis has 0 entries.
+            # prepend is defined to handle this case.
+            # prepend == _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY/-1 means there is no 0-d boolean scalar
+            # prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE/0 means an zero dim must be expanded
+            # prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE/1 means a new axis must be expanded
+            # prepend actually has no influence on __setitem__
+            key, prepend = indexing_key_expand_implicit_axes(key, self.shape)
+            if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
+                return # no action is needed
             slc_key = tuple(idx for idx in key if idx is not None)
             if len(slc_key) < self.ndim:
                 raise RuntimeError(
@@ -822,8 +786,6 @@ class ndarray(NDArray):
                 pass # no action needed
             elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
                 self._set_np_advanced_indexing(key, value)
-            elif indexing_dispatch_code == _NDARRAY_BOOLEAN_INDEXING:
-                return self._set_np_boolean_indexing(key_before_expaned, value)
             else:
                 raise ValueError(
                     'Indexing NDArray with index {} of type {} is not supported'
