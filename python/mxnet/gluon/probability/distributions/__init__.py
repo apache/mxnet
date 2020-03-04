@@ -23,6 +23,8 @@ from .distribution import *
 
 from .exp_family import *
 
+from .exponential import *
+
 from .normal import *
 
 from .gamma import *

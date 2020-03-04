@@ -39,6 +39,23 @@ import random
 import itertools
 from numbers import Number
 
+def _distribution_method_invoker(dist, func, *args):
+    """Wrapper for invoking different types of class methods
+    with one unified interface.
+    
+    Parameters
+    ----------
+    dist : Distribution
+    func : method
+    """
+    if (len(args) == 0):
+        out = getattr(dist, func)
+        if callable(out):
+            return out()
+        else:
+            return out
+    return getattr(dist, func)(*args)
+
 
 @with_seed()
 @use_np
@@ -112,6 +129,67 @@ def test_gluon_normal():
 
 @with_seed()
 @use_np
+def test_gluon_exponential():
+    class TestExponential(HybridBlock):
+        def __init__(self, func):
+            self._func = func
+            super(TestExponential, self).__init__()
+        
+        def hybrid_forward(self, F, scale, *args):
+            exponential = mgp.Exponential(scale, F)
+            return _distribution_method_invoker(exponential, self._func, *args)
+    
+    shapes = [(), (1,), (2, 3), 6]
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(0.2, 1.2, size=shape)
+        net = TestExponential("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.expon(scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(0.2, 1.2, size=shape)
+        net = TestExponential("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.expon(scale=scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(0.0, 1.0, size=shape)
+        net = TestExponential("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.expon(scale=scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestExponential("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale).asnumpy()
+        np_out = ss.expon(scale=scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_gamma():
     class TestGamma(HybridBlock):
         def __init__(self, func):
@@ -120,13 +198,7 @@ def test_gluon_gamma():
 
         def hybrid_forward(self, F, shape, scale, *args):
             gamma = mgp.Gamma(shape, scale, F)
-            if (len(args) == 0):
-                out = getattr(gamma, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(gamma, self._func)(*args)
+            return _distribution_method_invoker(gamma, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
 
@@ -171,16 +243,10 @@ def test_gluon_dirichlet():
 
         def hybrid_forward(self, F, alpha, *args):
             dirichlet = mgp.Dirichlet(alpha, F)
-            if (len(args) == 0):
-                out = getattr(dirichlet, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(dirichlet, self._func)(*args)
+            return _distribution_method_invoker(dirichlet, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3)] # Temporarily remove case (4, 0, 5) due to zero-dim sum issue.
+    batch_shapes = [None, (2, 3), (4, 0, 5)]
 
     # Test sampling
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
@@ -222,13 +288,7 @@ def test_gluon_beta():
 
         def hybrid_forward(self, F, alpha, beta, *args):
             beta_dist = mgp.Beta(alpha, beta, F)
-            if (len(args) == 0):
-                out = getattr(beta_dist, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(beta_dist, self._func)(*args)
+            return _distribution_method_invoker(beta_dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
 
@@ -347,13 +407,7 @@ def test_gluon_bernoulli():
         def hybrid_forward(self, F, params, *args):
             bernoulli = mgp.Bernoulli(logit=params, F=F) if self._is_logit else \
                         mgp.Bernoulli(prob=params, F=F)
-            if (len(args) == 0):
-                out = getattr(bernoulli, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(bernoulli, self._func)(*args)
+            return _distribution_method_invoker(bernoulli, self._func, *args)
 
     def prob_to_logit(prob):
         return np.log(prob) - np.log1p(-prob)
@@ -434,17 +488,9 @@ def test_relaxed_bernoulli():
         def hybrid_forward(self, F, params, *args):
             relaxed_bernoulli = mgp.RelaxedBernoulli(T=1.0, logit=params, F=F) if self._is_logit else \
                         mgp.RelaxedBernoulli(T=1.0, prob=params, F=F)
-            
             if self._func == "sample":
                 return relaxed_bernoulli.sample()
-
-            if (len(args) == 0):
-                out = getattr(relaxed_bernoulli, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(relaxed_bernoulli, self._func)(*args)
+            return _distribution_method_invoker(relaxed_bernoulli, self._func, *args)
 
     def prob_to_logit(prob):
         return np.log(prob) - np.log1p(-prob)
@@ -494,17 +540,9 @@ def test_gluon_categorical():
         def hybrid_forward(self, F, params, *args):
             categorical = mgp.Categorical(self._num_events, logit=params, F=F) if self._is_logit else \
                         mgp.Categorical(self._num_events, prob=params, F=F)
-            
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
-
-            if (len(args) == 0):
-                out = getattr(categorical, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(categorical, self._func)(*args)
+            return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
     batch_shapes = [None, (2, 3), (4, 0, 5)]
@@ -584,13 +622,7 @@ def test_gluon_one_hot_categorical():
                           mgp.OneHotCategorical(num_events=self._num_events, prob=params, F=F)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
-            if (len(args) == 0):
-                out = getattr(categorical, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(categorical, self._func)(*args)
+            return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
     batch_shapes = [None, (2, 3), (4, 0, 5)]
@@ -661,16 +693,10 @@ def test_relaxed_one_hot_categorical():
                             mgp.RelaxedOneHotCategorical(T=1.0, num_events=self._num_events, prob=params, F=F)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
-            if (len(args) == 0):
-                out = getattr(categorical, self._func)
-                if callable(out):
-                    return out()
-                else:
-                    return out
-            return getattr(categorical, self._func)(*args)
+            return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
+    batch_shapes = [None, (2, 3), (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
@@ -839,7 +865,7 @@ def test_compose_transform():
 
     shapes = [(1,), (2, 3), 6]
     # Test log_prob
-    for shape, hybridize in itertools.product(shapes, [False]): 
+    for shape, hybridize in itertools.product(shapes, [True, False]): 
         loc = np.random.uniform(-1, 1, shape)
         loc.attach_grad()
         scale = np.random.uniform(0.5, 1.5, shape)
@@ -850,10 +876,7 @@ def test_compose_transform():
             net.hybridize()
         with autograd.record():
             mx_out = net(loc, scale, samples)
-        np_out = _np.log(
-                    ss.lognorm(s=scale.asnumpy(), scale=np.exp(loc).asnumpy()).
-                    pdf(samples.asnumpy())
-                )
+        np_out = ss.lognorm(s=scale.asnumpy(), scale=np.exp(loc).asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 

@@ -148,7 +148,7 @@ class ComposeTransform(Transformation):
                                              self.event_dim - t.event_dim)
             x = x_prime
         t_last = self._parts[-1]
-        result = result + sum_right_most(t.log_det_jacobian(x, y),
+        result = result + sum_right_most(t_last.log_det_jacobian(x, y),
                                          self.event_dim - t_last.event_dim)
                                         
         return result

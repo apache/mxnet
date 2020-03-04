@@ -39,11 +39,8 @@ class OneHotCategorical(Distribution):
         return self.F.npx.one_hot(indices, self.num_events)
     
     def log_prob(self, value):
-        # TODO: The commented implementation will cause error #17661
-        # logit = self.logit
-        # return (value * logit).sum(-1)
-        indices = value.argmax(-1)
-        return self._categorical.log_prob(indices)
+        logit = self.logit
+        return (value * logit).sum(-1)
 
     def enumerate_support(self):
         F = self.F

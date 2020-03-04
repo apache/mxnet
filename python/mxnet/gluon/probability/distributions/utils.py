@@ -66,6 +66,8 @@ def sum_right_most(x, ndim):
     -------
     Tensor
     """
+    if ndim == 0:
+        return x
     axes = list(range(-ndim, 0))
     return x.sum(axes)
 
