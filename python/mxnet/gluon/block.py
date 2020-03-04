@@ -1123,7 +1123,7 @@ class HybridBlock(Block):
         symbol_filename : str
             Filename to which model symbols were saved, including `path` prefix.
         params_filename : str
-            Filename to which model parameter were saved, including `path` prefix.
+            Filename to which model parameters were saved, including `path` prefix.
         """
         if not self._cached_graph:
             raise RuntimeError(
