@@ -696,3 +696,53 @@ class RandomApply(Sequential):
             return x
         x = self.transforms(x)
         return x
+
+
+class HybridRandomApply(HybridSequential):
+    """Apply a list of transformations randomly given probability
+
+    Parameters
+    ----------
+    transforms
+        List of transformations which must be HybridBlocks.
+    p : float
+        Probability of applying the transformations.
+
+
+    Inputs:
+        - **data**: input tensor.
+
+    Outputs:
+        - **out**: transformed image.
+    """
+
+    def __init__(self, transforms, p=0.5):
+        super(HybridRandomApply, self).__init__()
+        assert isinstance(transforms, HybridBlock)
+        self.transforms = transforms
+        self.p = p
+
+    def hybrid_forward(self, F, x):
+        cond = self.p < F.random.uniform(low=0, high=1, shape=1)
+        return F.contrib.cond(cond, x, self.transforms(x))
+
+
+class RandomGray(HybridBlock):
+    """Randomly convert to gray image.
+
+    Parameters
+    ----------
+    p : float
+        Probability to convert to grayscale
+    """
+    def __init__(self, p=0.5):
+        super(RandomGray, self).__init__()
+        self.mat = self.params.get_constant('gray_mat', value=[[0.21, 0.21, 0.21],
+                                                               [0.72, 0.72, 0.72],
+                                                               [0.07, 0.07, 0.07]])
+        self.mat.initialize()
+        self.p = p
+
+    def hybrid_forward(self, F, x, mat):
+        cond = self.p < F.random.uniform(low=0, high=1, shape=1)
+        return F.contrib.cond(cond, lambda: x, lambda: F.dot(F.cast(x, dtype='float32'), mat))

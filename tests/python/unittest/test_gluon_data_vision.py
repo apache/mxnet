@@ -278,6 +278,19 @@ def test_random_transforms():
             num_apply += 1
     assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
+@with_seed()
+def test_random_gray():
+    from mxnet.gluon.data.vision import transforms
+
+    transform = transforms.RandomGray(0.5)
+    img = mx.nd.ones((4, 4, 3), dtype='uint8')
+    iteration = 1000
+    num_apply = 0
+    for _ in range(iteration):
+        out = transform(img)
+        if out.dtype != np.uint8:
+            num_apply += 1
+    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
 if __name__ == '__main__':
     import nose
