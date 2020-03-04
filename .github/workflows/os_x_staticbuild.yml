@@ -16,3 +16,11 @@ jobs:
           git --version
           clang --version
           CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
+      - name: Setup Python
+        run: |
+          python3 -m pip install --user nose nose-timer nose-exclude numpy scipy
+          python3 -m pip install --user -e python
+      - name: Test project
+        run: |
+          python3 -m nose --with-timer --verbose tests/python/unittest/ --exclude-test=test_extensions.test_subgraph --exclude-test=test_extensions.test_custom_op --exclude-test=test_gluon_data.test_recordimage_dataset_with_data_loader_multiworker
+          
