@@ -674,9 +674,6 @@ def autograd_grad_ex(heads, variables, head_grads=None, retain_graph=None, creat
     return grads
 
 
-def check_second_order_binary(inputs, op, grad_grad_op, rtol=None, atol=None, equal_nan=None):
-    check_nth_order_binary(inputs, op, grad_grad_op, 2, rtol, atol)
-
 def check_nth_order_binary(inputs, op, grad_ops, orders, rtol=None, atol=None):
     """Assert n-th order autograd gradient against expected gradient.
 
