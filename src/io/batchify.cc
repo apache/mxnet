@@ -64,7 +64,6 @@ class GroupBatchify : public BatchifyFunction {
       CHECK_EQ(out_size, fs_.size()) << "In GroupBatchifyFunction, Elem size "
         << out_size << " and batchify function size " << fs_.size() << " must match";
       outputs.resize(out_size);
-      std::vector<NDArray> tmp;
       for (size_t i = 0; i < out_size; ++i) {
         std::vector<std::vector<NDArray> > inp;
         inp.reserve(inputs.size());
@@ -72,6 +71,7 @@ class GroupBatchify : public BatchifyFunction {
             std::vector<NDArray> curr({inputs[j][i]});
             inp.emplace_back(curr);
         }
+        std::vector<NDArray> tmp;
         if (!fs_[i]->Batchify(inp, tmp)) return false;
         outputs[i] = tmp[0];
       }
@@ -149,13 +149,16 @@ class StackBatchify : public BatchifyFunction {
           MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
             _Pragma("omp parallel for num_threads(bs)")
             for (size_t j = 0; j < bs; ++j) {
-              // inputs[j][i].WaitToRead();
-              DType *ptr = outputs[i].data().dptr<DType>();
-              auto asize = ashape.Size();
-              RunContext rctx{outputs[i].ctx(), nullptr, nullptr, false};
-              auto dst = TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0);
-              mxnet::ndarray::Copy<cpu, cpu>(inputs[j][i].data(), &dst, Context::CPU(), Context::CPU(), rctx);
+              omp_exc_.Run([&] {
+                // inputs[j][i].WaitToRead();
+                DType *ptr = outputs[i].data().dptr<DType>();
+                auto asize = ashape.Size();
+                RunContext rctx{outputs[i].ctx(), nullptr, nullptr, false};
+                auto dst = TBlob(ptr + asize * j, inputs[j][i].data().shape_, cpu::kDevMask, dtype, 0);
+                mxnet::ndarray::Copy<cpu, cpu>(inputs[j][i].data(), &dst, Context::CPU(), Context::CPU(), rctx);
+              });
             }
+            omp_exc_.Rethrow();
           })
       }
       return true;

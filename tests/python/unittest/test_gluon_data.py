@@ -183,7 +183,7 @@ def test_list_dataset():
             pass
 
 
-class Dataset(gluon.data.Dataset):
+class _Dataset(gluon.data.Dataset):
     def __len__(self):
         return 100
     def __getitem__(self, key):
@@ -191,7 +191,7 @@ class Dataset(gluon.data.Dataset):
 
 @with_seed()
 def test_multi_worker():
-    data = Dataset()
+    data = _Dataset()
     for thread_pool in [True, False]:
         loader = gluon.data.DataLoader(data, batch_size=1, num_workers=5, thread_pool=thread_pool)
         for i, batch in enumerate(loader):
@@ -548,6 +548,7 @@ def test_batchify_group():
     e = bf_handle([a, b, c])
     assert d[0].shape == e[0].shape
     assert d[1].shape == e[1].shape
+    print(d[0].asnumpy(), ',', e[0].asnumpy(), ',', e[1].asnumpy())
     assert mx.test_utils.almost_equal(d[0].asnumpy(), e[0].asnumpy())
     assert mx.test_utils.almost_equal(d[1].asnumpy(), e[1].asnumpy())
     assert mx.test_utils.almost_equal(d[0].asnumpy(), np.stack((a[0], b[0], c[0])))

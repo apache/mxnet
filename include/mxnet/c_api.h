@@ -2740,8 +2740,7 @@ MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
 MXNET_DLL int MXDatasetGetItems(DatasetHandle handle,
                                 uint64_t index,
                                 int* num_outputs,
-                                NDArrayHandle **outputs,
-                                NDArrayHandle *is_scalar);
+                                NDArrayHandle **outputs);
 
 /*!
  * \brief List all the available batchify function entries

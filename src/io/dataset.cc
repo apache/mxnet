@@ -233,11 +233,11 @@ class ImageRecordFileDataset : public Dataset {
       size -= sizeof(header);
       s += sizeof(header);
       NDArray label = NDArray(Context::CPU(), mshadow::default_type_flag);
-      TBlob dst = label.data();
       RunContext rctx{Context::CPU(), nullptr, nullptr, false};
       if (header.flag > 0) {
         auto label_shape = header.flag <= 1 ? TShape(0, 1) : TShape({header.flag});
         label.ReshapeAndAlloc(label_shape);
+        TBlob dst = label.data();
         mxnet::ndarray::Copy<cpu, cpu>(TBlob((void*)s, label.shape(), cpu::kDevMask, label.dtype(), 0),
                                   &dst, Context::CPU(), Context::CPU(), rctx);
         s += sizeof(float) * header.flag;
@@ -245,8 +245,10 @@ class ImageRecordFileDataset : public Dataset {
       } else {
         // label is a scalar with ndim() == 0
         label.ReshapeAndAlloc(TShape(0, 1));
-        mxnet::ndarray::Copy<cpu, cpu>(TBlob((void*)(&header.label), label.shape(), cpu::kDevMask, label.dtype(), 0),
-                                  &dst, Context::CPU(), Context::CPU(), rctx);
+        TBlob dst = label.data();
+        *(dst.dptr<float>()) = header.label;
+        // mxnet::ndarray::Copy<cpu, cpu>(TBlob((void*)(&header.label), label.shape(), cpu::kDevMask, label.dtype(), 0),
+        //                           &dst, Context::CPU(), Context::CPU(), rctx);
       }
       ret.resize(2);
       ret[1] = label;

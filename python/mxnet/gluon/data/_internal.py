@@ -75,18 +75,15 @@ class MXDataset(Dataset):
         create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
         output_vars = ctypes.POINTER(NDArrayHandle)()
         num_output = ctypes.c_int(0)
-        is_scalars = NDArrayHandle()
         check_call(_LIB.MXDatasetGetItems(self.handle,
                                           ctypes.c_uint64(idx),
                                           ctypes.byref(num_output),
                                           ctypes.byref(output_vars)))
         out = [create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
                                        False) for i in range(num_output.value)]
-        nd_isscalar = create_ndarray_fn(is_scalars).asnumpy()
         for i in range(num_output.value):
-            if nd_isscalar[i] == 1:
-                assert out[i].size == 1, "is_scalar size: {}".format(out[i].size)
-                out[i] = out[i].asnumpy()[0]
+            if out[i].size == 1:
+                out[i] = out[i].asnumpy()
         if len(out) > 1:
             return tuple(out)
         return out[0]

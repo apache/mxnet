@@ -1716,11 +1716,12 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
 int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  bool no_label = db.data.size() < 2U;
   NDArray* pndarray = new NDArray();
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
-  mxnet::TShape shape = db.data[1].shape();
-  if (shape.Size() < 1) {
+  mxnet::TShape shape = no_label? TShape({1,}) : db.data[1].shape();
+  if (no_label || shape.Size() < 1) {
     // it's possible that label is not available and not required
     // but we need to bypass the invalid copy
     *pndarray = NDArray(TShape({1}), mxnet::Context::CPU(0));
