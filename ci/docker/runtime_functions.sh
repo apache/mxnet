@@ -453,18 +453,16 @@ build_ubuntu_cpu_openblas_make() {
 
 build_ubuntu_cpu_mkl() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=mkl                  \
-        USE_TVM_OP=1                  \
-        USE_MKLDNN=0                  \
-        USE_INTEL_PATH=/opt/intel     \
-        USE_DIST_KVSTORE=1            \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_cmake_debug() {
@@ -644,16 +642,16 @@ build_ubuntu_cpu_mkldnn() {
 
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=mkl                  \
-        USE_SIGNAL_HANDLER=1          \
-        USE_INTEL_PATH=/opt/intel/    \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu() {
