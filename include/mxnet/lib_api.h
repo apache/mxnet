@@ -426,8 +426,9 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
-
+  /*! \brief RNG lambda function */
   rng_caller_t rng_caller_nocap;
+  /*! \brief lambda function to return random number */
   void* rng_caller;
 };
 

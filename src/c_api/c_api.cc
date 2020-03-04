@@ -180,9 +180,15 @@ void CustomFComputeDispatcher(const std::string op_name,
   // custom random number generator
   auto rng_caller = [&](RandomGenType rand_type, int seed) {
     LOG(INFO) << "rng_caller called";
+  #if MXNET_USE_CUDA
+    mxnet::common::random::RandGenerator<gpu, double> *pgen =
+      ctx.requested[1].get_parallel_random<gpu, double>();
+    typename mxnet::common::random::RandGenerator<gpu, double>::Impl genImpl(pgen, seed);
+  #else
     mxnet::common::random::RandGenerator<cpu, double> *pgen =
       ctx.requested[1].get_parallel_random<cpu, double>();
     typename mxnet::common::random::RandGenerator<cpu, double>::Impl genImpl(pgen, seed);
+  #endif
     RandomRetType ret;
     if (rand_type == RNG_RAND) {
       ret.i = genImpl.rand();
