@@ -56,15 +56,6 @@ class Horovod(KVStoreBase):
 
         Examples
         --------
-        >>> # broadcast a value in-place
-        >>> shape = (2,3)
-        >>> kv = mx.kv.create('horovod')
-        >>> a = mx.nd.ones(shape)
-        >>> kv.broadcast('1', value=a)
-        >>> print(a.asnumpy())
-        [[ 1.  1.  1.]
-        [ 1.  1.  1.]]
-
         >>> a = mx.nd.ones(shape)
         >>> b = mx.nd.zeros(shape)
         >>> kv.broadcast('2', value=a, out=b)
@@ -74,10 +65,12 @@ class Horovod(KVStoreBase):
         """
         import horovod.mxnet as hvd
 
-        if out is None:
-            hvd.broadcast_(tensor=value, root_rank=0, name=key, priority=priority)
-        else:
-            out[:] = hvd.broadcast(tensor=value, root_rank=0, name=key, priority=priority)
+        out = out if isinstance(out, list) else [out]
+
+        # TODO (lnyuan): need to copy data to each device memory
+        for o in out:
+            o[:] = hvd.broadcast(tensor=value, root_rank=0, name=str(key),
+                                 priority=priority)
 
     def pushpull(self, key, value, out=None, priority=0):
         """ Performs allreduce on a single tensor or a list of tensor objects

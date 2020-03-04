@@ -48,8 +48,8 @@ def dmlc_opts(opts):
     try:
         from dmlc_tracker import opts
     except ImportError:
-        print("Can't load dmlc_tracker package.  Perhaps you need to run")
-        print("    git submodule update --init --recursive")
+        logging.info("Can't load dmlc_tracker package.  Perhaps you need to run")
+        logging.info("    git submodule update --init --recursive")
         raise
     dmlc_opts = opts.get_opts(args)
     return dmlc_opts
