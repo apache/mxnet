@@ -39,7 +39,8 @@
 #include <utility>
 #include <stdexcept>
 
-#define MX_LIBRARY_VERSION 3
+/* Make sure to update the version number everytime you make changes */
+#define MX_LIBRARY_VERSION 4
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -372,7 +373,6 @@ typedef void* (*xpu_malloc_t)(void*, int);
 union RandomRetType {
     int32_t i;
     int64_t l;
-    float f;
     double d;
 };
 
@@ -416,6 +416,16 @@ class OpResource {
 
   int64_t get_randint64(int seed = 1) {
     RandomRetType ret = rng_caller_nocap(rng_caller, RNG_RAND64, seed);
+    return ret.l;
+  }
+
+  double get_uniform(int seed = 1) {
+    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_UNIFORM, seed);
+    return ret.l;
+  }
+
+  double get_normal(int seed = 1) {
+    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_NORMAL, seed);
     return ret.l;
   }
 

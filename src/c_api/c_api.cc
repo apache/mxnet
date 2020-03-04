@@ -180,23 +180,21 @@ void CustomFComputeDispatcher(const std::string op_name,
   // custom random number generator
   auto rng_caller = [&](RandomGenType rand_type, int seed) {
     LOG(INFO) << "rng_caller called";
-  #if MXNET_USE_CUDA
+#if MXNET_USE_CUDA
     mxnet::common::random::RandGenerator<gpu, double> *pgen =
       ctx.requested[1].get_parallel_random<gpu, double>();
     typename mxnet::common::random::RandGenerator<gpu, double>::Impl genImpl(pgen, seed);
-  #else
+#else
     mxnet::common::random::RandGenerator<cpu, double> *pgen =
       ctx.requested[1].get_parallel_random<cpu, double>();
     typename mxnet::common::random::RandGenerator<cpu, double>::Impl genImpl(pgen, seed);
-  #endif
+#endif
     RandomRetType ret;
-    if (rand_type == RNG_RAND) {
-      ret.i = genImpl.rand();
-      LOG(INFO) << "rng_caller rand returns " << ret.i;
-    }
-    else if (rand_type == RNG_RAND64) {
-      ret.l = genImpl.rand_int64();
-      LOG(INFO) << "rng_caller rand64 returns " << ret.l;
+    switch(rand_type) {
+      case RNG_RAND: ret.i = genImpl.rand(); LOG(INFO) << "rand returns " << ret.i;
+      case RNG_RAND64: ret.l = genImpl.rand_int64(); LOG(INFO) << "rand64 returns " << ret.l;
+      case RNG_UNIFORM: ret.d = genImpl.uniform(); LOG(INFO) << "uniform returns " << ret.d;
+      case RNG_NORMAL: ret.d = genImpl.normal(); LOG(INFO) << "normal returns " << ret.d;
     }
     return ret;
   };
