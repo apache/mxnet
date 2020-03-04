@@ -626,19 +626,21 @@ def test_power():
 
 def autograd_grad_ex(heads, variables, head_grads=None, retain_graph=None, create_graph=False,
             train_mode=True):
-    """ If some variables don't in the path of computing heads, we the heads grad of them to zero instead of throwing exceptions.
+    """ If some variables don't in the path of computing heads, we set the heads grad of them to zero
+    instead of throwing exceptions.
 
-    The autograd.grad requires user knows which variables involved to compute the heads grad of them. That's fine for first order grad,
-    but for higher order grad, the variables used to compute the heads, may not used to computer their higher order grad.
-    It's impossible to ask user to know the formulas of every order grad.
+    The autograd.grad requires user knows which variables involved to compute the heads grad of them.
+    That's fine for first order grad, but for higher order grad, the variables used to compute the heads,
+    may not used to computer their higher order grad. It's impossible to ask user to know
+    the formulas of every order grad.
 
     E.g. we use such code to compute 2-nd order gradient:
       with autograd.record():
           z = op(x, y)
           head_grad = nd.ones_like(z)
-          dz_dx, _  = autograd.grad(heads=z, variables=[x, y], head_grads=head_grad,
+          dz_dx, _  = autograd.grad(heads=z, variables=[x, y], head_grads=nd.ones_like(z),
                               create_graph=True, retain_graph=True)
-          d2z_d2x, _  = autograd.grad(heads=dz_dx, variables=[x, y], head_grads=head_grad,
+          d2z_d2x, _  = autograd.grad(heads=dz_dx, variables=[x, y], head_grads=nd.ones_like(dz_dx),
                               create_graph=True, retain_graph=True)
     If z = x * y, because d2z_d2x = 0, MXNET will report the input is unreachable from the output.
     But it seems in that case MXNET returns zeros is more reasonable.
@@ -739,9 +741,11 @@ def check_nth_order_binary(inputs, op, grad_ops, orders, rtol=None, atol=None):
                 # in the i-th iteration, we use head = derivative_(i-1) * head_grad_(i-1)
                 # but in the expected computed, we use  head = derivative_(i-1)
                 # why it is woks in the check_nth_order_unary?
-                # Because most of them defined gradient of the first gradient (derivative_(1) * head_grad_(1)) of the function,
-                # and in the gradient function, they manually defined derivative_(i-1) and use it to computed derivative_(1) * head_grad_(1).
-                # It maybe a wrong approach.
+                # Because most of them defined gradient of the first gradient (derivative_(1) * head_grad_(1))
+                # of the function, and in the gradient function, they manually defined derivative_(i-1)
+                # and use it to computed derivative_(1) * head_grad_(1).
+                # It maybe a wrong approach, because the gradient of the first gradient should compute the grad of
+                # derivative_(1) * head_grad_(1) instead of gradient of derivative_(1).
                 new_heads.append(autograd_grad_ex(heads=head, variables=inputs, head_grads=nd.ones_like(head),
                                               create_graph=True, retain_graph=True)[i])
             heads = new_heads
