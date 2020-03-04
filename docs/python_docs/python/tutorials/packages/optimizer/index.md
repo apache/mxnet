@@ -181,10 +181,10 @@ Here is an example snippet creating the RMSProp optimizer in MXNet.
 
 
 ```python
-rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, gamma1=0.9, gamma2=0.9, epsilon=1e-07, centered=False)
+rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, rho=0.9, momentum=0.9, epsilon=1e-07, centered=False)
 ```
 
-In the code snippet above, `gamma1` is $\beta$ in the equations above and `gamma2` is $\gamma$, which is only used where `centered=True`.
+In the code snippet above, `rho` is $\beta$ in the equations above and `momentum` is $\gamma$, which is only used where `centered=True`.
 
 ### [AdaDelta](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.AdaDelta)
 
@@ -281,32 +281,6 @@ Here is how to create the signum optimizer in MXNet.
 signum_optimizer = optimizer.Signum(learning_rate=0.01, momentum=0.9, wd_lh=0.0)
 ```
 
-### [LBSGD](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.LBSGD)
-LBSGD stands for Large Batch Stochastic Gradient Descent and implements a technique where Layer-wise Adaptive Rate Scaling (LARS) is used to maintain a separate learning rate for each layer of the neural network. LBSGD has no additional modifications to SGD and performs the same parameter update steps as the SGD optimizer described above.
-
-LBSGD was introduced by [You et al](https://arxiv.org/pdf/1708.03888.pdf) for distributed training with data-parallel synchronous SGD across multiple worker nodes to overcome the issue of reduced model accuracy when the number of workers, and by extension effective batch size, is increased.
-
-Here is how to initialize the LBSGD optimizer in MXNet.
-
-
-```python
-lbsgd_optimizer = optimizer.LBSGD(momentum=0.0,
-                                  multi_precision=False,
-                                  warmup_strategy='linear',
-                                  warmup_epochs=5,
-                                  batch_scale=1,
-                                  updates_per_epoch=32,
-                                  begin_epoch=0,
-                                  num_epochs=60)
-```
-
-LBSGD has a number of extra keyword arguments described below
-* `multi_precision` - When True performs updates with float32 precision weights regardless of whether weights are initialized with lower precision. When False perform updates with same precision as the weights when initialized. Set to True to improve performance when training with low precision weight represenations.
-* `warmup_strategy` - The warmup is period where the learning rate is increased through the first few epochs. The following strategies are supported:  ['linear', 'power2', 'sqrt','lars']
-* `warmup_epochs` - How many epochs to perform warmup for
-* `batch_scale` - use batch size*numworkers
-* `updates_per_epoch` - How many updates to the learning rate to perform every epoch. For example during warmup the warmup strategy is applied to increase the learning rate a total of `warmup_epochs*updates_per_epoch` number of times.
-* `begin_epoch` - The epoch at which to start warmup.
 
 ### [DCASGD](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.DCASGD)
 

@@ -34,8 +34,8 @@ from benchmark.opperf.utils.benchmark_utils import run_performance_test
 from benchmark.opperf.utils.common_utils import merge_map_list
 from benchmark.opperf.rules.default_params import MX_OP_MODULE
 
-def run_linalg_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the linear algebra
+def run_linalg_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and data size (int64_tensor) for all the linear algebra
     operators in MXNet.
 
     Parameters
@@ -46,6 +46,8 @@ def run_linalg_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nat
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -74,5 +76,5 @@ def run_linalg_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nat
     # Fetch all Linear Algebra Operators
     mx_linalg_ops = get_all_linalg_operators()
     # Run benchmarks
-    mx_linalg_op_results = run_op_benchmarks(mx_linalg_ops, dtype, ctx, profiler, warmup, runs)
+    mx_linalg_op_results = run_op_benchmarks(mx_linalg_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return merge_map_list(linalg_potrf_benchmark + [mx_linalg_op_results])
