@@ -757,7 +757,12 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
       dst[i] = src[i];
     }
   } else {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(dst, src, sizeof(DType) * size);
+#pragma GCC diagnostic pop
   }
 }
 
