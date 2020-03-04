@@ -77,10 +77,14 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
     std::cout << random2 << std::endl;
     int random3 = res.get_randint(24);
     std::cout << random3 << std::endl;
-    double random4 = res.get_rand_uniform();
+    float random4 = res.get_rand_uniform();
     std::cout << random4 << std::endl;
-    double random5 = res.get_rand_normal();
+    double random5 = res.get_rand_uniform64();
     std::cout << random5 << std::endl;
+    float random6 = res.get_rand_normal();
+    std::cout << random6 << std::endl;
+    double random7 = res.get_rand_normal64();
+    std::cout << random7 << std::endl;
 
     gemm(A, B, C, n, k, m);
   }

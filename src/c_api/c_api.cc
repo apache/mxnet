@@ -177,31 +177,37 @@ void CustomFComputeDispatcher(const std::string op_name,
     return static_cast<void*>((*gpualloc)(size));
   };
 
-  // custom random number generator
-  auto rng_caller = [&](RandomGenType rand_type, int seed) {
+  // MXNet random number generator lambda to be invoked by custom library
+  // custom library will use gpu rng whenever possible
+  auto rng_caller = [&](RandGenType rand_type, int seed) {
     LOG(INFO) << "rng_caller called";
+    // init rng with float type if custom library asks for float random number
+    typedef std::conditional<rand_type == RAND_UNIFORM || rand_type == RAND_NORMAL,
+                             float, double>::type DType;
 #if MXNET_USE_CUDA
-    mxnet::common::random::RandGenerator<gpu, double> *pgen =
-      ctx.requested[1].get_parallel_random<gpu, double>();
-    typename mxnet::common::random::RandGenerator<gpu, double>::Impl genImpl(pgen, seed);
+    typedef mxnet::gpu Device
 #else
-    mxnet::common::random::RandGenerator<cpu, double> *pgen =
-      ctx.requested[1].get_parallel_random<cpu, double>();
-    typename mxnet::common::random::RandGenerator<cpu, double>::Impl genImpl(pgen, seed);
+    typedef mxnet::cpu Device
 #endif
-    RandomRetType ret;
+    mxnet::common::random::RandGenerator<Device, DType> *pgen =
+      ctx.requested[1].get_parallel_random<Device, DType>();
+    typename mxnet::common::random::RandGenerator<Device, DType>::Impl rng_inst(pgen, seed);
+    RandRetType ret;
     switch(rand_type) {
-      case RNG_RAND: ret.i = genImpl.rand(); LOG(INFO) << "rand: " << ret.i; break;
-      case RNG_RAND64: ret.l = genImpl.rand_int64(); LOG(INFO) << "rand64: " << ret.l; break;
-      case RNG_UNIFORM: ret.d = genImpl.uniform(); LOG(INFO) << "uniform: " << ret.d; break;
-      case RNG_NORMAL: ret.d = genImpl.normal(); LOG(INFO) << "normal: " << ret.d; break;
+      case RAND_INT: ret.i = rng_inst.rand(); LOG(INFO) << "rand: " << ret.i; break;
+      case RAND_INT64: ret.l = rng_inst.rand_int64(); LOG(INFO) << "rand64: " << ret.l; break;
+      case RAND_UNIFORM: ret.f = rng_inst.uniform(); LOG(INFO) << "uniform: " << ret.f; break;
+      case RAND_UNIFORM64: ret.d = rng_inst.uniform(); LOG(INFO) << "uniform64: " << ret.d; break;
+      case RAND_NORMAL: ret.f = rng_inst.normal(); LOG(INFO) << "normal: " << ret.f; break;
+      case RAND_NORMAL64: ret.d = rng_inst.normal(); LOG(INFO) << "normal64: " << ret.d; break;
       default: LOG(FATAL) << "unsupported random generator call";
     }
     return ret;
   };
 
+  // no-capture lambda passing in enum of rng call types and seed state
   typedef decltype(rng_caller) type_rng_caller;
-  auto rng_caller_nocap = [](void *rng_call, RandomGenType rand_type, int seed) {
+  auto rng_caller_nocap = [](void *rng_call, RandGenType rand_type, int seed) {
       type_rng_caller* rngcaller = static_cast<type_rng_caller*>(rng_call);
       return (*rngcaller)(rand_type, seed);
   };
@@ -209,7 +215,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
   void *cuda_stream = nullptr;
 #if MXNET_USE_CUDA
-  if (inputs[0].ctx().dev_mask() == Context::kGPU) {
+  if (inputs.size > 0 && inputs[0].ctx().dev_mask() == Context::kGPU) {
     cuda_stream = static_cast<void*>(gpu_stream->stream_);
   }
 #endif
@@ -305,7 +311,6 @@ int MXLoadLib(const char *path) {
 
   partCallSupportedOps_t callSupportedOps =
     get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
-
 
   partCallReviewSubgraph_t callReviewSubgraph =
     get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));

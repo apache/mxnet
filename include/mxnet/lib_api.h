@@ -370,17 +370,18 @@ typedef void* (*xpu_malloc_t)(void*, int);
 #endif
 
 /*! \brief union to hold random number generator return type from MXNet */
-union RandomRetType {
+union RandRetType {
     int32_t i;
     int64_t l;
+    float f;
     double d;
 };
 
 /*! \brief enum to hold random number generator call types from MXNet */
-enum RandomGenType {RNG_RAND, RNG_RAND64, RNG_UNIFORM, RNG_NORMAL};
+enum RandGenType {RAND_INT, RAND_INT64, RAND_UNIFORM, RAND_UNIFORM64, RAND_NORMAL, RAND_NORMAL64};
 
 /*! \brief function to call MXNet backend random number generator */
-typedef RandomRetType (*rng_caller_t)(void*, RandomGenType, int);
+typedef RandRetType (*rng_caller_t)(void*, RandGenType, int);
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
@@ -410,22 +411,32 @@ class OpResource {
   }
 
   int32_t get_randint(int seed = 1) {
-    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_RAND, seed);
+    RandRetType ret = rng_caller_nocap(rng_caller, RAND_INT, seed);
     return ret.i;
   }
 
   int64_t get_randint64(int seed = 1) {
-    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_RAND64, seed);
+    RandRetType ret = rng_caller_nocap(rng_caller, RAND_INT64, seed);
     return ret.l;
   }
 
-  double get_rand_uniform(int seed = 1) {
-    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_UNIFORM, seed);
+  float get_rand_uniform(int seed = 1) {
+    RandRetType ret = rng_caller_nocap(rng_caller, RAND_UNIFORM, seed);
+    return ret.f;
+  }
+
+  double get_rand_uniform64(int seed = 1) {
+    RandRetType ret = rng_caller_nocap(rng_caller, RAND_UNIFORM64, seed);
     return ret.d;
   }
 
-  double get_rand_normal(int seed = 1) {
-    RandomRetType ret = rng_caller_nocap(rng_caller, RNG_NORMAL, seed);
+  float get_rand_normal(int seed = 1) {
+    RandRetType ret = rng_caller_nocap(rng_caller, RAND_NORMAL, seed);
+    return ret.f;
+  }
+
+  double get_rand_normal64(int seed = 1) {
+    RandRetType ret = rng_caller_nocap(rng_caller, RAND_NORMAL64, seed);
     return ret.d;
   }
 
@@ -436,7 +447,7 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
-  /*! \brief RNG lambda function */
+  /*! \brief RNG lambda function wrapper */
   rng_caller_t rng_caller_nocap;
   /*! \brief lambda function to return random number */
   void* rng_caller;
