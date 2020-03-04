@@ -352,7 +352,7 @@ def convert_batchnorm(node, **kwargs):
         momentum=momentum,
         # MXNet computes mean and variance per channel for batchnorm
         # Default for onnx is across all spatial features. Explicitly encoding
-        # spatial=1 for ONNX opset 8 and below.
+        # spatial=1 for ONNX opset 8 and below. 
         spatial=1
     )
     return [bn_node]
