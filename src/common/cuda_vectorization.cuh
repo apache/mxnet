@@ -186,6 +186,8 @@ Alignment CheckAlignment(const Params& params) {
                     : Alignment::SAME_UNALIGNED;
 }
 
+constexpr int vectorized_kernel_thread_num = 512;
+
 }  // namespace
 
 template <typename DType, typename LType, typename Kernel>
@@ -196,7 +198,7 @@ void VectorizedKernelLauncher(const index_t size, mshadow::Stream<gpu>* s, typen
     constexpr int nvec = sizeof(LType) / sizeof(DType);
     VectorizedLoader<DType, LType> l(params.inputs[0], size);
     size_t num_elements = l.num_aligned_elements();
-    constexpr int threads = 512;
+    constexpr int threads = vectorized_kernel_thread_num;
     constexpr int max_blocks = 65535;
     index_t blocks = std::min(static_cast<int>((num_elements + threads - 1) / threads),
                               max_blocks);
