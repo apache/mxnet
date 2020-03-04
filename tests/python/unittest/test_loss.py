@@ -221,7 +221,7 @@ def test_ctc_loss_train():
     loss = Loss(output, l)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+    mod.fit(data_iter, num_epoch=10, optimizer_params={'learning_rate': 0.0256},
             initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
@@ -473,7 +473,7 @@ def test_bce_loss_with_pos_weight():
     loss = Loss(output, l, None, pos_w)
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'pos_w'))
-    mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
+    mod.fit(data_iter, num_epoch=20, optimizer_params={'learning_rate': 0.0844},
             eval_metric=mx.metric.Loss(), optimizer='adam',
             initializer=mx.init.Xavier(magnitude=2))
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
