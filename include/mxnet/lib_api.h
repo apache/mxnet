@@ -373,12 +373,11 @@ typedef void* (*xpu_malloc_t)(void*, int);
 union RandRetType {
     int32_t i;
     int64_t l;
-    float f;
     double d;
 };
 
 /*! \brief enum to hold random number generator call types from MXNet */
-enum RandGenType {RAND_INT, RAND_INT64, RAND_UNIFORM, RAND_UNIFORM64, RAND_NORMAL, RAND_NORMAL64};
+enum RandGenType {RAND_INT, RAND_INT64, RAND_UNIFORM, RAND_NORMAL};
 
 /*! \brief function to call MXNet backend random number generator */
 typedef RandRetType (*rng_caller_t)(void*, RandGenType, int);
@@ -420,23 +419,13 @@ class OpResource {
     return ret.l;
   }
 
-  float get_rand_uniform(int seed = 1) {
+  double get_rand_uniform(int seed = 1) {
     RandRetType ret = rng_caller_nocap(rng_caller, RAND_UNIFORM, seed);
-    return ret.f;
-  }
-
-  double get_rand_uniform64(int seed = 1) {
-    RandRetType ret = rng_caller_nocap(rng_caller, RAND_UNIFORM64, seed);
     return ret.d;
   }
 
-  float get_rand_normal(int seed = 1) {
+  double get_rand_normal(int seed = 1) {
     RandRetType ret = rng_caller_nocap(rng_caller, RAND_NORMAL, seed);
-    return ret.f;
-  }
-
-  double get_rand_normal64(int seed = 1) {
-    RandRetType ret = rng_caller_nocap(rng_caller, RAND_NORMAL64, seed);
     return ret.d;
   }
 

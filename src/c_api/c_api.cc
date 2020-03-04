@@ -181,25 +181,20 @@ void CustomFComputeDispatcher(const std::string op_name,
   // custom library will use gpu rng whenever possible
   auto rng_caller = [&](RandGenType rand_type, int seed) {
     LOG(INFO) << "rng_caller called";
-    // init rng with float type if custom library asks for float random numbers
-    const bool is_float32 = rand_type == RAND_UNIFORM || rand_type == RAND_NORMAL;
-    typedef std::conditional<is_float32, float, double>::type DType;
 #if MXNET_USE_CUDA
-    typedef mxnet::gpu Device
+    typedef mxnet::gpu Device;
 #else
-    typedef mxnet::cpu Device
+    typedef mxnet::cpu Device;
 #endif
-    mxnet::common::random::RandGenerator<Device, DType> *pgen =
-      ctx.requested[1].get_parallel_random<Device, DType>();
-    typename mxnet::common::random::RandGenerator<Device, DType>::Impl genImpl(pgen, seed);
+    mxnet::common::random::RandGenerator<Device, double> *pgen =
+      ctx.requested[1].get_parallel_random<Device, double>();
+    typename mxnet::common::random::RandGenerator<Device, float>::Impl rng_inst(pgen, seed);
     RandRetType ret;
     switch(rand_type) {
-      case RAND_INT: ret.i = genImpl.rand(); LOG(INFO) << "rand: " << ret.i; break;
-      case RAND_INT64: ret.l = genImpl.rand_int64(); LOG(INFO) << "rand64: " << ret.l; break;
-      case RAND_UNIFORM: ret.f = genImpl.uniform(); LOG(INFO) << "uniform: " << ret.f; break;
-      case RAND_UNIFORM64: ret.d = genImpl.uniform(); LOG(INFO) << "uniform64: " << ret.d; break;
-      case RAND_NORMAL: ret.f = genImpl.normal(); LOG(INFO) << "normal: " << ret.f; break;
-      case RAND_NORMAL64: ret.d = genImpl.normal(); LOG(INFO) << "normal64: " << ret.d; break;
+      case RAND_INT: ret.i = rng_inst.rand(); LOG(INFO) << "rand: " << ret.i; break;
+      case RAND_INT64: ret.l = rng_inst.rand_int64(); LOG(INFO) << "rand64: " << ret.l; break;
+      case RAND_UNIFORM: ret.d = rng_inst.uniform(); LOG(INFO) << "uniform: " << ret.d; break;
+      case RAND_NORMAL: ret.d = rng_inst.normal(); LOG(INFO) << "normal: " << ret.d; break;
       default: LOG(FATAL) << "unsupported random generator call";
     }
     return ret;
