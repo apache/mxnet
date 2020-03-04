@@ -53,9 +53,9 @@ MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
     std::cout << random2 << std::endl;
     int random3 = res.get_randint(24);
     std::cout << random3 << std::endl;
-    double random4 = res.get_uniform();
+    double random4 = res.get_rand_uniform();
     std::cout << random4 << std::endl;
-    double random5 = res.get_normal();
+    double random5 = res.get_rand_normal();
     std::cout << random5 << std::endl;
 
     return MX_SUCCESS;

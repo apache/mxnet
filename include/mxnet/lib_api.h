@@ -419,14 +419,14 @@ class OpResource {
     return ret.l;
   }
 
-  double get_uniform(int seed = 1) {
+  double get_rand_uniform(int seed = 1) {
     RandomRetType ret = rng_caller_nocap(rng_caller, RNG_UNIFORM, seed);
-    return ret.l;
+    return ret.d;
   }
 
-  double get_normal(int seed = 1) {
+  double get_rand_normal(int seed = 1) {
     RandomRetType ret = rng_caller_nocap(rng_caller, RNG_NORMAL, seed);
-    return ret.l;
+    return ret.d;
   }
 
  private:
