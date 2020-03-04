@@ -189,7 +189,7 @@ void CustomFComputeDispatcher(const std::string op_name,
       ctx.requested[1].get_parallel_random<Device, double>();
     typename mxnet::common::random::RandGenerator<Device, double>::Impl rng_inst(pgen, seed);
     RandRetType ret;
-    switch(rand_type) {
+    switch (rand_type) {
       case RAND_INT: ret.i = rng_inst.rand(); break;
       case RAND_INT64: ret.l = rng_inst.rand_int64(); break;
       case RAND_UNIFORM: ret.d = rng_inst.uniform(); break;
@@ -647,7 +647,8 @@ int MXLoadLib(const char *path) {
     };
 
     auto resc_req = [=](const NodeAttrs& attrs) {
-      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace, ResourceRequest::kParallelRandom};
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace,
+                                          ResourceRequest::kParallelRandom};
     };
 
     // library author should implement and return a 'state' which points to an instance
