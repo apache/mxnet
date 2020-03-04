@@ -45,36 +45,36 @@ Example::
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient",
-   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-   // input[0] = x
-   // input[1] = y;
-   // ograds[0] = head_grad_z
-   auto x = n->inputs[0];
-   auto y = n->inputs[1];
-   auto head_grad_z = ograds[0];
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  // input[0] = x
+  // input[1] = y;
+  // ograds[0] = head_grad_z
+  auto x = n->inputs[0];
+  auto y = n->inputs[1];
+  auto head_grad_z = ograds[0];
 
-   auto one_like  = nnvm::NodeEntry{mxnet::op::MakeNode("ones_like",
-                                    n->attrs.name + "_ones_like", {y}, nullptr, &n)};
-   auto y_sub_1 = nnvm::NodeEntry{MakeNode("elemwise_sub",
-                                  n->attrs.name + "_exp_sub_1",  {y, one_like}, nullptr, &n)};
-   auto x_power_y_sub_1 = nnvm::NodeEntry{MakeNode("broadcast_power",
-                                          n->attrs.name + "_base_power_exp_sub_1",  {x, y_sub_1}, nullptr, &n)};
-   auto dzdx = nnvm::NodeEntry{MakeNode("elemwise_mul",
-                               n->attrs.name + "dpower/dbase",  {y, x_power_y_sub_1}, nullptr, &n)};
+  auto one_like  = nnvm::NodeEntry{mxnet::op::MakeNode("ones_like",
+      n->attrs.name + "_ones_like", {y}, nullptr, &n)};
+  auto y_sub_1 = nnvm::NodeEntry{MakeNode("elemwise_sub",
+      n->attrs.name + "_exp_sub_1",  {y, one_like}, nullptr, &n)};
+  auto x_power_y_sub_1 = nnvm::NodeEntry{MakeNode("broadcast_power",
+      n->attrs.name + "_base_power_exp_sub_1",  {x, y_sub_1}, nullptr, &n)};
+  auto dzdx = nnvm::NodeEntry{MakeNode("elemwise_mul",
+      n->attrs.name + "dpower/dbase",  {y, x_power_y_sub_1}, nullptr, &n)};
 
-   auto lnx = nnvm::NodeEntry{MakeNode("log",
-                              n->attrs.name + "_ln_base",  {x}, nullptr, &n)};
-   auto x_power_y = nnvm::NodeEntry{MakeNode("elemwise_mul",
-                                    n->attrs.name + "_base_power_exp", {x_power_y_sub_1, x}, nullptr, &n)};
-   auto dzdy = nnvm::NodeEntry{MakeNode("elemwise_mul",
-                               n->attrs.name + "dpower/dexp", {x_power_y, lnx}, nullptr, &n)};
+  auto lnx = nnvm::NodeEntry{MakeNode("log",
+      n->attrs.name + "_ln_base",  {x}, nullptr, &n)};
+  auto x_power_y = nnvm::NodeEntry{MakeNode("elemwise_mul",
+      n->attrs.name + "_base_power_exp", {x_power_y_sub_1, x}, nullptr, &n)};
+  auto dzdy = nnvm::NodeEntry{MakeNode("elemwise_mul",
+     n->attrs.name + "dpower/dexp", {x_power_y, lnx}, nullptr, &n)};
 
-   std::vector<nnvm::NodeEntry> ret;
-   ret.emplace_back(MakeNode("elemwise_mul",
-           n->attrs.name + "_backward_grad_base", {head_grad_z, dzdx}, nullptr, &n));
-   ret.emplace_back(MakeNode("elemwise_mul",
-           n->attrs.name + "_backward_grad_exp", {head_grad_z, dzdy}, nullptr, &n));
-   return ret;
+  std::vector<nnvm::NodeEntry> ret;
+  ret.emplace_back(MakeNode("elemwise_mul",
+      n->attrs.name + "_backward_grad_base", {head_grad_z, dzdx}, nullptr, &n));
+  ret.emplace_back(MakeNode("elemwise_mul",
+      n->attrs.name + "_backward_grad_exp", {head_grad_z, dzdy}, nullptr, &n));
+  return ret;
 });
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
@@ -98,8 +98,7 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_maximum"});
 
-NNVM_REGISTER_OP(_backward_broadcast_maximum)
-.set_num_inputs(3)
+NNVM_REGISTER_OP(_backward_broadcast_maximum) .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
