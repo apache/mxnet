@@ -269,10 +269,15 @@ void LstmForwardInferenceSingleLayer(DType* ws,
     }
     if (P > 0) {
       linalg_gemm(h, whr, r, alpha, beta, false, true);
-      #pragma omp parallel for num_threads(omp_threads)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
+#pragma omp parallel for num_threads(omp_threads)
       for (int j = 0; j < N; ++j) {
         std::memcpy(y[t][j].dptr_ + proj_offset, r[j].dptr_, P * sizeof(DType));
       }
+#pragma GCC diagnostic pop
     }
   }
 }
