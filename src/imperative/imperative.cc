@@ -323,11 +323,12 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   node->attrs = std::move(attrs);
   // Need to support NameManager in imperative API to better name node->attrs.name
   node->attrs.name = "node_" + std::to_string(node_count_++);
-  DCInfo::Create(node, inputs, outputs);
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
     outputs[i]->deferredcompute_entry_ = nnvm::NodeEntry{node, i, 0};
   }
+
+  DCInfo::Create(node, inputs, outputs);
 }
 
 nnvm::Symbol Imperative::GetDeferredComputeSymbol(
@@ -731,8 +732,19 @@ Imperative::DCInfo::Create(const nnvm::ObjectPtr &node,
 }
 
 void Imperative::DCInfo::Compute(const NDArray &arr) {
-  if (Imperative::DCInfo::IsComputed(arr))
+  if (Imperative::DCInfo::IsComputed(arr)) {
+    if (!shape_is_known(arr.shape())) {
+      // We can't call arr.WaitToRead(); here, as WaitToRead calls Compute
+      // leading to an infinite loop.
+      Engine::Get()->WaitForVar(arr.ptr_->var);
+      if (shape_is_known(arr.ptr_->storage_shape)) {
+        arr.SetShapeFromChunk();
+      } else {
+        CHECK(shape_is_known(arr.shape()));
+      }
+    }
     return;
+  }
 
   DCInfo &info = Imperative::DCInfo::Get(arr.deferredcompute_entry_.node);
   info.is_computed_ = true;  // We will Invoke at the end of this function.
@@ -755,6 +767,10 @@ void Imperative::DCInfo::Compute(const NDArray &arr) {
   Imperative::Get()->Invoke(Context::CPU(),
                             arr.deferredcompute_entry_.node->attrs, ndinputs,
                             ndoutputs);
+  if (!shape_is_known(arr.shape())) {
+      arr.WaitToRead();
+      arr.SetShapeFromChunk();
+  }
 
   // Deallocate copies
   info.inputs_.clear();

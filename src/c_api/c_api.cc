@@ -1531,19 +1531,19 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
                      MXAPIThreadLocalEntry<dtype>* ret) {
   NDArray* arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-      CHECK_LT(arr->shape().Size(), (int64_t{1} << 31) - 1) <<
-                      "[Get Shape] Size of tensor you are trying to allocate is larger than "
-                      "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-    }
     mxnet::TShape s = arr->shape();
-
     // Handle dynamic shape in deferred compute mode
     if (!Imperative::DCInfo::IsNone(*arr)) {
       if (!shape_is_known(s) && !Imperative::DCInfo::IsComputed(*arr)) {
         Imperative::DCInfo::Compute(*arr);
         s = arr->shape();
       }
+    }
+
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(s.Size(), (int64_t{1} << 31) - 1) <<
+        "[Get Shape] Size of tensor you are trying to allocate is larger than "
+        "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
     }
 
     if (!Imperative::Get()->is_np_shape()) {

@@ -113,7 +113,7 @@ void NDArray::AssignStorageInfo(const std::string& profiler_scope,
   }
 }
 
-void NDArray::SetShapeFromChunk() {
+void NDArray::SetShapeFromChunk() const {
   if (Imperative::Get()->is_np_shape() ||
       !(ptr_->storage_shape.ndim() == 1 && ptr_->storage_shape[0] == 0)) {
     shape_ = ptr_->storage_shape;
@@ -284,22 +284,33 @@ NDArray NDArray::Reshape(const mxnet::TShape &shape) const {
 }
 
 NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
-  NDArray ret = this->Reshape(shape);
   bool is_recording = Imperative::Get()->is_recording();
   bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+  NDArray ret;
   if (!is_deferred_compute) {
     // The new array shares memory with this array, thus make sure this array
     // has been computed already computed. (noop if this array is not deferred)
     Imperative::DCInfo::Compute(*this);
+    ret = this->Reshape(shape);
     if (!is_recording) {
       return ret;
     }
+  } else {
+    if (shape_is_known(this->shape())) {
+      // Imperative reshape only works if shape is already known.
+      ret = this->Reshape(shape);
+    } else {
+      // Reshape called on after dynamic shape operator.
+      ret = this->Detach();
+    }
   }
 
-  CHECK_EQ(shape_.Size(), shape.Size())
-    << "NDArray.Reshape: target shape must have the same size as "
-    << "current shape when recording with autograd "
-    << "or in deferred compute mode.";
+  if (!is_deferred_compute || shape_is_known(this->shape())) {
+    CHECK_EQ(shape_.Size(), shape.Size())
+        << "NDArray.Reshape: target shape must have the same size as "
+        << "current shape when recording with autograd "
+        << "or in deferred compute mode.";
+  }
 
   nnvm::NodeAttrs attrs;
   attrs.op = nnvm::Op::Get("Reshape");;
@@ -334,15 +345,24 @@ NDArray NDArray::Slice(index_t begin, index_t end) const {
 }
 
 NDArray NDArray::SliceWithRecord(index_t begin, index_t end) {
-  NDArray ret = this->Slice(begin, end);
   bool is_recording = Imperative::Get()->is_recording();
   bool is_deferred_compute = Imperative::Get()->is_deferred_compute();
+  NDArray ret;
   if (!is_deferred_compute) {
     // The new array shares memory with this array, thus make sure this array
     // has been computed already computed. (noop if this array is not deferred)
     Imperative::DCInfo::Compute(*this);
+    ret = this->Slice(begin, end);
     if (!is_recording) {
       return ret;
+    }
+  } else {
+    if (shape_is_known(this->shape())) {
+      // Imperative slice only works if shape is already known.
+      ret = this->Slice(begin, end);
+    } else {
+      // Slice called on after dynamic shape operator.
+      ret = this->Detach();
     }
   }
 

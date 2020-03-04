@@ -128,6 +128,17 @@ inline void SetShapeType(const Context& ctx,
   if (!infershape.count(attrs.op)) {
     is_dynamic_shape_existing = true;
   } else {
+    // If any of the inputs is a deferred computed array with unknown shape, we
+    // can't infer shapes.
+    for (const NDArray *i : inputs) {
+      if (!shape_is_known(i->shape()) && !Imperative::DCInfo::IsNone(*i)) {
+        is_dynamic_shape_existing = true;
+        break;
+      }
+    }
+  }
+
+  if (!is_dynamic_shape_existing) {
     if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToNumpyShape(&in_shapes);
       common::ConvertToNumpyShape(&out_shapes);
@@ -207,7 +218,8 @@ inline void SetShapeType(const Context& ctx,
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
-    if (outputs[i]->is_none() || mxnet::op::shape_is_none(outputs[i]->shape())) {
+    if (outputs[i]->is_none() || (mxnet::op::shape_is_none(outputs[i]->shape()) &&
+                                   Imperative::DCInfo::IsNone(*outputs[i]))) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
         *outputs[i] = NDArray(ctx, out_types[i]);
@@ -219,13 +231,25 @@ inline void SetShapeType(const Context& ctx,
         *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
         outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs), attrs.name);
       }
+    } else if (mxnet::op::shape_is_none(outputs[i]->shape()) &&
+               !Imperative::DCInfo::IsNone(*outputs[i])) {
+      // For deferred computed arrays with unknown shape (following dynamic
+      // shape operator), don't use copy assignment as it would destroy the
+      // deferredcompute metadata.
+      if (!is_dynamic_shape_existing) {
+        outputs[i]->Init(out_shapes[i]);
+      }
+      CHECK_EQ(outputs[i]->dtype(), out_types[i])
+        << i << "-th output has invalid dtype. "
+        << "Expecting " << out_types[i] << " got " << outputs[i]->dtype()
+        << " in operator " << attrs.op->name;
     } else {
       CHECK_EQ(outputs[i]->shape(), out_shapes[i])
         << i << "-th output has invalid shape. "
         << "Expecting " << out_shapes[i] << " got "
         << outputs[i]->shape() << " in operator " << attrs.op->name;
       CHECK_EQ(outputs[i]->dtype(), out_types[i])
-        << i << "-th output has invalid shape. "
+        << i << "-th output has invalid dtype. "
         << "Expecting " << out_types[i] << " got "
         << outputs[i]->dtype()  << " in operator " << attrs.op->name;
     }

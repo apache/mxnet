@@ -54,46 +54,52 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
         If True, use mx.np. Otherwise mx.nd.
 
     """
-    nd = mx.np if numpy else mx.nd
+    try:
+        nd = mx.np if numpy else mx.nd
+        if numpy:
+            mx.npx.set_np()
 
-    xs = setup(nd=nd)
-    ys = compute(*xs, nd=nd)
-
-    ys_np = [y.asnumpy() for y in ys]
-
-    if setup_is_deterministic:
         xs = setup(nd=nd)
+        ys = compute(*xs, nd=nd)
 
-    with dc.context():
-        ys_dc = compute(*xs, nd=nd)
-
-    assert mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute')
-    if mode in ('all', 'imperativewithnondccompute'):
-        ys_dc_np = [(y + 0).asnumpy() for y in ys_dc]
-        _all_same(ys_np, ys_dc_np)
-
-    if mode in ('all', 'imperative'):
-        ys_dc_np = [y.asnumpy() for y in ys_dc]
-        _all_same(ys_np, ys_dc_np)
-
-    if mode in ('all', 'symbolic'):
-        input_names = list(map(str, range(len(xs))))
-        sym = dc.get_symbol(input_arrays=xs, output_arrays=ys_dc, input_names=input_names)
+        ys_np = [y.asnumpy() for y in ys]
 
         if setup_is_deterministic:
             xs = setup(nd=nd)
 
-        args = {name: x for name, x in zip(input_names, xs)}
-        ys_sym = sym.bind(mx.context.current_context(), args=args).forward()
+        with dc.context():
+            ys_dc = compute(*xs, nd=nd)
 
-        ys_sym_np = [y.asnumpy() for y in ys_sym]
-        _all_same(ys_np, ys_sym_np)
+        assert mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute')
+        if mode in ('all', 'imperativewithnondccompute'):
+            ys_dc_np = [(y + 0).asnumpy() for y in ys_dc]
+            _all_same(ys_np, ys_dc_np)
+
+        if mode in ('all', 'imperative'):
+            ys_dc_np = [y.asnumpy() for y in ys_dc]
+            _all_same(ys_np, ys_dc_np)
+
+        if mode in ('all', 'symbolic'):
+            input_names = list(map(str, range(len(xs))))
+            sym = dc.get_symbol(input_arrays=xs, output_arrays=ys_dc, input_names=input_names)
+
+            if setup_is_deterministic:
+                xs = setup(nd=nd)
+
+            args = {name: x for name, x in zip(input_names, xs)}
+            ys_sym = sym.bind(mx.context.current_context(), args=args).forward()
+
+            ys_sym_np = [y.asnumpy() for y in ys_sym]
+            _all_same(ys_np, ys_sym_np)
+    finally:
+        if numpy:
+            mx.npx.reset_np()
 
 
-def _all_assert_dc(setup, compute, setup_is_deterministic=True):
+def _all_assert_dc(setup, compute, setup_is_deterministic=True, numpy=(False, True)):
     for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
-        for numpy in (False, True):
-            _assert_dc(setup, compute, mode=mode, setup_is_deterministic=True, numpy=numpy)
+        for numpy_ in numpy:
+            _assert_dc(setup, compute, mode=mode, setup_is_deterministic=True, numpy=numpy_)
 
 
 ###############################################################################
@@ -268,6 +274,77 @@ def test_dc_astype():
 
     _assert_dc(_dc_simple_setup, f)
 
+
+def test_dc_dynamic_shape():
+    def f(a, *, nd):
+        return [mx.nd.np.flatnonzero(a)]
+
+    # Skip GraphExecutor test due to https://github.com/apache/incubator-mxnet/issues/17810
+    for mode in ('imperative', 'imperativewithnondccompute'):
+        _assert_dc(_dc_simple_setup, f, mode=mode, numpy=True)
+
+
+###############################################################################
+# Indexing specific tests
+###############################################################################
+def test_dc_integer_indexing():
+    def f(a, *, nd):
+        return [a[1] + 1]
+
+    _all_assert_dc(_dc_simple_setup, f)
+
+
+def test_dc_slice_indexing():
+    def f(a, *, nd):
+        b = a.reshape((5, 2))
+        return [b[:2, 1] + 1]
+
+    _all_assert_dc(_dc_simple_setup, f)
+
+
+def test_dc_tuple_indexing():
+    def f(a, *, nd):
+        b = a.reshape((5, 2))
+        return [b[(1, 1)] + 1]
+
+    _all_assert_dc(_dc_simple_setup, f)
+
+
+def test_dc_simple_boolean_indexing():
+    def setup(*, nd):
+        assert nd is mx.np
+        x = mx.np.array([[0, 1], [1, 1], [2, 2]])
+        return [x, x < 2]
+
+    def f(a, idx, *, nd):
+        assert nd is mx.np
+        return [a[idx].reshape((2, 2))]
+
+    # Skip GraphExecutor test due to https://github.com/apache/incubator-mxnet/issues/17810
+    for mode in ('imperative', 'imperativewithnondccompute'):
+        _assert_dc(setup, f, mode=mode)
+
+
+@raises(TypeError)  # Advanced indexing
+def test_dc_list_indexing():
+    def f(a, *, nd):
+        assert nd is mx.np
+        return [a[[1, 2, 3]]]
+
+    for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
+        _assert_dc(_dc_simple_setup, f, mode=mode)
+
+
+@raises(TypeError)  # Advanced indexing
+def test_dc_numpy_indexing():
+    def f(a, *, nd):
+        assert nd is mx.np
+        return [a[np.array([1, 2, 3])]]
+
+    for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
+        _assert_dc(_dc_simple_setup, f, mode=mode)
+
+
 ###############################################################################
 # Gluon
 ###############################################################################
@@ -375,6 +452,27 @@ def test_dc_hybridblock_deferred_init():
         net = MyBlock()
         net.initialize()
         _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
+
+
+def test_dc_hybridblock_dynamic_shape():
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self, *, prefix=None, params=None):
+            super().__init__(prefix, params)
+            with self.name_scope():
+                self.dense = mx.gluon.nn.Dense(units=10)
+
+        def forward(self, x, idx):
+            return x[idx].reshape((2, 2)), mx.np.flatnonzero(self.dense(x))
+
+    def setup(*, nd):
+        assert nd is mx.np
+        x = mx.np.array([[0, 1], [1, 1], [2, 2]])
+        return [x, x < 2]
+
+    with mx.util.np_array(True):
+        net = MyBlock()
+        net.initialize()
+        _assert_dc_gluon(setup, net, numpy=True)
 
 
 @raises(RuntimeError)

@@ -190,7 +190,7 @@ class NDArray {
   /*!
    * \brief set the correct shape of NDArray directly from the storage_shape of its own chunk.
    */
-  void SetShapeFromChunk();
+  void SetShapeFromChunk() const;
   /*
    * This indicates whether an array is a view of another array (created by
    * reshape or slice). If an array is a view and the data is stored in
@@ -1094,8 +1094,11 @@ class NDArray {
 
   /*! \brief internal data of NDArray */
   std::shared_ptr<Chunk> ptr_{nullptr};
-  /*! \brief shape of current NDArray */
-  mxnet::TShape shape_;
+  /*! \brief shape of current NDArray
+   *  \note const methods WaitToRead, WaitToWrite will set shape, if shape is
+   *        previously unknown and array is deferred computed.
+   */
+  mutable mxnet::TShape shape_;
   /*! \brief byte offset in chunk */
   size_t byte_offset_ = 0;
   /*! \brief type of data */
