@@ -777,11 +777,11 @@ def insert(arr, obj, values, axis=None):
             start = obj.start
             stop = obj.stop
             step = 1 if obj.step is None else obj.step
-            return _npi.insert_slice(arr, val=values, start=start, stop=stop, step=step, axis=axis)
+            return _api_internal.insert_slice(arr, values, start, stop, step, axis)
         elif isinstance(obj, integer_types):
-            return _npi.insert_scalar(arr, val=values, int_ind=obj, axis=axis)
+            return _api_internal.insert_scalar(arr, values, obj, axis)
         elif isinstance(obj, NDArray):
-            return _npi.insert_tensor(arr, obj, val=values, axis=axis)
+            return _api_internal.insert_tensor(arr, obj, values, axis)
 
     if not isinstance(arr, NDArray):
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))
@@ -791,11 +791,11 @@ def insert(arr, obj, values, axis=None):
         start = obj.start
         stop = obj.stop
         step = 1 if obj.step is None else obj.step
-        return _npi.insert_slice(arr, values, start=start, stop=stop, step=step, axis=axis)
+        return _api_internal.insert_slice(arr, values, start, stop, step, axis)
     elif isinstance(obj, integer_types):
-        return _npi.insert_scalar(arr, values, int_ind=obj, axis=axis)
+        return _api_internal.insert_scalar(arr, values, obj, axis)
     elif isinstance(obj, NDArray):
-        return _npi.insert_tensor(arr, values, obj, axis=axis)
+        return _api_internal.insert_tensor(arr, values, obj, axis)
     else:
         raise TypeError("'obj' can not support type {}".format(str(type(obj))))
 

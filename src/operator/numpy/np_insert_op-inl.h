@@ -65,6 +65,21 @@ struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
     .set_default(dmlc::optional<int>())
     .describe("Axis along which to insert 'values'.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream val_s, start_s, stop_s, step_s, int_ind_s, axis_s;
+    val_s << val;
+    start_s << start;
+    stop_s << stop;
+    step_s << step;
+    int_ind_s << int_ind;
+    axis_s << axis;
+    (*dict)["val"] = val_s.str();
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["step"] = step_s.str();
+    (*dict)["int_ind"] = int_ind_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 /*!
