@@ -279,9 +279,10 @@ DEFAULT_R1 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_R2 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LRS = [(0.1,0.1)]
-DEFAULT_LR = [0.1,0.5,0.9]
-DEFAULT_RHO = [0.1,0.5,0.9]
-DEFAULT_MOMENTUM = [0.1,0.5,0.9]
+DEFAULT_LR = [0.1, 0.5, 0.9]
+DEFAULT_WD = [0.1, 0.5, 0.9]
+DEFAULT_RHO = [0.1, 0.5, 0.9]
+DEFAULT_MOMENTUM = [0.1, 0.5, 0.9]
 DEFAULT_EPSILON = [1e-05]
 DEFAULT_BETA_1 = [0.1, 0.5, 0.9]
 DEFAULT_BETA_2 = [0.1, 0.5, 0.9]
@@ -433,7 +434,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "delta" : DEFAULT_DELTA,
                    "lr" : DEFAULT_LR,
                    "lrs" : DEFAULT_LRS,
-                   "wd" : DEFAULT_LR,
+                   "wd" : DEFAULT_WD,
                    "rho" : DEFAULT_RHO,
                    "momentum" : DEFAULT_MOMENTUM,
                    "epsilon" : DEFAULT_EPSILON,
@@ -610,7 +611,7 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "delta" : DEFAULT_DELTA_LARGE_TENSOR,
                                 "lr" : DEFAULT_LR,
                                 "lrs" : DEFAULT_LRS,
-                                "wd": DEFAULT_LR,
+                                "wd": DEFAULT_WD,
                                 "rho" : DEFAULT_RHO,
                                 "momentum" : DEFAULT_MOMENTUM,
                                 "epsilon" : DEFAULT_EPSILON,
