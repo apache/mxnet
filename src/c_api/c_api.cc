@@ -191,10 +191,11 @@ void CustomFComputeDispatcher(const std::string op_name,
 #endif
     RandomRetType ret;
     switch(rand_type) {
-      case RNG_RAND: ret.i = genImpl.rand(); LOG(INFO) << "rand returns " << ret.i;
-      case RNG_RAND64: ret.l = genImpl.rand_int64(); LOG(INFO) << "rand64 returns " << ret.l;
-      case RNG_UNIFORM: ret.d = genImpl.uniform(); LOG(INFO) << "uniform returns " << ret.d;
-      case RNG_NORMAL: ret.d = genImpl.normal(); LOG(INFO) << "normal returns " << ret.d;
+      case RNG_RAND: ret.i = genImpl.rand(); LOG(INFO) << "rand: " << ret.i; break;
+      case RNG_RAND64: ret.l = genImpl.rand_int64(); LOG(INFO) << "rand64: " << ret.l; break;
+      case RNG_UNIFORM: ret.d = genImpl.uniform(); LOG(INFO) << "uniform: " << ret.d; break;
+      case RNG_NORMAL: ret.d = genImpl.normal(); LOG(INFO) << "normal: " << ret.d; break;
+      default: LOG(FATAL) << "unsupported random generator call";
     }
     return ret;
   };
