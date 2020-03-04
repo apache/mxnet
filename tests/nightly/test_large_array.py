@@ -514,6 +514,23 @@ def test_nn():
         assert res.shape[1] == SMALL_Y
         assert res[0][SMALL_Y - 1] == 50.
 
+    def check_multi_lars():
+        lrs = nd.random_normal(shape=(LARGE_TENSOR_SHAPE + 1, 1))
+        weights_sum_sq = nd.random_normal(shape=(LARGE_TENSOR_SHAPE + 1, 1))
+        grads_sum_sq = nd.random_normal(shape=(LARGE_TENSOR_SHAPE + 1, 1))
+        wds = nd.random_normal(shape=(LARGE_TENSOR_SHAPE + 1, 1))
+        eta = .1
+        eps = .9
+
+        out = nd.multi_lars(lrs=lrs, weights_sum_sq=weights_sum_sq, grads_sum_sq=grads_sum_sq,
+                            wds=wds, eta=eta, eps=eps)
+
+        assert out.shape[0] == LARGE_TENSOR_SHAPE + 1
+        assert out.shape[1] == 1
+
+        # Trigger lazy evaluation of the output NDArray and ensure that it has been filled
+        assert type(out[0, 0].asscalar()).__name__ == 'float32'
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
@@ -538,6 +555,7 @@ def test_nn():
     check_spatial_transformer()
     check_ravel()
     check_cumsum()
+    check_multi_lars()
 
 
 def test_tensor():
