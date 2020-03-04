@@ -1249,11 +1249,11 @@ def delete(arr, obj, axis=None):
         start = obj.start
         stop = obj.stop
         step = 1 if obj.step is None else obj.step
-        return _npi.delete(arr, start=start, stop=stop, step=step, axis=axis)
+        return _api_internal.delete(arr, start, stop, step, axis)
     elif isinstance(obj, integer_types):
-        return _npi.delete(arr, int_ind=obj, axis=axis)
+        return _api_internal.delete(arr, obj, axis)
     elif isinstance(obj, NDArray):
-        return _npi.delete(arr, obj, axis=axis)
+        return _api_internal.delete(arr, obj, axis)
     else:
         raise TypeError("'obj' can not support type {}".format(str(type(obj))))
 
