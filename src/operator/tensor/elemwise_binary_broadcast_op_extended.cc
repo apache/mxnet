@@ -48,7 +48,7 @@ Example::
    [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
    // input[0] = x
    // input[1] = y;
-   // ograds[o] = head_grad_z
+   // ograds[0] = head_grad_z
    auto x = n->inputs[0];
    auto y = n->inputs[1];
    auto head_grad_z = ograds[0];
