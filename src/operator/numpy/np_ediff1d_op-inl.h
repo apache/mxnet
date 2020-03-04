@@ -65,7 +65,12 @@ struct set_to_val {
 template <typename DType>
 void copyArr(DType* dest, DType* src, size_t count,
              mshadow::Stream<cpu> *s) {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
   memcpy(dest, src, count);
+#pragma GCC diagnostic pop
 }
 
 template <typename DType>

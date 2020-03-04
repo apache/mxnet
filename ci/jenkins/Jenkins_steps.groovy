@@ -584,6 +584,20 @@ def compile_unix_asan_cpu() {
     }]
 }
 
+def compile_unix_gcc8_werror() {
+    return ['CPU: GCC8 -WError': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-gcc8') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_gcc8_werror', false)
+            utils.pack_lib('cpu_gcc8', mx_lib)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_amalgamation_min() {
     return ['Amalgamation MIN': {
       node(NODE_LINUX_CPU) {
