@@ -28,4 +28,6 @@ set -ex
 
 # Compile tests for discovery later
 cd scala-package
-mvn -B deploy -DskipTests=true
+mvn -B deploy -Pscala-2.11 -DskipTests=true
+mvn -B clean deploy -Pscala-2.12 -DskipTests=true
+mvn -B clean deploy -Pscala-2.13 -DskipTests=true

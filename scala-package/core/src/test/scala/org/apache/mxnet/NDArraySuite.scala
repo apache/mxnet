@@ -357,24 +357,24 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll with Matchers {
       val step = scala.util.Random.nextFloat() * 4
       val repeat = 1
 
-      val result1 = (start.toDouble until stop.toDouble by step.toDouble)
+      val result1 = (BigDecimal(start) until BigDecimal(stop) by BigDecimal(step))
         .flatMap(x => Array.fill[Float](repeat)(x.toFloat))
       val range1 = NDArray.arange(start = start, stop = Some(stop), step = step,
         repeat = repeat)
       assert(CheckUtils.reldiff(result1.toArray, range1.toArray) <= 1e-4f)
 
-      val result2 = (0.0 until stop.toDouble by step.toDouble)
+      val result2 = (BigDecimal(0.0) until BigDecimal(stop) by BigDecimal(step))
         .flatMap(x => Array.fill[Float](repeat)(x.toFloat))
       val range2 = NDArray.arange(stop, step = step, repeat = repeat)
       assert(CheckUtils.reldiff(result2.toArray, range2.toArray) <= 1e-4f)
 
-      val result3 = 0f to stop by 1f
+      val result3 = (BigDecimal(0) to BigDecimal(stop) by BigDecimal(1)).map(_.toFloat)
       val range3 = NDArray.arange(stop)
       assert(CheckUtils.reldiff(result3.toArray, range3.toArray) <= 1e-4f)
 
       val stop4 = Math.abs(stop)
       val step4 = stop4 + Math.abs(scala.util.Random.nextFloat())
-      val result4 = (0.0 until stop4.toDouble by step4.toDouble)
+      val result4 = (BigDecimal(0.0) until BigDecimal(stop4) by BigDecimal(step4))
         .flatMap(x => Array.fill[Float](repeat)(x.toFloat))
       val range4 = NDArray.arange(stop4, step = step4, repeat = repeat)
       assert(CheckUtils.reldiff(result4.toArray, range4.toArray) <= 1e-4f)

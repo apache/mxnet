@@ -102,7 +102,7 @@ class ObjectDetector(modelPathPrefix: String,
     val predictResult = predictor.predictWithNDArray(input)(0).asInContext(Context.cpu())
     // Parallel Execution with ParArray for better performance
     var batchResult = new ParArray[IndexedSeq[(String, Array[Float])]](predictResult.shape(0))
-    (0 until predictResult.shape(0)).toArray.par.foreach( i => {
+    ParArray(0 until predictResult.shape(0): _*).foreach( i => {
       val r = predictResult.at(i)
       batchResult(i) = sortAndReformat(r, topK)
       handler.execute(r.dispose())
@@ -123,7 +123,7 @@ class ObjectDetector(modelPathPrefix: String,
     // iterating over the all the predictions
     val length = predictResultND.shape(0)
 
-    val predictResult = (0 until length).toArray.par.flatMap( i => {
+    val predictResult = ParArray(0 until length: _*).flatMap( i => {
       val r = predictResultND.at(i)
       val tempArr = r.toArray
       val res = if (tempArr(0) != -1.0) {
@@ -161,7 +161,7 @@ class ObjectDetector(modelPathPrefix: String,
   IndexedSeq[IndexedSeq[(String, Array[Float])]] = {
 
     val inputBatchSeq = inputBatch.toIndexedSeq
-    val imageBatch = inputBatchSeq.indices.par.map(idx => {
+    val imageBatch = ParArray(inputBatchSeq.indices: _*).map(idx => {
       val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
       val imageShape = inputShape.drop(1)
       val pixelsND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape)

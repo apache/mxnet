@@ -264,7 +264,7 @@ class FeedForward private(
       }
     }
     // TODO(Yizhi): we can use Symbol.concat to do the same thing. Can it be more efficient?
-    val results = outputs.map(NDArray.concatenate(_))
+    val results = outputs.map(xs => NDArray.concatenate(xs.toSeq: _*))
     for (output <- outputs) {
       output.foreach(_.dispose())
     }

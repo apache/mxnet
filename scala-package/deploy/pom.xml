@@ -36,7 +36,7 @@
 
   <properties>
     <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
-    <ARTIFACT_ID>mxnet-full_2.11-${platform}-${flavor}</ARTIFACT_ID>
+    <ARTIFACT_ID>mxnet-full_${scala.binary.version}-${platform}-${flavor}</ARTIFACT_ID>
     <revision>${base.revision}-SNAPSHOT</revision>
     <repositoryId>apache.snapshots.https</repositoryId>
     <deploy_asc_types/>
@@ -47,7 +47,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.mxnet</groupId>
-      <artifactId>mxnet-full_2.11</artifactId>
+      <artifactId>mxnet-full</artifactId>
       <version>INTERNAL</version>
     </dependency>
   </dependencies>
@@ -62,7 +62,7 @@
         <deploy_asc_types>jar.asc,asc,asc,pom.asc</deploy_asc_types>
         <deploy_asc_classifers>,sources.jar,javadoc.jar,</deploy_asc_classifers>
         <deploy_asc_files>
-          ../assembly/target/mxnet-full_2.11-INTERNAL.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-src.jar.asc,../assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar.asc,../externalPom/target/deploy.xml.asc
+          ../assembly/target/mxnet-full-INTERNAL.jar.asc,../assembly/target/mxnet-full-INTERNAL-src.jar.asc,../assembly/target/mxnet-full_${scala.binary.version}-INTERNAL-bundle.jar.asc,../externalPom/target/deploy.xml.asc
         </deploy_asc_files>
       </properties>
     </profile>
@@ -105,9 +105,9 @@
               <version>${project.version}</version>
               <packaging>jar</packaging>
               <pomFile>${rootdir}/externalPom/target/deploy.xml</pomFile>
-              <file>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL.jar</file>
-              <sources>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL-src.jar</sources>
-              <javadoc>${rootdir}/assembly/target/mxnet-full_2.11-INTERNAL-bundle.jar</javadoc>
+              <file>${rootdir}/assembly/target/mxnet-full-INTERNAL.jar</file>
+              <sources>${rootdir}/assembly/target/mxnet-full-INTERNAL-src.jar</sources>
+              <javadoc>${rootdir}/assembly/target/mxnet-full-INTERNAL-bundle.jar</javadoc>
               <types>${deploy_asc_types}</types>
               <classifiers>${deploy_asc_classifers}</classifiers>
               <files>${deploy_asc_files}</files>

@@ -18,15 +18,17 @@
 package org.apache.mxnet
 
 import org.apache.mxnet.CheckUtils._
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funsuite.AnyFunSuite
 import org.scalacheck.Gen
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-class OperatorSuite extends FunSuite with BeforeAndAfterAll
-  with Matchers with GeneratorDrivenPropertyChecks {
+class OperatorSuite extends AnyFunSuite with BeforeAndAfterAll
+  with Matchers with ScalaCheckDrivenPropertyChecks {
   private def checkElementwiseSumWithShape(shape: Shape, n: Int) = {
     // forward
     val inputs = (0 until n).map(i => Symbol.Variable(s"arg $i"))
@@ -107,8 +109,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
         shapes += Shape(merge(i), 2)
       }
       // TODO: check dimension > 0
-      checkConcatWithShape(shapes, 0, skipSecond = true)
-      checkConcatWithShape(shapes, 0, skipSecond = false)
+      checkConcatWithShape(shapes.toSeq, 0, skipSecond = true)
+      checkConcatWithShape(shapes.toSeq, 0, skipSecond = false)
     }
   }
 
@@ -234,7 +236,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
       val stop = start + scala.util.Random.nextFloat() * 100
       val step = scala.util.Random.nextFloat() * 4
       val repeat = 1
-      val result = (start.toDouble until stop.toDouble by step.toDouble)
+      val result = (BigDecimal(start) until BigDecimal(stop) by BigDecimal(step))
         .flatMap(x => Array.fill[Float](repeat)(x.toFloat))
       val x = Symbol.arange(start = start, stop = Some(stop), step = step, repeat = repeat)
       var exe = x.simpleBind(ctx = Context.cpu(), gradReq = "write", shapeDict = Map())

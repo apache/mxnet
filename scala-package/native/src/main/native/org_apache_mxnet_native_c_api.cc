@@ -36,6 +36,22 @@
 #include <vector>
 #include "jni_helper_func.h"
 
+// Scala 2.13 has new collections library.
+// Native API uses `+=` method of ArrayBuffer/ListBuffer which was moved
+// to `Growable` trait.
+#if SCALA_2_13 == 1
+  #define SCALA_LIST_BUFFER "scala/collection/mutable/Growable"
+  #define SCALA_ARRAY_BUFFER "scala/collection/mutable/Growable"
+  #define SCALA_LIST_BUFFER_PLUS_EQ_SIG "(Ljava/lang/Object;)Lscala/collection/mutable/Growable;"
+  #define SCALA_ARRAY_BUFFER_PLUS_EQ_SIG "(Ljava/lang/Object;)Lscala/collection/mutable/Growable;"
+#else
+  #define SCALA_LIST_BUFFER "scala/collection/mutable/ListBuffer"
+  #define SCALA_ARRAY_BUFFER "scala/collection/mutable/ArrayBuffer"
+  #define SCALA_LIST_BUFFER_PLUS_EQ_SIG "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;"
+  #define SCALA_ARRAY_BUFFER_PLUS_EQ_SIG \
+    "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;"
+#endif
+
 JavaVM *_jvm;
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_nativeLibInit
@@ -49,9 +65,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxListAllOpNames
   const char **outArray;
   int ret = MXListAllOpNames(&outSize, &outArray);
 
-  jclass listCls = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listCls = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listCls,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize; ++i) {
     env->CallObjectMethod(nameList, listAppend, env->NewStringUTF(outArray[i]));
   }
@@ -133,9 +149,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxListFunctions
   jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
 
   // scala.collection.mutable.ListBuffer append method
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   // Get function list
   FunctionHandle *outArray;
@@ -188,9 +204,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxFuncGetInfo
   jfieldID valueStr = env->GetFieldID(refStringClass, "value", "Ljava/lang/String;");
 
   // scala.collection.mutable.ListBuffer append method
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
-      "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+      SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   env->SetObjectField(name, valueStr, env->NewStringUTF(cName));
   env->SetObjectField(desc, valueStr, env->NewStringUTF(cDesc));
@@ -268,9 +284,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxImperativeInvokeEx
     jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
     jmethodID intConst = env->GetMethodID(intCls, "<init>", "(I)V");
     // scala.collection.mutable.ListBuffer append method
-    jclass listClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+    jclass listClass = env->FindClass(SCALA_ARRAY_BUFFER);
     jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
-        "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+        SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
     for (int i = 0; i < numOutputs; ++i) {
       env->CallObjectMethod(outputs, listAppend,
                             env->NewObject(longCls, longConst,
@@ -361,9 +377,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySaveRawBytes
   // fill dataBuf
   jclass byteClass = env->FindClass("java/lang/Byte");
   jmethodID newByte = env->GetMethodID(byteClass, "<init>", "(B)V");
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < length; ++i) {
     jobject data = env->NewObject(byteClass, newByte, static_cast<jbyte>(pdata[i]));
     env->CallObjectMethod(dataBuf, arrayAppend, data);
@@ -395,9 +411,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
   jclass integerClass = env->FindClass("java/lang/Integer");
   jmethodID newInteger = env->GetMethodID(integerClass, "<init>", "(I)V");
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (int i = 0; i < ndim; ++i) {
     jobject data = env->NewObject(integerClass, newInteger, pdata[i]);
     env->CallObjectMethod(dataBuf, arrayAppend, data);
@@ -533,9 +549,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoad
   env->SetIntField(joutSize, valueInt, outSize);
   env->SetIntField(joutNameSize, valueInt, outNameSize);
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
 
   // fill handles
   jclass longCls = env->FindClass("java/lang/Long");
@@ -928,9 +944,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorOutputs
   jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
 
   // fill java outputs
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize; ++i) {
     env->CallObjectMethod(outputs, arrayAppend,
                           env->NewObject(longCls, longConst, out[i]));
@@ -1029,9 +1045,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxExecutorReshape
   jclass longCls = env->FindClass("java/lang/Long");
   jmethodID newLong = env->GetMethodID(longCls, "<init>", "(J)V");
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
 
   for (size_t i = 0; i < numInArgs; ++i) {
     jobject inArg = env->NewObject(longCls, newLong, inArgs[i]);
@@ -1121,9 +1137,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxListDataIters
   jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
 
   // scala.collection.mutable.ListBuffer append method
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   // Get function list
   DataIterCreator *outArray;
@@ -1205,9 +1221,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDataIterGetIterInfo
   // set params
   env->SetObjectField(jname, valueStr, env->NewStringUTF(name));
   env->SetObjectField(jdesc, valueStr, env->NewStringUTF(description));
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < numArgs; i++) {
     env->CallObjectMethod(jargNames, listAppend, env->NewStringUTF(argNames[i]));
     env->CallObjectMethod(jargTypeInfos, listAppend, env->NewStringUTF(argTypeInfos[i]));
@@ -1260,9 +1276,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxDataIterGetIndex
   // set field
   SetLongField(env, outSize, static_cast<jlong>(coutSize));
   // scala.collection.mutable.ListBuffer append method
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   // long class
   jclass longCls = env->FindClass("java/lang/Long");
@@ -1298,9 +1314,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListAtomicSymbolCre
   jclass longCls = env->FindClass("java/lang/Long");
   jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
 
-  jclass listCls = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listCls = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listCls,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   for (size_t i = 0; i < outSize; ++i) {
     env->CallObjectMethod(symbolList, listAppend,
@@ -1334,9 +1350,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolGetAtomicSymbolInfo
   jfieldID valueStr = env->GetFieldID(refStringClass, "value", "Ljava/lang/String;");
 
   // scala.collection.mutable.ListBuffer append method
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
-      "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+      SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   env->SetObjectField(name, valueStr, env->NewStringUTF(cName));
   env->SetObjectField(desc, valueStr, env->NewStringUTF(cDesc));
@@ -1411,9 +1427,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListAttrShallow
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
   env->SetIntField(joutSize, valueInt, static_cast<jint>(outSize));
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize * 2; ++i) {
     jstring jtmp = env->NewStringUTF(out[i]);
     env->CallObjectMethod(jout, arrayAppend, jtmp);
@@ -1434,9 +1450,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListAttr
   jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
   env->SetIntField(joutSize, valueInt, static_cast<jint>(outSize));
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize * 2; ++i) {
     jstring jtmp = env->NewStringUTF(out[i]);
     env->CallObjectMethod(jout, arrayAppend, jtmp);
@@ -1509,9 +1525,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListArguments
   int ret = MXSymbolListArguments(
     reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &outStrArray);
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize; i++) {
     jstring argument = env->NewStringUTF(outStrArray[i]);
     env->CallObjectMethod(arguments, arrayAppend, argument);
@@ -1527,9 +1543,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListOutputs
   const char **outStrArray;
   int ret = MXSymbolListOutputs(reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &outStrArray);
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize; i++) {
     jstring output = env->NewStringUTF(outStrArray[i]);
     env->CallObjectMethod(outputs, arrayAppend, output);
@@ -1546,9 +1562,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolListAuxiliaryStates
   int ret = MXSymbolListAuxiliaryStates(
     reinterpret_cast<SymbolHandle>(symbolPtr), &outSize, &outStrArray);
 
-  jclass arrayClass = env->FindClass("scala/collection/mutable/ArrayBuffer");
+  jclass arrayClass = env->FindClass(SCALA_ARRAY_BUFFER);
   jmethodID arrayAppend = env->GetMethodID(arrayClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ArrayBuffer;");
+    "$plus$eq", SCALA_ARRAY_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize; i++) {
     jstring output = env->NewStringUTF(outStrArray[i]);
     env->CallObjectMethod(outputs, arrayAppend, output);
@@ -1638,9 +1654,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxSymbolInferType
   jclass integerClass = env->FindClass("java/lang/Integer");
   jmethodID newInteger = env->GetMethodID(integerClass, "<init>", "(I)V");
 
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   for (size_t i = 0; i < inTypeSize; ++i) {
     jobject data = env->NewObject(integerClass, newInteger, inTypeData[i]);
@@ -1797,9 +1813,9 @@ int SymbolInferShapeHelper(JNIEnv *env, jobject obj, jlong symbolPtr, jint jnumA
   env->ReleaseIntArrayElements(jargIndPtr, argIndPtr, 0);
 
   if (ret == 0) {
-    jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+    jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
     jmethodID listAppend = env->GetMethodID(listClass,
-      "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+      "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
     if (FillSymbolInferShape(
           env, listAppend, jinShapeData, inShapeSize, inShapeNdim, inShapeData)) {

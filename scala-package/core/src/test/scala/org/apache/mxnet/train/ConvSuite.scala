@@ -96,7 +96,7 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
       val evalData = valDataIter.next()
       labels += evalData.label(0).copy()
     }
-    val y = NDArray.concatenate(labels)
+    val y = NDArray.concatenate(labels.toSeq)
 
     val py = NDArray.argmax_channel(prob)
     assert(y.shape === py.shape)

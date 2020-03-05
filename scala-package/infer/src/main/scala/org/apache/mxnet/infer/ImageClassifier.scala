@@ -21,6 +21,7 @@ import org.apache.mxnet.DType.DType
 import org.apache.mxnet._
 
 import scala.collection.mutable.ListBuffer
+import scala.collection.parallel.mutable.ParArray
 
 // scalastyle:off
 import java.awt.image.BufferedImage
@@ -115,7 +116,7 @@ class ImageClassifier(modelPathPrefix: String,
    dType: DType = DType.Float32): IndexedSeq[IndexedSeq[(String, Float)]] = {
 
     val inputBatchSeq = inputBatch.toIndexedSeq
-    val imageBatch = inputBatchSeq.indices.par.map(idx => {
+    val imageBatch = ParArray(inputBatchSeq.indices: _*).par.map(idx => {
       val scaledImage = ImageClassifier.reshapeImage(inputBatchSeq(idx), width, height)
       val imageShape = inputShape.drop(1)
       val imgND = ImageClassifier.bufferedImageToPixels(scaledImage, imageShape, dType)

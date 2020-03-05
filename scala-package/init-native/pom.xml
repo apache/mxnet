@@ -31,11 +31,19 @@
 
   <properties>
     <MXNET_DIR>${project.parent.basedir}/..</MXNET_DIR>
+    <native-init-api-source-file>org_apache_mxnet_init_native_c_api.cc</native-init-api-source-file>
+    <native-flag-scala-2.13>0</native-flag-scala-2.13>
   </properties>
 
   <packaging>${libtype}</packaging>
 
   <profiles>
+    <profile>
+      <id>scala-2.13</id>
+      <properties>
+        <native-flag-scala-2.13>1</native-flag-scala-2.13>
+      </properties>
+    </profile>
     <profile>
       <id>osx-x86_64</id>
       <activation>
@@ -56,7 +64,7 @@
                 <source>
                   <directory>src/main/native</directory>
                   <fileNames>
-                    <fileName>org_apache_mxnet_init_native_c_api.cc</fileName>
+                    <fileName>${native-init-api-source-file}</fileName>
                   </fileNames>
                 </source>
               </sources>
@@ -70,6 +78,7 @@
                 <compilerEndOption>-I${MXNET_DIR}/3rdparty/dlpack/include</compilerEndOption>
                 <compilerEndOption>-I${MXNET_DIR}/3rdparty/tvm/nnvm/include</compilerEndOption>
                 <compilerEndOption>-DMSHADOW_USE_MKL=0 -DMSHADOW_USE_CUDA=0</compilerEndOption>
+                <compilerEndOption>-DSCALA_2_13=${native-flag-scala-2.13}</compilerEndOption>
                 <compilerEndOption>-g -O0 -fPIC -msse3 -mf16c</compilerEndOption>
                 <compilerEndOption>-Wall -Wsign-compare -Wno-unused-parameter -Wno-unknown-pragmas -Wno-unused-local-typedefs</compilerEndOption>
               </compilerEndOptions>
@@ -131,7 +140,7 @@
                 <source>
                   <directory>src/main/native</directory>
                   <fileNames>
-                    <fileName>org_apache_mxnet_init_native_c_api.cc</fileName>
+                    <fileName>${native-init-api-source-file}</fileName>
                   </fileNames>
                 </source>
               </sources>
@@ -145,6 +154,7 @@
                 <compilerEndOption>-I${MXNET_DIR}/3rdparty/dlpack/include</compilerEndOption>
                 <compilerEndOption>-I${MXNET_DIR}/3rdparty/tvm/nnvm/include</compilerEndOption>
                 <compilerEndOption>-DMSHADOW_USE_MKL=0 -DMSHADOW_USE_CUDA=0</compilerEndOption>
+                <compilerEndOption>-DSCALA_2_13=${native-flag-scala-2.13}</compilerEndOption>
                 <compilerEndOption>-O3 -DNDEBUG=1 -fPIC -msse3 -mf16c</compilerEndOption>
                 <compilerEndOption>-Wall -Wsign-compare -Wno-unused-parameter -Wno-unknown-pragmas -Wno-unused-local-typedefs</compilerEndOption>
               </compilerEndOptions>

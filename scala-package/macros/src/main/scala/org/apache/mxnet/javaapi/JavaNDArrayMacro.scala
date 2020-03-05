@@ -30,7 +30,7 @@ private[mxnet] class AddJNDArrayAPIs(isContrib: Boolean) extends StaticAnnotatio
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) = macro JavaNDArrayMacro.typeSafeAPIDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any = macro JavaNDArrayMacro.typeSafeAPIDefs
 }
 
 private[mxnet] object JavaNDArrayMacro extends GeneratorBase {

@@ -37,8 +37,8 @@ trait ClassifierBase {
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
-  def classify[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]],
-               topK: Option[Int] = None): IndexedSeq[(String, T)]
+  def classify[@specialized (Base.MX_PRIMITIVES_SPECIALIZED_GROUP) T]
+        (input: IndexedSeq[Array[T]], topK: Option[Int] = None): IndexedSeq[(String, T)]
 
   /**
     * Takes a sequence of NDArrays and returns (Label, Score) tuples
@@ -85,8 +85,8 @@ class Classifier(modelPathPrefix: String,
     *                         elements to return. Default returns unsorted output.
     * @return                 Indexed sequence of (Label, Score) tuples
     */
-  override def classify[@specialized (Base.MX_PRIMITIVES) T](input: IndexedSeq[Array[T]],
-                        topK: Option[Int] = None): IndexedSeq[(String, T)] = {
+  override def classify[@specialized (Base.MX_PRIMITIVES_SPECIALIZED_GROUP) T]
+      (input: IndexedSeq[Array[T]], topK: Option[Int] = None): IndexedSeq[(String, T)] = {
 
     // considering only the first output
     val result = input(0)(0) match {
@@ -139,7 +139,7 @@ class Classifier(modelPathPrefix: String,
       new ParArray[Array[Float]](predictResultND.shape(0))
 
     // iterating over the individual items(batch size is in axis 0)
-    (0 until predictResultND.shape(0)).toVector.par.foreach( i => {
+    ParArray(0 until predictResultND.shape(0): _*).foreach( i => {
       val r = predictResultND.at(i)
       predictResultPar(i) = r.toArray
       r.dispose()

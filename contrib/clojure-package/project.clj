@@ -29,7 +29,8 @@
                  ;[org.apache.mxnet/mxnet-full_2.11-linux-x86_64-gpu "<insert-snapshot-version"]
 
                  ;;; CI / Local Build
-                 [org.apache.mxnet/mxnet-full_2.11 "INTERNAL"]
+                 ;;; Note local builds has not Scala version suffix
+                 [org.apache.mxnet/mxnet-full "INTERNAL"]
 
                  [org.clojure/tools.logging "0.4.0"]
                  [org.apache.logging.log4j/log4j-core "2.8.1"]

@@ -26,6 +26,17 @@
 #include <nnvm/c_api.h>
 #include <mxnet/c_api.h>
 
+// Scala 2.13 has new collections library.
+// Native API uses `+=` method of ListBuffer which was moved
+// to `Growable` trait.
+#if SCALA_2_13 == 1
+  #define SCALA_LIST_BUFFER "scala/collection/mutable/Growable"
+  #define SCALA_LIST_BUFFER_PLUS_EQ_SIG "(Ljava/lang/Object;)Lscala/collection/mutable/Growable;"
+#else
+  #define SCALA_LIST_BUFFER "scala/collection/mutable/ListBuffer"
+  #define SCALA_LIST_BUFFER_PLUS_EQ_SIG "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;"
+#endif
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_init_LibInfo_mxSymbolListAtomicSymbolCreators
   (JNIEnv *env, jobject obj, jobject symbolList) {
   mx_uint outSize;
@@ -35,9 +46,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_init_LibInfo_mxSymbolListAtomicSymb
   jclass longCls = env->FindClass("java/lang/Long");
   jmethodID longConst = env->GetMethodID(longCls, "<init>", "(J)V");
 
-  jclass listCls = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listCls = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listCls,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   for (size_t i = 0; i < outSize; ++i) {
     env->CallObjectMethod(symbolList, listAppend,
@@ -71,9 +82,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_init_LibInfo_mxSymbolGetAtomicSymbo
   jfieldID valueStr = env->GetFieldID(refStringClass, "value", "Ljava/lang/String;");
 
   // scala.collection.mutable.ListBuffer append method
-  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listClass = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
-      "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+      SCALA_LIST_BUFFER_PLUS_EQ_SIG);
 
   env->SetObjectField(name, valueStr, env->NewStringUTF(cName));
   env->SetObjectField(desc, valueStr, env->NewStringUTF(cDesc));
@@ -94,9 +105,9 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_init_LibInfo_mxListAllOpNames
   const char **outArray;
   int ret = MXListAllOpNames(&outSize, &outArray);
 
-  jclass listCls = env->FindClass("scala/collection/mutable/ListBuffer");
+  jclass listCls = env->FindClass(SCALA_LIST_BUFFER);
   jmethodID listAppend = env->GetMethodID(listCls,
-    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+    "$plus$eq", SCALA_LIST_BUFFER_PLUS_EQ_SIG);
   for (size_t i = 0; i < outSize; ++i) {
     env->CallObjectMethod(nameList, listAppend, env->NewStringUTF(outArray[i]));
   }

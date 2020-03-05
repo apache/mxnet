@@ -29,9 +29,14 @@
   <artifactId>mxnet-spark</artifactId>
   <name>MXNet Scala Package - Spark ML</name>
 
-  <properties>
-    <spark.version>1.6.3</spark.version>
-  </properties>
+  <profiles>
+    <profile>
+      <id>scala-2.11</id>
+      <properties>
+        <spark.version>1.6.3</spark.version>
+      </properties>
+    </profile>
+  </profiles>
 
   <dependencies>
     <dependency>
@@ -41,19 +46,19 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-mllib_2.11</artifactId>
-      <version>${spark.version}</version>
-    </dependency>
-    <dependency>
       <groupId>args4j</groupId>
       <artifactId>args4j</artifactId>
       <version>2.33</version>
     </dependency>
     <dependency>
-        <groupId>org.json4s</groupId>
-        <artifactId>json4s-core_2.11</artifactId>
-        <version>3.5.1</version>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-mllib_2.11</artifactId>
+      <version>${spark.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.json4s</groupId>
+      <artifactId>json4s-core_2.11</artifactId>
+      <version>3.5.1</version>
     </dependency>
   </dependencies>
 </project>

@@ -28,7 +28,8 @@ private[mxnet] class AddSymbolFunctions(isContrib: Boolean) extends StaticAnnota
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) = macro SymbolMacro.addDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any =
+    macro SymbolMacro.addDefs
 }
 
 private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation {
@@ -37,7 +38,8 @@ private[mxnet] class AddSymbolAPIs(isContrib: Boolean) extends StaticAnnotation 
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) = macro TypedSymbolAPIMacro.typeSafeAPIDefs
+  private[mxnet] def macroTransform(annottees: Any*): Any =
+    macro TypedSymbolAPIMacro.typeSafeAPIDefs
 }
 
 private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnotation {
@@ -46,7 +48,7 @@ private[mxnet] class AddSymbolRandomAPIs(isContrib: Boolean) extends StaticAnnot
   * @param annottees Annottees used to define Class or Module
   * @return Generated code for injection
   */
-  private[mxnet] def macroTransform(annottees: Any*) =
+  private[mxnet] def macroTransform(annottees: Any*): Any =
   macro TypedSymbolRandomAPIMacro.typeSafeAPIDefs
 }
 
@@ -136,7 +138,7 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
     val backendArgsMapping =
       function.listOfArgs.map { arg =>
         if (arg.argType.equals(s"Array[org.apache.mxnet.Symbol]")) {
-          s"args = ${arg.safeArgName}.toSeq"
+          s"args = ${arg.safeArgName}.toList"
         } else {
           // all go in kwargs
           if (arg.isOptional) {
@@ -153,7 +155,7 @@ private[mxnet] object TypedSymbolAPIMacro extends GeneratorBase {
          |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  val map = scala.collection.mutable.Map[String, Any]()
-         |  var args = scala.collection.Seq[org.apache.mxnet.Symbol]()
+         |  var args = List.empty[org.apache.mxnet.Symbol]
          |
          |  ${backendArgsMapping.mkString("\n")}
          |
@@ -224,7 +226,7 @@ private[mxnet] object TypedSymbolRandomAPIMacro extends GeneratorBase
          |  (${argDecl.mkString(",")}): $returnType = {
          |
          |  val map = scala.collection.mutable.Map[String, Any]()
-         |  var args = scala.collection.Seq[org.apache.mxnet.Symbol]()
+         |  var args = List.empty[org.apache.mxnet.Symbol]
          |  val isScalar = SymbolOrScalar[T].isScalar
          |
          |  ${backendArgsMapping.mkString("\n")}
