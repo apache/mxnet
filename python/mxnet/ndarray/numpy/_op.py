@@ -1355,7 +1355,7 @@ def matmul(a, b, out=None):
     ...
     mxnet.base.MXNetError: ... : Multiplication by scalars is not allowed.
     """
-    return _npi.matmul(a, b, out=out)
+    return _api_internal.matmul(a, b, out)
 
 
 @set_module('mxnet.ndarray.numpy')

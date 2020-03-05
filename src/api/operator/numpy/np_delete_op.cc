@@ -22,6 +22,8 @@
  * \brief Implementation of the API of functions in src/operator/numpy/np_delete_op.cc
  */
 #include <vector>
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_delete_op-inl.h"
 
@@ -91,9 +93,9 @@ MXNET_REGISTER_API("_npi.delete")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
+  SetAttrDict<op::NumpyDeleteParam>(&attrs);
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::NumpyDeleteParam>
-    (op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 

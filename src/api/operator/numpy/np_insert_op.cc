@@ -25,6 +25,8 @@
           src/operator/numpy/np_insert_op_tensor.cc
  */
 #include <vector>
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_insert_op-inl.h"
 
@@ -57,13 +59,13 @@ MXNET_REGISTER_API("_npi.insert_scalar")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
+  SetAttrDict<op::NumpyInsertParam>(&attrs);
   std::vector<NDArray*> inputs;
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::NumpyInsertParam>
-    (op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
@@ -105,13 +107,13 @@ MXNET_REGISTER_API("_npi.insert_slice")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
+  SetAttrDict<op::NumpyInsertParam>(&attrs);
   std::vector<NDArray*> inputs;
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::NumpyInsertParam>
-    (op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
@@ -141,13 +143,13 @@ MXNET_REGISTER_API("_npi.insert_tensor")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
+  SetAttrDict<op::NumpyInsertParam>(&attrs);
   std::vector<NDArray*> inputs;
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::NumpyInsertParam>
-    (op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
