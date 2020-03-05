@@ -368,7 +368,7 @@ def test_symbolic_basic_slicing():
                 TestSlicingWithVSplit, [x],
                 numpy_func=lambda a: _np.concatenate(_np.vsplit(a, shape[0])[1:-1], axis=0))
 
-    for data_shape, idx in [((4, 6, 8, 5), 2),
+    for data_shape, idx in [((4, 3), 2),
                             ((3,), -1),
                             ((3,), 0)]:
         class IntegerIndexing(gluon.HybridBlock):
