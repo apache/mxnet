@@ -24,9 +24,9 @@
           src/operator/numpy/np_insert_op_slice.cc
           src/operator/numpy/np_insert_op_tensor.cc
  */
-#include <vector>
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <vector>
 #include "../utils.h"
 #include "../../../operator/numpy/np_insert_op-inl.h"
 

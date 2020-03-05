@@ -21,7 +21,6 @@
  * \file np_matmul_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_matmul_op.cc
  */
-#include <vector>
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
@@ -33,7 +32,7 @@ MXNET_REGISTER_API("_npi.matmul")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   static const nnvm::Op* op = Op::Get("_npi_matmul");
-  nnvm::NodeAttrs attrs; 
+  nnvm::NodeAttrs attrs;
   int num_inputs = 2;
   NDArray* inputs[2] = {args[0].operator mxnet::NDArray*(),
                         args[1].operator mxnet::NDArray*()};
