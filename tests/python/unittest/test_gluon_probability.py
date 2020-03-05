@@ -190,6 +190,72 @@ def test_gluon_exponential():
 
 @with_seed()
 @use_np
+def test_gluon_weibull():
+    class TestWeibull(HybridBlock):
+        def __init__(self, func):
+            super(TestWeibull, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, concentration, scale, *args):
+            weibull = mgp.Weibull(concentration, scale, F)
+            return _distribution_method_invoker(weibull, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        concentration = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape)
+        net = TestWeibull("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(concentration, scale, samples).asnumpy()
+        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        concentration = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape)
+        net = TestWeibull("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(concentration, scale, samples).asnumpy()
+        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        concentration = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape)
+        net = TestWeibull("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(concentration, scale, samples).asnumpy()
+        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        concentration = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        net = TestWeibull("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(concentration, scale).asnumpy()
+        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_gamma():
     class TestGamma(HybridBlock):
         def __init__(self, func):
@@ -775,8 +841,28 @@ def test_gluon_half_normal():
                             rtol=1e-3, use_broadcast=False) 
     
     # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.abs(np.random.normal(size=shape))
+        net = TestHalfNormal("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.halfnorm(0, scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False) 
 
     # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestHalfNormal("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.halfnorm(0, scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False) 
 
 
 @with_seed()
@@ -953,11 +1039,11 @@ def test_independent():
 @with_seed()
 @use_np
 def test_gluon_stochastic_block():
-    """In this test case, we generate samples from a Gaussian
-    parameterized by `loc` and `scale` and accumulate the KL-divergence
-    between it and its prior into the block's loss storage
-    """
     class dummyBlock(StochasticBlock):
+        """In this test case, we generate samples from a Gaussian
+        parameterized by `loc` and `scale` and accumulate the KL-divergence
+        between it and its prior into the block's loss storage
+        """
         @StochasticBlock.collectLoss
         def hybrid_forward(self, F, loc, scale):
             qz = mgp.Normal(loc, scale)

@@ -30,7 +30,7 @@ class Exponential(ExponentialFamily):
     support = Positive()
     arg_constraints = {'scale' : Positive()}
     
-    def __init__(self, scale, F=None, validate_args=None):
+    def __init__(self, scale=1.0, F=None, validate_args=None):
         _F = F if F is not None else getF(scale)
         self.scale = scale
         super(Exponential, self).__init__(F=_F, event_dim=0, validate_args=validate_args)

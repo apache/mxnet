@@ -25,6 +25,8 @@ from .exp_family import *
 
 from .exponential import *
 
+from .weibull import *
+
 from .normal import *
 
 from .gamma import *

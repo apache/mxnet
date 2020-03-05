@@ -43,12 +43,10 @@ class HalfNormal(TransformedDistribution):
         return log_prob
 
     def cdf(self, value):
-        # FIXME
-        pass
+        return 2 * self._base_dist.cdf(value) - 1
 
     def icdf(self, value):
-        # FIXME
-        pass
+        return self._base_dist.icdf((value + 1) / 2)
 
     @property
     def scale(self):

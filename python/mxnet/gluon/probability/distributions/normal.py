@@ -52,7 +52,7 @@ class Normal(ExponentialFamily):
         super(Normal, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
-        """Compute the log likehood of `value`.
+        """Compute the log likelihood of `value`.
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ class Normal(ExponentialFamily):
         Returns
         -------
         Tensor
-            Log likehood of the input.
+            Log likelihood of the input.
         """
         F = self.F
         log_scale = F.np.log(self.scale)

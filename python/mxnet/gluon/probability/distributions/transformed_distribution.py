@@ -46,8 +46,8 @@ class TransformedDistribution(Distribution):
 
     def log_prob(self, value):
         """
-        Compute log-likehood of `value` with `log_det_jacobian` and
-        log-likehood of the base distribution according to the following conclusion:
+        Compute log-likelihood of `value` with `log_det_jacobian` and
+        log-likelihood of the base distribution according to the following conclusion:
 
         Given that Y = T(X),
         log(p(y)) = log(p(x)) - log(|dy/dx|)
@@ -65,10 +65,23 @@ class TransformedDistribution(Distribution):
         return log_prob
 
     def cdf(self, value):
-        # FIXME: implement transformed distribution CDF.
-        raise NotImplementedError
+        """
+        Compute the cumulative distribution function(CDF) p(Y < `value`)
+        """
+        sign = self.F.np.ones_like(value)
+        for t in reversed(self._transforms):
+            value = t.inv(value)
+            sign = sign * t.sign
+        value = self._base_dist.cdf(value)
+        return sign * (value - 0.5) + 0.5
 
     def icdf(self, value):
-        # FIXME: implement transformed distribution ICDF.
-        raise NotImplementedError
-
+        # FIXME: implement the inverse cdf for transformed distribution.
+        sign = self.F.np.ones_like(value)
+        for t in self._transforms:
+            sign = sign * t.sign
+        value = sign * (value - 0.5) + 0.5 # value or (1 - value)
+        samples_base = self._base_dist.icdf(value)
+        for t in self._transforms:
+            samples_base = t(samples_base)
+        return samples_base

@@ -50,6 +50,13 @@ class Transformation(object):
         self._F = value
 
     @property
+    def sign(self):
+        """
+        Returns the sign of the determinant of the Jacobian.
+        """
+        raise NotImplementedError
+
+    @property
     def inv(self):
         inv = None
         if self._inv is not None:
@@ -92,6 +99,10 @@ class _InverseTransformation(Transformation):
         return self._inv
 
     @property
+    def sign(self):
+        return self._inv.sign
+
+    @property
     def event_dim(self):
         return self._inv.event_dim
 
@@ -121,6 +132,13 @@ class ComposeTransform(Transformation):
     def F(self, value):
         for t in self._parts:
             t.F = value
+        
+    @cached_property
+    def sign(self):
+        sign = 1
+        for p in self._parts:
+            sign = sign * p.sign
+        return sign
 
     @cached_property
     def event_dim(self):
@@ -159,6 +177,7 @@ class ExpTransform(Transformation):
     Perform the exponential transform: y = exp{x}.
     """
     bijective = True
+    sign = 1
 
     def _forward_compute(self, x):
         return self.F.np.exp(x)
@@ -196,9 +215,14 @@ class AffineTransform(Transformation):
         value = ones_fn(x) * log_fn(abs_fn(self._scale))
         return sum_right_most(value, self.event_dim)
 
+    @property
+    def sign(self):
+        return self.F.np.sign(self._scale)
+
 
 class PowerTransform(Transformation):
     bijective = True
+    sign = 1
 
     def __init__(self, exponent):
         super(PowerTransform, self).__init__()
@@ -218,6 +242,7 @@ class PowerTransform(Transformation):
 
 class SigmoidTransform(Transformation):
     bijective = True
+    sign = 1
 
     def _forward_compute(self, x):
         F = self.F
