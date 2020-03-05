@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_DELETE_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_DELETE_OP_INL_H_
 
+#include <string>
 #include <vector>
 #include <memory>
 #include <algorithm>
