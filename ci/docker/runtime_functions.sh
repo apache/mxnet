@@ -387,23 +387,6 @@ build_centos7_cpu_make() {
         -j$(nproc)
 }
 
-build_amzn_linux_cpu() {
-    set -ex
-    cd /work/build
-    build_ccache_wrappers
-    cmake \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_DIST_KVSTORE=ON\
-        -G Ninja /work/mxnet
-    ninja
-}
-
 build_centos7_mkldnn() {
     set -ex
     cd /work/build
@@ -470,18 +453,16 @@ build_ubuntu_cpu_openblas_make() {
 
 build_ubuntu_cpu_mkl() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=mkl                  \
-        USE_TVM_OP=1                  \
-        USE_MKLDNN=0                  \
-        USE_INTEL_PATH=/opt/intel     \
-        USE_DIST_KVSTORE=1            \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_cmake_debug() {
@@ -544,6 +525,20 @@ build_ubuntu_cpu_cmake_asan() {
     ASAN_OPTIONS=detect_leaks=0 \
     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
     make -j $(nproc) mlp_cpu
+}
+
+build_ubuntu_cpu_gcc8_werror() {
+    set -ex
+    cd /work/build
+    export CXX=g++-8
+    export CC=gcc-8
+    cmake \
+        -DUSE_CUDA=OFF \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_clang39() {
@@ -647,16 +642,16 @@ build_ubuntu_cpu_mkldnn() {
 
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=mkl                  \
-        USE_SIGNAL_HANDLER=1          \
-        USE_INTEL_PATH=/opt/intel/    \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu() {

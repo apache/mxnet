@@ -1,9 +1,14 @@
 Run the following command:
 
+<div class="v1-6-0">
+
+Windows pip packages for MXNet 1.6 are not yet available.
+
+</div> <!-- End of v1-6-0 -->
 <div class="v1-5-1">
 
 {% highlight bash %}
-$ pip install mxnet-cu101
+$ pip install mxnet-cu101==1.5.1
 {% endhighlight %}
 
 </div> <!-- End of v1-5-1 -->
