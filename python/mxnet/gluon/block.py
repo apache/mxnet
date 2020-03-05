@@ -1031,8 +1031,24 @@ class HybridBlock(Block):
         return _regroup(out, self._out_format)
 
     def optimize_for(self, x, *args, backend=None, backend_opts=None, **kwargs):
-        """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
-        non-hybrid children.
+        """Partitions the current HybridBlock and optimizes it for a given backend
+        without executing a forward pass. Modifies the HybridBlock in-place. 
+
+        Immediately partitions a HybridBlock using the specified backend. Combines
+        the work done in the hybridize API with part of the work done in the forward
+        pass without calling the CachedOp. Can be used in place of hybridize,
+        afterwards `export` can be called or inference can be run. See README.md in
+        example/extensions/lib_subgraph/README.md for more details.
+
+        Examples
+        --------
+        # partition and then export to file
+        block.optimize_for(x, backend='myPart')
+        block.export('partitioned')
+
+        # partition and then run inference
+        block.optimize_for(x, backend='myPart')
+        block(x)
 
         Parameters
         ----------
