@@ -21,12 +21,14 @@
  * \file np_percentile_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_percentile_op.cc
  */
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_percentile_op-inl.h"
 
 namespace mxnet {
 
-inline int String2MXnetPercentileType(const std::string& s) {
+inline int String2MXNetPercentileType(const std::string& s) {
   using namespace op;
   if (s == "linear") {
     return percentile_enum::kLinear;
@@ -62,22 +64,34 @@ MXNET_REGISTER_API("_npi.percentile")
   } else {
     param.axis = Tuple<int>(args[2].operator ObjectRef());
   }
-  param.interpolation = String2MXnetPercentileType(args[3].operator std::string());
+  param.interpolation = String2MXNetPercentileType(args[3].operator std::string());
   param.keepdims = args[4].operator bool();
   if (args[1].type_code() == kDLInt || args[1].type_code() == kDLFloat) {
     param.q_scalar = args[1].operator double();
     NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+    int num_inputs = 1;
     attrs.parsed = std::move(param);
     attrs.op = op;
-    auto ndoutputs = Invoke<op::NumpyPercentileParam>(op, &attrs, 1, inputs, &num_outputs, outputs);
-    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+    SetAttrDict<op::NumpyPercentileParam>(&attrs);
+    auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+    if (out) {
+      *ret = PythonArg(5);
+    } else {
+      *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+    }
   } else {
     param.q_scalar = dmlc::nullopt;
     NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
+    int num_inputs = 2;
     attrs.parsed = std::move(param);
     attrs.op = op;
-    auto ndoutputs = Invoke<op::NumpyPercentileParam>(op, &attrs, 2, inputs, &num_outputs, outputs);
-    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+    SetAttrDict<op::NumpyPercentileParam>(&attrs);
+    auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+    if (out) {
+      *ret = PythonArg(5);
+    } else {
+      *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+    }
   }
 });
 

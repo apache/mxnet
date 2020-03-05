@@ -21,6 +21,7 @@
  * \file np_bincount_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_bincount_op.cc
  */
+#include <mxnet/api_registry.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_bincount_op-inl.h"
 
@@ -38,17 +39,21 @@ MXNET_REGISTER_API("_npi.bincount")
     param.minlength = args[2].operator int64_t();
     param.has_weights = false;
     NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-    attrs.parsed = param;  // remove std::move() ci error: trivially-copyable type
+    int num_inputs = 1;
+    attrs.parsed = param;
     attrs.op = op;
-    auto ndoutputs = Invoke<op::NumpyBincountParam>(op, &attrs, 1, inputs, &num_outputs, nullptr);
+    SetAttrDict<op::NumpyBincountParam>(&attrs);
+    auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
     *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
   } else {
     param.minlength = args[2].operator int64_t();
     param.has_weights = true;
     NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-    attrs.parsed = param;  // remove std::move() ci error: trivially-copyable type
+    int num_inputs = 2;
+    attrs.parsed = param;
     attrs.op = op;
-    auto ndoutputs = Invoke<op::NumpyBincountParam>(op, &attrs, 2, inputs, &num_outputs, nullptr);
+    SetAttrDict<op::NumpyBincountParam>(&attrs);
+    auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
     *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
     }
 });

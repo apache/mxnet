@@ -21,6 +21,8 @@
  * \file np_broadcast_reduce_op_boolean.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_broadcast_reduce_op_boolean.cc
  */
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_broadcast_reduce_op.h"
 
@@ -45,11 +47,16 @@ MXNET_REGISTER_API("_npi.all")
   }
   param.keepdims = args[2].operator bool();
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
   attrs.parsed = std::move(param);
   attrs.op = op;
-  auto ndoutputs = Invoke<op::NumpyReduceAxesBoolParam>(
-    op, &attrs, 1, inputs, &num_outputs, outputs);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  SetAttrDict<op::NumpyReduceAxesBoolParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
 });
 
 MXNET_REGISTER_API("_npi.any")
@@ -71,11 +78,16 @@ MXNET_REGISTER_API("_npi.any")
   }
   param.keepdims = args[2].operator bool();
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
   attrs.parsed = std::move(param);
   attrs.op = op;
-  auto ndoutputs = Invoke<op::NumpyReduceAxesBoolParam>(
-    op, &attrs, 1, inputs, &num_outputs, outputs);
-  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  SetAttrDict<op::NumpyReduceAxesBoolParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
 });
 
 }  // namespace mxnet

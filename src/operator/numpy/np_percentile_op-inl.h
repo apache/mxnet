@@ -33,6 +33,7 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "np_broadcast_reduce_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -67,13 +68,12 @@ struct NumpyPercentileParam : public dmlc::Parameter<NumpyPercentileParam> {
       .describe("inqut q is a scalar");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream axis_s, interpolation_s, keepdims_s, q_scalar_s;
+    std::ostringstream axis_s, keepdims_s, q_scalar_s;
     axis_s << axis;
-    interpolation_s << interpolation;
     keepdims_s << keepdims;
     q_scalar_s << q_scalar;
     (*dict)["axis"] = axis_s.str();
-    (*dict)["interpolation"] = interpolation_s.str();
+    (*dict)["interpolation"] = MXNetPercentileType2String(interpolation);
     (*dict)["keepdims"] = keepdims_s.str();
     (*dict)["q_scalar"] = q_scalar_s.str();
   }
