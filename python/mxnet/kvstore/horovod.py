@@ -121,16 +121,20 @@ class Horovod(KVStoreBase):
         import horovod.mxnet as hvd
 
         if out is None:
-            hvd.allreduce_(value, average=False, name=key, priority=priority)
+            value = value if isinstance(value, list) else [value]
+            for v in value:
+                hvd.allreduce_(v, average=False, name=str(key), priority=priority)
         else:
-            out[:] = hvd.allreduce(value, average=False, name=key, priority=priority)
+            out = out if isinstance(out, list) else [out]
+            for o in out:
+                o[:] = hvd.allreduce(value, average=False, name=str(key), priority=priority)
 
     def set_optimizer(self, optimizer):
         pass
 
     @staticmethod
     def is_capable(capability):
-        pass
+        return False
 
     def save_optimizer_states(self, fname, dump_optimizer=False):
         pass
