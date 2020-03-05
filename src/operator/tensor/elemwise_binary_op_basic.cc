@@ -114,6 +114,29 @@ The storage type of ``elemwise_add`` output depends on storage types of inputs
 // this must differ from elemwise_add to prevent add to optimization in forward pass.
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_grad_add, op::mshadow_op::plus);
 
+static void _backward_ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<NDArray>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<NDArray>& outputs) {
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 2U);
+#if MXNET_USE_MKLDNN == 1
+  if (inputs[0].IsMKLDNNData()) {
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNCopy, attrs, ctx, inputs[0], req[1], outputs[1]);
+    return;
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    FallBackCompute(
+        ElemwiseBinaryOp::BackwardUseNone<cpu, mshadow_op::identity, mshadow_op::identity>,
+            attrs, ctx, inputs, req, outputs);
+    return;
+  }
+#endif
+  ElemwiseBinaryOp::BackwardUseNoneEx<cpu, mshadow_op::identity, mshadow_op::identity>(
+      attrs, ctx, inputs, req, outputs);
+}
+
 static inline bool ElemwiseAddBackwardStorageType(const nnvm::NodeAttrs& attrs,
                                                   const int dev_mask,
                                                   DispatchMode* dispatch_mode,
