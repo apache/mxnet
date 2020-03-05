@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * 
  *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,20 +18,18 @@
  */
 
 /*!
- * \file np_cumsum.cu
- * \brief GPU implementation of numpy-compatible cumsum operator
+ * \file op_utils.h
+ * \brief Utility functions for modification in src/operator
  */
+#ifndef MXNET_API_OPERATOR_OP_UTILS_H_
+#define MXNET_API_OPERATOR_OP_UTILS_H_
 
-#include "./np_cumsum-inl.h"
+#include <string>
 
 namespace mxnet {
-namespace op {
 
-NNVM_REGISTER_OP(_npi_cumsum)
-.set_attr<FCompute>("FCompute<gpu>", CumsumForward<gpu>);
+std::string String2MXNetTypeWithBool(int dtype);
 
-NNVM_REGISTER_OP(_backward_npi_cumsum)
-.set_attr<FCompute>("FCompute<gpu>", CumsumBackward<gpu>);
-
-}  // namespace op
 }  // namespace mxnet
+
+#endif  // MXNET_API_OPERATOR_OP_UTILS_H_

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * 
  *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,20 +18,22 @@
  */
 
 /*!
- * \file np_cumsum.cu
- * \brief GPU implementation of numpy-compatible cumsum operator
+ * \file np_elemwise_broadcast_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_elemwise_broadcast_op.cc
  */
-
-#include "./np_cumsum-inl.h"
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
+#include "../utils.h"
+#include "../ufunc_helper.h"
 
 namespace mxnet {
-namespace op {
 
-NNVM_REGISTER_OP(_npi_cumsum)
-.set_attr<FCompute>("FCompute<gpu>", CumsumForward<gpu>);
+MXNET_REGISTER_API("_npi.add")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_add");
+  const nnvm::Op* op_scalar = Op::Get("_npi_add_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
 
-NNVM_REGISTER_OP(_backward_npi_cumsum)
-.set_attr<FCompute>("FCompute<gpu>", CumsumBackward<gpu>);
-
-}  // namespace op
 }  // namespace mxnet

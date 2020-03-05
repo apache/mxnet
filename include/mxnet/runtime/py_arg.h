@@ -16,22 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
-/*!
- * \file np_cumsum.cu
- * \brief GPU implementation of numpy-compatible cumsum operator
+/*
+ * \file py_arg.h
+ * \brief Python runtime arguments specifier.
  */
-
-#include "./np_cumsum-inl.h"
+#ifndef MXNET_RUNTIME_PY_ARG_H_
+#define MXNET_RUNTIME_PY_ARG_H_
 
 namespace mxnet {
-namespace op {
+namespace runtime {
 
-NNVM_REGISTER_OP(_npi_cumsum)
-.set_attr<FCompute>("FCompute<gpu>", CumsumForward<gpu>);
+class PythonArg {
+ public:
+  explicit PythonArg(int offset): offset_(offset) {}
+  int offset() const {
+    return offset_;
+  }
+ private:
+  int offset_;
+};
 
-NNVM_REGISTER_OP(_backward_npi_cumsum)
-.set_attr<FCompute>("FCompute<gpu>", CumsumBackward<gpu>);
+}  // namespace runtime
 
-}  // namespace op
 }  // namespace mxnet
+#endif  //  MXNET_RUNTIME_PY_ARG_H_
