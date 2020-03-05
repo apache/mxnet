@@ -1032,7 +1032,7 @@ class HybridBlock(Block):
 
     def optimize_for(self, x, *args, backend=None, backend_opts=None, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
-        without executing a forward pass. Modifies the HybridBlock in-place. 
+        without executing a forward pass. Modifies the HybridBlock in-place.
 
         Immediately partitions a HybridBlock using the specified backend. Combines
         the work done in the hybridize API with part of the work done in the forward
