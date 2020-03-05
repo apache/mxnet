@@ -32,14 +32,11 @@ class TypeCode(object):
     NULL = 4
     MXNET_TYPE = 5
     MXNET_CONTEXT = 6
-    ARRAY_HANDLE = 7
-    OBJECT_HANDLE = 8
-    MODULE_HANDLE = 9
-    FUNC_HANDLE = 10
-    STR = 11
-    BYTES = 12
-    NDARRAY_CONTAINER = 13
-    NDARRAYHANDLE = 14
+    OBJECT_HANDLE = 7
+    STR = 8
+    BYTES = 9
+    PYARG = 10
+    NDARRAYHANDLE = 11
     EXT_BEGIN = 15
 
 
@@ -54,5 +51,6 @@ RETURN_SWITCH = {
     TypeCode.INT: lambda x: x.v_int64,
     TypeCode.FLOAT: lambda x: x.v_float64,
     TypeCode.NULL: lambda x: None,
-    TypeCode.NDARRAYHANDLE: lambda x: _global_var._np_ndarray_cls(handle=NDArrayHandle(x.v_handle))
+    TypeCode.NDARRAYHANDLE: lambda x: _global_var._np_ndarray_cls(handle=NDArrayHandle(x.v_handle)),
+    TypeCode.PYARG: lambda x, args: args[x.v_int64],
 }

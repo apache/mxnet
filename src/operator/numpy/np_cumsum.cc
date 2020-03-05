@@ -65,8 +65,7 @@ inline bool CumsumType(const nnvm::NodeAttrs& attrs,
 
 DMLC_REGISTER_PARAMETER(CumsumParam);
 
-NNVM_REGISTER_OP(_np_cumsum)
-.add_alias("cumsum")
+NNVM_REGISTER_OP(_npi_cumsum)
 .describe(R"code(Return the cumulative sum of the elements along a given axis.)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CumsumParam>)
 .set_num_inputs(1)
@@ -78,7 +77,7 @@ NNVM_REGISTER_OP(_np_cumsum)
 .set_attr<mxnet::FInferShape>("FInferShape", CumsumShape)
 .set_attr<nnvm::FInferType>("FInferType", CumsumType)
 .set_attr<FCompute>("FCompute<cpu>", CumsumForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_cumsum"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_cumsum"})
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -86,7 +85,7 @@ NNVM_REGISTER_OP(_np_cumsum)
 .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(CumsumParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_cumsum)
+NNVM_REGISTER_OP(_backward_npi_cumsum)
 .set_attr_parser(ParamParser<CumsumParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
