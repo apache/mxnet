@@ -2076,7 +2076,7 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
     if isinstance(x, numeric_types):
         return fn_scalar(x, **kwargs)
     elif isinstance(x, NDArray):
-        return fn_array(x, out=out, **kwargs)
+        return fn_array(x, out)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -2113,7 +2113,7 @@ def sin(x, out=None, **kwargs):
     >>> np.sin(np.array((0., 30., 45., 60., 90.)) * np.pi / 180.)
     array([0.        , 0.5       , 0.70710677, 0.86602545, 1.        ])
     """
-    return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
+    return _unary_func_helper(x, _api_internal.sin, _np.sin, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3699,7 +3699,12 @@ def tile(A, reps):
     array([2, 2, 2]) # repeating integer `2`
 
     """
-    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+    if isinstance(A, numeric_types):
+        return _np.tile(A, reps=reps)
+    elif isinstance(x, NDArray):
+        return _npi.tile(A, reps=reps)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')

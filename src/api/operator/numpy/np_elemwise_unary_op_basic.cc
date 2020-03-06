@@ -18,30 +18,20 @@
  */
 
 /*!
- * \file ufunc_helper.h
- * \brief ufunc helper
+ * \file np_elemwise_broadcast_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_elemwise_unary_op_basic.cc
  */
-#ifndef MXNET_API_OPERATOR_UFUNC_HELPER_H_
-#define MXNET_API_OPERATOR_UFUNC_HELPER_H_
+#include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include "../utils.h"
+#include "../ufunc_helper.h"
+
 namespace mxnet {
 
-/*
- * Ufunc helper for unary operators
- */
-void UFuncHelper(runtime::MXNetArgs args,
-                 runtime::MXNetRetValue* ret,
-                 const nnvm::Op* fn_array);
-
-/*
- * Ufunc helper for binary operators
- */
-void UFuncHelper(runtime::MXNetArgs args,
-                 runtime::MXNetRetValue* ret,
-                 const nnvm::Op* fn_array,
-                 const nnvm::Op* lfn_scalar,
-                 const nnvm::Op* rfn_scalar);
+MXNET_REGISTER_API("_npi.sin")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  const nnvm::Op* op = Op::Get("_npi_sin");
+  UFuncHelper(args, ret, op);
+});
 
 }  // namespace mxnet
-
-#endif  // MXNET_API_OPERATOR_UFUNC_HELPER_H_
