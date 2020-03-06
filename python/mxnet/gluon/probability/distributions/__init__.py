@@ -27,6 +27,8 @@ from .exponential import *
 
 from .weibull import *
 
+from .pareto import *
+
 from .normal import *
 
 from .gamma import *

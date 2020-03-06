@@ -76,7 +76,6 @@ class TransformedDistribution(Distribution):
         return sign * (value - 0.5) + 0.5
 
     def icdf(self, value):
-        # FIXME: implement the inverse cdf for transformed distribution.
         sign = self.F.np.ones_like(value)
         for t in self._transforms:
             sign = sign * t.sign

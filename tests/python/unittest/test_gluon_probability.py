@@ -256,6 +256,73 @@ def test_gluon_weibull():
 
 @with_seed()
 @use_np
+def test_gluon_pareto():
+    class TestPareto(HybridBlock):
+        def __init__(self, func):
+            super(TestPareto, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, alpha, scale, *args):
+            pareto = mgp.Pareto(alpha, scale, F)
+            return _distribution_method_invoker(pareto, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        alpha = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        # scale = np.ones_like(alpha)
+        samples = np.random.uniform(1, 2, size=shape)
+        net = TestPareto("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(alpha, scale, samples).asnumpy()
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        alpha = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        samples = np.random.uniform(1.0, 2.0, size=shape)
+        net = TestPareto("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(alpha, scale, samples).asnumpy()
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        alpha = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape)
+        net = TestPareto("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(alpha, scale, samples).asnumpy()
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        alpha = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        net = TestPareto("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(alpha, scale).asnumpy()
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_gamma():
     class TestGamma(HybridBlock):
         def __init__(self, func):

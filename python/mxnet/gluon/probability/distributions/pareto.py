@@ -23,49 +23,42 @@ __all__ = ['Pareto']
 from .transformed_distribution import TransformedDistribution
 from .exponential import Exponential
 from .constraint import Positive
-from ..transformation import PowerTransform, AffineTransform
+from ..transformation import ExpTransform, AffineTransform
 from .utils import getF, sample_n_shape_converter
-# Euler-Mascheroni constant 
-from numpy import euler_gamma
 
-class Weibull(TransformedDistribution):
+class Pareto(TransformedDistribution):
 
     has_grad = True
     support = Positive()
     arg_constraints = {'scale': Positive(),
-                       'concentration': Positive()}
+                       'alpha': Positive()}
     
-    def __init__(self, concentration, scale=1.0, F=None, validate_args=None):
-        _F = F if F is not None else getF(scale, concentration)
-        self.concentration = concentration
+    def __init__(self, alpha, scale=1.0, F=None, validate_args=None):
+        _F = F if F is not None else getF(alpha, scale)
+        self.alpha = alpha
         self.scale = scale
-        base_dist = Exponential(F=_F)
-        super(Weibull, self).__init__(base_dist, [PowerTransform(1 / self.concentration),
-                                                  AffineTransform(0, self.scale)])
+        base_dist = Exponential(1 / self.alpha)
+        super(Pareto, self).__init__(base_dist, [ExpTransform(), AffineTransform(0, self.scale)])
     
     def sample(self, size=None):
         F = self.F
-        return self.scale * F.np.random.weibull(self.concentration, size)
+        return self.scale * (F.np.random.pareto(self.alpha, size) + 1)
     
     def sample_n(self, size=None):
         F = self.F
-        return self.scale * F.np.random.weibull(self.concentration,
-                                                sample_n_shape_converter(size))
+        return self.scale * (F.np.random.pareto(self.alpha, sample_n_shape_converter(size)) + 1)
 
     @property
     def mean(self):
         F = self.F
-        return self.scale * F.np.exp(F.npx.gammaln(1 + 1 / self.concentration))
+        a = F.np.clip(self.alpha, min=1)
+        return a * self.scale / (a - 1)
 
     def variance(self):
         F = self.F
-        exp = F.np.exp
-        lgamma = F.npx.gammaln
-        term1 = exp(lgamma(1 + 2 / self.concentration))
-        term2 = exp(2 * lgamma(1 + 1 / self.concentration))
-        return (self.scale ** 2) * (term1 - term1)
+        a = F.np.clip(self.alpha, min=2)
+        return (self.scale ** 2) * a / ((a - 1) ** 2 * (a - 2))
 
     def entropy(self):
         F = self.F
-        return (euler_gamma * (1 - 1 / self.concentration) + 
-                F.np.log(self.scale / self.concentration) + 1)
+        return F.np.log(self.scale / self.alpha) + 1 / self.alpha + 1
