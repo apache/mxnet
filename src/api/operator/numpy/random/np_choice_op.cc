@@ -21,6 +21,8 @@
  * \file np_choice_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_choice_op.cc
  */
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../../utils.h"
 #include "../../../../operator/numpy/random/np_choice_op.h"
 #include <algorithm>
@@ -59,7 +61,7 @@ MXNET_REGISTER_API("_npi.choice")
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke<op::NumpyChoiceParam>(op, &attrs, 0, nullptr, &num_outputs, outputs);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, outputs);
   *ret = ndoutputs[0];
 });
 
