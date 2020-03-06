@@ -19,8 +19,8 @@
 import numpy as np
 from ...context import current_context
 from . import _internal as _npi
+from . import _api_internal
 from ..ndarray import NDArray
-
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
            'logistic', 'gumbel', "rayleigh",
@@ -571,6 +571,10 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
             return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
 
 
+def choice_v2(a, size=None, replace=True, p=None, ctx=None, out=None):
+    return _api_internal.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
+
+
 def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
 
@@ -861,7 +865,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     # use fp64 to prevent precision loss
     X = gamma(a, 1, size=size, dtype='float64', ctx=ctx)
     Y = gamma(b, 1, size=size, dtype='float64', ctx=ctx)
-    out = X/(X + Y)
+    out = X / (X + Y)
     return out.astype(dtype)
 
 
@@ -939,7 +943,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
         ctx = current_context()
     if size == ():
         size = None
-    return gamma(df/2, 1/2, size=size, dtype=dtype, ctx=ctx)
+    return gamma(df / 2, 1 / 2, size=size, dtype=dtype, ctx=ctx)
 
 
 def rand(*size, **kwargs):

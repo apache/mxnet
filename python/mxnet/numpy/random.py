@@ -555,7 +555,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     >>> np.random.choice(5, 3, replace=False, p=[0.1, 0, 0.3, 0.6, 0])
     array([2, 3, 0])
     """
-    return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
+    return _mx_nd_np.random.choice_v2(a, size, replace, p, ctx, out)
 
 
 def rayleigh(scale=1.0, size=None, ctx=None, out=None):
