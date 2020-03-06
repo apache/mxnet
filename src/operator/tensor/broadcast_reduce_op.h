@@ -36,6 +36,8 @@
 #include "../mxnet_op.h"
 #include <sys/time.h>
 
+#define NORM_OPT
+// #define NORM_TIME
 namespace mxnet {
 namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
@@ -652,7 +654,11 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
             s, out_data, req[0], workspace, in_data);
         if (normalize) {
           auto out = out_data.FlatTo2D<xpu, OType>(s);
+          // LOG(INFO) << "src shape "<< src_shape << " dst_shape " << dst_shape << " size "<< src_shape.Size()/dst_shape.Size()
+          //           << " out data " << out_data.dptr<float>()[0];
           out /= scalar<OType>(src_shape.Size()/dst_shape.Size());
+          // LOG(INFO) << " after out data " << out_data.dptr<float>()[0];
+
         }
       });
     });
@@ -671,6 +677,7 @@ void ReduceAxesComputeBoolImpl(const OpContext& ctx,
 
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
+  // LOG(INFO) << "src_shape " << src_shape <<" dst_shape"<< dst_shape;
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
@@ -699,15 +706,44 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& inputs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
+  //    struct timeval start,stop;
+  // gettimeofday(&start,NULL);
+  // LOG(INFO)<< " hello world normalize " << normalize;
   const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+    float sum = 0.0;
+   if(!param.axis.has_value() && !param.keepdims) {
+    const size_t in_size = inputs[0].shape_.Size();
+    float* p_in_data = inputs[0].dptr<float>();
+    #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) reduction(+:sum)  
+    for (size_t i = 0; i < in_size; i++)
+    {
+      sum += p_in_data[i];
+    }
+    outputs[0].dptr<float>()[0] = normalize ? sum/in_size : sum;
+    // sum = outputs[0].dptr<float>()[0];
+    // LOG(INFO) << " sum is "<< outputs[0].dptr<float>()[0];
+  }  else {          
   mxnet::TShape small;
   if (param.keepdims) {
     small = outputs[0].shape_;
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
   }
-
   ReduceAxesComputeImpl<xpu, reducer, false, normalize, OP>(ctx, inputs, req, outputs, small);
+
+//    if(!param.axis.has_value() && !param.keepdims) {
+
+//   if(outputs[0].dptr<float>()[0] - sum > 0.01) {
+//     LOG(INFO) << std::setprecision(8) <<" error " << outputs[0].dptr<float>()[0] <<" "<< sum;
+//   }
+//    }
+//     gettimeofday(&stop,NULL);
+//     LOG(INFO) << " axis value "<<param.axis.has_value() << " keep "<<param.keepdims;
+//     if(param.axis.has_value()){
+//       LOG(INFO) << " axis value "<<param.axis.value();
+//     }
+//  LOG(INFO)<< " sum inshape " <<inputs[0].shape_ << " oshape " << outputs[0].shape_ <<"cost time ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+  }
 }
 
 template <typename red_op, int req, int axis>
@@ -1309,13 +1345,14 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
-    struct timeval start,stop;
+#ifdef NORM_TIME
+  struct timeval start,stop;
   gettimeofday(&start,NULL);
-
+#endif
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
   CHECK(param.ord == 1 || param.ord == 2) << "norm only supports ord=1 and ord=2";
   if (req[0] == kNullOp) return;
-
+#ifdef NORM_OPT
   bool is_last_dim = false;
   
   if(param.axis.has_value()) {
@@ -1327,12 +1364,17 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   if(param.ord == 1 && is_last_dim && param.keepdims == false && req[0] == kWriteTo) {
 
     if(MKLDNNLpNormCompute(inputs, req, outputs, param.ord)) {
+#ifdef NORM_TIME
       gettimeofday(&stop,NULL);
       LOG(INFO)<<inputs[0].shape_<< "MKLDNNLpNormCompute oshape "<< outputs[0].shape_<<" ord "<<param.ord 
                                   << " Lx cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+#endif
+#ifndef NORM_TEST
       return;
+#endif
     }
   }
+  #endif 
   mxnet::TShape small;
   if (param.keepdims) {
     small = outputs[0].shape_;
@@ -1346,6 +1388,22 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
                     "for more details.");
   }
   if (param.ord == 1) {
+#ifdef NORM_TEST
+
+    TBlob origin = outputs[0];
+    float* pO = (float*)origin.dptr<float>();
+
+    float* pLoad = new float[origin.shape_.Size()];
+    for(size_t i = 0; i < origin.shape_.Size(); i ++) {
+      pLoad[i] = pO[i];
+    }
+    LOG(INFO) << "origin shape is "<<origin.shape_ << "size is "<<origin.shape_.Size();
+  //  memset((void*)pO, 0, sizeof(float)*origin.shape_.Size());
+    for (size_t i = 0; i < 10; i ++) {
+      LOG(INFO) << "memset " << pO[i];
+    }
+
+#endif
     if (safe_acc) {
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, false, mshadow_op::abs>(
         ctx, inputs, req, outputs, small);
@@ -1353,6 +1411,18 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
       ReduceAxesComputeImpl<xpu, mshadow_op::sum, false, false, mshadow_op::abs>(
         ctx, inputs, req, outputs, small);
     }
+#ifdef NORM_TEST
+    for (size_t i = 0; i < 10; i ++) {
+      LOG(INFO) << "after " << pLoad[i] << " "<< pO[i];
+    }
+
+    for (size_t i = 0; i < outputs[0].shape_.Size(); i++)
+    {
+       if((pLoad[i] - pO[i]) >= 0.001)LOG(INFO) << "error " << i << " " << std::setprecision(8) << pLoad[i] <<" and "<< pO[i] <<"error "<< (pLoad[i] - pO[i]);
+    }
+    delete []pLoad;
+#endif 
+
   } else if (param.ord == 2) {
     if (safe_acc) {
       ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, true, false, mshadow_op::identity>(
@@ -1362,10 +1432,11 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
         ctx, inputs, req, outputs, small);
     }
   }
+#ifdef NORM_TIME
 
      gettimeofday(&stop,NULL);
    LOG(INFO)<<inputs[0].shape_<< " oshape "<< outputs[0].shape_<<" ord "<<param.ord << " Lx cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
-
+#endif
 }
 
 template<int req>
@@ -1408,11 +1479,15 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   using namespace mxnet_op;
   if (req[0] == kNullOp) return;
+  #ifdef NORM_TIME
 
   struct timeval start,stop;
   gettimeofday(&start,NULL);
+  #endif
 
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+
+#ifdef NORM_OPT
   bool is_last_dim = false;
   if(param.axis.has_value()) {
     mxnet::TShape axes(param.axis.value());
@@ -1424,11 +1499,36 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
   if(param.ord == 1 && is_last_dim && param.keepdims == false && req[0] == kWriteTo) {
 
     if(MKLDNNLpNormGradCompute(inputs, req, outputs, param.ord)) {
+  #ifdef NORM_TIME
       gettimeofday(&stop,NULL);
       LOG(INFO)<< "MKLDNNLpNormGradCompute in1 shape " <<inputs[1].shape_ <<" Lx backward cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
+  #endif 
+  #ifndef NORM_TEST
       return;
+  #endif
     }
   }
+#endif
+#ifdef NORM_TEST
+
+    TBlob origin = outputs[0];
+    float* pO = (float*)origin.dptr<float>();
+
+    float* pLoad = new float[origin.shape_.Size()];
+    for(size_t i = 0; i < origin.shape_.Size(); i ++) {
+      pLoad[i] = pO[i];
+    }
+    for(size_t i = 0; i < 10; i ++) {
+      LOG(INFO) << pLoad[i] << "in is "<< inputs[0].dptr<float>()[i] << "src data "<<inputs[1].dptr<float>()[i];
+    }
+
+    LOG(INFO) << "bwd origin shape is "<<origin.shape_;
+    memset((void*)pO, 0, sizeof(float)*origin.shape_.Size());
+    for (size_t i = 0; i < 10; i ++) {
+      LOG(INFO) << "bwd memset " << pO[i];
+    }
+
+#endif
 
   mxnet::TShape small;
   if (param.keepdims) {
@@ -1480,11 +1580,25 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
               in_shape, out_shape, src_shape.ndim());
           });
         }
+#ifdef NORM_TEST
+    for (size_t i = 0; i < 10; i ++) {
+      LOG(INFO) << "bwd after " << pLoad[i] << " "<< pO[i];
+    }
+
+    for (size_t i = 0; i < outputs[0].shape_.Size(); i++)
+    {
+       if((pLoad[i] - pO[i]) >= 0.001)LOG(INFO) << "bwd error " << i << " " << std::setprecision(8) << pLoad[i] <<" and "<< pO[i] <<"error "<< (pLoad[i] - pO[i]);
+    }
+    delete []pLoad;
+#endif 
+
       });
     });
+  #ifdef NORM_TIME
+  
    gettimeofday(&stop,NULL);
    LOG(INFO)<< " in1 shape " <<inputs[1].shape_ <<" Lx backward cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
-
+  #endif
   } else if (param.ord == 2) {
     ReduceAxesBackwardUseInOutImpl<xpu, mshadow_op::div, false>(ctx, small, inputs,
                                                                 req, outputs);

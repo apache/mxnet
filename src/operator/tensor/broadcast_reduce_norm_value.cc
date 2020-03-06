@@ -34,7 +34,7 @@ bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
                          int ord) {
   auto& in_data = inputs[0];
   int axis =  in_data.shape_.ndim() - 1;                
-  auto shape = in_data.shape_;
+  auto& shape = in_data.shape_;
   float* pin_data = (float*)in_data.dptr<float>();
 
   const size_t last_dim = shape[axis];
@@ -46,7 +46,7 @@ bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
   {
       pout_data[i] = 0;
   }
-  
+
   #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for(size_t i = 0; i < stride; i++) {
     for (size_t j = 0; j < last_dim; j++) {
@@ -63,23 +63,28 @@ bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
                            
   auto&  in_grad = inputs[0];
   auto&  in_data = inputs[1];
-  auto&  out_grad = outputs[0];
   auto shape = in_grad.shape_;
-  auto stride = in_grad.Size();
   float* pin_grad = (float*)in_grad.dptr<float>();
   float* psrc_data = (float*)in_data.dptr<float>();
 
+  auto&  out_grad = outputs[0];
   int axis =  out_grad.shape_.ndim() - 1;                
   const size_t last_dim = out_grad.shape_[axis];
   auto oSize = out_grad.Size();
   float* pout_grad = (float*)out_grad.dptr<float>();
 
-  #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for(size_t i = 0; i < stride; i++) {
-    for (size_t j = 0; j < last_dim; j++) {
-      pout_grad[i*last_dim + j] = psrc_data[i*last_dim + j] >0 ? pin_grad[i] : -pin_grad[i];
-    }
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for(size_t i = 0; i < oSize; i++) {
+      int idx = i/last_dim;
+      pout_grad[i] = psrc_data[i] >0 ? pin_grad[idx] : -pin_grad[idx];
   }
+
+  // #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  // for(size_t i = 0; i < stride; i++) {
+  //   for (size_t j = 0; j < last_dim; j++) {
+  //     pout_grad[i*last_dim + j] = psrc_data[i*last_dim + j] >0 ? pin_grad[i] : -pin_grad[i];
+  //   }
+  // }
   return true;                  
 }
 
