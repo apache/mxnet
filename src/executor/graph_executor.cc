@@ -1991,6 +1991,7 @@ Executor *Executor::SimpleBind(nnvm::Symbol symbol,
       symbol = exec::BuildSubgraph(symbol, backend, arg_shape_map, arg_dtype_map, arg_stype_map,
                                    default_ctx, group2ctx, &tmp_in_arg_ctxes, &tmp_arg_grad_ctxes,
                                    &tmp_grad_req_types, &tmp_aux_state_ctxes, verbose);
+      delete(exec);
       // Subgraph cannot be recreated from unoptimized symbol
       exec = new exec::GraphExecutor(symbol);
       exec->Init(symbol.Copy(), default_ctx, group2ctx, tmp_in_arg_ctxes, tmp_arg_grad_ctxes,
@@ -2062,6 +2063,7 @@ Executor *Executor::Bind(nnvm::Symbol symbol,
       symbol = exec::BuildSubgraph(symbol, backend, default_ctx, group2ctx, &tmp_in_args,
                                    &tmp_arg_grad_store, &tmp_grad_req_type, &tmp_aux_states,
                                    verbose);
+      delete(exec);
       // Subgraph cannot be recreated from unoptimized symbol
       exec = new exec::GraphExecutor(symbol);
     }
