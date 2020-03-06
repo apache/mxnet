@@ -1680,7 +1680,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`abs`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute abs')
+        return abs(self)
 
     def sign(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sign`.
@@ -1688,7 +1688,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sign`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute sign')
+        return sign(self)
 
     def flatten(self, order='C'):  # pylint: disable=arguments-differ
         """Return a copy of the array collapsed into one dimension."""
@@ -1888,7 +1888,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sin`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute sin')
+        return sin(self)
 
     def cos(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cos`.
@@ -1896,7 +1896,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`cos`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute cos')
+        return cos(self)
 
     def tan(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tan`.
@@ -1904,7 +1904,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`tan`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute tan')
+        return tan(self)
 
     def arcsin(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arcsin`.
@@ -1912,7 +1912,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`arcsin`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute arcsin')
+        return arcsin(self)
 
     def arccos(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arccos`.
@@ -1920,7 +1920,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`arccos`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute arccos')
+        return arccos(self)
 
     def arctan(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arctan`.
@@ -1928,7 +1928,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`arctan`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute arctan')
+        return arctan(self)
 
     def degrees(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`degrees`.
@@ -1936,7 +1936,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`degrees`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute degrees')
+        return degrees(self)
 
     def radians(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`radians`.
@@ -1944,7 +1944,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`radians`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute radians')
+        return radians(self)
 
     def sinh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sinh`.
@@ -1952,7 +1952,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sinh`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute sinh')
+        return sinh(self)
 
     def cosh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`cosh`.
@@ -1960,7 +1960,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`cosh`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute cosh')
+        return cosh(self)
 
     def tanh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`tanh`.
@@ -1968,7 +1968,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`tanh`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute tanh')
+        return tanh(self)
 
     def arcsinh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arcsinh`.
@@ -1976,7 +1976,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`arcsinh`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute arcsinh')
+        return arcsinh(self)
 
     def arccosh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arccosh`.
@@ -1984,7 +1984,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`arccosh`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute arccosh')
+        return arccosh(self)
 
     def arctanh(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`arctanh`.
@@ -1992,7 +1992,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`arctanh`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute arctanh')
+        return arctanh(self)
 
     def exp(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`exp`.
@@ -2000,7 +2000,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`exp`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute exp')
+        return exp(self)
 
     def expm1(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`expm1`.
@@ -2008,7 +2008,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`expm1`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute expm1')
+        return expm1(self)
 
     def log(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log`.
@@ -2016,7 +2016,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`log`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute log')
+        return log(self)
 
     def log10(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log10`.
@@ -2024,7 +2024,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`log10`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute log10')
+        return log10(self)
 
     def log2(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log2`.
@@ -2032,7 +2032,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`log2`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute log2')
+        return log2(self)
 
     def log1p(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`log1p`.
@@ -2040,7 +2040,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`log1p`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute log1p')
+        return log1p(self)
 
     def sqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`sqrt`.
@@ -2048,7 +2048,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`sqrt`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute sqrt')
+        return sqrt(self)
 
     def rsqrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rsqrt`.
@@ -2064,7 +2064,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`cbrt`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute cqrt')
+        return cbrt(self)
 
     def rcbrt(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`rcbrt`.
@@ -2080,7 +2080,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`square`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute square')
+        return square(self)
 
     def reciprocal(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reciprocal`.
@@ -2088,7 +2088,7 @@ class ndarray(NDArray):
         The arguments are the same as for :py:func:`reciprocal`, with
         this array as data.
         """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute reciprocal')
+        return reciprocal(self)
 
     def relu(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`relu`.
