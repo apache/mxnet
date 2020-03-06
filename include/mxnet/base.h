@@ -71,9 +71,9 @@
 #endif
 
 /*! \brief major version */
-#define MXNET_MAJOR 1
+#define MXNET_MAJOR 2
 /*! \brief minor version */
-#define MXNET_MINOR 7
+#define MXNET_MINOR 0
 /*! \brief patch version */
 #define MXNET_PATCH 0
 /*! \brief mxnet version */

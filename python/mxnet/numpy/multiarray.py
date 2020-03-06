@@ -66,7 +66,8 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'equal', 'not_equal',
            'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
-           'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount', 'pad']
+           'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
+           'pad', 'cumsum']
 
 __all__ += fallback.__all__
 
@@ -1808,7 +1809,7 @@ class ndarray(NDArray):
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
+        return _mx_nd_np.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def tolist(self):
         return self.asnumpy().tolist()
@@ -2240,6 +2241,7 @@ def empty(shape, dtype=_np.float32, order='C', ctx=None):  # pylint: disable=red
     return ndarray(handle=_new_alloc_handle(shape, ctx, False, dtype))
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def array(object, dtype=None, ctx=None):
     """
@@ -2296,6 +2298,7 @@ def array(object, dtype=None, ctx=None):
     else:
         ret[:] = object
     return ret
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -2507,6 +2510,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):
 # pylint: enable=too-many-arguments, redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pylint: disable=W0621
     """
@@ -2564,8 +2568,10 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
            [2.0e-323, 2.5e-323, 3.0e-323]])
     """
     return _mx_nd_np.empty_like(prototype, dtype=dtype, order=order, subok=subok, shape=shape)
+# pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def identity(n, dtype=None, ctx=None):
     """
@@ -2598,6 +2604,7 @@ def identity(n, dtype=None, ctx=None):
            [0., 0., 1.]])
     """
     return _mx_nd_np.identity(n, dtype, ctx)
+# pylint: enable=redefined-outer-name
 
 
 # pylint: disable=redefined-outer-name
@@ -5017,6 +5024,7 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
     return _mx_nd_np.histogram(a, bins=bins, range=range, normed=normed, weights=weights, density=density)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     """
@@ -5052,8 +5060,10 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
            [0., 0., 0.]])
     """
     return _mx_nd_np.eye(N, M, k, dtype, **kwargs)
+# pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis=0, ctx=None):  # pylint: disable=too-many-arguments
     r"""
@@ -5139,9 +5149,10 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
       GPU.
     """
     return _mx_nd_np.linspace(start, stop, num, endpoint, retstep, dtype, axis, ctx)
+# pylint: enable=redefined-outer-name
 
 
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, redefined-outer-name
 @set_module('mxnet.numpy')
 def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, ctx=None):
     r"""Return numbers spaced evenly on a log scale.
@@ -5216,7 +5227,7 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     array([ 100.     ,  215.44347,  464.15887, 1000.     ], ctx=gpu(0))
     """
     return _mx_nd_np.logspace(start, stop, num, endpoint, base, dtype, axis, ctx=ctx)
-# pylint: enable=too-many-arguments
+# pylint: enable=too-many-arguments, redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -5376,6 +5387,7 @@ def tril(m, k=0):
     return _mx_nd_np.tril(m, k)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """Return evenly spaced values within a given interval.
@@ -5427,6 +5439,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     array([3., 5.])
     """
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -6414,6 +6427,7 @@ def average(a, axis=None, weights=None, returned=False, out=None):
     return _mx_nd_np.average(a, axis=axis, weights=weights, returned=returned, out=out)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
     """
@@ -6471,9 +6485,10 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     array(0.55)
     """
     return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+# pylint: enable=redefined-outer-name
 
 
-
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
@@ -6539,6 +6554,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     array(0.45, dtype=float64)
     """
     return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -6590,6 +6606,7 @@ def delete(arr, obj, axis=None):
     return _mx_nd_np.delete(arr, obj, axis=axis)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: disable=too-many-arguments
     """
@@ -6928,6 +6945,7 @@ def diag_indices_from(arr):
     return _mx_nd_np.diag_indices_from(arr)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def hanning(M, dtype=_np.float32, ctx=None):
     r"""Return the Hanning window.
@@ -7006,8 +7024,10 @@ def hanning(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     return _mx_nd_np.hanning(M, dtype=dtype, ctx=ctx)
+# pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def hamming(M, dtype=_np.float32, ctx=None):
     r"""Return the hamming window.
@@ -7084,8 +7104,10 @@ def hamming(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     return _mx_nd_np.hamming(M, dtype=dtype, ctx=ctx)
+# pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def blackman(M, dtype=_np.float32, ctx=None):
     r"""Return the Blackman window.
@@ -7160,6 +7182,7 @@ def blackman(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     return _mx_nd_np.blackman(M, dtype=dtype, ctx=ctx)
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -8931,6 +8954,7 @@ def resize(a, new_shape):
     return _mx_nd_np.resize(a, new_shape)
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
     """
@@ -8983,8 +9007,10 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylin
     array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
     """
     return _mx_nd_np.full_like(a, fill_value=fill_value, dtype=dtype, order=order, ctx=ctx, out=out)
+# pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     """
@@ -9039,8 +9065,10 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     array([0., 0., 0.], dtype=float64)
     """
     return _mx_nd_np.full_like(a, fill_value=0, dtype=dtype, order=order, ctx=ctx, out=ctx)
+# pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     """
@@ -9095,6 +9123,7 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     array([1., 1., 1.], dtype=float64)
     """
     return _mx_nd_np.full_like(a, fill_value=1, dtype=dtype, order=order, ctx=ctx, out=out)
+# pylint: enable=redefined-outer-name
 
 
 @set_module('mxnet.numpy')
@@ -9698,3 +9727,57 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
            [10, 10, 10, 10, 10, 10, 10]])
     """
     return _mx_nd_np.pad(x, pad_width, mode, **kwargs)
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def cumsum(a, axis=None, dtype=None, out=None):
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative sum is computed. The default
+        (None) is to compute the cumsum over the flattened array.
+    dtype : dtype, optional
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output
+        but the type will be cast if necessary. See `doc.ufuncs`
+        (Section "Output arguments") for more details.
+
+    Returns
+    -------
+    cumsum_along_axis : ndarray.
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to `out` is returned. The
+        result has the same size as `a`, and the same shape as `a` if
+        `axis` is not None or `a` is a 1-d array.
+
+    Examples
+    --------
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> a
+    array([[1, 2, 3],
+           [4, 5, 6]])
+    >>> np.cumsum(a)
+    array([ 1,  3,  6, 10, 15, 21])
+    >>> np.cumsum(a, dtype=float)     # specifies type of output value(s)
+    array([  1.,   3.,   6.,  10.,  15.,  21.])
+    >>> np.cumsum(a,axis=0)      # sum over rows for each of the 3 columns
+    array([[1, 2, 3],
+           [5, 7, 9]])
+    >>> np.cumsum(a,axis=1)      # sum over columns for each of the 2 rows
+    array([[ 1,  3,  6],
+           [ 4,  9, 15]])
+    """
+    return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
+# pylint: enable=redefined-outer-name

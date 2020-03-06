@@ -46,7 +46,12 @@ struct TakeZeroAxisCPU {
       j = j % K;
       j += (j < 0) ? K : 0;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+#pragma GCC diagnostic pop
   }
 };
 
