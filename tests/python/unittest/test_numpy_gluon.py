@@ -400,6 +400,27 @@ def test_net_symbol_save_load():
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
 
+@with_seed()
+@use_np
+def test_hybridize_boolean_dtype():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, valid_length):
+            mask = ((F.np.ones((10,)) / 2) < valid_length)
+            return mask
+
+    valid_length = mx.np.random.uniform(size=(10,))
+    foo = Foo()
+    out1 = foo(valid_length)
+
+    foo = Foo()
+    foo.hybridize()
+    out2 = foo(valid_length)
+
+    assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
+
 
 if __name__ == '__main__':
     import nose

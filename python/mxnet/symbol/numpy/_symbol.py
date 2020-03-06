@@ -37,21 +37,21 @@ except ImportError:
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'arctan2',
-           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'exp',
+           'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum',
+           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_', 'flatnonzero',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
-           'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'around', 'round',
+           'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
-           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff',
+           'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount']
+           'where', 'bincount', 'pad', 'cumsum']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -683,7 +683,7 @@ class _Symbol(Symbol):
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
+        return _npi.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
@@ -1255,6 +1255,9 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
         else:
             ret = broadcast_to(fill_value, shape).astype(dtype)
         return ret
+    if isinstance(fill_value, bool):
+        fill_value = int(fill_value)
+        dtype = _np.bool if dtype is None else dtype
     dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
@@ -1299,6 +1302,8 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None):  # pyli
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
+    if isinstance(fill_value, bool):
+        fill_value = int(fill_value)
     return _npi.full_like(a, fill_value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
@@ -2431,6 +2436,32 @@ def cbrt(x, out=None, **kwargs):
 def abs(x, out=None, **kwargs):
     r"""
     Calculate the absolute value element-wise.
+
+    Parameters
+    ----------
+    x : _Symbol or scalar
+        Input array.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    absolute : _Symbol
+        An ndarray containing the absolute value of
+        each element in `x`. This is a scalar if `x` is a scalar.
+    """
+    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+@wrap_np_unary_func
+def fabs(x, out=None, **kwargs):
+    r"""
+    Calculate the absolute value element-wise.
+
+    This function returns the absolute values (positive magnitude) of the
+    data in `x`. Complex values are not handled, use `absolute` to find the
+    absolute values of complex data.
 
     Parameters
     ----------
@@ -4660,6 +4691,32 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
         raise NotImplementedError('Don not support column-major (Fortran-style) order at this moment')
 
 
+def flatnonzero(a):
+    r"""
+    Return indices that are non-zero in the flattened version of a.
+
+    This is equivalent to np.nonzero(np.ravel(a))[0].
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array, containing the indices of the elements of `a.ravel()`
+        that are non-zero.
+
+    See Also
+    --------
+    nonzero : Return the indices of the non-zero elements of the input array.
+    ravel : Return a 1-D array containing the elements of the input array.
+    """
+    out = _npi.nonzero(ravel(a))
+    return out.reshape(-1,)
+
+
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
@@ -5070,6 +5127,24 @@ def around(x, decimals=0, out=None, **kwargs):
 
 @set_module('mxnet.symbol.numpy')
 def round(x, decimals=0, out=None, **kwargs):
+    r"""
+    round(a, decimals=0, out=None)
+    Round an array to the given number of decimals.
+
+    See Also
+    --------
+    around : equivalent function; see for details.
+    """
+    if isinstance(x, numeric_types):
+        return _np.around(x, decimals, **kwargs)
+    elif isinstance(x, _Symbol):
+        return _npi.around(x, decimals, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+@set_module('mxnet.symbol.numpy')
+def round_(x, decimals=0, out=None, **kwargs):
     r"""
     round_(a, decimals=0, out=None)
     Round an array to the given number of decimals.
@@ -6063,6 +6138,44 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
 
 
 @set_module('mxnet.symbol.numpy')
+def ediff1d(ary, to_end=None, to_begin=None):
+    """
+    The differences between consecutive elements of an array.
+
+    Parameters
+    ----------
+    ary : _Symbol
+        If necessary, will be flattened before the differences are taken.
+    to_end : _Symbol or scalar, optional
+        Number(s) to append at the end of the returned differences.
+    to_begin : _Symbol or scalar, optional
+        Number(s) to prepend at the beginning of the returned differences.
+
+    Returns
+    -------
+    ediff1d : _Symbol
+        The differences. Loosely, this is ``ary.flat[1:] - ary.flat[:-1]``.
+    """
+    input_type = (isinstance(to_begin, _Symbol), isinstance(to_end, _Symbol))
+    # case 1: when both `to_begin` and `to_end` are arrays
+    if input_type == (True, True):
+        return _npi.ediff1d(ary, to_begin, to_end, to_begin_arr_given=True, to_end_arr_given=True,
+                            to_begin_scalar=None, to_end_scalar=None)
+    # case 2: only `to_end` is array but `to_begin` is scalar/None
+    elif input_type == (False, True):
+        return _npi.ediff1d(ary, to_end, to_begin_arr_given=False, to_end_arr_given=True,
+                            to_begin_scalar=to_begin, to_end_scalar=None)
+    # case 3: only `to_begin` is array but `to_end` is scalar/None
+    elif input_type == (True, False):
+        return _npi.ediff1d(ary, to_begin, to_begin_arr_given=True, to_end_arr_given=False,
+                            to_begin_scalar=None, to_end_scalar=to_end)
+    # case 4: both `to_begin` and `to_end` are scalar/None
+    else:
+        return _npi.ediff1d(ary, to_begin_arr_given=False, to_end_arr_given=False,
+                            to_begin_scalar=to_begin, to_end_scalar=to_end)
+
+
+@set_module('mxnet.symbol.numpy')
 def resize(a, new_shape):
     """
     Return a new array with the specified shape.
@@ -6510,6 +6623,175 @@ def bincount(x, weights=None, minlength=0):
     if weights is None:
         return _npi.bincount(x, minlength=minlength, has_weights=False)
     return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
+
+
+@set_module('mxnet.symbol.numpy')
+def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arguments
+    """
+    Pad an array.
+
+    Parameters
+    ----------
+    array : array_like of rank N
+        The array to pad.
+    pad_width : {sequence, array_like, int}
+        Number of values padded to the edges of each axis.
+        ((before_1, after_1), ... (before_N, after_N)) unique pad widths
+        for each axis.
+        ((before, after),) yields same before and after pad for each axis.
+        (pad,) or int is a shortcut for before = after = pad width for all
+        axes.
+    mode : str or function, optional
+        One of the following string values or a user supplied function.
+        'constant' (default)
+            Pads with a constant value.
+        'edge'
+            Pads with the edge values of array.
+        'linear_ramp'
+            not supported yet
+        'maximum'
+            Pads with the maximum value of all of the
+            vector along each axis.
+        'mean'
+            not supported yet
+        'median'
+            not supported yet
+        'minimum'
+            Pads with the minimum value of all of the
+            vector along each axis.
+        'reflect'
+            Pads with the reflection of the vector mirrored on
+            the first and last values of the vector along each
+            axis.
+        'symmetric'
+            Pads with the reflection of the vector mirrored
+            along the edge of the array.
+        'wrap'
+            not supported yet.
+        'empty'
+            not supported yet.
+        <function>
+            not supported yet.
+    stat_length : not supported yet
+    constant_values : scalar, optional
+        Used in 'constant'.  The values to set the padded values for each
+        axis.
+        Default is 0.
+
+    end_values : not supported yet
+    reflect_type : {'even', 'odd'}, optional
+        only support even now
+
+    Returns
+    -------
+    pad : ndarray
+        Padded array of rank equal to `array` with shape increased
+        according to `pad_width`.
+    """
+    # pylint: disable = too-many-return-statements, inconsistent-return-statements
+    if not _np.asarray(pad_width).dtype.kind == 'i':
+        raise TypeError('`pad_width` must be of integral type.')
+    if not isinstance(pad_width, tuple):
+        raise TypeError("`pad_width` must be tuple.")
+    if mode == "linear_ramp":
+        raise ValueError("mode {'linear_ramp'} is not supported.")
+    if mode == "wrap":
+        raise ValueError("mode {'wrap'} is not supported.")
+    if mode == "median":
+        raise ValueError("mode {'median'} is not supported.")
+    if mode == "mean":
+        raise ValueError("mode {'mean'} is not supported.")
+    if mode == "empty":
+        raise ValueError("mode {'empty'} is not supported.")
+    if callable(mode):
+        raise ValueError("mode {'<function>'} is not supported.")
+
+    allowedkwargs = {
+        'constant': ['constant_values'],
+        'edge': [],
+        'linear_ramp': ['end_values'],
+        'maximum': ['stat_length'],
+        'mean': ['stat_length'],
+        'median': ['stat_length'],
+        'minimum': ['stat_length'],
+        'reflect': ['reflect_type'],
+        'symmetric': ['reflect_type'],
+        'wrap': [],
+        }
+
+    if isinstance(mode, _np.compat.basestring):
+        # Make sure have allowed kwargs appropriate for mode
+        for key in kwargs:
+            if key not in allowedkwargs[mode]:
+                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
+
+    unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
+    if unsupported_kwargs:
+        raise ValueError("unsupported keyword arguments for mode '{}': {}"
+                         .format(mode, unsupported_kwargs))
+    if mode == "constant":
+        values = kwargs.get("constant_values", 0)
+        if isinstance(values, tuple):
+            raise TypeError("unsupported constant_values type: {'tuple'}.")
+        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+    elif mode == "symmetric":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='symmetric', reflect_type="even")
+    elif mode == "edge":
+        return _npi.pad(x, pad_width, mode='edge')
+    elif mode == "reflect":
+        values = kwargs.get("reflect_type", "even")
+        if values != "even" and values is not None:
+            raise ValueError("unsupported reflect_type '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='reflect', reflect_type="even")
+    elif mode == "maximum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='maximum')
+    elif mode == "minimum":
+        values = kwargs.get("stat_length", None)
+        if values is not None:
+            raise ValueError("unsupported stat_length '{}'".format(values))
+        return _npi.pad(x, pad_width, mode='minimum')
+    return _npi.pad(x, pad_width, mode='constant', constant_value=0)
+
+
+@set_module('mxnet.symbol.numpy')
+def cumsum(a, axis=None, dtype=None, out=None):
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative sum is computed. The default
+        (None) is to compute the cumsum over the flattened array.
+    dtype : dtype, optional
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output
+        but the type will be cast if necessary. See `doc.ufuncs`
+        (Section "Output arguments") for more details.
+
+    Returns
+    -------
+    cumsum_along_axis : _Symbol.
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to `out` is returned. The
+        result has the same size as `a`, and the same shape as `a` if
+        `axis` is not None or `a` is a 1-d array.
+    """
+    return _npi.cumsum(a, axis=axis, dtype=dtype, out=out)
 
 
 _set_np_symbol_class(_Symbol)

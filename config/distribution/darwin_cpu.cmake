@@ -19,7 +19,7 @@ set(CMAKE_BUILD_TYPE "Distribution" CACHE STRING "Build type")
 set(CFLAGS "-mno-avx" CACHE STRING "CFLAGS")
 set(CXXFLAGS "-mno-avx" CACHE STRING "CXXFLAGS")
 
-set(BLAS "apple" CACHE STRING "BLAS Vendor")
+set(USE_BLAS "apple" CACHE STRING "BLAS Vendor")
 
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
@@ -30,3 +30,4 @@ set(USE_LAPACK ON CACHE BOOL "Build with lapack support")
 set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 set(USE_SSE ON CACHE BOOL "Build with x86 SSE instruction support")
 set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")
+set(USE_LIBJPEG_TURBO ON CACHE BOOL "Build with libjpeg-turbo")

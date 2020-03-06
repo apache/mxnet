@@ -13,6 +13,12 @@ add_library(mshadow INTERFACE)
 file(GLOB_RECURSE MSHADOWSOURCE "mshadow/*.h")
 target_include_directories(mshadow INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_sources(mshadow INTERFACE ${MSHADOWSOURCE})
+if(UNIX)
+  target_compile_options(mshadow INTERFACE
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
+endif()
 
 if(USE_CUDA)
   enable_language(CUDA)
@@ -67,7 +73,8 @@ else()
 endif()
 
 set(mshadow_LINT_DIRS mshadow mshadow-ps)
+find_package(Python3)
 add_custom_target(mshadow_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC}
-  -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
+  -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
   -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mshadow
   -P ${PROJECT_SOURCE_DIR}/../dmlc-core/cmake/lint.cmake)

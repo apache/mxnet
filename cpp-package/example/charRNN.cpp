@@ -553,7 +553,7 @@ void trainWithBuiltInRNNOp(const std::string file, int batch_size, int max_epoch
   }
   start_epoch++;
 
-  Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+  Optimizer* opt = OptimizerRegistry::Find("sgd");
 //  opt->SetParam("momentum", 0.9)->SetParam("rescale_grad", 1.0 / batch_size)
 //  ->SetParam("clip_gradient", 10);
 

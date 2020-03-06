@@ -199,7 +199,7 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
-    int num_bits = common::ilog2ui(static_cast<unsigned int>(indices_len) - 1);
+    int num_bits = 8 * sizeof(int64_t);
     Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
                                       inputs[obj_pos].dptr<int64_t>());
     Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);

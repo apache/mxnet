@@ -713,9 +713,9 @@ class CustomOp {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(std::string, int, int*,
+typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<bool>,
                                         std::unordered_map<std::string, std::string>&);
-typedef MXReturnValue (*acceptSubgraph_t)(std::string, int, bool*,
+typedef MXReturnValue (*reviewSubgraph_t)(std::string, int, bool*,
                                           std::unordered_map<std::string, std::string>&,
                                           std::unordered_map<std::string, std::string>&);
 
@@ -735,21 +735,21 @@ class CustomPartitioner {
     op_names.push_back(sg_name);
     return *this;
   }
-  CustomPartitioner& setAcceptSubgraph(const char* prop_name, acceptSubgraph_t fn) {
-    accept_map[std::string(prop_name)] = fn;
+  CustomPartitioner& setReviewSubgraph(const char* prop_name, reviewSubgraph_t fn) {
+    review_map[std::string(prop_name)] = fn;
     return *this;
   }
-  acceptSubgraph_t getAcceptSubgraph(int stg_id) {
+  reviewSubgraph_t getReviewSubgraph(int stg_id) {
     std::string prop(strategies[stg_id]);
-    if (accept_map.find(prop) != accept_map.end())
-      return accept_map[prop];
+    if (review_map.find(prop) != review_map.end())
+      return review_map[prop];
     else
       return nullptr;
   }
 
   /*! \brief partitioner  name */
   const char* name;
-  std::map<std::string, acceptSubgraph_t> accept_map;
+  std::map<std::string, reviewSubgraph_t> review_map;
   /*! \brief strategy names */
   std::vector<const char*> strategies;
   /*! \brief supported ops function */
@@ -908,7 +908,7 @@ typedef int (*partRegGetCount_t)(int idx, const char** name);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
 typedef void (*partRegGet_t)(int part_idx, int stg_idx, const char** strategy,
-                             supportedOps_t* supportedOps, acceptSubgraph_t* acceptSubgraph,
+                             supportedOps_t* supportedOps, reviewSubgraph_t* reviewSubgraph,
                              const char** op_name);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
@@ -916,8 +916,8 @@ typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *j
                                       int num_ids, int *ids, const char* const* opt_keys,
                                       const char* const* opt_vals, int num_opts);
 
-#define MXLIB_PARTCALLACCEPTSUBGRAPH_STR "_partCallAcceptSubgraph"
-typedef int (*partCallAcceptSubgraph_t)(acceptSubgraph_t acceptSubgraph, const char *json,
+#define MXLIB_PARTCALLREVIEWSUBGRAPH_STR "_partCallReviewSubgraph"
+typedef int (*partCallReviewSubgraph_t)(reviewSubgraph_t reviewSubgraph, const char *json,
                                         int subgraph_id, int *accept, const char* const* opt_keys,
                                         const char* const* opt_vals, int num_opts,
                                         char*** attr_keys, char*** attr_vals, int *num_attrs);
@@ -1248,12 +1248,12 @@ extern "C" {
   void
 #endif
   _partRegGet(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
-              acceptSubgraph_t* acceptSubgraph, const char** op_name) {
+              reviewSubgraph_t* reviewSubgraph, const char** op_name) {
     CustomPartitioner part = Registry<CustomPartitioner>::get()->get(part_idx);
     *strategy = part.strategies[stg_idx];
     *supportedOps = part.supportedOps[stg_idx];
     *op_name = part.op_names[stg_idx];
-    *acceptSubgraph = part.getAcceptSubgraph(stg_idx);
+    *reviewSubgraph = part.getReviewSubgraph(stg_idx);
   }
 
   /*! \brief returns status of calling parse attributes function for operator from library */
@@ -1271,7 +1271,17 @@ extern "C" {
     for (int i = 0; i < num_opts; i++) {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
     }
-    return supportedOps(subgraph_json, num_ids, ids, opts);
+    // create array of bools for operator support
+    std::vector<bool> _ids(num_ids, false);
+    // call user's supportedOps function
+    MXReturnValue retval = supportedOps(subgraph_json, _ids, opts);
+    if (!retval) return retval;
+
+    // copy bools in ids to ints
+    for (int i = 0; i < num_ids; i++)
+      ids[i] = _ids[i];
+
+    return retval;
   }
 
     /*! \brief returns status of calling parse attributes function for operator from library */
@@ -1280,7 +1290,7 @@ extern "C" {
 #else
   int
 #endif
-  _partCallAcceptSubgraph(acceptSubgraph_t acceptSubgraph, const char *json,
+  _partCallReviewSubgraph(reviewSubgraph_t reviewSubgraph, const char *json,
                           int subgraph_id, int *accept, const char* const* opt_keys,
                           const char* const* opt_vals, int num_opts,
                           char*** attr_keys, char*** attr_vals, int *num_attrs) {
@@ -1295,7 +1305,7 @@ extern "C" {
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
-    MXReturnValue retval = acceptSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
+    MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
     *accept = accept_bool;
 
     if (attrs.size() > 0) {
