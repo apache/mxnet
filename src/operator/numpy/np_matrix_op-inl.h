@@ -965,6 +965,11 @@ struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. ");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
@@ -988,7 +993,7 @@ inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
   auto s = std::max(std::min(h, w), a);
   // s is the length of diagonal with k as the offset
 
-  int32_t n_dim = ishape.ndim() - 1;
+  int n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
   oshape[n_dim - 1] = s;
   return oshape;
@@ -1159,8 +1164,8 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
   int offset;
-  int32_t axis1;
-  int32_t axis2;
+  int axis1;
+  int axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
     DMLC_DECLARE_FIELD(offset)
       .set_default(0)
@@ -1177,12 +1182,21 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
       .describe("The second axis of the sub-arrays of interest. "
                 "Ignored when the input is a 1-D array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream offset_s, axis1_s, axis2_s;
+    offset_s << offset;
+    axis1_s << axis1;
+    axis2_s << axis2;
+    (*dict)["offset"] = offset_s.str();
+    (*dict)["axis1"] = axis1_s.str();
+    (*dict)["axis2"] = axis2_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
-                                            const int32_t axis1, const int32_t axis2) {
-  int32_t x1 = CheckAxis(axis1, ishape.ndim());
-  int32_t x2 = CheckAxis(axis2, ishape.ndim());
+                                            const int axis1, const int axis2) {
+  int x1 = CheckAxis(axis1, ishape.ndim());
+  int x2 = CheckAxis(axis2, ishape.ndim());
 
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
 
@@ -1197,11 +1211,11 @@ inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const i
   if (s < 0) s = 0;
   if (x1 > x2) std::swap(x1, x2);
 
-  int32_t n_dim = ishape.ndim() - 1;
+  int n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
 
   // remove axis1 and axis2 and append the new axis to the end
-  uint32_t idx = 0;
+  int idx = 0;
   for (int i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
@@ -1274,22 +1288,22 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
                          const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
-  uint32_t x1 = CheckAxis(param.axis1, ishape.ndim());
-  uint32_t x2 = CheckAxis(param.axis2, ishape.ndim());
-  uint32_t idim = ishape.ndim(), odim = oshape.ndim();
-  uint32_t minx = x1, maxx = x2;
+  int x1 = CheckAxis(param.axis1, ishape.ndim());
+  int x2 = CheckAxis(param.axis2, ishape.ndim());
+  int idim = ishape.ndim(), odim = oshape.ndim();
+  int minx = x1, maxx = x2;
   if (minx > maxx) std::swap(minx, maxx);
 
   index_t oleading = 1,
           obody = 1,
           otrailing = 1;
-  for (uint32_t i = 0; i < minx; ++i) {
+  for (int i = 0; i < minx; ++i) {
     oleading *= ishape[i];
   }
-  for (uint32_t i = minx + 1; i < maxx; ++i) {
+  for (int i = minx + 1; i < maxx; ++i) {
     obody *= ishape[i];
   }
-  for (uint32_t i = maxx + 1; i < idim; ++i) {
+  for (int i = maxx + 1; i < idim; ++i) {
     otrailing *= ishape[i];
   }
 
