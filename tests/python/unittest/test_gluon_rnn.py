@@ -150,7 +150,7 @@ def test_lstm_cpu_inference():
 
 
 def test_gru():
-    cell = gluon.rnn.GRUCell(100, prefix='rnn_')
+    cell = gluon.rnn.GRUCell(100, prefix='rnn_', activation='relu', recurrent_activation='tanh')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
