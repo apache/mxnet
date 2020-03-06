@@ -411,9 +411,9 @@ class OpResource {
  * \brief Json utility to parse serialized subgraph symbol
  */
 /*! \brief Macro to help passing serialized subgraph through attribute dict */
-#define SUBGRAPH_SYM_JSON "subgraph_sym_json"
-#define MX_DTYPE "__dtype__"
-#define MX_SHAPE "__shape__"
+#define MX_STR_SUBGRAPH_SYM_JSON "subgraph_sym_json"
+#define MX_STR_DTYPE "__dtype__"
+#define MX_STR_SHAPE "__shape__"
 
 /*! \brief Types of JSON objects */
 enum JsonType {ERR, STR, NUM, LIST, MAP};

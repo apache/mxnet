@@ -370,7 +370,7 @@ int MXLoadLib(const char *path) {
         nnvm::Graph g;
         g.outputs = attrs->subgraphs[0].get()->outputs;
         subgraph_json = nnvm::pass::SaveJSON(g);
-        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_keys.push_back(MX_STR_SUBGRAPH_SYM_JSON);
         attr_vals.push_back(subgraph_json.c_str());
       }
 
@@ -639,7 +639,7 @@ int MXLoadLib(const char *path) {
         nnvm::Graph g;
         g.outputs = attrs.subgraphs[0].get()->outputs;
         subgraph_json = nnvm::pass::SaveJSON(g);
-        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_keys.push_back(MX_STR_SUBGRAPH_SYM_JSON);
         attr_vals.push_back(subgraph_json.c_str());
       }
 

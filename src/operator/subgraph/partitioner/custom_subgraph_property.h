@@ -163,7 +163,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         mxnet::TShape shape = shapes[i];
         std::stringstream ss;
         ss << shape;
-        node->attrs.dict[MX_SHAPE] = ss.str();
+        node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
     // set dtype attrs for each node in the graph
@@ -174,7 +174,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         int dtype = dtypes[i];
         std::stringstream ss;
         ss << dtype;
-        node->attrs.dict[MX_DTYPE] = ss.str();
+        node->attrs.dict[MX_STR_DTYPE] = ss.str();
       }
     }
 

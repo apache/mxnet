@@ -160,11 +160,11 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   std::string serialized_subgraph = "[empty]";
   // MXNet subgraph is stored as Symbol in operator node attrs subgraphs field
   // custom subgraph is stored as json string in custom operator attrs map entry
-  if (attrs.count(SUBGRAPH_SYM_JSON)) {
+  if (attrs.count(MX_STR_SUBGRAPH_SYM_JSON)) {
     // user can now parse json and run other custom ops inside subgraph
-    serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
+    serialized_subgraph = attrs[MX_STR_SUBGRAPH_SYM_JSON];
   }
-  attrs.erase(SUBGRAPH_SYM_JSON);
+  attrs.erase(MX_STR_SUBGRAPH_SYM_JSON);
   *op_inst = new MyStatefulOp(serialized_subgraph, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
