@@ -27,7 +27,7 @@ import platform
 
 if platform.system() == 'Linux':
     sys.argv.append('--universal')
-    sys.argv.append('--plat-name=manylinux2010_x86_64')
+    sys.argv.append('--plat-name=manylinux2014_x86_64')
 
 from setuptools import setup, find_packages
 from setuptools.dist import Distribution
