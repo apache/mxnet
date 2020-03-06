@@ -28,8 +28,8 @@ from benchmark.opperf.utils.op_registry_utils import get_all_loss_operators
 """
 
 
-def run_loss_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the
+def run_loss_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and data size (int64_tensor) for all the
     Neural Network loss operators in MXNet.
 
     Parameters
@@ -40,6 +40,8 @@ def run_loss_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -54,5 +56,5 @@ def run_loss_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nativ
     mx_loss_ops = get_all_loss_operators()
 
     # Run benchmarks
-    mx_loss_op_results = run_op_benchmarks(mx_loss_ops, dtype, ctx, profiler, warmup, runs)
+    mx_loss_op_results = run_op_benchmarks(mx_loss_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_loss_op_results

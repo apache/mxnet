@@ -18,12 +18,13 @@
 #define NOMINMAX
 #endif
 #endif
-#include <cmath>
-#include <cstdio>
+#include <algorithm>
 #include <cfloat>
 #include <climits>
-#include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <functional>
+#include <limits>
 #include <sstream>
 #include <string>
 
@@ -839,7 +840,7 @@ MSHADOW_XINLINE bool MaxValue<bool>(void) {
 /*! \brief maximum value of uint32_t */
 template<>
 MSHADOW_XINLINE uint32_t MaxValue<uint32_t>(void) {
-  return -1;
+  return std::numeric_limits<uint32_t>::max();
 }
 
 /*!

@@ -23,7 +23,7 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-ARG PYTHON_CMD=python
+ARG PYTHON_CMD=python3
 RUN apt-get update && \
     apt-get install -y wget ${PYTHON_CMD}-dev gcc && \
     wget https://bootstrap.pypa.io/get-pip.py && \
