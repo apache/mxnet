@@ -3701,10 +3701,10 @@ def tile(A, reps):
     """
     if isinstance(A, numeric_types):
         return _np.tile(A, reps=reps)
-    elif isinstance(x, NDArray):
+    elif isinstance(A, NDArray):
         return _npi.tile(A, reps=reps)
     else:
-        raise TypeError('type {} not supported'.format(str(type(x))))
+        raise TypeError('type {} not supported'.format(str(type(A))))
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
