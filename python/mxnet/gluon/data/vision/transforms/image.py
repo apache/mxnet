@@ -20,116 +20,17 @@
 "Image transforms."
 
 import random
-from ...block import Block, HybridBlock
-from ...nn import Sequential, HybridSequential
-from .... import image
-from ....base import numeric_types
-from ....util import is_np_array
+from ....block import Block, HybridBlock
+from ....nn import Sequential, HybridSequential
+from ..... import image
+from .....base import numeric_types
+from .....util import is_np_array
 
-
-class Compose(Sequential):
-    """Sequentially composes multiple transforms.
-
-    Parameters
-    ----------
-    transforms : list of transform Blocks.
-        The list of transforms to be composed.
-
-
-    Inputs:
-        - **data**: input tensor with shape of the first transform Block requires.
-
-    Outputs:
-        - **out**: output tensor with shape of the last transform Block produces.
-
-    Examples
-    --------
-    >>> transformer = transforms.Compose([transforms.Resize(300),
-    ...                                   transforms.CenterCrop(256),
-    ...                                   transforms.ToTensor()])
-    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
-    >>> transformer(image)
-    <NDArray 3x256x256 @cpu(0)>
-    """
-    def __init__(self, transforms):
-        super(Compose, self).__init__()
-        transforms.append(None)
-        hybrid = []
-        for i in transforms:
-            if isinstance(i, HybridBlock):
-                hybrid.append(i)
-                continue
-            elif len(hybrid) == 1:
-                self.add(hybrid[0])
-                hybrid = []
-            elif len(hybrid) > 1:
-                hblock = HybridSequential()
-                for j in hybrid:
-                    hblock.add(j)
-                hblock.hybridize()
-                self.add(hblock)
-                hybrid = []
-
-            if i is not None:
-                self.add(i)
-
-
-class HybridCompose(HybridSequential):
-    """Sequentially composes multiple transforms. This is the Hybrid version of Compose.
-
-    Parameters
-    ----------
-    transforms : list of transform Blocks.
-        The list of transforms to be composed.
-
-
-    Inputs:
-        - **data**: input tensor with shape of the first transform Block requires.
-
-    Outputs:
-        - **out**: output tensor with shape of the last transform Block produces.
-
-    Examples
-    --------
-    >>> transformer = transforms.HybridCompose([transforms.Resize(300),
-    ...                                   transforms.CenterCrop(256),
-    ...                                   transforms.ToTensor()])
-    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
-    >>> transformer(image)
-    <NDArray 3x256x256 @cpu(0)>
-    """
-    def __init__(self, transforms):
-        super(HybridCompose, self).__init__()
-        for i in transforms:
-            if not isinstance(i, HybridBlock):
-                raise ValueError("{} is not a HybridBlock, try use `Compose` instead".format(i))
-            self.add(i)
-        self.hybridize()
-
-
-class Cast(HybridBlock):
-    """Cast input to a specific data type
-
-    Parameters
-    ----------
-    dtype : str, default 'float32'
-        The target data type, in string or `numpy.dtype`.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape and dtype.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data` and data type as dtype.
-    """
-    def __init__(self, dtype='float32'):
-        super(Cast, self).__init__()
-        self._dtype = dtype
-
-    def hybrid_forward(self, F, x):
-        if is_np_array():
-            F = F.npx
-        return F.cast(x, self._dtype)
+__all__ = ['ToTensor', 'Normalize',
+           'RandomResizedCrop', 'CropResize', 'CropResize', 'RandomCrop',
+           'CenterCrop', 'Resize', 'RandomFlipLeftRight', 'RandomFlipTopBottom',
+           'RandomBrightness', 'RandomContrast', 'RandomSaturation', 'RandomHue',
+           'RandomColorJitter', 'RandomLighting', 'RandomGray']
 
 
 class ToTensor(HybridBlock):
@@ -463,7 +364,7 @@ class Resize(HybridBlock):
 
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
-    of 0.5.
+    of p(0.5 by default).
 
     Inputs:
         - **data**: input tensor with (H x W x C) shape.
@@ -471,18 +372,33 @@ class RandomFlipLeftRight(HybridBlock):
     Outputs:
         - **out**: output tensor with same shape as `data`.
     """
-    def __init__(self):
+    def __init__(self, p=0.5):
         super(RandomFlipLeftRight, self).__init__()
+        self.p = p
 
     def hybrid_forward(self, F, x):
         if is_np_array():
-            F = F.npx
-        return F.image.random_flip_left_right(x)
+            _image = F.npx.image
+            _random = F.np.random
+            _cond = F.npx.cond
+        else:
+            _image = F.image
+            _random = F.random
+            _cond = F.contrib.cond
+
+        if self.p <= 0:
+            return x
+        elif self.p >= 1:
+            return _image.flip_left_right(x)
+        elif self.p == 0.5:
+            return _image.random_flip_left_right(x)
+        cond = self.p < _random.uniform(low=0, high=1)
+        return _cond(cond, lambda: x, lambda: _image.flip_left_right(x))
 
 
 class RandomFlipTopBottom(HybridBlock):
     """Randomly flip the input image top to bottom with a probability
-    of 0.5.
+    of p(0.5 by default).
 
     Inputs:
         - **data**: input tensor with (H x W x C) shape.
@@ -490,13 +406,28 @@ class RandomFlipTopBottom(HybridBlock):
     Outputs:
         - **out**: output tensor with same shape as `data`.
     """
-    def __init__(self):
+    def __init__(self, p=0.5):
         super(RandomFlipTopBottom, self).__init__()
+        self.p = p
 
     def hybrid_forward(self, F, x):
         if is_np_array():
-            F = F.npx
-        return F.image.random_flip_top_bottom(x)
+            _image = F.npx.image
+            _random = F.np.random
+            _cond = F.npx.cond
+        else:
+            _image = F.image
+            _random = F.random
+            _cond = F.contrib.cond
+            
+        if self.p <= 0:
+            return x
+        elif self.p >= 1:
+            return _image.flip_top_bottom(x)
+        elif self.p == 0.5:
+            return _image.random_flip_top_bottom(x)
+        cond = self.p < _random.uniform(low=0, high=1)
+        return _cond(cond, lambda: x, lambda: _image.flip_top_bottom(x))
 
 
 class RandomBrightness(HybridBlock):
@@ -668,65 +599,6 @@ class RandomLighting(HybridBlock):
         return F.image.random_lighting(x, self._alpha)
 
 
-class RandomApply(Sequential):
-    """Apply a list of transformations randomly given probability
-
-    Parameters
-    ----------
-    transforms
-        List of transformations.
-    p : float
-        Probability of applying the transformations.
-
-
-    Inputs:
-        - **data**: input tensor.
-
-    Outputs:
-        - **out**: transformed image.
-    """
-
-    def __init__(self, transforms, p=0.5):
-        super(RandomApply, self).__init__()
-        self.transforms = transforms
-        self.p = p
-
-    def forward(self, x):
-        if self.p < random.random():
-            return x
-        x = self.transforms(x)
-        return x
-
-
-class HybridRandomApply(HybridSequential):
-    """Apply a list of transformations randomly given probability
-
-    Parameters
-    ----------
-    transforms
-        List of transformations which must be HybridBlocks.
-    p : float
-        Probability of applying the transformations.
-
-
-    Inputs:
-        - **data**: input tensor.
-
-    Outputs:
-        - **out**: transformed image.
-    """
-
-    def __init__(self, transforms, p=0.5):
-        super(HybridRandomApply, self).__init__()
-        assert isinstance(transforms, HybridBlock)
-        self.transforms = transforms
-        self.p = p
-
-    def hybrid_forward(self, F, x):
-        cond = self.p < F.random.uniform(low=0, high=1, shape=1)
-        return F.contrib.cond(cond, x, self.transforms(x))
-
-
 class RandomGray(HybridBlock):
     """Randomly convert to gray image.
 
@@ -744,5 +616,15 @@ class RandomGray(HybridBlock):
         self.p = p
 
     def hybrid_forward(self, F, x, mat):
-        cond = self.p < F.random.uniform(low=0, high=1, shape=1)
-        return F.contrib.cond(cond, lambda: x, lambda: F.dot(F.cast(x, dtype='float32'), mat))
+        if is_np_array():
+            _random = F.np.random
+            _cond = F.npx.cond
+            _dot = F.np.dot
+            _cast = F.npx.cast
+        else:
+            _random = F.random
+            _cond = F.contrib.cond
+            _dot = F.dot
+            _cast = F.cast
+        cond = self.p < _random.uniform()
+        return _cond(cond, lambda: x, lambda: _dot(_cast(x, dtype='float32'), mat))
