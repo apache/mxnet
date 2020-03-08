@@ -22,7 +22,7 @@ __all__ = ['Beta']
 
 from .exp_family import ExponentialFamily
 from .constraint import UnitInterval, Positive
-from .utils import getF, sample_n_shape_converter
+from .utils import getF, sample_n_shape_converter, gammaln
 
 # FIXME: Implement `entropy()`.
 class Beta(ExponentialFamily):
@@ -61,7 +61,7 @@ class Beta(ExponentialFamily):
     
     def log_prob(self, value):
         F = self.F
-        lgamma = F.npx.gammaln
+        lgamma = gammaln(F)
         log = F.np.log
         a = self.alpha
         b = self.beta

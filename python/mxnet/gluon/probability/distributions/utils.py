@@ -18,10 +18,21 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """Distribution utilities"""
-__all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter']
+__all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter',
+           'gammaln']
 
 from functools import update_wrapper
+from numbers import Number
+import numpy as onp
+import scipy.special as sc
 from .... import nd, sym, np
+
+def gammaln(F):
+    def compute(value):
+        if isinstance(value, Number):
+            return sc.gammaln(value)
+        return F.npx.gammaln(value)
+    return compute
 
 def sample_n_shape_converter(size):
     """Convert `size` to the proper format for performing sample_n.

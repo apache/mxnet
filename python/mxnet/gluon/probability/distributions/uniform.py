@@ -57,6 +57,17 @@ class Uniform(Distribution):
     @property
     def support(self):
         return Interval(self.low, self.high)
+
+    def broadcast_to(self, batch_shape):
+        new_instance = self.__new__(type(self))
+        F = self.F
+        new_instance.low = F.np.broadcast_to(self.low, batch_shape)
+        new_instance.high = F.np.broadcast_to(self.high, batch_shape)
+        super(Uniform, new_instance).__init__(F=F,
+                                             event_dim=self.event_dim,
+                                             validate_args=False)
+        new_instance._validate_args = self._validate_args
+        return new_instance
     
     def cdf(self, value):
         x = (value - self.low) / (self.high - self.low)

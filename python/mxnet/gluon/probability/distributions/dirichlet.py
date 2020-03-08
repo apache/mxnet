@@ -22,7 +22,7 @@ __all__ = ['Dirichlet']
 
 from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
-from .utils import getF
+from .utils import getF, gammaln
 
 # FIXME: Implement `entropy()`.
 class Dirichlet(ExponentialFamily):
@@ -51,7 +51,7 @@ class Dirichlet(ExponentialFamily):
 
     def log_prob(self, value):
         F = self.F
-        lgamma = F.npx.gammaln
+        lgamma = gammaln(F)
         log = F.np.log
         alpha = self.alpha
         return (log(value) * (alpha - 1.0)).sum(-1) + lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)

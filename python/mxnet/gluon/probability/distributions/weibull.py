@@ -24,7 +24,7 @@ from .transformed_distribution import TransformedDistribution
 from .exponential import Exponential
 from .constraint import Positive
 from ..transformation import PowerTransform, AffineTransform
-from .utils import getF, sample_n_shape_converter
+from .utils import getF, sample_n_shape_converter, gammaln
 # Euler-Mascheroni constant 
 from numpy import euler_gamma
 
@@ -60,7 +60,7 @@ class Weibull(TransformedDistribution):
     def variance(self):
         F = self.F
         exp = F.np.exp
-        lgamma = F.npx.gammaln
+        lgamma = gammaln(F)
         term1 = exp(lgamma(1 + 2 / self.concentration))
         term2 = exp(2 * lgamma(1 + 1 / self.concentration))
         return (self.scale ** 2) * (term1 - term1)

@@ -22,7 +22,7 @@ __all__ = ['Gamma']
 
 from .exp_family import ExponentialFamily
 from .constraint import Real, Positive
-from .utils import getF, sample_n_shape_converter
+from .utils import getF, sample_n_shape_converter, gammaln
 
 class Gamma(ExponentialFamily):
     # TODO: Implement implicit reparameterization gradient for Gamma.
@@ -39,7 +39,7 @@ class Gamma(ExponentialFamily):
     def log_prob(self, value): 
         F = self.F
         log_fn = F.np.log
-        lgamma = F.npx.gammaln
+        lgamma = gammaln(F)
         # alpha (concentration)
         a = self.shape
         # beta (rate)

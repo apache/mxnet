@@ -39,6 +39,8 @@ from .dirichlet import *
 
 from .beta import *
 
+from .chi2 import *
+
 from .half_normal import *
 
 from .independent import *
