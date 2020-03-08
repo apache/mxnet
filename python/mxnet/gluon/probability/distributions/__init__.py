@@ -29,6 +29,8 @@ from .weibull import *
 
 from .pareto import *
 
+from .uniform import *
+
 from .normal import *
 
 from .gamma import *

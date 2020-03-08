@@ -19,12 +19,12 @@ import os
 import tempfile
 
 import mxnet as mx
+from mxnet import np, npx, autograd
 from mxnet import gluon
 import mxnet.gluon.probability as mgp
 from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal
-from mxnet import np, npx, autograd
 import numpy as _np
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied)
@@ -55,6 +55,76 @@ def _distribution_method_invoker(dist, func, *args):
         else:
             return out
     return getattr(dist, func)(*args)
+
+
+@with_seed()
+@use_np
+def test_gluon_uniform():
+    class TestUniform(HybridBlock):
+        def __init__(self, func):
+            super(TestUniform, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, low, high, *args):
+            uniform = mgp.Uniform(low, high)
+            return _distribution_method_invoker(uniform, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestNormal("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestNormal("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestNormal("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestNormal("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale).asnumpy()
+        np_out = ss.norm(loc.asnumpy(),
+                        scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
 
 
 @with_seed()
