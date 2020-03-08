@@ -5910,7 +5910,6 @@ def test_np_linalg_det():
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
         if grad_req != 'null':
-            print(shape, grad_req)
             mx_out.backward()
 
         # Test imperative once again
