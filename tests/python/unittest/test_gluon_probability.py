@@ -75,54 +75,54 @@ def test_gluon_uniform():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         low = np.random.uniform(-1, 1, shape)
         high = low + np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.normal(size=shape)
-        net = TestNormal("log_prob")
+        samples = np.random.uniform(low, high)
+        net = TestUniform("log_prob")
         if hybridize:
             net.hybridize()
-        mx_out = net(loc, scale, samples).asnumpy()
-        np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).logpdf(samples.asnumpy())
+        mx_out = net(low, high, samples).asnumpy()
+        np_out = ss.uniform(low.asnumpy(),
+                            (high - low).asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
     # Test cdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.normal(size=shape)
-        net = TestNormal("cdf")
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(low, high)
+        net = TestUniform("cdf")
         if hybridize:
             net.hybridize()
-        mx_out = net(loc, scale, samples).asnumpy()
-        np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).cdf(samples.asnumpy())
+        mx_out = net(low, high, samples).asnumpy()
+        np_out = ss.uniform(low.asnumpy(),
+                            (high - low).asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
     # Test icdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
         samples = np.random.uniform(size=shape)
-        net = TestNormal("icdf")
+        net = TestUniform("icdf")
         if hybridize:
             net.hybridize()
-        mx_out = net(loc, scale, samples).asnumpy()
-        np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).ppf(samples.asnumpy())
+        mx_out = net(low, high, samples).asnumpy()
+        np_out = ss.uniform(low.asnumpy(),
+                            (high - low).asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
     # Test entropy
     for shape, hybridize in itertools.product(shapes, [True, False]):
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        net = TestNormal("entropy")
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
+        net = TestUniform("entropy")
         if hybridize:
             net.hybridize()
-        mx_out = net(loc, scale).asnumpy()
-        np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).entropy()
+        mx_out = net(low, high).asnumpy()
+        np_out = ss.uniform(low.asnumpy(),
+                            (high - low).asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 

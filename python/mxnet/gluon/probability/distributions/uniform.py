@@ -38,11 +38,12 @@ class Uniform(Distribution):
 
     def log_prob(self, value):
         F = self.F
-        lower_bound = (self.low < value).astype('float')
-        upper_bound = (self.high > value).astype('float')
+        type_converter = lambda x: float(x) if isinstance(x, bool) else x.astype('float')
+        lower_bound = type_converter(self.low < value)
+        upper_bound = type_converter(self.high > value)
         # 0 if value \in [low, high], -inf otherwise.
         out_of_support_value = F.np.log(lower_bound * upper_bound)
-        return out_of_support_value - F.np.log * (self.high - self.low)
+        return out_of_support_value - F.np.log(self.high - self.low)
     
     def sample(self, size=None):
         F = self.F
