@@ -27,7 +27,7 @@ class Chi2(Gamma):
     arg_constraints = {'df': Positive()}
 
     def __init__(self, df, F=None, validate_args=None):
-        super(Chi2, self).__init__(df / 2, 0.5, F, validate_args)
+        super(Chi2, self).__init__(df / 2, 2, F, validate_args)
 
     @property
     def df(self):
