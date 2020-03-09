@@ -28,7 +28,11 @@ import scipy.special as sc
 from .... import nd, sym, np
 
 def gammaln(F):
+    """Unified gammaln interface for both scalar and tensor
+    """
     def compute(value):
+        """Return log(gamma(value))
+        """
         if isinstance(value, Number):
             return sc.gammaln(value)
         return F.npx.gammaln(value)

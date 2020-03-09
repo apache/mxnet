@@ -24,7 +24,7 @@ from mxnet import gluon
 import mxnet.gluon.probability as mgp
 from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import use_np, assert_almost_equal
+from mxnet.test_utils import use_np, assert_almost_equal, set_default_context
 import numpy as _np
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied)
@@ -38,6 +38,8 @@ import unittest
 import random
 import itertools
 from numbers import Number
+
+# set_default_context(mx.gpu(0))
 
 def _distribution_method_invoker(dist, func, *args):
     """Wrapper for invoking different types of class methods
@@ -528,6 +530,51 @@ def test_gluon_beta():
 
 @with_seed()
 @use_np
+def test_gluon_fisher_snedecor():
+    class TestFisherSnedecor(HybridBlock):
+        def __init__(self, func):
+            super(TestFisherSnedecor, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, df1, df2, *args):
+            beta_dist = mgp.FisherSnedecor(df1, df2, F)
+            return _distribution_method_invoker(beta_dist, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        df1 = np.random.uniform(0.5, 1.5, shape)
+        df2 = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestFisherSnedecor("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(df1, df2, samples).asnumpy()
+        np_out = ss.f(dfn=df1.asnumpy(), dfd=df2.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test `mean` and `var`
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        for func in ['mean', 'variance']:
+            df1 = np.random.uniform(0.5, 1.5, shape)
+            df2 = np.random.uniform(4.0, 6.0, shape)
+            net = TestFisherSnedecor(func)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(df1, df2).asnumpy()
+            ss_f = ss.f(dfn=df1.asnumpy(), dfd=df2.asnumpy())
+            if func == 'mean':
+                np_out = ss_f.mean()
+            else:
+                np_out = ss_f.var()
+            assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_gumbel():
     class TestGumbel(HybridBlock):
         def __init__(self, func):
@@ -748,7 +795,7 @@ def test_gluon_categorical():
             return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3), (4, 0, 5)]
+    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
@@ -899,7 +946,7 @@ def test_relaxed_one_hot_categorical():
             return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3), (4, 0, 5)]
+    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
