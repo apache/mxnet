@@ -348,7 +348,8 @@ MXNET_REGISTER_API("_npi.ones")
     attrs.dict["ctx"] = args[2].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  SetAttrDict<op::InitOpParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
@@ -374,14 +375,16 @@ MXNET_REGISTER_API("_npi.full")
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
   }
-  int num_outputs = 0;
-  NDArray** outputs = nullptr;
-  if (args[4].type_code() != kNull) {
-    num_outputs = 1;
-    outputs = new NDArray*[1]{args[4].operator mxnet::NDArray*()};
+  SetAttrDict<op::InitOpParam>(&attrs);
+  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(4);
+  } else {
+    *ret = ndoutputs[0];
   }
-  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, outputs);
-  *ret = ndoutputs[0];
 });
 
 MXNET_REGISTER_API("_npi.arange")
@@ -410,7 +413,8 @@ MXNET_REGISTER_API("_npi.arange")
     attrs.dict["ctx"] = args[4].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::RangeParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  SetAttrDict<op::RangeParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
@@ -432,7 +436,8 @@ MXNET_REGISTER_API("_npi.identity")
     attrs.dict["ctx"] = args[2].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  SetAttrDict<op::InitOpParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
