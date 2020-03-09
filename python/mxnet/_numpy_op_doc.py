@@ -63,7 +63,7 @@ def _np_all(a, axis=None, keepdims=False, out=None):
     >>> o=np.array(False)
     >>> z=np.all([-1, 4, 5], out=o)
     >>> id(z), id(o), z
-    (28293632, 28293632, array(True)) # may vary  
+    (28293632, 28293632, array(True)) # may vary
     """
     pass
 
@@ -121,53 +121,15 @@ def _np_any(a, axis=None, keepdims=False, out=None):
     pass
 
 
-def _np_cumsum(a, axis=None, dtype=None, out=None):
+def _np_sometrue(a, axis=None, keepdims=False, out=None):
     """
-    Return the cumulative sum of the elements along a given axis.
+    Check whether some values are true.
 
-    Parameters
-    ----------
-    a : array_like
-        Input array.
-    axis : int, optional
-        Axis along which the cumulative sum is computed. The default
-        (None) is to compute the cumsum over the flattened array.
-    dtype : dtype, optional
-        Type of the returned array and of the accumulator in which the
-        elements are summed.  If `dtype` is not specified, it defaults
-        to the dtype of `a`, unless `a` has an integer dtype with a
-        precision less than that of the default platform integer.  In
-        that case, the default platform integer is used.
-    out : ndarray, optional
-        Alternative output array in which to place the result. It must
-        have the same shape and buffer length as the expected output
-        but the type will be cast if necessary. See `doc.ufuncs`
-        (Section "Output arguments") for more details.
+    Refer to `any` for full documentation.
 
-    Returns
-    -------
-    cumsum_along_axis : ndarray.
-        A new array holding the result is returned unless `out` is
-        specified, in which case a reference to `out` is returned. The
-        result has the same size as `a`, and the same shape as `a` if
-        `axis` is not None or `a` is a 1-d array.
-
-    Examples
+    See Also
     --------
-    >>> a = np.array([[1,2,3], [4,5,6]])
-    >>> a
-    array([[1, 2, 3],
-           [4, 5, 6]])
-    >>> np.cumsum(a)
-    array([ 1,  3,  6, 10, 15, 21])
-    >>> np.cumsum(a, dtype=float)     # specifies type of output value(s)
-    array([  1.,   3.,   6.,  10.,  15.,  21.])
-    >>> np.cumsum(a,axis=0)      # sum over rows for each of the 3 columns
-    array([[1, 2, 3],
-           [5, 7, 9]])
-    >>> np.cumsum(a,axis=1)      # sum over columns for each of the 2 rows
-    array([[ 1,  3,  6],
-           [ 4,  9, 15]])
+    any : equivalent function; see for details.
     """
     pass
 
@@ -1167,6 +1129,17 @@ def _np_prod(a, axis=None, dtype=None, out=None, keepdims=False):
     >>> x = np.array([1, 2, 3], dtype=np.int8)
     >>> np.prod(x).dtype == np.int8
     True
+    """
+    pass
+
+
+def _np_product(a, axis=None, dtype=None, out=None, keepdims=False):
+    """
+    Return the product of array elements over a given axis.
+
+    See Also
+    --------
+    prod : equivalent function; see for details.
     """
     pass
 

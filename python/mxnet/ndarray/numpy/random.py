@@ -664,7 +664,7 @@ def weibull(a, size=None, ctx=None, out=None):
         return _npi.weibull(a=a, size=size, ctx=ctx, out=out)
 
 
-def pareto(a, size=None):
+def pareto(a, size=None, ctx=None, out=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
 
     Parameters
@@ -698,13 +698,15 @@ def pareto(a, size=None):
     """
     from ...numpy import ndarray as np_ndarray
     tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = current_context()
     if size == ():
         size = None
     is_tensor = isinstance(a, tensor_type_name)
     if is_tensor:
-        return _npi.pareto(a, a=None, size=size)
+        return _npi.pareto(a, a=None, size=size, ctx=ctx, out=out)
     else:
-        return _npi.pareto(a=a, size=size)
+        return _npi.pareto(a=a, size=size, ctx=ctx, out=out)
 
 
 def power(a, size=None):

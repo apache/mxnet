@@ -84,10 +84,12 @@ def with_array_ufunc_protocol(func):
 _NUMPY_ARRAY_FUNCTION_LIST = [
     'all',
     'any',
+    'sometrue',
     'argmin',
     'argmax',
     'around',
     'round',
+    'round_',
     'argsort',
     'sort',
     'append',
@@ -119,6 +121,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'atleast_2d',
     'atleast_3d',
     'prod',
+    'product',
     'ravel',
     'repeat',
     'reshape',
@@ -139,6 +142,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'transpose',
     'unique',
     'unravel_index',
+    'flatnonzero',
     'diag_indices_from',
     'delete',
     'var',
@@ -171,6 +175,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'quantile',
     'percentile',
     'diff',
+    'ediff1d',
     'resize',
     'where',
     'full_like',
@@ -182,6 +187,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'isposinf',
     'isneginf',
     'isinf',
+    'pad',
 ]
 
 
@@ -228,6 +234,7 @@ def _register_array_function():
 # https://docs.scipy.org/doc/numpy/reference/ufuncs.html#available-ufuncs
 _NUMPY_ARRAY_UFUNC_LIST = [
     'abs',
+    'fabs',
     'add',
     'arctan2',
     'copysign',
