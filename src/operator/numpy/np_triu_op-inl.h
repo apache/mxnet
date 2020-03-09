@@ -28,6 +28,9 @@
 
 #include <dmlc/parameter.h>
 #include <vector>
+#include <string>
+#include <unordered_map>
+#include <sstream>
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -46,7 +49,6 @@ struct TriuParam : public dmlc::Parameter<TriuParam> {
                 "and k<0 for diagonals below the main diagonal. "
                 "If input has shape (S0 S1) k must be between -S0 and S1");
   }
-
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream k_s;
     k_s << k;
