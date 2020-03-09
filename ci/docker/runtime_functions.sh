@@ -159,37 +159,24 @@ build_ubuntu_cpu_release() {
     cd /work/build
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_MKLDNN=OFF \
-        -DUSE_CUDA=OFF \
-        -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_cpu_mkldnn_release() {
-    set -ex
-    cd /work/build
-    cmake \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_release() {
+build_ubuntu_cpu_native_release() {
     set -ex
     cd /work/build
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
-        -DUSE_DIST_KVSTORE=ON \
-        -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDA=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_mkldnn_release() {
+build_ubuntu_gpu_release() {
     set -ex
     cd /work/build
     cmake \
@@ -204,7 +191,7 @@ build_ubuntu_gpu_mkldnn_release() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu92, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -215,14 +202,13 @@ build_dynamic_libmxnet() {
 
     if [[ ${mxnet_variant} = "cpu" ]]; then
         build_ubuntu_cpu_release
-    elif [[ ${mxnet_variant} = "mkl" ]]; then
-        build_ubuntu_cpu_mkldnn_release
+    elif [[ ${mxnet_variant} = "native" ]]; then
+        build_ubuntu_cpu_native_release
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         build_ubuntu_gpu_release
-    elif [[ ${mxnet_variant} =~ cu[0-9]+mkl$ ]]; then
-        build_ubuntu_gpu_mkldnn_release
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
+        exit 1
     fi
 }
 

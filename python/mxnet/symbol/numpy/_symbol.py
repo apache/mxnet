@@ -96,7 +96,10 @@ class _Symbol(Symbol):
                                 .format(type(key)))
         else:
             if isinstance(key, integer_types):
-                sliced = _npi.slice(self, [key], [key+1])
+                if key == -1:
+                    sliced = _npi.slice(self, [key], [None])
+                else:
+                    sliced = _npi.slice(self, [key], [key+1])
                 return _npi.reshape(sliced, (-3, -4))
             elif isinstance(key, py_slice):
                 if key.step is None or key.step != 0:
