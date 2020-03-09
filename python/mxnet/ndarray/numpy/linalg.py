@@ -19,6 +19,7 @@
 
 from . import _op as _mx_nd_np
 from . import _internal as _npi
+from . import _api_internal
 
 __all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
            'eigvals', 'eig', 'eigvalsh', 'eigh']
@@ -329,7 +330,8 @@ def svd(a):
     >>> (ret - a < -1e-3).sum()
     array(0.)
     """
-    return tuple(_npi.svd(a))
+    # return tuple(_npi.svd(a))
+    return tuple(_api_internal.svd(a))
 
 
 def cholesky(a):
