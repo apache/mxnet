@@ -48,6 +48,45 @@ MXNET_REGISTER_API("_npi.expand_dims")
   int num_inputs = 1;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
+/* \brief Implementation of the API of functions in src/operator/numpy/np_matrix_op.cc
+ */
+// #include <mxnet/api_registry.h>
+// #include <mxnet/runtime/packed_func.h>
+// #include "../utils.h"
+// #include "../../../operator/numpy/np_matrix_op-inl.h"
+
+// namespace mxnet {
+
+MXNET_REGISTER_API("_npi.concatenate")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_concatenate");
+  nnvm::NodeAttrs attrs;
+  op::NumpyConcatenateParam param;
+  int arg_size = args.num_args;
+  param.num_args = arg_size - 2;
+  if (args[arg_size - 2].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else {
+    param.axis = args[arg_size - 2].operator int();
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyConcatenateParam>(&attrs);
+  int num_inputs = arg_size - 2;
+  std::vector<NDArray*> inputs;
+  for (int i = 0; i < num_inputs; ++i) {
+    inputs.push_back(args[i].operator mxnet::NDArray*());
+  }
+  NDArray* out = args[arg_size - 1].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(arg_size - 1);
+  } else {
+    *ret = ndoutputs[0];
+  }
 });
 
 MXNET_REGISTER_API("_npi.dstack")

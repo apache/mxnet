@@ -4076,7 +4076,7 @@ def concatenate(seq, axis=0, out=None):
     array([[1., 2., 5.],
            [3., 4., 6.]])
     """
-    return _npi.concatenate(*seq, axis=axis, out=out)
+    return _api_internal.concatenate(*seq, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4116,7 +4116,8 @@ def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
            [4., 5., 6.],
            [7., 8., 9.]])
     """
-    return _npi.concatenate(arr, values, axis=axis, out=None)
+    out = None
+    return _api_internal.concatenate(arr, values, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')
