@@ -39,6 +39,11 @@ class NDArrayHandleObj : public Object {
 
 class NDArrayHandle : public ObjectRef {
 public:
+  explicit NDArrayHandle(NDArray* value) {
+    runtime::ObjectPtr<NDArrayHandleObj> node = make_object<NDArrayHandleObj>();
+    node->value = value;
+    data_ = std::move(node);
+  }
   MXNET_DEFINE_OBJECT_REF_METHODS(NDArrayHandle, ObjectRef, NDArrayHandleObj)
 };
 
