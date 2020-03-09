@@ -51,7 +51,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount', 'pad']
+           'where', 'bincount', 'pad', 'cumsum']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -96,7 +96,10 @@ class _Symbol(Symbol):
                                 .format(type(key)))
         else:
             if isinstance(key, integer_types):
-                sliced = _npi.slice(self, [key], [key+1])
+                if key == -1:
+                    sliced = _npi.slice(self, [key], [None])
+                else:
+                    sliced = _npi.slice(self, [key], [key+1])
                 return _npi.reshape(sliced, (-3, -4))
             elif isinstance(key, py_slice):
                 if key.step is None or key.step != 0:
@@ -683,7 +686,7 @@ class _Symbol(Symbol):
 
     def cumsum(self, axis=None, dtype=None, out=None):
         """Return the cumulative sum of the elements along the given axis."""
-        return _mx_np_op.cumsum(self, axis=axis, dtype=dtype, out=out)
+        return _npi.cumsum(self, axis=axis, dtype=dtype, out=out)
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
@@ -6730,6 +6733,41 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
             raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='minimum')
     return _npi.pad(x, pad_width, mode='constant', constant_value=0)
+
+
+@set_module('mxnet.symbol.numpy')
+def cumsum(a, axis=None, dtype=None, out=None):
+    """
+    Return the cumulative sum of the elements along a given axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative sum is computed. The default
+        (None) is to compute the cumsum over the flattened array.
+    dtype : dtype, optional
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
+    out : _Symbol, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output
+        but the type will be cast if necessary. See `doc.ufuncs`
+        (Section "Output arguments") for more details.
+
+    Returns
+    -------
+    cumsum_along_axis : _Symbol.
+        A new array holding the result is returned unless `out` is
+        specified, in which case a reference to `out` is returned. The
+        result has the same size as `a`, and the same shape as `a` if
+        `axis` is not None or `a` is a 1-d array.
+    """
+    return _npi.cumsum(a, axis=axis, dtype=dtype, out=out)
 
 
 _set_np_symbol_class(_Symbol)

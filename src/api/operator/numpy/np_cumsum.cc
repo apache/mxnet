@@ -18,41 +18,50 @@
  */
 
 /*!
- * \file np_init_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy/np_init_op.cc
+ * \file np_cumsum.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_cumsum.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
-#include "../../../operator/tensor/init_op.h"
+#include "../../../operator/numpy/np_cumsum-inl.h"
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.zeros")
+MXNET_REGISTER_API("_npi.cumsum")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_zeros");
   nnvm::NodeAttrs attrs;
-  op::InitOpParam param;
-  if (args[0].type_code() == kDLInt) {
-    param.shape = TShape(1, args[0].operator int64_t());
-  } else {
-    param.shape = TShape(args[0].operator ObjectRef());
-  }
+  const nnvm::Op* op = Op::Get("_npi_cumsum");
+  op::CumsumParam param;
+  // axis
   if (args[1].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.axis = dmlc::nullopt;
   } else {
-    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+    param.axis = args[1].operator int();
+  }
+  // dtype
+  if (args[2].type_code() == kNull) {
+    param.dtype = dmlc::nullopt;
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
-  SetAttrDict<op::InitOpParam>(&attrs);
-  if (args[2].type_code() != kNull) {
-    attrs.dict["ctx"] = args[2].operator std::string();
+  SetAttrDict<op::CumsumParam>(&attrs);
+  // inputs
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  int num_inputs = 1;
+  // outputs
+  NDArray* outputs[] = {args[3].operator NDArray*()};
+  NDArray** out = outputs[0] == nullptr ? nullptr : outputs;
+  int num_outputs = outputs[0] != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
   }
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
 });
 
 }  // namespace mxnet
