@@ -36,8 +36,9 @@
 #include "../mxnet_op.h"
 #include <sys/time.h>
 
-#define NORM_OPT
+// #define NORM_OPT
 // #define NORM_TIME
+// #define NORM_TEST
 namespace mxnet {
 namespace op {
 struct ReduceAxesParam : public dmlc::Parameter<ReduceAxesParam> {
@@ -1413,12 +1414,12 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
     }
 #ifdef NORM_TEST
     for (size_t i = 0; i < 10; i ++) {
-      LOG(INFO) << "after " << pLoad[i] << " "<< pO[i];
+      LOG(INFO) << "after " << std::setprecision(8) << pLoad[i] << " "<< pO[i];
     }
 
     for (size_t i = 0; i < outputs[0].shape_.Size(); i++)
     {
-       if((pLoad[i] - pO[i]) >= 0.001)LOG(INFO) << "error " << i << " " << std::setprecision(8) << pLoad[i] <<" and "<< pO[i] <<"error "<< (pLoad[i] - pO[i]);
+       if(std::abs(pLoad[i] - pO[i]) >= 0.001)LOG(INFO) << "error " << i << " " << std::setprecision(8) << pLoad[i] <<" and "<< pO[i] <<"error "<< (pLoad[i] - pO[i]);
     }
     delete []pLoad;
 #endif 
@@ -1587,7 +1588,7 @@ void LpNormGradCompute(const nnvm::NodeAttrs& attrs,
 
     for (size_t i = 0; i < outputs[0].shape_.Size(); i++)
     {
-       if((pLoad[i] - pO[i]) >= 0.001)LOG(INFO) << "bwd error " << i << " " << std::setprecision(8) << pLoad[i] <<" and "<< pO[i] <<"error "<< (pLoad[i] - pO[i]);
+       if(abs(pLoad[i] - pO[i]) >= 0.001)LOG(INFO) << "bwd error " << i << " " << std::setprecision(8) << pLoad[i] <<" and "<< pO[i] <<"error "<< (pLoad[i] - pO[i]);
     }
     delete []pLoad;
 #endif 

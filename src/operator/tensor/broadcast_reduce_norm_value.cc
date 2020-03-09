@@ -22,11 +22,106 @@
  * \file broadcast_reduce_norm_value.cc
  * \brief CPU Implementation of broadcast and reduce norm functions based on value.
  */
-#include "./broadcast_reduce_op.h"
 
+#include "./broadcast_reduce_op.h"
+#include <x86intrin.h>
+#include <immintrin.h>
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(NormParam);
+
+// float Vector_Abs_Sum_Avx512(float* pin_data, size_t len) {
+//   assert (len > 16);
+
+//   size_t stop = len - 16;
+//   float sum = 0.0;
+//   __m512 YMM2 = _mm512_setzero_ps();
+
+//   for (size_t i = 0; i <= stop; i += 16) {
+//     __m512 YMM0 = _mm512_loadu_ps(pin_data+i);
+//     __m512 YMM1 = _mm512_abs_ps(YMM0);
+//     YMM2 = _mm512_add_ps(YMM1, YMM2);
+//   }
+//   sum = _mm512_reduce_add_ps(YMM2);
+//   if(size_t remain = (len&0xf)) {
+//     size_t off = len - remain;
+//     // off = len - (len&0xffff);
+//     LOG(INFO) << "remain is  "<<remain<<"  "<< (len&0xf);
+//     for (size_t i=off; i< len; i++) {
+//       sum += std::abs(pin_data[i]);
+//     }
+//   }
+
+//   return sum;
+// }
+
+// float Vector_Abs_Sum_Avx256(float* pin_data, const size_t len, const float mask) {
+//   assert (len > 8);
+
+//   size_t stop = len - 8;
+//   float sum_each[8];
+//   size_t i = 0;
+//   __m256 YMM0;
+//   __m256 YMM1;
+//   __m256 YMM4;
+//   __m256 YMM5;
+//   __m256 YMM6 = _mm256_setzero_ps();
+//   __m256 YMM2 = _mm256_setzero_ps();
+//   __m256 YMM3 = _mm256_set1_ps(mask);
+//   for (i = 0; i <= stop; i += 16) {
+//     YMM0 = _mm256_loadu_ps(pin_data+i);
+//     YMM1 = _mm256_and_ps(YMM0, YMM3);
+//     YMM2 = _mm256_add_ps(YMM1, YMM2);
+//     YMM4 = _mm256_loadu_ps(pin_data+i+8);
+//     YMM5 = _mm256_and_ps(YMM4, YMM3);
+//     YMM6 = _mm256_add_ps(YMM6, YMM5);
+//   }
+//   YMM2 = _mm256_add_ps(YMM6, YMM2);
+// //  sum = _mm256_reduce_add_ps(YMM2);
+//   _mm256_storeu_ps(sum_each, YMM2);
+
+//   float sum = 0.0;
+//   for (size_t j = 0; j < 8; j++)
+//   {
+//     sum += sum_each[i];
+//   }
+  
+//   for (; i<len; i++) {
+//     LOG(INFO) << " i "<< i;
+//     sum += std::abs(pin_data[i]);
+//   }
+
+//   return sum;
+// }
+
+// bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
+//                          const std::vector<OpReqType>& req,
+//                          const std::vector<TBlob>& outputs,
+//                          int ord) {
+//   auto& in_data = inputs[0];
+//   int axis =  in_data.shape_.ndim() - 1;                
+//   auto& shape = in_data.shape_;
+//   const size_t in_size = shape.Size();
+//   float* pin_data = (float*)in_data.dptr<float>();
+
+//   const size_t last_dim = shape[axis];
+//   auto out_size = outputs[0].Size();
+//   float* pout_data = (float*)outputs[0].dptr<float>();
+
+//   // #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+//   // for (size_t i = 0; i < out_size; i++)
+//   // {
+//   //     pout_data[i] = 0;
+//   // }
+//   float mask_f;
+//   int* pmask = (int*)&mask_f;
+//   *pmask = 0x7fffffff;
+//   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+//   for(size_t i = 0; i < out_size; i++) {
+//       pout_data[i] = Vector_Abs_Sum_Avx256 (pin_data+i*last_dim, last_dim, mask_f);
+//   }
+//   return true;                  
+// }
 
 bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
@@ -41,18 +136,29 @@ bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
   auto stride = outputs[0].Size();
   float* pout_data = (float*)outputs[0].dptr<float>();
 
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t i = 0; i < stride; i++)
-  {
-      pout_data[i] = 0;
-  }
+  // #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  // for (size_t i = 0; i < stride; i++)
+  // {
+  //     pout_data[i] = 0;
+  // }
 
-  #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for(size_t i = 0; i < stride; i++) {
+    int idx = i*last_dim;
+    float sum = 0.0;
     for (size_t j = 0; j < last_dim; j++) {
-      pout_data[i] += std::abs(pin_data[i*last_dim + j]);
+      float in_data = pin_data[idx++];
+      sum += in_data > 0 ? in_data : -in_data;
     }
+    pout_data[i] = sum;
   }
+  // #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  // for(size_t i = 0; i < stride; i++) {
+  //   for (size_t j = 0; j < last_dim; j++) {
+  //     const int idx = i*last_dim + j;
+  //     pout_data[i] += pin_data[idx] > 0 ? pin_data[idx] : -pin_data[idx];
+  //   }
+  // }
   return true;                  
 }
 
@@ -64,6 +170,7 @@ bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
   auto&  in_grad = inputs[0];
   auto&  in_data = inputs[1];
   auto shape = in_grad.shape_;
+  const size_t stride = shape.Size();
   float* pin_grad = (float*)in_grad.dptr<float>();
   float* psrc_data = (float*)in_data.dptr<float>();
 
@@ -73,16 +180,26 @@ bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
   auto oSize = out_grad.Size();
   float* pout_grad = (float*)out_grad.dptr<float>();
 
-  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for(size_t i = 0; i < oSize; i++) {
-      int idx = i/last_dim;
-      pout_grad[i] = psrc_data[i] >0 ? pin_grad[idx] : -pin_grad[idx];
-  }
+  // #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  // for(size_t i = 0; i < oSize; i++) {
+  //     int idx = i/last_dim;
+  //     pout_grad[i] = psrc_data[i] >0 ? pin_grad[idx] : -pin_grad[idx];
+  // }
 
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for(size_t i = 0; i < stride; i++) {
+    int idx = i*last_dim;
+    float in_grad_val = pin_grad[i];
+    for (size_t j = 0; j < last_dim; j++) {
+      pout_grad[idx] = psrc_data[idx] >0 ? in_grad_val : -in_grad_val;
+      idx++;
+    }
+  }
   // #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   // for(size_t i = 0; i < stride; i++) {
   //   for (size_t j = 0; j < last_dim; j++) {
-  //     pout_grad[i*last_dim + j] = psrc_data[i*last_dim + j] >0 ? pin_grad[i] : -pin_grad[i];
+  //     int idx = i*last_dim + j;
+  //     pout_grad[idx] = psrc_data[idx] >0 ? pin_grad[i] : -pin_grad[i];
   //   }
   // }
   return true;                  
