@@ -31,6 +31,8 @@ from .types import RETURN_SWITCH
 from .object import ObjectBase
 from ..node_generic import convert_to_node
 from ..._ctypes.ndarray import NDArrayBase
+from .object import ObjectBase, _set_class_object
+from . import object as _object
 
 ObjectHandle = ctypes.c_void_p
 
@@ -118,8 +120,20 @@ class FunctionBase(object):
                 else RETURN_SWITCH[ret_tcode.value](ret_val, args))
 
 
-_CLASS_OBJECT = None
+def __init_handle_by_constructor__(fconstructor, args):
+    """Initialize handle by constructor"""
+    temp_args = []
+    values, tcodes, num_args = _make_mxnet_args(args, temp_args)
+    ret_val = MXNetValue()
+    ret_tcode = ctypes.c_int()
+    if _LIB.MXNetFuncCall(
+            fconstructor.handle, values, tcodes, ctypes.c_int(num_args),
+            ctypes.byref(ret_val), ctypes.byref(ret_tcode)) != 0:
+        raise get_last_ffi_error()
+    _ = temp_args
+    _ = args
+    assert ret_tcode.value == TypeCode.OBJECT_HANDLE
+    handle = ret_val.v_handle
+    return handle
 
-def _set_class_object(obj_class):
-    global _CLASS_OBJECT
-    _CLASS_OBJECT = obj_class
+_object.__init_by_constructor__ = __init_handle_by_constructor__

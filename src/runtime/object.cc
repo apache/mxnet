@@ -84,6 +84,7 @@ class TypeContext {
                                       uint32_t num_child_slots,
                                       bool child_slots_can_overflow) {
     std::lock_guard<std::mutex> lock(mutex_);
+    std::cout << skey << std::endl;
     auto it = type_key2index_.find(skey);
     if (it != type_key2index_.end()) {
       return it->second;
@@ -211,5 +212,19 @@ uint32_t Object::TypeKey2Index(const std::string& key) {
 int MXNetObjectFree(MXNetObjectHandle obj) {
   API_BEGIN();
   mxnet::runtime::ObjectInternal::ObjectFree(obj);
+  API_END();
+}
+
+int MXNetObjectGetTypeIndex(MXNetObjectHandle obj, unsigned* out_tindex) {
+  API_BEGIN();
+  CHECK(obj != nullptr);
+  out_tindex[0] = static_cast<mxnet::runtime::Object*>(obj)->type_index();
+  API_END();
+}
+
+int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tindex) {
+  API_BEGIN();
+  out_tindex[0] = mxnet::runtime::ObjectInternal::ObjectTypeKey2Index(
+      type_key);
   API_END();
 }

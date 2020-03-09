@@ -25,14 +25,32 @@ from . import function
 from .types import RETURN_SWITCH, TypeCode
 
 ObjectHandle = ctypes.c_void_p
+__init_by_constructor__ = None
+
+"""Maps object type to its constructor"""
+OBJECT_TYPE = {}
+
+_CLASS_OBJECT = None
+
+def _set_class_object(object_class):
+    global _CLASS_OBJECT
+    _CLASS_OBJECT = object_class
+
+def _register_object(index, cls):
+    """register object class"""
+    # if issubclass(cls, NDArrayBase):
+    #     _register_ndarray(index, cls)
+    #     return
+    OBJECT_TYPE[index] = cls
 
 
 def _return_object(x):
     handle = x.v_handle
     if not isinstance(handle, ObjectHandle):
         handle = ObjectHandle(handle)
-    # Does not support specific cpp node class for now
-    cls = function._CLASS_OBJECT
+    tindex = ctypes.c_uint()
+    check_call(_LIB.MXNetObjectGetTypeIndex(handle, ctypes.byref(tindex)))
+    cls = OBJECT_TYPE.get(tindex.value, _CLASS_OBJECT)
     # Avoid calling __init__ of cls, instead directly call __new__
     # This allows child class to implement their own __init__
     obj = cls.__new__(cls)
@@ -50,4 +68,26 @@ class ObjectBase(object):
         if _LIB is not None:
             check_call(_LIB.MXNetObjectFree(self.handle))
 
-    # Does not support creation of cpp node class via python class
+    def __init_handle_by_constructor__(self, fconstructor, *args):
+        """Initialize the handle by calling constructor function.
+
+        Parameters
+        ----------
+        fconstructor : Function
+            Constructor function.
+
+        args: list of objects
+            The arguments to the constructor
+
+        Note
+        ----
+        We have a special calling convention to call constructor functions.
+        So the return handle is directly set into the Node object
+        instead of creating a new Node.
+        """
+        # assign handle first to avoid error raising
+        self.handle = None
+        handle = __init_by_constructor__(fconstructor, args)
+        if not isinstance(handle, ObjectHandle):
+            handle = ObjectHandle(handle)
+        self.handle = handle

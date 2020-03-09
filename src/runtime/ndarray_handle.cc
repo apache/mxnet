@@ -16,46 +16,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-/*
- * \file object_internal.h
- * \brief Expose a few functions for CFFI purposes.
- *        This file is not intended to be used
- */
-// Acknowledgement: This file originates from incubator-tvm
-#ifndef MXNET_RUNTIME_OBJECT_INTERNAL_H_
-#define MXNET_RUNTIME_OBJECT_INTERNAL_H_
 
+/*!
+ * \file src/api/ndarary_handle.cc
+ * \brief Implementations of NDArrayHandle
+ */
+#include <mxnet/runtime/ndarray_handle.h>
 #include <mxnet/runtime/object.h>
-#include <mxnet/runtime/c_runtime_api.h>
-#include <string>
+#include <mxnet/runtime/registry.h>
+#include <mxnet/runtime/packed_func.h>
 
 namespace mxnet {
 namespace runtime {
 
-/*!
- * \brief Internal object namespace to expose
- *        certain util functions for FFI.
- */
-class ObjectInternal {
- public:
-  /*!
-   * \brief Free an object handle.
-   */
-  static void ObjectFree(MXNetObjectHandle obj) {
-    if (obj != nullptr) {
-      static_cast<Object*>(obj)->DecRef();
-    }
-  }
-  /*!
-   * \brief Expose TypeKey2Index
-   * \param type_key The original type key.
-   * \return the corresponding index.
-   */
-  static uint32_t ObjectTypeKey2Index(const std::string& type_key) {
-    return Object::TypeKey2Index(type_key);
-  }
-};
+MXNET_REGISTER_GLOBAL("ndarray_handle._GetNDArrayHandleValue")
+.set_body([](MXNetArgs args, MXNetRetValue* rv) {
+  ObjectRef obj = args[0];
+  const auto& handle = Downcast<NDArrayHandle>(obj);
+  *rv = handle;
+});
+
+MXNET_REGISTER_OBJECT_TYPE(NDArrayHandleObj);
 
 }  // namespace runtime
 }  // namespace mxnet
-#endif   // MXNET_RUNTIME_OBJECT_INTERNAL_H_
