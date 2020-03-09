@@ -436,7 +436,8 @@ MXNET_REGISTER_API("_npi.arange")
     attrs.dict["ctx"] = args[4].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::RangeParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  SetAttrDict<op::RangeParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
@@ -458,7 +459,8 @@ MXNET_REGISTER_API("_npi.identity")
     attrs.dict["ctx"] = args[2].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  SetAttrDict<op::InitOpParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
