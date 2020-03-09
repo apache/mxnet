@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
@@ -496,6 +497,12 @@ struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
 
   bool operator==(const ExpandDimParam &other) const {
     return this->axis == other.axis;
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
   }
 };
 

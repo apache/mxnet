@@ -156,6 +156,11 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
                 " E.g `A = broadcast_to(B, shape=(10, 0, 0))` "
                 "has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s;
+    shape_s << shape;
+    (*dict)["shape"] = shape_s.str();
+  }
 };
 
 struct BroadcastLikeParam : public dmlc::Parameter<BroadcastLikeParam> {
