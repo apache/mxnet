@@ -26,6 +26,7 @@
 #include "../../utils.h"
 #include "../../../../operator/numpy/random/np_choice_op.h"
 #include <algorithm>
+#include <iostream>
 
 namespace mxnet {
 
@@ -33,21 +34,52 @@ MXNET_REGISTER_API("_npi.choice")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_choice");
+  const nnvm::Op* op_take = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
   op::NumpyChoiceParam param;
 
+  NDArray* in;
+
   if (args[0].type_code() == kDLInt) {
-    param.a = 100;
+    param.a = args[0].operator int();
+  } else if (args[0].type_code() == 11){
+    param.a = dmlc::optional<int64_t>();
+    in = args[0].operator mxnet::NDArray*();
   } else {
-    param.a = 100;
+    param.a = 5;
   }
 
-  // if (args[1].type_code() == kNull) {
-  //   param.size = 10;
-  // } else {
-  //   param.size = 10;
-  // }
+  std::cout<<args[0].type_code();
 
+  if (args[1].type_code() == kNull) {
+    param.size = mxnet::Tuple<int64_t>({10});
+  } else {
+    if (args[1].type_code() == kDLInt) {
+      param.size = mxnet::Tuple<int64_t>(1, args[1].operator int64_t());
+    } else {
+      param.size = mxnet::Tuple<int64_t>(args[1].operator ObjectRef());
+    }
+  }
+
+  if (args[2].type_code() == kNull) {
+    param.replace = true;
+  } else {
+    param.replace = args[2].operator bool();
+  }
+
+  if (args[3].type_code() == kNull) {
+    param.ctx = "cpu";
+  } else {
+    param.ctx = args[3].operator std::__cxx11::string();
+  }
+
+  if (args[4].type_code() == kNull) {
+    param.weighted = false;
+  } else {
+    param.weighted = args[4].operator bool();
+  }
+
+  NDArray** inputs = in == nullptr ? nullptr : &in;
   int num_input = 0;
   if (param.weighted) num_input += 1;
   if (!param.a.has_value()) num_input += 1;
@@ -61,8 +93,14 @@ MXNET_REGISTER_API("_npi.choice")
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, outputs);
-  *ret = ndoutputs[0];
+  auto ndoutputs = Invoke(op, &attrs, num_input, inputs, &num_outputs, outputs);
+  if (out) {
+    // PythonArg(n) designates the nth python argument is to be returned.
+    // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)
+    *ret = PythonArg(5);
+  } else {
+    *ret = ndoutputs[0];
+  }
 });
 
 }  // namespace mxnet

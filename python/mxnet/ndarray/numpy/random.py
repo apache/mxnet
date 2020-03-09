@@ -572,7 +572,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
 
 
 def choice_v2(a, size=None, replace=True, p=None, ctx=None, out=None):
-    return _api_internal.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
+    return _api_internal.choice(a, size, replace, ctx, False, out)
 
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
