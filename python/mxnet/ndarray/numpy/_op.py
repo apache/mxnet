@@ -1933,7 +1933,7 @@ def triu(m, k=0):
            [ 0,  8,  9],
            [ 0,  0, 12]])
     """
-    return _npi.triu(m, k)
+    return _api_internal.triu(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):

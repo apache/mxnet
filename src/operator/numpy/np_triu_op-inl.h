@@ -46,6 +46,12 @@ struct TriuParam : public dmlc::Parameter<TriuParam> {
                 "and k<0 for diagonals below the main diagonal. "
                 "If input has shape (S0 S1) k must be between -S0 and S1");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
+  }
 };
 
 inline bool TriuOpShape(const nnvm::NodeAttrs& attrs,
@@ -100,9 +106,9 @@ struct triu1Dbackward {
                                   mshadow::Shape<1> oshape, int k) {
     using namespace mxnet_op;
     auto m = oshape[0];
-    auto start = (i > k) ? (i - k) : 0;
+    auto start = i - k;
     DType res = 0;
-    for (auto y = start; y < m; y++) {
+    for (auto y = 0; y <= start && y < m; y++) {
       res += data[y * m + i];
     }
     KERNEL_ASSIGN(out[i], req, res);

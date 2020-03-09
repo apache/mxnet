@@ -92,7 +92,7 @@ struct tril1Dforward {
     }
   }
 };
-
+#include <cstdio>
 template<int req>
 struct tril1Dbackward {
   template<typename DType>
@@ -103,6 +103,7 @@ struct tril1Dbackward {
     auto start = (i > k) ? (i - k) : 0;
     DType res = 0;
     for (auto y = start; y < m; y++) {
+      printf("papi %d %f\n", y * m + i, float(data[y * m + i]));
       res += data[y * m + i];
     }
     KERNEL_ASSIGN(out[i], req, res);
