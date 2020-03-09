@@ -66,6 +66,20 @@ struct NumpyLaplaceParam : public dmlc::Parameter<NumpyLaplaceParam> {
             "DType of the output in case this can't be inferred. "
             "Defaults to float32 if not defined (dtype=None).");
   }
+
+  *void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream loc_s, scale_s, size_s, dtype_s;
+    loc_s << loc;
+    scale_s << scale;
+    size_s << size;
+    dtype_s << dtype;
+    (*dict)["loc"] = loc_s.str();
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["size"] = size_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
+    // Setting ctx here results in an error.
+  }
 };
 
 inline bool NumpyLaplaceOpType(const nnvm::NodeAttrs &attrs,
