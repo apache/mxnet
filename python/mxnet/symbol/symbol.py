@@ -44,6 +44,7 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
+from ..profiler import Scope
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -2742,7 +2743,7 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.backward, None)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
-        init=None, stype=None, **kwargs):
+        init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
     Example
@@ -2777,6 +2778,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         Initializer for this variable to (optionally) override the default initializer.
     stype : str
         The storage type of the variable, such as 'row_sparse', 'csr', 'default', etc
+    profiler_scope : str
+        The profiler scope for input variable.
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 
@@ -2812,6 +2815,12 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         attr['__init__'] = init
     if stype is not None:
         attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[stype])
+    if profiler_scope is not None:
+        attr['__profiler_scope__'] = profiler_scope
+    else:
+        if not hasattr(Scope._current, "value"):
+            Scope._current.value = Scope()
+        attr['__profiler_scope__'] = Scope._current.value.name
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

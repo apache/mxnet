@@ -294,5 +294,23 @@ void Profiler::SetContinuousProfileDump(bool continuous_dump, float delay_in_sec
   }
 }
 
+ProfilerScope* ProfilerScope::Get() {
+  static std::mutex mtx;
+  static std::shared_ptr<ProfilerScope> prof_scope = nullptr;
+  std::unique_lock<std::mutex> lk(mtx);
+  if (!prof_scope) {
+    prof_scope = std::make_shared<ProfilerScope>();
+  }
+  return prof_scope.get();
+}
+
+void ProfilerScope::SetCurrentProfilerScope(const std::string& scope) {
+  current_profiler_scope_ = scope;
+}
+
+std::string ProfilerScope::GetCurrentProfilerScope() const {
+  return current_profiler_scope_;
+}
+
 }  // namespace profiler
 }  // namespace mxnet

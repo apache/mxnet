@@ -304,7 +304,7 @@ def broadcast_to(array, shape):
     """
     if _np.isscalar(array):
         return full(shape, array)
-    return _npi.broadcast_to(array, shape)
+    return _api_internal.broadcast_to(array, shape)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1834,7 +1834,7 @@ def expand_dims(a, axis):
         Output array. The number of dimensions is one greater than that of
         the input array.
     """
-    return _npi.expand_dims(a, axis)
+    return _api_internal.expand_dims(a, axis)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1908,7 +1908,7 @@ def tril(m, k=0):
            [ 7.,  8.,  0.],
            [10., 11., 12.]])
     """
-    return _npi.tril(m, k)
+    return _api_internal.tril(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
@@ -6837,7 +6837,7 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
     >>> x = np.array([[1, 3, 6, 10], [0, 5, 6, 8]])
     >>> np.diff(x)
     array([[2, 3, 4],
-        [5, 1, 2]])
+           [5, 1, 2]])
     >>> np.diff(x, axis=0)
     array([[-1,  2,  0, -2]])
 
@@ -6847,7 +6847,7 @@ def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefin
     """
     if (prepend or append):
         raise NotImplementedError('prepend and append options are not supported yet')
-    return _npi.diff(a, n=n, axis=axis)
+    return _api_internal.diff(a, n, axis)
 
 
 @set_module('mxnet.ndarray.numpy')
