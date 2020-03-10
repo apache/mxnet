@@ -33,26 +33,58 @@ MXNET_REGISTER_API("_npi.geometric")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_geometric");
   nnvm::NodeAttrs attrs;
-  op::InitOpParam param;
-  if (args[0].type_code() == kDLInt) {
-    param.shape = TShape(1, args[0].operator int64_t());
+  op::NumpyLaplaceParam param;
+
+  NDArray* in = new NDArray();
+  int num_inputs = 0;
+
+  if (args[0].type_code() == kNull) {
+    param.prob = dmlc::nullopt;
+  } else if (args[0].type_code() == kNDArrayHandle){
+    param.prob = dmlc::nullopt;
+    in = args[0].operator mxnet::NDArray *();
+    num_inputs++;
   } else {
-    param.shape = TShape(args[0].operator ObjectRef());
+    param.prob = args[0].operator double();  // convert arg to T
   }
+
   if (args[1].type_code() == kNull) {
+    param.size = dmlc::nullopt;
+  } else {
+    if (args[1].type_code() == kDLInt) {
+      param.size = mxnet::Tuple<int>(1, args[1].operator int64_t());
+    } else {
+      param.size = mxnet::Tuple<int>(args[1].operator ObjectRef());
+    }
+  }
+
+  if (args[2].type_code() == kNull) {
     param.dtype = mshadow::kFloat32;
   } else {
-    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+    param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
   SetAttrDict<op::InitOpParam>(&attrs);
-  if (args[2].type_code() != kNull) {
-    attrs.dict["ctx"] = args[2].operator std::string();
+  if (args[3].type_code() != kNull) {
+    attrs.dict["ctx"] = args[3].operator std::string();
   }
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
+
+  NDArray** inputs = in == nullptr ? nullptr : &in;
+
+  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  // set the number of outputs provided by the `out` arugment
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    // PythonArg(n) designates the nth python argument is to be returned.
+    // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)
+    *ret = PythonArg(4);
+  } else {
+    *ret = ndoutputs[0];
+  }
+  delete [] inputs;
 });
 
 }  // namespace mxnet
