@@ -84,7 +84,6 @@ class TypeContext {
                                       uint32_t num_child_slots,
                                       bool child_slots_can_overflow) {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::cout << skey << std::endl;
     auto it = type_key2index_.find(skey);
     if (it != type_key2index_.end()) {
       return it->second;
