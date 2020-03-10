@@ -40,7 +40,7 @@ MXNET_REGISTER_API("_npi.laplace")
 
   if (args[0].type_code() == kNull) {
     param.loc = dmlc::nullopt;
-  } else if (args[0].type_code() == kNDArrayHandle){
+  } else if (args[0].type_code() == kNDArrayHandle) {
     param.loc = dmlc::nullopt;
     inputs[num_inputs] = args[0].operator mxnet::NDArray *();
     num_inputs++;
@@ -50,7 +50,7 @@ MXNET_REGISTER_API("_npi.laplace")
 
   if (args[1].type_code() == kNull) {
     param.scale = dmlc::nullopt;
-  } else if (args[1].type_code() == kNDArrayHandle){
+  } else if (args[1].type_code() == kNDArrayHandle) {
     param.scale = dmlc::nullopt;
     inputs[num_inputs] = args[1].operator mxnet::NDArray *();
     num_inputs++;
