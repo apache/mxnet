@@ -329,7 +329,10 @@ def test_batchnorm_relu_fusion():
                 super(BNNet, self).__init__()
                 self.fuse_relu = fuse_relu
                 with self.name_scope():
-                    self.bn = gluon.nn.BatchNorm(fuse_relu=self.fuse_relu)
+                    if self.fuse_relu:
+                        self.bn = gluon.nn.BatchNormReLU()
+                    else:
+                        self.bn = gluon.nn.BatchNorm()
                     self.relu = gluon.nn.Activation('relu')
 
             def forward(self, x):

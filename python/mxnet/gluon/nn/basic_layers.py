@@ -19,7 +19,7 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
-           'BatchNorm', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
+           'BatchNorm', 'BatchNormReLU', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
            'Flatten', 'Lambda', 'HybridLambda']
 import warnings
 import numpy as np
@@ -279,8 +279,9 @@ class Dropout(HybridBlock):
                         **self.__dict__)
 
 
-class BatchNorm(HybridBlock):
-    """Batch normalization layer (Ioffe and Szegedy, 2014).
+class _BatchNorm(HybridBlock):
+    """Abstract BatchNorm layer (private, used as implementation base).
+    Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalizes the input at each batch, i.e. applies a transformation
     that maintains the mean activation close to 0 and the activation
     standard deviation close to 1.
@@ -334,7 +335,7 @@ class BatchNorm(HybridBlock):
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
-        super(BatchNorm, self).__init__(**kwargs)
+        super(_BatchNorm, self).__init__(**kwargs)
         self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats}
         self.fuse_relu = fuse_relu
@@ -363,7 +364,7 @@ class BatchNorm(HybridBlock):
     def cast(self, dtype):
         if np.dtype(dtype).name == 'float16':
             dtype = 'float32'
-        super(BatchNorm, self).cast(dtype)
+        super(_BatchNorm, self).cast(dtype)
 
     def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
         batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
@@ -381,6 +382,129 @@ class BatchNorm(HybridBlock):
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
 
+class BatchNorm(_BatchNorm):
+    """Batch normalization layer (Ioffe and Szegedy, 2014).
+    Normalizes the input at each batch, i.e. applies a transformation
+    that maintains the mean activation close to 0 and the activation
+    standard deviation close to 1.
+
+    Parameters
+    ----------
+    axis : int, default 1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
+    fuse_relu: False
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
+                 use_global_stats=False, fuse_relu=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 running_mean_initializer='zeros', running_variance_initializer='ones',
+                 in_channels=0, **kwargs):
+        assert fuse_relu == False, "Please use BatchNormReLU with Relu fusion"
+        super(BatchNorm, self).__init__(
+            axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
+            use_global_stats=False, fuse_relu=False,
+            beta_initializer='zeros', gamma_initializer='ones',
+            running_mean_initializer='zeros', running_variance_initializer='ones',
+            in_channels=0, **kwargs)
+
+class BatchNormReLU(_BatchNorm):
+    """Batch normalization layer (Ioffe and Szegedy, 2014).
+    Normalizes the input at each batch, i.e. applies a transformation
+    that maintains the mean activation close to 0 and the activation
+    standard deviation close to 1.
+
+    Parameters
+    ----------
+    axis : int, default 1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
+    fuse_relu: True
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
+                 use_global_stats=False, fuse_relu=True,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 running_mean_initializer='zeros', running_variance_initializer='ones',
+                 in_channels=0, **kwargs):
+        assert fuse_relu == True, "Please use BatchNorm w/o Relu fusion"
+        super(BatchNormReLU, self).__init__(
+            axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
+            use_global_stats=False, fuse_relu=True,
+            beta_initializer='zeros', gamma_initializer='ones',
+            running_mean_initializer='zeros', running_variance_initializer='ones',
+            in_channels=0, **kwargs)
 
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors
