@@ -591,6 +591,12 @@ class GRUCell(HybridRecurrentCell):
     params : Parameter or None, default None
         Container for weight sharing between cells.
         Created if `None`.
+    activation : str, default 'tanh'
+        Activation type to use. See nd/symbol Activation
+        for supported types.
+    recurrent_activation : str, default 'sigmoid'
+        Activation type to use for the recurrent step. See nd/symbol Activation
+        for supported types.
 
 
     Inputs:
@@ -606,7 +612,8 @@ class GRUCell(HybridRecurrentCell):
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None):
+                 input_size=0, prefix=None, params=None, activation='tanh',
+                 recurrent_activation='sigmoid'):
         super(GRUCell, self).__init__(prefix=prefix, params=params)
         self._hidden_size = hidden_size
         self._input_size = input_size
@@ -622,6 +629,8 @@ class GRUCell(HybridRecurrentCell):
         self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
                                         init=h2h_bias_initializer,
                                         allow_deferred_init=True)
+        self._activation = activation
+        self._recurrent_activation = recurrent_activation
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -658,17 +667,20 @@ class GRUCell(HybridRecurrentCell):
         h2h_r, h2h_z, h2h = F.SliceChannel(h2h, num_outputs=3,
                                            name=prefix+'h2h_slice')
 
-        reset_gate = F.Activation(F.elemwise_add(i2h_r, h2h_r, name=prefix+'plus0'), act_type="sigmoid",
-                                  name=prefix+'r_act')
-        update_gate = F.Activation(F.elemwise_add(i2h_z, h2h_z, name=prefix+'plus1'), act_type="sigmoid",
-                                   name=prefix+'z_act')
-
-        next_h_tmp = F.Activation(F.elemwise_add(i2h,
-                                                 F.elemwise_mul(reset_gate, h2h, name=prefix+'mul0'),
-                                                 name=prefix+'plus2'),
-                                  act_type="tanh",
-                                  name=prefix+'h_act')
-
+        reset_gate = self._get_activation(F,
+                                          F.elemwise_add(i2h_r, h2h_r, name=prefix+'plus0'),
+                                          self._recurrent_activation,
+                                          name=prefix+'r_act')
+        update_gate = self._get_activation(F,
+                                           F.elemwise_add(i2h_z, h2h_z, name=prefix+'plus1'),
+                                           self._recurrent_activation,
+                                           name=prefix+'z_act')
+        next_h_tmp = self._get_activation(F,
+                                          F.elemwise_add(i2h,
+                                                         F.elemwise_mul(reset_gate, h2h, name=prefix+'mul0'),
+                                                         name=prefix+'plus2'),
+                                          self._activation,
+                                          name=prefix+'h_act')
         ones = F.ones_like(update_gate, name=prefix+"ones_like0")
         next_h = F.elemwise_add(F.elemwise_mul(F.elemwise_sub(ones, update_gate, name=prefix+'minus0'),
                                                next_h_tmp,

@@ -27,11 +27,11 @@
 #  Next modify the according entries, and then compile by
 #
 #  $ mkdir build; cd build
-#  $ cmake -C ../config.cmake ..
-#  $ cmake --build . --parallel 8
+#  $ cmake ..
+#  $ cmake --build .
 #
-# You can increase the --parallel 8 argument to match the number of processor
-# cores of your computer.
+# Specify `cmake --build . --parallel N` to set the number of parallel compilation jobs.
+# Default is derived from CPUs available.
 #
 #-------------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture")
 #---------------------------------------------
 # Common libraries
 #---------------------------------------------
-set(BLAS "open" CACHE STRING "BLAS Vendor")
+set(USE_BLAS "open" CACHE STRING "BLAS Vendor")
 
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")

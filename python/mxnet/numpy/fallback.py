@@ -20,7 +20,10 @@
 
 import numpy as onp
 
+
 __all__ = [
+    '__version__',
+    '_NoValue',
     'allclose',
     'alltrue',
     'apply_along_axis',
@@ -37,8 +40,8 @@ __all__ = [
     'cov',
     'digitize',
     'divmod',
+    'dtype',
     'extract',
-    'flatnonzero',
     'float_power',
     'frexp',
     'heaviside',
@@ -107,6 +110,8 @@ __all__ = [
     'vander',
 ]
 
+__version__ = onp.__version__
+_NoValue = onp._NoValue
 allclose = onp.allclose
 alltrue = onp.alltrue
 apply_along_axis = onp.apply_along_axis
@@ -123,8 +128,8 @@ count_nonzero = onp.count_nonzero
 cov = onp.cov
 digitize = onp.digitize
 divmod = onp.divmod
+dtype = onp.dtype
 extract = onp.extract
-flatnonzero = onp.flatnonzero
 float_power = onp.float_power
 frexp = onp.frexp
 heaviside = onp.heaviside

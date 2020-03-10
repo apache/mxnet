@@ -32,6 +32,7 @@ from .. import symbol, ndarray, initializer, np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
+from .. import profiler as _profiler
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
@@ -53,18 +54,24 @@ class _BlockScope(object):
 
     @staticmethod
     def create(prefix, params, hint):
-        """Creates prefix and params for new `Block`."""
+        """
+        Creates prefix, params, and profiler scope name for new `Block`.
+        The profiler scope is to support the GPU memory profiler.
+        """
         current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
                 if not hasattr(_name.NameManager._current, "value"):
                     _name.NameManager._current.value = _name.NameManager()
                 prefix = _name.NameManager._current.value.get(None, hint) + '_'
+            # replace the trailing underscore with colon
+            profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
+                                   else prefix) + ":"
             if params is None:
                 params = ParameterDict(prefix)
             else:
                 params = ParameterDict(params.prefix, params)
-            return prefix, params
+            return prefix, params, profiler_scope_name
 
         if prefix is None:
             count = current._counter.get(hint, 0)
@@ -75,7 +82,11 @@ class _BlockScope(object):
             params = ParameterDict(parent.prefix+prefix, parent._shared)
         else:
             params = ParameterDict(params.prefix, params)
-        return current._block.prefix+prefix, params
+        # replace the trailing underscore with colon
+        profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
+                               else prefix) + ":"
+        return current._block.prefix + prefix, params, \
+               current._block._profiler_scope_name + profiler_scope_name
 
     def __enter__(self):
         if self._block._empty_prefix:
@@ -84,6 +95,8 @@ class _BlockScope(object):
         _BlockScope._current.value = self
         self._name_scope = _name.Prefix(self._block.prefix)
         self._name_scope.__enter__()
+        self._profiler_scope = _profiler.Scope(self._block._profiler_scope_name)
+        self._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
@@ -91,6 +104,8 @@ class _BlockScope(object):
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
+        self._profiler_scope.__exit__(ptype, value, trace)
+        self._profiler_scope = None
         _BlockScope._current.value = self._old_scope
 
 
@@ -274,7 +289,8 @@ class Block(object):
     """
     def __init__(self, prefix=None, params=None):
         self._empty_prefix = prefix == ''
-        self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
+        self._prefix, self._params, self._profiler_scope_name = \
+                _BlockScope.create(prefix, params, self._alias())
         self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
         self._children = OrderedDict()
@@ -879,7 +895,7 @@ class HybridBlock(Block):
         self._callback = None
         self._monitor_all = False
         self._backend = None
-        self._backend_args = {}
+        self._backend_opts = {}
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -974,7 +990,7 @@ class HybridBlock(Block):
             arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
                          for name in out.list_arguments()]
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_args)
+            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_opts)
 
         self._cached_op = ndarray.CachedOp(out, flags)
 
@@ -1040,7 +1056,7 @@ class HybridBlock(Block):
         super(HybridBlock, self).register_child(block, name)
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_args=None, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1050,7 +1066,7 @@ class HybridBlock(Block):
             Whether to turn hybrid on or off.
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_args : dict of arguments, optional
+        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
@@ -1061,10 +1077,10 @@ class HybridBlock(Block):
         """
 
         self._backend = backend
-        if backend_args is not None:
-            assert isinstance(backend_args, dict), \
-            "HybridBlock hybridize requires backend_args to be a dictionary."
-            self._backend_args = backend_args
+        if backend_opts is not None:
+            assert isinstance(backend_opts, dict), \
+            "HybridBlock hybridize requires backend_opts to be a dictionary."
+            self._backend_opts = backend_opts
 
         self._active = active
         self._flags = list(kwargs.items())

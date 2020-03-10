@@ -41,10 +41,20 @@ void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
 const std::vector<std::string> kHiddenKeys = {
-  "ctx_group", "lr_mult", "wd_mult", "force_mirroring", "mirror_stage"
+  "ctx_group",
+  "lr_mult",
+  "wd_mult",
+  "force_mirroring",
+  "mirror_stage",
+  "profiler_scope"
 };
 const std::vector<std::string> kReplacedHiddenKeys = {
-  "__ctx_group__", "__lr_mult__", "__wd_mult__", "__force_mirroring__", "__mirror_stage__"
+  "__ctx_group__",
+  "__lr_mult__",
+  "__wd_mult__",
+  "__force_mirroring__",
+  "__mirror_stage__",
+  "__profiler_scope__"
 };
 const char *kNamespaceSeparator = "$";
 

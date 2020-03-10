@@ -221,6 +221,9 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
     logging.basicConfig(format='%(asctime)-15s %(message)s')
     logging.info("MXNet Windows build helper")
+    instance_info = ec2_instance_info()
+    if instance_info:
+        logging.info("EC2: %s", instance_info)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output",
