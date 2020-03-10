@@ -22,128 +22,45 @@
  * \file broadcast_reduce_norm_value.cc
  * \brief CPU Implementation of broadcast and reduce norm functions based on value.
  */
-
 #include "./broadcast_reduce_op.h"
-#include <x86intrin.h>
-#include <immintrin.h>
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(NormParam);
 
-// float Vector_Abs_Sum_Avx512(float* pin_data, size_t len) {
-//   assert (len > 16);
+bool supportFastLpNormCompute(const NormParam& param,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req) {
+  // check the axis = last dim
+  if (param.axis.has_value()) {
+    mxnet::TShape axes(param.axis.value());
+    if (!(axes.ndim() == 1 && (axes[0] == inputs[0].shape_.ndim() - 1 || axes[0] == -1))) {
+      return false;
+    }
+  }
 
-//   size_t stop = len - 16;
-//   float sum = 0.0;
-//   __m512 YMM2 = _mm512_setzero_ps();
-
-//   for (size_t i = 0; i <= stop; i += 16) {
-//     __m512 YMM0 = _mm512_loadu_ps(pin_data+i);
-//     __m512 YMM1 = _mm512_abs_ps(YMM0);
-//     YMM2 = _mm512_add_ps(YMM1, YMM2);
-//   }
-//   sum = _mm512_reduce_add_ps(YMM2);
-//   if(size_t remain = (len&0xf)) {
-//     size_t off = len - remain;
-//     // off = len - (len&0xffff);
-//     LOG(INFO) << "remain is  "<<remain<<"  "<< (len&0xf);
-//     for (size_t i=off; i< len; i++) {
-//       sum += std::abs(pin_data[i]);
-//     }
-//   }
-
-//   return sum;
-// }
-
-// float Vector_Abs_Sum_Avx256(float* pin_data, const size_t len, const float mask) {
-//   assert (len > 8);
-
-//   size_t stop = len - 8;
-//   float sum_each[8];
-//   size_t i = 0;
-//   __m256 YMM0;
-//   __m256 YMM1;
-//   __m256 YMM4;
-//   __m256 YMM5;
-//   __m256 YMM6 = _mm256_setzero_ps();
-//   __m256 YMM2 = _mm256_setzero_ps();
-//   __m256 YMM3 = _mm256_set1_ps(mask);
-//   for (i = 0; i <= stop; i += 16) {
-//     YMM0 = _mm256_loadu_ps(pin_data+i);
-//     YMM1 = _mm256_and_ps(YMM0, YMM3);
-//     YMM2 = _mm256_add_ps(YMM1, YMM2);
-//     YMM4 = _mm256_loadu_ps(pin_data+i+8);
-//     YMM5 = _mm256_and_ps(YMM4, YMM3);
-//     YMM6 = _mm256_add_ps(YMM6, YMM5);
-//   }
-//   YMM2 = _mm256_add_ps(YMM6, YMM2);
-// //  sum = _mm256_reduce_add_ps(YMM2);
-//   _mm256_storeu_ps(sum_each, YMM2);
-
-//   float sum = 0.0;
-//   for (size_t j = 0; j < 8; j++)
-//   {
-//     sum += sum_each[i];
-//   }
-  
-//   for (; i<len; i++) {
-//     LOG(INFO) << " i "<< i;
-//     sum += std::abs(pin_data[i]);
-//   }
-
-//   return sum;
-// }
-
-// bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
-//                          const std::vector<OpReqType>& req,
-//                          const std::vector<TBlob>& outputs,
-//                          int ord) {
-//   auto& in_data = inputs[0];
-//   int axis =  in_data.shape_.ndim() - 1;                
-//   auto& shape = in_data.shape_;
-//   const size_t in_size = shape.Size();
-//   float* pin_data = (float*)in_data.dptr<float>();
-
-//   const size_t last_dim = shape[axis];
-//   auto out_size = outputs[0].Size();
-//   float* pout_data = (float*)outputs[0].dptr<float>();
-
-//   // #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-//   // for (size_t i = 0; i < out_size; i++)
-//   // {
-//   //     pout_data[i] = 0;
-//   // }
-//   float mask_f;
-//   int* pmask = (int*)&mask_f;
-//   *pmask = 0x7fffffff;
-//   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-//   for(size_t i = 0; i < out_size; i++) {
-//       pout_data[i] = Vector_Abs_Sum_Avx256 (pin_data+i*last_dim, last_dim, mask_f);
-//   }
-//   return true;                  
-// }
+  if (param.ord == 1 && inputs[0].type_flag_ == mshadow::kFloat32
+      && param.keepdims == false && req[0] == kWriteTo) {
+    return true;
+  } else {
+    return false;
+  }
+}
 
 bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs,
                          int ord) {
   auto& in_data = inputs[0];
-  int axis =  in_data.shape_.ndim() - 1;                
+  int axis =  in_data.shape_.ndim() - 1;
   auto& shape = in_data.shape_;
-  float* pin_data = (float*)in_data.dptr<float>();
+  float* pin_data = static_cast<float*>(in_data.dptr<float>());
 
   const size_t last_dim = shape[axis];
   auto stride = outputs[0].Size();
-  float* pout_data = (float*)outputs[0].dptr<float>();
-
-  // #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  // for (size_t i = 0; i < stride; i++)
-  // {
-  //     pout_data[i] = 0;
-  // }
+  float* pout_data = static_cast<float*>(outputs[0].dptr<float>());
 
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for(size_t i = 0; i < stride; i++) {
+  for (size_t i = 0; i < stride; i++) {
     int idx = i*last_dim;
     float sum = 0.0;
     for (size_t j = 0; j < last_dim; j++) {
@@ -152,42 +69,41 @@ bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
     }
     pout_data[i] = sum;
   }
-  // #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  // for(size_t i = 0; i < stride; i++) {
-  //   for (size_t j = 0; j < last_dim; j++) {
-  //     const int idx = i*last_dim + j;
-  //     pout_data[i] += pin_data[idx] > 0 ? pin_data[idx] : -pin_data[idx];
-  //   }
-  // }
-  return true;                  
+  return true;
+}
+
+void LpNormComputeCpu(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  if (supportFastLpNormCompute(param, inputs, req)) {
+    MKLDNNLpNormCompute(inputs, req, outputs, param.ord);
+  } else {
+    LpNormCompute<cpu>(attrs, ctx, inputs, req, outputs);
+  }
+  return;
 }
 
 bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
                              const std::vector<OpReqType>& req,
                              const std::vector<TBlob>& outputs,
                              int ord) {
-                           
   auto&  in_grad = inputs[0];
   auto&  in_data = inputs[1];
   auto shape = in_grad.shape_;
   const size_t stride = shape.Size();
-  float* pin_grad = (float*)in_grad.dptr<float>();
-  float* psrc_data = (float*)in_data.dptr<float>();
+  float* pin_grad = static_cast<float*>(in_grad.dptr<float>());
+  float* psrc_data = static_cast<float*>(in_data.dptr<float>());
 
   auto&  out_grad = outputs[0];
-  int axis =  out_grad.shape_.ndim() - 1;                
+  int axis =  out_grad.shape_.ndim() - 1;
   const size_t last_dim = out_grad.shape_[axis];
-  auto oSize = out_grad.Size();
-  float* pout_grad = (float*)out_grad.dptr<float>();
-
-  // #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  // for(size_t i = 0; i < oSize; i++) {
-  //     int idx = i/last_dim;
-  //     pout_grad[i] = psrc_data[i] >0 ? pin_grad[idx] : -pin_grad[idx];
-  // }
+  float* pout_grad = static_cast<float*>(out_grad.dptr<float>());
 
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for(size_t i = 0; i < stride; i++) {
+  for (size_t i = 0; i < stride; i++) {
     int idx = i*last_dim;
     float in_grad_val = pin_grad[i];
     for (size_t j = 0; j < last_dim; j++) {
@@ -195,14 +111,21 @@ bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
       idx++;
     }
   }
-  // #pragma omp parallel for collapse(2) num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  // for(size_t i = 0; i < stride; i++) {
-  //   for (size_t j = 0; j < last_dim; j++) {
-  //     int idx = i*last_dim + j;
-  //     pout_grad[idx] = psrc_data[idx] >0 ? pin_grad[i] : -pin_grad[i];
-  //   }
-  // }
-  return true;                  
+  return true;
+}
+
+void LpNormGradComputeCpu(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  if (supportFastLpNormCompute(param, inputs, req)) {
+    MKLDNNLpNormGradCompute(inputs, req, outputs, param.ord);
+  }  else {
+    LpNormGradCompute<cpu>(attrs, ctx, inputs, req, outputs);
+  }
+  return;
 }
 
 template<>
@@ -211,9 +134,6 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
                           const std::vector<NDArray>& inputs,
                           const std::vector<OpReqType>& req,
                           const std::vector<NDArray>& outputs) {
-  struct timeval start,stop;
-  gettimeofday(&start,NULL);
-
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
@@ -235,9 +155,6 @@ void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
-   gettimeofday(&stop,NULL);
-   LOG(INFO)<<inputs[0].shape()<< " oshape "<< outputs[0].shape()<< "L2Ex cost time  ms "<<(stop.tv_sec-start.tv_sec)*1000+(stop.tv_usec-start.tv_usec)/1000.0 ;
-
 }
 
 NNVM_REGISTER_OP(norm)
@@ -282,7 +199,7 @@ Examples::
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", LpNormComputeCpu)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(NormParam::__FIELDS__());
@@ -296,7 +213,7 @@ NNVM_REGISTER_OP(_backward_norm)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", LpNormGradCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", LpNormGradComputeCpu);
 
 
 }  // namespace op
