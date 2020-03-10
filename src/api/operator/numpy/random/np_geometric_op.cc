@@ -84,7 +84,6 @@ MXNET_REGISTER_API("_npi.geometric")
   } else {
     *ret = ndoutputs[0];
   }
-  delete [] inputs;
 });
 
 }  // namespace mxnet
