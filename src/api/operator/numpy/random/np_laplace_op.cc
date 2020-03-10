@@ -94,7 +94,6 @@ MXNET_REGISTER_API("_npi.laplace")
   } else {
     *ret = ndoutputs[0];
   }
-  delete [] inputs;
 });
 
 }  // namespace mxnet
