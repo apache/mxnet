@@ -35,19 +35,25 @@ MXNET_REGISTER_API("_npi.laplace")
   nnvm::NodeAttrs attrs;
   op::NumpyLaplaceParam param;
 
-  NDArray* in;
+  NDArray** inputs = new NDArray*[2]();
+  int num_inputs = 0;
 
   if (args[0].type_code() == kNull) {
     param.loc = dmlc::nullopt;
-  } else if (args[0].type_code() == kDLInt) {
-    param.loc = args[0].operator double();  // convert arg to T
   } else if (args[0].type_code() == kNDArrayHandle){
     param.loc = dmlc::nullopt;
-    in = args[0].operator mxnet::NDArray *();
+    inputs[num_inputs] = args[0].operator mxnet::NDArray *();
+    num_inputs++;
+  } else {
+    param.loc = args[0].operator double();  // convert arg to T
   }
 
   if (args[1].type_code() == kNull) {
     param.scale = dmlc::nullopt;
+  } else if (args[1].type_code() == kNDArrayHandle){
+    param.scale = dmlc::nullopt;
+    inputs[num_inputs] = args[1].operator mxnet::NDArray *();
+    num_inputs++;
   } else {
     param.scale = args[1].operator double();  // convert arg to T
   }
@@ -74,11 +80,7 @@ MXNET_REGISTER_API("_npi.laplace")
     attrs.dict["ctx"] = args[3].operator std::string();
   }
 
-  int num_inputs = 2;
-  if (param.loc.has_value()) num_inputs -= 1;
-  if (param.scale.has_value()) num_inputs -= 1;
-
-  NDArray** inputs = in == nullptr ? nullptr : &in;
+  inputs = inputs == nullptr ? nullptr : inputs;
 
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
@@ -92,6 +94,7 @@ MXNET_REGISTER_API("_npi.laplace")
   } else {
     *ret = ndoutputs[0];
   }
+  delete [] inputs;
 });
 
 }  // namespace mxnet

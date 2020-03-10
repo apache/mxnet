@@ -1036,27 +1036,6 @@ def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized Laplace distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
-    if size == ():
-        size = None
-    if input_type == (True, True):
-        return _npi.laplace(loc, scale, loc=None, scale=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (False, True):
-        return _npi.laplace(scale, loc=loc, scale=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (True, False):
-        return _npi.laplace(loc, loc=None, scale=scale, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    else:
-        return _npi.laplace(loc=loc, scale=scale, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-
-
-def laplace_v2(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     return _api_internal.laplace(loc, scale, size, dtype, ctx, out)
