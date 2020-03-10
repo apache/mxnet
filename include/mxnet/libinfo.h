@@ -55,6 +55,10 @@
 #define MXNET_USE_CUDNN MSHADOW_USE_CUDNN
 #endif
 
+#ifndef MXNET_USE_NVML
+#define MXNET_USE_NVML 0
+#endif
+
 #ifndef MXNET_USE_NCCL
 #define MXNET_USE_NCCL 0
 #endif

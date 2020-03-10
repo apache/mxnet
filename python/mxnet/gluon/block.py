@@ -32,6 +32,7 @@ from .. import symbol, ndarray, initializer, np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
+from .. import profiler as _profiler
 from .parameter import Parameter, ParameterDict, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
@@ -53,18 +54,24 @@ class _BlockScope(object):
 
     @staticmethod
     def create(prefix, params, hint):
-        """Creates prefix and params for new `Block`."""
+        """
+        Creates prefix, params, and profiler scope name for new `Block`.
+        The profiler scope is to support the GPU memory profiler.
+        """
         current = getattr(_BlockScope._current, "value", None)
         if current is None:
             if prefix is None:
                 if not hasattr(_name.NameManager._current, "value"):
                     _name.NameManager._current.value = _name.NameManager()
                 prefix = _name.NameManager._current.value.get(None, hint) + '_'
+            # replace the trailing underscore with colon
+            profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
+                                   else prefix) + ":"
             if params is None:
                 params = ParameterDict(prefix)
             else:
                 params = ParameterDict(params.prefix, params)
-            return prefix, params
+            return prefix, params, profiler_scope_name
 
         if prefix is None:
             count = current._counter.get(hint, 0)
@@ -75,7 +82,11 @@ class _BlockScope(object):
             params = ParameterDict(parent.prefix+prefix, parent._shared)
         else:
             params = ParameterDict(params.prefix, params)
-        return current._block.prefix+prefix, params
+        # replace the trailing underscore with colon
+        profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
+                               else prefix) + ":"
+        return current._block.prefix + prefix, params, \
+               current._block._profiler_scope_name + profiler_scope_name
 
     def __enter__(self):
         if self._block._empty_prefix:
@@ -84,6 +95,8 @@ class _BlockScope(object):
         _BlockScope._current.value = self
         self._name_scope = _name.Prefix(self._block.prefix)
         self._name_scope.__enter__()
+        self._profiler_scope = _profiler.Scope(self._block._profiler_scope_name)
+        self._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
@@ -91,6 +104,8 @@ class _BlockScope(object):
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
+        self._profiler_scope.__exit__(ptype, value, trace)
+        self._profiler_scope = None
         _BlockScope._current.value = self._old_scope
 
 
@@ -274,7 +289,8 @@ class Block(object):
     """
     def __init__(self, prefix=None, params=None):
         self._empty_prefix = prefix == ''
-        self._prefix, self._params = _BlockScope.create(prefix, params, self._alias())
+        self._prefix, self._params, self._profiler_scope_name = \
+                _BlockScope.create(prefix, params, self._alias())
         self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
         self._scope = _BlockScope(self)
         self._children = OrderedDict()
