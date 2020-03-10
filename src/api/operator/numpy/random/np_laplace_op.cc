@@ -34,10 +34,16 @@ MXNET_REGISTER_API("_npi.laplace")
   const nnvm::Op* op = Op::Get("_npi_laplace");
   nnvm::NodeAttrs attrs;
   op::NumpyLaplaceParam param;
+
+  NDArray* in;
+
   if (args[0].type_code() == kNull) {
     param.loc = dmlc::nullopt;
-  } else {
+  } else if (args[0].type_code() == kDLInt) {
     param.loc = args[0].operator double();  // convert arg to T
+  } else if (args[0].type_code() == kNDArrayHandle){
+    param.loc = dmlc::nullopt;
+    in = args[0].operator mxnet::NDArray *();
   }
 
   if (args[1].type_code() == kNull) {
@@ -50,9 +56,9 @@ MXNET_REGISTER_API("_npi.laplace")
     param.size = dmlc::nullopt;
   } else {
     if (args[2].type_code() == kDLInt) {
-      param.size = Tuple<int64_t>(1, args[2].operator int64_t());
+      param.size = mxnet::Tuple<int>(1, args[2].operator int64_t());
     } else {
-      param.size = Tuple<int64_t>(args[2].operator ObjectRef());
+      param.size = mxnet::Tuple<int>(args[2].operator ObjectRef());
     }
   }
 
@@ -68,11 +74,17 @@ MXNET_REGISTER_API("_npi.laplace")
     attrs.dict["ctx"] = args[3].operator std::string();
   }
 
+  int num_inputs = 2;
+  if (param.loc.has_value()) num_inputs -= 1;
+  if (param.scale.has_value()) num_inputs -= 1;
+
+  NDArray** inputs = in == nullptr ? nullptr : &in;
+
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   // set the number of outputs provided by the `out` arugment
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, outputs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
     // PythonArg(n) designates the nth python argument is to be returned.
     // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)

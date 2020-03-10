@@ -20,6 +20,7 @@ import numpy as np
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
+from . import _api_internal
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
@@ -1055,3 +1056,7 @@ def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     else:
         return _npi.laplace(loc=loc, scale=scale, size=size,
                             ctx=ctx, dtype=dtype, out=out)
+
+
+def laplace_v2(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    return _api_internal.laplace(loc, scale, size, dtype, ctx, out)
