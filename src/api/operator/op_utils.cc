@@ -24,6 +24,7 @@
 
 #include "op_utils.h"
 #include <mxnet/base.h>
+#include "../../operator/numpy/np_percentile_op-inl.h"
 
 namespace mxnet {
 
@@ -47,6 +48,26 @@ std::string String2MXNetTypeWithBool(int dtype) {
       return "bool";
     default:
       LOG(FATAL) << "Unknown type enum " << dtype;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return "";
+}
+
+std::string MXNetPercentileType2String(int interpolation) {
+  using namespace op;
+  switch (interpolation) {
+    case percentile_enum::kLinear:
+      return "linear";
+    case percentile_enum::kLower:
+      return "lower";
+    case percentile_enum::kHigher:
+      return "higher";
+    case percentile_enum::kMidpoint:
+      return "midpoint";
+    case percentile_enum::kNearest:
+      return "nearest";
+    default:
+      LOG(FATAL) << "Unknown type enum " << interpolation;
   }
   LOG(FATAL) << "should not reach here ";
   return "";
