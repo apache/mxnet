@@ -40,7 +40,7 @@ MXNET_REGISTER_API("_npi.geometric")
 
   if (args[0].type_code() == kNull) {
     param.prob = dmlc::nullopt;
-  } else if (args[0].type_code() == kNDArrayHandle){
+  } else if (args[0].type_code() == kNDArrayHandle) {
     param.prob = dmlc::nullopt;
     in = args[0].operator mxnet::NDArray *();
     num_inputs++;
