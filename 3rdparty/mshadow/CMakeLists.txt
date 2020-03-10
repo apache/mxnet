@@ -1,6 +1,80 @@
-cmake_minimum_required(VERSION 2.8.7)
-
+cmake_minimum_required(VERSION 3.13)
 project(mshadow C CXX)
 
+include(CMakeDependentOption)
+option(USE_CUDA "Build with CUDA support" ON)
+option(USE_CUDNN ON)
+cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
+option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
+option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
+option(MSHADOW_IN_CXX11 ON)
+
+add_library(mshadow INTERFACE)
+file(GLOB_RECURSE MSHADOWSOURCE "mshadow/*.h")
+target_include_directories(mshadow INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_sources(mshadow INTERFACE ${MSHADOWSOURCE})
+if(UNIX)
+  target_compile_options(mshadow INTERFACE
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
+endif()
+
+if(USE_CUDA)
+  enable_language(CUDA)
+  file(GLOB_RECURSE MSHADOW_CUDASOURCE "mshadow/*.cuh")
+  target_sources(mshadow INTERFACE ${MSHADOW_CUDASOURCE})
+  target_compile_definitions(mshadow INTERFACE MSHADOW_USE_CUDA=1
+    MSHADOW_FORCE_STREAM)
+else()
+  target_compile_definitions(mshadow INTERFACE MSHADOW_USE_CUDA=0)
+endif()
+if(USE_SSE)
+  # For cross compilation, we can't rely on the compiler checks, but mshadow
+  # will add platform specific includes not available in other arches
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag("-msse3" SUPPORT_MSSE3)
+  check_cxx_compiler_flag("-msse2" SUPPORT_MSSE2)
+  if(SUPPORT_MSSE3)
+    target_compile_definitions(mshadow INTERFACE MSHADOW_USE_SSE)
+    target_compile_options(mshadow INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-msse3>)
+  elseif(SUPPORT_MSSE2)
+    target_compile_definitions(mshadow INTERFACE MSHADOW_USE_SSE)
+    target_compile_options(mshadow INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-msse2>)
+  else()
+    target_compile_definitions(mshadow INTERFACE MSHADOW_USE_SSE=0)
+  endif()
+else()
+  target_compile_definitions(mshadow INTERFACE MSHADOW_USE_SSE=0)
+endif()
+if(USE_CUDNN)
+  target_compile_definitions(mshadow INTERFACE MSHADOW_USE_CUDNN)
+endif()
+if(MSHADOW_IN_CXX11)
+  target_compile_definitions(mshadow INTERFACE MSHADOW_IN_CXX11)
+endif()
+if(USE_F16C)
+  # Determine if hardware supports F16C instruction set
+  message(STATUS "Determining F16C support")
+  include(cmake/AutoDetectF16C.cmake)
+  if(SUPPORT_F16C)
+    target_compile_options(mshadow INTERFACE $<$<COMPILE_LANGUAGE:CXX>:-mf16c>)
+  else()
+    target_compile_definitions(mshadow INTERFACE MSHADOW_USE_F16C=0)
+  endif()
+else()
+  target_compile_definitions(mshadow INTERFACE MSHADOW_USE_F16C=0)
+endif()
+if(USE_INT64_TENSOR_SIZE)
+  message(STATUS "Using 64-bit integer for tensor size")
+  target_compile_definitions(mshadow INTERFACE MSHADOW_INT64_TENSOR_SIZE=1)
+else()
+  target_compile_definitions(mshadow INTERFACE MSHADOW_INT64_TENSOR_SIZE=0)
+endif()
+
 set(mshadow_LINT_DIRS mshadow mshadow-ps)
-add_custom_target(mshadow_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS} -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mshadow -P ${PROJECT_SOURCE_DIR}/../dmlc-core/cmake/lint.cmake)
+find_package(Python3)
+add_custom_target(mshadow_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC}
+  -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
+  -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mshadow
+  -P ${PROJECT_SOURCE_DIR}/../dmlc-core/cmake/lint.cmake)

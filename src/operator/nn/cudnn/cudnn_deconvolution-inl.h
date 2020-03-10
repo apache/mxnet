@@ -696,7 +696,7 @@ class CuDNNDeconvolutionOp {
 
   // Converts a TBlob to a dptr, checking for the expected dim and that it's contiguous.
   DType *GetNdPtr(const TBlob& tb, int dim, Stream<gpu> *s) {
-    DType *data_ptr = NULL;
+    DType *data_ptr = nullptr;
     if (dim == 3) {
       Tensor<gpu, 3, DType> data = tb.get<gpu, 3, DType>(s);
       CHECK_EQ(data.CheckContiguous(), true);
@@ -763,8 +763,11 @@ class CuDNNDeconvolutionOp {
   // cudaMalloc() calls by (say) cudnnFind().  `elements` spec the alloc size in DTypes, not bytes.
   void ReserveElements(const std::vector<size_t> &elements) {
     std::vector<Storage::Handle> handles;
-    for (size_t alloc_element : elements)
+    for (size_t alloc_element : elements) {
         handles.push_back(Storage::Get()->Alloc(alloc_element * sizeof(DType), Context::GPU()));
+        handles.back().profiler_scope = "<ephemeral>:";
+        handles.back().name = "reserve_elements";
+    }
     for (auto &handle : handles)
         Storage::Get()->DirectFree(handle);
   }

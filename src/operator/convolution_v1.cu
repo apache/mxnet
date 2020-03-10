@@ -37,7 +37,7 @@ Operator* CreateOp<gpu>(ConvolutionV1Param param, int dtype,
                         mxnet::ShapeVector *in_shape,
                         mxnet::ShapeVector *out_shape,
                         Context ctx) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new ConvolutionV1Op<gpu, DType>(param);
   })

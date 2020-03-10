@@ -28,9 +28,11 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -56,21 +58,32 @@ struct CumsumParam : public dmlc::Parameter<CumsumParam> {
                 " unless a has an integer dtype with a precision less than that of the"
                 " default platform integer. In that case, the default platform integer is used.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s;
+    axis_s << axis;
+    dtype_s << dtype;
+    (*dict)["axis"] = axis_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = String2MXNetTypeWithBool(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+  }
 };
 
 struct cumsum_forward {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   OType *out,
                                   const IType *in,
-                                  const int middle,
-                                  const int trailing) {
-    int left = i / trailing, right = i % trailing;
-    int offset = left * middle * trailing + right;
+                                  const index_t middle,
+                                  const index_t trailing) {
+    index_t left = i / trailing, right = i % trailing;
+    index_t offset = left * middle * trailing + right;
     const IType *lane_in = in + offset;
     OType *lane_out = out + offset;
     lane_out[0] = OType(lane_in[0]);
-    for (int j = 1; j < middle; ++j) {
+    for (index_t j = 1; j < middle; ++j) {
       lane_out[j * trailing] = lane_out[(j - 1) * trailing] + OType(lane_in[j * trailing]);
     }
   }
@@ -125,17 +138,17 @@ void CumsumForward(const nnvm::NodeAttrs& attrs,
 
 struct cumsum_backward {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   IType *igrad,
                                   const OType *ograd,
-                                  const int middle,
-                                  const int trailing) {
-    int left = i / trailing, right = i % trailing;
-    int offset = left * middle * trailing + right;
+                                  const index_t middle,
+                                  const index_t trailing) {
+    index_t left = i / trailing, right = i % trailing;
+    index_t offset = left * middle * trailing + right;
     const OType *lane_ograd = ograd + offset;
     IType *lane_igrad = igrad + offset;
     lane_igrad[(middle - 1) * trailing] = IType(lane_ograd[(middle - 1) * trailing]);
-    for (int j = middle - 2; j >= 0; --j) {
+    for (index_t j = middle - 2; j >= 0; --j) {
       lane_igrad[j * trailing] = lane_igrad[(j + 1) * trailing] + IType(lane_ograd[j * trailing]);
     }
   }

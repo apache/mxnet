@@ -347,6 +347,12 @@ struct mixed_rpower {
 };
 #endif
 
+
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#pragma GCC diagnostic ignored "-Wbool-compare"
+#endif
 MXNET_BINARY_MATH_OP_NC_WITH_BOOL(mul, a * b);
 
 MXNET_BINARY_MATH_OP_NC_WITH_BOOL(div, a / b);
@@ -354,6 +360,7 @@ MXNET_BINARY_MATH_OP_NC_WITH_BOOL(div, a / b);
 MXNET_BINARY_MATH_OP_NC_WITH_BOOL(plus, a + b);
 
 MXNET_BINARY_MATH_OP_NC_WITH_BOOL(minus, a - b);
+#pragma GCC diagnostic pop
 
 MXNET_UNARY_MATH_OP(negation, -a);
 
@@ -682,6 +689,51 @@ struct fix : public mxnet_op::tunable {
     return DType((floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil);
   }
 };
+
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wbool-compare"
+#endif
+/*! \brief used to determine whether a number is Not A Number*/
+struct isnan : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsNan(a);
+  }
+};
+
+/*! \brief used to determine whether a number is infinite*/
+struct isinf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a);
+  }
+};
+
+/*! \brief used to determine whether a number is finite*/
+struct isfinite : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return !IsNan(a) && !IsInf(a);
+  }
+};
+
+/*! \brief used to determine whether a number is positive infinity*/
+struct isposinf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a) && a > 0;
+  }
+};
+
+/*! \brief used to determine whether a number is negative infinity*/
+struct isneginf : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return IsInf(a) && a < 0;
+  }
+};
+#pragma GCC diagnostic pop
 
 /*! \brief used for generate gradient of MAE loss*/
 MXNET_BINARY_MATH_OP_NC(minus_sign, a - b > DType(0) ? DType(1) : -DType(1));
@@ -1261,7 +1313,12 @@ struct nrm2 {
   /*! \brief finalize reduction result */
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& sum_of_squares, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     sum_of_squares = scale * math::sqrt(sum_of_squares);
+#pragma GCC diagnostic pop
   }
   /*!
    *\brief calculate gradient of redres with respect to redsrc,
@@ -1355,6 +1412,11 @@ struct nanprod_grad : public mxnet_op::tunable {
   }
 };
 
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#pragma GCC diagnostic ignored "-Wbool-compare"
+#endif
 /*! \brief used for computing binary lowest common multiple */
 struct lcm : public mxnet_op::tunable {
   template<typename DType>
@@ -1396,6 +1458,7 @@ struct lcm : public mxnet_op::tunable {
     return DType(0.0f);
   }
 };
+#pragma GCC diagnostic pop
 
 }  // namespace mshadow_op
 }  // namespace op

@@ -19,8 +19,6 @@
 # pylint: disable=wildcard-import, unused-wildcard-import, too-many-lines
 """Sparse NDArray API of MXNet."""
 
-from __future__ import absolute_import
-from __future__ import division
 try:
     from __builtin__ import slice as py_slice
     from __builtin__ import sum as py_sum

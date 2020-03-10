@@ -30,11 +30,11 @@ $JULIA = "$JULIA_DIR\bin\julia"
 # Download most recent Julia Windows binary
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 (New-Object System.Net.WebClient).DownloadFile($env:JULIA_URL, "julia-binary.exe")
-if (! $?) { Throw ("Error on downloading Julia Windows binary") }
+if ($LastExitCode -ne 0) { Throw ("Error on downloading Julia Windows binary") }
 
 # Run installer silently, output to C:\julia07\julia
 Start-Process -Wait "julia-binary.exe" -ArgumentList "/S /D=$JULIA_DIR"
-if (! $?) { Throw ("Error on installing Julia") }
+if ($LastExitCode -ne 0) { Throw ("Error on installing Julia") }
 
 & $JULIA -e "using InteractiveUtils; versioninfo()"
 

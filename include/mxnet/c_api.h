@@ -322,6 +322,13 @@ MXNET_DLL int MXSetProcessProfilerState(int state, int profile_process,
 MXNET_DLL int MXSetProfilerState(int state);
 
 /*!
+ * \brief Set the scope of profiler for current process
+ * \param scope indicate the working scope of profiler
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerScope(const char* scope);
+
+/*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
  * \param profile_process an int,
@@ -1752,7 +1759,7 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
  * \brief DEPRECATED. Use MXSymbolInferShapeEx instead.
  * infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1790,7 +1797,7 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
@@ -1829,7 +1836,7 @@ MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  * \param sym symbol handle
@@ -1871,7 +1878,7 @@ MXNET_DLL int MXSymbolInferShapeEx64(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1911,7 +1918,7 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  *
@@ -1953,7 +1960,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  *
@@ -1993,7 +2000,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx64(SymbolHandle sym,
 /*!
  * \brief infer type of unknown input types given the known one.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -2025,7 +2032,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  *
  *  Return partially inferred results if not all types could be inferred.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.

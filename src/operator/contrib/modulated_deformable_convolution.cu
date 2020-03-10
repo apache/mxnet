@@ -36,7 +36,7 @@ namespace op {
     std::vector<TShape> *in_shape,
     std::vector<TShape> *out_shape,
     Context ctx) {
-    Operator *op = NULL;
+    Operator *op = nullptr;
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new ModulatedDeformableConvolutionOp<gpu, DType>(param);
     })

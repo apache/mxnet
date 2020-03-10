@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=unnecessary-pass
 """Data iterators for common data formats."""
-from __future__ import absolute_import
 from collections import namedtuple
 
 import sys

@@ -18,12 +18,15 @@
 from __future__ import print_function
 import time
 import os
+import csv
 import json
 import unittest
+import numpy as np
 from collections import OrderedDict
 
 import mxnet as mx
 from mxnet import profiler
+from mxnet.gluon import nn
 from common import run_in_spawned_process
 
 
@@ -34,8 +37,7 @@ def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate
                         profile_api=True,
                         filename=profile_filename,
                         continuous_dump=continuous_dump,
-                        aggregate_stats=aggregate_stats
-                        )
+                        aggregate_stats=aggregate_stats)
     if run is True:
         profiler.set_state('run')
 
@@ -457,6 +459,156 @@ def test_custom_operator_profiling_naive_engine():
     run_in_spawned_process(custom_operator_profiling_multiple_custom_ops, \
             {'MXNET_ENGINE_TYPE' : "NaiveEngine"}, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
+
+
+@unittest.skipIf(mx.context.num_gpus() == 0, "GPU memory profiler records allocation on GPUs only")
+def test_gpu_memory_profiler_symbolic():
+    iter_num = 5
+
+    enable_profiler('test_profiler.json', False, False)
+    profiler.set_state('run')
+
+    with profiler.Scope("tensordot"):
+        A = mx.sym.Variable('A')
+        B = mx.sym.Variable('B')
+        C = mx.symbol.dot(A, B, name='dot')
+
+    executor = C.simple_bind(mx.gpu(), 'write', A=(4096, 4096), B=(4096, 4096))
+
+    a = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
+    b = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
+
+    a.copyto(executor.arg_dict['A'])
+    b.copyto(executor.arg_dict['B'])
+
+    for i in range(iter_num):
+        executor.forward()
+        c = executor.outputs[0]
+        mx.nd.waitall()
+    profiler.set_state('stop')
+    profiler.dump(True)
+
+    expected_alloc_entries = [
+            {'Attribute Name' : 'tensordot:in_arg:A',
+             'Requested Size' : str(4 * a.size)},
+            {'Attribute Name' : 'tensordot:in_arg:B',
+             'Requested Size' : str(4 * b.size)},
+            {'Attribute Name' : 'tensordot:arg_grad:A',
+             'Requested Size' : str(4 * a.size)},
+            {'Attribute Name' : 'tensordot:arg_grad:B',
+             'Requested Size' : str(4 * b.size)},
+            {'Attribute Name' : 'tensordot:dot',
+             'Requested Size' : str(4 * c.size)},
+            {'Attribute Name' : 'tensordot:dot_head_grad',
+             'Requested Size' : str(4 * c.size)}]
+
+    # Sample gpu_memory_profile.csv:
+    # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
+    # "tensordot:arg_grad:A","67108864","0","67108864","0"
+    # "tensordot:arg_grad:B","67108864","0","67108864","0"
+    # "tensordot:dot","67108864","0","67108864","0"
+    # "tensordot:dot_head_grad","67108864","0","67108864","0"
+    # "tensordot:in_arg:A","67108864","0","67108864","0"
+    # "tensordot:in_arg:B","67108864","0","67108864","0"
+
+    with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        for expected_alloc_entry in expected_alloc_entries:
+            csv_file.seek(0)
+            entry_found = False
+            for row in csv_reader:
+                if row['Attribute Name'] == expected_alloc_entry['Attribute Name']:
+                    assert row['Requested Size'] == expected_alloc_entry['Requested Size'], \
+                           "requested size={} is not equal to the expected size={}" \
+                           .format(row['Requested Size'],
+                                   expected_alloc_entry['Requested Size'])
+                    entry_found = True
+                    break
+            assert entry_found, \
+                   "Entry for attr_name={} has not been found" \
+                   .format(expected_alloc_entry['Attribute Name'])
+
+
+@unittest.skipIf(mx.context.num_gpus() == 0, "GPU memory profiler records allocation on GPUs only")
+def test_gpu_memory_profiler_gluon():
+    enable_profiler(profile_filename='test_profiler.json',
+                    run=True, continuous_dump=True)
+    profiler.set_state('run')
+
+    model = nn.HybridSequential(prefix='net_')
+    with model.name_scope():
+        model.add(nn.Dense(128, activation='tanh'))
+        model.add(nn.Dropout(0.5))
+        model.add(nn.Dense(64, activation='tanh'),
+                  nn.Dense(32, in_units=64))
+        model.add(nn.Activation('relu'))
+    model.initialize(ctx=mx.gpu())
+    model.hybridize()
+
+    inputs = mx.sym.var('data')
+
+    with mx.autograd.record():
+        out = model(mx.nd.zeros((16, 10), ctx=mx.gpu()))
+    out.backward()
+    mx.nd.waitall()
+    profiler.set_state('stop')
+    profiler.dump(True)
+
+    # Sample gpu_memory_profiler.csv
+    # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
+    # "<unk>:in_arg:data","640","0","4096","0"
+    # "net:arg_grad:net_dense0_bias","512","0","4096","0"
+    # "net:arg_grad:net_dense0_weight","5120","0","8192","0"
+    # "net:arg_grad:net_dense1_bias","256","0","4096","0"
+    # "net:arg_grad:net_dense1_weight","32768","0","32768","0"
+    # "net:arg_grad:net_dense2_bias","128","0","4096","0"
+    # "net:arg_grad:net_dense2_weight","8192","0","8192","0"
+    # "net:dense0:net_dense0_fwd","8192","0","8192","0"
+    # "net:dense0:tanh:net_dense0_tanh_fwd","8192","0","8192","0"
+    # "net:dense1:net_dense1_fwd","4096","0","4096","0"
+    # "net:dense1:tanh:net_dense1_tanh_fwd","4096","0","4096","0"
+    # "net:dense2:net_dense2_fwd","2048","0","4096","0"
+    # "net:dense2:net_dense2_fwd_backward","4096","0","4096","0"
+    # "net:dropout0:net_dropout0_fwd","8192","0","8192","0"
+    # "net:dropout0:net_dropout0_fwd","8192","0","8192","0"
+    # "net:in_arg:net_dense0_bias","512","0","4096","0"
+    # "net:in_arg:net_dense0_weight","5120","0","8192","0"
+    # "net:in_arg:net_dense1_bias","256","0","4096","0"
+    # "net:in_arg:net_dense1_weight","32768","0","32768","0"
+    # "net:in_arg:net_dense2_bias","128","0","4096","0"
+    # "net:in_arg:net_dense2_weight","8192","0","8192","0"
+    # "net:relu0:net_relu0_fwd","2048","0","4096","0"
+    # "net:relu0:net_relu0_fwd_backward","8192","0","8192","0"
+    # "net:relu0:net_relu0_fwd_head_grad","2048","0","4096","0"
+    # "resource:cudnn_dropout_state (dropout-inl.h +258)","1671168","0","1671168","0"
+    # "resource:temp_space (fully_connected-inl.h +316)","34816","0","36864","0"
+
+    # We are only checking for weight parameters here, also making sure that
+    # there is no unknown entries in the memory profile.
+    with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+        for scope in ['in_arg', 'arg_grad']:
+            for key, nd in model.collect_params().items():
+                expected_arg_name = "net:%s:" % scope + key
+                expected_arg_size = str(4 * np.prod(nd.shape))
+                csv_file.seek(0)
+                entry_found = False
+                for row in csv_reader:
+                    if row['Attribute Name'] == expected_arg_name:
+                        assert row['Requested Size'] == expected_arg_size, \
+                            "requested size={} is not equal to the expected size={}" \
+                            .format(row['Requested Size'], expected_arg_size)
+                        entry_found = True
+                        break
+                assert entry_found, \
+                    "Entry for attr_name={} has not been found" \
+                    .format(expected_arg_name)
+        # Make sure that there is no unknown allocation entry.
+        csv_file.seek(0)
+        for row in csv_reader:
+            if row['Attribute Name'] == "<unk>:unknown" or \
+               row['Attribute Name'] == "<unk>:":
+                assert False, "Unknown allocation entry has been encountered"
 
 
 if __name__ == '__main__':

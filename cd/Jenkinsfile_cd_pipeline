@@ -31,12 +31,12 @@ pipeline {
     // Because each pass of the CD pipeline
     // updates Jenkins' state of the release job
     // to avoid crazy issues, we don't allow concurrent builds.
-    disableConcurrentBuilds()  
+    disableConcurrentBuilds()
   }
 
   parameters {
     // Release parameters
-    string(defaultValue: "cpu,mkl,cu90,cu90mkl,cu92,cu92mkl,cu100,cu100mkl,cu101,cu101mkl,cu102,cu102mkl", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
+    string(defaultValue: "cpu,native,cu90,cu92,cu100,cu101,cu102", description: "Comma separated list of variants", name: "MXNET_VARIANTS")
     booleanParam(defaultValue: false, description: 'Whether this is a release build or not', name: "RELEASE_BUILD")
   }
 
@@ -45,7 +45,6 @@ pipeline {
       steps {
         script {
           cd_utils = load('cd/Jenkinsfile_utils.groovy')
-          
           // Update release job state in Jenkins
           cd_utils.update_release_job_state()
         }
@@ -59,7 +58,7 @@ pipeline {
 
             "Static libmxnet based release": {
               stage("Build") {
-                cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
+                cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)
               }
               stage("Releases") {
                 cd_utils.error_checked_parallel([
@@ -77,10 +76,9 @@ pipeline {
 
             "Dynamic libmxnet based release": {
               stage("Build") {
-                cd_utils.trigger_release_job("Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)    
+                cd_utils.trigger_release_job("Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)
               }
             }
-            
           ])
         }
       }

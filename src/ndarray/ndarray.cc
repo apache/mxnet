@@ -36,6 +36,7 @@
 #include "../operator/tensor/matrix_op-inl.h"
 #include "../operator/tensor/init_op.h"
 #include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../profiler/storage_profiler.h"
 
 #if MXNET_USE_OPENCV
 #include <opencv2/opencv.hpp>
@@ -93,6 +94,25 @@ NDArray::NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Con
         dtype, aux_types, aux_shapes);
 }
 
+void NDArray::AssignStorageInfo(const std::string& profiler_scope,
+                                const std::string& name) {
+  if (is_none()) {
+    return;
+  }
+  ptr_->shandle.profiler_scope = profiler_scope;
+  ptr_->shandle.name = name;
+#if MXNET_USE_CUDA
+  profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(ptr_->shandle);
+#endif  // MXNET_USE_CUDA
+  for (Storage::Handle& aux_handle : ptr_->aux_handles) {
+    aux_handle.profiler_scope = profiler_scope;
+    aux_handle.name = name + "_aux_data";
+#if MXNET_USE_CUDA
+    profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(aux_handle);
+#endif  // MXNET_USE_CUDA
+  }
+}
+
 void NDArray::SetShapeFromChunk() {
   if (Imperative::Get()->is_np_shape() ||
       !(ptr_->storage_shape.ndim() == 1 && ptr_->storage_shape[0] == 0)) {
@@ -148,7 +168,8 @@ void NDArray::Chunk::CheckAndAllocData(const mxnet::TShape &shape, int dtype) {
     // free storage
     Storage::Get()->Free(shandle);
     // init storage
-    shandle = Storage::Get()->Alloc(dbytes, ctx);
+    shandle.size = dbytes;
+    Storage::Get()->Alloc(&shandle);
 #if MXNET_USE_MKLDNN == 1
     mkl_mem_ = nullptr;
 #endif
@@ -529,10 +550,6 @@ const mkldnn::memory *NDArray::GetMKLDNNData(const mkldnn::memory::desc &desc) c
 
 const mkldnn::memory *NDArray::GetMKLDNNDataReorder(
     const mkldnn::memory::desc &new_desc) const {
-  if (new_desc.get_size() != shape().Size() * GetTypeSize(dtype_)) {
-    LOG(FATAL) << "The size of NDArray doesn't match the requested MKLDNN memory desc";
-    return nullptr;
-  }
   CHECK(storage_type() == kDefaultStorage);
 
   const mkldnn::memory *mem = GetMKLDNNData();
@@ -612,6 +629,20 @@ void NDArray::Reorder2DefaultAsync() const {
       on_complete();
     }, ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, "Reorder2Default");
+}
+
+// now just support bf16->fp32
+NDArray NDArray::Reorder2DefaultFloatFormat() const {
+  CHECK(storage_type() == kDefaultStorage && IsView() == false);
+  if (dtype() !=  mshadow::kBfloat16) {
+    return Reorder2Default();
+  }
+  NDArray ret(shape(), ctx(), false, mshadow::DataType<float>::kFlag);
+  auto src_mem = GetMKLDNNData();
+  auto dst_mem = ret.GetMKLDNNData();
+  ReorderTo(src_mem, dst_mem);
+
+  return ret;
 }
 
 void NDArray::MKLDNNDataReorderAsync(const mkldnn::memory::desc &desc) const {
@@ -1201,7 +1232,7 @@ void CopyFromTo(const NDArray& from, const NDArray& to, int priority, bool is_op
     return;
   }
   CHECK(from.shape() == to.shape())
-      << "operands shape mismatch"
+      << "operands shape mismatch "
       << "from.shape = " << from.shape() << " to.shape=" << to.shape();
   CHECK(!mxnet::op::shape_is_none(from.shape()))
       << "source operands have undefined shape";
@@ -1859,9 +1890,9 @@ void NDArray::Load(dmlc::Stream* fi,
 NDArray NDArray::Copy(Context ctx) const {
   NDArray ret;
   if (kDefaultStorage == storage_type()) {
-    ret = NDArray(shape(), ctx, true, dtype_);
+    ret = NDArray(shape(), ctx, false, dtype_);
   } else if (kUndefinedStorage != storage_type()) {
-    ret = NDArray(storage_type(), shape(), ctx, true, dtype_,
+    ret = NDArray(storage_type(), shape(), ctx, false, dtype_,
                   ptr_->aux_types, ptr_->aux_shapes, storage_shape());
   } else {
     LOG(FATAL) << "NDArray::Copy cannot copy undefined storage-type ndarray to ctx.dev_type="

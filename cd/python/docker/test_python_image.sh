@@ -25,7 +25,6 @@ set -ex
 
 # Variant parameter should be passed in
 mxnet_variant=${1:?"Missing mxnet variant"}
-python_cmd=${2:?"Missing python version (python or python3)"}
 
 if [ -z "${MXNET_COMMIT_ID}" ]; then
     echo "MXNET_COMMIT_ID environment variable is empty. Please rebuild the image with MXNET_COMMIT_ID build-arg specified."
@@ -38,10 +37,10 @@ if [[ $mxnet_variant == cu* ]]; then
     test_conv_params="--gpu"
 fi
 
-if [[ $mxnet_variant == *mkl ]]; then
-    ${python_cmd} tests/python/mkl/test_mkldnn.py
+if [[ $mxnet_variant == cpu ]]; then
+    python3 tests/python/mkl/test_mkldnn.py
 fi
 
-${python_cmd} tests/python/train/test_conv.py ${test_conv_params}
-${python_cmd} example/image-classification/train_mnist.py ${mnist_params}
+python3 tests/python/train/test_conv.py ${test_conv_params}
+python3 example/image-classification/train_mnist.py ${mnist_params}
 
