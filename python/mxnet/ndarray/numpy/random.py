@@ -20,6 +20,7 @@ import numpy as np
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
+from . import _api_internal
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
@@ -1031,17 +1032,10 @@ def geometric(p, size=None, dtype=None, ctx=None, out=None):
 
     The geometric distribution models the number of trials that must be run in order to achieve success.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = isinstance(p, np_ndarray)
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
-        ctx = current_context()
-    if size == ():
-        size = None
-    if input_type:
-        return _npi.geometric(p, prob=None, size=size,
-                              ctx=ctx, dtype=dtype, out=out)
+        ctx = str(current_context())
     else:
-        return _npi.geometric(prob=p, size=size,
-                              ctx=ctx, dtype=dtype, out=out)
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.geometric(p, size, dtype, ctx, out)

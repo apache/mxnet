@@ -33,9 +33,9 @@ MXNET_REGISTER_API("_npi.geometric")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_geometric");
   nnvm::NodeAttrs attrs;
-  op::NumpyLaplaceParam param;
+  op::NumpyGeometricParam param;
 
-  NDArray* in = new NDArray();
+  NDArray* in = nullptr;
   int num_inputs = 0;
 
   if (args[0].type_code() == kNull) {
