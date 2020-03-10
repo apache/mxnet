@@ -117,6 +117,12 @@ def prepare_workloads():
     OpArgMngr.add_workload("vsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("hsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("dsplit", pool['2X2x2'], 2)
+    OpArgMngr.add_workload("arange", 10)
+    OpArgMngr.add_workload("concatenate", (pool['1x2'], pool['1x2'], pool['1x2']), axis=0)
+    OpArgMngr.add_workload("append", pool['2x2'], pool['1x2'], axis=0)
+    OpArgMngr.add_workload("insert", pool['3x2'], 1, pool['1x1'], axis=0)
+    OpArgMngr.add_workload("delete", pool['3x2'], 1, axis=0)
+    OpArgMngr.add_workload("blackman", 12)
 
 
 def benchmark_helper(f, *args, **kwargs):
