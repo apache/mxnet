@@ -68,7 +68,7 @@ MXNET_REGISTER_API("_npi.laplace")
     }
   }
 
-  if (args[4].type_code() == kNull) {
+  if (args[3].type_code() == kNull) {
     param.dtype = mshadow::kFloat32;
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
@@ -76,8 +76,8 @@ MXNET_REGISTER_API("_npi.laplace")
   attrs.parsed = std::move(param);
   attrs.op = op;
   SetAttrDict<op::InitOpParam>(&attrs);
-  if (args[3].type_code() != kNull) {
-    attrs.dict["ctx"] = args[3].operator std::string();
+  if (args[4].type_code() != kNull) {
+    attrs.dict["ctx"] = args[4].operator std::string();
   }
 
   inputs = inputs == nullptr ? nullptr : inputs;
