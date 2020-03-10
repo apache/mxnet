@@ -1194,8 +1194,9 @@ def fmod(x1, x2, out=None, **kwargs):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.fmod, _np.fmod, _npi.fmod_scalar, _npi.rfmod_scalar, out)
-
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmod(x1, x2, out=out)
+    return _api_internal.fmod(x1, x2, out)
 
 @set_module('mxnet.ndarray.numpy')
 def delete(arr, obj, axis=None):
@@ -4410,8 +4411,9 @@ def fmax(x1, x2, out=None, **kwargs):
     -------
     out : mxnet.numpy.ndarray or scalar
         The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _ufunc_helper(x1, x2, _npi.fmax, _np.fmax, _npi.fmax_scalar, None, out)
-
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmax(x1, x2, out=out)
+    return _api_internal.fmax(x1, x2, out)
 
 @set_module('mxnet.ndarray.numpy')
 @wrap_np_binary_func
@@ -4448,7 +4450,9 @@ def fmin(x1, x2, out=None, **kwargs):
     -------
     out : mxnet.numpy.ndarray or scalar
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _ufunc_helper(x1, x2, _npi.fmin, _np.fmin, _npi.fmin_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmin(x1, x2, out=out)
+    return _api_internal.fmin(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
