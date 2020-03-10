@@ -5463,8 +5463,12 @@ def blackman(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     if ctx is None:
-        ctx = current_context()
-    return _npi.blackman(M, dtype=dtype, ctx=ctx)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.blackman(M, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')

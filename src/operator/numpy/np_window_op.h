@@ -58,6 +58,13 @@ struct NumpyWindowsParam : public dmlc::Parameter<NumpyWindowsParam> {
     MXNET_ADD_ALL_TYPES
     .describe("Data-type of the returned array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream M_s, dtype_s;
+    M_s << M;
+    dtype_s << dtype;
+    (*dict)["M"] = M_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+  }
 };
 
 struct hanning_fwd {
