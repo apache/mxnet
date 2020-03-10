@@ -226,6 +226,21 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, step_s, repeat_s, infer_range_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    step_s << step;
+    repeat_s << repeat;
+    infer_range_s << infer_range;
+    dtype_s << dtype;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["step"] = step_s.str();
+    (*dict)["repeat"] = repeat_s.str();
+    (*dict)["infer_range"] = infer_range_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+  }
 };
 
 struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {

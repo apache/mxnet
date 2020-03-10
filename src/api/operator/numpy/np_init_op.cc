@@ -199,6 +199,36 @@ MXNET_REGISTER_API("_npi.atleast_3d")
     ndarray_handles.emplace_back(ndoutputs[i]);
   }
   *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+
+MXNET_REGISTER_API("_npi.arange")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_arange");
+  nnvm::NodeAttrs attrs;
+  op::RangeParam param;
+  param.start = args[0].operator double();
+  if (args[1].type_code() == kNull) {
+    param.stop = dmlc::nullopt;
+  } else {
+    param.stop = args[1].operator double();
+  }
+  param.step = args[2].operator double();
+  param.repeat = 1;
+  param.infer_range = false;
+  if (args[3].type_code() == kNull) {
+    param.dtype = mshadow::kFloat32;
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::RangeParam>(&attrs);
+  if (args[4].type_code() != kNull) {
+    attrs.dict["ctx"] = args[4].operator std::string();
+  }
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
 });
 
 }  // namespace mxnet

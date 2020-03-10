@@ -550,8 +550,12 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """
     if dtype is None:
         dtype = 'float32'
+    if dtype is not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if stop is None:
         stop = start
         start = 0
@@ -561,7 +565,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         raise ValueError('start and stop cannot be both None')
     if step == 0:
         raise ZeroDivisionError('step cannot be 0')
-    return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
+    return _api_internal.arange(start, stop, step, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
