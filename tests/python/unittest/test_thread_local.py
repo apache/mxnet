@@ -120,6 +120,7 @@ def test_blockscope():
         def __init__(self, prefix):
             self.prefix = prefix
             self._empty_prefix = False
+            self._profiler_scope_name = '<unk>:'
     blockscope_list = []
     status = [False]
     event = threading.Event()

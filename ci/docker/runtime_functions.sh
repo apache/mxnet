@@ -701,7 +701,7 @@ build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -715,7 +715,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -730,7 +730,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -786,7 +786,7 @@ build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_CUDA=ON \
