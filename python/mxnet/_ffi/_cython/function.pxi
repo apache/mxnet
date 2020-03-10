@@ -53,6 +53,9 @@ cdef inline int make_arg(object arg,
     elif arg is None:
         value[0].v_handle = NULL
         tcode[0] = kNull
+    elif isinstance(arg, ObjectBase):
+        value[0].v_handle = (<ObjectBase>arg).chandle
+        tcode[0] = kObjectHandle
     elif isinstance(arg, Number):
         value[0].v_float64 = arg
         tcode[0] = kFloat
@@ -77,6 +80,8 @@ cdef inline object make_ret(MXNetValue value, int tcode, tuple args):
         return args[value.v_int64]
     elif tcode == kNull:
         return None
+    elif tcode == kObjectHandle:
+        return make_ret_object(value.v_handle)
     elif tcode == kInt:
         return value.v_int64
     elif tcode == kFloat:
@@ -130,6 +135,19 @@ cdef inline int FuncCall(void* chandle,
     return 0
 
 
+cdef inline int ConstructorCall(void* constructor_handle,
+                                int type_code,
+                                tuple args,
+                                void** handle) except -1:
+    """Call contructor of a handle function"""
+    cdef MXNetValue ret_val
+    cdef int ret_tcode
+    FuncCall(constructor_handle, args, &ret_val, &ret_tcode)
+    assert ret_tcode == type_code
+    handle[0] = ret_val.v_handle
+    return 0
+
+
 cdef class FunctionBase:
     cdef MXNetFunctionHandle chandle
     cdef int is_global
@@ -169,3 +187,10 @@ cdef class FunctionBase:
         cdef int ret_tcode
         FuncCall(self.chandle, args, &ret_val, &ret_tcode)
         return make_ret(ret_val, ret_tcode, args)
+
+
+_CLASS_OBJECT = None
+
+def _set_class_object(obj_class):
+    global _CLASS_OBJECT
+    _CLASS_OBJECT = obj_class
