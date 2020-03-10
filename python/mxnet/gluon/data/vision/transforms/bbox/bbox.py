@@ -20,10 +20,11 @@
 "Bounding box transforms."
 import random
 
-from ....block import Block, HybridBlock
-from ....nn import Sequential, HybridSequential
-from .....util import is_np_array
-from ..... import nd, npx, np
+from .....block import Block, HybridBlock
+from .....nn import Sequential, HybridSequential
+from ......util import is_np_array
+from ...... import nd, npx, np
+from .utils import bbox_crop, bbox_iou, bbox_random_crop_with_constraints
 
 __all__ = ['RandomImageBboxFlipLeftRight']
 
@@ -84,67 +85,35 @@ class ImageBboxCrop(Block):
             return img, bbox
         if is_np_array():
             new_img = npx.image.crop(img, self.xmin, self.ymin, self.width, self.height)
-            new_bbox = _crop_bbox(bbox, (self.xmin, self.ymin, self.width, self.height), self._allow_outside_center)
+            new_bbox = bbox_crop(bbox, (self.xmin, self.ymin, self.width, self.height), self._allow_outside_center)
         else:
             new_img = nd.image.crop(img, self.xmin, self.ymin, self.width, self.height)
-            new_bbox = _crop_bbox(bbox, (self.xmin, self.ymin, self.width, self.height), self._allow_outside_center)
-
+            new_bbox = bbox_crop(bbox, (self.xmin, self.ymin, self.width, self.height), self._allow_outside_center)
 
 
 class RandomImageBboxCropWithConstraints(Block):
-    pass
+    def __init__(self, p=0.5, min_scale=0.3, max_scale=1,
+                 max_aspect_ratio=2, constraints=None,
+                 max_trial=50):
+        super(RandomImageBboxCropWithConstraints, self).__init__()
+        self.p = p
+        self._args = {
+            "min_scale": min_scale,
+            "max_scale": max_scale,
+            "max_aspect_ratio": max_aspect_ratio,
+            "constraints": constraints,
+            "max_trial": max_trial
+        }
 
-
-def _crop_bbox(bbox, crop_box=None, allow_outside_center=True):
-    """Crop bounding boxes according to slice area.
-    This method is mainly used with image cropping to ensure bonding boxes fit
-    within the cropped image.
-    Parameters
-    ----------
-    bbox : numpy.ndarray
-        Numpy.ndarray with shape (N, 4+) where N is the number of bounding boxes.
-        The second axis represents attributes of the bounding box.
-        Specifically, these are :math:`(x_{min}, y_{min}, x_{max}, y_{max})`,
-        we allow additional attributes other than coordinates, which stay intact
-        during bounding box transformations.
-    crop_box : tuple
-        Tuple of length 4. :math:`(x_{min}, y_{min}, width, height)`
-    allow_outside_center : bool
-        If `False`, remove bounding boxes which have centers outside cropping area.
-    Returns
-    -------
-    numpy.ndarray
-        Cropped bounding boxes with shape (M, 4+) where M <= N.
-    """
-    bbox = bbox.copy()
-    if crop_box is None:
-        return bbox
-    if not len(crop_box) == 4:
-        raise ValueError(
-            "Invalid crop_box parameter, requires length 4, given {}".format(str(crop_box)))
-    if sum([int(c is None) for c in crop_box]) == 4:
-        return bbox
-
-    l, t, w, h = crop_box
-
-    left = l if l else 0
-    top = t if t else 0
-    right = left + (w if w else np.inf)
-    bottom = top + (h if h else np.inf)
-    crop_bbox = np.array((left, top, right, bottom))
-
-    if allow_outside_center:
-        mask = np.ones(bbox.shape[0], dtype=bool)
-    else:
-        centers = (bbox[:, :2] + bbox[:, 2:4]) / 2
-        mask = ((crop_bbox[:2] <= centers) * (centers < crop_bbox[2:])).all(axis=1)
-
-    # transform borders
-    bbox[:, :2] = np.maximum(bbox[:, :2], crop_bbox[:2])
-    bbox[:, 2:4] = np.minimum(bbox[:, 2:4], crop_bbox[2:4])
-    bbox[:, :2] -= crop_bbox[:2]
-    bbox[:, 2:4] -= crop_bbox[:2]
-
-    mask = (mask * (bbox[:, :2] < bbox[:, 2:4]).all(axis=1))
-    bbox = bbox[mask]
-    return bbox
+    def forward(self, img, bbox):
+        if random.random() < self.p:
+            return img, bbox
+        im_size = (img.shape[-2], img.shape[-3])
+        new_bbox, crop = bbox_random_crop_with_constraints(bbox.asnumpy(), im_size, **self._args)
+        if is_np_array():
+            new_img = npx.image.crop(img, *crop)
+            new_bbox = np.array(new_bbox)
+        else:
+            new_img = nd.image.crop(img, *crop)
+            new_bbox = nd.array(new_bbox)
+        return new_img, new_bbox
