@@ -21,11 +21,11 @@
 set -ex
 
 apt-get update
-apt-get --no-install-recommends install -y software-properties-common
+apt-get --no-install-recommends install -y ca-certificates apt-utils software-properties-common
 add-apt-repository ppa:ubuntu-toolchain-r/test -y
 add-apt-repository ppa:openjdk-r/ppa -y # Java lib
 apt-get update
-apt-get --no-install-recommends install -y git \
+apt-get --no-install-recommends install -y ca-certificates apt-utils git \
     cmake3 \
     ninja-build \
     libcurl4-openssl-dev \
@@ -70,7 +70,7 @@ make
 sudo make install
 cd /
 
-apt-get --no-install-recommends install -y python python-pip python3 python3-pip
+apt-get --no-install-recommends install -y ca-certificates apt-utils python python-pip python3 python3-pip
 
 # the version of the pip shipped with ubuntu may be too lower, install a recent version here
 # Restrict pip version to <19 due to use of Python 3.4 on Ubuntu 14.04

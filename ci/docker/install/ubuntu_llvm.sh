@@ -24,4 +24,4 @@ echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main\
 
 wget -qO - http://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
 apt-get update || true
-apt-get --no-install-recommends install -y --force-yes llvm-5.0
+apt-get --no-install-recommends install -y ca-certificates apt-utils --force-yes llvm-5.0

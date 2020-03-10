@@ -101,7 +101,7 @@ You can install the rest using the package manager. For example, on Ubuntu:
 
 ```
 sudo apt-get update
-sudo apt-get --no-install-recommends install -y build-essential git libcurl4-openssl-dev libatlas-base-dev libopencv-dev python-numpy
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils build-essential git libcurl4-openssl-dev libatlas-base-dev libopencv-dev python-numpy
 ```
 
 The Amazon Machine Image (AMI) [ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178) has the  packages listed above installed.

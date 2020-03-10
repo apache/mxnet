@@ -25,7 +25,7 @@ pip3 install gluoncv==0.2.0
 pushd .
 cd ..
 apt-get update
-apt-get --no-install-recommends install -y automake libtool zip
+apt-get --no-install-recommends install -y ca-certificates apt-utils automake libtool zip
 git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git
 cd protobuf
 ./autogen.sh
@@ -43,7 +43,7 @@ echo "TensorRT build enabled. Installing TensorRT."
 wget -qO tensorrt.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1604/x86_64/nvidia-machine-learning-repo-ubuntu1604_1.0.0-1_amd64.deb
 dpkg -i tensorrt.deb
 apt-get update
-apt-get --no-install-recommends install -y --allow-downgrades libnvinfer5=5.1.5-1+cuda10.0
-apt-get --no-install-recommends install -y --allow-downgrades libnvinfer-dev=5.1.5-1+cuda10.0
+apt-get --no-install-recommends install -y ca-certificates apt-utils --allow-downgrades libnvinfer5=5.1.5-1+cuda10.0
+apt-get --no-install-recommends install -y ca-certificates apt-utils --allow-downgrades libnvinfer-dev=5.1.5-1+cuda10.0
 apt-mark hold libnvinfer5 libnvinfer-dev
 rm tensorrt.deb

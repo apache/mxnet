@@ -34,7 +34,7 @@ on ubuntu:
 
 ```
 wget -qO- https://deb.nodesource.com/setup_8.x | sudo -E bash -
-sudo apt-get --no-install-recommends install -y nodejs
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils nodejs
 ```
 
 on macos

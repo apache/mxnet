@@ -26,10 +26,10 @@ set -ex
 for i in 1 2 3 4 5; do add-apt-repository -y ppa:ubuntu-toolchain-r/test && break || sleep 300; done
 
 apt-get update || true
-apt-get --no-install-recommends install -y time
+apt-get --no-install-recommends install -y ca-certificates apt-utils time
 
 # Install for RAT License Check Nightly Test
-apt-get --no-install-recommends install -y subversion maven -y #>/dev/null
+apt-get --no-install-recommends install -y ca-certificates apt-utils subversion maven -y #>/dev/null
 
 # Packages needed for the Straight Dope Nightly tests.
 pip3 install pandas scikit-image prompt_toolkit

@@ -65,7 +65,7 @@ Install MXNet dependencies with the following:
 
 {% highlight bash %}
 sudo apt-get update
-sudo apt-get --no-install-recommends install -y \
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils \
 apt-transport-https \
 build-essential \
 ca-certificates \
@@ -156,7 +156,7 @@ Install these dependencies using the following commands in any directory:
 
 {% highlight bash %}
 sudo apt-get update
-sudo apt-get --no-install-recommends install -y git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack*
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils git cmake ninja-build build-essential g++-4.9 c++-4.9 liblapack*
 libblas* libopencv*
 libopenblas* python3-dev python-dev virtualenv
 {% endhighlight %}

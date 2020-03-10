@@ -32,7 +32,7 @@ fi
 
 # All Ubuntu
 apt-get update || true
-apt-get --no-install-recommends install -y \
+apt-get --no-install-recommends install -y ca-certificates apt-utils \
     openjdk-8-jdk \
     openjdk-8-jre \
     software-properties-common \
@@ -49,5 +49,5 @@ if [[ $(lsb_release -r | grep 14.04) ]]; then
     update-alternatives --install /usr/bin/mvn mvn /usr/local/maven/apache-maven-3.3.9/bin/mvn 1
     update-ca-certificates -f
 else
-    apt-get --no-install-recommends install -y maven
+    apt-get --no-install-recommends install -y ca-certificates apt-utils maven
 fi

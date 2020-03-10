@@ -22,7 +22,7 @@
 
 set -exuo pipefail
 
-apt-get --no-install-recommends install -y \
+apt-get --no-install-recommends install -y ca-certificates apt-utils \
     cmake \
     curl \
     wget \

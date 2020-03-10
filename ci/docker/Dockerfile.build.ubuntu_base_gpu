@@ -23,7 +23,7 @@ FROM nvidia/cuda:10.1-devel-ubuntu16.04
 
 WORKDIR /work/deps
 
-RUN apt-get update && apt-get --no-install-recommends install -y sudo
+RUN apt-get update && apt-get --no-install-recommends install -y ca-certificates apt-utils sudo
 
 ENV CUDNN_VERSION=7.6.0.64
 COPY install/ubuntu_cudnn.sh /work/

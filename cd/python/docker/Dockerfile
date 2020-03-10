@@ -25,7 +25,7 @@ FROM ${BASE_IMAGE}
 
 ARG PYTHON_CMD=python3
 RUN apt-get update && \
-    apt-get --no-install-recommends install -y wget ${PYTHON_CMD}-dev gcc && \
+    apt-get --no-install-recommends install -y ca-certificates apt-utils wget ${PYTHON_CMD}-dev gcc && \
     wget https://bootstrap.pypa.io/get-pip.py && \
     ${PYTHON_CMD} get-pip.py
 

@@ -43,7 +43,7 @@ straightforward. Here we provide the instructions to build `gcc-4.8` from source
 Step 3. Install the 32-bit `libc` with one of the following system-specific commands:
 
 ```bash
-sudo apt-get --no-install-recommends install -y libc6-dev-i386 # In Ubuntu
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libc6-dev-i386 # In Ubuntu
 sudo yum install glibc-devel.i686   # In RHEL (Red Hat Linux)
 sudo yum install glibc-devel.i386   # In CentOS 5.8
 sudo yum install glibc-devel.i686   # In CentOS 6/7

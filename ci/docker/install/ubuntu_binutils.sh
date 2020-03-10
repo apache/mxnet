@@ -26,7 +26,7 @@ wget https://mirror.clarkson.edu/gnu/binutils/binutils-2.27.tar.gz
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update || true
-apt-get --no-install-recommends install -y \
+apt-get --no-install-recommends install -y ca-certificates apt-utils \
     wget
 
 mkdir /opt/binutils_install && mkdir /opt/binutils_install && mkdir /opt/binutils && cd /opt/binutils

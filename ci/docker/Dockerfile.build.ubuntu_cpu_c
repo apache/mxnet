@@ -28,7 +28,7 @@ RUN /work/ubuntu_core.sh
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
-RUN apt-get update && apt-get --no-install-recommends install -y doxygen graphviz
+RUN apt-get update && apt-get --no-install-recommends install -y ca-certificates apt-utils doxygen graphviz
 
 COPY runtime_functions.sh /work/
 

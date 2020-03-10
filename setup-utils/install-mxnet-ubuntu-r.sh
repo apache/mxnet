@@ -40,18 +40,18 @@ if [ "$is_rscript_installed" = "0" ]; then
 		sudo add-apt-repository -y "deb http://cran.rstudio.com/bin/linux/ubuntu `lsb_release -cs`/"
 		sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9
 		sudo apt-get -qq update
-		sudo apt-get --no-install-recommends install -y r-base-core
+		sudo apt-get --no-install-recommends install -y ca-certificates apt-utils r-base-core
 	fi
 fi
 
 # libcurl4-openssl-dev and libssl-dev are needed for devtools.
-sudo apt-get --no-install-recommends install -y libcurl4-openssl-dev libssl-dev
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libcurl4-openssl-dev libssl-dev
 
 # Needed for R XML
-sudo apt-get --no-install-recommends install -y libxml2-dev
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libxml2-dev
 
 # Needed for R Cairo
-sudo apt-get --no-install-recommends install -y libxt-dev
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libxt-dev
 
 sudo Rscript -e "install.packages('devtools', repo = 'https://cran.rstudio.com')"
 cd R-package

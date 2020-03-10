@@ -28,7 +28,7 @@ set -x
 
 echo "Installing libprotobuf-dev and protobuf-compiler ..."
 apt-get update || true
-apt-get --no-install-recommends install -y libprotobuf-dev protobuf-compiler
+apt-get --no-install-recommends install -y ca-certificates apt-utils libprotobuf-dev protobuf-compiler
 
 echo "Installing pytest, pytest-cov, protobuf, Pillow, ONNX and tabulate ..."
 pip3 install pytest==3.6.3 pytest-cov==2.5.1 protobuf==3.5.2 onnx==1.3.0 Pillow==5.0.0 tabulate==0.7.5

@@ -28,7 +28,7 @@ apt-get update || true
 # Avoid interactive package installers such as tzdata.
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get --no-install-recommends install -y \
+apt-get --no-install-recommends install -y ca-certificates apt-utils \
     apt-transport-https \
     build-essential \
     ca-certificates \

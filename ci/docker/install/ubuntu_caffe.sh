@@ -19,7 +19,7 @@
 set -ex
 
 apt-get update || true
-apt-get --no-install-recommends install -y \
+apt-get --no-install-recommends install -y ca-certificates apt-utils \
     libgflags-dev \
     libgoogle-glog-dev \
     libhdf5-serial-dev \
@@ -33,7 +33,7 @@ apt-get --no-install-recommends install -y \
     python-numpy \
     python-opencv
 
-apt-get --no-install-recommends install -y libboost-all-dev
+apt-get --no-install-recommends install -y ca-certificates apt-utils libboost-all-dev
 
 cd /work/deps
 git clone http://github.com/BVLC/caffe.git

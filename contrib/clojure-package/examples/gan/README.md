@@ -33,7 +33,7 @@ Do `lein run` and the images generated will be in the `results` directory. The g
 `lein run :gpu` will run on gpu
 
 If you are running on AWS you will need to setup X11 for graphics
-`sudo apt-get --no-install-recommends install -y xauth x11-apps`
+`sudo apt-get --no-install-recommends install -y ca-certificates apt-utils xauth x11-apps`
 
 then relogin in `ssh -X -i creds ubuntu@yourinstance`
 

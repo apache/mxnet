@@ -21,7 +21,7 @@
 FROM dockcross/base
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
-RUN apt-get update && apt-get --no-install-recommends install -y \
+RUN apt-get update && apt-get --no-install-recommends install -y ca-certificates apt-utils \
   unzip
 
 WORKDIR /work/deps
