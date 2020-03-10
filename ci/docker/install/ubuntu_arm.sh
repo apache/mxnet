@@ -20,7 +20,7 @@
 set -ex
 
 apt update || true
-apt install -y \
+apt-get --no-install-recommends install -y \
     unzip \
     python3 \
     python3-pip

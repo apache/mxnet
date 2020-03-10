@@ -24,13 +24,13 @@ set -ex
 pushd .
 
 apt update || true
-apt install -y \
+apt-get --no-install-recommends install -y \
     libxslt1-dev \
     docbook-xsl \
     xsltproc \
     libxml2-utils
 
-apt install -y --no-install-recommends \
+apt-get --no-install-recommends install -y \
     autoconf \
     asciidoc \
     xsltproc

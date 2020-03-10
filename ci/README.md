@@ -33,14 +33,14 @@ following script:
 set -e
 set -x
 export DEBIAN_FRONTEND=noninteractive
-apt-get -y install curl
+apt-get --no-install-recommends install -y curl
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
       $(lsb_release -cs) \
          stable"
 apt-get update
-apt-get -y install docker-ce
+apt-get --no-install-recommends install -y docker-ce
 service docker restart
 usermod -a -G docker $SUDO_USER
 ```
@@ -189,7 +189,7 @@ nosetests-3.4 -v -s tests/python/unittest/test_ndarray.py
 
 
 # Debug with cgdb
-sudo apt install -y libstdc++6-6-dbg
+sudo apt-get --no-install-recommends install -y libstdc++6-6-dbg
 cgdb build/tests/mxnet_unit_tests
 
 (gdb) !pwd

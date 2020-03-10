@@ -22,7 +22,7 @@
 
 set -ex
 apt-get update || true
-apt-get install -y \
+apt-get --no-install-recommends install -y \
     build-essential \
     ca-certificates \
     cmake \

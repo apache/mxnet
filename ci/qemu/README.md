@@ -41,7 +41,7 @@ In the same way for the kernel.
 
 Then we install packages and dependencies on the qemu image:
 
-apt install -y sudo python3-dev virtualenv wget libgfortran3 libopenblas-base rsync build-essential
+apt-get --no-install-recommends install -y sudo python3-dev virtualenv wget libgfortran3 libopenblas-base rsync build-essential
 libopenblas-dev libomp5
 
 We enable sudo and passwordless logins:

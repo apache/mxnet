@@ -62,7 +62,7 @@ Note: The following NNPACK installation instructions have been tested on Ubuntu 
 ```bash
 # Install Pip
 $ sudo apt-get update
-$ sudo apt-get install -y python-pip
+$ sudo apt-get --no-install-recommends install -y python-pip
 $ sudo pip install --upgrade pip
 
 # Install Peach
@@ -73,7 +73,7 @@ $ python setup.py generate
 $ sudo pip install --upgrade .
 
 # Install Ninja Build System
-$ sudo apt-get install ninja-build
+$ sudo apt-get --no-install-recommends install -y ninja-build
 $ pip install ninja-syntax
 
 # Build NNPack shared library

@@ -22,7 +22,7 @@
 
 set -exuo pipefail
 
-apt-get install -y \
+apt-get --no-install-recommends install -y \
     cmake \
     curl \
     wget \

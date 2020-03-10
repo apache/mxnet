@@ -132,7 +132,7 @@ To run the scala interpreter, first download and install scala 2.11.x (run `scal
 **Ubuntu***
 
 ```
-sudo apt-get install scala
+sudo apt-get --no-install-recommends install -y scala
 ```
 
 **macOS***

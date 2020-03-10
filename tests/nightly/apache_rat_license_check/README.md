@@ -37,10 +37,10 @@ ci/build.py -p ubuntu_rat nightly_test_rat_check
 Manual method:
 ```
 #install maven
-sudo apt-get install maven -y #>/dev/null
+sudo apt-get --no-install-recommends install -y maven -y #>/dev/null
 
 #install svn
-sudo apt-get install subversion -y #>/dev/null
+sudo apt-get --no-install-recommends install -y subversion -y #>/dev/null
 
 #download RAT 0.12 version
 svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.12-RC3/ #>/dev/null

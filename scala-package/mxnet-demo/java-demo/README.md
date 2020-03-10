@@ -115,7 +115,7 @@ If you are facing opencv issue on Ubuntu, please try as follows to install openc
 ```Bash
 sudo add-apt-repository ppa:timsc/opencv-3.4
 sudo apt-get update
-sudo apt install libopencv-imgcodecs3.4
+sudo apt-get --no-install-recommends install -y libopencv-imgcodecs3.4
 ```
 
 Is there any other version available?

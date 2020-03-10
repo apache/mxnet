@@ -42,10 +42,10 @@ The detailed performance data collected on Intel Xeon CPU with MXNet built with 
 
 ```
 sudo apt-get update
-sudo apt-get install -y build-essential git
-sudo apt-get install -y libopenblas-dev liblapack-dev
-sudo apt-get install -y libopencv-dev
-sudo apt-get install -y graphviz
+sudo apt-get --no-install-recommends install -y build-essential git
+sudo apt-get --no-install-recommends install -y libopenblas-dev liblapack-dev
+sudo apt-get --no-install-recommends install -y libopencv-dev
+sudo apt-get --no-install-recommends install -y graphviz
 ```
 
 ### Clone MXNet sources

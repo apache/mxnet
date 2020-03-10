@@ -23,7 +23,7 @@ CLASS_PATH=$MXNET_ROOT/scala-package/assembly/assembly/target/*:$MXNET_ROOT/scal
 
 # please install the Graphviz library
 # if you are using ubuntu, use the following command:
-# sudo apt-get install graphviz
+# sudo apt-get --no-install-recommends install -y graphviz
 
 # path to save the generated visualization result
 OUT_DIR=$1

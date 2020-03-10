@@ -51,7 +51,7 @@ compiler and its python binding. It is easier to install, but may be slower
 during running.
 
 1. Install the compiler:
-  - Linux: install `protobuf-compiler` e.g. `sudo apt-get install
+  - Linux: install `protobuf-compiler` e.g. `sudo apt-get --no-install-recommends install -y
     protobuf-compiler` for Ubuntu and `sudo yum install protobuf-compiler` for
      Redhat/Fedora.
   - Windows: Download the win32 build of

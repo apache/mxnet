@@ -49,7 +49,7 @@ Ninja is a build tool (like make) that prioritizes building speed. If you will b
 
 1. Download Ninja via package manager or directly from [source](https://github.com/ninja-build/ninja)
     ```
-    apt-get install ninja-build
+    apt-get --no-install-recommends install -y ninja-build
     ```
 1. When running cmake, add the `-GNinja` flag to specify cmake to generate a Ninja build file
     ```

@@ -71,7 +71,7 @@ fi
 if [ $PLATFORM = "Linux/Ubuntu" ];then
     install_dependencies_ubuntu() {
         sudo apt-get update
-        sudo apt-get install -y build-essential libatlas-base-dev libopencv-dev graphviz virtualenv cmake\
+        sudo apt-get --no-install-recommends install -y build-essential libatlas-base-dev libopencv-dev graphviz virtualenv cmake\
             ninja-build libopenblas-dev liblapack-dev python3 python3-dev
     }
     echo "Installing build dependencies in Ubuntu!"

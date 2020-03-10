@@ -24,7 +24,7 @@ set -ex
 # Install dependencies
 echo 'Installing dependencies...'
 apt-get update || true
-apt-get install -y \
+apt-get --no-install-recommends install -y \
     doxygen \
     pandoc
 

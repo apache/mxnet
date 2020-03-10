@@ -28,17 +28,17 @@ echo "MXNet root folder: $MXNET_HOME"
 
 echo "Installing build-essential, libatlas-base-dev, libopencv-dev, pip, graphviz ..."
 sudo apt-get update
-sudo apt-get install -y build-essential libatlas-base-dev libopencv-dev graphviz
+sudo apt-get --no-install-recommends install -y build-essential libatlas-base-dev libopencv-dev graphviz
 
 echo "Building MXNet core. This can take few minutes..."
 cd "$MXNET_HOME"
 make -j$(nproc)
 
 echo "Installing Numpy..."
-sudo apt-get install python-numpy
+sudo apt-get --no-install-recommends install -y python-numpy
 
 echo "Installing Python setuptools pip..."
-sudo apt-get install -y python-setuptools python-pip
+sudo apt-get --no-install-recommends install -y python-setuptools python-pip
 
 echo "Updating pip..."
 sudo pip install -U pip

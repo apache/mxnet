@@ -23,13 +23,13 @@
 set -ex
 echo 'Installing npm...'
 apt-get update || true
-apt-get install -y npm
+apt-get --no-install-recommends install -y npm
 
 echo "Obtaining NodeJS version 8.x"
 curl -sL https://deb.nodesource.com/setup_8.x | bash -
 
 echo "Installing nodejs"
-apt-get install -y nodejs
+apt-get --no-install-recommends install -y nodejs
 
 # Install broken link checker utility
 echo "Installing broken link checker utility"

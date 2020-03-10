@@ -35,7 +35,7 @@ apt-key add r.gpg
 add-apt-repository 'deb [arch=amd64,i386] https://cran.rstudio.com/bin/linux/ubuntu xenial/'
 
 apt-get update || true
-apt-get install -y --allow-unauthenticated \
+apt-get --no-install-recommends install -y --allow-unauthenticated \
     libcairo2-dev \
     libssl-dev \
     libxml2-dev \

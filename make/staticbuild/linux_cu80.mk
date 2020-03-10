@@ -136,7 +136,7 @@ LIBJVM=$(JAVA_HOME)/jre/lib/amd64/server
 
 # whether or not allow to read and write AWS S3 directly. If yes, then
 # libcurl4-openssl-dev is required, it can be installed on Ubuntu by
-# sudo apt-get install -y libcurl4-openssl-dev
+# sudo apt-get --no-install-recommends install -y libcurl4-openssl-dev
 USE_S3 = 1
 
 #----------------------------

@@ -48,7 +48,7 @@ To use the Python API you need the following dependencies:
 
 ```bash
 sudo apt update
-sudo apt -y install \
+sudo apt-get --no-install-recommends install -y \
                         build-essential \
                         git \
                         graphviz \

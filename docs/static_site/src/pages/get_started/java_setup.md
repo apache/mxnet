@@ -50,7 +50,7 @@ brew install maven
 Please run the following lines:
 
 ```bash
-sudo apt-get install openjdk-8-jdk maven
+sudo apt-get --no-install-recommends install -y openjdk-8-jdk maven
 ```
 
 **Step 2.** Run the demo MXNet-Java project.
