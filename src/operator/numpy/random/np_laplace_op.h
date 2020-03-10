@@ -67,7 +67,7 @@ struct NumpyLaplaceParam : public dmlc::Parameter<NumpyLaplaceParam> {
             "Defaults to float32 if not defined (dtype=None).");
   }
 
-  *void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream loc_s, scale_s, size_s, dtype_s;
     loc_s << loc;
     scale_s << scale;
