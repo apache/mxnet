@@ -121,11 +121,11 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
 
-  // Extra data for sparse inputs.
-  std::vector<void*> in_indices;
-  std::vector<void*> in_indptr;
-  std::vector<int64_t> in_indices_shapes;
-  std::vector<int64_t> in_indptr_shapes;
+  // Extra data for sparse inputs and outputs.
+  std::vector<void*> in_indices, out_indices;
+  std::vector<void*> in_indptr, out_indptr;
+  std::vector<int64_t> in_indices_shapes, out_indices_shapes;
+  std::vector<int64_t> in_indptr_shapes, out_indptr_shapes;
 
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
@@ -150,11 +150,6 @@ void CustomFComputeDispatcher(const std::string op_name,
     }
   }
 
-  // Extra data for sparse outputs.
-  // To do: fix data type.
-  std::vector<std::vector<float>> tmp_data;
-  std::vector<std::vector<int64_t>> col_index, row_ptr;
-
   for (size_t i = 0; i < outputs.size(); i++) {
     out_data.push_back(outputs[i].data().dptr_);
     out_shapes.push_back(outputs[i].shape().data());
@@ -166,14 +161,15 @@ void CustomFComputeDispatcher(const std::string op_name,
     out_dev_id.push_back(outputs[i].ctx().real_dev_id());
 
     if(outputs[i].storage_type() == mxnet::kRowSparseStorage) {
-      tmp_data.push_back(std::vector<float>());
-      col_index.push_back(std::vector<int64_t>());
+      out_indices.push_back(outputs[i].aux_data(rowsparse::kIdx).dptr_);
+      out_indices_shapes.push_back(outputs[i].aux_shape(rowsparse::kIdx).Size());
     }
     else if(outputs[i].storage_type() == mxnet::kCSRStorage) {
-      tmp_data.push_back(std::vector<float>());
-      col_index.push_back(std::vector<int64_t>());
-      row_ptr.push_back(std::vector<int64_t>());
-    } 
+      out_indices.push_back(outputs[i].aux_data(csr::kIdx).dptr_);
+      out_indptr.push_back(outputs[i].aux_data(csr::kIndPtr).dptr_);
+      out_indices_shapes.push_back(outputs[i].aux_shape(csr::kIdx).Size());
+      out_indptr_shapes.push_back(outputs[i].aux_shape(csr::kIndPtr).Size());
+    }
   }
 
   // get memory resource and mxnet backend streams
@@ -194,6 +190,24 @@ void CustomFComputeDispatcher(const std::string op_name,
     return workspace.dptr_;
   };
 
+  // create lambda that allocates memory for sparse and updates MXSparse.
+  auto ndarray_alloc = [&](int index, int indices_len, int idxptr_len,
+                           void** data, int64_t** indices, int64_t** indptr) {
+    // Row Sparse
+    if(idxptr_len == 0) {
+      outputs[index].CheckAndAlloc({mshadow::Shape1(indices_len)});
+      *data = outputs[index].data().dptr_;
+      *indices = (int64_t*)outputs[index].aux_data(rowsparse::kIdx).dptr_;
+    }
+    // CSR
+    else {
+      outputs[index].CheckAndAlloc({mshadow::Shape1(idxptr_len), mshadow::Shape1(indices_len)});
+      *data = outputs[index].data().dptr_;
+      *indices = (int64_t*)outputs[index].aux_data(csr::kIdx).dptr_;
+      *indptr = (int64_t*)outputs[index].aux_data(csr::kIndPtr).dptr_;
+    }
+  };
+
   // create lambda without captures so that we can cast it to function pointer
   // lambda with captures cannot be cast to function pointer and pass to lib_api.h
   // this needs to be a lambda function so that we can do the decltype cast
@@ -208,6 +222,13 @@ void CustomFComputeDispatcher(const std::string op_name,
   auto gpu_malloc = [](void* _gpu_alloc, int size) {
     alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
     return static_cast<void*>((*gpualloc)(size));
+  };
+
+  typedef decltype(ndarray_alloc) alloc_type_ndarray;
+  auto ndarray_malloc = [](void* _ndarray_alloc, int index, int indices_len, int idxptr_len, 
+                           void** data, int64_t** indices, int64_t** indptr) {
+    alloc_type_ndarray* ndarrayalloc = static_cast<alloc_type_ndarray*>(_ndarray_alloc);
+    (*ndarrayalloc)(index, indices_len, idxptr_len, data, indices, indptr);
   };
 
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
@@ -237,8 +258,10 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
-                    in_indices.data(), in_indptr.data(), in_indices_shapes.data(), 
-                    in_indptr_shapes.data(), tmp_data, col_index, row_ptr))
+                    ndarray_malloc, &ndarray_alloc,
+                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(), 
+                    in_indices_shapes.data(), out_indices_shapes.data(), 
+                    in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -258,25 +281,11 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                            in_indices.data(), in_indptr.data(),
-                            in_indices_shapes.data(), in_indptr_shapes.data(),
-                            tmp_data, col_index, row_ptr))
+                            ndarray_malloc, &ndarray_alloc,
+                            in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                            in_indices_shapes.data(), out_indices_shapes.data(),
+                            in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
-  }
-  
-  // Alloc space for sparse output and copy data to saprse NDArray.
-  for (size_t i = 0; i < outputs.size(); i++) {
-    if (outputs[i].storage_type() == mxnet::kDefaultStorage) continue;  
-    if (outputs[i].storage_type() == mxnet::kRowSparseStorage) {
-      outputs[i].CheckAndAlloc({mshadow::Shape1(col_index[i].size())});
-      memcpy(outputs[i].aux_data(rowsparse::kIdx).dptr_, col_index[i].data(), sizeof(int64_t) * col_index[i].size());
-    }
-    else if (outputs[i].storage_type() == mxnet::kCSRStorage) {
-      outputs[i].CheckAndAlloc({mshadow::Shape1(row_ptr[i].size()), mshadow::Shape1(col_index[i].size())});
-      memcpy(outputs[i].aux_data(csr::kIndPtr).dptr_, row_ptr[i].data(), sizeof(int64_t) * row_ptr[i].size());
-      memcpy(outputs[i].aux_data(csr::kIdx).dptr_, col_index[i].data(), sizeof(int64_t) * col_index[i].size());
-    }
-    memcpy(outputs[i].data().dptr_, tmp_data[i].data(), sizeof(float) * tmp_data[i].size());
   }
 }
 

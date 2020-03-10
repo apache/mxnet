@@ -242,29 +242,33 @@ enum MXReturnValue {
 };
 
 // For sparse input, read/write the data from NDarray via pointers.
-struct MXInSparse {
+struct MXSparse {
   // Pointer to data.
   void *data{nullptr};
   // length of (non-zero) data.
   int64_t data_len;
 
   // To store aux data for sparse.
-  // For CSR, indices stores the col index of non-zero values.
-  // For row sparse, indices store row index of rows which have non-zero values.
+  // For CSR, indices stores the col index of non-zero elements.
+  // For row sparse, indices store row index of rows which have non-zero elements.
   int64_t* indices;
   int64_t indices_len;
 
   // For CSR, indptr gives the start and end index of data for each row.
-  // For row sparse, indptr is empty. 
-  int64_t* indptr;
+  // For row sparse, indptr is not used. 
+  int64_t* indptr = nullptr;
   int64_t indptr_len;
 
   void set(void *data_ptr, const int64_t* dims, int ndims, void *idx,
           int64_t num_idx, void *idx_ptr = nullptr, int64_t num_idx_ptr = 0) {
     data = data_ptr;
-    // If CSR, num of non-zero value is num_idx,
-    // If row sparse, num of value is num_idx * width.
-    data_len = idx_ptr ? num_idx : num_idx * dims[1];
+    // If CSR, num of non-zero elemets is num_idx,
+    // If row sparse, num of elements is num_idx * width.
+    data_len = num_idx;
+    if(!idx_ptr) {
+      for(int i = 1; i < ndims; ++i)
+         data_len *= dims[i];
+    }
 
     indices = (int64_t*)idx;
     indices_len = num_idx;
@@ -274,25 +278,6 @@ struct MXInSparse {
       indptr_len = num_idx_ptr;
     }
   }
-};
-
-// For sparse output, cannot read/write data from NDArray directly, since 
-// size is known during run time. Need a copy. 
-struct MXOutSparse {
-  // Data of sparse output.
-  std::vector<float> &m_data;
-
-  // To store aux data for sparse.
-  // For CSR, indices stores the col index of non-zero values.
-  // For row sparse, indices store row index of rows which have non-zero values.
-  std::vector<int64_t> &m_col_idx;
-
-  // For CSR, indptr gives the start and end index of data for each row.
-  // For row sparse, indptr is empty. 
-  std::vector<int64_t> &m_row_ptr;
-
-  MXOutSparse(std::vector<float> &data, std::vector<int64_t> &col_idx, std::vector<int64_t> &row_ptr) :
-	  m_data(data), m_col_idx(col_idx), m_row_ptr(row_ptr) {}
 };
 
 /*!
@@ -433,6 +418,8 @@ struct MXTensor {
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
+typedef void (*ndarray_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t**);
+
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
 #else
@@ -449,6 +436,13 @@ class OpResource {
     : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
       cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream) {}
 
+  OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
+             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream,
+             ndarray_malloc_t ndarray_malloc_fp, void* ndarray_alloc_fp)
+    : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
+      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream),
+      ndarray_malloc(ndarray_malloc_fp), ndarray_alloc(ndarray_alloc_fp) {}
+
   /*! \brief allocate cpu memory controlled by MXNet */
   void* alloc_cpu(int size) {
     return cpu_malloc(cpu_alloc, size);
@@ -464,6 +458,11 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
+  void alloc_ndarray(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
+    ndarray_malloc(ndarray_alloc, index, indices_len, indptr_len, 
+                   &(sparse->data), &(sparse->indices), &(sparse->indptr));
+  }
+
  private:
   /*! \brief allocation lambda function */
   xpu_malloc_t cpu_malloc, gpu_malloc;
@@ -471,6 +470,9 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
+
+  ndarray_malloc_t ndarray_malloc;
+  void *ndarray_alloc;
 };
 
 /*!
@@ -946,11 +948,11 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              int* outdev_id, int num_out,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
                              xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-                             void** in_indices, void** in_indptr, 
-                             int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-                             std::vector<std::vector<float>>& tmp_data, 
-                             std::vector<std::vector<int64_t>>& col_idx,
-                             std::vector<std::vector<int64_t>>& row_ptr);
+                             ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                             void** in_indices, void** out_indices,
+                             void** in_indptr, void** out_indptr,
+                             int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                             int64_t* in_indptr_shapes, int64_t* out_indptr_shapes);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
@@ -974,12 +976,11 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      int* outdev_id, int num_out,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc,
                                      xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-                                     void** in_indices, void** in_indptr,
-                                     int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-                                     std::vector<std::vector<float>>& tmp_data,
-                                     std::vector<std::vector<int64_t>>& col_idx,
-                                     std::vector<std::vector<int64_t>>& row_ptr);
-
+                                     ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                                     void** in_indices, void** out_indices,
+                                     void** in_indptr, void** out_indptr,
+                                     int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                                     int64_t* in_indptr_shapes, int64_t* out_indptr_shapes);
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
 
@@ -1184,11 +1185,10 @@ extern "C" {
                   size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
                   xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-                  void** in_indices, void** in_indptr, 
-                  int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-                  std::vector<std::vector<float>>& tmp_data,
-                  std::vector<std::vector<int64_t>>& col_idx,
-                  std::vector<std::vector<int64_t>>& row_ptr) {
+                  ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                  void** in_indices, void** out_indices, void** in_indptr, void** out_indptr,
+                  int64_t* in_indices_shapes, int64_t* out_indices_shapes, 
+                  int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1198,7 +1198,7 @@ extern "C" {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     // create a vector for sparse inputs
-    std::vector<MXInSparse> in_sparse(num_in);
+    std::vector<MXSparse> in_sparse(num_in);
 
     for (int i = 0; i < num_in; i++) {
       // Dense representation.
@@ -1225,25 +1225,32 @@ extern "C" {
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
-    // create a vector for sparse outputs
-    std::vector<MXOutSparse> out_sparse;
+    std::vector<MXSparse> out_sparse(num_out);
 
     for (int i = 0; i < num_out; i++) {
-      if(col_idx.empty()) {
+      // Dense representation.
+      if(!out_indices_shapes) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+                            outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
-        out_sparse.push_back(MXOutSparse(tmp_data[0], col_idx[0], row_ptr[0]));
-        MXStorageType type = row_ptr.empty() ? kRowSparseStorage : kCSRStorage;
+        MXStorageType type;
+        if(!out_indptr_shapes) {
+          type = kRowSparseStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
+        }
+        else {
+          type = kCSRStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+                            out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
+        }
         outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
-                             outIDs[i], {outdev_type[i], outdev_id[i]}, type);
+                            outIDs[i], {outdev_type[i], outdev_id[i]}, type);
       }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
-
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream, ndarray_malloc, ndarray_alloc);
     return fcomp(attrs, inputs, outputs, res);
   }
 
@@ -1313,15 +1320,15 @@ extern "C" {
                           size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc,
                           xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-                          void** in_indices, void** in_indptr, 
-                          int64_t* in_indices_shapes, int64_t* in_indptr_shapes,
-                          std::vector<std::vector<float>>& tmp_data,
-                          std::vector<std::vector<int64_t>>& col_idx,
-                          std::vector<std::vector<int64_t>>& row_ptr) {
+                          ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                          void** in_indices, void** out_indices, void** in_indptr, void** out_indptr,
+                          int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                          int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
+    
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     // create a vector for sparse inputs
-    std::vector<MXInSparse> in_sparse(num_in);
+    std::vector<MXSparse> in_sparse(num_in);
 
     for (int i = 0; i < num_in; i++) {
       // Dense representation.
@@ -1349,23 +1356,32 @@ extern "C" {
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
     // create a vector for sparse outputs
-    std::vector<MXOutSparse> out_sparse;
+    std::vector<MXSparse> out_sparse(num_out);
 
     for (int i = 0; i < num_out; i++) {
-      if(col_idx.empty()) {
+      // Dense representation.
+      if(!out_indices_shapes) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                              outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
-        out_sparse.push_back(MXOutSparse(tmp_data[0], col_idx[0], row_ptr[0]));
-        MXStorageType type = row_ptr.empty() ? kRowSparseStorage : kCSRStorage;
+        MXStorageType type;
+        if(!out_indptr_shapes) {
+          type = kRowSparseStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
+        }
+        else {
+          type = kCSRStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+                            out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
+        }
         outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
                              outIDs[i], {outdev_type[i], outdev_id[i]}, type);
       }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, ndarray_malloc, ndarray_alloc);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {

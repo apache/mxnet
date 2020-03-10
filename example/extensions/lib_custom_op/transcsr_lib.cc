@@ -26,40 +26,36 @@
 #include <iostream>
 #include "lib_api.h"
 
-void transpose(MXTensor src, MXTensor dst) {
-  MXInSparse* A = src.data<MXInSparse>();
-  MXOutSparse* B = dst.data<MXOutSparse>(); 
-
+void transpose(MXTensor src, MXTensor dst, OpResource res) {
+  MXSparse* A = src.data<MXSparse>();
+  MXSparse* B = dst.data<MXSparse>(); 
   std::vector<int64_t> shape = src.shape;
   int64_t h = shape[0];
   int64_t w = shape[1];
   if(src.stype == kCSRStorage) {
-    // To do: fix type.
     float *Aval = (float*) (A->data);
     std::vector<int64_t> rowPtr(w + 2, 0);
-
     // count column
     for(int i = 0; i < A->data_len; i++) {
       rowPtr[A->indices[i] + 2]++;
     }
-
     // Accumulated sum
     for(int i = 2; i < rowPtr.size(); i++) {
       rowPtr[i] += rowPtr[i - 1];
     }
 
-    // Get the dst sparse matrix.
-    B->m_col_idx.resize(A->data_len);
-    B->m_row_ptr.resize(w + 1);
-    B->m_data.resize(A->data_len);
+    // Alloc memory for sparse data, where 0 is the index
+    // of B in output vector.
+    res.alloc_ndarray(B, 0, A->data_len, w + 1);
+    float *Bval = (float*) (B->data);
     for(int i = 0; i < h; i++) {
       for(int j = A->indptr[i]; j < A->indptr[i + 1]; j++) {
         int index = rowPtr[A->indices[j] + 1]++;
-	B->m_data[index] = Aval[j];
-	B->m_col_idx[index] = i;
+        Bval[index] = Aval[j];
+        B->indices[index] = i;
       }
     }
-    memcpy(B->m_row_ptr.data(), rowPtr.data(), sizeof(int64_t) * (w + 1));
+    memcpy(B->indptr, rowPtr.data(), sizeof(int64_t) * (w + 1));
   }
 }
 
@@ -72,7 +68,7 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
   if(inputs[0].dtype != outputs[0].dtype || inputs[0].stype != outputs[0].stype)
     return MX_FAIL;
 
-  transpose(inputs[0], outputs[0]);
+  transpose(inputs[0], outputs[0], res);
   return MX_SUCCESS;
 }
 

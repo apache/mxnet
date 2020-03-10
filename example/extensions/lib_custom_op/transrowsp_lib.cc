@@ -26,9 +26,9 @@
 #include <iostream>
 #include "lib_api.h"
 
-void transpose(MXTensor src, MXTensor dst) {
-  MXInSparse* A = src.data<MXInSparse>();
-  MXOutSparse* B = dst.data<MXOutSparse>(); 
+void transpose(MXTensor src, MXTensor dst, OpResource res) {
+  MXSparse* A = src.data<MXSparse>();
+  MXSparse* B = dst.data<MXSparse>(); 
 
   std::vector<int64_t> shape = src.shape;
   int64_t h = shape[0];
@@ -51,9 +51,14 @@ void transpose(MXTensor src, MXTensor dst) {
       }
     }
 
+    res.alloc_ndarray(B, 0, mp.size());
+    float *Bval = (float*) (B->data);
+    int didx = 0, iidx = 0;
     for(auto i : mp) {
-      B->m_col_idx.push_back(i.first);
-      B->m_data.insert(B->m_data.end(), i.second.begin(), i.second.end());
+      B->indices[iidx++] = i.first;
+      for(auto j : i.second) {
+        Bval[didx++] = j;
+      }
     }
   }
 }
@@ -67,7 +72,7 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
   if(inputs[0].dtype != outputs[0].dtype || inputs[0].stype != outputs[0].stype)
     return MX_FAIL;
 
-  transpose(inputs[0], outputs[0]);
+  transpose(inputs[0], outputs[0], res);
   return MX_SUCCESS;
 }
 
