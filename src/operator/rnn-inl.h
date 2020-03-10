@@ -41,6 +41,7 @@
 #include "./math_functions-inl.h"
 #include "./operator_common.h"
 #include "./rnn_impl.h"
+#include "../profiler/storage_profiler.h"
 
 #if MXNET_USE_CUDNN == 1
 STATIC_ASSERT_CUDNN_VERSION_GE(7000);
@@ -1400,6 +1401,9 @@ class RNNOp {
       workspace_size_ = workspace_byte_ / sizeof(DType);
       // Allocate the reserve space
       reserve_space_ = Storage::Get()->Alloc(reserve_space_byte_, Context::GPU(s->dev_id));
+      reserve_space_.profiler_scope = "cudnn_rnn:";
+      reserve_space_.name = "reserve_space";
+      profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(reserve_space_);
       // Check that number of params are correct
       size_t cudnn_param_size;
       CUDNN_CALL(cudnnGetRNNParamsSize(s->dnn_handle_,

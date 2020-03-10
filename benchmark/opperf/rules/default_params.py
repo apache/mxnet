@@ -279,10 +279,11 @@ DEFAULT_R1 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_R2 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LRS = [(0.1,0.1)]
-DEFAULT_LR = [0.1,0.5,0.9]
-DEFAULT_RHO = [0.1,0.5,0.9]
-DEFAULT_MOMENTUM = [0.1,0.5,0.9]
-DEFAULT_EPSILON = [1e-08]
+DEFAULT_LR = [0.1, 0.5, 0.9]
+DEFAULT_WD = [0.1, 0.5, 0.9]
+DEFAULT_RHO = [0.1, 0.5, 0.9]
+DEFAULT_MOMENTUM = [0.1, 0.5, 0.9]
+DEFAULT_EPSILON = [1e-05]
 DEFAULT_BETA_1 = [0.1, 0.5, 0.9]
 DEFAULT_BETA_2 = [0.1, 0.5, 0.9]
 DEFAULT_T = [1, 5]
@@ -423,6 +424,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "mean" : DEFAULT_MEAN,
                    "var" : DEFAULT_VAR,
                    "mom" : DEFAULT_MOM,
+                   "r1" : DEFAULT_R1,
+                   "r2" : DEFAULT_R2,
                    "n" : DEFAULT_N,
                    "d" : DEFAULT_D,
                    "v" : DEFAULT_V,
@@ -431,7 +434,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "delta" : DEFAULT_DELTA,
                    "lr" : DEFAULT_LR,
                    "lrs" : DEFAULT_LRS,
-                   "wds" : DEFAULT_LRS,
+                   "wd" : DEFAULT_WD,
                    "rho" : DEFAULT_RHO,
                    "momentum" : DEFAULT_MOMENTUM,
                    "epsilon" : DEFAULT_EPSILON,
@@ -508,7 +511,6 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN,
                    "beta_groupnorm": DEFAULT_BETA_GAMMA_GN,
                    "num_groups": DEFAULT_NUM_GROUPS,
-                   "eps": DEFAULT_EPSILON,
                    "data_dropout": DEFAULT_DATA_DROPOUT,
                    "mode_dropout": DEFAULT_MODE_DROPOUT,
                    "p_dropout": DEFAULT_P,
@@ -609,10 +611,9 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "delta" : DEFAULT_DELTA_LARGE_TENSOR,
                                 "lr" : DEFAULT_LR,
                                 "lrs" : DEFAULT_LRS,
-                                "wds" : DEFAULT_LRS,
-                                "wd": DEFAULT_LR,
-                                "gamma1" : DEFAULT_GAMMA_1,
-                                "gamma2" : DEFAULT_GAMMA_2,
+                                "wd": DEFAULT_WD,
+                                "rho" : DEFAULT_RHO,
+                                "momentum" : DEFAULT_MOMENTUM,
                                 "epsilon" : DEFAULT_EPSILON,
                                 "beta1" : DEFAULT_BETA_1,
                                 "beta2" : DEFAULT_BETA_2,
@@ -723,7 +724,6 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "data_groupnorm": DEFAULT_DATA_GN_LARGE_TENSOR,
                                 "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
                                 "beta_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
-                                "eps": DEFAULT_EPSILON,
                                 "data_dropout": DEFAULT_DATA_DROPOUT_LARGE_TENSOR,
                                 "mode_dropout": DEFAULT_MODE_DROPOUT,
                                 "p_dropout": DEFAULT_P_DROPOUT_LARGE_TENSOR,

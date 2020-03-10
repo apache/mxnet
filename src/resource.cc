@@ -29,12 +29,12 @@
 #include <mxnet/engine.h>
 #include <mxnet/random_generator.h>
 #include <mxnet/resource.h>
-#include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
 #include "./common/lazy_alloc_array.h"
 #include "./common/utils.h"
 #include "./common/cuda_utils.h"
+#include "./profiler/storage_profiler.h"
 
 namespace mxnet {
 namespace resource {
@@ -65,11 +65,16 @@ struct SpaceAllocator {
     host_handle.size = 0;
   }
 
-  inline void* GetSpace(size_t size) {
+  inline void* GetSpace(size_t size, const std::string &name) {
     if (handle.size >= size) return handle.dptr;
 
     Storage::Get()->DirectFree(handle);
     handle = Storage::Get()->Alloc(size, ctx);
+    handle.profiler_scope = "resource:";
+    handle.name = name;
+#if MXNET_USE_CUDA
+    profiler::GpuDeviceStorageProfiler::Get()->UpdateStorageInfo(handle);
+#endif  // MXNET_USE_CUDA
     return handle.dptr;
   }
 
@@ -410,8 +415,9 @@ class ResourceManagerImpl : public ResourceManager {
 };
 }  // namespace resource
 
-void* Resource::get_space_internal(size_t size) const {
-  return static_cast<resource::SpaceAllocator*>(ptr_)->GetSpace(size);
+void* Resource::get_space_internal(size_t size,
+    const std::string &name) const {
+  return static_cast<resource::SpaceAllocator*>(ptr_)->GetSpace(size, name);
 }
 
 void* Resource::get_host_space_internal(size_t size) const {
@@ -420,27 +426,25 @@ void* Resource::get_host_space_internal(size_t size) const {
 
 #if MXNET_USE_CUDNN == 1
 void Resource::get_cudnn_dropout_desc(
-    cudnnDropoutDescriptor_t* dropout_desc,
+    cudnnDropoutDescriptor_t *dropout_desc,
     mshadow::Stream<gpu> *stream,
-    const float dropout,
-    uint64_t seed) const {
+    const float dropout, uint64_t seed,
+    const std::string &name) const {
 
   CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
   CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
-    << "The device id of cudnn dropout state space doesn't match that from stream.";
+    << "The device id of cuDNN dropout state space doesn't match that from stream.";
   if (!state_space->handle.size) {
     // not initialized yet.
     size_t dropout_state_size;
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
     // reserve GPU space
-    Storage::Get()->DirectFree(
-      Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
+    Storage::Get()->DirectFree(Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
     CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
                                          dropout,
-                                         state_space->GetSpace(dropout_state_size),
-                                         dropout_state_size,
-                                         seed));
+                                         state_space->GetSpace(dropout_state_size, name),
+                                         dropout_state_size, seed));
   } else {
     // cudnnRestoreDropoutDescriptor() introduced with cuDNN v7
     STATIC_ASSERT_CUDNN_VERSION_GE(7000);

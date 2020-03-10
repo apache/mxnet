@@ -526,6 +526,12 @@ ifeq ($(USE_CUDA), 1)
 	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
+	ifeq ($(USE_NVML), 1)
+		LDFLAGS += -lnvidia-ml
+		CFLAGS += -DMXNET_USE_NVML=1
+	else
+		CFLAGS += -DMXNET_USE_NVML=0
+	endif
 	ifeq ($(USE_NCCL), 1)
 		ifneq ($(USE_NCCL_PATH), NONE)
 			CFLAGS += -I$(USE_NCCL_PATH)/include
@@ -537,6 +543,7 @@ ifeq ($(USE_CUDA), 1)
 		CFLAGS += -DMXNET_USE_NCCL=0
 	endif
 else
+	CFLAGS += -DMXNET_USE_NVML=0
 	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
