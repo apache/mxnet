@@ -109,11 +109,11 @@ struct kron_back_b {
 
 template<typename xpu>
 void KronOpForwardImpl(const OpContext& ctx,
-                OpReqType req,
-                const TBlob& a,
-                const TBlob& b,
-                const TBlob& out
-                ) {
+                       OpReqType req,
+                       const TBlob& a,
+                       const TBlob& b,
+                       const TBlob& out
+                       ) {
   using namespace mshadow;
 
   if (req == kNullOp) {

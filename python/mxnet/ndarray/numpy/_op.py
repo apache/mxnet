@@ -6080,15 +6080,19 @@ def kron(a, b):
     Kronecker product of two arrays.
     Computes the Kronecker product, a composite array made of blocks of the
     second array scaled by the first.
+
     Parameters
     ----------
     a, b : ndarray
+
     Returns
     -------
     out : ndarray
+
     See Also
     --------
     outer : The outer product
+
     Notes
     -----
     The function assumes that the number of dimensions of `a` and `b`
@@ -6104,6 +6108,7 @@ def kron(a, b):
         [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
         [  ...                              ...   ],
         [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
+
     Examples
     --------
     >>> np.kron([1,10,100], [5,6,7])
@@ -6111,7 +6116,7 @@ def kron(a, b):
     >>> np.kron([5,6,7], [1,10,100])
     array([  5,  50, 500,   6,  60, 600,   7,  70, 700])
     """
-    return _npi.kron(a, b)
+    return _api_internal.kron(a, b)
 
 
 @set_module('mxnet.ndarray.numpy')
