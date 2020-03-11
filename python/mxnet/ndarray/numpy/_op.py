@@ -6855,7 +6855,7 @@ def shares_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `may_share_memory` in MXNet DeepNumPy
     """
-    return _npi.share_memory(a, b).item()
+    return _api_internal.share_memory(a, b).item()
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6896,7 +6896,7 @@ def may_share_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `shares_memory` in MXNet DeepNumPy
     """
-    return _npi.share_memory(a, b).item()
+    return _api_internal.share_memory(a, b).item()
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7482,16 +7482,7 @@ def where(condition, x=None, y=None):  # pylint: disable=too-many-return-stateme
             else:
                 return y
         else:
-            if isinstance(x, numeric_types) and isinstance(y, numeric_types):
-                return _npi.where_scalar2(condition, float(x), float(y), out=None)
-            elif isinstance(x, NDArray) and isinstance(y, NDArray):
-                return _npi.where(condition, x, y, out=None)
-            elif isinstance(y, NDArray):
-                return _npi.where_lscalar(condition, y, float(x), out=None)
-            elif isinstance(x, NDArray):
-                return _npi.where_rscalar(condition, x, float(y), out=None)
-            else:
-                raise TypeError('type {0} and {1} not supported'.format(str(type(x)), str(type(y))))
+            return _api_internal.where(condition, x, y)
 
 
 @set_module('mxnet.ndarray.numpy')
