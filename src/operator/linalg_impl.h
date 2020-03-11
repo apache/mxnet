@@ -303,8 +303,8 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
     // pseudo-fp16 (fp32 math with fp16 I/O)
     if (use_true_fp16)
       common::LogOnce("MXNET_FC_TRUE_FP16 was set but this architecture does not support it.");
-    float alpha_f = float(alpha);
-    float beta_f = float(beta);
+    float alpha_f = static_cast<float>(alpha);
+    float beta_f = static_cast<float>(beta);
     CUBLAS_CALL(cublasSgemmEx(blas_handle,
                              (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
                              (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
