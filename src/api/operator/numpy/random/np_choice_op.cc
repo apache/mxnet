@@ -30,10 +30,24 @@
 
 namespace mxnet {
 
-inline static auto _npi_take(NDArray* a, ) {
-}
-                                            
-                      
+inline static auto _npi_take(NDArray* a, NDArray* indices) {
+  const nnvm::Op* op = Op::Get("_npi_take");
+  nnvm::NodeAttrs attrs;
+  op::TakeParam param;
+
+  NDArray** in = new NDArray*[2];
+  in[0] = a;
+  in[1] = indices;
+  int num_inputs = 2;
+
+  NDArray** inputs = in == nullptr ? nullptr : in;
+  
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  
+  int num_outputs = 0;
+  return Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+}                                              
 
 MXNET_REGISTER_API("_npi.choice")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
