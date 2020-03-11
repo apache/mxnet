@@ -317,7 +317,7 @@ def test_nn():
         axis = 1  # default
         eps = 1e-3
         nch = shape[axis]
-        data = mx.nd.ones(shape=shape)
+        
         bn_gamma = mx.nd.random.uniform(shape=(nch,))
         bn_beta = mx.nd.random.uniform(shape=(nch,))
         bn_running_mean = mx.nd.zeros(nch)
