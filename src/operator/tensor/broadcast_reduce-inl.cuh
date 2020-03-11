@@ -54,6 +54,75 @@ __global__ void binary_broadcast_kernel(const int N, const bool addto,
   }
 }
 
+template <int ndim, typename DType>
+struct VectorizedBinaryBroadcastParam {
+  const DType* inputs[2];
+  DType* outputs[1];
+  Shape<ndim> lstride;
+  //Shape<ndim> lshape;
+  Shape<ndim> rstride;
+  //Shape<ndim> rshape;
+  Shape<ndim> oshape;
+  index_t size[2];
+};
+
+template <int ndim>
+MSHADOW_XINLINE index_t calc_index(const index_t idx,
+                                   const Shape<ndim>& stride,
+                                   const Shape<ndim>& shape) {
+  index_t ret = idx;
+#pragma unroll
+  for (int i = 0; i < ndim; ++i) {
+    ret -= ((idx / stride[i]) % shape[i]) * stride[i];
+  }
+
+  return ret;
+}
+
+using common::cuda::VectorizedLoader;
+using common::cuda::VectorizedStorer;
+
+template <bool aligned, typename DType, typename LType, typename OP, int ndim, int req>
+__global__ void VectorizedBinaryBroadcastKernel(
+    const VectorizedBinaryBroadcastParam<ndim, DType> param,
+    const index_t N) {
+  constexpr int nvec = sizeof(LType) / sizeof(DType);
+  const index_t M = N / nvec;
+
+  VectorizedLoader<DType, LType, aligned> lloader(param.inputs[0], param.size[0]);
+  VectorizedLoader<DType, LType, aligned> rloader(param.inputs[1], param.size[1]);
+  VectorizedStorer<DType, LType, aligned> storer(param.outputs[0], N);
+
+  for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+       idx < M;
+       idx += gridDim.x * blockDim.x) {
+    index_t lindex, rindex;
+    unravel_dot(idx * nvec, param.oshape,
+                param.lstride, param.rstride,
+                &lindex, &rindex);
+    //index_t lindex = calc_index(idx * nvec, lstride);
+    //index_t rindex = calc_index(idx * nvec, rstride);
+    lloader.load(lindex / nvec, param.size[0]);
+    rloader.load(rindex / nvec, param.size[1]);
+
+    if (req == kAddTo) {
+      storer.load(idx, N);
+    }
+#pragma unroll
+    for (int i = 0; i < lloader.nvec(); ++i) {
+      DType temp = OP::Map(lloader.separate()[i],
+                           rloader.separate()[i]);
+
+      if (req == kAddTo) {
+        storer.separate()[i] += temp;
+      } else {
+        storer.separate()[i] = temp;
+      }
+    }
+    storer.store(idx, N);
+  }
+}
+
 template<int ndim, typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
@@ -69,6 +138,49 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
   binary_broadcast_kernel<ndim, DType, OP, unroll><<<ngrid, nthread, 0, stream>>>(
     N, req == kAddTo, lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>(), lstride, rstride,
     out.shape_.get<ndim>());
+}
+
+template <typename DType, typename OP, int req, int ndim>
+class VectorizedBinaryBroadcastFwd {
+ public:
+  using ParamType = VectorizedBinaryBroadcastParam<ndim, DType>;
+
+  template <bool aligned, typename LType>
+  static void Launch(const index_t blocks, const index_t threads,
+                     cudaStream_t stream,
+                     const ParamType params, const index_t N) {
+    VectorizedBinaryBroadcastKernel<aligned, DType, LType, OP, ndim, req>
+      <<<blocks, threads, 0, stream>>>(params, N);
+  }
+};
+
+using common::cuda::VectorizedKernelLauncher;
+
+template<int ndim, typename DType, typename OP>
+void BinaryBroadcastComputeImpl2(Stream<gpu> *s, const OpReqType req,
+                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
+  if (req == kNullOp) return;
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
+  const index_t N = out.shape_.Size();
+
+  Shape<ndim> lstride = calc_stride(lhs.shape_.get<ndim>());
+  Shape<ndim> rstride = calc_stride(rhs.shape_.get<ndim>());
+  constexpr int Req = kWriteTo;
+  //MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+    using LType = uint2;
+    using Kernel = VectorizedBinaryBroadcastFwd<DType, OP, Req, ndim>;
+
+    typename Kernel::ParamType param;
+
+    param.inputs[0] = lhs.dptr<DType>();
+    param.inputs[1] = rhs.dptr<DType>();
+    param.outputs[0] = out.dptr<DType>();
+    param.lstride = lstride;
+    param.rstride = rstride;
+    param.oshape = out.shape_.get<ndim>();
+
+    VectorizedKernelLauncher<DType, LType, Kernel>(N, s, param);
+  //});
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
@@ -660,16 +772,16 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
-                           const mxnet::TShape& big) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
+                           const ::mxnet::TShape& big) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, nullptr, nullptr);
   return config.workspace_size;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
-                           const mxnet::TShape& big, const mxnet::TShape& lhs, const mxnet::TShape& rhs) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
+                           const ::mxnet::TShape& big, const ::mxnet::TShape& lhs, const ::mxnet::TShape& rhs) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
   return config.workspace_size;

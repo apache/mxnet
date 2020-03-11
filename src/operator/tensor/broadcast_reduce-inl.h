@@ -32,6 +32,7 @@
 #include <utility>
 #include "../mshadow_op.h"
 #include "../operator_common.h"
+#include "../../common/cuda_vectorization.cuh"
 
 namespace mxnet {
 namespace op {
@@ -178,6 +179,11 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
 #include "broadcast_reduce-inl.cuh"
 
 #else
+
+template<int ndim, typename DType, typename OP>
+void BinaryBroadcastComputeImpl2(Stream<cpu> *s, const OpReqType req,
+                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
+}
 
 template<int ndim, typename DType, typename OP>
 void binary_broadcast_compute(const size_t N, const bool addto, const DType *lhs,

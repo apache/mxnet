@@ -395,9 +395,15 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     }
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        if (dmlc::GetEnv("DEBUG_BCAST", false)) {
+        int choice = dmlc::GetEnv("DEBUG_BCAST", 0);
+        if (choice != 0) {
+        if (choice == 1) {
         broadcast::BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
           inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+        } else {
+        broadcast::BinaryBroadcastComputeImpl2<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
+          inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+        }
         } else {
         mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();
         mshadow::Shape<NDim> lstride = mxnet_op::calc_stride(new_lshape.get<NDim>());
