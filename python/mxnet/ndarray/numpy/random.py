@@ -1038,4 +1038,6 @@ def geometric(p, size=None, dtype=None, ctx=None, out=None):
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
         dtype = np.dtype(dtype).name
+    if size == ():
+        size = None
     return _api_internal.geometric(p, size, dtype, ctx, out)
