@@ -28,55 +28,25 @@
 #include <algorithm>
 #include <iostream>
 
-namespace mxnet {
-
-inline static runtime::MXNetRetValue* _npi_take(NDArray* a, NDArray* indices) {
-  const nnvm::Op* op = Op::Get("_npi_take");
-  nnvm::NodeAttrs attrs;
-  op::TakeParam param;
-  runtime::MXNetRetValue* ret;
-
-  NDArray** in = new NDArray*[2];
-  in[0] = a;
-  in[1] = indices;
-  int num_inputs = 2;
-
-  NDArray** inputs = in == nullptr ? nullptr : in;
-  
-  attrs.parsed = std::move(param);
-  attrs.op = op;
-  
-  int num_outputs = 0;
-  *ret = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr)[0];
-  return ret;
-}                                              
+namespace mxnet {                  
 
 MXNET_REGISTER_API("_npi.choice")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_choice");
-  const nnvm::Op* op_take = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
   op::NumpyChoiceParam param;
-  bool a_is_ndarray;
 
   NDArray** in = new NDArray*[2];
   int num_inputs = 0;
 
   if (args[0].type_code() == kDLInt) {
     param.a = args[0].operator int();
-    a_is_ndarray = false;
   } else if (args[0].type_code() == kNDArrayHandle){
     param.a = dmlc::nullopt;
     in[num_inputs] = args[0].operator mxnet::NDArray*();
     num_inputs++;
-    a_is_ndarray = true;
-  } else {
-    param.a = 5;
-    a_is_ndarray = false;
   }
-
-  std::cout<<args[0].type_code();
 
   if (args[1].type_code() == kNull) {
     param.size = dmlc::nullopt;

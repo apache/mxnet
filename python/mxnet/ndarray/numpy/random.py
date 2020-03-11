@@ -551,28 +551,16 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     """
     from ...numpy import ndarray as np_ndarray
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
     if isinstance(a, np_ndarray):
-        ctx = None
-        if p is None:
-            indices = _npi.choice(a, a=None, size=size,
-                                  replace=replace, ctx=ctx, weighted=False)
-            return _npi.take(a, indices)
-        else:
-            indices = _npi.choice(a, p, a=None, size=size,
-                                  replace=replace, ctx=ctx, weighted=True)
-            return _npi.take(a, indices)
+        indices = _api_internal.choice(a, size, replace, p, ctx, out)
+        return _npi.take(a, indices)
     else:
-        if p is None:
-            return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
-        else:
-            return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
-
-
-def choice_v2(a, size=None, replace=True, p=None, ctx=None, out=None):
-    return _api_internal.choice(a, size, replace, ctx, False, out)
+        return _api_internal.choice(a, size, replace, p, ctx, out)
 
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
