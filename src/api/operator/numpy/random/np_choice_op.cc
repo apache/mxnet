@@ -31,6 +31,7 @@
 namespace mxnet {
 
 inline static auto _npi_take(NDArray* a, ) {
+}
                                             
                       
 
