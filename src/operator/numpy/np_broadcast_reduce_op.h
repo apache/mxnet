@@ -99,6 +99,13 @@ struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolPara
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
