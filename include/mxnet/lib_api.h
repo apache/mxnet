@@ -949,6 +949,7 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
                              xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
                              ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                             int* instypes, int* outstypes,
                              void** in_indices, void** out_indices,
                              void** in_indptr, void** out_indptr,
                              int64_t* in_indices_shapes, int64_t* out_indices_shapes,
@@ -977,6 +978,7 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc,
                                      xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
                                      ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                                     int* instypes, int* outstypes,
                                      void** in_indices, void** out_indices,
                                      void** in_indptr, void** out_indptr,
                                      int64_t* in_indices_shapes, int64_t* out_indices_shapes,
@@ -1186,7 +1188,8 @@ extern "C" {
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
                   xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
                   ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
-                  void** in_indices, void** out_indices, void** in_indptr, void** out_indptr,
+                  int* instypes, int* outstypes, void** in_indices, void** out_indices,
+                  void** in_indptr, void** out_indptr,
                   int64_t* in_indices_shapes, int64_t* out_indices_shapes, 
                   int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
     // create map of attributes from list
@@ -1202,14 +1205,14 @@ extern "C" {
 
     for (int i = 0; i < num_in; i++) {
       // Dense representation.
-      if(!in_indices_shapes) {
+      if(instypes[i] == 0) {
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
                             inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
         MXStorageType type;
-        if(!in_indptr_shapes) {
+        if(instypes[i] == 1) {
           type = kRowSparseStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
         }
@@ -1229,14 +1232,14 @@ extern "C" {
 
     for (int i = 0; i < num_out; i++) {
       // Dense representation.
-      if(!out_indices_shapes) {
+      if(outstypes[i] == 0) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
         MXStorageType type;
-        if(!out_indptr_shapes) {
+        if(outstypes[i] == 1) {
           type = kRowSparseStorage;
           out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
         }
@@ -1321,7 +1324,8 @@ extern "C" {
                           xpu_malloc_t cpu_malloc, void* cpu_alloc,
                           xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
                           ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
-                          void** in_indices, void** out_indices, void** in_indptr, void** out_indptr,
+                          int* instypes, int* outstypes, void** in_indices, void** out_indices,
+                          void** in_indptr, void** out_indptr,
                           int64_t* in_indices_shapes, int64_t* out_indices_shapes,
                           int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
     
@@ -1332,14 +1336,14 @@ extern "C" {
 
     for (int i = 0; i < num_in; i++) {
       // Dense representation.
-      if(!in_indices_shapes) {
+      if(instypes[i] == 0) {
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
                             inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
         MXStorageType type;
-        if(!in_indptr_shapes) {
+        if(instypes[i] == 1) {
           type = kRowSparseStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
         }
@@ -1360,14 +1364,14 @@ extern "C" {
 
     for (int i = 0; i < num_out; i++) {
       // Dense representation.
-      if(!out_indices_shapes) {
+      if(outstypes[i] == 0) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                              outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
       }
       // Sparse representation.
       else {
         MXStorageType type;
-        if(!out_indptr_shapes) {
+        if(outstypes[i] == 1) {
           type = kRowSparseStorage;
           out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
         }

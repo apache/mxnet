@@ -122,10 +122,11 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<int> in_dev_id, out_dev_id;
 
   // Extra data for sparse inputs and outputs.
-  std::vector<void*> in_indices, out_indices;
-  std::vector<void*> in_indptr, out_indptr;
-  std::vector<int64_t> in_indices_shapes, out_indices_shapes;
-  std::vector<int64_t> in_indptr_shapes, out_indptr_shapes;
+  std::vector<int> in_stypes(inputs.size(), 0), out_stypes(outputs.size(), 0);
+  std::vector<void*> in_indices(inputs.size(), nullptr), out_indices(outputs.size(), nullptr);
+  std::vector<void*> in_indptr(inputs.size(), nullptr), out_indptr(outputs.size(), nullptr);
+  std::vector<int64_t> in_indices_shapes(inputs.size(), 0), out_indices_shapes(outputs.size(), 0);
+  std::vector<int64_t> in_indptr_shapes(inputs.size(), 0), out_indptr_shapes(outputs.size(), 0);
 
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
@@ -139,14 +140,16 @@ void CustomFComputeDispatcher(const std::string op_name,
     in_dev_id.push_back(inputs[i].ctx().real_dev_id());
     
     if(inputs[i].storage_type() == mxnet::kRowSparseStorage) {
-      in_indices.push_back(inputs[i].aux_data(rowsparse::kIdx).dptr_);
-      in_indices_shapes.push_back(inputs[i].aux_shape(rowsparse::kIdx).Size());
+      in_stypes[i] = 1;
+      in_indices[i] = inputs[i].aux_data(rowsparse::kIdx).dptr_;
+      in_indices_shapes[i] = inputs[i].aux_shape(rowsparse::kIdx).Size();
     }
     else if(inputs[i].storage_type() == mxnet::kCSRStorage) {
-      in_indices.push_back(inputs[i].aux_data(csr::kIdx).dptr_);
-      in_indptr.push_back(inputs[i].aux_data(csr::kIndPtr).dptr_);
-      in_indices_shapes.push_back(inputs[i].aux_shape(csr::kIdx).Size());
-      in_indptr_shapes.push_back(inputs[i].aux_shape(csr::kIndPtr).Size());
+      in_stypes[i] = 2;
+      in_indices[i] = inputs[i].aux_data(csr::kIdx).dptr_;
+      in_indptr[i] = inputs[i].aux_data(csr::kIndPtr).dptr_;
+      in_indices_shapes[i] = inputs[i].aux_shape(csr::kIdx).Size();
+      in_indptr_shapes[i] = inputs[i].aux_shape(csr::kIndPtr).Size();
     }
   }
 
@@ -161,14 +164,16 @@ void CustomFComputeDispatcher(const std::string op_name,
     out_dev_id.push_back(outputs[i].ctx().real_dev_id());
 
     if(outputs[i].storage_type() == mxnet::kRowSparseStorage) {
-      out_indices.push_back(outputs[i].aux_data(rowsparse::kIdx).dptr_);
-      out_indices_shapes.push_back(outputs[i].aux_shape(rowsparse::kIdx).Size());
+      out_stypes[i] = 1;
+      out_indices[i] = outputs[i].aux_data(rowsparse::kIdx).dptr_;
+      out_indices_shapes[i] = outputs[i].aux_shape(rowsparse::kIdx).Size();
     }
     else if(outputs[i].storage_type() == mxnet::kCSRStorage) {
-      out_indices.push_back(outputs[i].aux_data(csr::kIdx).dptr_);
-      out_indptr.push_back(outputs[i].aux_data(csr::kIndPtr).dptr_);
-      out_indices_shapes.push_back(outputs[i].aux_shape(csr::kIdx).Size());
-      out_indptr_shapes.push_back(outputs[i].aux_shape(csr::kIndPtr).Size());
+      out_stypes[i] = 2;
+      out_indices[i] = outputs[i].aux_data(csr::kIdx).dptr_;
+      out_indptr[i] = outputs[i].aux_data(csr::kIndPtr).dptr_;
+      out_indices_shapes[i] = outputs[i].aux_shape(csr::kIdx).Size();
+      out_indptr_shapes[i] = outputs[i].aux_shape(csr::kIndPtr).Size();
     }
   }
 
@@ -258,7 +263,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
-                    ndarray_malloc, &ndarray_alloc,
+                    ndarray_malloc, &ndarray_alloc, in_stypes.data(), out_stypes.data(),
                     in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(), 
                     in_indices_shapes.data(), out_indices_shapes.data(), 
                     in_indptr_shapes.data(), out_indptr_shapes.data()))
@@ -281,7 +286,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                            ndarray_malloc, &ndarray_alloc,
+                            ndarray_malloc, &ndarray_alloc, in_stypes.data(), out_stypes.data(),
                             in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
                             in_indices_shapes.data(), out_indices_shapes.data(),
                             in_indptr_shapes.data(), out_indptr_shapes.data()))
