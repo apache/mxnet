@@ -640,13 +640,13 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     """
     if zoom_in and zoom_out:
         raise ValueError("`zoom_in` and `zoom_out` cannot be both True")
-    if src.dtype is not np.float32:
+    if np.dtype(src.dtype) is not np.dtype(np.float32):
         raise TypeError("Only `float32` images are supported by this function")
     # handles the case in which a single image is passed to this function
     expanded = False
     if src.ndim == 3:
         expanded = True
-        src = src.expand_dims(axis=0)
+        src = _mx_np.expand_dims(src, 0) if is_np_array() else src.expand_dims(axis=0)
         if not isinstance(rotation_degrees, Number):
             raise TypeError("When a single image is passed the rotation angle is "
                             "required to be a scalar.")
@@ -714,7 +714,11 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     grid = nd.concat(w_matrix_rot.expand_dims(axis=1),
                      h_matrix_rot.expand_dims(axis=1), dim=1)
     grid = grid * globalscale
+    if is_np_array():
+        src = src.as_nd_ndarray()
     rot_img = nd.BilinearSampler(src, grid)
+    if is_np_array():
+        rot_img = rot_img.as_np_ndarray()
     if expanded:
         return rot_img[0]
     return rot_img

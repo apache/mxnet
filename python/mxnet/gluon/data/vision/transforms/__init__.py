@@ -20,12 +20,15 @@
 "Vision transforms."
 
 import warnings
+import random
 
 from ....block import Block, HybridBlock
 from ....nn import Sequential, HybridSequential
 
 from . image import *
+from .image import _append_return
 from .bbox import *
+
 
 class Compose(Sequential):
     """Sequentially composes multiple transforms.
@@ -126,10 +129,10 @@ class Cast(HybridBlock):
         super(Cast, self).__init__()
         self._dtype = dtype
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.cast(x, self._dtype)
+        return _append_return(F.cast(x, self._dtype), *args)
 
 
 class RandomApply(Sequential):
@@ -155,11 +158,11 @@ class RandomApply(Sequential):
         self.transforms = transforms
         self.p = p
 
-    def forward(self, x):
+    def forward(self, x, *args):
         if self.p < random.random():
             return x
         x = self.transforms(x)
-        return x
+        return _append_return(x, *args)
 
 
 class HybridRandomApply(HybridSequential):
@@ -186,9 +189,9 @@ class HybridRandomApply(HybridSequential):
         self.transforms = transforms
         self.p = p
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             cond = self.p < F.random.uniform(low=0, high=1, size=1)
             return F.npx.cond(cond, x, self.transforms(x))
         cond = self.p < F.random.uniform(low=0, high=1, shape=1)
-        return F.contrib.cond(cond, x, self.transforms(x))
+        return _append_return(F.contrib.cond(cond, x, self.transforms(x)), *args)

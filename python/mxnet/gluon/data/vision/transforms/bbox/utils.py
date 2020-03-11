@@ -23,6 +23,10 @@ import random
 
 import numpy as np
 
+def _check_bbox_shape(bbox):
+    assert len(bbox.shape) == 2, "bbox requires shape of (N, 4+), given: {}".format(bbox.shape)
+    assert bbox.shape[1] >= 4, "bbox requires shape of (N, 4+), given: {}".format(bbox.shape)
+
 def bbox_crop(bbox, crop_box=None, allow_outside_center=True):
     """Crop bounding boxes according to slice area.
     This method is mainly used with image cropping to ensure bonding boxes fit
