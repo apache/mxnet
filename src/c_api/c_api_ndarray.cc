@@ -120,8 +120,7 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
     for (NDArray* input : ndinputs) {
       Imperative::DCInfo::Compute(*input);
     }
-    auto state = Imperative::Get()->Invoke(
-      Context::CPU(), attrs, ndinputs, ndoutputs);
+    auto state = Imperative::Get()->Invoke(Context::CPU(), attrs, ndinputs, ndoutputs);
     if (Imperative::Get()->is_recording()) {
       Imperative::Get()->RecordOp(std::move(attrs), ndinputs, ndoutputs, state);
     }
