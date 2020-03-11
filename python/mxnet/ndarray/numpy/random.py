@@ -1042,4 +1042,6 @@ def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
         dtype = np.dtype(dtype).name
+    if size == ():
+        size = None
     return _api_internal.laplace(loc, scale, size, dtype, ctx, out)
