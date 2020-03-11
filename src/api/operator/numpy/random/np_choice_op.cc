@@ -33,7 +33,7 @@ namespace mxnet {
 inline static runtime::MXNetRetValue* _npi_take(NDArray* a, NDArray* indices) {
   const nnvm::Op* op = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
-  op::TakeParam param;
+  op::CastParam param;
   runtime::MXNetRetValue* ret;
 
   NDArray** in = new NDArray*[2];
