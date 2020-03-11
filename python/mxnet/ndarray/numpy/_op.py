@@ -6654,7 +6654,9 @@ def logical_and(x1, x2, out=None):
     >>> np.logical_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([False,  True])
     """
-    return _ufunc_helper(x1, x2, _npi.logical_and, _np.logical_and, _npi.logical_and_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.logical_and(x1, x2, out=out)
+    return _api_internal.logical_and(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6689,7 +6691,9 @@ def logical_or(x1, x2, out=None):
     >>> np.logical_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([True,  True])
     """
-    return _ufunc_helper(x1, x2, _npi.logical_or, _np.logical_or, _npi.logical_or_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.logical_or(x1, x2, out=out)
+    return _api_internal.logical_or(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6724,7 +6728,9 @@ def logical_xor(x1, x2, out=None):
     >>> np.logical_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, False])
     """
-    return _ufunc_helper(x1, x2, _npi.logical_xor, _np.logical_xor, _npi.logical_xor_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.logical_xor(x1, x2, out=out)
+    return _api_internal.logical_xor(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
