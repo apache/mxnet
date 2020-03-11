@@ -26,12 +26,12 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_TRIU_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_TRIU_OP_INL_H_
 
+#include <dmlc/parameter.h>
 #include <vector>
 #include <string>
 #include <unordered_map>
 #include <sstream>
 #include <algorithm>
-#include <dmlc/parameter.h>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
