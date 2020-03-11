@@ -633,6 +633,7 @@ def test_gemms_true_fp16():
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
+    os.environ["MXNET_FC_TRUE_FP16"] = "0"
 
 
 if __name__ == '__main__':

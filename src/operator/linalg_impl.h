@@ -288,17 +288,33 @@ void linalg_gemm<gpu, mshadow::half::half_t>(const Tensor<gpu, 2, mshadow::half:
     beta_ptr = &pseudoFP16_beta;
     computeType = CublasType<PseudoFP16Type>::kCudaFlag;
   }
-
-  CUBLAS_CALL(cublasGemmEx(blas_handle,
-                           (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
-                           (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
-                           C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
-                           alpha_ptr,
-                           B.dptr_, half_datatype, B.stride_,
-                           A.dptr_, half_datatype, A.stride_,
-                           beta_ptr,
-                           C.dptr_, half_datatype, C.stride_,
-                           computeType, algo));
+  if (SupportsFloat16Compute(s->dev_id)) {
+    CUBLAS_CALL(cublasGemmEx(blas_handle,
+                            (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
+                            (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
+                            C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
+                            alpha_ptr,
+                            B.dptr_, half_datatype, B.stride_,
+                            A.dptr_, half_datatype, A.stride_,
+                            beta_ptr,
+                            C.dptr_, half_datatype, C.stride_,
+                            computeType, algo));
+  } else {
+    // pseudo-fp16 (fp32 math with fp16 I/O)
+    if (use_true_fp16)
+      common::LogOnce("MXNET_FC_TRUE_FP16 was set but this architecture does not support it.");
+    float alpha_f = float(alpha);
+    float beta_f = float(beta);
+    CUBLAS_CALL(cublasSgemmEx(blas_handle,
+                             (tB ? CUBLAS_OP_T : CUBLAS_OP_N),
+                             (tA ? CUBLAS_OP_T : CUBLAS_OP_N),
+                             C.size(1), C.size(0), (tB ? B.size(1) : B.size(0)),
+                             &alpha_f,
+                             B.dptr_, half_datatype, B.stride_,
+                             A.dptr_, half_datatype, A.stride_,
+                             &beta_f,
+                             C.dptr_, half_datatype, C.stride_));
+  }
 #if CUDA_VERSION >= 9000
   SetCublasMathMode(blas_handle, previous_math_mode);
 #endif
