@@ -52,16 +52,14 @@ class FisherSnedecor(Distribution):
 
     @property
     def mean(self):
-        df2 = self.F.np.copy(self.df2)
         # mean is only defined for df2 > 2
-        # df2[df2 <= 2] = nan
+        df2 = self.F.np.where(self.df2 <= 2, nan, self.df2)
         return df2 / (df2 - 2)
 
     @property
     def variance(self):
-        df2 = self.F.np.copy(self.df2)
         # variance is only define for df2 > 4
-        # df2[df2 <= 4] = nan
+        df2 = self.F.np.where(self.df2 <= 4, nan, self.df2)
         df1 = self.df1
         numerator = 2 * df2 ** 2 * (df1 + df2 - 2)
         denominator = df1 * (df2 - 2) ** 2 * (df2 - 4)
