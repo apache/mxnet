@@ -588,6 +588,16 @@ inline void FlipTopBottom(const nnvm::NodeAttrs &attrs,
   });
 }
 
+struct RandomFlipParam : public dmlc::Parameter<RandomFlipParam> {
+  float p;
+
+  DMLC_DECLARE_PARAMETER(RandomFlipParam) {
+    DMLC_DECLARE_FIELD(p)
+    .set_default(0.5f)
+    .describe("The probablity of flipping the image.");
+  }
+};
+
 inline void RandomFlipLeftRight(
     const nnvm::NodeAttrs &attrs,
     const OpContext &ctx,
@@ -595,10 +605,12 @@ inline void RandomFlipLeftRight(
     const std::vector<OpReqType> &req,
     const std::vector<TBlob> &outputs) {
   using namespace mshadow;
+  const RandomFlipParam &param = nnvm::get<RandomFlipParam>(attrs.parsed);
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
+  std::normal_distribution<float> dist(0, 1);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (std::bernoulli_distribution()(prnd->GetRndEngine())) {
+    if (dist(prnd->GetRndEngine()) > param.p) {
       if (outputs[0].dptr_ != inputs[0].dptr_) {
         std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
       }
@@ -616,10 +628,12 @@ inline void RandomFlipTopBottom(
     const std::vector<OpReqType> &req,
     const std::vector<TBlob> &outputs) {
   using namespace mshadow;
+  const RandomFlipParam &param = nnvm::get<RandomFlipParam>(attrs.parsed);
   Stream<cpu> *s = ctx.get_stream<cpu>();
   Random<cpu> *prnd = ctx.requested[0].get_random<cpu, float>(s);
+  std::normal_distribution<float> dist(0, 1);
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    if (std::bernoulli_distribution()(prnd->GetRndEngine())) {
+    if (dist(prnd->GetRndEngine()) > param.p) {
       if (outputs[0].dptr_ != inputs[0].dptr_) {
         std::memcpy(outputs[0].dptr_, inputs[0].dptr_, inputs[0].Size() * sizeof(DType));
       }

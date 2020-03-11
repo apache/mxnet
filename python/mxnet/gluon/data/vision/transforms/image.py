@@ -483,18 +483,11 @@ class RandomFlipLeftRight(HybridBlock):
         if is_np_array():
             if self.p >= 1:
                 return _append_return(F.npx.image.flip_left_right(x), *args)
-            if self.p == 0.5:
-                return _append_return(F.npx.image.random_flip_left_right(x), *args)
-            cond = self.p < F.random.uniform(low=0, high=1)
-            x = F.contrib.cond(cond, lambda: x, lambda: F.npx.image.flip_left_right(x))
-            return _append_return(x, *args)
+            return _append_return(F.npx.image.random_flip_left_right(x, p=self.p), *args)
         else:
             if self.p >= 1:
                 return _append_return(F.image.flip_left_right(x), *args)
-            if self.p == 0.5:
-                return _append_return(F.image.random_flip_left_right(x), *args)
-            cond = self.p < F.random.uniform(low=0, high=1)
-            return _append_return(F.contrib.cond(cond, lambda: x, lambda: F.image.flip_left_right(x)), *args)
+            return _append_return(F.image.random_flip_left_right(x, p=self.p), *args)
 
 
 class RandomFlipTopBottom(HybridBlock):
@@ -518,18 +511,11 @@ class RandomFlipTopBottom(HybridBlock):
         if is_np_array():
             if self.p >= 1:
                 return _append_return(F.npx.image.flip_top_bottom(x), *args)
-            if self.p == 0.5:
-                return _append_return(F.npx.image.random_flip_top_bottom(x), *args)
-            cond = self.p < F.random.uniform(low=0, high=1)
-            x = F.contrib.cond(cond, lambda: x, lambda: F.npx.image.flip_top_bottom(x))
-            return _append_return(x, *args)
+            return _append_return(F.npx.image.random_flip_top_bottom(x, p=self.p), *args)
         else:
             if self.p >= 1:
                 return _append_return(F.image.flip_top_bottom(x), *args)
-            if self.p == 0.5:
-                return _append_return(F.image.random_flip_top_bottom(x), *args)
-            cond = self.p < F.random.uniform(low=0, high=1)
-            return _append_return(F.contrib.cond(cond, lambda: x, lambda: F.image.flip_top_bottom(x)), *args)
+            return _append_return(F.image.random_flip_top_bottom(x, p=self.p), *args)
 
 
 class RandomBrightness(HybridBlock):
@@ -711,25 +697,18 @@ class RandomGray(HybridBlock):
     """
     def __init__(self, p=0.5):
         super(RandomGray, self).__init__()
-        self.mat = self.params.get_constant('gray_mat', value=[[0.21, 0.21, 0.21],
-                                                               [0.72, 0.72, 0.72],
-                                                               [0.07, 0.07, 0.07]])
+        self.mat = self.params.get_constant('gray_mat', value=[[0.2989, 0.5870, 0.114],
+                                                               [0.2989, 0.5870, 0.114],
+                                                               [0.2989, 0.5870, 0.114]])
         self.mat.initialize()
         self.p = p
 
     def hybrid_forward(self, F, x, mat, *args):
         if is_np_array():
-            _random = F.np.random
-            _cond = F.contrib.cond
-            _dot = F.np.dot
-            _cast = F.npx.cast
+            x = F.npx.cast(x, dtype='float32')
+            gray = F.np.where(self.p < F.np.random.uniform(), x, F.np.dot(x, mat))
         else:
-            _random = F.random
-            _cond = F.contrib.cond
-            _dot = F.dot
-            _cast = F.cast
-        cond = self.p < _random.uniform()
-        return _append_return(_cond(cond,
-                                    lambda: x,
-                                    lambda: _dot(_cast(x, dtype='float32'),
-                                    mat)), *args)
+            cond = self.p < F.random.uniform(shape=1)
+            x = F.cast(x, dtype='float32')
+            gray = F.contrib.cond(cond, lambda: x, lambda: F.dot(x, mat))
+        return _append_return(gray, *args)

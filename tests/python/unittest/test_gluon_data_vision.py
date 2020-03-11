@@ -340,11 +340,24 @@ def test_random_gray():
 
     transform = transforms.RandomGray(0.5)
     img = mx.nd.ones((4, 4, 3), dtype='uint8')
+    pixel = img[0, 0, 0].asnumpy()
     iteration = 1000
     num_apply = 0
     for _ in range(iteration):
         out = transform(img)
-        if out.dtype != np.uint8:
+        if out[0][0][0].asnumpy() != pixel:
+            num_apply += 1
+    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
+
+    transform = transforms.RandomGray(0.5)
+    transform.hybridize()
+    img = mx.nd.ones((4, 4, 3), dtype='uint8')
+    pixel = img[0, 0, 0].asnumpy()
+    iteration = 1000
+    num_apply = 0
+    for _ in range(iteration):
+        out = transform(img)
+        if out[0][0][0].asnumpy() != pixel:
             num_apply += 1
     assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
