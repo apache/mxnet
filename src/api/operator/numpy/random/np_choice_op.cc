@@ -30,6 +30,10 @@
 
 namespace mxnet {
 
+inline static auto _npi_take(NDArray* a, ) {
+                                            
+                      
+
 MXNET_REGISTER_API("_npi.choice")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
@@ -37,22 +41,28 @@ MXNET_REGISTER_API("_npi.choice")
   const nnvm::Op* op_take = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
   op::NumpyChoiceParam param;
+  bool a_is_ndarray;
 
-  NDArray* in;
+  NDArray** in = new NDArray*[2];
+  int num_inputs = 0;
 
   if (args[0].type_code() == kDLInt) {
     param.a = args[0].operator int();
-  } else if (args[0].type_code() == 11){
-    param.a = dmlc::optional<int64_t>();
-    in = args[0].operator mxnet::NDArray*();
+    a_is_ndarray = false;
+  } else if (args[0].type_code() == kNDArrayHandle){
+    param.a = dmlc::nullopt;
+    in[num_inputs] = args[0].operator mxnet::NDArray*();
+    num_inputs++;
+    a_is_ndarray = true;
   } else {
     param.a = 5;
+    a_is_ndarray = false;
   }
 
   std::cout<<args[0].type_code();
 
   if (args[1].type_code() == kNull) {
-    param.size = mxnet::Tuple<int64_t>({10});
+    param.size = dmlc::nullopt;
   } else {
     if (args[1].type_code() == kDLInt) {
       param.size = mxnet::Tuple<int64_t>(1, args[1].operator int64_t());
@@ -68,32 +78,25 @@ MXNET_REGISTER_API("_npi.choice")
   }
 
   if (args[3].type_code() == kNull) {
-    param.ctx = "cpu";
-  } else {
-    param.ctx = args[3].operator std::__cxx11::string();
-  }
-
-  if (args[4].type_code() == kNull) {
     param.weighted = false;
-  } else {
-    param.weighted = args[4].operator bool();
+  } else if (args[0].type_code() == kNDArrayHandle) {
+    param.weighted = true;
+    in[num_inputs] = args[3].operator mxnet::NDArray*();
+    num_inputs++;
   }
 
-  NDArray** inputs = in == nullptr ? nullptr : &in;
-  int num_input = 0;
-  if (param.weighted) num_input += 1;
-  if (!param.a.has_value()) num_input += 1;
+  NDArray** inputs = in == nullptr ? nullptr : in;
   
   attrs.parsed = std::move(param);
   attrs.op = op;
-  if (args[3].type_code() != kNull) {
-    attrs.dict["ctx"] = args[3].operator std::string();
+  if (args[4].type_code() != kNull) {
+    attrs.dict["ctx"] = args[4].operator std::string();
   }
   
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_input, inputs, &num_outputs, outputs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
     // PythonArg(n) designates the nth python argument is to be returned.
     // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)
