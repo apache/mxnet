@@ -38,7 +38,7 @@ class NDArrayHandleObj : public Object {
 };
 
 class NDArrayHandle : public ObjectRef {
-public:
+ public:
   explicit NDArrayHandle(NDArray* value) {
     runtime::ObjectPtr<NDArrayHandleObj> node = make_object<NDArrayHandleObj>();
     node->value = value;

@@ -21,7 +21,6 @@ Acknowledgement: This file originates from incubator-tvm
 """
 import ctypes
 from ...base import _LIB, check_call
-from . import function
 from .types import RETURN_SWITCH, TypeCode
 
 ObjectHandle = ctypes.c_void_p

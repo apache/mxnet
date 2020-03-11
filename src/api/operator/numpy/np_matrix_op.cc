@@ -50,6 +50,8 @@ MXNET_REGISTER_API("_npi.split")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_split");
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   nnvm::NodeAttrs attrs;
   op::SplitParam param;
   param.axis = args[2].operator int();
@@ -57,6 +59,10 @@ MXNET_REGISTER_API("_npi.split")
   if (args[1].type_code() == kDLInt) {
     param.indices = TShape(0, 0);
     param.sections = args[1].operator int();
+    CHECK_GT(param.sections, 0)
+      << "ValueError: number sections must be larger than 0";
+    CHECK_EQ(inputs[0]->shape()[param.axis] % param.sections, 0)
+      << "ValueError: array split does not result in an equal division";
   } else {
     TShape t = TShape(args[1].operator ObjectRef());
     param.indices = TShape(t.ndim() + 1, 0);
@@ -69,8 +75,6 @@ MXNET_REGISTER_API("_npi.split")
   attrs.op = op;
   SetAttrDict<op::SplitParam>(&attrs);
 
-  int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   std::vector<NDArrayHandle> ndarray_handles;

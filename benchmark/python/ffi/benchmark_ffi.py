@@ -54,6 +54,8 @@ def prepare_workloads():
     OpArgMngr.add_workload("tensordot", pool['2x2'], pool['2x2'], ((1, 0), (0, 1)))
     OpArgMngr.add_workload("cumsum", pool['3x2'], axis=0, out=pool['3x2'])
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("linalg.svd", pool['3x3'])
+    OpArgMngr.add_workload("split", pool['3x3'], (0, 1, 2), axis=1)
     OpArgMngr.add_workload("random.uniform", low=0, high=1, size=1)
 
 

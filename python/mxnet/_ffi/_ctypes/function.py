@@ -28,7 +28,6 @@ from ...base import get_last_ffi_error, _LIB
 from ..base import c_str
 from .types import MXNetValue, TypeCode
 from .types import RETURN_SWITCH
-from .object import ObjectBase
 from ..node_generic import convert_to_node
 from ..._ctypes.ndarray import NDArrayBase
 from .object import ObjectBase, _set_class_object
