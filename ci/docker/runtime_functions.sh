@@ -136,7 +136,7 @@ build_wheel() {
     unzip -d ${TMPDIR} ${WHEEL}
     rm ${WHEEL}
     cd ${TMPDIR}
-    mv *.data/data/mxnet/libmxnet.so mxnet
+    mv *.data/data/mxnet/libmxnet.so* mxnet
     zip -r ${WHEEL} .
     cp ${WHEEL} ${BUILD_DIR}
     rm -rf ${TMPDIR}

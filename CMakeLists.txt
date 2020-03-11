@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.13)
 
+file(READ "include/mxnet/base.h" ver)
+string(REGEX MATCH "MXNET_MAJOR ([0-9]*)" _ ${ver})
+set(ver_major ${CMAKE_MATCH_1})
+string(REGEX MATCH "MXNET_MINOR ([0-9]*)" _ ${ver})
+set(ver_minor ${CMAKE_MATCH_1})
+string(REGEX MATCH "MXNET_PATCH ([0-9]*)" _ ${ver})
+set(ver_patch ${CMAKE_MATCH_1})
+
 # workaround to store CMAKE_CROSSCOMPILING because is getting reset by the project command
 if(CMAKE_CROSSCOMPILING)
   set(__CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING})
@@ -86,7 +94,7 @@ if(USE_TVM_OP)
 endif()
 
 message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-project(mxnet C CXX)
+project(${PROJECT_NAME} VERSION ${ver_major}.${ver_minor}.${ver_patch} LANGUAGES C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
@@ -701,6 +709,7 @@ if(UNIX)
   target_link_libraries(mxnet PRIVATE mxnet_static)
   target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
   set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
+  set_target_properties(mxnet PROPERTIES VERSION ${PROJECT_VERSION} SOVERSION ${PROJECT_VERSION_MAJOR})
   if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_options(mxnet_static PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
     # Ignore erroneous compiler warnings:

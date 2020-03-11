@@ -94,7 +94,7 @@ def config_cython():
                 libraries=libraries,
                 extra_link_args=extra_link_args,
                 language="c++"))
-        
+
         path = "mxnet/_ffi/_cython"
         for fn in os.listdir(path):
             if not fn.endswith(".pyx"):

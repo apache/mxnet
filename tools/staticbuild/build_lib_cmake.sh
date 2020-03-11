@@ -37,7 +37,7 @@ cd -
 # Move to lib
 rm -rf lib; mkdir lib;
 if [[ $PLATFORM == 'linux' ]]; then
-    cp -L build/libmxnet.so lib/libmxnet.so
+    cp -L build/libmxnet.so* lib/
     cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
     if [[ -f /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so ]]; then
         cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3

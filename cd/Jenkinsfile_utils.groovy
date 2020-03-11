@@ -131,7 +131,7 @@ def restore_artifact(variant, libtype) {
 
   // move libraries to lib directory
   dir('lib') {
-    sh "mv ../mxnet_artifact/libmxnet.so ."
+    sh "mv ../mxnet_artifact/libmxnet.so* ."
     if (fileExists('../mxnet_artifact/dependencies')) {
       sh """find "../mxnet_artifact/dependencies" -type f -name "*.so*" -exec mv {} . \\;"""
       sh "ls ."

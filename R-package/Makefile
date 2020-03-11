@@ -5,12 +5,12 @@ rpkg:
 	mkdir -p R-package/inst/libs
 	cp src/io/image_recordio.h R-package/src
 	if [ -d "lib" ]; then \
-		cp -rf lib/libmxnet.so R-package/inst/libs; \
+		cp -rf lib/libmxnet.so* R-package/inst/libs; \
 		if [ -e "lib/libtvm_runtime.so" ]; then \
 			cp -rf lib/libtvm_runtime.so R-package/inst/libs; \
 		fi; \
 	else \
-		cp -rf build/libmxnet.so R-package/inst/libs; \
+		cp -rf build/libmxnet.so* R-package/inst/libs; \
 		if [ -e "build/libtvm_runtime.so" ]; then \
 			cp -rf build/libtvm_runtime.so R-package/inst/libs; \
 		fi; \
