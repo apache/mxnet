@@ -23,11 +23,12 @@
  * \brief CPU Implementation of broadcast and reduce norm functions based on value.
  */
 #include "./broadcast_reduce_op.h"
+
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(NormParam);
 
-bool supportFastLpNormCompute(const NormParam& param,
+bool supportDfltAxisLpNormCompute(const NormParam& param,
                    const std::vector<TBlob>& inputs,
                    const std::vector<OpReqType>& req) {
   // check the axis = last dim
@@ -46,7 +47,7 @@ bool supportFastLpNormCompute(const NormParam& param,
   }
 }
 
-bool MKLDNNLpNormCompute(const std::vector<TBlob>& inputs,
+bool DfltAxisLpNormCompute(const std::vector<TBlob>& inputs,
                          const std::vector<OpReqType>& req,
                          const std::vector<TBlob>& outputs,
                          int ord) {
@@ -78,15 +79,15 @@ void LpNormComputeCpu(const nnvm::NodeAttrs& attrs,
                    const std::vector<OpReqType>& req,
                    const std::vector<TBlob>& outputs) {
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  if (supportFastLpNormCompute(param, inputs, req)) {
-    MKLDNNLpNormCompute(inputs, req, outputs, param.ord);
+  if (supportDfltAxisLpNormCompute(param, inputs, req)) {
+    DfltAxisLpNormCompute(inputs, req, outputs, param.ord);
   } else {
     LpNormCompute<cpu>(attrs, ctx, inputs, req, outputs);
   }
   return;
 }
 
-bool MKLDNNLpNormGradCompute(const std::vector<TBlob>& inputs,
+bool DfltAxisLpNormGradCompute(const std::vector<TBlob>& inputs,
                              const std::vector<OpReqType>& req,
                              const std::vector<TBlob>& outputs,
                              int ord) {
@@ -120,8 +121,8 @@ void LpNormGradComputeCpu(const nnvm::NodeAttrs& attrs,
                        const std::vector<OpReqType>& req,
                        const std::vector<TBlob>& outputs) {
   const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
-  if (supportFastLpNormCompute(param, inputs, req)) {
-    MKLDNNLpNormGradCompute(inputs, req, outputs, param.ord);
+  if (supportDfltAxisLpNormCompute(param, inputs, req)) {
+    DfltAxisLpNormGradCompute(inputs, req, outputs, param.ord);
   }  else {
     LpNormGradCompute<cpu>(attrs, ctx, inputs, req, outputs);
   }
