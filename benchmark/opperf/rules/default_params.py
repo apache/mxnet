@@ -107,10 +107,6 @@ DEFAULT_SHAPE_SE_LARGE_TENSOR = [(1,)]
 DEFAULT_LAM_SE_LARGE_TENSOR = [(2**32 + 1,)]
 DEFAULT_SHAPE_SU_LARGE_TENSOR = [(2**32,)]
 
-# For reduction operators
-# NOTE: Data used is DEFAULT_DATA
-DEFAULT_AXIS_SHAPE = [(), 0, (0, 1)]
-
 # For sorting and searching operators
 # NOTE: Data used is DEFAULT_DATA
 DEFAULT_AXIS = [0]
@@ -279,10 +275,11 @@ DEFAULT_R1 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_R2 = [(1, 1024), (1, 1), (1, 100)]
 DEFAULT_DELTA = [(1024, 1024), (10000, 1), (10000, 100)]
 DEFAULT_LRS = [(0.1,0.1)]
-DEFAULT_LR = [0.1,0.5,0.9]
-DEFAULT_RHO = [0.1,0.5,0.9]
-DEFAULT_MOMENTUM = [0.1,0.5,0.9]
-DEFAULT_EPSILON = [1e-08]
+DEFAULT_LR = [0.1, 0.5, 0.9]
+DEFAULT_WD = [0.1, 0.5, 0.9]
+DEFAULT_RHO = [0.1, 0.5, 0.9]
+DEFAULT_MOMENTUM = [0.1, 0.5, 0.9]
+DEFAULT_EPSILON = [1e-05]
 DEFAULT_BETA_1 = [0.1, 0.5, 0.9]
 DEFAULT_BETA_2 = [0.1, 0.5, 0.9]
 DEFAULT_T = [1, 5]
@@ -305,12 +302,21 @@ DEFAULT_R1_LARGE_TENSOR = [(1,)]
 DEFAULT_R2_LARGE_TENSOR = [(1,)]
 DEFAULT_DELTA_LARGE_TENSOR = [(2**16, 2**16), (2**32, 1), (2**25, 2**7)]
 
-# For rearrange operators
-# NOTE: Data needs to be a 4D tensor for  operators like space_to_depth and depth_to_space
+# For array manipulation operators
+# NOTE: Data needs to be a 4D tensor for  operators like space_to_depth, depth_to_space etc
 # Hence below we append 4d to mark the difference.
 # For depth_to_space, dimension 3 needs to be a multiple of 'block' and 1 should be a multiple of `block^2`
 DEFAULT_DATA_4d = [(1, 4, 2, 4), (10, 25, 10, 100)]
 DEFAULT_BLOCK_SIZE = [2, 5]
+DEFAULT_NUM_OUTPUTS = [1]
+DEFAULT_PAD_WIDTH_4d = [(0, 0, 0, 0, 1, 1, 1, 1)]
+DEFAULT_MODE_4d = ["constant"]
+DEFAULT_REPEATS = [2]
+
+# broadcast_axis needs input array with atleast 1 dim of size 1
+# since axis is 0 (default) size(dim0)=1
+DEFAULT_DATA_DIM1 = [(1, 1024), (1, 1), (1, 100)]
+DEFAULT_SIZE = [2]
 
 DEFAULT_DATA_4d_LARGE_TENSOR = [(1, 4, 2, 2**29), (1,2**4,2**4,2**24)]
 DEFAULT_BLOCK_SIZE_LARGE_TENSOR = [2, 4]
@@ -415,7 +421,6 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "p": DEFAULT_P,
                    "k_nd": DEFAULT_K_ND,
                    "p_nd": DEFAULT_P_ND,
-                   "axis_shape": DEFAULT_AXIS_SHAPE,
                    "axis": DEFAULT_AXIS,
                    "weight" : DEFAULT_WEIGHT,
                    "weight32" : DEFAULT_WEIGHT,
@@ -423,6 +428,8 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "mean" : DEFAULT_MEAN,
                    "var" : DEFAULT_VAR,
                    "mom" : DEFAULT_MOM,
+                   "r1" : DEFAULT_R1,
+                   "r2" : DEFAULT_R2,
                    "n" : DEFAULT_N,
                    "d" : DEFAULT_D,
                    "v" : DEFAULT_V,
@@ -431,7 +438,7 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "delta" : DEFAULT_DELTA,
                    "lr" : DEFAULT_LR,
                    "lrs" : DEFAULT_LRS,
-                   "wds" : DEFAULT_LRS,
+                   "wd" : DEFAULT_WD,
                    "rho" : DEFAULT_RHO,
                    "momentum" : DEFAULT_MOMENTUM,
                    "epsilon" : DEFAULT_EPSILON,
@@ -461,7 +468,13 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "data_3d": DEFAULT_DATA_3d,
                    "label_smce": DEFAULT_LABEL_SMCE,
                    "label": DEFAULT_LABEL,
-                   "index": DEFAULT_INDEX,
+                   "num_outputs": DEFAULT_NUM_OUTPUTS,
+                   "data_dim1": DEFAULT_DATA_DIM1,
+                   "size": DEFAULT_SIZE,
+                   "mode_4d": DEFAULT_MODE_4d,
+                   "pad_width_4d": DEFAULT_PAD_WIDTH_4d,
+                   "repeats": DEFAULT_REPEATS,
+                   "reps": DEFAULT_REPEATS,
                    "grid": DEFAULT_GRID,
                    "data_bilinearsampler": DEFAULT_DATA_BILINEAR,
                    "transform_type": DEFAULT_TRANSFORM_TYPE,
@@ -508,7 +521,6 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN,
                    "beta_groupnorm": DEFAULT_BETA_GAMMA_GN,
                    "num_groups": DEFAULT_NUM_GROUPS,
-                   "eps": DEFAULT_EPSILON,
                    "data_dropout": DEFAULT_DATA_DROPOUT,
                    "mode_dropout": DEFAULT_MODE_DROPOUT,
                    "p_dropout": DEFAULT_P,
@@ -609,10 +621,9 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "delta" : DEFAULT_DELTA_LARGE_TENSOR,
                                 "lr" : DEFAULT_LR,
                                 "lrs" : DEFAULT_LRS,
-                                "wds" : DEFAULT_LRS,
-                                "wd": DEFAULT_LR,
-                                "gamma1" : DEFAULT_GAMMA_1,
-                                "gamma2" : DEFAULT_GAMMA_2,
+                                "wd": DEFAULT_WD,
+                                "rho" : DEFAULT_RHO,
+                                "momentum" : DEFAULT_MOMENTUM,
                                 "epsilon" : DEFAULT_EPSILON,
                                 "beta1" : DEFAULT_BETA_1,
                                 "beta2" : DEFAULT_BETA_2,
@@ -723,7 +734,6 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "data_groupnorm": DEFAULT_DATA_GN_LARGE_TENSOR,
                                 "gamma_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
                                 "beta_groupnorm": DEFAULT_BETA_GAMMA_GN_LARGE_TENSOR,
-                                "eps": DEFAULT_EPSILON,
                                 "data_dropout": DEFAULT_DATA_DROPOUT_LARGE_TENSOR,
                                 "mode_dropout": DEFAULT_MODE_DROPOUT,
                                 "p_dropout": DEFAULT_P_DROPOUT_LARGE_TENSOR,

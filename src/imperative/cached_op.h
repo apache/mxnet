@@ -96,6 +96,10 @@ void CreateGraphNDs(const nnvm::Graph& g,
       continue;
     *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
                                 shapes[eid], default_ctx, true, dtypes[eid]);
+    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
+    (*arrays)[eid]->AssignStorageInfo(
+        common::NodeAttrsGetProfilerScope(attrs),
+        attrs.name);
   }
 }
 
@@ -136,7 +140,9 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
   ograd_entries->reserve(fwd_graph->outputs.size());
   for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
     nnvm::ObjectPtr np = Node::Create();
-    np->attrs.name = "_head_grad_" + std::to_string(i);
+    const nnvm::NodeAttrs& attrs = fwd_graph->outputs[i].node->attrs;
+    np->attrs.name = attrs.name + "_head_grad";
+    np->attrs.dict["__profiler_scope__"] = common::NodeAttrsGetProfilerScope(attrs);
     ograd_entries->emplace_back(np);
   }
 

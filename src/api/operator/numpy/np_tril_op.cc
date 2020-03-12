@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
+ * 
  *   http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,23 +18,32 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
- * \file np_broadcast_reduce_op_boolean.cu
- * \brief GPU Implementation of broadcast and reduce functions based on boolean.
+ * \file np_tril_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_diff.cc
  */
-
-#include "./np_broadcast_reduce_op.h"
+#include <mxnet/api_registry.h>
+#include "../utils.h"
+#include "../../../operator/numpy/np_tril_op-inl.h"
 
 namespace mxnet {
-namespace op {
 
-NNVM_REGISTER_OP(_npi_any)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
-  mshadow_op::sum, mshadow_op::NonZero, 0>);
+MXNET_REGISTER_API("_npi.tril")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_tril");
+  nnvm::NodeAttrs attrs;
+  op::TrilParam param;
+  param.k = args[1].operator int();
 
-NNVM_REGISTER_OP(_npi_all)
-.set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
-  mshadow_op::product, mshadow_op::NonZero, 1>);
+  // we directly copy TrilParam, which is trivially-copyable
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::TrilParam>(&attrs);
 
-}  // namespace op
+  int num_outputs = 0;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke(op, &attrs, 1, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet

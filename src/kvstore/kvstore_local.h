@@ -37,6 +37,7 @@
 #include "./comm_tree.h"
 #include "./kvstore_utils.h"
 #include "../ndarray/ndarray_function.h"
+#include "../profiler/profiler.h"
 
 namespace mxnet {
 namespace kvstore {
@@ -246,6 +247,15 @@ class KVStoreLocal : public KVStore {
       int key = uniq_keys[i];
       const NDArray& merged = comm_->Reduce(key, grouped_vals[i], priority);
       NDArray& local = local_[key];
+      if (key_type_ == kStringKey) {
+        local.AssignStorageInfo(
+            profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "kvstore:push:",
+            reverse_str_key_dict_[key]);
+      } else {
+        local.AssignStorageInfo(
+            profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "kvstore:push:",
+            "local_" + std::to_string(key));
+      }
       if (updater_ != nullptr) {
         CHECK(!local.is_none()) << "key " << key << " has not been inited";
         // if merged is on gpu, we may need copy weight from cpu to gpu
@@ -288,6 +298,18 @@ class KVStoreLocal : public KVStore {
       const NDArray& local = local_[key];
       CHECK(!local.is_none()) << "key " << key << " has not been inited";
       comm_->Broadcast(key, local, grouped_vals[i], priority);
+      for (std::vector<NDArray*>::iterator iter = grouped_vals[i].begin();
+           iter != grouped_vals[i].end(); ++iter) {
+        if (key_type_ == kStringKey) {
+          (*iter)->AssignStorageInfo(
+              profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "kvstore:pull:",
+              reverse_str_key_dict_[key]);
+        } else {
+          (*iter)->AssignStorageInfo(
+              profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "kvstore:pull:",
+              "grouped_vals_" + std::to_string(key));
+        }
+      }
     }
   }
 
