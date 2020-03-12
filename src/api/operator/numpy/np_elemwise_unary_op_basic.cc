@@ -28,10 +28,53 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.sin")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  const nnvm::Op* op = Op::Get("_npi_sin");
-  UFuncHelper(args, ret, op);
-});
+#define MXNET_REGISTER_UNARY_API(op_name)                                      \
+MXNET_REGISTER_API("_npi." #op_name)                                           \
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {           \
+  const nnvm::Op* op = Op::Get("_npi_" #op_name);                              \
+  UFuncHelper(args, ret, op);                                                  \
+})
+
+MXNET_REGISTER_UNARY_API(negative);
+MXNET_REGISTER_UNARY_API(reciprocal);
+MXNET_REGISTER_UNARY_API(abs);
+MXNET_REGISTER_UNARY_API(sign);
+MXNET_REGISTER_UNARY_API(rint);
+MXNET_REGISTER_UNARY_API(ceil);
+MXNET_REGISTER_UNARY_API(floor);
+MXNET_REGISTER_UNARY_API(bitwise_not);
+MXNET_REGISTER_UNARY_API(trunc);
+MXNET_REGISTER_UNARY_API(fix);
+MXNET_REGISTER_UNARY_API(square);
+MXNET_REGISTER_UNARY_API(sqrt);
+MXNET_REGISTER_UNARY_API(cbrt);
+MXNET_REGISTER_UNARY_API(exp);
+MXNET_REGISTER_UNARY_API(log);
+MXNET_REGISTER_UNARY_API(log10);
+MXNET_REGISTER_UNARY_API(log2);
+MXNET_REGISTER_UNARY_API(log1p);
+MXNET_REGISTER_UNARY_API(expm1);
+MXNET_REGISTER_UNARY_API(logical_not);
+MXNET_REGISTER_UNARY_API(isnan);
+MXNET_REGISTER_UNARY_API(isinf);
+MXNET_REGISTER_UNARY_API(isposinf);
+MXNET_REGISTER_UNARY_API(isneginf);
+MXNET_REGISTER_UNARY_API(isfinite);
+MXNET_REGISTER_UNARY_API(sin);
+MXNET_REGISTER_UNARY_API(cos);
+MXNET_REGISTER_UNARY_API(tan);
+MXNET_REGISTER_UNARY_API(arcsin);
+MXNET_REGISTER_UNARY_API(arccos);
+MXNET_REGISTER_UNARY_API(arctan);
+MXNET_REGISTER_UNARY_API(degrees);
+MXNET_REGISTER_UNARY_API(radians);
+MXNET_REGISTER_UNARY_API(rad2deg);  // from src/operator/contrib/tvmop/ufunc.cc
+MXNET_REGISTER_UNARY_API(deg2rad);  // from src/operator/contrib/tvmop/ufunc.cc
+MXNET_REGISTER_UNARY_API(sinh);
+MXNET_REGISTER_UNARY_API(cosh);
+MXNET_REGISTER_UNARY_API(tanh);
+MXNET_REGISTER_UNARY_API(arcsinh);
+MXNET_REGISTER_UNARY_API(arccosh);
+MXNET_REGISTER_UNARY_API(arctanh);
 
 }  // namespace mxnet
