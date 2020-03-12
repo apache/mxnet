@@ -328,6 +328,9 @@ int MXLoadLib(const char *path) {
   opCallInferType_t callInferType =
     get_func<opCallInferType_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERTYPE_STR));
 
+  opCallInferSType_t callInferSType =
+    get_func<opCallInferSType_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERSTYPE_STR));
+
   opCallFComp_t callFComp =
     get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
 
@@ -362,6 +365,7 @@ int MXLoadLib(const char *path) {
     // function pointers holding implementation from custom library
     parseAttrs_t parse_fp = nullptr;
     inferType_t type_fp = nullptr;
+    inferSType_t stype_fp = nullptr;
     inferShape_t shape_fp = nullptr;
     // optional attributes
     mutateInputs_t mutate_fp = nullptr;
@@ -378,7 +382,7 @@ int MXLoadLib(const char *path) {
              &forward_ctx, &forward_fcomp, &forward_count,
              &backward_ctx, &backward_fcomp, &backward_count,
              &createop_ctx, &createop_fp, &createop_count,
-             &parse_fp, &type_fp, &shape_fp, &mutate_fp);
+             &parse_fp, &type_fp, &stype_fp, &shape_fp, &mutate_fp);
 
     // construct maps of context to forward/backward custom library function
     std::unordered_map<std::string, fcomp_t> forward_ctx_map;
@@ -408,6 +412,8 @@ int MXLoadLib(const char *path) {
                             << "' custom op, Forward or CreateOpState function was not set.";
       CHECK(type_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
+      CHECK(stype_fp != nullptr) << "Error loading '" << name
+                            << "' custom op, InferSType function was not set.";
       CHECK(shape_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferShape function was not set.";
     } else {
@@ -638,9 +644,30 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
-      return op::storage_type_assign(out_stypes,
-                                     static_cast<mxnet::NDArrayStorageType>(in_stypes->at(0)),
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+      // copy input types from in_stype
+      std::vector<int> instypes(*in_stypes);
+
+      // output types will be populated by inferType function
+      std::vector<int> outstypes(out_stypes->size());
+
+      CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           instypes.data(), in_stypes->size(),
+                           outstypes.data(), out_stypes->size()))
+      << "Error calling InferSType for custom operator '" << name_str << "'";
+
+      // copy and assign output storage types from custom op to MXNet memory.
+      for (size_t i = 0; i < out_stypes->size(); i++) {
+        STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, outstypes[i]);
+      }
+      // assign dispatch mode
+      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+      return true;
     };
 
     // FGradient register lambda

@@ -104,6 +104,13 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
+MXReturnValue inferSType(std::map<std::string, std::string> attrs,
+                        std::vector<int> &instypes,
+                        std::vector<int> &outstypes) {
+  outstypes[0] = instypes[0];
+  return MX_SUCCESS;
+}
+
 MXReturnValue inferShape(std::map<std::string, std::string> attrs,
                          std::vector<std::vector<unsigned int>> &inshapes,
                          std::vector<std::vector<unsigned int>> &outshapes) {
@@ -123,6 +130,7 @@ REGISTER_OP(my_transcsr)
 .setBackward(backward, "cpu")
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
+.setInferSType(inferSType)
 .setInferShape(inferShape);
 
 /* ------------------------------------------------------------------------- */
@@ -171,6 +179,7 @@ MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
 REGISTER_OP(state_transcsr)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
+.setInferSType(inferSType)
 .setInferShape(inferShape)
 .setMutateInputs(mutateInputs)
 .setCreateOpState(createOpState, "cpu");

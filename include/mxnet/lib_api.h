@@ -687,6 +687,8 @@ typedef MXReturnValue (*parseAttrs_t)(std::map<std::string, std::string>,
                                       int*, int*);
 typedef MXReturnValue (*inferType_t)(std::map<std::string, std::string>,
                                      std::vector<int>&, std::vector<int>&);
+typedef MXReturnValue (*inferSType_t)(std::map<std::string, std::string>,
+                                     std::vector<int>&, std::vector<int>&);
 typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int> >&,
                                       std::vector<std::vector<unsigned int> >&);
@@ -701,7 +703,7 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
-    parse_attrs(NULL), infer_type(NULL), infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
+    parse_attrs(NULL), infer_type(NULL), infer_storage_type(NULL), infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
     if (forward_ctx_map.count(ctx) > 0)
       raiseDuplicateContextError();
@@ -720,6 +722,10 @@ class CustomOp {
   }
   CustomOp& setInferType(inferType_t func) {
     infer_type = func;
+    return *this;
+  }
+  CustomOp& setInferSType(inferSType_t func) {
+    infer_storage_type = func;
     return *this;
   }
   CustomOp& setInferShape(inferShape_t func) {
@@ -762,6 +768,7 @@ class CustomOp {
   /*! \brief operator functions */
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
+  inferSType_t infer_storage_type;
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
   bool isSGop;
@@ -913,7 +920,7 @@ typedef int (*opRegGet_t)(int idx, const char** name, int *isSGop,
                           const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
                           const char*** create_op_ctx, createOpState_t** create_op_fp,
                           int* create_op_count,
-                          parseAttrs_t* parse, inferType_t* type,
+                          parseAttrs_t* parse, inferType_t* type, inferSType_t* stype,
                           inferShape_t* shape, mutateInputs_t* mutate);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
@@ -932,6 +939,11 @@ typedef int (*opCallInferShape_t)(inferShape_t inferShape, const char* const* ke
 
 #define MXLIB_OPCALLINFERTYPE_STR "_opCallInferType"
 typedef int (*opCallInferType_t)(inferType_t inferType, const char* const* keys,
+                                 const char* const* vals, int num,
+                                 int* intypes, int num_in, int* outtypes, int num_out);
+
+#define MXLIB_OPCALLINFERSTYPE_STR "_opCallInferSType"
+typedef int (*opCallInferSType_t)(inferSType_t inferSType, const char* const* keys,
                                  const char* const* vals, int num,
                                  int* intypes, int num_in, int* outtypes, int num_out);
 
@@ -1042,12 +1054,13 @@ extern "C" {
             const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
             const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
             const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
-            parseAttrs_t* parse, inferType_t* type,
+            parseAttrs_t* parse, inferType_t* type, inferSType_t* stype,
             inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp &op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *parse = op.parse_attrs;
     *type = op.infer_type;
+    *stype = op.infer_storage_type;
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
     *isSGop = op.isSGop;
@@ -1169,6 +1182,43 @@ extern "C" {
     // copy output types
     for (int i = 0; i < num_out; i++) {
       outtypes[i] = out_types[i];
+    }
+
+    return retval;
+  }
+
+   /*! \brief returns status of calling inferSType function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+   _opCallInferSType(inferSType_t inferSType, const char* const* keys,
+                   const char* const* vals, int num,
+                   int* instypes, int num_in, int* outstypes, int num_out) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    // create a vector of types for inputs
+    std::vector<int> in_stypes(num_in);
+    for (int i = 0; i < num_in; i++) {
+      in_stypes[i] = instypes[i];
+    }
+
+    // create a vector of types for outputs
+    std::vector<int> out_stypes(num_out, -1);
+
+    int retval = inferSType(attrs, in_stypes, out_stypes);
+
+    if (!retval)
+      return retval;
+
+    // copy output types
+    for (int i = 0; i < num_out; i++) {
+      outstypes[i] = out_stypes[i];
     }
 
     return retval;
