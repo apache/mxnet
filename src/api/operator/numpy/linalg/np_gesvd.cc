@@ -24,7 +24,6 @@
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../../utils.h"
-#include "../../../../operator/numpy/linalg/np_gesvd-inl.h"
 
 namespace mxnet {
 

@@ -66,7 +66,7 @@ MXNET_REGISTER_API("_npi.split")
   } else {
     TShape t = TShape(args[1].operator ObjectRef());
     param.indices = TShape(t.ndim() + 1, 0);
-    for (size_t i = 0; i < t.ndim(); ++i) {
+    for (int i = 0; i < t.ndim(); ++i) {
       param.indices[i + 1] = t[i];
     }
     param.sections = 0;
