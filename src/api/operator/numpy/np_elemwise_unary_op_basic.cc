@@ -68,8 +68,21 @@ MXNET_REGISTER_UNARY_API(arccos);
 MXNET_REGISTER_UNARY_API(arctan);
 MXNET_REGISTER_UNARY_API(degrees);
 MXNET_REGISTER_UNARY_API(radians);
+#if MXNET_USE_TVM_OP
 MXNET_REGISTER_UNARY_API(rad2deg);  // from src/operator/contrib/tvmop/ufunc.cc
 MXNET_REGISTER_UNARY_API(deg2rad);  // from src/operator/contrib/tvmop/ufunc.cc
+#else  // MXNET_USE_TVM_OP
+MXNET_REGISTER_API("_npi.rad2deg")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  const nnvm::Op* op = Op::Get("_npi_degrees");
+  UFuncHelper(args, ret, op);
+});
+MXNET_REGISTER_API("_npi.deg2rad")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  const nnvm::Op* op = Op::Get("_npi_radians");
+  UFuncHelper(args, ret, op);
+});
+#endif  // MXNET_USE_TVM_OP
 MXNET_REGISTER_UNARY_API(sinh);
 MXNET_REGISTER_UNARY_API(cosh);
 MXNET_REGISTER_UNARY_API(tanh);
