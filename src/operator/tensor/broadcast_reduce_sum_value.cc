@@ -29,12 +29,12 @@ namespace op {
 template<typename DType, typename OType, bool normalize = false>
 void ReduceDefaultAxesSumCompute(const std::vector<TBlob>& inputs,
                                  const std::vector<TBlob>& outputs) {
-  const size_t in_size = inputs[0].shape_.Size();
+  const int in_size = inputs[0].shape_.Size();
   DType* p_in_data = inputs[0].dptr<DType>();
   double sum = 0;
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) \
                        reduction(+:sum)
-  for (size_t i = 0; i < in_size; i++) {
+  for (int i = 0; i < in_size; i++) {
     sum += (OType)p_in_data[i];
   }
   outputs[0].dptr<OType>()[0] = normalize ? (OType)(sum/in_size) : (OType)sum;

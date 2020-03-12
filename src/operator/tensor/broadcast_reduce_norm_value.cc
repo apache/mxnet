@@ -57,11 +57,11 @@ bool DfltAxisLpNormCompute(const std::vector<TBlob>& inputs,
   float* pin_data = static_cast<float*>(in_data.dptr<float>());
 
   const size_t last_dim = shape[axis];
-  auto stride = outputs[0].Size();
+  const int stride = outputs[0].Size();
   float* pout_data = static_cast<float*>(outputs[0].dptr<float>());
 
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t i = 0; i < stride; i++) {
+  for (int i = 0; i < stride; i++) {
     int idx = i*last_dim;
     float sum = 0.0;
     for (size_t j = 0; j < last_dim; j++) {
@@ -94,7 +94,7 @@ bool DfltAxisLpNormGradCompute(const std::vector<TBlob>& inputs,
   auto&  in_grad = inputs[0];
   auto&  in_data = inputs[1];
   auto shape = in_grad.shape_;
-  const size_t stride = shape.Size();
+  const int stride = shape.Size();
   float* pin_grad = static_cast<float*>(in_grad.dptr<float>());
   float* psrc_data = static_cast<float*>(in_data.dptr<float>());
 
@@ -104,7 +104,7 @@ bool DfltAxisLpNormGradCompute(const std::vector<TBlob>& inputs,
   float* pout_grad = static_cast<float*>(out_grad.dptr<float>());
 
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
-  for (size_t i = 0; i < stride; i++) {
+  for (int i = 0; i < stride; i++) {
     int idx = i*last_dim;
     float in_grad_val = pin_grad[i];
     for (size_t j = 0; j < last_dim; j++) {
