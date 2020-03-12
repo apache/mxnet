@@ -33,8 +33,6 @@ from ..base import mx_real_t
 from ..base import check_call, build_param_doc as _build_param_doc
 from ..ndarray import NDArray
 from ..ndarray.sparse import CSRNDArray
-from ..ndarray import _ndarray_cls
-from ..numpy.multiarray import _np_ndarray_cls
 from ..util import is_np_array
 from ..ndarray import array
 from ..ndarray import concat, tile
@@ -826,6 +824,8 @@ class MXDataIter(DataIter):
     """
     def __init__(self, handle, data_name='data', label_name='softmax_label', **kwargs):
         super(MXDataIter, self).__init__()
+        from ..ndarray import _ndarray_cls
+        from ..numpy.multiarray import _np_ndarray_cls
         self._create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
         self.handle = handle
         self._kwargs = kwargs

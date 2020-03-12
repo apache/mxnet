@@ -117,10 +117,6 @@ enum class ExecType {
    *  in the execution engine.
    */
   kSubgraphExec,
-  /*!
-   * \brief Do not allow engine to involve in the computation.
-   */
-  kNoEngine,
 };
 
 /*! \brief the dispatch mode of the operator */

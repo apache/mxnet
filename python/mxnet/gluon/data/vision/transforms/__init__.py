@@ -24,7 +24,7 @@ import warnings
 from ....block import Block, HybridBlock
 from ....nn import Sequential, HybridSequential
 
-from . image import *
+from .image import *
 from .bbox import *
 
 class Compose(Sequential):

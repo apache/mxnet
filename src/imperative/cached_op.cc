@@ -32,12 +32,6 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
-struct CachedOp::DynamicRuntime {
-  GraphInfo info;
-  std::vector<NDArray> buff;
-  std::vector<OpStatePtr> op_states;
-};
-
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
     const std::vector<std::pair<std::string, std::string> >& flags) : sym_(sym), flags_(flags) {

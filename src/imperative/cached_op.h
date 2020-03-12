@@ -370,7 +370,7 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  ~CachedOp();
+  virtual ~CachedOp();
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
@@ -532,8 +532,6 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
 
-
- private:
   struct DynamicRuntime;
 
   OpStatePtr DynamicForward(
@@ -541,6 +539,8 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs,
       bool use_naive_run = false);
+
+ private:
   void DynamicBackward(
       const bool retain_graph,
       const OpStatePtr& op_state,
@@ -573,6 +573,12 @@ class CachedOp {
   friend class ::mxnet::io::LazyTransformDataset;
   nnvm::Symbol sym_;
   std::vector<std::pair<std::string, std::string> > flags_;
+};
+
+struct CachedOp::DynamicRuntime {
+  GraphInfo info;
+  std::vector<NDArray> buff;
+  std::vector<OpStatePtr> op_states;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

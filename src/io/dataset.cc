@@ -30,7 +30,7 @@
 #include <mxnet/tensor_blob.h>
 
 #include "../imperative/cached_op.h"
-#include "../imperative/cached_op_threadsafe.h"
+#include "../imperative/naive_cached_op.h"
 #include "../ndarray/ndarray_function.h"
 
 #include <string>
@@ -588,7 +588,7 @@ class LazyTransformDataset : public Dataset {
       this->pass_through_indices_ = other.pass_through_indices_;
       this->use_input_indices_ = other.use_input_indices_;
       this->num_outputs_ = other.num_outputs_;
-      this->cached_op_ = CachedOpPtr(new CachedOpThreadSafe(other.cached_op_->sym_, other.cached_op_->flags_));
+      this->cached_op_ = NaiveCachedOpPtr(new NaiveCachedOp(other.cached_op_->sym_, other.cached_op_->flags_));
       // LOG(INFO) << "Create new cachedop" << this->cached_op_->num_inputs() << " " << this->cached_op_->num_outputs();
       this->base_data_ = other.base_data_;
     }
@@ -603,7 +603,7 @@ class LazyTransformDataset : public Dataset {
     void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
       param_.InitAllowUnknown(kwargs);
       auto op = *static_cast<CachedOpPtr*>(reinterpret_cast<void*>(param_.cached_op));
-      cached_op_ = CachedOpPtr(new CachedOp(op->sym_, op->flags_));
+      cached_op_ = NaiveCachedOpPtr(new NaiveCachedOp(op->sym_, op->flags_));
       base_data_ = *static_cast<DatasetPtr*>(reinterpret_cast<void*>(param_.dataset));
 
       // use first item to calculate size info
@@ -671,7 +671,7 @@ class LazyTransformDataset : public Dataset {
       for (size_t i = 0; i < inputs.size(); ++i) {
         inputs[i].WaitToRead();
       }
-      cached_op_->NaiveForward(cached_op_, ndinputs, ndoutputs);
+      cached_op_->Forward(cached_op_, ndinputs, ndoutputs);
       return true;
     }
 
@@ -680,7 +680,7 @@ class LazyTransformDataset : public Dataset {
     LazyTransformDatasetParam param_;
     /*! \brief stored cached op */
     // CachedOpPtr cached_op_;
-    CachedOpPtr cached_op_;
+    NaiveCachedOpPtr cached_op_;
     /*! \brief internal dataset */
     DatasetPtr base_data_;
     /*! \brief engine variable */
