@@ -117,8 +117,9 @@ void UFuncHelper(runtime::MXNetArgs args,
   NDArray* inputs[] = {args[0].operator NDArray*()};
   NDArray* out = args[1].operator NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_inputs = 1;
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, 1, inputs, &num_outputs, outputs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (outputs) {
     *ret = PythonArg(1);
   } else {
