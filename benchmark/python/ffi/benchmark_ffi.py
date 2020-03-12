@@ -125,6 +125,15 @@ def prepare_workloads():
     OpArgMngr.add_workload("hsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("dsplit", pool['2X2x2'], 2)
 
+    unary_ops = ['negative', 'reciprocal', 'abs', 'sign', 'rint', 'ceil', 'floor',
+                 'bitwise_not', 'trunc', 'fix', 'square', 'sqrt', 'cbrt', 'exp',
+                 'log', 'log10', 'log2', 'log1p', 'expm1', 'logical_not', 'isnan',
+                 'isinf', 'isposinf', 'isfinite', 'sin', 'cos', 'tan', 'arcsin',
+                 'arccos', 'arctan', 'degrees', 'radians', 'rad2deg', 'deg2rad',
+                 'sinh', 'cosh', 'tanh', 'arcsinh', 'arccosh', 'arctanh']
+    for unary_op in unary_ops:
+        OpArgMngr.add_workload(unary_op, pool['2x2'])
+
 
 def benchmark_helper(f, *args, **kwargs):
     number = 10000
