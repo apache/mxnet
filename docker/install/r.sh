@@ -24,7 +24,7 @@ gpg --keyserver keyserver.ubuntu.com --recv-key E084DAB9
 gpg -a --export E084DAB9 | apt-key add -
 
 apt-get update
-apt-get install -y r-base r-base-dev libxml2-dev libxt-dev libssl-dev
+apt-get --no-install-recommends install -y ca-certificates apt-utils r-base r-base-dev libxml2-dev libxt-dev libssl-dev
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 

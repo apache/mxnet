@@ -82,7 +82,7 @@ On Ubuntu versions 16.04 or later, you need the following dependencies:
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
 ```
 
 Instead of `libopenblas-dev` you may also choose a different math library.
@@ -98,7 +98,7 @@ CMake, you will see an error message like `CMake 3.13 or higher is required. You
 are running version 3.10.2` during Step 3. In that case please update CMake on
 your system. You can download and install latest CMake from https://cmake.org or
 via `pip3` with `pip3 install --user --upgrade "cmake>=3.13.2"`. If `pip3` is
-not available on your system, you can install it via `sudo apt-get install -y
+not available on your system, you can install it via `sudo apt-get --no-install-recommends install -y ca-certificates apt-utils
 python3-pip`. After installing cmake with `pip3`, it is usually available at
 `~/.local/bin/cmake` or directly as `cmake`.
 
@@ -308,7 +308,7 @@ After you build the shared library, run the following command from the MXNet sou
 Perl package:
 
 ```bash
-sudo apt-get install libmouse-perl pdl cpanminus swig libgraphviz-perl
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libmouse-perl pdl cpanminus swig libgraphviz-perl
 cpanm -q -L "${HOME}/perl5" Function::Parameters Hash::Ordered PDL::CCS
 
 MXNET_HOME=${PWD}
@@ -349,7 +349,7 @@ To install R and the devtools, run
 
 ```bash
 sudo apt-get update
-sudo apt-get install -y r-base-core r-cran-devtools libcairo2-dev libxml2-dev
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils r-base-core r-cran-devtools libcairo2-dev libxml2-dev
 ```
 
 `libxml2-dev` is required for the `roxygen2` dependency and `libcairo2-dev` is

@@ -26,7 +26,7 @@
 set -ex
 
 apt-get update || true
-apt-get -y install nodejs
+apt-get --no-install-recommends install -y ca-certificates apt-utils nodejs
 
 git clone -b 1.38.6 https://github.com/kripken/emscripten.git
 git clone -b 1.38.6 https://github.com/kripken/emscripten-fastcomp

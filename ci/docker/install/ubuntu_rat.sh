@@ -21,7 +21,7 @@ set -ex
 
 echo "Install dependencies"
 apt-get update || true
-apt-get install -y subversion maven openjdk-8-jdk openjdk-8-jre
+apt-get --no-install-recommends install -y ca-certificates apt-utils subversion maven openjdk-8-jdk openjdk-8-jre
 
 echo "download RAT"
 #svn co http://svn.apache.org/repos/asf/creadur/rat/trunk/

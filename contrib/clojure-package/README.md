@@ -90,7 +90,7 @@ As of writing this, OpenCV 3.4 is not available in the default repositories. The
 ```bash
 sudo add-apt-repository ppa:timsc/opencv
 sudo apt-get update
-sudo apt install libopencv-imgcodecs3.4 libopenblas-base libatlas3-base libcurl3
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libopencv-imgcodecs3.4 libopenblas-base libatlas3-base libcurl3
 ```
 
 Note: `libcurl3` may conflict with other packages on your system. [Here](https://github.com/apache/incubator-mxnet/issues/12822) is a possible workaround.

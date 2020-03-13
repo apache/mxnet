@@ -22,7 +22,7 @@
 
 set -ex
 apt-get update || true
-apt-get install graphviz python-opencv
+apt-get --no-install-recommends install -y ca-certificates apt-utils graphviz python-opencv
 
 # sckit-learn past version 0.20 does not support python version 2 and 3.4
 pip3 install jupyter matplotlib Pillow opencv-python scikit-learn graphviz==0.8.4 tqdm mxboard scipy gluoncv

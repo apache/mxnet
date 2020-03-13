@@ -26,7 +26,7 @@ pip install pygame
 
 # Install arcade learning environment
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-    sudo apt-get install libsdl1.2-dev libsdl-gfx1.2-dev libsdl-image1.2-dev cmake ninja-build
+    sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libsdl1.2-dev libsdl-gfx1.2-dev libsdl-image1.2-dev cmake ninja-build
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     brew install sdl sdl_image sdl_mixer sdl_ttf portmidi
 fi

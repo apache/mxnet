@@ -22,7 +22,7 @@ FROM dockcross/base
 MAINTAINER Pedro Larroy "pllarroy@amazon.com"
 
 # The cross-compiling emulator
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get --no-install-recommends install -y ca-certificates apt-utils \
   unzip
 
 ENV CROSS_TRIPLE=arm-linux-androideabi

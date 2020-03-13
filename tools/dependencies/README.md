@@ -79,7 +79,7 @@ The dependencies could be categorized by several groups: BLAS libraries, CPU-bas
 #### 0. Prerequisite Software
 ```
 sudo apt update
-sudo apt-get install -y git \
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils git \
     cmake \
     libcurl4-openssl-dev \
     unzip \
@@ -174,7 +174,7 @@ cat /usr/local/cuda/include/cudnn.h | grep CUDNN_MAJOR -A 2
 sudo dpkg -i nccl-repo-ubuntu1604-2.4.2-ga-cuda10.0_1-1_amd64.deb
 sudo apt-key add /var/nccl-repo-2.4.2-ga-cuda10.0/7fa2af80.pub
 sudo apt update
-sudo apt install libnccl2 libnccl-dev
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils libnccl2 libnccl-dev
 # we will check the NCCL version later
 ```
 #### 2. Build
@@ -254,7 +254,7 @@ python
 ```python
 # Take Ubuntu 16.04 for example
 sudo apt update
-sudo apt-get install -y git \
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils git \
     cmake \
     libcurl4-openssl-dev \
     unzip \
@@ -303,7 +303,7 @@ pip install -e python
 ```python
 # Take Ubuntu 16.04 for example
 sudo apt update
-sudo apt-get install -y git \
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils git \
     cmake \
     libcurl4-openssl-dev \
     unzip \

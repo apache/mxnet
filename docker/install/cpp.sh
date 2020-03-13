@@ -19,7 +19,7 @@
 
 # libraries for building mxnet c++ core on ubuntu
 
-apt-get update && apt-get install -y \
+apt-get update && apt-get --no-install-recommends install -y ca-certificates apt-utils \
     build-essential git libatlas-base-dev libopencv-dev python-opencv \
     libcurl4-openssl-dev libgtest-dev cmake wget unzip
 

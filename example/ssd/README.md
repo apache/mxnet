@@ -84,7 +84,7 @@ Due to the permission issue, this example is maintained in this [repository](htt
 If you use mxnet-python api, you probably have already got them.
 You can install them via pip or package managers, such as `apt-get`:
 ```
-sudo apt-get install python-opencv python-matplotlib python-numpy
+sudo apt-get --no-install-recommends install -y ca-certificates apt-utils python-opencv python-matplotlib python-numpy
 ```
 
 * Build MXNet: Follow the official instructions

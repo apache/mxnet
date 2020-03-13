@@ -24,7 +24,7 @@ WORKDIR /work/deps
 
 SHELL ["/bin/bash", "-l", "-c" ]
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get --no-install-recommends install -y ca-certificates apt-utils \
       build-essential \
       git \
       zlib1g-dev \
