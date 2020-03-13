@@ -118,6 +118,7 @@ def convert_string_to_list(string_val):
 
     return result_list
 
+
 def get_boolean_attribute_value(attrs, attr_name):
     """ Helper function to convert a string version
     of Boolean attributes to integer for ONNX.
@@ -125,6 +126,7 @@ def get_boolean_attribute_value(attrs, attr_name):
     parameters.
     """
     return 1 if attrs.get(attr_name, 0) in ["True", "1"] else 0
+
 
 def get_inputs(node, kwargs):
     """Helper function to get inputs"""
@@ -137,9 +139,15 @@ def get_inputs(node, kwargs):
     input_nodes = []
     for ip in inputs:
         input_node_id = index_lookup[ip[0]]
-        input_nodes.append(proc_nodes[input_node_id].name)
+        try:
+            # ip[1] defines which output index to use
+            input_nodes.append(proc_nodes[input_node_id].output[ip[1]])
+        except AttributeError:
+            # fallback to the name attribute as output if the output attribute does not exist (e.g. for data nodes)
+            input_nodes.append(proc_nodes[input_node_id].name)
 
     return name, input_nodes, attrs
+
 
 def create_basic_op_node(op_name, node, kwargs):
     """Helper function to create a basic operator
@@ -153,6 +161,7 @@ def create_basic_op_node(op_name, node, kwargs):
         name=name
     )
     return [node]
+
 
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
