@@ -68,6 +68,7 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
             "DType of the output in case this can't be inferred. "
             "Defaults to float32 if not defined (dtype=None).");
   }
+
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream prob_s, dtype_s, size_s;
     prob_s << prob;
@@ -76,8 +77,6 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
     (*dict)["prob"] = prob_s.str();
     (*dict)["dtype"] = dtype_s.str();
     (*dict)["size"] = size_s.str();
-    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
-    // Setting ctx here results in an error.
   }
 };
 
