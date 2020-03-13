@@ -33,26 +33,49 @@ MXNET_REGISTER_API("_npi.take")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
-  op::InitOpParam param;
-  if (args[0].type_code() == kDLInt) {
-    param.shape = TShape(1, args[0].operator int64_t());
-  } else {
-    param.shape = TShape(args[0].operator ObjectRef());
+  op::TakeParam param;
+  NDArray** inputs = new NDArray*[2]();
+
+  if (args[0].type_code() != kNull) {
+    inputs[0] = args[0].operator mxnet::NDArray *();
   }
-  if (args[1].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+
+  if (args[1].type_code() != kNull) {
+    inputs[1] = args[1].operator mxnet::NDArray *();
   }
-  attrs.parsed = std::move(param);
+
+  if (args[2].type_code() == kDLInt) {
+    param.axis = args[2].operator int();
+  }
+
+  if (args[3].type_code() != kNull) {
+    std::string mode = args[3].operator std::string();
+    if (mode == "raise"){
+      param.mode = op::take_::kRaise;
+    } else if (mode == "clip") {
+      param.mode = op::take_::kClip;
+    } else if (mode == "wrap") {
+      param.mode = op::take_::kWrap;
+    }
+  }
+
+  attrs.parsed = param;
   attrs.op = op;
-  SetAttrDict<op::InitOpParam>(&attrs);
-  if (args[2].type_code() != kNull) {
-    attrs.dict["ctx"] = args[2].operator std::string();
+  SetAttrDict<op::TakeParam>(&attrs);
+  // if (args[2].type_code() != kNull) {
+  //   attrs.dict["ctx"] = args[2].operator std::string();
+  // }
+
+  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  // set the number of outputs provided by the `out` arugment
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(4);
+  } else {
+    *ret = ndoutputs[0];
   }
-  int num_outputs = 0;
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
 });
 
 }  // namespace mxnet

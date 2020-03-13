@@ -682,14 +682,31 @@ def take(a, indices, axis=None, mode='raise', out=None):
     array([[4., 3.],
            [5., 7.]])
     """
+    # if mode not in ('wrap', 'clip', 'raise'):
+    #     raise NotImplementedError(
+    #         "function take does not support mode '{}'".format(mode))
+    # if axis is None:
+    #     return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+    # else:
+    #     return _npi.take(a, indices, axis, mode, out)
     if mode not in ('wrap', 'clip', 'raise'):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
     if axis is None:
-        return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+        return _api_internal.take(_npi.reshape(a, -1), indices, 0, mode, out)
     else:
-        return _npi.take(a, indices, axis, mode, out)
+        return _api_internal.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
+
+@set_module('mxnet.ndarray.numpy')
+def take_v2(a, indices, axis=None, mode='raise', out=None):
+    if mode not in ('wrap', 'clip', 'raise'):
+        raise NotImplementedError(
+            "function take does not support mode '{}'".format(mode))
+    if axis is None:
+        return _api_internal.take(_npi.reshape(a, -1), indices, 0, mode, out)
+    else:
+        return _api_internal.take(a, indices, axis, mode, out)
 
 
 @set_module('mxnet.ndarray.numpy')
