@@ -47,7 +47,7 @@ pipeline {
           cd_utils = load('cd/Jenkinsfile_utils.groovy')
           
           // Update release job state in Jenkins
-          cd_utils.update_release_job_state()
+          cd_utils.update_release_job_state(params.CD_RELEASE_JOB_NAME)
         }
       }
     }
@@ -59,17 +59,17 @@ pipeline {
 
             "Static libmxnet based release": {
               stage("Build") {
-                cd_utils.trigger_release_job("Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)    
+                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build static libmxnet", "mxnet_lib/static", params.MXNET_VARIANTS)
               }
               stage("Releases") {
                 cd_utils.error_checked_parallel([
                   "PyPI Release": {
                     echo "Building PyPI Release"
-                    cd_utils.trigger_release_job("Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
+                    cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release PyPI Packages", "python/pypi", params.MXNET_VARIANTS)
                   },
                   "Python Docker Release": {
                     echo "Building Python Docker Release"
-                    cd_utils.trigger_release_job("Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
+                    cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Release Python Docker Images", "python/docker", params.MXNET_VARIANTS)
                   }
                 ])
               }
@@ -77,10 +77,10 @@ pipeline {
 
             "Dynamic libmxnet based release": {
               stage("Build") {
-                cd_utils.trigger_release_job("Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)    
+                cd_utils.trigger_release_job(params.CD_RELEASE_JOB_NAME, "Build dynamic libmxnet", "mxnet_lib/dynamic", params.MXNET_VARIANTS)
               }
             }
-            
+
           ])
         }
       }
