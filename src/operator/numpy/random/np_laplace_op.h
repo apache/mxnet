@@ -186,7 +186,6 @@ void NumpyLaplaceForward(const nnvm::NodeAttrs &attrs,
                          &new_lshape, &new_lshape, &new_oshape);
     int scalar_pos;
     float scalar_value;
-    // int type_flag = param.t;
     if (param.loc.has_value()) {
       scalar_pos = 0;
       scalar_value = param.loc.value();
