@@ -673,7 +673,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
         ctx = current_context()
     if size == ():
         size = None
-    return gamma(df/2, 1/2, size=size, dtype=dtype, ctx=ctx)
+    return gamma(df/2, 2, size=size, dtype=dtype, ctx=ctx)
 
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
