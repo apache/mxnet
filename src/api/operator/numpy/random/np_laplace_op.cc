@@ -71,7 +71,7 @@ MXNET_REGISTER_API("_npi.laplace")
   if (args[3].type_code() == kNull) {
     param.dtype = mshadow::kFloat32;
   } else {
-    param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
+    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
