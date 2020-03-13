@@ -18,8 +18,8 @@
  */
 
 /*!
- * \file np_init_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy/np_init_op.cc
+ * \file np_laplace_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_laplace_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
@@ -75,7 +75,7 @@ MXNET_REGISTER_API("_npi.laplace")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
-  SetAttrDict<op::InitOpParam>(&attrs);
+  SetAttrDict<op::NumpyLaplaceParam>(&attrs);
   if (args[4].type_code() != kNull) {
     attrs.dict["ctx"] = args[4].operator std::string();
   }
@@ -84,12 +84,9 @@ MXNET_REGISTER_API("_npi.laplace")
 
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  // set the number of outputs provided by the `out` arugment
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
-    // PythonArg(n) designates the nth python argument is to be returned.
-    // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)
     *ret = PythonArg(5);
   } else {
     *ret = ndoutputs[0];
