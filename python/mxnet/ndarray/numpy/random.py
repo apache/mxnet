@@ -558,7 +558,7 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
         size = None
     if isinstance(a, np_ndarray):
         indices = _api_internal.choice(a, size, replace, p, ctx, out)
-        return _npi.take(a, indices)
+        return _api_internal.take(a, indices, 0, 'raise', out)
     else:
         return _api_internal.choice(a, size, replace, p, ctx, out)
 
