@@ -47,7 +47,7 @@ struct TriuParam : public dmlc::Parameter<TriuParam> {
       .describe("Diagonal in question. The default is 0. "
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. "
-                "If input has shape (S0 S1) k must be between -S0 and S1");
+                "If input has shape (S0 S1) k must be between -S0 and S1.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream k_s;
