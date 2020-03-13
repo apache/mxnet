@@ -1350,6 +1350,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const mx_uint num_options,
                          const char** keys,
                          const char** vals) {
+  // create copy of input symbol
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
@@ -1367,6 +1368,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     nnvm::DTypeVector arg_dtypes(args_len + aux_len);
     StorageTypeVector arg_stypes(args_len + aux_len);
     size_t args_top = 0, aux_top = 0;
+    // loop over inputs to symbol in order and add to args/aux if mutable
     for (size_t i = 0; i < num_forward_inputs; ++i) {
       const uint32_t nid = indexed_graph.input_nodes().at(i);
       if (mutable_nodes.count(nid)) {
@@ -1403,6 +1405,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
                                           g.GetAttr<StorageTypeVector>("storage_type"));
     }
+    // set args/aux as attributes on graph so that subgraph property can use them
     std::vector<std::string> arg_names = sym->ListInputNames(nnvm::Symbol::kReadOnlyArgs);
     g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
     g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
@@ -1411,6 +1414,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
     g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
   } else {
+    // args/aux were not specified, so set nullptr/empty-lists
     NDArray **in_args_ptr = static_cast<NDArray**>(nullptr);
     std::vector<std::string> arg_names;
     g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
@@ -1421,11 +1425,11 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
     g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
   }
-
+  // create a data structure from pointer array
   std::vector<std::pair<std::string, std::string>> options_map;
-  for (mx_uint i = 0; i < num_options; ++i) {
+  for (mx_uint i = 0; i < num_options; ++i)
     options_map.emplace_back(keys[i], vals[i]);
-  }
+
   const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {

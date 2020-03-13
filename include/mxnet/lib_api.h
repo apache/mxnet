@@ -1285,11 +1285,11 @@ extern "C" {
                         int num_ids, int *ids, const char* const* opt_keys,
                         const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
-    // create map of attributes from list
+    // create map of options from list
     std::unordered_map<std::string, std::string> opts;
-    for (int i = 0; i < num_opts; i++) {
+    for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
-    }
+
     // create array of bools for operator support
     std::vector<bool> _ids(num_ids, false);
     // call user's supportedOps function
