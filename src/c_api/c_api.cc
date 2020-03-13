@@ -122,14 +122,28 @@ void CustomFComputeDispatcher(const std::string op_name,
 
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
-    in_data.push_back(inputs[i].data().dptr_);
-    in_shapes.push_back(inputs[i].shape().data());
-    in_dims.push_back(inputs[i].shape().ndim());
-    in_types.push_back(inputs[i].dtype());
-    in_verIDs.push_back(inputs[i].version());
-    const char* ctx_str = inputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-    in_dev_type.push_back(ctx_str);
-    in_dev_id.push_back(inputs[i].ctx().real_dev_id());
+    const NDArray& in_nd = inputs[i];
+    // reorder data if in MKLDNN format
+    if(in_nd.IsMKLDNNData()) {
+      const NDArray& tmp_nd = in_nd.Reorder2Default();
+      in_data.push_back(tmp_nd.data().dptr_);
+      in_shapes.push_back(tmp_nd.shape().data());
+      in_dims.push_back(tmp_nd.shape().ndim());
+      in_types.push_back(tmp_nd.dtype());
+      in_verIDs.push_back(tmp_nd.version());
+      const char* ctx_str = tmp_nd.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+      in_dev_type.push_back(ctx_str);
+      in_dev_id.push_back(tmp_nd.ctx().real_dev_id());
+    } else {
+      in_data.push_back(in_nd.data().dptr_);
+      in_shapes.push_back(in_nd.shape().data());
+      in_dims.push_back(in_nd.shape().ndim());
+      in_types.push_back(in_nd.dtype());
+      in_verIDs.push_back(in_nd.version());
+      const char* ctx_str = in_nd.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+      in_dev_type.push_back(ctx_str);
+      in_dev_id.push_back(in_nd.ctx().real_dev_id());
+    }
   }
 
   for (size_t i = 0; i < outputs.size(); i++) {
