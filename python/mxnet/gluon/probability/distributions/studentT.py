@@ -74,7 +74,6 @@ class StudentT(Distribution):
         return self.loc + Y * self.scale
 
     def sample_n(self, size=None):
-        F = self.F
         return self.sample(sample_n_shape_converter(size))
 
     def log_prob(self, value):

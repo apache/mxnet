@@ -344,7 +344,6 @@ def test_gluon_pareto():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         alpha = np.random.uniform(size=shape)
         scale = np.random.uniform(size=shape)
-        # scale = np.ones_like(alpha)
         samples = np.random.uniform(1, 2, size=shape)
         net = TestPareto("log_prob")
         if hybridize:
@@ -571,6 +570,54 @@ def test_gluon_fisher_snedecor():
                 np_out = ss_f.var()
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_gluon_student_t():
+    class TestT(HybridBlock):
+        def __init__(self, func):
+            super(TestT, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, df, loc, scale, *args):
+            t_dist = mgp.StudentT(df, loc, scale, F)
+            return _distribution_method_invoker(t_dist, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.zeros(shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        df = np.random.uniform(2, 4, shape)
+        samples = np.random.uniform(0, 4, size=shape)
+        net = TestT("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(df, loc, scale, samples).asnumpy()
+        np_out = ss.t(loc=0, scale=scale.asnumpy(), df=df.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test `mean` and `var`
+    for shape, hybridize in itertools.product(shapes, [False, True]):
+        for func in ['mean', 'variance']:
+            loc = np.zeros(shape)
+            scale = np.random.uniform(0.5, 1.5, shape)
+            df = np.random.uniform(3, 4, shape)
+            net = TestT(func)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(df, loc, scale).asnumpy()
+            ss_f = ss.t(loc=0, scale=scale.asnumpy(), df=df.asnumpy())
+            if func == 'mean':
+                np_out = ss_f.mean()
+            else:
+                np_out = ss_f.var()
+            assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                rtol=1e-3, use_broadcast=False)
+
 
 
 @with_seed()

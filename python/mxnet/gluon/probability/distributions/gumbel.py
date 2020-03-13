@@ -52,7 +52,7 @@ class Gumbel(Distribution):
 
     def log_prob(self, value):
         F = self.F
-        # Standarized sample
+        # Standardized sample
         y = (self.loc - value) / self.scale
         return (y - F.np.exp(y)) - F.np.log(self.scale)
 
