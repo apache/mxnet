@@ -124,7 +124,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   for (size_t i = 0; i < inputs.size(); i++) {
     const NDArray& in_nd = inputs[i];
     // reorder data if in MKLDNN format
-    if(in_nd.IsMKLDNNData()) {
+    if (in_nd.IsMKLDNNData()) {
       const NDArray& tmp_nd = in_nd.Reorder2Default();
       in_data.push_back(tmp_nd.data().dptr_);
       in_shapes.push_back(tmp_nd.shape().data());

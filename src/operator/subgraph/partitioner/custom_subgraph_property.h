@@ -221,7 +221,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       opt_keys_.push_back(kv.first.c_str());
       opt_vals_.push_back(kv.second.c_str());
     }
-    
+
     CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,
                             opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
       << "Error calling supported_ops for '" << subgraph_prop << "'";
