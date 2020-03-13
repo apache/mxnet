@@ -15,6 +15,8 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+**CUDA 9.0 package for MXNet is no longer maintained for new releases.**
+
 Prerequisites
 -------------
 This package supports Linux and Windows platforms. You may also want to check:
@@ -33,4 +35,11 @@ Installation
 To install:
 ```bash
 pip install mxnet-cu90
+```
+
+Nightly Builds
+--------------
+To install the latest nightly build, use:
+```bash
+pip install --pre mxnet-cu90 -f https://dist.mxnet.io/python
 ```

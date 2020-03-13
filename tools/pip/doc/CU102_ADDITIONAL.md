@@ -34,3 +34,10 @@ To install:
 ```bash
 pip install mxnet-cu102
 ```
+
+Nightly Builds
+--------------
+To install the latest nightly build, use:
+```bash
+pip install --pre mxnet-cu102 -f https://dist.mxnet.io/python
+```
