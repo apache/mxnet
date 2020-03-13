@@ -216,8 +216,6 @@ build_jetson() {
     set -ex
     pushd .
 
-    #build_ccache_wrappers
-
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
 
@@ -240,7 +238,6 @@ build_armv6() {
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=OFF \
@@ -267,7 +264,6 @@ build_armv7() {
     # file tries to add -llapack. Lapack functionality though, requires -lgfortran
     # to be linked additionally.
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CROSSCOMPILING=ON \
@@ -287,7 +283,6 @@ build_armv7() {
 }
 
 build_armv8() {
-    build_ccache_wrappers
     cd /work/build
     cmake \
         -DUSE_CUDA=OFF\
@@ -311,7 +306,6 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DANDROID=ON\
         -DUSE_CUDA=OFF\
@@ -329,7 +323,6 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -454,7 +447,6 @@ build_ubuntu_cpu_mkl() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -471,7 +463,6 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
@@ -492,7 +483,6 @@ build_ubuntu_cpu_cmake_asan() {
     cd /work/build
     export CXX=g++-8
     export CC=gcc-8
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -647,8 +637,6 @@ build_ubuntu_gpu() {
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
-
-    build_ccache_wrappers
 
     # Build ONNX
     pushd .
@@ -821,7 +809,6 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -843,7 +830,6 @@ build_ubuntu_gpu_cmake() {
 build_ubuntu_gpu_cmake_no_rtc() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -866,7 +852,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
 build_ubuntu_gpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -888,7 +873,6 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
@@ -905,7 +889,6 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
