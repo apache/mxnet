@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: gemm_lib relu_lib transcsr_lib transrowsp_lib
+all: gemm_lib relu_lib transposecsr_lib transposerowsp_lib
 
 gemm_lib:
 	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
@@ -23,11 +23,11 @@ gemm_lib:
 relu_lib:
 	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
 
-transcsr_lib:
-	g++ -shared -fPIC -std=c++11 transcsr_lib.cc -o libtranscsr_lib.so -I ../../../include/mxnet
+transposecsr_lib:
+	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc -o libtransposecsr_lib.so -I ../../../include/mxnet
 
-transrowsp_lib:
-	g++ -shared -fPIC -std=c++11 transrowsp_lib.cc -o libtransrowsp_lib.so -I ../../../include/mxnet
+transposerowsp_lib:
+	g++ -shared -fPIC -std=c++11 transposerowsp_lib.cc -o libtransposerowsp_lib.so -I ../../../include/mxnet
 
 clean:
-	rm -rf libgemm_lib.so librelu_lib.so libtranscsr_lib.so libtransrowsp_lib.so
+	rm -rf libgemm_lib.so librelu_lib.so libtransposecsr_lib.so libtransposerowsp_lib.so

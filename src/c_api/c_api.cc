@@ -195,8 +195,9 @@ void CustomFComputeDispatcher(const std::string op_name,
     return workspace.dptr_;
   };
 
-  // create lambda that allocates memory for sparse and updates MXSparse.
-  auto ndarray_alloc = [&](int index, int indices_len, int idxptr_len,
+  // create lambda that allocates memory for sparse and
+  // returns allocated arrays for data, indices and indptr.
+  auto sparse_alloc = [&](int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
     // Row Sparse
     if(idxptr_len == 0) {
@@ -229,11 +230,11 @@ void CustomFComputeDispatcher(const std::string op_name,
     return static_cast<void*>((*gpualloc)(size));
   };
 
-  typedef decltype(ndarray_alloc) alloc_type_ndarray;
-  auto ndarray_malloc = [](void* _ndarray_alloc, int index, int indices_len, int idxptr_len, 
+  typedef decltype(sparse_alloc) alloc_type_sparse;
+  auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len, 
                            void** data, int64_t** indices, int64_t** indptr) {
-    alloc_type_ndarray* ndarrayalloc = static_cast<alloc_type_ndarray*>(_ndarray_alloc);
-    (*ndarrayalloc)(index, indices_len, idxptr_len, data, indices, indptr);
+    alloc_type_sparse* sparsealloc = static_cast<alloc_type_sparse*>(_sparse_alloc);
+    (*sparsealloc)(index, indices_len, idxptr_len, data, indices, indptr);
   };
 
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
@@ -263,7 +264,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
                     cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
-                    ndarray_malloc, &ndarray_alloc, in_stypes.data(), out_stypes.data(),
+                    sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
                     in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(), 
                     in_indices_shapes.data(), out_indices_shapes.data(), 
                     in_indptr_shapes.data(), out_indptr_shapes.data()))
@@ -286,7 +287,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                            ndarray_malloc, &ndarray_alloc, in_stypes.data(), out_stypes.data(),
+                            sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
                             in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
                             in_indices_shapes.data(), out_indices_shapes.data(),
                             in_indptr_shapes.data(), out_indptr_shapes.data()))
@@ -757,8 +758,8 @@ int MXLoadLib(const char *path) {
       regOp.set_num_inputs(num_inputs);
       regOp.set_num_outputs(num_outputs);
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)

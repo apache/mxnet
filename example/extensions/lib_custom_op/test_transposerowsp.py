@@ -28,10 +28,10 @@ import os
 
 #load library
 if (os.name=='posix'):
-    path = os.path.abspath('libtransrowsp_lib.so')
+    path = os.path.abspath('libtransposerowsp_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('libtransrowsp_lib.dll')
+    path = os.path.abspath('libtransposerowsp_lib.dll')
     mx.library.load(path)
 
 a = mx.nd.array([[1,2,3],[0,0,0],[4,0,5],[0,0,0],[0,0,0]])
@@ -42,20 +42,20 @@ print("data:", a.data.asnumpy())
 print("indices:", a.indices.asnumpy())
 
 print("--------Start NDArray Compute---------")
-b = mx.nd.my_transrowsp(a)
+b = mx.nd.my_transposerowsp(a)
 print("Compute Results:")
 print("data:", b.data.asnumpy())
 print("indices:", b.indices.asnumpy())
 
 print("Stateful Compute Result:")
-c = mx.nd.state_transrowsp(a, test_kw=100)
+c = mx.nd.state_transposerowsp(a, test_kw=100)
 print("data:", c.data.asnumpy())
 print("indices:", c.indices.asnumpy())
 
 print("--------start symbolic compute--------")
 d = mx.sym.Variable('d')
-e = mx.sym.my_transrowsp(d)
-f = mx.sym.state_transrowsp(d, test_kw=200)
+e = mx.sym.my_transposerowsp(d)
+f = mx.sym.state_transposerowsp(d, test_kw=200)
 
 exe = e.bind(ctx=mx.cpu(),args={'d':a})
 exe2 = f.bind(ctx=mx.cpu(),args={'d':a})

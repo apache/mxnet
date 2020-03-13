@@ -51,7 +51,7 @@ void transpose(MXTensor src, MXTensor dst, OpResource res) {
       }
     }
 
-    res.alloc_ndarray(B, 0, mp.size());
+    res.alloc_sparse(B, 0, mp.size());
     float *Bval = (float*) (B->data);
     int didx = 0, iidx = 0;
     for(auto i : mp) {
@@ -67,11 +67,15 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
                       std::vector<MXTensor> inputs,
                       std::vector<MXTensor> outputs,
                       OpResource res) {
-
-  // The data types and storage types of inputs and outputs should be the same.  
-  if(inputs[0].dtype != outputs[0].dtype || inputs[0].stype != outputs[0].stype)
+  // The data types and storage types of inputs and outputs should be the same.
+  if(inputs[0].dtype != outputs[0].dtype || inputs[0].stype != outputs[0].stype) {
+    std::cout << "Error! Expected all inputs and outputs to be the same type."
+              << "Found input storage type:" << inputs[0].stype
+              << " Found output storage type:" << outputs[0].stype
+              << " Found input data type:" << inputs[0].dtype
+              << " Found output data type:" << outputs[0].dtype << std::endl;
     return MX_FAIL;
-
+  }
   transpose(inputs[0], outputs[0], res);
   return MX_SUCCESS;
 }
@@ -129,7 +133,7 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-REGISTER_OP(my_transrowsp)
+REGISTER_OP(my_transposerowsp)
 .setForward(forward, "cpu")
 .setBackward(backward, "cpu")
 .setParseAttrs(parseAttrs)
@@ -139,9 +143,9 @@ REGISTER_OP(my_transrowsp)
 
 /* ------------------------------------------------------------------------- */
 
-class MyStatefulTransRowSP : public CustomStatefulOp {
+class MyStatefulTransposeRowSP : public CustomStatefulOp {
  public:
-  explicit MyStatefulTransRowSP(int count) : count(count) {}
+  explicit MyStatefulTransposeRowSP(int count) : count(count) {}
 
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
@@ -158,8 +162,6 @@ class MyStatefulTransRowSP : public CustomStatefulOp {
     return backward(attrs, inputs, outputs, op_res);
   }
 
-  ~MyStatefulTransRowSP() {}
-
  private:
   int count;
 };
@@ -169,23 +171,16 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs["test_kw"]) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulTransRowSP(count);
+  *op_inst = new MyStatefulTransposeRowSP(count);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 
-MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
-                           std::vector<int> &input_indices) {
-  // input_indices.push_back(1);  // mark mutate input
-  return MX_SUCCESS;
-}
-
-REGISTER_OP(state_transrowsp)
+REGISTER_OP(state_transposerowsp)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferSType(inferSType)
 .setInferShape(inferShape)
-.setMutateInputs(mutateInputs)
 .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {

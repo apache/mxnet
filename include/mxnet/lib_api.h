@@ -241,7 +241,7 @@ enum MXReturnValue {
   MX_SUCCESS = 1,
 };
 
-// For sparse input, read/write the data from NDarray via pointers.
+// For sparse tensors, read/write the data from NDarray via pointers.
 struct MXSparse {
   // Pointer to data.
   void *data{nullptr};
@@ -418,7 +418,7 @@ struct MXTensor {
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
-typedef void (*ndarray_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t**);
+typedef void (*sparse_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t**);
 
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
@@ -432,16 +432,11 @@ typedef void (*ndarray_malloc_t)(void*, int, int, int, void**, int64_t**, int64_
 class OpResource {
  public:
   OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
-             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream)
-    : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
-      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream) {}
-
-  OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
              xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream,
-             ndarray_malloc_t ndarray_malloc_fp, void* ndarray_alloc_fp)
+             sparse_malloc_t sparse_malloc_fp, void* sparse_alloc_fp)
     : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
       cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream),
-      ndarray_malloc(ndarray_malloc_fp), ndarray_alloc(ndarray_alloc_fp) {}
+      sparse_malloc(sparse_malloc_fp), sparse_alloc(sparse_alloc_fp) {}
 
   /*! \brief allocate cpu memory controlled by MXNet */
   void* alloc_cpu(int size) {
@@ -458,8 +453,8 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
-  void alloc_ndarray(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
-    ndarray_malloc(ndarray_alloc, index, indices_len, indptr_len, 
+  void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
+    sparse_malloc(sparse_alloc, index, indices_len, indptr_len, 
                    &(sparse->data), &(sparse->indices), &(sparse->indptr));
   }
 
@@ -471,8 +466,8 @@ class OpResource {
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
 
-  ndarray_malloc_t ndarray_malloc;
-  void *ndarray_alloc;
+  sparse_malloc_t sparse_malloc;
+  void *sparse_alloc;
 };
 
 /*!
@@ -960,7 +955,7 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              int* outdev_id, int num_out,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
                              xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-                             ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                             sparse_malloc_t sparse_malloc, void* sparse_alloc,
                              int* instypes, int* outstypes,
                              void** in_indices, void** out_indices,
                              void** in_indptr, void** out_indptr,
@@ -989,7 +984,7 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      int* outdev_id, int num_out,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc,
                                      xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-                                     ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                                     sparse_malloc_t sparse_malloc, void* sparse_alloc,
                                      int* instypes, int* outstypes,
                                      void** in_indices, void** out_indices,
                                      void** in_indptr, void** out_indptr,
@@ -1216,7 +1211,7 @@ extern "C" {
     if (!retval)
       return retval;
 
-    // copy output types
+    // copy output storage types
     for (int i = 0; i < num_out; i++) {
       outstypes[i] = out_stypes[i];
     }
@@ -1237,7 +1232,7 @@ extern "C" {
                   size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
                   xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-                  ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                  sparse_malloc_t sparse_malloc, void* sparse_alloc,
                   int* instypes, int* outstypes, void** in_indices, void** out_indices,
                   void** in_indptr, void** out_indptr,
                   int64_t* in_indices_shapes, int64_t* out_indices_shapes, 
@@ -1303,7 +1298,7 @@ extern "C" {
       }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream, ndarray_malloc, ndarray_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream, sparse_malloc, sparse_alloc);
     return fcomp(attrs, inputs, outputs, res);
   }
 
@@ -1373,7 +1368,7 @@ extern "C" {
                           size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc,
                           xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-                          ndarray_malloc_t ndarray_malloc, void* ndarray_alloc,
+                          sparse_malloc_t sparse_malloc, void* sparse_alloc,
                           int* instypes, int* outstypes, void** in_indices, void** out_indices,
                           void** in_indptr, void** out_indptr,
                           int64_t* in_indices_shapes, int64_t* out_indices_shapes,
@@ -1435,7 +1430,7 @@ extern "C" {
       }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, ndarray_malloc, ndarray_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, sparse_malloc, sparse_alloc);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {

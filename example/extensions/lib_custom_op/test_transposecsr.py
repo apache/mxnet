@@ -28,10 +28,10 @@ import os
 
 #load library
 if (os.name=='posix'):
-    path = os.path.abspath('libtranscsr_lib.so')
+    path = os.path.abspath('libtransposecsr_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('libtranscsr_lib.dll')
+    path = os.path.abspath('libtransposecsr_lib.dll')
     mx.library.load(path)
 
 a = mx.nd.array([[1,3,0,2,1],[0,1,0,0,0],[0,2,4,5,3]])
@@ -42,22 +42,22 @@ print("indices:", a.indices.asnumpy())
 print("indptr:", a.indptr.asnumpy())
 
 print("--------Start NDArray Compute---------")
-b = mx.nd.my_transcsr(a)
+b = mx.nd.my_transposecsr(a)
 print("Compute Results:")
 print("data:", b.data.asnumpy())
 print("indices:", b.indices.asnumpy())
 print("indptr:", b.indptr.asnumpy())
 
 print("Stateful Compute Result:")
-c = mx.nd.state_transcsr(a, test_kw=100)
+c = mx.nd.state_transposecsr(a, test_kw=100)
 print("data:", c.data.asnumpy())
 print("indices:", c.indices.asnumpy())
 print("indptr:", c.indptr.asnumpy())
 
 print("--------start symbolic compute--------")
 d = mx.sym.Variable('d')
-e = mx.sym.my_transcsr(d)
-f = mx.sym.state_transcsr(d, test_kw=200)
+e = mx.sym.my_transposecsr(d)
+f = mx.sym.state_transposecsr(d, test_kw=200)
 
 exe = e.bind(ctx=mx.cpu(),args={'d':a})
 exe2 = f.bind(ctx=mx.cpu(),args={'d':a})
