@@ -45,7 +45,7 @@ fi
 
 build() {
     # NOTE: Ensure the correct context root is passed in when building - Dockerfile expects ./wheel_build
-    docker build -t "${image_name}" --build-arg --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} -f ${resources_path}/Dockerfile ./wheel_build
+    docker build -t "${image_name}" --build-arg BASE_IMAGE="${base_image}" --build-arg MXNET_COMMIT_ID=${GIT_COMMIT} -f ${resources_path}/Dockerfile ./wheel_build
 }
 
 test() {

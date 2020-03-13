@@ -22,8 +22,10 @@
 
 
 try:
+    from __builtin__ import all as py_all
     from __builtin__ import slice as py_slice
 except ImportError:
+    from builtins import all as py_all
     from builtins import slice as py_slice
 
 from array import array as native_array
@@ -50,7 +52,7 @@ from . import fallback
 
 
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape',
-           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'broadcast_to',
+           'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not', 'delete',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
@@ -310,7 +312,7 @@ class ndarray(NDArray):
         else:
             # Note: this allows subclasses that don't override
             # __array_function__ to handle mxnet.numpy.ndarray objects
-            if not all(issubclass(t, ndarray) for t in types):
+            if not py_all(issubclass(t, ndarray) for t in types):
                 return NotImplemented
             return mx_np_func(*args, **kwargs)
 
@@ -626,7 +628,7 @@ class ndarray(NDArray):
         if isinstance(key, tuple) and len(key) == 0:
             return self
         if isinstance(key, tuple) and len(key) == ndim\
-                and all(isinstance(idx, integer_types) for idx in key):
+                and py_all(isinstance(idx, integer_types) for idx in key):
             out = self
             for idx in key:
                 out = out[idx]
@@ -1091,10 +1093,10 @@ class ndarray(NDArray):
     # pylint: enable= invalid-name, undefined-variable
 
     def all(self, axis=None, out=None, keepdims=False):
-        return _mx_nd_np.all(self, axis=axis, keepdims=keepdims, out=out)
+        return _mx_nd_np.all(self, axis=axis, out=out, keepdims=keepdims)
 
     def any(self, axis=None, out=None, keepdims=False):
-        return _mx_nd_np.any(self, axis=axis, keepdims=keepdims, out=out)
+        return _mx_nd_np.any(self, axis=axis, out=out, keepdims=keepdims)
 
     def as_nd_ndarray(self):
         """Convert mxnet.numpy.ndarray to mxnet.ndarray.NDArray to use its fluent methods."""
@@ -2572,6 +2574,110 @@ def empty_like(prototype, dtype=None, order='C', subok=False, shape=None): # pyl
 
 
 # pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def all(a, axis=None, out=None, keepdims=False):
+    """
+    Test whether all array elements along a given axis evaluate to True.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array or object that can be converted to an array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a logical AND reduction is performed.
+        The default (axis = None) is to perform a logical AND over
+        all the dimensions of the input array.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in
+        the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+    out : ndarray, optional
+        Alternate output array in which to place the result. It must have
+        the same shape as the expected output and its type is preserved
+
+    Returns
+    --------
+    all : ndarray, bool
+        A new boolean or array is returned unless out is specified,
+        in which case a reference to out is returned.
+
+    Examples:
+    ---------
+    >>> np.all([[True,False],[True,True]])
+    False
+
+    >>> np.all([[True,False],[True,True]], axis=0)
+    array([ True, False])
+
+    >>> np.all([-1, 4, 5])
+    True
+
+    >>> np.all([1.0, np.nan])
+    True
+
+    >>> o=np.array(False)
+    >>> z=np.all([-1, 4, 5], out=o)
+    >>> id(z), id(o), z
+    (28293632, 28293632, array(True)) # may vary
+    """
+    return _mx_nd_np.all(a, axis=axis, out=out, keepdims=keepdims)
+
+
+@set_module('mxnet.numpy')
+def any(a, axis=None, out=None, keepdims=False):
+    """
+    Test whether any array element along a given axis evaluates to True.
+    Returns single boolean unless axis is not None
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array or object that can be converted to an array.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a logical AND reduction is performed.
+        The default (axis = None) is to perform a logical AND over
+        all the dimensions of the input array.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in
+        the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+    out : ndarray, optional
+        Alternate output array in which to place the result. It must have
+        the same shape as the expected output and its type is preserved
+
+    Returns
+    --------
+    any : bool or ndarray
+        A new boolean or ndarray is returned unless out is specified,
+        in which case a reference to out is returned.
+
+    Examples:
+    ---------
+    >>> np.any([[True, False], [True, True]])
+    True
+
+    >>> np.any([[True, False], [False, False]], axis=0)
+    array([ True, False])
+
+    >>> np.any([-1, 0, 5])
+    True
+
+    >>> np.any(np.nan)
+    True
+
+    >>> o=np.array(False)
+    >>> z=np.any([-1, 4, 5], out=o)
+    >>> z, o
+    (array(True), array(True))
+    >>> # Check now that z is a reference to o
+    >>> z is o
+    True
+    >>> id(z), id(o) # identity of z and o              # doctest: +SKIP
+    (191614240, 191614240)
+    """
+    return _mx_nd_np.any(a, axis=axis, out=out, keepdims=keepdims)
+
+
 @set_module('mxnet.numpy')
 def identity(n, dtype=None, ctx=None):
     """
@@ -6200,6 +6306,11 @@ def clip(a, a_min, a_max, out=None):
     >>> np.clip(a, 3, 6, out=a)
     array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
     """
+    from numbers import Number
+    if isinstance(a, Number):
+        # In case input is a scalar, the computation would fall back to native numpy.
+        # The value returned would be a python scalar.
+        return _np.clip(a, a_min, a_max, out=None)
     return _mx_nd_np.clip(a, a_min, a_max, out=out)
 
 
