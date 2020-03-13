@@ -185,6 +185,42 @@ class _Symbol(Symbol):
         """x.__add__(y) <=> x + y"""
         return add(self, other)
 
+    def __invert__(self):
+        """x.__invert__() <=> ~x"""
+        return invert(self)
+
+    def __and__(self, other):
+        """x.__and__(y) <=> x & y"""
+        return bitwise_and(self, other)
+
+    def __or__(self, other):
+        """x.__or__(y) <=> x | y"""
+        return bitwise_or(self, other)
+
+    def __xor__(self, other):
+        """x.__xor__(y) <=> x ^ y"""
+        return bitwise_xor(self, other)
+
+    def __round__(self, n=0):
+        """x.__round__(n)"""
+        return round(self, decimals=n)
+
+    def __abs__(self):
+        """x.__abs__()"""
+        return absolute(self)
+
+    def __ceil__(self):
+        """x.__ceil__()"""
+        return ceil(self)
+
+    def __floor__(self):
+        """x.__floor__()"""
+        return floor(self)
+
+    def __trunc__(self):
+        """x.__trunc__()"""
+        return trunc(self)
+
     def __sub__(self, other):
         """x.__sub__(y) <=> x - y"""
         return subtract(self, other)
