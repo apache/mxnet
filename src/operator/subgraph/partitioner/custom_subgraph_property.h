@@ -117,7 +117,15 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     arg_dev_id.clear();
     for (size_t i=0; i < in_arg_names.size(); i++) {
       arg_names.push_back(in_arg_names[i].c_str());
-      const auto &in_arg = *(in_args_ptr[i]);
+      const NDArray &in_arg = *(in_args_ptr[i]);
+
+      // reorder data if in MKLDNN format
+      if (in_arg.IsMKLDNNData()) {
+        in_arg.Reorder2DefaultAsync();
+        in_arg.WaitToRead();
+      }
+
+      // pull out parts of NDArray to send to backend
       arg_data.push_back(in_arg.data().dptr_);
       arg_shapes.push_back(in_arg.shape().data());
       arg_dims.push_back(in_arg.shape().ndim());
@@ -140,6 +148,14 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     for (size_t i=0; i < in_aux_names.size(); i++) {
       aux_names.push_back(in_aux_names[i].c_str());
       const auto &in_aux = *(in_aux_ptr[i]);
+
+      // reorder data if in MKLDNN format
+      if (in_aux.IsMKLDNNData()) {
+        in_aux.Reorder2DefaultAsync();
+        in_aux.WaitToRead();
+      }
+
+      // pull out parts of NDArray to send to backend
       aux_data.push_back(in_aux.data().dptr_);
       aux_shapes.push_back(in_aux.shape().data());
       aux_dims.push_back(in_aux.shape().ndim());
@@ -158,9 +174,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // set shape attrs for each node in the graph
     if (g.HasAttr("shape")) {
       mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
-      for (unsigned i = 0; i < indexed_graph.num_nodes(); i++) {
-        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[i].source);
-        mxnet::TShape shape = shapes[i];
+      for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+        // get the output entry ID for this node
+        const uint32_t out_entry_id = indexed_graph.entry_id(nid, 0);
+        mxnet::TShape shape = shapes[out_entry_id];
         std::stringstream ss;
         ss << shape;
         node->attrs.dict[MX_STR_SHAPE] = ss.str();
@@ -169,9 +187,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // set dtype attrs for each node in the graph
     if (g.HasAttr("dtype")) {
       std::vector<int> dtypes = g.GetAttr<std::vector<int> >("dtype");
-      for (unsigned i = 0; i < indexed_graph.num_nodes(); i++) {
-        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[i].source);
-        int dtype = dtypes[i];
+      for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+        // get the output entry ID for this node
+        const uint32_t out_entry_id = indexed_graph.entry_id(nid, 0);
+        int dtype = dtypes[out_entry_id];
         std::stringstream ss;
         ss << dtype;
         node->attrs.dict[MX_STR_DTYPE] = ss.str();
@@ -192,12 +212,16 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     opt_keys_.clear();
     opt_vals_.clear();
     options_map_.clear();
-    for (auto kv : options_map) {
+    // store options in map in subgraph property to re-use later for reviewSubgraph
+    for (auto& kv : options_map) {
       options_map_.push_back(kv);
-      opt_keys_.push_back(options_map_.back().first.c_str());
-      opt_vals_.push_back(options_map_.back().second.c_str());
     }
-
+    // convert options_map_ to char* to pass to backend library
+    for (auto& kv : options_map_) {
+      opt_keys_.push_back(kv.first.c_str());
+      opt_vals_.push_back(kv.second.c_str());
+    }
+    
     CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,
                             opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
       << "Error calling supported_ops for '" << subgraph_prop << "'";
