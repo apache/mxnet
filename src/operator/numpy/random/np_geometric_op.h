@@ -63,10 +63,10 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
         .add_enum("bool", mshadow::kBool)
-        .set_default(mshadow::kFloat32)
+        .set_default(mshadow::kInt32)
         .describe(
             "DType of the output in case this can't be inferred. "
-            "Defaults to float32 if not defined (dtype=None).");
+            "Defaults to int32 if not defined (dtype=None).");
   }
 
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
