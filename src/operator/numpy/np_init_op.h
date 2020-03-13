@@ -63,6 +63,17 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     MXNET_ADD_ALL_TYPES
     .describe("Data-type of the returned array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream N_s, M_s, k_s, dtype_s;
+    N_s << N;
+    M_s << M;
+    k_s << k;
+    dtype_s << dtype;
+    (*dict)["N"] = N_s.str();
+    (*dict)["M"] = M_s.str();
+    (*dict)["k"] = k_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+  }
 };
 
 struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {

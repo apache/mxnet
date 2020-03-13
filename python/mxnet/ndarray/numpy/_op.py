@@ -1776,8 +1776,12 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     _sanity_check_params('eye', ['order'], kwargs)
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
-        ctx = current_context()
-    return _npi.eye(N, M, k, ctx, dtype)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.eye(N, M, k, ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5305,8 +5309,12 @@ def hanning(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     if ctx is None:
-        ctx = current_context()
-    return _npi.hanning(M, dtype=dtype, ctx=ctx)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.hanning(M, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5385,8 +5393,12 @@ def hamming(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     if ctx is None:
-        ctx = current_context()
-    return _npi.hamming(M, dtype=dtype, ctx=ctx)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.hamming(M, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')

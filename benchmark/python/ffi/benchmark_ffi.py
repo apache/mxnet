@@ -123,6 +123,9 @@ def prepare_workloads():
     OpArgMngr.add_workload("insert", pool['3x2'], 1, pool['1x1'], axis=0)
     OpArgMngr.add_workload("delete", pool['3x2'], 1, axis=0)
     OpArgMngr.add_workload("blackman", 12)
+    OpArgMngr.add_workload("eye", 5)
+    OpArgMngr.add_workload("hamming", 12)
+    OpArgMngr.add_workload("hanning", 12)
 
 
 def benchmark_helper(f, *args, **kwargs):

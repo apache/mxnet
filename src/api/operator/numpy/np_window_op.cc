@@ -28,10 +28,10 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.blackman")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+inline static void SetNumpyWindowsParam(runtime::MXNetArgs args,
+                                 runtime::MXNetRetValue* ret,
+                                 const nnvm::Op* op) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_blackman");
   nnvm::NodeAttrs attrs;
   op::NumpyWindowsParam param;
   if (args[0].type_code() == kNull) {
@@ -53,6 +53,27 @@ MXNET_REGISTER_API("_npi.blackman")
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
+}
+
+MXNET_REGISTER_API("_npi.blackman")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_blackman");
+  SetNumpyWindowsParam(args, ret, op);
+});
+
+MXNET_REGISTER_API("_npi.hamming")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_hamming");
+  SetNumpyWindowsParam(args, ret, op);
+});
+
+MXNET_REGISTER_API("_npi.hanning")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_hanning");
+  SetNumpyWindowsParam(args, ret, op);
 });
 
 }  // namespace mxnet

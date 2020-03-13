@@ -231,4 +231,33 @@ MXNET_REGISTER_API("_npi.arange")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.eye")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_eye");
+  nnvm::NodeAttrs attrs;
+  op::NumpyEyeParam param;
+  param.N = args[0].operator nnvm::dim_t();
+  if (args[1].type_code() == kNull) {
+    param.M = dmlc::nullopt;
+  } else {
+    param.M = args[1].operator nnvm::dim_t();
+  }
+  param.k = args[2].operator nnvm::dim_t();
+  if (args[4].type_code() == kNull) {
+    param.dtype = mshadow::kFloat32;
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyEyeParam>(&attrs);
+  if (args[3].type_code() != kNull) {
+    attrs.dict["ctx"] = args[3].operator std::string();
+  }
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet
