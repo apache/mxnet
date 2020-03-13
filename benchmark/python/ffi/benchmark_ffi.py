@@ -146,6 +146,10 @@ def prepare_workloads():
     OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
     OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
     OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
+    OpArgMngr.add_workload("max", pool["2x2"], axis=0, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("min", pool["2x2"], axis=0, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("amax", pool["2x2"], axis=1, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("amin", pool["2x2"], axis=1, out=pool['2'], keepdims=False)
 
     unary_ops = ['negative', 'reciprocal', 'abs', 'sign', 'rint', 'ceil', 'floor',
                  'bitwise_not', 'trunc', 'fix', 'square', 'sqrt', 'cbrt', 'exp',
