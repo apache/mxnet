@@ -124,12 +124,14 @@ void CustomFComputeDispatcher(const std::string op_name,
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
     NDArray const* in_nd = &(inputs[i]);
+#if MXNET_USE_MKLDNN == 1
     // reorder data if in MKLDNN format
     if (in_nd->IsMKLDNNData()) {
       // convert from MKLDNN
       conv_mkl.push_back(in_nd->Reorder2Default());
       in_nd = &(conv_mkl.back());
     }
+#endif
     // pull out parts to pass over to library
     in_data.push_back(in_nd->data().dptr_);
     in_shapes.push_back(in_nd->shape().data());
