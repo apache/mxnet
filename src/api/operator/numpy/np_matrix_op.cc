@@ -24,6 +24,7 @@
 #include <mxnet/api_registry.h>
 #include "../utils.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
+#include "../../../operator/numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 
@@ -44,6 +45,27 @@ MXNET_REGISTER_API("_npi.expand_dims")
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   auto ndoutputs = Invoke(op, &attrs, 1, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.column_stack")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_column_stack");
+  nnvm::NodeAttrs attrs;
+  op::NumpyColumnStackParam param;
+  param.num_args = args.size();
+
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyColumnStackParam>(&attrs);
+  int num_outputs = 0;
+  NDArray** inputs = new NDArray*[param.num_args];
+  for (int i = 0; i < param.num_args; ++i) {
+    inputs[i] = args[i].operator mxnet::NDArray*();
+  }
+  auto ndoutputs = Invoke(op, &attrs, param.num_args, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+  delete[] inputs;
 });
 
 }  // namespace mxnet
