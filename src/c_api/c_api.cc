@@ -120,30 +120,25 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
 
+  std::vector<NDArray> conv_mkl; //converted NDArrays from MKLDNN format
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
-    const NDArray& in_nd = inputs[i];
+    NDArray const* in_nd = &(inputs[i]);
     // reorder data if in MKLDNN format
-    if (in_nd.IsMKLDNNData()) {
-      const NDArray& tmp_nd = in_nd.Reorder2Default();
-      in_data.push_back(tmp_nd.data().dptr_);
-      in_shapes.push_back(tmp_nd.shape().data());
-      in_dims.push_back(tmp_nd.shape().ndim());
-      in_types.push_back(tmp_nd.dtype());
-      in_verIDs.push_back(tmp_nd.version());
-      const char* ctx_str = tmp_nd.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      in_dev_type.push_back(ctx_str);
-      in_dev_id.push_back(tmp_nd.ctx().real_dev_id());
-    } else {
-      in_data.push_back(in_nd.data().dptr_);
-      in_shapes.push_back(in_nd.shape().data());
-      in_dims.push_back(in_nd.shape().ndim());
-      in_types.push_back(in_nd.dtype());
-      in_verIDs.push_back(in_nd.version());
-      const char* ctx_str = in_nd.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
-      in_dev_type.push_back(ctx_str);
-      in_dev_id.push_back(in_nd.ctx().real_dev_id());
+    if (in_nd->IsMKLDNNData()) {
+      // convert from MKLDNN
+      conv_mkl.push_back(in_nd->Reorder2Default());
+      in_nd = &(conv_mkl.back());
     }
+    // pull out parts to pass over to library
+    in_data.push_back(in_nd->data().dptr_);
+    in_shapes.push_back(in_nd->shape().data());
+    in_dims.push_back(in_nd->shape().ndim());
+    in_types.push_back(in_nd->dtype());
+    in_verIDs.push_back(in_nd->version());
+    const char* ctx_str = in_nd->ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+    in_dev_type.push_back(ctx_str);
+    in_dev_id.push_back(in_nd->ctx().real_dev_id());
   }
 
   for (size_t i = 0; i < outputs.size(); i++) {
