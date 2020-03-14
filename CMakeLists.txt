@@ -710,7 +710,8 @@ if(UNIX)
     # 1) variables used in '#pragma omp parallel' are considered unused
     target_compile_options(mxnet_static PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=unused-variable>")
     if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Werror cross-execution-space-call")
+      # Note: "=" is required to avoid breaking ccache
+      string(APPEND CMAKE_CUDA_FLAGS " -Werror=cross-execution-space-call")
     endif()
   endif()
 elseif(MSVC)
