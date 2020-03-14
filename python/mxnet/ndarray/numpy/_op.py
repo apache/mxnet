@@ -6983,24 +6983,7 @@ def ediff1d(ary, to_end=None, to_begin=None):
     >>> np.ediff1d(x, to_begin=y)
     array([ 1.,  2.,  4.,  1.,  6., 24.,  1.,  2.,  3., -7.])
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(to_begin, np_ndarray), isinstance(to_end, np_ndarray))
-    # case 1: when both `to_begin` and `to_end` are arrays
-    if input_type == (True, True):
-        return _npi.ediff1d(ary, to_begin, to_end, to_begin_arr_given=True, to_end_arr_given=True,
-                            to_begin_scalar=None, to_end_scalar=None)
-    # case 2: only `to_end` is array but `to_begin` is scalar/None
-    elif input_type == (False, True):
-        return _npi.ediff1d(ary, to_end, to_begin_arr_given=False, to_end_arr_given=True,
-                            to_begin_scalar=to_begin, to_end_scalar=None)
-    # case 3: only `to_begin` is array but `to_end` is scalar/None
-    elif input_type == (True, False):
-        return _npi.ediff1d(ary, to_begin, to_begin_arr_given=True, to_end_arr_given=False,
-                            to_begin_scalar=None, to_end_scalar=to_end)
-    # case 4: both `to_begin` and `to_end` are scalar/None
-    else:
-        return _npi.ediff1d(ary, to_begin_arr_given=False, to_end_arr_given=False,
-                            to_begin_scalar=to_begin, to_end_scalar=to_end)
+    return _api_internal.ediff1d(ary, to_end, to_begin)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7148,8 +7131,8 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
         if x.dtype in ['int8', 'uint8', 'int32', 'int64']:
             return x
         if not copy:
-            return _npi.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf, out=x)
-        return _npi.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf, out=None)
+            return _api_internal.nan_to_num(x, copy, nan, posinf, neginf, x)
+        return _api_internal.nan_to_num(x, copy, nan, posinf, neginf, None)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -7538,10 +7521,10 @@ def polyval(p, x):
     array([76., 49.])
     """
     from ...numpy import ndarray
-    if isinstance(p, ndarray) and isinstance(x, ndarray):
-        return _npi.polyval(p, x)
-    elif not isinstance(p, ndarray) and not isinstance(x, ndarray):
+    if isinstance(p, numeric_types) and isinstance(x, numeric_types):
         return _np.polyval(p, x)
+    elif isinstance(p, ndarray) and isinstance(x, ndarray):
+        return _api_internal.polyval(p, x)
     else:
         raise TypeError('type not supported')
 
