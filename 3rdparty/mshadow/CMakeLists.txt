@@ -15,6 +15,8 @@ target_include_directories(mshadow INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_sources(mshadow INTERFACE ${MSHADOWSOURCE})
 if(UNIX)
   target_compile_options(mshadow INTERFACE
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-braced-scalar-init>"
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-pass-failed>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
