@@ -23,7 +23,8 @@ if(UNIX)
     "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-undefined-var-template>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
-    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>"
+    "$<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>")
 endif()
 
 if(USE_CUDA)
