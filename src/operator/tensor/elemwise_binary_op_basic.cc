@@ -199,8 +199,9 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
   auto y = n->inputs[1];
 
   std::vector<nnvm::NodeEntry> ret;
-  ret.emplace_back(head_grad);
-  ret.emplace_back(MakeNode("negative", n->attrs.name + "_backward_grad_y",
+  ret.emplace_back( MakeNode("identity", n->attrs.name + "_lhs_backward",
+                             {head_grad}, nullptr, &n));
+  ret.emplace_back(MakeNode("negative", n->attrs.name + "_rhs_backward",
                             {head_grad}, nullptr, &n));
   return ret;
 });
@@ -237,9 +238,9 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
   auto y = n->inputs[1];
 
   std::vector<nnvm::NodeEntry> ret;
-  ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_0",
+  ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_lhs_backward",
                             {head_grad, y}, nullptr, &n));
-  ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_backward_grad_grad_1",
+  ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_rhs_backward",
                             {head_grad, x}, nullptr, &n));
   return ret;
 });

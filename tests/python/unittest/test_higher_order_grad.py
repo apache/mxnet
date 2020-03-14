@@ -624,6 +624,99 @@ def test_power():
         y = nd.random.uniform(low, high, shape)
         check_nth_order_binary([x, y], power, [grad_op, grad_grad_op, grad_grad_grad_op], [1, 2, 3])
 
+#  based on gen_broadcast_data in test_operation.py
+def gen_broadcast_shape(idx):
+    # Manually set test cases
+    binary_op_data_shape = nd.array(
+        [[[2, 5, 1, 30, 7], [1, 5, 448, 30, 1]],
+         [[10, 49, 1, 77, 17], [10, 1, 2, 1, 17]],
+         [[13, 2, 65, 2,  1], [13, 1, 65, 1, 225]],
+         [[9, 434, 4, 2, 37], [9, 1, 4, 1, 37]],
+         [[2, 52, 1, 4, 1], [1, 52, 60, 1, 37]],
+         [[1, 23, 7, 122, 50], [2, 1, 7, 1, 50]],
+         [[1, 17, 1, 5, 1], [22, 1, 2, 1, 28]],
+         [[29, 1, 2, 1, 8], [29, 22, 1, 130, 1]],
+         [[2, 36, 1, 427, 3], [1, 36, 11, 427, 1]],
+         [[1, 2, 1, 100, 7], [1, 2, 448, 100, 1]],
+         [[1, 2, 495, 77, 7], [1, 2, 1, 1, 7]],
+         [[1, 43, 65, 2, 1], [1, 43, 65, 1, 225]],
+         [[1, 92, 434, 2, 2], [1, 92, 1, 2, 2]],
+         [[1, 92, 1, 4, 1], [1, 92, 134, 1, 17]],
+         [[1, 53, 2, 122, 143], [1, 1, 2, 1, 143]],
+         [[1, 179, 1, 87, 17], [1, 179, 1, 1, 17]],
+         [[1, 1, 17, 5, 1], [1, 22, 1, 1, 28]],
+         [[1, 2, 1, 1, 8], [1, 2, 52, 430, 1]],
+         [[1, 163, 1, 22, 3], [1, 163, 116, 22, 1]],
+         [[1, 1, 44, 30, 7], [1, 1, 44, 30, 1]],
+         [[1, 1, 1, 1, 28], [1, 127, 1, 5, 28]],
+         [[1, 2, 394, 38, 1], [1, 2, 394, 38, 16]],
+         [[1, 10, 49, 77, 17], [1, 1, 1, 1, 17]],
+         [[1, 431, 6, 2, 225], [1, 1, 6, 2, 225]],
+         [[1, 15, 1, 28, 1], [1, 15, 1, 28, 463]], [[1, 129, 2, 48, 96], [1, 129, 2, 1, 1]],
+         [[1, 1, 403, 17, 2], [1, 44, 403, 17, 2]],
+         [[1, 1, 65, 2, 22], [1, 1, 65, 1, 1]],
+         [[1, 24, 103, 17, 18], [1, 24, 1, 1, 1]],
+         [[1, 1, 1, 1, 2], [1, 24, 194, 50, 1]],
+         [[1, 1, 107, 84, 9], [1, 1, 1, 1, 1]]])
+    if idx < binary_op_data_shape.shape[0]:
+        l_shape = binary_op_data_shape[idx][0]
+        r_shape = binary_op_data_shape[idx][1]
+    else:
+        # Generate random data that has ndim between 1-7 and all the shape dims between 1-5
+        ndim = nd.random.randint(1, 6)
+        shape = nd.random.randint(1, 6, size=(ndim,))
+        l_same_dim = nd.random.randint(0, 5)
+        r_same_dim = nd.random.randint(0, 5)
+        l_axis_flags = nd.random.randint(0, 2, size=ndim)
+        r_axis_flags = nd.random.randint(0, 2, size=ndim)
+        if l_same_dim == 4:
+            l_axis_flags = nd.ones(ndim)
+        if r_same_dim == 4:
+            r_axis_flags = nd.ones(ndim)
+        l_shape = shape.copy()
+        r_shape = shape.copy()
+        l_shape[nd.where(l_axis_flags == 0)] = 1
+        r_shape[nd.where(r_axis_flags == 0)] = 1
+    return tuple(l_shape.asnumpy().astype(int)), tuple(r_shape.asnumpy().astype(int))
+
+# from test_operation.py
+def reduce_op(shape, x):
+    if shape == x.shape:
+        return x
+    keepdims_shape = list(x.shape)
+    for i in range(len(shape)):
+        if x.shape[i] != shape[i]:
+            keepdims_shape[i] = 1
+            x = nd.sum(x, axis=i).reshape(keepdims_shape)
+    return x
+
+@with_seed()
+def test_broadcast_power():
+    def broadcast_power(inputs):
+        return nd.broadcast_power(inputs[0], inputs[1])
+
+    def unreduced_grad_op(inputs):
+        x, y = inputs
+        return [y * nd.broadcast_power(x, y - 1), nd.broadcast_power(x, y) * nd.log(x)]
+
+    def unreduced_grad_grad_op(inputs):
+        x, y = inputs
+        return   [y * (y - 1) * nd.broadcast_power(x, y - 2), nd.broadcast_power(x, y) * (nd.log(x) ** 2)]
+
+    def unreduced_grad_grad_grad_op(inputs):
+        x, y = inputs
+        return   [y * (y - 1) * (y - 2) * nd.broadcast_power(x, y - 3), nd.broadcast_power(x, y) * (nd.log(x) ** 3)]
+
+    low = 1.0
+    high = 3.0
+    for dim in range(1, 5):
+        x_shape, y_shape = gen_broadcast_shape(dim)
+        x = nd.random.uniform(low, high, x_shape)
+        y = nd.random.uniform(low, high, y_shape)
+
+        check_nth_order_binary([x, y], broadcast_power, [unreduced_grad_op, unreduced_grad_grad_op,
+            unreduced_grad_grad_grad_op], [1, 2, 3], True, rtol=1e-3, atol=1e-5)
+
 def autograd_grad_ex(heads, variables, head_grads=None, retain_graph=None, create_graph=False,
             train_mode=True):
     """ If some variables don't in the path of computing heads, we set the heads grad of them to zero
@@ -674,7 +767,7 @@ def autograd_grad_ex(heads, variables, head_grads=None, retain_graph=None, creat
     return grads
 
 
-def check_nth_order_binary(inputs, op, grad_ops, orders, rtol=None, atol=None):
+def check_nth_order_binary(inputs, op, grad_ops, orders, broadcast_op = False, rtol=None, atol=None):
     """Assert n-th order autograd gradient against expected gradient.
 
     Multiple order of gradients can be checked by passing list of
@@ -731,7 +824,7 @@ def check_nth_order_binary(inputs, op, grad_ops, orders, rtol=None, atol=None):
             for i in range(0, len(heads)):
                 head = heads[i]
                 head_grad = nd.random.normal(shape=head.shape)
-                new_head_grads.append(head_grad.asnumpy())
+                new_head_grads.append(head_grad)
                 grads.append(autograd_grad_ex(heads=head, variables=inputs, head_grads=head_grad,
                                               create_graph=True, retain_graph=True)[i])
                 # If we only use once auto grad with head_grads = head_grad in every iteration,
@@ -755,10 +848,13 @@ def check_nth_order_binary(inputs, op, grad_ops, orders, rtol=None, atol=None):
             zip(orders, expected_grads, computed_grads):
         # Compute expected values.
         # keep as numpy value and use dot mul
-        expected_grad_list = [grad.asnumpy() for grad in grad_list]
-        for expected_grad, head_grad, computed_grad in zip(expected_grad_list, head_grads[order], computed_grad_list):
-            expected_grad *= head_grad
-            assert_almost_equal(expected_grad, computed_grad.asnumpy(), rtol=rtol, atol=atol)
+        expected_grad_list = [grad for grad in grad_list]
+        for expected_grad, head_grad, computed_grad, input in zip(expected_grad_list, head_grads[order], computed_grad_list, inputs):
+            if broadcast_op:
+                expected_grad = reduce_op(input.shape, expected_grad * head_grad)
+            else:
+                expected_grad *= head_grad
+            assert_almost_equal(expected_grad.asnumpy(), computed_grad.asnumpy(), rtol=rtol, atol=atol)
 
 def arange_shape_like(y):
     shape = y.shape

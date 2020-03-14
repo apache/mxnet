@@ -49,31 +49,38 @@ Example::
   // input[0] = x
   // input[1] = y;
   // ograds[0] = head_grad_z
-  auto x = n->inputs[0];
-  auto y = n->inputs[1];
   auto head_grad_z = ograds[0];
+  auto x = nnvm::NodeEntry{mxnet::op::MakeNode("broadcast_like",
+      n->attrs.name + "_broadcast_like", {n->inputs[0], head_grad_z}, nullptr, &n)};
+  auto y =  nnvm::NodeEntry{mxnet::op::MakeNode("broadcast_like",
+      n->attrs.name + "_broadcast_like", {n->inputs[1], head_grad_z}, nullptr, &n)};
 
   auto one_like  = nnvm::NodeEntry{mxnet::op::MakeNode("ones_like",
       n->attrs.name + "_ones_like", {y}, nullptr, &n)};
   auto y_sub_1 = nnvm::NodeEntry{MakeNode("elemwise_sub",
-      n->attrs.name + "_exp_sub_1",  {y, one_like}, nullptr, &n)};
+      n->attrs.name + "_rhs_sub_1",  {y, one_like}, nullptr, &n)};
   auto x_power_y_sub_1 = nnvm::NodeEntry{MakeNode("broadcast_power",
-      n->attrs.name + "_base_power_exp_sub_1",  {x, y_sub_1}, nullptr, &n)};
+      n->attrs.name + "_lhs_power_rhs_sub_1",  {x, y_sub_1}, nullptr, &n)};
   auto dzdx = nnvm::NodeEntry{MakeNode("elemwise_mul",
-      n->attrs.name + "dpower/dbase",  {y, x_power_y_sub_1}, nullptr, &n)};
+     n->attrs.name + "dpower/dlhs",  {y, x_power_y_sub_1}, nullptr, &n)};
 
   auto lnx = nnvm::NodeEntry{MakeNode("log",
-      n->attrs.name + "_ln_base",  {x}, nullptr, &n)};
+      n->attrs.name + "_ln_lhs",  {x}, nullptr, &n)};
   auto x_power_y = nnvm::NodeEntry{MakeNode("elemwise_mul",
-      n->attrs.name + "_base_power_exp", {x_power_y_sub_1, x}, nullptr, &n)};
+      n->attrs.name + "_lhs_power_rhs", {x_power_y_sub_1, x}, nullptr, &n)};
   auto dzdy = nnvm::NodeEntry{MakeNode("elemwise_mul",
-     n->attrs.name + "dpower/dexp", {x_power_y, lnx}, nullptr, &n)};
+     n->attrs.name + "dpower/drhs", {x_power_y, lnx}, nullptr, &n)};
+
+  auto broadcasted_lhs_backward= nnvm::NodeEntry{MakeNode("elemwise_mul",
+             n->attrs.name + "_broadcasted_lhs_backward", {head_grad_z, dzdx}, nullptr, &n)};
+  auto broadcasted_rhs_backward = nnvm::NodeEntry{MakeNode("elemwise_mul",
+             n->attrs.name + "_broadcasted_rhs_backward", {head_grad_z, dzdy}, nullptr, &n)};
 
   std::vector<nnvm::NodeEntry> ret;
-  ret.emplace_back(MakeNode("elemwise_mul",
-      n->attrs.name + "_backward_grad_base", {head_grad_z, dzdx}, nullptr, &n));
-  ret.emplace_back(MakeNode("elemwise_mul",
-      n->attrs.name + "_backward_grad_exp", {head_grad_z, dzdy}, nullptr, &n));
+  ret.emplace_back(MakeNode("_reduce_sum_brodcasted", n->attrs.name + "_lhs_backward",
+                            {broadcasted_lhs_backward, n->inputs[0]}, nullptr, &n));
+  ret.emplace_back(MakeNode("_reduce_sum_brodcasted", n->attrs.name + "rhs_backward",
+                            {broadcasted_rhs_backward, n->inputs[1]}, nullptr, &n));
   return ret;
 });
 
