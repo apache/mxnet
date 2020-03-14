@@ -17,6 +17,8 @@ if(UNIX)
   target_compile_options(mshadow INTERFACE
     "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-braced-scalar-init>"
     "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-pass-failed>"
+    # TODO Replace Wno-unused-lambda-capture with [[maybe_unused]] annotation once requiring C++17
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-unused-lambda-capture>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
