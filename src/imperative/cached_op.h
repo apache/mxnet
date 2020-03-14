@@ -366,7 +366,7 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  ~CachedOp();
+  virtual ~CachedOp();
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
