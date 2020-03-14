@@ -98,6 +98,8 @@ build_ccache_wrappers() {
     ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
     ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
     ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
+    ln -sf $CCACHE /tmp/ccache-redirects/clang++-10
+    ln -sf $CCACHE /tmp/ccache-redirects/clang-10
     #Doesn't work: https://github.com/ccache/ccache/issues/373
     # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
     # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
@@ -506,14 +508,36 @@ build_ubuntu_cpu_cmake_asan() {
 build_ubuntu_cpu_gcc8_werror() {
     set -ex
     cd /work/build
-    export CXX=g++-8
-    export CC=gcc-8
-    cmake \
+    CXX=g++-8 CC=gcc-8 cmake \
         -DUSE_CUDA=OFF \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_CPP_PACKAGE=ON \
         -DMXNET_USE_CPU=ON \
         -GNinja /work/mxnet
+    ninja
+}
+
+build_ubuntu_cpu_clang10_werror() {
+    set -ex
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_CUDA=OFF \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -DUSE_CPP_PACKAGE=ON \
+       -DMXNET_USE_CPU=ON \
+       -GNinja /work/mxnet
+    ninja
+}
+
+build_ubuntu_gpu_clang10_werror() {
+    set -ex
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_CUDA=ON \
+       -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -DUSE_CPP_PACKAGE=ON \
+       -GNinja /work/mxnet
     ninja
 }
 
@@ -531,10 +555,10 @@ build_ubuntu_cpu_clang39() {
     ninja
 }
 
-build_ubuntu_cpu_clang60() {
+build_ubuntu_cpu_clang100() {
     set -ex
     cd /work/build
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
@@ -549,10 +573,12 @@ build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
     export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
+    # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
     CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
@@ -576,10 +602,10 @@ build_ubuntu_cpu_clang39_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_clang60_mkldnn() {
+build_ubuntu_cpu_clang100_mkldnn() {
     set -ex
     cd /work/build
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
