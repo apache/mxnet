@@ -74,7 +74,7 @@ class Distribution(object):
         r"""
         Returns the probability density/mass function evaluated at `value`.
         """
-        raise NotImplementedError
+        raise self.F.exp(self.log_prob(value))
 
     def cdf(self, value):
         r"""

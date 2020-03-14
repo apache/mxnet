@@ -33,6 +33,8 @@ from .uniform import *
 
 from .normal import *
 
+from .cauchy import *
+
 from .gamma import *
 
 from .dirichlet import *

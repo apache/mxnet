@@ -201,6 +201,88 @@ def test_gluon_normal():
 
 @with_seed()
 @use_np
+def test_gluon_cauchy():
+    class TestCauchy(HybridBlock):
+        def __init__(self, func):
+            self._func = func
+            super(TestCauchy, self).__init__()
+
+        def hybrid_forward(self, F, loc, scale, *args):
+            cauchy = mgp.Cauchy(loc, scale, F)
+            return _distribution_method_invoker(cauchy, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test sampling
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestCauchy("sample")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale)
+        desired_shape = (shape,) if isinstance(shape, Number) else shape
+        assert mx_out.shape == desired_shape
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestCauchy("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.cauchy(loc.asnumpy(),
+                        scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.normal(size=shape)
+        net = TestCauchy("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.cauchy(loc.asnumpy(),
+                        scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestCauchy("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.cauchy(loc.asnumpy(),
+                        scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestCauchy("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale).asnumpy()
+        np_out = ss.cauchy(loc.asnumpy(),
+                        scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_exponential():
     class TestExponential(HybridBlock):
         def __init__(self, func):
