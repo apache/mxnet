@@ -19,6 +19,8 @@ if(UNIX)
     "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-pass-failed>"
     # TODO Replace Wno-unused-lambda-capture with [[maybe_unused]] annotation once requiring C++17
     "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-unused-lambda-capture>"
+    # TODO Fixing the warning leads to compile error on 4.8; fix once 4.8 support is dropped
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-undefined-var-template>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
