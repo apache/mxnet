@@ -331,6 +331,19 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, num_s, endpoint_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    num_s << num;
+    endpoint_s << endpoint;
+    dtype_s << dtype;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["num"] = num_s.str();
+    (*dict)["endpoint"] = endpoint_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+  }
 };
 
 template<typename ParamType>

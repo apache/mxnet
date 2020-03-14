@@ -1873,12 +1873,16 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
     if retstep:
         step = (stop - start) / (num - 1)
-        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step
+        return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype), step
     else:
-        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+        return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1960,8 +1964,12 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
     if ctx is None:
-        ctx = current_context()
-    return _npi.logspace(start=start, stop=stop, num=num, endpoint=endpoint, base=base, ctx=ctx, dtype=dtype)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.logspace(start, stop, num, endpoint, base, ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
