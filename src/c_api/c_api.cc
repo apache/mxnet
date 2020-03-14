@@ -119,8 +119,8 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<size_t> in_verIDs, out_verIDs;
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
+  std::vector<NDArray> conv_mkl;  // converted NDArrays from MKLDNN format
 
-  std::vector<NDArray> conv_mkl; //converted NDArrays from MKLDNN format
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
     NDArray const* in_nd = &(inputs[i]);
