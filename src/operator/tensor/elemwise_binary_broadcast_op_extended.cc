@@ -71,7 +71,7 @@ Example::
   auto dzdy = nnvm::NodeEntry{MakeNode("elemwise_mul",
      n->attrs.name + "dpower/drhs", {x_power_y, lnx}, nullptr, &n)};
 
-  auto broadcasted_lhs_backward= nnvm::NodeEntry{MakeNode("elemwise_mul",
+  auto broadcasted_lhs_backward = nnvm::NodeEntry{MakeNode("elemwise_mul",
              n->attrs.name + "_broadcasted_lhs_backward", {head_grad_z, dzdx}, nullptr, &n)};
   auto broadcasted_rhs_backward = nnvm::NodeEntry{MakeNode("elemwise_mul",
              n->attrs.name + "_broadcasted_rhs_backward", {head_grad_z, dzdy}, nullptr, &n)};
@@ -105,7 +105,8 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::maximum>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_maximum"});
 
-NNVM_REGISTER_OP(_backward_broadcast_maximum) .set_num_inputs(3)
+NNVM_REGISTER_OP(_backward_broadcast_maximum)
+.set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",

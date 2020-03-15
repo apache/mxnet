@@ -199,7 +199,7 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
   auto y = n->inputs[1];
 
   std::vector<nnvm::NodeEntry> ret;
-  ret.emplace_back( MakeNode("identity", n->attrs.name + "_lhs_backward",
+  ret.emplace_back(MakeNode("identity", n->attrs.name + "_lhs_backward",
                              {head_grad}, nullptr, &n));
   ret.emplace_back(MakeNode("negative", n->attrs.name + "_rhs_backward",
                             {head_grad}, nullptr, &n));

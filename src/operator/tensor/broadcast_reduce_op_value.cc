@@ -120,7 +120,17 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 .set_attr<mxnet::FInferShape>("FInferShape", BroadcastToShape)
 .set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
 
-// if the rhs can broadcast to lhs, use sum to reduce rhs to shape of rhs
+// backward op for broadcast.
+NNVM_REGISTER_OP(_broadcast_backward)
+.set_attr_parser(ParamParser<ReduceAxesParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  });
+
+// if the rhs can broadcast to lhs, use sum to reduce lhs to shape of rhs
 NNVM_REGISTER_OP(_reduce_sum_brodcasted)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -156,20 +166,21 @@ NNVM_REGISTER_OP(_reduce_sum_brodcasted)
   return true;
   })
 .set_attr<FCompute>("FCompute<cpu>", [](const nnvm::NodeAttrs& attrs, const OpContext& ctx,
-  const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req, const std::vector<TBlob>& outputs) {
-    ReduceAxesComputeImpl<cpu, mshadow::red::sum, false, false, op::mshadow_op::identity>(ctx, inputs, req, outputs,
-          inputs[1].shape_);
+  const std::vector<TBlob>& inputs, const std::vector<OpReqType>& req,
+  const std::vector<TBlob>& outputs) {
+    ReduceAxesComputeImpl<cpu, mshadow::red::sum, false, false,
+      op::mshadow_op::identity>(ctx, inputs, req, outputs, inputs[1].shape_);
   })
 .set_attr<nnvm::FGradient>("FGradient",
-   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-     auto head_grad = ograds[0];
-     std::vector<nnvm::NodeEntry> ret;
-     ret.emplace_back(MakeNode("broadcast_like", n->attrs.name + "_lhs_backward",
-                               {head_grad, n->inputs[0]}, nullptr, &n));
-     ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
-                           {n->inputs[1]}, nullptr, &n));
-     return ret;
- });
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+    auto head_grad = ograds[0];
+    std::vector<nnvm::NodeEntry> ret;
+    ret.emplace_back(MakeNode("broadcast_like", n->attrs.name + "_lhs_backward",
+                              {head_grad, n->inputs[0]}, nullptr, &n));
+    ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
+                          {n->inputs[1]}, nullptr, &n));
+    return ret;
+  });
 
 NNVM_REGISTER_OP(broadcast_like)
 .set_num_inputs(2)
