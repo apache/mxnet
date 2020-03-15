@@ -1117,7 +1117,7 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
-        
+
         Returns
         -------
         symbol_filename : str
