@@ -1345,11 +1345,13 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    pip3 install --no-cache-dir horovod
     cd tests/nightly/
     python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore.py
     python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
     python3 ../../tools/launch.py --p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
     python3 ../../tools/launch.py -n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu
+    mpirun -n 2 -H localhost:2 python3 dist_device_sync_kvstore_horovod.py
     popd
 }
 

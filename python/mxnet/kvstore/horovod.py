@@ -34,21 +34,20 @@ class Horovod(KVStoreBase):
     def type(self):
         return 'horovod'
 
-    def broadcast(self, key, value, out=None, priority=0):
+    def broadcast(self, key, value, out, priority=0):
         """ Broadcast the `value` NDArray at rank 0 to all ranks
 
         Parameters
         ----------
         key : str, or int
-            The key.
+            The key is used to name the tensor for allreduce. Its
+            usage is different from that of parameter servers.
 
         value : NDArray
-            The value corresponding to the key to broadcast. If `out` is not specified,
-            `value` NDArray will be updated in-place.
+            The tensor that is to be broadcasted.
 
         out : NDArray, list of NDArray
             Output tensor that receives value broadcasted from root process
-            If not specified, output will be written to `value`
 
         priority : int, optional
             The priority of the operation.
@@ -123,11 +122,14 @@ class Horovod(KVStoreBase):
         if out is None:
             value = value if isinstance(value, list) else [value]
             for v in value:
-                hvd.allreduce_(v, average=False, name=str(key), priority=priority)
+                hvd.allreduce_(v, average=False, name=str(key),
+                               priority=priority)
         else:
             out = out if isinstance(out, list) else [out]
-            for o in out:
-                o[:] = hvd.allreduce(value, average=False, name=str(key), priority=priority)
+            value = value if isinstance(value, list) else [value]
+            for o, v in zip(out, value):
+                o[:] = hvd.allreduce(v, average=False, name=str(key),
+                                     priority=priority)
 
     def set_optimizer(self, optimizer):
         pass
