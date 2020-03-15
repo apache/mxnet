@@ -67,6 +67,13 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
         if setup_is_deterministic:
             xs = setup(nd=nd)
 
+        xs_names = list(map(str, range(len(xs))))
+        symbol_inputs = [
+            mx.symbol.var(name).as_np_ndarray()
+            if numpy else mx.symbol.var(name)
+            for arg, name in zip(xs, xs_names)
+        ]
+        dc.set_variable(xs, symbol_inputs)
         with dc.context():
             ys_dc = compute(*xs, nd=nd)
 
@@ -80,13 +87,12 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
             _all_same(ys_np, ys_dc_np)
 
         if mode in ('all', 'symbolic'):
-            input_names = list(map(str, range(len(xs))))
-            sym = dc.get_symbol(input_arrays=xs, output_arrays=ys_dc, input_names=input_names)
+            sym = dc.get_symbol(ys_dc, sym_cls=mx.sym.np._Symbol if numpy else mx.sym.Symbol)
 
             if setup_is_deterministic:
                 xs = setup(nd=nd)
 
-            args = {name: x for name, x in zip(input_names, xs)}
+            args = {name: x for name, x in zip(xs_names, xs)}
             ys_sym = sym.bind(mx.context.current_context(), args=args).forward()
 
             ys_sym_np = [y.asnumpy() for y in ys_sym]
@@ -207,7 +213,8 @@ def test_dc_subset_of_output():
     _all_assert_dc(_dc_simple_setup, f)
 
 
-def test_dc_inplace_special_case():
+@raises(MXNetError)  # Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
+def test_dc_inplace():
     def f(a, *, nd):
         a[:5] = 0
         b = a + 1
@@ -219,24 +226,30 @@ def test_dc_inplace_special_case():
 ###############################################################################
 # Special cases
 ###############################################################################
-@raises(MXNetError)  # Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
 def test_dc_input_part_of_output():
     a = mx.np.arange(10)
+    dc.set_variable(a, mx.sym.var('a'))
     with dc.context():
         b = a + 1
-    dc.get_symbol([a], [a, b])
+    dc.get_symbol([a, b])
 
 
 def test_dc_get_symbol_called_twice():
     a = mx.np.arange(10)
+    dc.set_variable(a, mx.sym.var('a'))
     with dc.context():
         b = a + 1
-    sym1 = dc.get_symbol([a], [b], input_names=['my_input1'])
-    sym2 = dc.get_symbol([a], [b], input_names=['input1'])
+    sym1 = dc.get_symbol(b)
+    sym2 = dc.get_symbol(b)
+    assert sym1.list_inputs() == ['a']
+    assert sym2.list_inputs() == ['a']
 
-    assert sym1.list_inputs() == ['my_input1']
-    assert sym2.list_inputs() == ['input1']
-    assert sym1.list_inputs() == ['my_input1']  # sym1 not modified by backend
+
+@raises(MXNetError)  # Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
+def test_dc_set_variable_called_twice():
+    a = mx.np.arange(10)
+    dc.set_variable(a, mx.sym.var('a'))
+    dc.set_variable(a, mx.sym.var('b'))
 
 
 def test_dc_no_inputs_context_switch():

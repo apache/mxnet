@@ -274,8 +274,8 @@ void Imperative::RecordOp(
 
   for (auto output : outputs) {
     CHECK(AGInfo::IsNone(*output))
-      << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
-      << "recording with autograd.";
+        << "NotImplementedError: Inplace operations (+=, -=, x[:]=, etc) "
+        << "are not supported when recording with autograd.";
   }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
@@ -296,17 +296,17 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
                                        const std::vector<NDArray *> &inputs,
                                        const std::vector<NDArray *> &outputs) {
   CHECK(!is_recording())
-      << "Autograd recording is not supported during deferred compute mode.";
+      << "MXNetError: Autograd recording is not supported during deferred compute mode.";
 
+  for (const NDArray *input : inputs) {
+    CHECK(!DCInfo::IsNone(*input))
+        << "ValueError: All inputs to deferred compute recording must be associated "
+        << "with a symbolic variable or be the output of a deferred compute operator.";
+  }
   for (const NDArray *output : outputs) {
     CHECK(DCInfo::IsNone(*output))
-        << "Inplace operations (+=, -=, x[:]=, etc) are not supported when "
-        << "recording in deferred compute mode.";
-    // However, an inplace operation on a non-deferred compute array inside
-    // deferred compute scope will work. For example:
-    // a = mx.nd.arange(10)
-    // with dc.context():
-    //     a[:5] = 0
+        << "NotImplementedError: Inplace operations (+=, -=, x[:]=, etc) "
+        << "are not supported when recording in deferred compute mode.";
   }
   DispatchMode dispatch_mode = DispatchMode::kUndefined;
   Context ctx = imperative::GetContext(attrs, inputs, outputs, Context::CPU());
@@ -316,8 +316,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   node->inputs.reserve(inputs.size());
   // Get NodeEntries for inputs
   for (const NDArray *array : inputs) {
-    // For non-deferred compute arrays, array->deferredcompute_entry_ will be
-    // nullptr. We handle this in in GetDeferredComputeSymbol
+    CHECK(array->deferredcompute_entry_.node);  // Must not be nullptr
     node->inputs.emplace_back(array->deferredcompute_entry_);
   }
   node->attrs = std::move(attrs);
@@ -331,10 +330,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   DCInfo::Create(node, inputs, outputs);
 }
 
-nnvm::Symbol Imperative::GetDeferredComputeSymbol(
-    const std::vector<std::pair<NDArray *, std::string>> &inputs,
-    const std::vector<NDArray *> &outputs
-    ) {
+nnvm::Symbol Imperative::GetDeferredComputeSymbol(const std::vector<NDArray *> &outputs) {
   Symbol s;
   s.outputs.reserve(outputs.size());
   for (NDArray * ndoutput : outputs) {
@@ -343,72 +339,6 @@ nnvm::Symbol Imperative::GetDeferredComputeSymbol(
         << "must have a deferred compute history associated with them.";
     s.outputs.emplace_back(ndoutput->deferredcompute_entry_);
   }
-  std::unordered_map<NDArray *, nnvm::ObjectPtr> ndinput_to_variable;
-  std::unordered_set<const NDArray *> missing_inputs;
-  auto add_symbol_variables = [&inputs, &ndinput_to_variable,
-                               &missing_inputs](const nnvm::ObjectPtr &node) {
-    if (node == nullptr) {
-      // This (nonexistant) "Node" belongs to an array created outside of deferred compute scope.
-      return;
-    }
-
-    // Check if node has any non-deferred compute inputs
-    for (uint32_t i = 0; i < node->inputs.size(); i++) {
-      nnvm::NodeEntry &node_entry = node->inputs[i];
-      if (node_entry.node == nullptr || node_entry.node->is_variable()) {
-        // Node has non-deferred compute input (nullptr). Find the corresponding
-        // NDArray and create a variable for it. If GetDeferredComputeSymbol has
-        // been called before, a variable already exists and only the name needs
-        // to be updated.
-        Imperative::DCInfo &dcinfo = Imperative::DCInfo::Get(node);
-        const NDArray *array = dcinfo.input_handles_.at(i);
-
-        // Make sure this array is part of GetDeferredComputeSymbol inputs
-        auto is_equal = [array](const std::pair<NDArray *, std::string> &input) {
-          return array == std::get<0>(input);
-        };
-
-        std::vector<std::pair<NDArray *, std::string>>::const_iterator input_search =
-          std::find_if(inputs.begin(), inputs.end(), is_equal);
-        // Create symbol variable
-        if (input_search != inputs.end()) {
-          NDArray *ndinput;
-          std::string input_name;
-          std::tie(ndinput, input_name) = *input_search;
-
-          nnvm::ObjectPtr input_variable;
-
-          auto variable_search = ndinput_to_variable.find(ndinput);
-          if (variable_search == ndinput_to_variable.end()) {
-            // No variable for this ndarray yet
-            input_variable = nnvm::CreateVariableNode(input_name);
-            ndinput_to_variable.insert({ndinput, input_variable});
-          } else {
-            input_variable = variable_search->second;
-          }
-
-          node_entry.node = input_variable;
-        } else if (node_entry.node == nullptr) {
-          // If a variable is already associated with this node, it is optional
-          // to specify it as input to GetDeferredComputeSymbol.
-          missing_inputs.insert(array);
-        }
-      }
-    }
-  };
-  nnvm::DFSVisit(s.outputs, add_symbol_variables);
-
-  CHECK_EQ(ndinput_to_variable.size(), inputs.size())
-      << "ValueError: Invalid input to GetDeferredComputeSymbol. "
-      << ndinput_to_variable.size() << " inputs are required, but "
-      << inputs.size() << " were specified.";
-
-  CHECK_EQ(missing_inputs.size(), 0)
-      << "ValueError: Invalid input to GetDeferredComputeSymbol. "
-      << missing_inputs.size() << " required inputs unspecified.";
-
-  // Deep copy of symbol as subsequent calls to this function may change the
-  // name of input variables.
   return s.Copy();
 }
 
@@ -417,6 +347,7 @@ void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
   // Sanity check all inputs
   for (int i = 0; i < num; i++) {
     nnvm::Symbol *s = reinterpret_cast<nnvm::Symbol *>(variables[i]);
+    NDArray *nd = reinterpret_cast<NDArray *>(arrays[i]);
     CHECK_EQ(s->outputs.size(), 1)
         << "MXNDArraySetDeferredComputeVariable expects variables as input. "
         << "Instead got a Symbol with " << s->outputs.size()
@@ -424,6 +355,9 @@ void Imperative::SetDeferredComputeVariable(NDArrayHandle *arrays,
     CHECK(s->outputs[0].node->is_variable())
         << "MXNDArraySetDeferredComputeVariable expects variables as input. "
         << "Instead got a Symbol associated with an operator as input " << i;
+    CHECK(DCInfo::IsNone(*nd) || nd->deferredcompute_entry_.node == s->outputs[0].node)
+        << "ValueError: array " << i << " is already associated with a different variable. "
+        << "You can call array.detach() to obtain a copy without the variable";
   }
 
   // Store variables in DCInfo of arrays

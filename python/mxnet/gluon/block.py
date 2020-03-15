@@ -940,6 +940,7 @@ class HybridBlock(Block):
     def _get_graph_v2(self, *args):
         if not self._cached_graph:
             flatten_args, self._in_format = _flatten(args, "input")
+            flatten_args = [ele.detach() if ele is not None else None for ele in flatten_args]
             real_args = [ele for ele in flatten_args if ele is not None]
             if len(real_args) == 0:
                 raise ValueError('All args are None and we do not support such a case.'
@@ -948,19 +949,18 @@ class HybridBlock(Block):
                 arg_names = ['data']
             else:
                 arg_names = ['data{}'.format(i) for i, ele in enumerate(real_args)]
-
-            with autograd.pause(), dc.context():
-                out = super().__call__(*args)
-            flatten_out, self._out_format = _flatten(out, "output")
-
-            symbol_outputs = dc.get_symbol(real_args, flatten_out, input_names=arg_names)
             symbol_inputs = [
                 symbol.var(name).as_np_ndarray()
                 if isinstance(arg, _mx_np.ndarray) else symbol.var(name)
                 for arg, name in zip(real_args, arg_names)
             ]
+            dc.set_variable(real_args, symbol_inputs)
+            args = _regroup(flatten_args, self._in_format)
+            with autograd.pause(), dc.context():
+                out = super().__call__(*args)
+            flatten_out, self._out_format = _flatten(out, "output")
+            symbol_outputs = dc.get_symbol(flatten_out)
             self._cached_graph = symbol_inputs, symbol_outputs
-
         return self._cached_graph
 
     def _get_graph(self, *args):

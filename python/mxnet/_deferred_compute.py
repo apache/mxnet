@@ -61,54 +61,26 @@ def context(state=True):
         set_deferred_compute(val)
 
 
-def get_symbol(input_arrays, output_arrays, input_names=None, *, sym_cls=Symbol):
+def get_symbol(output_arrays, *, sym_cls=Symbol):
     """Get symbolic representation of computation recorded in deferred compute mode.
 
     Parameters
     ----------
-    input_arrays: NDArray or List[NDArray]
     output_arrays: NDArray or List[NDArray]
-    input_names: str or List[str]
     sym_cls: class used to construct Symbol
 
     Returns
     -------
     Symbol of sym_cls
     """
-
-    input_arrays = _as_list(input_arrays)
     output_arrays = _as_list(output_arrays)
-
     # Prepare ctypes array types
-    input_handles_type = ctypes.c_void_p * len(input_arrays)
     output_handles_type = ctypes.c_void_p * len(output_arrays)
-    input_names_type = ctypes.c_char_p * len(input_arrays)
-
     # Convert handles
-    input_handles = input_handles_type(*[array.handle for array in input_arrays])
     output_handles = output_handles_type(*[array.handle for array in output_arrays])
-
-    # Handle names arguments
-    if input_names is None:
-        if len(input_arrays) > 1:
-            input_names = ['data{}'.format(cnt) for cnt in range(len(input_arrays))]
-        elif len(input_arrays) == 1:
-            input_names = ['data']
-        else:
-            input_names = []
-    else:
-        input_names = _as_list(input_names)
-        assert len(input_names) == len(input_arrays), \
-            'If input_names is specified, it must have equal length as input_arrays'
-    # Convert names
-    input_names = input_names_type(
-        *[ctypes.c_char_p(ctypes.create_string_buffer(name.encode()).raw) for name in input_names])
-
     handle = SymbolHandle()
-    check_call(
-        _LIB.MXNDArrayGetDeferredComputeSymbol(input_handles, output_handles, input_names,
-                                               len(input_arrays), len(output_arrays),
-                                               ctypes.byref(handle)))
+    check_call(_LIB.MXNDArrayGetDeferredComputeSymbol(output_handles, len(output_arrays),
+                                                      ctypes.byref(handle)))
     return sym_cls(handle)
 
 

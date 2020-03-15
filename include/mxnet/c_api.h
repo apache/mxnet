@@ -1451,20 +1451,13 @@ MXNET_DLL int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays,
 
 /*!
  * \brief Convert the graph constructed during deferred computation mode to a Symbol.
- * \param input_handles ndarray handles of non-deferred computed inputs
  * \param output_handles ndarray handles of outputs
- * \param input_names names associated with the inputs of the returned Symbol
  * \param out grouped output symbol handle
  *
- * Construct a Symbol for the deferred computation graph. input_handles must
- * provide all ndarray handles of non-deferred computed ndarrays used as
- * arguments to operators inside the deferred compute scope. output_handles
+ * Construct a Symbol for the deferred computation graph. output_handles
  * specifies the outputs of interest which the returned symbol will compute.
  */
-MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *input_handles,
-                                                NDArrayHandle *output_handles,
-                                                const char** input_names,
-                                                int num_inputs,
+MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles,
                                                 int num_outputs,
                                                 SymbolHandle *out);
 
