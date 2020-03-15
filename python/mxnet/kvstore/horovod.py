@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+""" Key value store interface of MXNet for Horovod """
 from __future__ import absolute_import
 from .base import KVStoreBase
 
