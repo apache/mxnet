@@ -63,6 +63,11 @@ struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be column stacked");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream ss;
+    ss << num_args;
+    (*dict)["num_args"] = ss.str();
+  }
 };
 
 struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {

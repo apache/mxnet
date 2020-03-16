@@ -68,4 +68,25 @@ MXNET_REGISTER_API("_npi.column_stack")
   delete[] inputs;
 });
 
+MXNET_REGISTER_API("_npi.hstack")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_hstack");
+  nnvm::NodeAttrs attrs;
+  op::ConcatParam param;
+  param.num_args = args.size();
+
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::ConcatParam>(&attrs);
+  int num_outputs = 0;
+  NDArray** inputs = new NDArray*[param.num_args];
+  for (int i = 0; i < param.num_args; ++i) {
+    inputs[i] = args[i].operator mxnet::NDArray*();
+  }
+  auto ndoutputs = Invoke(op, &attrs, param.num_args, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+  delete[] inputs;
+});
+
 }  // namespace mxnet

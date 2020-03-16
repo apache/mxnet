@@ -56,6 +56,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("random.uniform", low=0, high=1, size=1)
     OpArgMngr.add_workload("column_stack", (pool['3x3'], pool['3x3'], pool['3x3']))
+    OpArgMngr.add_workload("hstack", (pool['3x3'], pool['3x3'], pool['3x3']))
 
 
 def benchmark_helper(f, *args, **kwargs):
