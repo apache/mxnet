@@ -66,6 +66,17 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
             "DType of the output in case this can't be inferred. "
             "Defaults to float32 if not defined (dtype=None).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream low_s, high_s, dtype_s, size_s;
+    low_s << low;
+    high_s << high;
+    dtype_s << dtype;
+    size_s << size;
+    (*dict)["low"] = low_s.str();
+    (*dict)["high"] = high_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["size"] = size_s.str();
+  }
 };
 
 inline bool NumpyUniformOpType(const nnvm::NodeAttrs &attrs,

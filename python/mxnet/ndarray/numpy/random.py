@@ -129,21 +129,26 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.uniform(low, high, low=None, high=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (False, True):
-        return _npi.uniform(high, low=low, high=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (True, False):
-        return _npi.uniform(low, low=None, high=high, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    else:
-        return _npi.uniform(low=low, high=high, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+    return _api_internal.uniform(low, high, size, ctx, dtype, out)
+    # if input_type == (True, True):
+    #     return _npi.uniform(low, high, low=None, high=None, size=size,
+    #                         ctx=ctx, dtype=dtype, out=out)
+    # elif input_type == (False, True):
+    #     return _npi.uniform(high, low=low, high=None, size=size,
+    #                         ctx=ctx, dtype=dtype, out=out)
+    # elif input_type == (True, False):
+    #     return _npi.uniform(low, low=None, high=high, size=size,
+    #                         ctx=ctx, dtype=dtype, out=out)
+    # else:
+    #     return _npi.uniform(low=low, high=high, size=size,
+    #                         ctx=ctx, dtype=dtype, out=out)
 
 
 def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
