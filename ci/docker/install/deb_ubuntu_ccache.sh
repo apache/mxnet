@@ -23,7 +23,7 @@ set -ex
 
 pushd .
 
-dist = $(awk -F= '/^NAME/{print $2}' /etc/os-release)
+dist=$(awk -F= '/^NAME/{print $2}' /etc/os-release)
 if [ $dist == "Ubuntu" ]; then
     zstd = "libzstd1-dev"
 else  # Debian
