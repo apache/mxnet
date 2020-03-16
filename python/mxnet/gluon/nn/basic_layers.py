@@ -436,7 +436,7 @@ class BatchNorm(_BatchNorm):
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
-        assert fuse_relu == False, "Please use BatchNormReLU with Relu fusion"
+        assert not fuse_relu, "Please use BatchNormReLU with Relu fusion"
         super(BatchNorm, self).__init__(
             axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
             use_global_stats=False, fuse_relu=False,
@@ -498,7 +498,7 @@ class BatchNormReLU(_BatchNorm):
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
-        assert fuse_relu == True, "Please use BatchNorm w/o Relu fusion"
+        assert fuse_relu, "Please use BatchNorm w/o Relu fusion"
         super(BatchNormReLU, self).__init__(
             axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
             use_global_stats=False, fuse_relu=True,
