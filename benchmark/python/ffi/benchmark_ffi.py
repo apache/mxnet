@@ -56,6 +56,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("random.uniform", low=0, high=1, size=1)
     OpArgMngr.add_workload("random.choice", pool['2'], size=(2, 2))
+    OpArgMngr.add_workload("take", pool['2'], dnp.array([1,0], dtype='int64'))
 
 
 def benchmark_helper(f, *args, **kwargs):
