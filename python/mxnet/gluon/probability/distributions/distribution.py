@@ -70,11 +70,11 @@ class Distribution(object):
         """
         raise NotImplementedError()
 
-    def prob(self, value):
+    def pdf(self, value):
         r"""
         Returns the probability density/mass function evaluated at `value`.
         """
-        raise self.F.exp(self.log_prob(value))
+        raise NotImplementedError()
 
     def cdf(self, value):
         r"""

@@ -21,7 +21,7 @@
 __all__ = ['Categorical']
 
 from .distribution import Distribution
-from .utils import prob2logit, logit2prob, getF, cached_property
+from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
 from .constraint import Simplex, Real
 
 
@@ -47,7 +47,7 @@ class Categorical(Distribution):
                        'logit': Real()}
 
     def __init__(self, num_events, prob=None, logit=None, F=None, validate_args=None):
-        _F = F if F is not None else getF([prob, logit])
+        _F = F if F is not None else getF(prob, logit)
         if (num_events > 0):
             num_events = int(num_events)
             self.num_events = num_events
@@ -133,6 +133,24 @@ class Categorical(Distribution):
                 logit = F.np.broadcast_to(self.logit, size + (-2,))
         gumbel_samples = F.np.random.gumbel(logit)
         return F.np.argmax(gumbel_samples, axis=-1)
+
+    def sample_n(self, size=None):
+        F = self.F
+        size = sample_n_shape_converter(size)
+        gumbel_samples = F.np.random.gumbel(self.logit, size=size)
+        return F.np.argmax(gumbel_samples, axis=-1)
+
+    def broadcast_to(self, batch_shape):
+        new_instance = self.__new__(type(self))
+        F = self.F
+        new_instance.prob = F.np.broadcast_to(self.prob, batch_shape + (-2,))
+        new_instance.logit = F.np.broadcast_to(self.logit, batch_shape + (-2,))
+        new_instance.num_events = self.num_events
+        super(Categorical, new_instance).__init__(F=F,
+                                             event_dim=self.event_dim,
+                                             validate_args=False)
+        new_instance._validate_args = self._validate_args
+        return new_instance
 
     def enumerate_support(self):
         num_events = self.num_events

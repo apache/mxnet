@@ -41,6 +41,8 @@ def gammaln(F):
 def sample_n_shape_converter(size):
     """Convert `size` to the proper format for performing sample_n.
     """
+    if size is None:
+        return size
     if size == ():
         size = None
     else:

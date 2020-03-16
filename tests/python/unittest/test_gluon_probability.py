@@ -763,7 +763,6 @@ def test_gluon_student_t():
                                 rtol=1e-3, use_broadcast=False)
 
 
-
 @with_seed()
 @use_np
 def test_gluon_gumbel():
@@ -834,6 +833,12 @@ def test_gluon_gumbel():
                         scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_gluon_multinomial():
+    pass
 
 
 @with_seed()
@@ -971,18 +976,21 @@ def test_relaxed_bernoulli():
 @use_np
 def test_gluon_categorical():
     class TestCategorical(HybridBlock):
-        def __init__(self, func, is_logit=False, batch_shape=None, num_events=None):
+        def __init__(self, func, is_logit=False, batch_shape=None, num_events=None, sample_shape=None):
             super(TestCategorical, self).__init__()
             self._is_logit = is_logit
             self._func = func
             self._batch_shape = batch_shape
             self._num_events = num_events
+            self._sample_shape = sample_shape
 
         def hybrid_forward(self, F, params, *args):
             categorical = mgp.Categorical(self._num_events, logit=params, F=F) if self._is_logit else \
                         mgp.Categorical(self._num_events, prob=params, F=F)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
+            if self._func == "sample_n":
+                return categorical.sample_n(self._sample_shape)
             return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
@@ -1001,6 +1009,23 @@ def test_gluon_categorical():
                 net.hybridize()
             mx_out = net(param).asnumpy()
             desired_shape = batch_shape if batch_shape is not None else ()
+            assert mx_out.shape == desired_shape
+    
+    # Test sample_n
+    for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            if use_logit:
+                param = np.log(param)
+            net = TestCategorical("sample_n",
+                                is_logit=False, batch_shape=batch_shape,
+                                num_events=event_shape, sample_shape=sample_shape
+                    )
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param).asnumpy()
+            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
             assert mx_out.shape == desired_shape
 
     # Test log_prob
