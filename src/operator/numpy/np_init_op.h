@@ -31,6 +31,7 @@
 #include <string>
 #include "../tensor/init_op.h"
 #include "../tensor/elemwise_unary_op.h"
+#include "../../api/operator/op_utils.h"
 
 
 namespace mxnet {
@@ -78,6 +79,13 @@ struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream dimensions_s, dtype_s;
+    dimensions_s << dimensions;
+    dtype_s << dtype;
+    (*dict)["dimensions"] = dimensions_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
