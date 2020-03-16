@@ -54,6 +54,9 @@ cd ccache
 # ccache 4 contains fixes for caching nvcc output: https://github.com/ccache/ccache/pull/381
 git checkout 2e7154e67a5dd56852dae29d4c418d4ddc07c230
 
+
+export CFLAGS="-mno-avx"
+export CXXFLAGS="-mno-avx"
 ./autogen.sh
 ./configure --disable-man --with-libzstd-from-internet --with-libb2-from-internet
 make -j$(nproc)
