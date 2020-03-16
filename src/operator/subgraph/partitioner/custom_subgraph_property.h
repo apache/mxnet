@@ -396,7 +396,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         for (unsigned x=0; x < orig.index; x++)
           idx = shape.find("[", idx+1);
         if (idx == 0) idx++;  // if output index is 0, start after first square bracket [
-        int stop = shape.find("]",idx);  // find stop index for this output shape
+        int stop = shape.find("]", idx);  // find stop index for this output shape
         std::stringstream ss;
         // create new shape string for this node
         ss << "[" << shape.substr(idx, stop-idx+1) << "]";
