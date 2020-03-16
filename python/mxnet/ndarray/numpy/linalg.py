@@ -330,7 +330,6 @@ def svd(a):
     >>> (ret - a < -1e-3).sum()
     array(0.)
     """
-    # return tuple(_npi.svd(a))
     return tuple(_api_internal.svd(a))
 
 
