@@ -58,26 +58,10 @@ template <int ndim, typename DType>
 struct VectorizedBinaryBroadcastParam {
   const DType* inputs[2];
   DType* outputs[1];
-  Shape<ndim> lstride;
-  //Shape<ndim> lshape;
-  Shape<ndim> rstride;
-  //Shape<ndim> rshape;
+  Shape<ndim> stride[2];
   Shape<ndim> oshape;
   index_t size[2];
 };
-
-template <int ndim>
-MSHADOW_XINLINE index_t calc_index(const index_t idx,
-                                   const Shape<ndim>& stride,
-                                   const Shape<ndim>& shape) {
-  index_t ret = idx;
-#pragma unroll
-  for (int i = 0; i < ndim; ++i) {
-    ret -= ((idx / stride[i]) % shape[i]) * stride[i];
-  }
-
-  return ret;
-}
 
 using common::cuda::VectorizedLoader;
 using common::cuda::VectorizedStorer;
@@ -98,10 +82,8 @@ __global__ void VectorizedBinaryBroadcastKernel(
        idx += gridDim.x * blockDim.x) {
     index_t lindex, rindex;
     unravel_dot(idx * nvec, param.oshape,
-                param.lstride, param.rstride,
+                param.stride[0], param.stride[1],
                 &lindex, &rindex);
-    //index_t lindex = calc_index(idx * nvec, lstride);
-    //index_t rindex = calc_index(idx * nvec, rstride);
     lloader.load(lindex / nvec, param.size[0]);
     rloader.load(rindex / nvec, param.size[1]);
 
@@ -123,6 +105,55 @@ __global__ void VectorizedBinaryBroadcastKernel(
   }
 }
 
+template <bool aligned, typename DType, typename LType, typename OP, int ndim, int req, int side>
+__global__ void VectorizedBinaryBroadcastSingleSideKernel(
+    const VectorizedBinaryBroadcastParam<ndim, DType> param,
+    const index_t N) {
+  constexpr int nvec = sizeof(LType) / sizeof(DType);
+  const index_t M = N / nvec;
+  constexpr int other_side = 1 - side;
+
+  VectorizedLoader<DType, LType, aligned> lloader(param.inputs[side], param.size[side]);
+  VectorizedStorer<DType, LType, aligned> storer(param.outputs[0], N);
+
+  for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+       idx < M;
+       idx += gridDim.x * blockDim.x) {
+    index_t lindex, rindex;
+    unravel_dot(idx * nvec, param.oshape,
+                param.stride[side], param.stride[other_side],
+                &lindex, &rindex);
+    lloader.load(lindex / nvec, param.size[side]);
+
+    if (req == kAddTo) {
+      storer.load(idx, N);
+    }
+#pragma unroll
+    for (int i = 0; i < lloader.nvec(); ++i) {
+      if (i != 0) {
+        rindex = unravel_dot(idx * nvec + i, param.oshape, param.stride[other_side]);
+      }
+      DType rinput = param.inputs[other_side][rindex];
+      DType temp;
+      if (side == 0) {
+        // Left side is vectorized
+        temp = OP::Map(lloader.separate()[i],
+                       rinput);
+      } else {
+        // Right side is vectorized
+        temp = OP::Map(rinput,
+                       lloader.separate()[i]);
+      }
+
+      if (req == kAddTo) {
+        storer.separate()[i] += temp;
+      } else {
+        storer.separate()[i] = temp;
+      }
+    }
+    storer.store(idx, N);
+  }
+}
 template<int ndim, typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
@@ -166,7 +197,7 @@ void BinaryBroadcastComputeImpl2(Stream<gpu> *s, const OpReqType req,
   Shape<ndim> lstride = calc_stride(lhs.shape_.get<ndim>());
   Shape<ndim> rstride = calc_stride(rhs.shape_.get<ndim>());
   constexpr int Req = kWriteTo;
-  //MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+  MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     using LType = uint2;
     using Kernel = VectorizedBinaryBroadcastFwd<DType, OP, Req, ndim>;
 
@@ -175,12 +206,12 @@ void BinaryBroadcastComputeImpl2(Stream<gpu> *s, const OpReqType req,
     param.inputs[0] = lhs.dptr<DType>();
     param.inputs[1] = rhs.dptr<DType>();
     param.outputs[0] = out.dptr<DType>();
-    param.lstride = lstride;
-    param.rstride = rstride;
+    param.stride[0] = lstride;
+    param.stride[1] = rstride;
     param.oshape = out.shape_.get<ndim>();
 
     VectorizedKernelLauncher<DType, LType, Kernel>(N, s, param);
-  //});
+  });
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
