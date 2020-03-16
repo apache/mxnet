@@ -342,7 +342,9 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
     NodeEntry ngrad(nnvm::Node::Create(), 0, 0);
-    ngrad.node->attrs.name = "_head_grad_" + std::to_string(i);
+    const nnvm::NodeAttrs& attrs = g.outputs[i].node->attrs;
+    ngrad.node->attrs.name = attrs.name + "_head_grad";
+    ngrad.node->attrs.dict["__profiler_scope__"] = common::NodeAttrsGetProfilerScope(attrs);
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
@@ -517,9 +519,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
     if (mutable_nodes.count(nid)) {  // aux_states
       EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
                        inferred_dtype, aux_state_vec);
+      aux_state_vec->back().AssignStorageInfo(profiler_scope + "aux_state:", arg_name);
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
       ++aux_top;
@@ -530,6 +534,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     } else {  // in_args
       EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
                        inferred_dtype, in_arg_vec);
+      in_arg_vec->back().AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
       data_entry_[eid] = in_arg_vec->back();
       if (log_verbose_) {
         LOG(INFO) << "\tassign data entry\t" << eid << "\tas "
@@ -545,6 +550,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
         EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
                          inferred_dtype, arg_grad_vec);
+        arg_grad_vec->back().AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
         if (log_verbose_) {
           LOG(INFO) << "\tassign grad entry\t" << grad_eid << "\tas "
                     << common::stype_string(grad_stype);
@@ -589,6 +595,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
     // aux_states
     if (mutable_nodes.count(nid)) {
       if (nullptr != shared_exec) {
@@ -611,6 +618,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       } else {
         EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
                          inferred_dtype, aux_state_vec);
+        aux_state_vec->back().AssignStorageInfo(profiler_scope + "aux_state:", arg_name);
       }  // if (has_shared_exec)
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
@@ -648,6 +656,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           // doesn't have shared_exec, or non-default storage
           EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
                            inferred_dtype, in_arg_vec);
+          in_arg_vec->back().AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
         }
         // gradient for model parameter
         if (kNullOp == grad_req_types[arg_top]) {
@@ -664,6 +673,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
             // no need to reuse memory from shared_exec for gradient of non-default storage
             EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
                              inferred_dtype, arg_grad_vec);
+            arg_grad_vec->back().AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
           }
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }
@@ -673,6 +683,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
                                                  inferred_stype, in_arg_ctxes[arg_top],
                                                  shared_buffer, enable_row_sparse_sharing));
+        in_arg_vec->back().AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
         // gradient for model parameter, row_sparse ndarray sharing disabled
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();
@@ -685,6 +696,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                                      inferred_dtype, grad_stype,
                                                      arg_grad_ctxes[arg_top], shared_buffer,
                                                      enable_row_sparse_sharing));
+          arg_grad_vec->back().AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }  // if (kNullOp == grad_req_types[arg_top])
       }  // if (shared_arg_names.count(arg_name))
@@ -1077,12 +1089,17 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   CHECK_EQ(data_entry_.size(), vshape.size());
   std::vector<Context> data_context(idx.num_node_entries());
   std::vector<NDArrayStorageType> data_storage_type(idx.num_node_entries(), kUndefinedStorage);
+  std::vector<std::string> data_storage_profiler_scope(idx.num_node_entries());
+  std::vector<std::string> data_storage_name(idx.num_node_entries());
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
       auto eid = idx.entry_id(nid, i);
       data_context[eid] = vctx[nid];
       CHECK_NE(vstorage_type[eid], kUndefinedStorage);
       data_storage_type[eid] = (NDArrayStorageType) vstorage_type[eid];
+      data_storage_profiler_scope[eid] = profiler_scope;
+      data_storage_name[eid] = idx[nid].source->attrs.name;
     }
   }
 
@@ -1091,6 +1108,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     Context ctx;
     size_t bytes;
     NDArrayStorageType stype;
+    std::string profiler_scope;
+    std::string name;
   };
   std::vector<PoolEntry> pool_info;
 
@@ -1111,6 +1130,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     } else {
       data_entry_[data_eid] = NDArray(data_context[eid], vdtype[eid]);
     }
+    data_entry_[data_eid].AssignStorageInfo(data_storage_profiler_scope[data_eid],
+                                            data_storage_name[data_eid]);
     if (log_verbose_) {
       LOG(INFO) << "\tinit head_grad entry\t" << data_eid << "\tas "
                 << common::stype_string(stype);
@@ -1129,11 +1150,14 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     if (storage_id < 0) continue;
     size_t sid = static_cast<size_t>(storage_id);
     if (sid >= pool_info.size()) {
-      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage});
+      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage,
+                                          MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR,
+                                          MXNET_STORAGE_DEFAULT_NAME_CSTR});
     }
     PoolEntry& info = pool_info[sid];
     if (info.bytes == 0) {
-      info = PoolEntry{data_context[i], bytes, data_storage_type[i]};
+      info = PoolEntry{data_context[i], bytes, data_storage_type[i],
+                       data_storage_profiler_scope[i], data_storage_name[i]};
     } else {
       info.bytes = std::max(info.bytes, bytes);
     }
@@ -1183,6 +1207,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       // TODO(junwu): adding delay_alloc=true to create nd
       // is a temporary solution.
       NDArray nd(shape, ctx, true);
+      nd.AssignStorageInfo(pool_info[i].profiler_scope,
+                           pool_info[i].name);
       data_pool_[i] = nd;
       // put the new allocated arrays to shared pool
       if (shared_pool != nullptr)  {
@@ -1201,6 +1227,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     if (storage_type == kDefaultStorage) {
       if (!shape_is_known(vshape[i])) {
         data_entry_[i] = NDArray(data_context[i], vdtype[i]);
+        data_entry_[i].AssignStorageInfo(data_storage_profiler_scope[i],
+                                         data_storage_name[i]);
       } else {
         CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
         const NDArray& src = data_pool_.at(storage_id);
@@ -1209,6 +1237,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     } else {
       data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i],
                                true, vdtype[i]);
+      data_entry_[i].AssignStorageInfo(data_storage_profiler_scope[i],
+                                       data_storage_name[i]);
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit data entry\t" << i << "\tas " << common::stype_string(storage_type);
