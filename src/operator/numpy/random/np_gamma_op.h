@@ -68,6 +68,17 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
       .describe("DType of the output in case this can't be inferred. "
                 "Defaults to float32 if not defined (dtype=None).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, scale_s, dtype_s, size_s;
+    shape_s << shape;
+    scale_s << scale;
+    dtype_s << dtype;
+    size_s << size;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["size"] = size_s.str();
+  }
 };
 
 

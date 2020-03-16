@@ -19,6 +19,7 @@
 import numpy as np
 from ...context import current_context
 from . import _internal as _npi
+from . import _api_internal
 from ..ndarray import NDArray
 from . import _api_internal
 
@@ -790,24 +791,29 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     input_type = (isinstance(shape, np_ndarray), isinstance(scale, np_ndarray))
     if dtype is None:
         dtype = 'float32'
-    if ctx is None:
-        ctx = current_context()
     if out is not None:
         size = out.shape
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (False, True):
-        return _npi.gamma(scale, shape=shape, scale=None, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (True, False):
-        return _npi.gamma(shape, shape=None, scale=scale, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
+    if ctx is None:
+        ctx = str(current_context())
     else:
-        return _npi.gamma(shape=shape, scale=scale, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.gamma(shape, scale, size, ctx, dtype, out)
+    # if input_type == (True, True):
+    #     return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
+    #                       ctx=ctx, dtype=dtype, out=out)
+    # elif input_type == (False, True):
+    #     return _npi.gamma(scale, shape=shape, scale=None, size=size,
+    #                       ctx=ctx, dtype=dtype, out=out)
+    # elif input_type == (True, False):
+    #     return _npi.gamma(shape, shape=None, scale=scale, size=size,
+    #                       ctx=ctx, dtype=dtype, out=out)
+    # else:
+    #     return _npi.gamma(shape=shape, scale=scale, size=size,
+    #                       ctx=ctx, dtype=dtype, out=out)
 
     raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
 
