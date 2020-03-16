@@ -60,11 +60,11 @@ def transformer(data, label):
     return data, label
 
 train_data = gluon.data.DataLoader(
-    gluon.data.vision.MNIST('./data', train=True, transform=transformer),
+    gluon.data.vision.MNIST('./data', train=True).transform(transformer),
     batch_size=opt.batch_size, shuffle=True, last_batch='discard')
 
 val_data = gluon.data.DataLoader(
-    gluon.data.vision.MNIST('./data', train=False, transform=transformer),
+    gluon.data.vision.MNIST('./data', train=False).transform(transformer),
     batch_size=opt.batch_size, shuffle=False)
 
 # train

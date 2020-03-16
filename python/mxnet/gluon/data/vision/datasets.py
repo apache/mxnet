@@ -47,6 +47,7 @@ class MNIST(dataset._DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
+        DEPRECATED FUNCTION ARGUMENTS.
         A user defined callback that transforms each sample. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
@@ -110,6 +111,7 @@ class FashionMNIST(MNIST):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
+        DEPRECATED FUNCTION ARGUMENTS.
         A user defined callback that transforms each sample. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
@@ -142,6 +144,7 @@ class CIFAR10(dataset._DownloadedDataset):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
+        DEPRECATED FUNCTION ARGUMENTS.
         A user defined callback that transforms each sample. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
@@ -207,6 +210,7 @@ class CIFAR100(CIFAR10):
     train : bool, default True
         Whether to load the training or testing set.
     transform : function, default None
+        DEPRECATED FUNCTION ARGUMENTS.
         A user defined callback that transforms each sample. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
@@ -243,6 +247,7 @@ class ImageRecordDataset(dataset.RecordFileDataset):
         If 0, always convert images to greyscale. \
         If 1, always convert images to colored (RGB).
     transform : function, default None
+        DEPRECATED FUNCTION ARGUMENTS.
         A user defined callback that transforms each sample. For example::
 
             transform=lambda data, label: (data.astype(np.float32)/255, label)
@@ -250,6 +255,10 @@ class ImageRecordDataset(dataset.RecordFileDataset):
     """
     def __init__(self, filename, flag=1, transform=None):
         super(ImageRecordDataset, self).__init__(filename)
+        if transform is not None:
+            raise DeprecationWarning(
+                'Directly apply transform to dataset is deprecated. '
+                'Please use dataset.transform() or dataset.transform_first() instead...')
         self._flag = flag
         self._transform = transform
 
@@ -281,6 +290,7 @@ class ImageFolderDataset(dataset.Dataset):
         If 0, always convert loaded images to greyscale (1 channel).
         If 1, always convert loaded images to colored (3 channels).
     transform : callable, default None
+        DEPRECATED FUNCTION ARGUMENTS.
         A function that takes data and label and transforms them::
 
             transform = lambda data, label: (data.astype(np.float32)/255, label)
@@ -295,6 +305,10 @@ class ImageFolderDataset(dataset.Dataset):
     def __init__(self, root, flag=1, transform=None):
         self._root = os.path.expanduser(root)
         self._flag = flag
+        if transform is not None:
+            raise DeprecationWarning(
+                'Directly apply transform to dataset is deprecated. '
+                'Please use dataset.transform() or dataset.transform_first() instead...')
         self._transform = transform
         self._exts = ['.jpg', '.jpeg', '.png']
         self._list_images(self._root)
