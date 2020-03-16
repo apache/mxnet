@@ -140,22 +140,6 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-MXReturnValue inferSType(std::map<std::string, std::string> attrs,
-                        std::vector<int> &instypes,
-                        std::vector<int> &outstypes) {
-  // validate inputs
-  for (unsigned i = 0; i < instypes.size(); i++) {
-    if (instypes[i] != kDefaultStorage) {
-      std::cout << "Expected input " << i << " to have dense storage type" << std::endl;
-      return MX_FAIL;
-    }
-  }
-  for (unsigned i = 0; i < instypes.size(); i++) {
-    outstypes[i] = instypes[0];
-  }
-  return MX_SUCCESS;
-}
-
 MXReturnValue inferShape(std::map<std::string, std::string> attrs,
                          std::vector<std::vector<unsigned int>> &inshapes,
                          std::vector<std::vector<unsigned int>> &outshapes) {
@@ -187,7 +171,6 @@ REGISTER_OP(my_gemm)
 .setBackward(backward, "cpu")
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferSType(inferSType)
 .setInferShape(inferShape);
 
 /* ------------------------------------------------------------------------- */
@@ -236,7 +219,6 @@ MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
 REGISTER_OP(state_gemm)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferSType(inferSType)
 .setInferShape(inferShape)
 .setMutateInputs(mutateInputs)
 .setCreateOpState(createOpState, "cpu");

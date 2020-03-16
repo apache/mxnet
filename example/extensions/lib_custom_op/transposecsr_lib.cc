@@ -34,22 +34,26 @@ void transpose(MXTensor src, MXTensor dst, OpResource res) {
   int64_t w = shape[1];
   if(src.stype == kCSRStorage) {
     float *Aval = (float*) (A->data);
+    // Here we need one more element to help calculate index(line 57).
     std::vector<int64_t> rowPtr(w + 2, 0);
     // count column
     for(int i = 0; i < A->data_len; i++) {
       rowPtr[A->indices[i] + 2]++;
     }
-    // Accumulated sum
+    // Accumulated sum. After this for loop, rowPtr[1:w+2) stores the correct 
+    // result of transposed rowPtr.
     for(int i = 2; i < rowPtr.size(); i++) {
       rowPtr[i] += rowPtr[i - 1];
     }
-
+    
     // Alloc memory for sparse data, where 0 is the index
     // of B in output vector.
     res.alloc_sparse(B, 0, A->data_len, w + 1);
     float *Bval = (float*) (B->data);
     for(int i = 0; i < h; i++) {
       for(int j = A->indptr[i]; j < A->indptr[i + 1]; j++) {
+        // Helps calculate index and after that rowPtr[0:w+1) stores the 
+        // correct result of transposed rowPtr.
         int index = rowPtr[A->indices[j] + 1]++;
         Bval[index] = Aval[j];
         B->indices[index] = i;

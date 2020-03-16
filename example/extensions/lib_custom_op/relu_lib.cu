@@ -109,13 +109,6 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     return MX_SUCCESS;
 }
 
-MXReturnValue inferSType(std::map<std::string, std::string> attrs,
-                        std::vector<int> &instypes,
-                        std::vector<int> &outstypes) {
-  outstypes[0] = instypes[0];
-  return MX_SUCCESS;
-}
-
 MXReturnValue inferShape(std::map<std::string, std::string> attrs,
                          std::vector<std::vector<unsigned int>> &inshapes,
                          std::vector<std::vector<unsigned int>> &outshapes) {
@@ -126,7 +119,6 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
 REGISTER_OP(my_relu)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferSType(inferSType)
 .setInferShape(inferShape)
 .setForward(forwardCPU, "cpu")
 .setForward(forwardGPU, "gpu")
@@ -184,7 +176,6 @@ MXReturnValue createOpStateGPU(std::map<std::string, std::string> attrs,
 REGISTER_OP(my_state_relu)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
-.setInferSType(inferSType)
 .setInferShape(inferShape)
 .setCreateOpState(createOpStateCPU, "cpu")
 .setCreateOpState(createOpStateGPU, "gpu");

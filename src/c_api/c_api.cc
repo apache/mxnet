@@ -413,8 +413,6 @@ int MXLoadLib(const char *path) {
                             << "' custom op, Forward or CreateOpState function was not set.";
       CHECK(type_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
-      CHECK(stype_fp != nullptr) << "Error loading '" << name
-                            << "' custom op, InferSType function was not set.";
       CHECK(shape_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferShape function was not set.";
     } else {
@@ -657,18 +655,29 @@ int MXLoadLib(const char *path) {
       // output types will be populated by inferType function
       std::vector<int> outstypes(out_stypes->size());
 
-      CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           instypes.data(), in_stypes->size(),
-                           outstypes.data(), out_stypes->size()))
-      << "Error calling InferSType for custom operator '" << name_str << "'";
-
-      // copy and assign output storage types from custom op to MXNet memory.
-      for (size_t i = 0; i < out_stypes->size(); i++) {
-        STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, outstypes[i]);
+      // InferSType is not defineid in customized lib.
+      if (stype_fp == nullptr) {
+        CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
+        << "Error input tensors are not dense for custom operator '" << name_str << "'";
+        // set outputs as dense
+        return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
       }
-      // assign dispatch mode
-      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-      return true;
+      // InferSType is defineid in customized lib.
+      else {
+        CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                             instypes.data(), in_stypes->size(),
+                             outstypes.data(), out_stypes->size()))
+        << "Error calling InferSType for custom operator '" << name_str << "'";
+
+        // copy and assign output storage types from custom op to MXNet memory.
+        for (size_t i = 0; i < out_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, outstypes[i]);
+        }
+        // assign dispatch mode
+        DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+        return true;
+      }
     };
 
     // FGradient register lambda
