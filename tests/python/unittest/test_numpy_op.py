@@ -1734,6 +1734,40 @@ def test_np_squeeze():
 
 @with_seed()
 @use_np
+def test_np_tri():
+    class TestTri(HybridBlock):
+        def __init__(self, N, M=None, k=0, dtype=None):
+            super(TestTri, self).__init__()
+            self._N = N
+            self._M = M
+            self._k = k
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.tri(self._N, self._M, self._k, self._dtype)
+
+    dtypes = ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8', None]
+    hybrids = [False, True]
+
+    for dtype, hybrid in itertools.product(dtypes, hybrids):
+        N = random.randint(2,6)
+        M = random.randint(2,6)
+        k = random.randint(-M*2, N*2)
+
+        test_tri = TestTri(N, M, k, dtype)
+        if hybrid:
+            test_tri.hybridize()
+        np_out = np.tri(N, M, k, dtype)
+        x = np.zeros(shape=(), dtype=dtype)
+        mx_out = test_tri(x)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+        mx_out = np.tri(N, M, k, dtype)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_np_prod():
     class TestProd(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):

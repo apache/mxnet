@@ -57,6 +57,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("polyval", dnp.arange(10), pool['2x2'])
     OpArgMngr.add_workload("ediff1d", pool['2x2'], pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("nan_to_num", pool['2x2'])
+    OpArgMngr.add_workload("tri", 2, 3, 4)
     OpArgMngr.add_workload("tensordot", pool['2x2'], pool['2x2'], ((1, 0), (0, 1)))
     OpArgMngr.add_workload("kron", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("cumsum", pool['3x2'], axis=0, out=pool['3x2'])
