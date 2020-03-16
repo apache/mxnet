@@ -21,9 +21,9 @@
  * \file np_uniform_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/random/np_uniform_op.cc
  */
-#include <vector>
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <vector>
 #include "../utils.h"
 #include "../../../operator/numpy/random/np_uniform_op.h"
 
@@ -49,7 +49,6 @@ MXNET_REGISTER_API("_npi.uniform")
       param.low = args[0].operator double();
       param.high = dmlc::nullopt;
     }
-    //param.scale = args[0].operator double();
   } else {
     if (args[1].type_code() == kDLFloat || args[1].type_code() == kDLInt) {
       // 'low' is not numeric types but 'high' is numeric types

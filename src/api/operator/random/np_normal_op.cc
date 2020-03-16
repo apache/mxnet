@@ -21,9 +21,9 @@
  * \file np_normal_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/random/np_normal_op.cc
  */
-#include <vector>
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <vector>
 #include "../utils.h"
 #include "../../../operator/numpy/random/np_normal_op.h"
 
@@ -49,7 +49,6 @@ MXNET_REGISTER_API("_npi.normal")
       param.loc = args[0].operator double();
       param.scale = dmlc::nullopt;
     }
-    //param.scale = args[0].operator double();
   } else {
     if (args[1].type_code() == kDLFloat || args[1].type_code() == kDLInt) {
       // 'loc' is not numeric types but 'scale' is numeric types

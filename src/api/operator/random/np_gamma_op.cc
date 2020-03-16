@@ -21,9 +21,9 @@
  * \file np_gamma_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/random/np_gamma_op.cc
  */
-#include <vector>
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <vector>
 #include "../utils.h"
 #include "../../../operator/numpy/random/np_gamma_op.h"
 
