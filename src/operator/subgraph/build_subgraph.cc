@@ -560,18 +560,6 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     }
     nnvm::ObjectPtr n = nnvm::CreateVariableNode(
         var_name + std::to_string(name_count_map[var_name]));
-    // set attribute for subgraph input to indicate if it is from an arg/param to model
-    if (e->node->is_variable()) {
-      n->attrs.dict["isArg"] = "True";
-      n->attrs.dict["argName"] = var_name;
-    } else {
-      n->attrs.dict["isArg"] = "False";
-    }
-    // pass down other attributes if available
-    if (e->node->attrs.dict.count("__dtype__") > 0)
-      n->attrs.dict["__dtype__"] = e->node->attrs.dict["__dtype__"];
-    if (e->node->attrs.dict.count("__shape__") > 0)
-      n->attrs.dict["__shape__"] = e->node->attrs.dict["__shape__"];
 
     *e = nnvm::NodeEntry{n, 0, 0};
   }
@@ -591,7 +579,7 @@ void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 }
 
 /*!
- * \brief Replace a set of nodes belonging to the same subgraph with a subgrpah node
+ * \brief Replace a set of nodes belonging to the same subgraph with a subgraph node
  * and keep the subgraph in the subgraph node.
  */
 void CreateSubgraphNode(nnvm::Graph* g,
@@ -621,6 +609,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
     sym.outputs[i] = *output_entries[i];
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
+  subg_prop->InitSubgraphInputs(&input_entries, &orig_input_entries);
   nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
   // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
   // In that case, subgraph node is not created and graph is not modified
