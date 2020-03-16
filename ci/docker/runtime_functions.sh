@@ -532,6 +532,9 @@ build_ubuntu_cpu_clang10_werror() {
 build_ubuntu_gpu_clang10_werror() {
     set -ex
     cd /work/build
+    # Disable cpp package as OpWrapperGenerator.py dlopens libmxnet.so,
+    # requiring presence of cuda driver libraries that are missing on CI host
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/lib/stubs
     # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CXX=clang++-10 CC=clang-10 cmake \
        -DCMAKE_AR=/usr/local/bin/ar \
@@ -539,7 +542,7 @@ build_ubuntu_gpu_clang10_werror() {
        -DUSE_CUDA=ON \
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_CPP_PACKAGE=ON \
+       -DUSE_CPP_PACKAGE=OFF \
        -GNinja /work/mxnet
     ninja
 }
