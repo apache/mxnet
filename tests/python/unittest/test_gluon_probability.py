@@ -283,6 +283,68 @@ def test_gluon_cauchy():
 
 @with_seed()
 @use_np
+def test_gluon_half_cauchy():
+    class TestHalfCauchy(HybridBlock):
+        def __init__(self, func):
+            super(TestHalfCauchy, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, scale, *args):
+            half_normal = mgp.HalfCauchy(scale, F)
+            return getattr(half_normal, self._func)(*args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test sampling
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestHalfCauchy("sample")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale).asnumpy()
+        if isinstance(shape, Number):
+            shape = (shape,)
+        assert mx_out.shape == shape
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.abs(np.random.normal(size=shape))
+        net = TestHalfCauchy("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.halfcauchy(0, scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False) 
+    
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.abs(np.random.normal(size=shape))
+        net = TestHalfCauchy("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.halfcauchy(0, scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False) 
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestHalfCauchy("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(scale, samples).asnumpy()
+        np_out = ss.halfcauchy(0, scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False) 
+
+
+@with_seed()
+@use_np
 def test_gluon_exponential():
     class TestExponential(HybridBlock):
         def __init__(self, func):

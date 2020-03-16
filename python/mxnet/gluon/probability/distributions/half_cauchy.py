@@ -17,27 +17,27 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Half-normal Distribution"""
-__all__ = ["HalfNormal"]
+"""Half-cauchy Distribution"""
+__all__ = ["HalfCauchy"]
 
 from .transformed_distribution import TransformedDistribution
 from ..transformation import AbsTransform
-from .normal import Normal
+from .cauchy import Cauchy
 from .constraint import Positive
 from .utils import getF
 import math
 from numpy import inf
 
 
-class HalfNormal(TransformedDistribution):
+class HalfCauchy(TransformedDistribution):
 
     has_grad = True
     support = Positive()
     arg_constraints = {'scale': Positive()}
 
     def __init__(self, scale=1.0, F=None, validate_args=None):
-        base_dist = Normal(0, scale, F)
-        super(HalfNormal, self).__init__(base_dist, AbsTransform(), validate_args=validate_args)
+        base_dist = Cauchy(0, scale, F)
+        super(HalfCauchy, self).__init__(base_dist, AbsTransform(), validate_args=validate_args)
 
     def log_prob(self, value):
         log_prob = self._base_dist.log_prob(value) + math.log(2)
@@ -49,6 +49,9 @@ class HalfNormal(TransformedDistribution):
 
     def icdf(self, value):
         return self._base_dist.icdf((value + 1) / 2)
+
+    def entropy(self):
+        return self._base_dist.entropy() - math.log(2)
 
     @property
     def scale(self):

@@ -25,7 +25,7 @@ from .utils import sum_right_most
 
 
 class TransformedDistribution(Distribution):
-    def __init__(self, base_dist, transforms):
+    def __init__(self, base_dist, transforms, validate_args=None):
         self._base_dist = base_dist
         if isinstance(transforms, Transformation):
             transforms = [transforms,]
@@ -36,7 +36,7 @@ class TransformedDistribution(Distribution):
             t.F = _F
         event_dim = max([self._base_dist.event_dim] +
                              [t.event_dim for t in self._transforms])
-        super(TransformedDistribution, self).__init__(_F, event_dim=event_dim)
+        super(TransformedDistribution, self).__init__(_F, event_dim=event_dim, validate_args=validate_args)
 
     def sample(self, size=None):
         x = self._base_dist.sample(size)

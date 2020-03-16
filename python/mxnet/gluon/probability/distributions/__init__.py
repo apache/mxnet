@@ -35,6 +35,8 @@ from .normal import *
 
 from .cauchy import *
 
+from .half_cauchy import *
+
 from .gamma import *
 
 from .dirichlet import *
