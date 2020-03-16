@@ -129,6 +129,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("linspace", 0, 10, 8, endpoint=False)
     OpArgMngr.add_workload("logspace", 2.0, 3.0, num=4, base=2.0, dtype=onp.float32)
     OpArgMngr.add_workload("matmul", pool['2x2'], pool['2x2'], out=pool['2x2'])
+    OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
 
 
 def benchmark_helper(f, *args, **kwargs):
