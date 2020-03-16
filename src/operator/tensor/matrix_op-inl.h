@@ -1598,6 +1598,14 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
     DMLC_DECLARE_FIELD(a_max)
     .describe("Maximum value");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_min_s, a_max_s;
+    a_min_s << a_min;
+    a_max_s << a_max;
+    (*dict)["a_min"] = a_min_s.str();
+    (*dict)["a_max"] = a_max_s.str();
+  }
 };
 
 

@@ -698,16 +698,6 @@ def take(a, indices, axis=None, mode='raise', out=None):
         return _api_internal.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
 
-@set_module('mxnet.ndarray.numpy')
-def take_v2(a, indices, axis=None, mode='raise', out=None):
-    if mode not in ('wrap', 'clip', 'raise'):
-        raise NotImplementedError(
-            "function take does not support mode '{}'".format(mode))
-    if axis is None:
-        return _api_internal.take(_npi.reshape(a, -1), indices, 0, mode, out)
-    else:
-        return _api_internal.take(a, indices, axis, mode, out)
-
 
 @set_module('mxnet.ndarray.numpy')
 def insert(arr, obj, values, axis=None):
@@ -4370,11 +4360,7 @@ def clip(a, a_min, a_max, out=None):
     """
     if a_min is None and a_max is None:
         raise ValueError('array_clip: must set either max or min')
-    if a_min is None:
-        a_min = float('-inf')
-    if a_max is None:
-        a_max = float('inf')
-    return _npi.clip(a, a_min, a_max, out=out)
+    return _api_internal.clip(a, a_min, a_max, out)
 
 
 @set_module('mxnet.ndarray.numpy')

@@ -18,58 +18,51 @@
  */
 
 /*!
- * \file indexing_op.cc
- * \brief Implementation of the API of functions in src/operator/tensor/indexing_op.cc
+ * \file matrix_op.cc
+ * \brief Implementation of the API of functions in src/operator/tensor/matrix_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
-#include "../../../operator/tensor/indexing_op.h"
+#include "../../../operator/tensor/matrix_op-inl.h"
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.take")
+MXNET_REGISTER_API("_npi.clip")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_take");
+  const nnvm::Op* op = Op::Get("_npi_clip");
   nnvm::NodeAttrs attrs;
-  op::TakeParam param;
-  NDArray** inputs = new NDArray*[2]();
+  op::ClipParam param;
+  NDArray** inputs = new NDArray*[1]();
 
   if (args[0].type_code() != kNull) {
     inputs[0] = args[0].operator mxnet::NDArray *();
   }
 
   if (args[1].type_code() != kNull) {
-    inputs[1] = args[1].operator mxnet::NDArray *();
+    param.a_min = args[1].operator double();
+  } else {
+    param.a_min = -INFINITY;
   }
 
   if (args[2].type_code() == kDLInt) {
-    param.axis = args[2].operator int();
-  }
-
-  if (args[3].type_code() != kNull) {
-    std::string mode = args[3].operator std::string();
-    if (mode == "raise"){
-      param.mode = op::take_::kRaise;
-    } else if (mode == "clip") {
-      param.mode = op::take_::kClip;
-    } else if (mode == "wrap") {
-      param.mode = op::take_::kWrap;
-    }
+    param.a_max = args[2].operator double();
+  } else {
+    param.a_max = INFINITY;
   }
 
   attrs.parsed = param;
   attrs.op = op;
-  SetAttrDict<op::TakeParam>(&attrs);
+  SetAttrDict<op::ClipParam>(&attrs);
 
-  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray* out = args[3].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   // set the number of outputs provided by the `out` arugment
   int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, outputs);
+  auto ndoutputs = Invoke(op, &attrs, 1, inputs, &num_outputs, outputs);
   if (out) {
-    *ret = PythonArg(4);
+    *ret = PythonArg(3);
   } else {
     *ret = ndoutputs[0];
   }
