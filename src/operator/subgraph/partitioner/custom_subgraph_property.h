@@ -180,11 +180,16 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
       for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
         nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
-        // get the output entry ID for this node
-        const uint32_t out_entry_id = indexed_graph.entry_id(nid, 0);
-        mxnet::TShape shape = shapes[out_entry_id];
         std::stringstream ss;
-        ss << shape;
+        ss << "[";
+        // set the output shapes for this node
+        for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
+          const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
+          mxnet::TShape shape = shapes[out_entry_id];
+          ss << shape;
+          if(oid < node->num_outputs()-1) ss << ",";
+        }
+        ss << "]";
         node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
@@ -193,11 +198,16 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       std::vector<int> dtypes = g.GetAttr<std::vector<int> >("dtype");
       for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
         nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
-        // get the output entry ID for this node
-        const uint32_t out_entry_id = indexed_graph.entry_id(nid, 0);
-        int dtype = dtypes[out_entry_id];
         std::stringstream ss;
-        ss << dtype;
+        ss << "[";
+        // set the output dtypes for this node
+        for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
+          const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
+          int dtype = dtypes[out_entry_id];
+          ss << dtype;
+          if(oid < node->num_outputs()-1) ss << ",";
+        }
+        ss << "]";
         node->attrs.dict[MX_STR_DTYPE] = ss.str();
       }
     }
@@ -299,6 +309,38 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       n->attrs.name = "_op" + std::to_string(subgraph_id);
       n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
 
+      // set shapes
+      {
+        std::stringstream ss;
+        ss << "[";
+        for (unsigned i=0; i < sym.outputs.size(); i++) {
+          nnvm::Node* n = sym.outputs[i].node.get();
+          if (n->attrs.dict.count("__shape__") > 0) {
+            std::string& shape = n->attrs.dict["__shape__"];
+            ss << shape.substr(1,shape.length()-2); //strip off outer square brackets []
+          }
+          if (i < sym.outputs.size()-1)
+            ss << ",";
+        }
+        ss << "]";
+        n->attrs.dict["__shape__"]=ss.str();
+      }
+      // set dtypes
+      {
+        std::stringstream ss;
+        ss << "[";
+        for (unsigned i=0; i < sym.outputs.size(); i++) {
+          nnvm::Node* n = sym.outputs[i].node.get();
+          if (n->attrs.dict.count("__dtype__") > 0) {
+            std::string& dtype = n->attrs.dict["__dtype__"];
+            ss << dtype.substr(1,dtype.length()-2); //strip off outer square brackets []
+          }
+          if (i < sym.outputs.size()-1)
+            ss << ",";
+        }
+        ss << "]";
+        n->attrs.dict["__dtype__"]=ss.str();
+      }
       // set user specified attributes
       for (auto attr : user_attrs)
         n->attrs.dict[attr.first] = attr.second;
@@ -308,6 +350,63 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       return nullptr;
     }
   }
+
+  virtual void InitSubgraphInputs(std::vector<nnvm::NodeEntry*>* input_entries,
+                                  std::vector<nnvm::NodeEntry>* orig_input_entries) const {
+    std::cout << "in InitSubgraphInputs" << std::endl;
+    for (size_t i = 0; i < input_entries->size(); ++i) {
+      nnvm::NodeEntry *e = input_entries->at(i);
+      nnvm::NodeEntry& orig = orig_input_entries->at(i);
+
+      // set attribute for subgraph input to indicate if it is from an arg/param to model
+      if (orig.node->is_variable()) {
+        // get name of original output entry
+        nnvm::Symbol sym;
+        sym.outputs.push_back(orig);
+        const auto output_names = sym.ListOutputNames();
+        CHECK_EQ(output_names.size(), 1U);
+        const std::string& var_name = output_names[0];
+
+        e->node->attrs.dict["isArg"] = "True";
+        e->node->attrs.dict["argName"] = var_name;
+      } else {
+        e->node->attrs.dict["isArg"] = "False";
+      }
+
+      // pass down other attributes if available
+      if (orig.node->attrs.dict.count("__dtype__") > 0) {
+        // get dtype string from other node
+        std::string& dtype = orig.node->attrs.dict["__dtype__"];
+        int idx = 0;
+        // find the beginning of the output dtype for the particular output index
+        for (unsigned x=0; x < orig.index; x++)
+          idx = dtype.find("[",idx+1);
+        if (idx == 0) idx++; // if output index is 0, start after first square bracket [
+        int stop = dtype.find("]",idx); // find stop index for this output dtype
+        std::stringstream ss;
+        // create new dtype string for this node
+        ss << "[" << dtype.substr(idx,stop-idx+1) << "]";
+        e->node->attrs.dict["__dtype__"] = ss.str();
+      }
+
+      if (orig.node->attrs.dict.count("__shape__") > 0) {
+        // get shape string from other node
+        std::string& shape = orig.node->attrs.dict["__shape__"];
+        int idx = 0;
+        // find the beginning of the output shape for the particular output index
+        for (unsigned x=0; x < orig.index; x++)
+          idx = shape.find("[",idx+1);
+        if (idx == 0) idx++; // if output index is 0, start after first square bracket [
+        int stop = shape.find("]",idx); // find stop index for this output shape
+        std::stringstream ss;
+        // create new shape string for this node
+        ss << "[" << shape.substr(idx,stop-idx+1) << "]";
+        e->node->attrs.dict["__shape__"] = ss.str();
+      }
+    }
+    std::cout << "-----------------------------" << std::endl;
+  }
+
   // override CreateSubgraphSelector
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
     return std::make_shared<CustomContainOpSelector>(supported_nodes);
