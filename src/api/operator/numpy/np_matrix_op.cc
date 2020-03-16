@@ -142,4 +142,158 @@ MXNET_REGISTER_API("_npi.rot90")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.array_split")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_array_split");
+  nnvm::NodeAttrs attrs;
+  op::SplitParam param;
+  param.axis = args[2].operator int();
+  param.squeeze_axis = false;
+  if (args[1].type_code() == kDLInt) {
+    param.indices = TShape(0, 0);
+    param.sections = args[1].operator int();
+    CHECK_GT(param.sections, 0)
+      << "ValueError: number sections must be larger than 0";
+  } else {
+    TShape t = TShape(args[1].operator ObjectRef());
+    param.indices = TShape(t.ndim() + 1, 0);
+    for (int i = 0; i < t.ndim(); ++i) {
+      param.indices[i + 1] = t[i];
+    }
+    param.sections = 0;
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::SplitParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  std::vector<NDArrayHandle> ndarray_handles;
+  ndarray_handles.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    ndarray_handles.emplace_back(ndoutputs[i]);
+  }
+  *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
+
+MXNET_REGISTER_API("_npi.dsplit")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_split");
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  CHECK_GE(inputs[0]->shape().ndim(), 3)
+      << "ValueError: dsplit only works on arrays of 3 or more dimensions";
+  nnvm::NodeAttrs attrs;
+  op::SplitParam param;
+  param.axis = 2;
+  param.squeeze_axis = false;
+  if (args[1].type_code() == kDLInt) {
+    param.indices = TShape(0, 0);
+    param.sections = args[1].operator int();
+    CHECK_EQ(inputs[0]->shape()[2] % param.sections, 0)
+      << "ValueError: array split does not result in an equal division";
+    CHECK_GT(param.sections, 0)
+      << "ValueError: number sections must be larger than 0";
+  } else {
+    TShape t = TShape(args[1].operator ObjectRef());
+    param.indices = TShape(t.ndim() + 1, 0);
+    for (int i = 0; i < t.ndim(); ++i) {
+      param.indices[i + 1] = t[i];
+    }
+    param.sections = 0;
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::SplitParam>(&attrs);
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  std::vector<NDArrayHandle> ndarray_handles;
+  ndarray_handles.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    ndarray_handles.emplace_back(ndoutputs[i]);
+  }
+  *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
+
+MXNET_REGISTER_API("_npi.hsplit")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_hsplit");
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  CHECK_GE(inputs[0]->shape().ndim(), 1)
+    << "ValueError: hsplit only works on arrays of 1 or more dimensions";
+  nnvm::NodeAttrs attrs;
+  op::SplitParam param;
+  param.axis = 0;
+  param.squeeze_axis = false;
+  if (args[1].type_code() == kDLInt) {
+    param.indices = TShape(0, 0);
+    param.sections = args[1].operator int();
+    CHECK_GT(param.sections, 0)
+      << "ValueError: number sections must be larger than 0";
+  } else {
+    TShape t = TShape(args[1].operator ObjectRef());
+    param.indices = TShape(t.ndim() + 1, 0);
+    for (int i = 0; i < t.ndim(); ++i) {
+      param.indices[i + 1] = t[i];
+    }
+    param.sections = 0;
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::SplitParam>(&attrs);
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  std::vector<NDArrayHandle> ndarray_handles;
+  ndarray_handles.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    ndarray_handles.emplace_back(ndoutputs[i]);
+  }
+  *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
+
+MXNET_REGISTER_API("_npi.vsplit")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_split");
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  CHECK_GE(inputs[0]->shape().ndim(), 2)
+      << "ValueError: vsplit only works on arrays of 2 or more dimensions";
+  nnvm::NodeAttrs attrs;
+  op::SplitParam param;
+  param.axis = 0;
+  param.squeeze_axis = false;
+  if (args[1].type_code() == kDLInt) {
+    param.indices = TShape(0, 0);
+    param.sections = args[1].operator int();
+    CHECK_EQ(inputs[0]->shape()[0] % param.sections, 0)
+      << "ValueError: array split does not result in an equal division";
+    CHECK_GT(param.sections, 0)
+      << "ValueError: number sections must be larger than 0";
+  } else {
+    TShape t = TShape(args[1].operator ObjectRef());
+    param.indices = TShape(t.ndim() + 1, 0);
+    for (int i = 0; i < t.ndim(); ++i) {
+      param.indices[i + 1] = t[i];
+    }
+    param.sections = 0;
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::SplitParam>(&attrs);
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  std::vector<NDArrayHandle> ndarray_handles;
+  ndarray_handles.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    ndarray_handles.emplace_back(ndoutputs[i]);
+  }
+  *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
+
 }  // namespace mxnet

@@ -3765,18 +3765,9 @@ def array_split(ary, indices_or_sections, axis=0):
     >>> np.array_split(x, 3)
     [array([0.,  1.,  2.]), array([3.,  4.]), array([5.,  6.])]
     """
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False, sections)
-    if not isinstance(ret, list):
-        return [ret]
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.array_split(ary, indices_or_sections, axis))
 # pylint: enable=redefined-outer-name
 
 
@@ -3873,20 +3864,9 @@ def hsplit(ary, indices_or_sections):
     >>> np.hsplit(x, [2, 2])
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
-    if len(ary.shape) < 1:
-        raise ValueError('hsplit only works on arrays of 1 or more dimensions')
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.hsplit(ary, indices, 1, False, sections)
-    if not isinstance(ret, list):
-        return [ret]
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.hsplit(ary, indices_or_sections))
 # pylint: enable=redefined-outer-name
 
 
@@ -3964,9 +3944,9 @@ def vsplit(ary, indices_or_sections):
             [6., 7.]]])]
 
     """
-    if len(ary.shape) < 2:
-        raise ValueError("vsplit only works on arrays of 2 or more dimensions")
-    return split(ary, indices_or_sections, 0)
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.vsplit(ary, indices_or_sections))
 
 
 # pylint: disable=redefined-outer-name
@@ -4023,9 +4003,9 @@ def dsplit(ary, indices_or_sections):
             [15.]]]),
     array([], shape=(2, 2, 0), dtype=float64)]
     """
-    if len(ary.shape) < 3:
-        raise ValueError('dsplit only works on arrays of 3 or more dimensions')
-    return split(ary, indices_or_sections, 2)
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.dsplit(ary, indices_or_sections))
 # pylint: enable=redefined-outer-name
 
 
