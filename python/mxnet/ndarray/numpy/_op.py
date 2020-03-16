@@ -1198,6 +1198,7 @@ def fmod(x1, x2, out=None, **kwargs):
         _np.fmod(x1, x2, out=out)
     return _api_internal.fmod(x1, x2, out)
 
+
 @set_module('mxnet.ndarray.numpy')
 def delete(arr, obj, axis=None):
     """
@@ -4414,6 +4415,7 @@ def fmax(x1, x2, out=None, **kwargs):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         _np.fmax(x1, x2, out=out)
     return _api_internal.fmax(x1, x2, out)
+
 
 @set_module('mxnet.ndarray.numpy')
 @wrap_np_binary_func

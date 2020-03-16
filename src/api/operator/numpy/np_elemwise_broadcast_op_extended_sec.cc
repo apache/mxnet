@@ -18,8 +18,8 @@
  */
 
 /*!
- * \file np_elemwise_broadcast_op_extended.cc
- * \brief Implementation of the API of functions in src/operator/numpy/np_elemwise_broadcast_op_extended.cc
+ * \file np_elemwise_broadcast_op_extended_sec.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_elemwise_broadcast_op_extended_sec.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>

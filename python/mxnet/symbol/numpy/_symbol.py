@@ -4148,7 +4148,12 @@ def minimum(x1, x2, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
-<<<<<<< HEAD
+@wrap_np_binary_func
+def fmin(x1, x2, out=None, **kwargs):
+    return _ufunc_helper(x1, x2, _npi.fmin, _np.fmin, _npi.fmin_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
 def all(a, axis=None, out=None, keepdims=False):
     """
     Test whether all array elements along a given axis evaluate to True.
@@ -4207,11 +4212,6 @@ def any(a, axis=None, out=None, keepdims=False):
         in which case a reference to out is returned.
     """
     return _npi.any(a, axis=axis, keepdims=keepdims, out=out)
-=======
-@wrap_np_binary_func
-def fmin(x1, x2, out=None, **kwargs):
-    return _ufunc_helper(x1, x2, _npi.fmin, _np.fmin, _npi.fmin_scalar, None, out)
->>>>>>> [Numpy] Add op fmax, fmin
 
 
 @set_module('mxnet.symbol.numpy')
