@@ -1068,7 +1068,7 @@ def shuffle(x):
            [3., 4., 5.],
            [0., 1., 2.]])
     """
-    _npi.shuffle(x, out=x)
+    _api_internal.shuffle(x, x)
 
 
 def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
