@@ -473,7 +473,7 @@ def det(a):
     >>> np.linalg.det(a)
     array([-2., -3., -8.])
     """
-    return _npi.det(a)
+    return _api_internal.det(a)
 
 
 def slogdet(a):
@@ -539,7 +539,7 @@ def slogdet(a):
     >>> np.linalg.slogdet(np.eye(500) * 0.1)
     (1., -1151.2925464970228)
     """
-    return _npi.slogdet(a)
+    return tuple(_api_internal.slogdet(a))
 
 
 def solve(a, b):
@@ -891,7 +891,7 @@ def eig(a):
            [ 0.13086087, -0.04077047, -0.9325615 ],
            [ 0.4021404 , -0.29585576,  0.26117516]])
     """
-    w, v = _npi.eig(a)
+    w, v = _api_internal.eig(a)
     return (w, v)
 
 
@@ -959,5 +959,5 @@ def eigh(a, UPLO='L'):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
-    w, v = _npi.eigh(a, UPLO)
+    w, v = _api_internal.eigh(a, UPLO)
     return (w, v)

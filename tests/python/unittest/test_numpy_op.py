@@ -5921,8 +5921,7 @@ def test_np_linalg_det():
         a_sym = mx.sym.Variable("a").as_np_ndarray()
         mx_sym = mx.sym.np.linalg.det(a_sym).as_nd_ndarray()
         if 0 not in shape and grad_req != 'null':
-            check_numeric_gradient(mx_sym, [a.as_nd_ndarray()],
-                                    rtol=1e-1, atol=1e-1, dtype=dtype)
+            check_numeric_gradient(mx_sym, [a.as_nd_ndarray()], rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
 @with_seed()
