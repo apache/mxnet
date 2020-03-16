@@ -131,6 +131,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("matmul", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
     OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
+    OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
 
 
 def benchmark_helper(f, *args, **kwargs):
