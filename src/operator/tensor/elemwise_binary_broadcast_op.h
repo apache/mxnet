@@ -154,16 +154,11 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   int j = 0;
   index_t lprod = 1, rprod = 1, oprod = 1;
   for (int i = 0; i < oshape.ndim(); ++i) {
-    std::cout << "Doing " << i << std::endl;
-    std::cout << "lprod " << lprod << std::endl;
-    std::cout << "rprod " << rprod << std::endl;
     index_t l = 1, r = 1, o = oshape[i];
     if (i >= bl) l = lshape[i-bl];
     if (i >= br) r = rshape[i-br];
-    std::cout << "lr " << l << " " << r << std::endl;
     if ((lprod != rprod || l != r) &&
         lprod*l > 1 && rprod*r > 1) {
-      std::cout << "Changing new shapes" << std::endl;
       (*new_lshape)[j] = lprod;
       (*new_rshape)[j] = rprod;
       (*new_oshape)[j] = oprod;
@@ -172,9 +167,6 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
     lprod *= l;
     rprod *= r;
     oprod *= o;
-    std::cout << *new_lshape << std::endl;
-    std::cout << *new_rshape << std::endl;
-    std::cout << *new_oshape << std::endl;
   }
   if (lprod > 1 || rprod > 1) {
     (*new_lshape)[j] = lprod;
@@ -191,9 +183,6 @@ inline int BinaryBroadcastShapeCompact(const mxnet::TShape& lshape, const mxnet:
   } else {
     LOG(FATAL) << "Too many broadcast dimensions with operands " << lshape << " " << rshape;
   }
-  std::cout << "lshape " << lshape << " -> " << *new_lshape << std::endl;
-  std::cout << "rshape " << rshape << " -> " << *new_rshape << std::endl;
-  std::cout << "oshape " << oshape << " -> " << *new_oshape << std::endl;
 
   return j;
 }
