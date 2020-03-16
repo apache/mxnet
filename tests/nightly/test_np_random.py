@@ -155,6 +155,25 @@ def test_np_gamma():
                              nsamples=samples, nrepeat=trials)
 
 
+@retry(5)
+@with_seed()
+@use_np
+def test_np_laplace():
+    types = [None, "float32", "float64"]
+    ctx = mx.context.current_context()
+    samples = 1000000
+    # Generation test
+    trials = 8
+    num_buckets = 5
+    for dtype in types:
+        for loc, scale in [(0.0, 1.0), (1.0, 5.0)]:
+            buckets, probs = gen_buckets_probs_with_ppf(lambda x: ss.laplace.ppf(x, loc=loc, scale=scale), num_buckets)
+            buckets = np.array(buckets, dtype=dtype).tolist()
+            probs = [(buckets[i][1] - buckets[i][0])/scale for i in range(num_buckets)]
+            generator_mx_np = lambda x: np.random.laplace(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
+            verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
