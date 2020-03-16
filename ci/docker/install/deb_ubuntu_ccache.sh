@@ -23,8 +23,17 @@ set -ex
 
 pushd .
 
+dist = $(awk -F= '/^NAME/{print $2}' /etc/os-release)
+if [ $dist == "Ubuntu" ]; then
+    zstd = "libzstd1-dev"
+else  # Debian
+    zstd = "libzstd-dev"
+fi
+
 apt update || true
 apt install -y \
+    $zstd \
+    libb2-dev \
     autoconf \
     xsltproc
 
@@ -55,7 +64,7 @@ cd ccache
 git checkout 2e7154e67a5dd56852dae29d4c418d4ddc07c230
 
 ./autogen.sh
-./configure --disable-man --with-libzstd-from-internet --with-libb2-from-internet
+./configure --disable-man
 make -j$(nproc)
 make install
 
