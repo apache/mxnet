@@ -57,7 +57,8 @@ __global__ void binary_broadcast_kernel(const int N, const bool addto,
 template <int ndim, typename DType>
 struct VectorizedBinaryBroadcastParam {
   const DType* inputs[2];
-  DType* outputs[1];
+  DType* outputs[2];  // Only the first one is used in the computation
+                      // the other one is used for alignment checking
   Shape<ndim> stride[2];
   Shape<ndim> oshape;
   index_t size[2];
@@ -180,8 +181,29 @@ class VectorizedBinaryBroadcastFwd {
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
                      const ParamType params, const index_t N) {
-    VectorizedBinaryBroadcastKernel<aligned, DType, LType, OP, ndim, req>
-      <<<blocks, threads, 0, stream>>>(params, N);
+    int common_shape = 1;
+    int first_different = -1;
+    for (int i = ndim - 1; i >= 0; --i) {
+      if (params.stride[0][i] == params.stride[1][i]) {
+        common_shape *= params.oshape[i];
+      } else {
+        first_different = i;
+        break;
+      }
+    }
+
+    if (common_shape != 1) {
+      VectorizedBinaryBroadcastKernel<aligned, DType, LType, OP, ndim, req>
+        <<<blocks, threads, 0, stream>>>(params, N);
+    } else {
+      if (params.stride[0][first_different] == 0) {
+        VectorizedBinaryBroadcastSingleSideKernel<aligned, DType, LType, OP, ndim, req, 1>
+          <<<blocks, threads, 0, stream>>>(params, N);
+      } else {
+        VectorizedBinaryBroadcastSingleSideKernel<aligned, DType, LType, OP, ndim, req, 0>
+          <<<blocks, threads, 0, stream>>>(params, N);
+      }
+    }
   }
 };
 
@@ -209,6 +231,20 @@ void BinaryBroadcastComputeImpl2(Stream<gpu> *s, const OpReqType req,
     param.stride[0] = lstride;
     param.stride[1] = rstride;
     param.oshape = out.shape_.get<ndim>();
+
+    for (int i = ndim - 1; i >= 0; --i) {
+      /* Find the first non-1 dimension
+         to check the alignment
+      */
+      if (param.oshape[i] != 1) {
+        param.outputs[1] = param.outputs[0] + param.oshape[i];
+        break;
+      }
+      if (i == 0) {
+        /* All dimensions are 1 */
+        param.outputs[1] = param.outputs[0];
+      }
+    }
 
     VectorizedKernelLauncher<DType, LType, Kernel>(N, s, param);
   });
