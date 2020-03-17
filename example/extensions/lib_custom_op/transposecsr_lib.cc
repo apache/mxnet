@@ -116,8 +116,10 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
 MXReturnValue inferSType(std::map<std::string, std::string> attrs,
                         std::vector<int> &instypes,
                         std::vector<int> &outstypes) {
-  if (instypes[0] != kCSRStorage)
+  if (instypes[0] != kCSRStorage) {
+    std::cout << "Expected storage type is kCSRStorage" << std::endl;
     return MX_FAIL;
+  }
   outstypes[0] = instypes[0];
   return MX_SUCCESS;
 }
