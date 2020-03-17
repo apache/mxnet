@@ -418,7 +418,7 @@ class OpResource {
 /* \brief get shape value from list of shapes string
  * format: [[1]] or [[1],[2]]
  */
-std::string getShapeAt(std::string& shape, unsigned index) {
+std::string getShapeAt(const std::string& shape, unsigned index) {
   int idx = 1;  // start at 1 to skip the first square bracket [
   // find the beginning of the output shape for the particular output index
   for (unsigned x=0; x < index; x++)
@@ -431,13 +431,13 @@ std::string getShapeAt(std::string& shape, unsigned index) {
 /* \brief get dtype value from list of dtypes string
  * format: [1] or [1,2]
  */
-std::string getDtypeAt(std::string& dtype, unsigned index) {
+std::string getDtypeAt(const std::string& dtype, unsigned index) {
   // find the beginning of the output dtype for the particular output index
   int idx = 0;
   for (unsigned x=0; x < index; x++)
     idx = dtype.find(",", idx+1);
   int stop = dtype.find(",", idx+1);  // find stop index for this output dtype
-  if (stop == -1) stop = dtype.find("]",idx+1);
+  if (stop == -1) stop = dtype.find("]", idx+1);
   return dtype.substr(idx+1, stop-idx-1);
 }
 

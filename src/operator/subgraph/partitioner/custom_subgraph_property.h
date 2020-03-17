@@ -333,7 +333,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         for (unsigned i=0; i < sym.outputs.size(); i++) {
           const nnvm::NodeEntry& e = sym.outputs[i];
           if (e.node->attrs.dict.count("__dtype__") > 0) {
-            std::string& dtype = e.node->attrs.dict["__dtype__"]; // format: [1,2]
+            std::string& dtype = e.node->attrs.dict["__dtype__"];
             // add this dtype to the list
             ss << getDtypeAt(dtype, e.index);
           }
