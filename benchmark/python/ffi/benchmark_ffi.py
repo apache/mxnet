@@ -51,6 +51,9 @@ def generate_workloads():
 def prepare_workloads():
     pool = generate_workloads()
     OpArgMngr.add_workload("zeros", (2, 2))
+    OpArgMngr.add_workload("einsum", "ii", pool['2x2'], optimize=False)
+    OpArgMngr.add_workload("unique", pool['1'], return_index=True, return_inverse=True, return_counts=True, axis=-1)
+    OpArgMngr.add_workload("dstack", (pool['2x1'], pool['2x1'], pool['2x1'], pool['2x1']))
     OpArgMngr.add_workload("polyval", dnp.arange(10), pool['2x2'])
     OpArgMngr.add_workload("ediff1d", pool['2x2'], pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("nan_to_num", pool['2x2'])

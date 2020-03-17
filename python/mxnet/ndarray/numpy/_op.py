@@ -950,11 +950,8 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
     >>> u[indices]
     array([1., 2., 6., 4., 2., 3., 2.])
     """
-    ret = _npi.unique(ar, return_index, return_inverse, return_counts, axis)
-    if isinstance(ret, list):
-        return tuple(ret)
-    else:
-        return ret
+    ret = list(_api_internal.unique(ar, return_index, return_inverse, return_counts, axis))
+    return ret[0] if len(ret) == 1 else tuple(ret)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4344,7 +4341,7 @@ def dstack(arrays):
            [[2, 3]],
            [[3, 4]]])
     """
-    return _npi.dstack(*arrays)
+    return _api_internal.dstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6657,7 +6654,7 @@ def einsum(*operands, **kwargs):
 
     subscripts = operands[0]
     operands = operands[1:]
-    return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
+    return _api_internal.einsum(*operands, subscripts, out, int(optimize_arg))
 
 
 @set_module('mxnet.ndarray.numpy')
