@@ -1664,7 +1664,7 @@ def sort(a, axis=-1, kind=None, order=None):
     """
     if order is not None:
         raise NotImplementedError("order not supported here")
-    return _npi.sort(data=a, axis=axis, is_ascend=True)
+    return _api_internal.sort(a, axis, True)
 
 
 @set_module('mxnet.ndarray.numpy')

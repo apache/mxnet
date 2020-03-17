@@ -105,6 +105,13 @@ struct SortParam : public dmlc::Parameter<SortParam> {
     DMLC_DECLARE_FIELD(is_ascend).set_default(true)
       .describe("Whether to sort in ascending or descending order.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, is_ascend_s;
+    axis_s << axis;
+    is_ascend_s << is_ascend;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["is_ascend_s"] = is_ascend_s.str();
+  }
 };
 
 struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
