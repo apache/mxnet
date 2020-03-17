@@ -544,6 +544,9 @@ FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 if (USE_INTGEMM)
   list(APPEND SOURCE "3rdparty/intgemm/intgemm.cc")
+else()
+  FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
+  list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
 endif()
 
 # add nnvm to source
