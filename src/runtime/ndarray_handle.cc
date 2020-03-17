@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,19 +18,25 @@
  */
 
 /*!
- * \file op_utils.h
- * \brief Utility functions for modification in src/operator
+ * \file src/api/ndarary_handle.cc
+ * \brief Implementations of NDArrayHandle
  */
-#ifndef MXNET_API_OPERATOR_OP_UTILS_H_
-#define MXNET_API_OPERATOR_OP_UTILS_H_
-
-#include <string>
+#include <mxnet/runtime/ndarray_handle.h>
+#include <mxnet/runtime/object.h>
+#include <mxnet/runtime/registry.h>
+#include <mxnet/runtime/packed_func.h>
 
 namespace mxnet {
+namespace runtime {
 
-std::string MXNetTypeWithBool2String(int dtype);
-std::string MXNetPercentileType2String(int interpolation);
+MXNET_REGISTER_GLOBAL("ndarray_handle._GetNDArrayHandleValue")
+.set_body([](MXNetArgs args, MXNetRetValue* rv) {
+  ObjectRef obj = args[0];
+  const auto& handle = Downcast<NDArrayHandle>(obj);
+  *rv = handle->value;
+});
 
+MXNET_REGISTER_OBJECT_TYPE(NDArrayHandleObj);
+
+}  // namespace runtime
 }  // namespace mxnet
-
-#endif  // MXNET_API_OPERATOR_OP_UTILS_H_

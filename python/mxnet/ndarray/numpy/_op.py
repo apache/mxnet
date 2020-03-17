@@ -990,7 +990,7 @@ def add(x1, x2, out=None, **kwargs):
         * If both inputs are of integer types (including boolean), not supported yet.
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.add(x1, x2, out=out)
+        return _np.add(x1, x2, out=out)
     return _api_internal.add(x1, x2, out)
 
 
@@ -3698,21 +3698,9 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
     """
-    axis_size = ary.shape[axis]
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-        if axis_size % sections:
-            raise ValueError('array split does not result in an equal division')
-        section_size = int(axis_size / sections)
-        indices = [i * section_size for i in range(sections)]
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False)
-    assert isinstance(ret, list), 'Output of split should be list,' \
-                                  ' got a return type {}'.format(type(ret))
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.split(ary, indices_or_sections, axis))
 # pylint: enable=redefined-outer-name
 
 
