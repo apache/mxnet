@@ -498,15 +498,13 @@ class ElemwiseBinaryOp : public OpBase {
     });
   }
 
-  template<typename xpu, typename OP>
-  static void Compute(const nnvm::NodeAttrs &attrs,
-                      const OpContext &ctx,
-                      const std::vector<TBlob> &inputs,
-                      const std::vector<OpReqType> &req,
-                      const std::vector<TBlob> &outputs) {
+  template<typename OP>
+  static void Compute_(const nnvm::NodeAttrs &attrs,
+                       mshadow::Stream<cpu> *s,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
     using namespace mxnet_op;
-    if (req[0] == kNullOp) return;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     CHECK_EQ(inputs.size(), 2U);
     CHECK_EQ(outputs.size(), 1U);
     if (outputs[0].type_flag_ == mshadow::kBool) {
@@ -517,12 +515,32 @@ class ElemwiseBinaryOp : public OpBase {
         const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
         + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
         if (size != 0) {
-          Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
+          Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(s, size,
           outputs[0].dptr<DType>(),
           inputs[0].dptr<DType>(), inputs[1].dptr<DType>());
         }
       });
     });
+  }
+
+#if MXNET_USE_CUDA
+  template<typename OP>
+  static void Compute_(const nnvm::NodeAttrs &attrs,
+                       mshadow::Stream<gpu> *s,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs);
+#endif
+
+  template<typename xpu, typename OP>
+  static void Compute(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+    Compute_<OP>(attrs, s, inputs, req, outputs);
   }
 
   template<typename xpu, typename OP>
@@ -817,4 +835,9 @@ class ElemwiseBinaryOp : public OpBase {
 
 }  // namespace op
 }  // namespace mxnet
+
+#ifdef __CUDACC__
+#include "elemwise_binary_op.cuh"
+#endif  // __CUDACC__
+
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_H_

@@ -24,36 +24,35 @@
  */
 #include "./elemwise_unary_op.h"
 #include "./elemwise_binary_op.h"
-#include "./elemwise_binary_op.cuh"
 
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(_power)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedCompute<mshadow_op::power>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::power>);
 
 NNVM_REGISTER_OP(_backward_power)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedBackwardUseInCompute<
+.set_attr<FCompute>("FCompute<gpu>", binary::VectorizedBackwardUseInCompute<
   mshadow_op::power_grad, mshadow_op::power_rgrad>);
 
 NNVM_REGISTER_OP(_maximum)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedCompute<mshadow_op::maximum>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::maximum>);
 
 NNVM_REGISTER_OP(_backward_maximum)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedBackwardUseInCompute<mshadow_op::ge,
+.set_attr<FCompute>("FCompute<gpu>", binary::VectorizedBackwardUseInCompute<mshadow_op::ge,
   mshadow_op::lt>);
 
 NNVM_REGISTER_OP(_minimum)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedCompute<mshadow_op::minimum>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::minimum>);
 
 NNVM_REGISTER_OP(_backward_minimum)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedBackwardUseInCompute<mshadow_op::le,
+.set_attr<FCompute>("FCompute<gpu>", binary::VectorizedBackwardUseInCompute<mshadow_op::le,
   mshadow_op::gt>);
 
 NNVM_REGISTER_OP(_hypot)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedCompute<mshadow_op::hypot>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::hypot>);
 
 NNVM_REGISTER_OP(_backward_hypot)
-.set_attr<FCompute>("FCompute<gpu>", VectorizedBackwardUseInCompute<
+.set_attr<FCompute>("FCompute<gpu>", binary::VectorizedBackwardUseInCompute<
   mshadow_op::hypot_grad_left, mshadow_op::hypot_grad_right>);
 
 }  // namespace op

@@ -218,7 +218,6 @@ void BinaryBroadcastComputeImpl2(Stream<gpu> *s, const OpReqType req,
 
   Shape<ndim> lstride = calc_stride(lhs.shape_.get<ndim>());
   Shape<ndim> rstride = calc_stride(rhs.shape_.get<ndim>());
-  constexpr int Req = kWriteTo;
   MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     using LType = uint2;
     using Kernel = VectorizedBinaryBroadcastFwd<DType, OP, Req, ndim>;

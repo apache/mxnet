@@ -387,11 +387,15 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
         int choice = dmlc::GetEnv("DEBUG_BCAST", 2);
         if (choice != 0 && ctx.run_ctx.ctx.dev_type == kGPU) {
         if (choice == 1) {
-        broadcast::BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
-          inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+        broadcast::BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0],
+                                                               inputs[0].reshape(new_lshape),
+                                                               inputs[1].reshape(new_rshape),
+                                                               outputs[0].reshape(new_oshape));
         } else {
-        broadcast::BinaryBroadcastComputeImpl2<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
-          inputs[1].reshape(new_rshape), outputs[0].reshape(new_oshape));
+        broadcast::BinaryBroadcastComputeImpl2<NDim, DType, OP>(s, req[0],
+                                                                inputs[0].reshape(new_lshape),
+                                                                inputs[1].reshape(new_rshape),
+                                                                outputs[0].reshape(new_oshape));
         }
         } else {
         mshadow::Shape<NDim> oshape = new_oshape.get<NDim>();

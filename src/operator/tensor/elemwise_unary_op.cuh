@@ -37,7 +37,7 @@
 namespace mxnet {
 namespace op {
 
-namespace {
+namespace unary {
 
 using common::cuda::VectorizedKernelLauncher;
 using common::cuda::VectorizedLoader;
@@ -93,13 +93,12 @@ class VectorizedUnaryScalarFwd {
 };
 
 template<typename OP>
-void VectorizedUnaryCompute(const nnvm::NodeAttrs &attrs,
-                            const OpContext &ctx,
-                            const std::vector<TBlob> &inputs,
-                            const std::vector<OpReqType> &req,
-                            const std::vector<TBlob> &outputs) {
+void VectorizedCompute(const nnvm::NodeAttrs &attrs,
+                       mshadow::Stream<gpu>* s,
+                       const std::vector<TBlob> &inputs,
+                       const std::vector<OpReqType> &req,
+                       const std::vector<TBlob> &outputs) {
   if (req[0] == kNullOp) return;
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
   MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
@@ -117,7 +116,16 @@ void VectorizedUnaryCompute(const nnvm::NodeAttrs &attrs,
   });
 }
 
-}  // namespace
+}  // namespace unary
+
+template<typename OP>
+void UnaryOp::Compute_(const nnvm::NodeAttrs& attrs,
+                     mshadow::Stream<gpu>* s,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  unary::VectorizedCompute<OP>(attrs, s, inputs, req, outputs);
+}
 
 }  // namespace op
 }  // namespace mxnet

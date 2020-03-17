@@ -37,7 +37,7 @@
 namespace mxnet {
 namespace op {
 
-namespace {
+namespace binary {
 
 using common::cuda::VectorizedKernelLauncher;
 using common::cuda::VectorizedLoader;
@@ -227,12 +227,11 @@ class VectorizedBinaryBwdUseIn {
 
 template<typename OP>
 void VectorizedCompute(const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
+                       mshadow::Stream<gpu> *s,
                        const std::vector<TBlob> &inputs,
                        const std::vector<OpReqType> &req,
                        const std::vector<TBlob> &outputs) {
   if (req[0] == kNullOp) return;
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
@@ -310,7 +309,16 @@ void VectorizedBackwardUseInCompute(const nnvm::NodeAttrs &attrs,
   }
 }
 
-}  // namespace
+}  // namespace binary
+
+template<typename OP>
+void ElemwiseBinaryOp::Compute_(const nnvm::NodeAttrs &attrs,
+                                mshadow::Stream<gpu> *s,
+                                const std::vector<TBlob> &inputs,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<TBlob> &outputs) {
+  binary::VectorizedCompute<OP>(attrs, s, inputs, req, outputs);
+}
 
 }  // namespace op
 }  // namespace mxnet
