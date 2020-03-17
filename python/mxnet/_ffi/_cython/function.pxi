@@ -191,6 +191,7 @@ cdef class FunctionBase:
 
 _CLASS_OBJECT = None
 
+
 def _set_class_object(obj_class):
     global _CLASS_OBJECT
     _CLASS_OBJECT = obj_class

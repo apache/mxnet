@@ -46,6 +46,7 @@ class ObjectInternal {
       static_cast<Object*>(obj)->DecRef();
     }
   }
+
   /*!
    * \brief Expose TypeKey2Index
    * \param type_key The original type key.
