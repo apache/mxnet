@@ -6296,9 +6296,9 @@ def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=to
     """
     if isinstance(x, numeric_types):
         return _npi.interp(xp.astype(float), fp.astype(float), left=left,
-                           right=right, period=period, x_scalar=x)
-    return _npi.interp(xp.astype(float), fp.astype(float), x.astype(float),
-                       left=left, right=right, period=period, x_scalar=None)
+                           right=right, period=period, x_scalar=x, x_is_scalar=True)
+    return _npi.interp(xp.astype(float), fp.astype(float), x.astype(float), left=left,
+                       right=right, period=period, x_scalar=0.0, x_is_scalar=False)
 
 
 @set_module('mxnet.symbol.numpy')

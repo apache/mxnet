@@ -41,7 +41,7 @@ inline bool NumpyInterpShape(const nnvm::NodeAttrs& attrs,
     << "ValueError: Data points must be 1-D array";
   CHECK_EQ(in_attrs->at(0)[0], in_attrs->at(1)[0])
     << "ValueError: fp and xp are not of the same length";
-  oshape = param.x_scalar.has_value() ? TShape(0, 1) : in_attrs->at(2);
+  oshape = param.x_is_scalar ? TShape(0, 1) : in_attrs->at(2);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
   return shape_is_known(out_attrs->at(0));
 }
@@ -62,7 +62,7 @@ NNVM_REGISTER_OP(_npi_interp)
 .set_num_inputs([](const NodeAttrs& attrs) {
   const NumpyInterpParam& param =
     nnvm::get<NumpyInterpParam>(attrs.parsed);
-  return param.x_scalar.has_value()? 2 : 3;
+  return param.x_is_scalar ? 2 : 3;
   })
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyInterpParam>)
@@ -72,7 +72,7 @@ NNVM_REGISTER_OP(_npi_interp)
   [](const NodeAttrs& attrs) {
     const NumpyInterpParam& param =
       nnvm::get<NumpyInterpParam>(attrs.parsed);
-    return param.x_scalar.has_value() ?
+    return param.x_is_scalar ?
            std::vector<std::string>{"xp", "fp"} :
            std::vector<std::string>{"xp", "fp", "x"};
   })

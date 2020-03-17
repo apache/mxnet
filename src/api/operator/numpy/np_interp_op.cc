@@ -51,6 +51,7 @@ MXNET_REGISTER_API("_npi.interp")
   }
   if (args[2].type_code() == kDLInt || args[2].type_code() == kDLFloat) {
     param.x_scalar = args[2].operator double();
+    param.x_is_scalar = true;
     attrs.op = op;
     attrs.parsed = std::move(param);
     SetAttrDict<op::NumpyInterpParam>(&attrs);
@@ -60,7 +61,8 @@ MXNET_REGISTER_API("_npi.interp")
     auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
     *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
   } else {
-    param.x_scalar = dmlc::nullopt;
+    param.x_scalar = 0.0;
+    param.x_is_scalar = false;
     attrs.op = op;
     attrs.parsed = std::move(param);
     SetAttrDict<op::NumpyInterpParam>(&attrs);

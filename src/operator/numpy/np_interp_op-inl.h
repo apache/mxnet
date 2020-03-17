@@ -43,7 +43,8 @@ struct NumpyInterpParam : public dmlc::Parameter<NumpyInterpParam> {
   dmlc::optional<double> left;
   dmlc::optional<double> right;
   dmlc::optional<double> period;
-  dmlc::optional<double> x_scalar;
+  double x_scalar;
+  bool x_is_scalar;
   DMLC_DECLARE_PARAMETER(NumpyInterpParam) {
     DMLC_DECLARE_FIELD(left)
       .set_default(dmlc::optional<double>())
@@ -56,20 +57,23 @@ struct NumpyInterpParam : public dmlc::Parameter<NumpyInterpParam> {
       .describe("A period for the x-coordinates. This parameter allows"
                 "the proper interpolation of angular x-coordinates. Parameters"
                 "left and right are ignored if period is specified.");
-    DMLC_DECLARE_FIELD(x_scalar)
-      .set_default(dmlc::optional<double>())
-      .describe("Input x is a scalar");
+    DMLC_DECLARE_FIELD(x_scalar).set_default(0.0)
+      .describe("x is a scalar input");
+    DMLC_DECLARE_FIELD(x_is_scalar).set_default(false)
+      .describe("Flag that determines whether input is a scalar");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream left_s, right_s, period_s, x_scalar_s;
+    std::ostringstream left_s, right_s, period_s, x_scalar_s, x_is_scalar_s;
     left_s << left;
     right_s << right;
     period_s << period;
     x_scalar_s << x_scalar;
+    x_is_scalar_s << x_is_scalar;
     (*dict)["left"] = left_s.str();
     (*dict)["right"] = right_s.str();
     (*dict)["period"] = period_s.str();
     (*dict)["x_scalar"] = x_scalar_s.str();
+    (*dict)["x_is_scalar"] = x_is_scalar_s.str();
   }
 };
 
@@ -193,7 +197,7 @@ void NumpyInterpForward(const nnvm::NodeAttrs& attrs,
   dmlc::optional<double> left = param.left;
   dmlc::optional<double> right = param.right;
   dmlc::optional<double> period = param.period;
-  dmlc::optional<double> x_scalar = param.x_scalar;
+  bool x_is_scalar = param.x_is_scalar;
 
   TBlob xp = inputs[0];
   const TBlob &fp = inputs[1];
@@ -213,8 +217,8 @@ void NumpyInterpForward(const nnvm::NodeAttrs& attrs,
 
   size_t topk_temp_size;  // Used by Sort
   size_t topk_workspace_size = TopKWorkspaceSize<xpu, double>(xp, topk_param, &topk_temp_size);
-  size_t size_x = x_scalar.has_value() ? 8 : 0;
-  size_t size_norm_x = x_scalar.has_value() ? 8 : inputs[2].Size() * sizeof(double);
+  size_t size_x = x_is_scalar ? 8 : 0;
+  size_t size_norm_x = x_is_scalar ? 8 : inputs[2].Size() * sizeof(double);
   size_t size_norm_xp = xp.Size() * sizeof(double);
   size_t size_norm = period.has_value()? size_norm_x + size_norm_xp : 0;
   size_t size_idx = period.has_value()? xp.Size() * sizeof(index_t) : 0;
@@ -227,9 +231,9 @@ void NumpyInterpForward(const nnvm::NodeAttrs& attrs,
   char* workspace_curr_ptr = temp_mem.dptr_;
 
   TBlob x, idx;
-  if (x_scalar.has_value()) {
-    double x_value = x_scalar.value();
-    Tensor<cpu, 1, double> host_x(&x_value, Shape1(1), ctx.get_stream<cpu>());
+  if (x_is_scalar) {
+    double x_scalar = param.x_scalar;
+    Tensor<cpu, 1, double> host_x(&x_scalar, Shape1(1), ctx.get_stream<cpu>());
     Tensor<xpu, 1, double> device_x(reinterpret_cast<double*>(workspace_curr_ptr),
                                     Shape1(1), ctx.get_stream<xpu>());
     Copy(device_x, host_x, ctx.get_stream<xpu>());
