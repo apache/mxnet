@@ -185,7 +185,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         // set the output shapes for this node
         for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
           const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
-          mxnet::TShape shape = shapes[out_entry_id];
+          mxnet::TShape& shape = shapes[out_entry_id];
           ss << shape;
           if (oid < node->num_outputs()-1) ss << ",";
         }
@@ -314,10 +314,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         std::stringstream ss;
         ss << "[";
         for (unsigned i=0; i < sym.outputs.size(); i++) {
-          nnvm::Node* n = sym.outputs[i].node.get();
-          if (n->attrs.dict.count("__shape__") > 0) {
-            std::string& shape = n->attrs.dict["__shape__"];
-            ss << shape.substr(1, shape.length()-2);  // strip off outer square brackets []
+          const nnvm::NodeEntry& e = sym.outputs[i];
+          if (e.node->attrs.dict.count("__shape__") > 0) {
+            std::string& shape = e.node->attrs.dict["__shape__"];
+            // add this shape to the list
+            ss << getShapeAt(shape, e.index);
           }
           if (i < sym.outputs.size()-1)
             ss << ",";
@@ -330,10 +331,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         std::stringstream ss;
         ss << "[";
         for (unsigned i=0; i < sym.outputs.size(); i++) {
-          nnvm::Node* n = sym.outputs[i].node.get();
-          if (n->attrs.dict.count("__dtype__") > 0) {
-            std::string& dtype = n->attrs.dict["__dtype__"];
-            ss << dtype.substr(1, dtype.length()-2);  // strip off outer square brackets []
+          const nnvm::NodeEntry& e = sym.outputs[i];
+          if (e.node->attrs.dict.count("__dtype__") > 0) {
+            std::string& dtype = e.node->attrs.dict["__dtype__"]; // format: [1,2]
+            // add this dtype to the list
+            ss << getDtypeAt(dtype, e.index);
           }
           if (i < sym.outputs.size()-1)
             ss << ",";
@@ -344,7 +346,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       // set user specified attributes
       for (auto attr : user_attrs)
         n->attrs.dict[attr.first] = attr.second;
-
       return n;
     } else {
       return nullptr;
@@ -376,30 +377,17 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       if (orig.node->attrs.dict.count("__dtype__") > 0) {
         // get dtype string from other node
         std::string& dtype = orig.node->attrs.dict["__dtype__"];
-        int idx = 0;
-        // find the beginning of the output dtype for the particular output index
-        for (unsigned x=0; x < orig.index; x++)
-          idx = dtype.find("[", idx+1);
-        if (idx == 0) idx++;  // if output index is 0, start after first square bracket [
-        int stop = dtype.find("]", idx);  // find stop index for this output dtype
         std::stringstream ss;
-        // create new dtype string for this node
-        ss << "[" << dtype.substr(idx, stop-idx+1) << "]";
+        ss << "[" << getDtypeAt(dtype, orig.index) << "]";
         e->node->attrs.dict["__dtype__"] = ss.str();
       }
 
       if (orig.node->attrs.dict.count("__shape__") > 0) {
         // get shape string from other node
         std::string& shape = orig.node->attrs.dict["__shape__"];
-        int idx = 0;
-        // find the beginning of the output shape for the particular output index
-        for (unsigned x=0; x < orig.index; x++)
-          idx = shape.find("[", idx+1);
-        if (idx == 0) idx++;  // if output index is 0, start after first square bracket [
-        int stop = shape.find("]", idx);  // find stop index for this output shape
-        std::stringstream ss;
         // create new shape string for this node
-        ss << "[" << shape.substr(idx, stop-idx+1) << "]";
+        std::stringstream ss;
+        ss << "[" << getShapeAt(shape, orig.index) << "]";
         e->node->attrs.dict["__shape__"] = ss.str();
       }
     }

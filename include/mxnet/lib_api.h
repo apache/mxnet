@@ -415,6 +415,32 @@ class OpResource {
 #define MX_STR_DTYPE "__dtype__"
 #define MX_STR_SHAPE "__shape__"
 
+/* \brief get shape value from list of shapes string
+ * format: [[1]] or [[1],[2]]
+ */
+std::string getShapeAt(std::string& shape, unsigned index) {
+  int idx = 1;  // start at 1 to skip the first square bracket [
+  // find the beginning of the output shape for the particular output index
+  for (unsigned x=0; x < index; x++)
+    idx = shape.find("[", idx+1);
+  int stop = shape.find("]", idx);  // find stop index for this output shape
+  // add this shape to the list
+  return shape.substr(idx, stop-idx+1);
+}
+
+/* \brief get dtype value from list of dtypes string
+ * format: [1] or [1,2]
+ */
+std::string getDtypeAt(std::string& dtype, unsigned index) {
+  // find the beginning of the output dtype for the particular output index
+  int idx = 0;
+  for (unsigned x=0; x < index; x++)
+    idx = dtype.find(",", idx+1);
+  int stop = dtype.find(",", idx+1);  // find stop index for this output dtype
+  if (stop == -1) stop = dtype.find("]",idx+1);
+  return dtype.substr(idx+1, stop-idx-1);
+}
+
 /*! \brief Types of JSON objects */
 enum JsonType {ERR, STR, NUM, LIST, MAP};
 
