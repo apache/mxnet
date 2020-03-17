@@ -18,45 +18,22 @@
  */
 
 /*!
- * \file np_broadcast_reduce_op_value.cc
- * \brief Implementation of the API of functions in
- * src/operator/tensor/np_broadcast_reduce_op_value.cc
+ * \file np_moments_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_moments_op.cc
  */
+
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
-#include "../../../operator/tensor/broadcast_reduce_op.h"
 #include "../../../operator/numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.broadcast_to")
+MXNET_REGISTER_API("_npi.std")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_broadcast_to");
-  nnvm::NodeAttrs attrs;
-  op::BroadcastToParam param;
-  if (args[1].type_code() == kDLInt) {
-    param.shape = TShape(1, args[1].operator int64_t());
-  } else {
-    param.shape = TShape(args[1].operator ObjectRef());
-  }
-  attrs.parsed = std::move(param);
-  attrs.op = op;
-  SetAttrDict<op::BroadcastToParam>(&attrs);
-
-  int num_outputs = 0;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  int num_inputs = 1;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
-});
-
-MXNET_REGISTER_API("_npi.sum")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_sum");
-  op::NumpyReduceAxesParam param;
+  const nnvm::Op* op = Op::Get("_npi_std");
+  op::NumpyMomentsParam param;
   nnvm::NodeAttrs attrs;
   attrs.op = op;
 
@@ -78,23 +55,19 @@ MXNET_REGISTER_API("_npi.sum")
     param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
 
+  // parse ddof
+  param.ddof = args[3].operator int();
+
   // parse keepdims
-  if (args[3].type_code() == kNull) {
+  if (args[4].type_code() == kNull) {
     param.keepdims = false;
   } else {
-    param.keepdims = args[3].operator bool();
-  }
-
-  // parse initial
-  if (args[4].type_code() == kNull) {
-    param.initial = dmlc::nullopt;
-  } else {
-    param.initial = args[4].operator double();
+    param.keepdims = args[4].operator bool();
   }
 
   attrs.parsed = std::move(param);
 
-  SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
+  SetAttrDict<op::NumpyMomentsParam>(&attrs);
 
   NDArray* inputs[] = {args[0].operator NDArray*()};
   int num_inputs = 1;
@@ -111,43 +84,59 @@ MXNET_REGISTER_API("_npi.sum")
   }
 });
 
-MXNET_REGISTER_API("_npi.mean")
+MXNET_REGISTER_API("_npi.var")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_mean");
+  const nnvm::Op* op = Op::Get("_npi_var");
+  op::NumpyMomentsParam param;
   nnvm::NodeAttrs attrs;
-  op::NumpyReduceAxesParam param;
+  attrs.op = op;
+
+  // parse axis
   if (args[1].type_code() == kNull) {
-    param.axis = dmlc::optional<mxnet::Tuple<int>>();
+    param.axis = dmlc::nullopt;
   } else {
-    param.axis = mxnet::Tuple<int>(args[1].operator ObjectRef());
+    if (args[1].type_code() == kDLInt) {
+      param.axis = Tuple<int>(1, args[1].operator int64_t());
+    } else {
+      param.axis = Tuple<int>(args[1].operator ObjectRef());
+    }
   }
+
+  // parse dtype
   if (args[2].type_code() == kNull) {
-    param.dtype = dmlc::optional<int>();
+    param.dtype = dmlc::nullopt;
   } else {
     param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
 
-  if (args[3].type_code() == kNull) {
+  // parse ddof
+  param.ddof = args[3].operator int();
+
+  // parse keepdims
+  if (args[4].type_code() == kNull) {
     param.keepdims = false;
   } else {
-    param.keepdims = args[3].operator bool();
+    param.keepdims = args[4].operator bool();
   }
-  param.initial = dmlc::optional<double>();
+
   attrs.parsed = std::move(param);
-  attrs.op = op;
-  SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
+
+  SetAttrDict<op::NumpyMomentsParam>(&attrs);
+
+  NDArray* inputs[] = {args[0].operator NDArray*()};
   int num_inputs = 1;
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  NDArray* out = args[4].operator mxnet::NDArray*();
-  NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+
+  NDArray* outputs[] = {args[5].operator NDArray*()};
+  NDArray** out = (outputs[0] == nullptr) ? nullptr : outputs;
+  int num_outputs = (outputs[0] != nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, out);
+
   if (out) {
-    *ret = PythonArg(4);
+    *ret = PythonArg(5);
   } else {
-    *ret = ndoutputs[0];
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
   }
 });
 
-}  // namespace mxnet
+};  // namespace mxnet
