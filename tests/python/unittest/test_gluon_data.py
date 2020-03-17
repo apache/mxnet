@@ -272,7 +272,7 @@ def test_multi_worker_dataloader_release_pool():
 
     from sys import platform
     if platform == 'darwin':
-        print('Skip for MacOS due to flaky failures')
+        print('Skip for MacOS due to https://github.com/apache/incubator-mxnet/issues/17782')
         return
 
     for _ in range(10):
