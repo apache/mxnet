@@ -33,6 +33,7 @@ Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
+cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
@@ -90,9 +91,10 @@ if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
   check_language(CUDA)
-  if (NOT CMAKE_CUDA_COMPILER_LOADED AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
-    set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
-    message(WARNING "CMAKE_CUDA_COMPILER guessed: ${CMAKE_CUDA_COMPILER}")
+  if (NOT CMAKE_CUDA_COMPILER AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
+    set(ENV{CUDACXX} "/usr/local/cuda/bin/nvcc")
+    message(WARNING "CMAKE_CUDA_COMPILER guessed: " $ENV{CUDACXX} "\n"
+      "Please fix your cuda installation: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-post")
   endif()
   enable_language(CUDA)
   set(CMAKE_CUDA_STANDARD 11)
@@ -419,17 +421,19 @@ if(USE_OPENMP)
     set(CMAKE_BUILD_TYPE Release)
     set(OPENMP_ENABLE_LIBOMPTARGET OFF CACHE BOOL "LLVM OpenMP offloading support")  # Requires CMP0077 CMake 3.13
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+    # Disable warnings
+    target_compile_options(omp PRIVATE
+      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:-w>
+      $<$<CXX_COMPILER_ID:MSVC>:/w>)
   endfunction()
 
-  # This should build on Windows, but there's some problem and I don't have a Windows box, so
-  # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
      AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
+     AND NOT BLAS STREQUAL "MKL"
      AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
-    list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
     list(APPEND mxnet_LINKER_LIBS omp)
     if(UNIX)
       list(APPEND mxnet_LINKER_LIBS pthread)
@@ -442,8 +446,11 @@ if(USE_OPENMP)
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      if(NOT BLAS STREQUAL "MKL")
+        # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      endif()
       add_definitions(-DMXNET_USE_OPENMP=1)
     endif()
   endif()
@@ -624,6 +631,19 @@ if(USE_CUDA)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 
+  if(UNIX)
+    if(USE_NVML)
+      find_package(NVML)
+      if(NVML_FOUND)
+        include_directories(${NVML_INCLUDE_DIRS})
+        list(APPEND mxnet_LINKER_LIBS ${NVML_LIBRARIES})
+        add_definitions(-DMXNET_USE_NVML=1)
+      else()
+        add_definitions(-DMXNET_USE_NVML=0)
+        message(WARNING "Could not find NVML libraries")
+      endif()
+    endif()
+  endif()
   if(USE_NCCL)
     find_package(NCCL)
     if(NCCL_FOUND)
@@ -690,7 +710,8 @@ if(UNIX)
     # 1) variables used in '#pragma omp parallel' are considered unused
     target_compile_options(mxnet_static PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=unused-variable>")
     if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Werror cross-execution-space-call")
+      # Note: "=" is required to avoid breaking ccache
+      string(APPEND CMAKE_CUDA_FLAGS " -Werror=cross-execution-space-call")
     endif()
   endif()
 elseif(MSVC)

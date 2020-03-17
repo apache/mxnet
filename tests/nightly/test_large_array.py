@@ -39,6 +39,7 @@ SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
+RNN_LARGE_TENSOR = 2**28
 
 
 def test_nn():
@@ -479,7 +480,6 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
-        assert out.shape[2] == 1
         
     def check_spatial_transformer():
         data = nd.random_normal(shape=(2, 2**29, 1, 6))
@@ -530,6 +530,39 @@ def test_nn():
 
         # Trigger lazy evaluation of the output NDArray and ensure that it has been filled
         assert type(out[0, 0].asscalar()).__name__ == 'float32'
+        
+    def check_rnn():
+        data = nd.random_normal(shape=(RNN_LARGE_TENSOR, 4, 4))
+        parameters_relu_tanh = nd.random_normal(shape=(7,))
+        parameters_lstm = nd.random_normal(shape=(28,))
+        parameters_gru = nd.random_normal(shape=(21,))
+        state = nd.random_normal(shape=(1, 4, 1))
+        state_cell = nd.random_normal(shape=(1, 4, 1))
+        mode_relu = 'rnn_relu'
+        mode_tanh = 'rnn_tanh'
+        mode_lstm = 'lstm'
+        mode_gru = 'gru'
+        state_size = 1
+        num_layers = 1
+
+        out_relu = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_relu,
+                          state_size=state_size, num_layers=num_layers)
+        
+        out_tanh = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_tanh,
+                          state_size=state_size, num_layers=num_layers)
+        
+        out_lstm = nd.RNN(data=data, parameters=parameters_lstm, state=state, mode=mode_lstm,
+                          state_cell=state_cell, state_size=state_size, num_layers=num_layers)
+
+        out_gru = nd.RNN(data=data, parameters=parameters_gru, state=state, mode=mode_gru,
+                         state_size=state_size, num_layers=num_layers)
+
+        for out in [out_relu, out_tanh, out_lstm, out_gru]:
+            assert out.shape[0] == RNN_LARGE_TENSOR
+            assert out.shape[1] == 4
+            assert out.shape[2] == 1
+
+            assert type(out[0, 0, 0].asscalar()).__name__ == 'float32'
 
     check_gluon_embedding()
     check_fully_connected()
@@ -556,6 +589,7 @@ def test_nn():
     check_ravel()
     check_cumsum()
     check_multi_lars()
+    check_rnn()
 
 
 def test_tensor():

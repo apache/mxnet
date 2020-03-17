@@ -175,13 +175,13 @@ def compile_unix_int64_gpu() {
 }
 
 def compile_unix_mkl_cpu() {
-    return ['CPU: MKL Makefile': {
+    return ['CPU: MKL': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-mkl') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
-            utils.pack_lib('cpu_mkl', mx_mkldnn_lib_make)
+            utils.pack_lib('cpu_mkl', mx_lib)
           }
         }
       }
@@ -217,13 +217,13 @@ def compile_unix_mkldnn_cpu_make() {
 }
 
 def compile_unix_mkldnn_mkl_cpu() {
-    return ['CPU: MKLDNN_MKL Makefile': {
+    return ['CPU: MKLDNN_MKL': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
-            utils.pack_lib('mkldnn_mkl_cpu', mx_mkldnn_lib_make)
+            utils.pack_lib('mkldnn_mkl_cpu', mx_mkldnn_lib)
           }
         }
       }
@@ -584,6 +584,20 @@ def compile_unix_asan_cpu() {
     }]
 }
 
+def compile_unix_gcc8_werror() {
+    return ['CPU: GCC8 -WError': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-gcc8') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_gcc8_werror', false)
+            utils.pack_lib('cpu_gcc8', mx_lib)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_amalgamation_min() {
     return ['Amalgamation MIN': {
       node(NODE_LINUX_CPU) {
@@ -777,11 +791,11 @@ def test_unix_python3_cpu() {
 }
 
 def test_unix_python3_mkl_cpu() {
-    return ['Python3: MKL-CPU Makefile': {
+    return ['Python3: MKL-CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
-            utils.unpack_and_init('cpu_mkl', mx_lib_make)
+            utils.unpack_and_init('cpu_mkl', mx_lib)
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -893,11 +907,11 @@ def test_unix_python3_mkldnn_cpu() {
 }
 
 def test_unix_python3_mkldnn_mkl_cpu() {
-    return ['Python3: MKLDNN-MKL-CPU Makefile': {
+    return ['Python3: MKLDNN-MKL-CPU': {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-mkl-cpu') {
           try {
-            utils.unpack_and_init('mkldnn_mkl_cpu', mx_mkldnn_lib_make)
+            utils.unpack_and_init('mkldnn_mkl_cpu', mx_lib)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {

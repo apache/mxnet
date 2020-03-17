@@ -159,37 +159,24 @@ build_ubuntu_cpu_release() {
     cd /work/build
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_MKLDNN=OFF \
-        -DUSE_CUDA=OFF \
-        -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_cpu_mkldnn_release() {
-    set -ex
-    cd /work/build
-    cmake \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_release() {
+build_ubuntu_cpu_native_release() {
     set -ex
     cd /work/build
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
-        -DUSE_DIST_KVSTORE=ON \
-        -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDA=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_mkldnn_release() {
+build_ubuntu_gpu_release() {
     set -ex
     cd /work/build
     cmake \
@@ -204,7 +191,7 @@ build_ubuntu_gpu_mkldnn_release() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu92, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -215,22 +202,19 @@ build_dynamic_libmxnet() {
 
     if [[ ${mxnet_variant} = "cpu" ]]; then
         build_ubuntu_cpu_release
-    elif [[ ${mxnet_variant} = "mkl" ]]; then
-        build_ubuntu_cpu_mkldnn_release
+    elif [[ ${mxnet_variant} = "native" ]]; then
+        build_ubuntu_cpu_native_release
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         build_ubuntu_gpu_release
-    elif [[ ${mxnet_variant} =~ cu[0-9]+mkl$ ]]; then
-        build_ubuntu_gpu_mkldnn_release
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
+        exit 1
     fi
 }
 
 build_jetson() {
     set -ex
     pushd .
-
-    #build_ccache_wrappers
 
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
@@ -254,7 +238,6 @@ build_armv6() {
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=OFF \
@@ -281,7 +264,6 @@ build_armv7() {
     # file tries to add -llapack. Lapack functionality though, requires -lgfortran
     # to be linked additionally.
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CROSSCOMPILING=ON \
@@ -301,7 +283,6 @@ build_armv7() {
 }
 
 build_armv8() {
-    build_ccache_wrappers
     cd /work/build
     cmake \
         -DUSE_CUDA=OFF\
@@ -325,7 +306,6 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DANDROID=ON\
         -DUSE_CUDA=OFF\
@@ -343,7 +323,6 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -385,23 +364,6 @@ build_centos7_cpu_make() {
         USE_DIST_KVSTORE=1 \
         USE_SIGNAL_HANDLER=1 \
         -j$(nproc)
-}
-
-build_amzn_linux_cpu() {
-    set -ex
-    cd /work/build
-    build_ccache_wrappers
-    cmake \
-        -DUSE_CUDA=OFF\
-        -DUSE_OPENCV=ON\
-        -DUSE_OPENMP=ON\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_DIST_KVSTORE=ON\
-        -G Ninja /work/mxnet
-    ninja
 }
 
 build_centos7_mkldnn() {
@@ -470,24 +432,21 @@ build_ubuntu_cpu_openblas_make() {
 
 build_ubuntu_cpu_mkl() {
     set -ex
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=mkl                  \
-        USE_TVM_OP=1                  \
-        USE_MKLDNN=0                  \
-        USE_INTEL_PATH=/opt/intel     \
-        USE_DIST_KVSTORE=1            \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -504,7 +463,6 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
@@ -525,7 +483,6 @@ build_ubuntu_cpu_cmake_asan() {
     cd /work/build
     export CXX=g++-8
     export CC=gcc-8
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -544,6 +501,20 @@ build_ubuntu_cpu_cmake_asan() {
     ASAN_OPTIONS=detect_leaks=0 \
     LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
     make -j $(nproc) mlp_cpu
+}
+
+build_ubuntu_cpu_gcc8_werror() {
+    set -ex
+    cd /work/build
+    export CXX=g++-8
+    export CC=gcc-8
+    cmake \
+        -DUSE_CUDA=OFF \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_CPP_PACKAGE=ON \
+        -DMXNET_USE_CPU=ON \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_cpu_clang39() {
@@ -647,16 +618,16 @@ build_ubuntu_cpu_mkldnn() {
 
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=mkl                  \
-        USE_SIGNAL_HANDLER=1          \
-        USE_INTEL_PATH=/opt/intel/    \
-        -j$(nproc)
+    cd /work/build
+    cmake \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_BLAS=MKL \
+        -GNinja /work/mxnet
+    ninja
 }
 
 build_ubuntu_gpu() {
@@ -666,8 +637,6 @@ build_ubuntu_gpu() {
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
-
-    build_ccache_wrappers
 
     # Build ONNX
     pushd .
@@ -720,7 +689,7 @@ build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -734,7 +703,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -749,7 +718,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -805,7 +774,7 @@ build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_CUDA=ON \
@@ -840,7 +809,6 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -862,7 +830,6 @@ build_ubuntu_gpu_cmake() {
 build_ubuntu_gpu_cmake_no_rtc() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -885,7 +852,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
 build_ubuntu_gpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -907,7 +873,6 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
@@ -924,7 +889,6 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \

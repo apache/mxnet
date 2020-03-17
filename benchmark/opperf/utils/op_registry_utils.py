@@ -112,8 +112,8 @@ def prepare_op_inputs(arg_params, arg_values):
 def prepare_op_inputs(op, arg_params, int64_tensor):
     inputs = []
 
-    # 4d tensor is needed only by following two ops
-    ops_4d = {'depth_to_space', 'space_to_depth'}
+    # 4d tensor is needed by following ops
+    ops_4d = ['depth_to_space', 'space_to_depth', 'pad']
 
     # 3d tensor is needed by following ops
     ops_3d = {'CTCLoss', 'ctc_loss'}
@@ -135,6 +135,9 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
     int_only = {'random_randint'}
     float_only = {'log_softmax', 'softmax', 'softmin'}
 
+    # following ops need atleast 1 dim of size 1
+    ops_dim1 = ['broadcast_axis', 'broadcast_like', 'broadcast_to', 'broadcast_axes']
+
     if int64_tensor == 'on':
         default_inputs = DEFAULTS_INPUTS_LARGE_TENSOR
         custom_data |= custom_data_int64
@@ -149,30 +152,43 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
         # added a logic for using float only dtype as input for ops that take only floats
         # same for randint (which is the only op that takes only int as input)
         # rest all operators take int as well as float
-        if op in int_only and arg_name == "dtype":
-            arg_values[arg_name] = default_inputs["dtype_int"]
-        elif (op.startswith(('random','sample')) or op in float_only) and arg_name == "dtype":
-            arg_values[arg_name] = default_inputs["dtype_float"]
-        elif "NDArray" in arg_type and op == "ravel_multi_index":
-            arg_values[arg_name] = default_inputs["ravel_data"]
-        elif op in custom_data and arg_name + "_" + op.lower() in default_inputs:
-            arg_values[arg_name] = default_inputs[arg_name + "_" + op.lower()]
-        elif "NDArray" in arg_type and arg_name + "_nd" in default_inputs:
-            arg_values[arg_name] = default_inputs[arg_name + "_nd"]
-        elif "NDArray" in arg_type and op in ops_4d and arg_name + "_4d" in default_inputs:
-            arg_values[arg_name] = default_inputs[arg_name + "_4d"]
-        elif "NDArray" in arg_type and op in ops_3d and arg_name + "_3d" in default_inputs:
-            arg_values[arg_name] = default_inputs[arg_name + "_3d"]
-        elif "NDArray" in arg_type and op == 'softmax_cross_entropy':
-            arg_values[arg_name] = default_inputs[arg_name + "_smce"]
-        elif arg_name in default_inputs:
-            arg_values[arg_name] = default_inputs[arg_name]
-        elif "float" in arg_type and arg_name + "_float" in default_inputs:
-            arg_values[arg_name] = default_inputs[arg_name + "_float"]
-        elif "Shape" in arg_type and arg_name + "_shape" in default_inputs:
-            # This is for cases where in some ops 'axis' is Int in some ops a shape tuple.
-            # Ex: axis in sum is shape, axis in sort is int.
-            arg_values[arg_name] = default_inputs[arg_name + "_shape"]
+        if "NDArray" in arg_type:
+            if op in int_only and arg_name == "dtype":
+                arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
+            elif (op.startswith(('random','sample')) or op in float_only) and arg_name == "dtype":
+                arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
+            elif op == "ravel_multi_index":
+                arg_values[arg_name] = DEFAULTS_INPUTS["ravel_data"]
+            elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
+            elif arg_name + "_nd" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_nd"]
+            elif op in ops_3d and arg_name + "_3d" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_3d"]
+            elif op == 'softmax_cross_entropy':
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_smce"]
+            elif op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
+            elif op in ops_dim1 and arg_name + "_dim1" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_dim1"]
+            # default case
+            elif arg_name in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
+        else:
+            # arg_type is not NDArray
+            if op in int_only and arg_name == "dtype":
+                arg_values[arg_name] = DEFAULTS_INPUTS["dtype_int"]
+            elif (op.startswith(('random','sample')) or op in float_only) and arg_name == "dtype":
+                arg_values[arg_name] = DEFAULTS_INPUTS["dtype_float"]
+            elif op in custom_data and arg_name + "_" + op.lower() in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_" + op.lower()]
+            elif op in ops_4d and arg_name + "_4d" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_4d"]
+            elif op in ops_dim1 and arg_name + "_dim1" in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name + "_dim1"]
+            #default case
+            elif arg_name in DEFAULTS_INPUTS:
+                arg_values[arg_name] = DEFAULTS_INPUTS[arg_name]
 
     # Number of different inputs we want to use to test
     # the operator
@@ -434,7 +450,8 @@ def get_all_rearrange_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    rearrange_ops = {'transpose','swapaxes','flip','depth_to_space','space_to_depth'}
+    rearrange_ops = ['transpose', 'swapaxes', 'flip', 'depth_to_space',
+                     'space_to_depth', 'SwapAxis', 'reverse']
 
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
@@ -480,7 +497,7 @@ def get_all_indexing_routines():
     """
     indexing_routines = {'slice', 'slice_axis', 'slice_like', 'take', 'one_hot',
                          'where', 'ravel_multi_index', 'gather_nd', 'pick'}
-    
+
     # Get all mxnet operators
     mx_operators = _get_all_mxnet_operators()
 
@@ -510,6 +527,69 @@ def get_all_loss_operators():
         if op_name in loss_ops:
             loss_mx_operators[op_name] = mx_operators[op_name]
     return loss_mx_operators
+
+
+def get_all_shape_operators():
+    """Gets all array shape manipulation operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    shape_ops = ['split', 'SliceChannel', 'diag', 'reshape',
+                     'reshape_like', 'size_array', 'shape_array']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Shape Manipulation operators
+    shape_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in shape_ops:
+            shape_mx_operators[op_name] = mx_operators[op_name]
+    return shape_mx_operators
+
+
+def get_all_expanding_operators():
+    """Gets all array expanding operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    expanding_ops = ['broadcast_axes', 'broadcast_axis', 'broadcast_to', 'broadcast_like',
+                     'repeat', 'tile', 'pad', 'expand_dims']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Expanding operators
+    expanding_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in expanding_ops:
+            expanding_mx_operators[op_name] = mx_operators[op_name]
+    return expanding_mx_operators
+
+
+def get_all_rounding_operators():
+    """Gets all array rounding operators registered with MXNet.
+
+    Returns
+    -------
+    {"operator_name": {"has_backward", "nd_op_handle", "params"}}
+    """
+    rounding_ops = ['round', 'rint', 'fix', 'floor',
+                     'ceil', 'trunc']
+
+    # Get all mxnet operators
+    mx_operators = _get_all_mxnet_operators()
+
+    # Filter for Array Rounding operators
+    rounding_mx_operators = {}
+    for op_name, op_params in mx_operators.items():
+        if op_name in rounding_ops:
+            rounding_mx_operators[op_name] = mx_operators[op_name]
+    return rounding_mx_operators
 
 
 def get_operators_with_no_benchmark(operators_with_benchmark):

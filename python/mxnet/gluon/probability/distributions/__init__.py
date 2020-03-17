@@ -33,6 +33,8 @@ from .uniform import *
 
 from .normal import *
 
+from .laplace import *
+
 from .cauchy import *
 
 from .half_cauchy import *

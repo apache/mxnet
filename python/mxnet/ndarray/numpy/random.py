@@ -20,10 +20,12 @@ import numpy as np
 from ...context import current_context
 from . import _internal as _npi
 from ..ndarray import NDArray
+from . import _api_internal
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           'logistic', 'gumbel', "rayleigh",
+           'logistic', 'gumbel', "rayleigh", 'f',
+           'laplace',
            "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
@@ -865,6 +867,70 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     return out.astype(dtype)
 
 
+def f(dfnum, dfden, size=None, ctx=None):
+    r"""Draw samples from an F distribution.
+
+    Samples are drawn from an F distribution with specified parameters,
+    `dfnum` (degrees of freedom in numerator) and `dfden` (degrees of
+    freedom in denominator), where both parameters must be greater than
+    zero.
+
+    The random variate of the F distribution (also known as the
+    Fisher distribution) is a continuous probability distribution
+    that arises in ANOVA tests, and is the ratio of two chi-square
+    variates.
+
+    Parameters
+    ----------
+    dfnum : float or ndarray of floats
+        Degrees of freedom in numerator, must be > 0.
+    dfden : float or ndarray of float
+        Degrees of freedom in denominator, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``dfnum`` and ``dfden`` are both scalars.
+        Otherwise, ``np.broadcast(dfnum, dfden).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Fisher distribution.
+
+    Examples
+    --------
+    An example from Glantz[1], pp 47-40:
+
+    Two groups, children of diabetics (25 people) and children from people
+    without diabetes (25 controls). Fasting blood glucose was measured,
+    case group had a mean value of 86.1, controls had a mean value of
+    82.2. Standard deviations were 2.09 and 2.49 respectively. Are these
+    data consistent with the null hypothesis that the parents diabetic
+    status does not affect their children's blood glucose levels?
+    Calculating the F statistic from the data gives a value of 36.01.
+
+    Draw samples from the distribution:
+
+    >>> dfnum = 1. # between group degrees of freedom
+    >>> dfden = 48. # within groups degrees of freedom
+    >>> s = np.random.f(dfnum, dfden, 1000)
+
+    The lower bound for the top 1% of the samples is :
+
+    >>> np.sort(s)[-10]
+    7.61988120985 # random
+
+    So there is about a 1% chance that the F statistic will exceed 7.62,
+    the measured value is 36, so the null hypothesis is rejected at the 1%
+    level.
+    """
+    X = chisquare(df=dfnum, size=size, ctx=ctx)
+    Y = chisquare(df=dfden, size=size, ctx=ctx)
+    return (X * dfden) / (Y * dfnum)
+
+
 def chisquare(df, size=None, dtype=None, ctx=None):
     r"""
     chisquare(df, size=None, dtype=None, ctx=None)
@@ -939,7 +1005,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
         ctx = current_context()
     if size == ():
         size = None
-    return gamma(df/2, 1/2, size=size, dtype=dtype, ctx=ctx)
+    return gamma(df/2, 2, size=size, dtype=dtype, ctx=ctx)
 
 
 def rand(*size, **kwargs):
@@ -1005,5 +1071,41 @@ def shuffle(x):
     _npi.shuffle(x, out=x)
 
 
-def multivariate_normal(mean, cov, size=None):
-    return _npi.mvn_fallback(mean, cov, shape=size)
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a Laplace distribution.
+
+    Samples are distributed according to a Laplace distribution parametrized
+    by *loc* (mean) and *scale* (the exponential decay).
+
+
+    Parameters
+    ----------
+    loc : float, The position of the distribution peak.
+
+    scale : float, the exponential decay.
+
+    size : int or tuple of ints, optional. Output shape.
+        If the given shape is, e.g., (m, n, k), then m * n * k samples are drawn.
+        Default is None, in which case a single value is returned.
+
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized Laplace distribution.
+    """
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = np.dtype(dtype).name
+    if size == ():
+        size = None
+    return _api_internal.laplace(loc, scale, size, dtype, ctx, out)

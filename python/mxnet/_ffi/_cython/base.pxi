@@ -32,14 +32,11 @@ cdef enum MXNetTypeCode:
     kNull = 4
     kMXNetType = 5
     kMXNetContext = 6
-    kArrayHandle = 7
-    kObjectHandle = 8
-    kModuleHandle = 9
-    kFuncHandle = 10
-    kStr = 11
-    kBytes = 12
-    kNDArrayContainer = 13
-    kNDArrayHandle = 14
+    kObjectHandle = 7
+    kStr = 8
+    kBytes = 9
+    kPyArg = 10
+    kNDArrayHandle = 11
     kExtBegin = 15
 
 cdef extern from "mxnet/runtime/c_runtime_api.h":

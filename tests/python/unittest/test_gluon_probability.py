@@ -201,6 +201,76 @@ def test_gluon_normal():
 
 @with_seed()
 @use_np
+def test_gluon_laplace():
+    class TestLaplace(HybridBlock):
+        def __init__(self, func):
+            super(TestLaplace, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, loc, scale, *args):
+            normal = mgp.Laplace(loc, scale, F)
+            return getattr(normal, self._func)(*args)
+
+    shapes = [(), (1,), (2, 3), 6]
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.laplace(size=shape)
+        net = TestLaplace("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.laplace(loc.asnumpy(),
+                        scale.asnumpy()).logpdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test cdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.laplace(size=shape)
+        net = TestLaplace("cdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.laplace(loc.asnumpy(),
+                        scale.asnumpy()).cdf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test icdf
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.uniform(size=shape)
+        net = TestLaplace("icdf")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale, samples).asnumpy()
+        np_out = ss.laplace(loc.asnumpy(),
+                        scale.asnumpy()).ppf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        net = TestLaplace("entropy")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(loc, scale).asnumpy()
+        np_out = ss.laplace(loc.asnumpy(),
+                        scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_cauchy():
     class TestCauchy(HybridBlock):
         def __init__(self, func):

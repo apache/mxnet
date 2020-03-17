@@ -21,6 +21,8 @@
  * \file np_init_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_init_op.cc
  */
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/tensor/init_op.h"
 
@@ -44,11 +46,12 @@ MXNET_REGISTER_API("_npi.zeros")
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
+  SetAttrDict<op::InitOpParam>(&attrs);
   if (args[2].type_code() != kNull) {
     attrs.dict["ctx"] = args[2].operator std::string();
   }
   int num_outputs = 0;
-  auto ndoutputs = Invoke<op::InitOpParam>(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
