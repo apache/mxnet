@@ -35,6 +35,7 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include "../../api/operator/op_utils.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -239,7 +240,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     (*dict)["step"] = step_s.str();
     (*dict)["repeat"] = repeat_s.str();
     (*dict)["infer_range"] = infer_range_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
   }
 };
 
@@ -342,7 +343,7 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     (*dict)["stop"] = stop_s.str();
     (*dict)["num"] = num_s.str();
     (*dict)["endpoint"] = endpoint_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
   }
 };
 

@@ -28,6 +28,7 @@
 
 #include <string>
 #include <vector>
+#include "../../api/operator/op_utils.h"
 #include "../tensor/init_op.h"
 
 namespace mxnet {
@@ -63,7 +64,7 @@ struct NumpyWindowsParam : public dmlc::Parameter<NumpyWindowsParam> {
     M_s << M;
     dtype_s << dtype;
     (*dict)["M"] = M_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
   }
 };
 

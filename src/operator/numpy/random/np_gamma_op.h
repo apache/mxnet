@@ -31,6 +31,7 @@
 #include <string>
 #include <algorithm>
 #include "./dist_common.h"
+#include "../../../api/operator/op_utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
@@ -76,7 +77,7 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
     size_s << size;
     (*dict)["shape"] = shape_s.str();
     (*dict)["scale"] = scale_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
     (*dict)["size"] = size_s.str();
   }
 };

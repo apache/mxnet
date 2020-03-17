@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../api/operator/op_utils.h"
 #include "../tensor/init_op.h"
 #include "../tensor/elemwise_unary_op.h"
 #include "../../api/operator/op_utils.h"
@@ -72,7 +73,7 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     (*dict)["N"] = N_s.str();
     (*dict)["M"] = M_s.str();
     (*dict)["k"] = k_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
   }
 };
 
@@ -275,7 +276,7 @@ struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
     (*dict)["num"] = num_s.str();
     (*dict)["endpoint"] = endpoint_s.str();
     (*dict)["base"] = base_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
   }
 };
 

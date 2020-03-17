@@ -31,6 +31,7 @@
 #include "../nn/moments-inl.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -73,7 +74,11 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
     keepdims_s << keepdims;
     initial_s << initial;
     (*dict)["axis"] = axis_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = String2MXNetTypeWithBool(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
     (*dict)["keepdims"] = keepdims_s.str();
     (*dict)["initial"] = initial_s.str();
   }

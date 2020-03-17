@@ -29,8 +29,8 @@
 namespace mxnet {
 
 inline static void SetNumpyWindowsParam(runtime::MXNetArgs args,
-                                 runtime::MXNetRetValue* ret,
-                                 const nnvm::Op* op) {
+                                        runtime::MXNetRetValue* ret,
+                                        const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
   op::NumpyWindowsParam param;

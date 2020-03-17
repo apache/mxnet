@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "../../../api/operator/op_utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -74,7 +75,7 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
     size_s << size;
     (*dict)["low"] = low_s.str();
     (*dict)["high"] = high_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
     (*dict)["size"] = size_s.str();
   }
 };

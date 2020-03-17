@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "../../../api/operator/op_utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -75,7 +76,7 @@ struct NumpyNormalParam : public dmlc::Parameter<NumpyNormalParam> {
     size_s << size;
     (*dict)["loc"] = loc_s.str();
     (*dict)["scale"] = scale_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
     (*dict)["size"] = size_s.str();
   }
 };
