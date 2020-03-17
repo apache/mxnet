@@ -838,7 +838,85 @@ def test_gluon_gumbel():
 @with_seed()
 @use_np
 def test_gluon_multinomial():
-    pass
+    class TestMultinomial(HybridBlock):
+        def __init__(self, func, num_events, total_count, is_logit, batch_shape=None, sample_shape=None):
+            super(TestMultinomial, self).__init__()
+            self._num_events = num_events
+            self._total_count = total_count
+            self._is_logit = is_logit
+            self._func = func
+            self._batch_shape = batch_shape
+            self._sample_shape = sample_shape
+
+        def hybrid_forward(self, F, params, *args):
+            multinomial = (
+                mgp.Multinomial(self._num_events, logit=params, total_count=self._total_count, F=F)
+                if self._is_logit else \
+                mgp.Multinomial(self._num_events, prob=params, total_count=self._total_count, F=F)
+            )
+            if self._func == 'sample':
+                return multinomial.sample(self._batch_shape)
+            if self._func == 'sample_n':
+                return multinomial.sample_n(self._sample_shape)
+            return _distribution_method_invoker(multinomial, self._func, *args)
+    
+    def one_hot(a, num_classes):
+        return np.identity(num_classes)[a]
+
+    event_shapes = [2, 5, 10]
+    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
+    sample_shapes = [None, (2,), (3, 4)]
+
+    # Test sampling
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            if use_logit:
+                param = np.log(param)
+            net = TestMultinomial("sample", event_shape, _np.random.randint(1, 5),
+                                    use_logit, batch_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param).asnumpy()
+            desired_shape = batch_shape if batch_shape is not None else ()
+            assert mx_out.shape == desired_shape + (event_shape,)
+    
+    # Test sample_n
+    for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            param = prob
+            if use_logit:
+                param = np.log(param)
+            net = TestMultinomial("sample_n", event_shape, _np.random.randint(1, 5),
+                                    use_logit, batch_shape, sample_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param).asnumpy()
+            sample_shape = () if sample_shape is None else sample_shape
+            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            assert mx_out.shape == desired_shape + (event_shape,)
+
+    # Test log_prob
+    for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
+        for use_logit, hybridize in itertools.product([True, False], [False]):
+            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            eps = _np.finfo('float32').eps
+            prob = np.clip(prob, eps, 1 - eps)
+            param = prob
+            sample_shape = () if sample_shape is None else sample_shape
+            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            samples = np.random.choice(event_shape, size=desired_shape)
+            samples = one_hot(samples, event_shape)
+            if use_logit:
+                param = np.log(param)
+            net = TestMultinomial("log_prob", event_shape, _np.random.randint(1, 5), use_logit)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param, samples).asnumpy()
+            # Check shape
+            assert mx_out.shape == desired_shape
 
 
 @with_seed()
