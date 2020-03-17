@@ -29,7 +29,9 @@
  * Rename params file epoch number starts from zero.
  */
 
+#if _MSC_VER
 #pragma warning(disable: 4996)  // VS2015 complains on 'std::copy' ...
+#endif
 #include <cstring>
 #include <iostream>
 #include <fstream>

@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include <cmath>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -76,7 +75,7 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
     dtype_s << dtype;
     size_s << size;
     (*dict)["prob"] = prob_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = dtype_s.str();
     (*dict)["size"] = size_s.str();
   }
 };
@@ -90,18 +89,16 @@ inline bool NumpyGeometricOpType(const nnvm::NodeAttrs &attrs,
   return true;
 }
 
-namespace mxnet_op {
-
 template <int ndim, typename IType, typename OType>
 struct geometric_kernel {
   MSHADOW_XINLINE static void Map(index_t i,
-                                  const Shape<ndim> &stride,
-                                  const Shape<ndim> &oshape,
+                                  const mshadow::Shape<ndim> &stride,
+                                  const mshadow::Shape<ndim> &oshape,
                                   IType *probs, float* uniforms, OType *out) {
-    Shape<ndim> coord = unravel(i, oshape);
-    auto idx = static_cast<index_t>(dot(coord, stride));
+    mshadow::Shape<ndim> coord = mxnet_op::unravel(i, oshape);
+    auto idx = static_cast<index_t>(mxnet_op::dot(coord, stride));
     IType prob = probs[idx];
-    out[i] = floor(log(uniforms[i]) / log(1 - prob)) + 1;
+    out[i] = math::floor(math::log(uniforms[i]) / math::log(1 - prob)) + 1;
   }
 };
 
@@ -121,8 +118,6 @@ struct check_legal_prob_kernel {
     }
   }
 };
-
-}  // namespace mxnet_op
 
 template <typename xpu>
 void NumpyGeometricForward(const nnvm::NodeAttrs &attrs,

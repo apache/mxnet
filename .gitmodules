@@ -16,7 +16,6 @@
 [submodule "3rdparty/mkldnn"]
 	path = 3rdparty/mkldnn
 	url = https://github.com/intel/mkl-dnn.git
-	branch = master
 [submodule "3rdparty/tvm"]
 	path = 3rdparty/tvm
 	url = https://github.com/apache/incubator-tvm.git

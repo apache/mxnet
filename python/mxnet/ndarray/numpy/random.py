@@ -1137,4 +1137,3 @@ def geometric(p, size=None, dtype=None, ctx=None, out=None):
     The geometric distribution models the number of trials that must be run in order to achieve success.
     """
     return _api_internal.geometric(p, size, dtype, ctx, out)
-
