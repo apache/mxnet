@@ -687,7 +687,7 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
     mode_s << mode;
     (*dict)["axis"] = axis_s.str();
     (*dict)["mode"] = mode_s.str();
-    switch(mode) {
+    switch (mode) {
       case take_::kRaise:
         (*dict)["mode"] = "raise";
         break;
