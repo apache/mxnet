@@ -643,18 +643,6 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
-      // convert attributes to vector of char*
-      std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
-        attr_keys.push_back(kv.first.c_str());
-        attr_vals.push_back(kv.second.c_str());
-      }
-      // copy input types from in_stype
-      std::vector<int> instypes(*in_stypes);
-
-      // output types will be populated by inferType function
-      std::vector<int> outstypes(out_stypes->size());
-
       // InferSType is not defineid in customized lib.
       if (stype_fp == nullptr) {
         CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
@@ -663,8 +651,19 @@ int MXLoadLib(const char *path) {
         return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
       }
-      // InferSType is defineid in customized lib.
+      // InferSType is defined in customized lib.
       else {
+        // convert attributes to vector of char*
+        std::vector<const char*> attr_keys, attr_vals;
+        for (auto kv : attrs.dict) {
+          attr_keys.push_back(kv.first.c_str());
+          attr_vals.push_back(kv.second.c_str());
+        }
+        // copy input types from in_stype
+        std::vector<int> instypes(*in_stypes);
+
+        // output types will be populated by inferType function
+        std::vector<int> outstypes(out_stypes->size());
         CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                              instypes.data(), in_stypes->size(),
                              outstypes.data(), out_stypes->size()))

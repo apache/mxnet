@@ -34,6 +34,8 @@ void transpose(MXTensor src, MXTensor dst, OpResource res) {
   int64_t h = shape[0];
   int64_t w = shape[1];
   if(src.stype == kRowSparseStorage) {
+    // Keys of the map is the row index of transposed tensors.
+    // Values of the map is the rows which have non-zero elements.    
     std::map<int, std::vector<float>> mp;
     float *Aval = (float*) (A->data);
     for(int i = 0; i < A->data_len; i++) {
@@ -51,6 +53,7 @@ void transpose(MXTensor src, MXTensor dst, OpResource res) {
       }
     }
 
+    // Alloc memory for output tensors.
     res.alloc_sparse(B, 0, mp.size());
     float *Bval = (float*) (B->data);
     int didx = 0, iidx = 0;
@@ -115,6 +118,8 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
 MXReturnValue inferSType(std::map<std::string, std::string> attrs,
                         std::vector<int> &instypes,
                         std::vector<int> &outstypes) {
+  if (instypes[0] != kRowSparseStorage) 
+    return MX_FAIL;
   outstypes[0] = instypes[0];
   return MX_SUCCESS;
 }

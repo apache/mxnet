@@ -465,8 +465,9 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
-
+  /*! \brief sparse allocation lambda function */
   sparse_malloc_t sparse_malloc;
+  /*! \brief lambda function to return allocated sparse memory handle */
   void *sparse_alloc;
 };
 
