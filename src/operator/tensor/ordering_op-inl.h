@@ -30,6 +30,7 @@
 #include <mshadow/tensor.h>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include <type_traits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -136,6 +137,15 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
     .describe("DType of the output indices. It is only valid when ret_typ is \"indices\" or"
               " \"both\". An error will be raised if the selected data type cannot precisely "
               "represent the indices.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, is_ascend_s, dtype_s;
+    axis_s << axis;
+    is_ascend_s << is_ascend;
+    dtype_s << dtype;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["is_ascend_s"] = is_ascend_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
   }
 };
 

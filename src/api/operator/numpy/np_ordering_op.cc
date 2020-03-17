@@ -44,12 +44,43 @@ MXNET_REGISTER_API("_npi.sort")
 
   attrs.parsed = std::move(param);
   attrs.op = op;
-  // input
+
   int num_inputs = 1;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  //output
+
   int num_outputs = 0;
   SetAttrDict<op::SortParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+});
+
+MXNET_REGISTER_API("_npi.argsort")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_argsort");
+  nnvm::NodeAttrs attrs;
+  op::ArgSortParam param;
+
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else {
+    param.axis = args[1].operator int();
+  }
+  param.is_ascend = args[2].operator bool();
+  if (args[3].type_code() == kNull) {
+    param.dtype = mshadow::kFloat32;
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+  }
+
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+
+  int num_outputs = 0;
+  SetAttrDict<op::ArgSortParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });

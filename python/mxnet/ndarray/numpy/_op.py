@@ -1620,7 +1620,7 @@ def argsort(a, axis=-1, kind=None, order=None):
     if order is not None:
         raise NotImplementedError("order not supported here")
 
-    return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
+    return _api_internal.argsort(a, axis, True, 'int64')
 
 
 @set_module('mxnet.ndarray.numpy')
