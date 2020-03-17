@@ -63,8 +63,6 @@ struct NumpyChoiceParam : public dmlc::Parameter<NumpyChoiceParam> {
     (*dict)["size"] = size_s.str();
     (*dict)["replace"] = replace_s.str();
     (*dict)["weighted"] = weighted_s.str();
-    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
-    // Setting ctx here results in an error.
   }
 };
 

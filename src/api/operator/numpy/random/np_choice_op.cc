@@ -23,12 +23,11 @@
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <algorithm>
 #include "../../utils.h"
 #include "../../../../operator/numpy/random/np_choice_op.h"
-#include <algorithm>
-#include <iostream>
 
-namespace mxnet {                  
+namespace mxnet {
 
 MXNET_REGISTER_API("_npi.choice")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
@@ -42,7 +41,7 @@ MXNET_REGISTER_API("_npi.choice")
 
   if (args[0].type_code() == kDLInt) {
     param.a = args[0].operator int();
-  } else if (args[0].type_code() == kNDArrayHandle){
+  } else if (args[0].type_code() == kNDArrayHandle) {
     param.a = dmlc::nullopt;
     in[num_inputs] = args[0].operator mxnet::NDArray*();
     num_inputs++;
@@ -73,20 +72,16 @@ MXNET_REGISTER_API("_npi.choice")
   }
 
   NDArray** inputs = in == nullptr ? nullptr : in;
-  
   attrs.parsed = std::move(param);
   attrs.op = op;
   if (args[4].type_code() != kNull) {
     attrs.dict["ctx"] = args[4].operator std::string();
   }
-  
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
-    // PythonArg(n) designates the nth python argument is to be returned.
-    // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)
     *ret = PythonArg(5);
   } else {
     *ret = ndoutputs[0];

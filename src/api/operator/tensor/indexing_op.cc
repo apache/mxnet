@@ -50,7 +50,7 @@ MXNET_REGISTER_API("_npi.take")
 
   if (args[3].type_code() != kNull) {
     std::string mode = args[3].operator std::string();
-    if (mode == "raise"){
+    if (mode == "raise") {
       param.mode = op::take_::kRaise;
     } else if (mode == "clip") {
       param.mode = op::take_::kClip;
