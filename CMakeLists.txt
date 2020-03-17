@@ -39,7 +39,9 @@ if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PR
 else()
   option(USE_MKLDNN "Build with MKL-DNN support" OFF)
 endif()
-IF ((CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
+#gcc 4 doesn't support AVX2 and SSSE3 support doesn't work with target attributes so ban gcc < 5 from intgemm.
+if ((CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING) AND 
+    ((NOT CMAKE_COMPILER_IS_GNUCC) OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 5.0)))
   option(USE_INTGEMM          "Build with x86 intgemm library for low-precision multiplication" ON)
 else()
   option(USE_INTGEMM          "Build with x86 intgemm library for low-precision multiplication" OFF)
