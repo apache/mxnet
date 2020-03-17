@@ -46,6 +46,15 @@ class ObjectInternal {
       static_cast<Object*>(obj)->DecRef();
     }
   }
+
+  /*!
+   * \brief Expose TypeKey2Index
+   * \param type_key The original type key.
+   * \return the corresponding index.
+   */
+  static uint32_t ObjectTypeKey2Index(const std::string& type_key) {
+    return Object::TypeKey2Index(type_key);
+  }
 };
 
 }  // namespace runtime
