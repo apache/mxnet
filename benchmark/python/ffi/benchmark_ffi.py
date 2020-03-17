@@ -62,6 +62,8 @@ def prepare_workloads():
     OpArgMngr.add_workload("random.uniform", low=0, high=1, size=1)
     OpArgMngr.add_workload("where", pool['2x3'], pool['2x3'], pool['2x1'])
     OpArgMngr.add_workload("may_share_memory", pool['2x3'][:0], pool['2x3'][:1])
+    OpArgMngr.add_workload("roll", pool["2x2"], 1, axis=0)
+    OpArgMngr.add_workload("rot90", pool["2x2"], 2)
 
 
 def benchmark_helper(f, *args, **kwargs):

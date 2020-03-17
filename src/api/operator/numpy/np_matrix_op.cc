@@ -22,8 +22,10 @@
  * \brief Implementation of the API of functions in src/operator/tensor/matrix_op.cc
  */
 #include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
+#include "../../../operator/numpy/np_matrix_op-inl.h"
 
 namespace mxnet {
 
@@ -83,6 +85,60 @@ MXNET_REGISTER_API("_npi.split")
     ndarray_handles.emplace_back(ndoutputs[i]);
   }
   *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
+
+MXNET_REGISTER_API("_npi.roll")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_roll");
+  nnvm::NodeAttrs attrs;
+  op::NumpyRollParam param;
+  if (args[1].type_code() == kNull) {
+    param.shift = dmlc::nullopt;
+  } else if (args[1].type_code() == kDLInt) {
+    param.shift = TShape(1, args[1].operator int64_t());
+  } else {
+    param.shift = TShape(args[1].operator ObjectRef());
+  }
+  if (args[2].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else if (args[2].type_code() == kDLInt) {
+    param.axis = TShape(1, args[2].operator int64_t());
+  } else {
+    param.axis = TShape(args[2].operator ObjectRef());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyRollParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.rot90")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_rot90");
+  nnvm::NodeAttrs attrs;
+  op::NumpyRot90Param param;
+  param.k = args[1].operator int();
+  if (args[2].type_code() == kNull) {
+    param.axes = dmlc::nullopt;
+  } else if (args[2].type_code() == kDLInt) {
+    param.axes = TShape(1, args[2].operator int64_t());
+  } else {
+    param.axes = TShape(args[2].operator ObjectRef());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyRot90Param>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
 });
 
 }  // namespace mxnet
