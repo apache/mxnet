@@ -78,8 +78,6 @@ MXNET_REGISTER_API("_npi.geometric")
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
-    // PythonArg(n) designates the nth python argument is to be returned.
-    // So suppose `out` is the 3rd positional argument, we use PythonArg(2) (0-based index)
     *ret = PythonArg(4);
   } else {
     *ret = ndoutputs[0];

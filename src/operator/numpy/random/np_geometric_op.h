@@ -35,6 +35,7 @@
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
+#include "../../../api/operator/op_utils.h"
 #include "./dist_common.h"
 
 namespace mxnet {
@@ -75,7 +76,7 @@ struct NumpyGeometricParam : public dmlc::Parameter<NumpyGeometricParam> {
     dtype_s << dtype;
     size_s << size;
     (*dict)["prob"] = prob_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
     (*dict)["size"] = size_s.str();
   }
 };
