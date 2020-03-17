@@ -89,7 +89,8 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
   const float *data = in.dptr<float>();
   // To maintain alignment, be a multiple of AVX512 register size.
   const std::size_t kMultiple = 512 / 8 / sizeof(float);
-  CHECK_EQ(reinterpret_cast<intptr_t>(data) % kMultiple, 0) << "Data must be aligned to " << kMultiple << ".";
+  CHECK_EQ(reinterpret_cast<intptr_t>(data) % kMultiple, 0)
+    << "Data must be aligned to " << kMultiple << " bytes.";
 
 #ifdef _OPENMP
   float result = 0.0f;
