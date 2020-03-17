@@ -49,6 +49,11 @@ struct NumpyWhereScalarParam : public dmlc::Parameter<NumpyWhereScalarParam> {
     .set_default(0.0)
     .describe("The scalar value of x/y.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream scalar_s;
+    scalar_s << scalar;
+    (*dict)["scalar"] = scalar_s.str();
+  }
 };
 
 struct NumpyWhereScalar2Param : public dmlc::Parameter<NumpyWhereScalar2Param> {
@@ -60,6 +65,13 @@ struct NumpyWhereScalar2Param : public dmlc::Parameter<NumpyWhereScalar2Param> {
     DMLC_DECLARE_FIELD(y)
     .set_default(0.0)
     .describe("The scalar value of y.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream x_s, y_s;
+    x_s << x;
+    y_s << y;
+    (*dict)["x"] = x_s.str();
+    (*dict)["y"] = y_s.str();
   }
 };
 
