@@ -21,8 +21,8 @@
  * \file np_matrix_op.cc
  * \brief Implementation of the API of functions in src/operator/tensor/matrix_op.cc
  */
-#include <vector>
 #include <mxnet/api_registry.h>
+#include <vector>
 #include "../utils.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
 #include "../../../operator/numpy/np_matrix_op-inl.h"
