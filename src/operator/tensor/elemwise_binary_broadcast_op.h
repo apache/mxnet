@@ -384,7 +384,7 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     }
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        int choice = dmlc::GetEnv("DEBUG_BCAST", 0);
+        int choice = dmlc::GetEnv("DEBUG_BCAST", 2);
         if (choice != 0) {
         if (choice == 1) {
         broadcast::BinaryBroadcastComputeImpl<NDim, DType, OP>(s, req[0], inputs[0].reshape(new_lshape),
