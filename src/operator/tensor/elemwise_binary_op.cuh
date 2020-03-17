@@ -225,12 +225,15 @@ class VectorizedBinaryBwdUseIn {
   }
 };
 
+}  // namespace binary
+
 template<typename OP>
-void VectorizedCompute(const nnvm::NodeAttrs &attrs,
-                       mshadow::Stream<gpu> *s,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs) {
+void ElemwiseBinaryOp::Compute_(const nnvm::NodeAttrs &attrs,
+                                mshadow::Stream<gpu> *s,
+                                const std::vector<TBlob> &inputs,
+                                const std::vector<OpReqType> &req,
+                                const std::vector<TBlob> &outputs) {
+  using namespace binary;
   if (req[0] == kNullOp) return;
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
@@ -251,12 +254,12 @@ void VectorizedCompute(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename LOP, typename ROP>
-void VectorizedBackwardUseNoneCompute(const nnvm::NodeAttrs &attrs,
-                                      const OpContext &ctx,
-                                      const std::vector<TBlob> &inputs,
-                                      const std::vector<OpReqType> &req,
-                                      const std::vector<TBlob> &outputs) {
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+void ElemwiseBinaryOp::BackwardUseNone_(const nnvm::NodeAttrs &attrs,
+                                        mshadow::Stream<gpu>* s,
+                                        const std::vector<TBlob> &inputs,
+                                        const std::vector<OpReqType> &req,
+                                        const std::vector<TBlob> &outputs) {
+  using namespace binary;
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
 
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
@@ -280,12 +283,12 @@ void VectorizedBackwardUseNoneCompute(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename LOP, typename ROP>
-void VectorizedBackwardUseInCompute(const nnvm::NodeAttrs &attrs,
-                                    const OpContext &ctx,
-                                    const std::vector<TBlob> &inputs,
-                                    const std::vector<OpReqType> &req,
-                                    const std::vector<TBlob> &outputs) {
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+void ElemwiseBinaryOp::BackwardUseIn_(const nnvm::NodeAttrs &attrs,
+                                      mshadow::Stream<gpu>* s,
+                                      const std::vector<TBlob> &inputs,
+                                      const std::vector<OpReqType> &req,
+                                      const std::vector<TBlob> &outputs) {
+  using namespace binary;
   if (req[0] != kNullOp || req[1] != kNullOp) {
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MXNET_REQ_TYPE_SWITCH(req[0], lreq, {
@@ -307,17 +310,6 @@ void VectorizedBackwardUseInCompute(const nnvm::NodeAttrs &attrs,
       });
     });
   }
-}
-
-}  // namespace binary
-
-template<typename OP>
-void ElemwiseBinaryOp::Compute_(const nnvm::NodeAttrs &attrs,
-                                mshadow::Stream<gpu> *s,
-                                const std::vector<TBlob> &inputs,
-                                const std::vector<OpReqType> &req,
-                                const std::vector<TBlob> &outputs) {
-  binary::VectorizedCompute<OP>(attrs, s, inputs, req, outputs);
 }
 
 }  // namespace op

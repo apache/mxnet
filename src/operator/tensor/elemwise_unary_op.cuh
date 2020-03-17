@@ -92,12 +92,15 @@ class VectorizedUnaryScalarFwd {
   }
 };
 
+}  // namespace unary
+
 template<typename OP>
-void VectorizedCompute(const nnvm::NodeAttrs &attrs,
-                       mshadow::Stream<gpu>* s,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs) {
+void UnaryOp::Compute_(const nnvm::NodeAttrs& attrs,
+                     mshadow::Stream<gpu>* s,
+                     const std::vector<TBlob>& inputs,
+                     const std::vector<OpReqType>& req,
+                     const std::vector<TBlob>& outputs) {
+  using namespace unary;
   if (req[0] == kNullOp) return;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -114,17 +117,6 @@ void VectorizedCompute(const nnvm::NodeAttrs &attrs,
       VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
     });
   });
-}
-
-}  // namespace unary
-
-template<typename OP>
-void UnaryOp::Compute_(const nnvm::NodeAttrs& attrs,
-                     mshadow::Stream<gpu>* s,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  unary::VectorizedCompute<OP>(attrs, s, inputs, req, outputs);
 }
 
 }  // namespace op

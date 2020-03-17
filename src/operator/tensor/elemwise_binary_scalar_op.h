@@ -353,6 +353,35 @@ class BinaryScalarOp : public UnaryOp {
     }
   }
 
+  template<typename OP>
+  static void Backward_(const nnvm::NodeAttrs &attrs,
+                        mshadow::Stream<cpu>* s,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs) {
+    using namespace mshadow;
+    using namespace mshadow::expr;
+    const double alpha = nnvm::get<double>(attrs.parsed);
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
+          mxnet::op::mxnet_op::backward_grad_tuned<OP>, Req>, cpu>::
+          Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
+                 inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
+                 DType(alpha));
+      });
+    });
+  }
+
+#if MXNET_USE_CUDA
+  template<typename OP>
+  static void Backward_(const nnvm::NodeAttrs &attrs,
+                        mshadow::Stream<gpu>* s,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs);
+#endif
+
   template<typename xpu, typename OP>
   static void Backward(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,
@@ -362,16 +391,7 @@ class BinaryScalarOp : public UnaryOp {
     using namespace mshadow;
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const double alpha = nnvm::get<double>(attrs.parsed);
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        mxnet::op::mxnet_op::Kernel<mxnet::op::mxnet_op::op_with_req<
-          mxnet::op::mxnet_op::backward_grad_tuned<OP>, Req>, xpu>::
-          Launch(s, inputs[0].Size(), outputs[0].dptr<DType>(),
-                 inputs[0].dptr<DType>(), inputs[1].dptr<DType>(),
-                 DType(alpha));
-      });
-    });
+    Backward_<OP>(attrs, s, inputs, req, outputs);
   }
 };
 

@@ -141,12 +141,15 @@ class VectorizedBinaryScalarBwd {
   }
 };
 
-template<typename OP>
-void VectorizedCompute(const nnvm::NodeAttrs &attrs,
-                       mshadow::Stream<gpu>* s,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs) {
+}  // namespace binary_scalar
+
+template <typename OP>
+void BinaryScalarOp::Compute_(const nnvm::NodeAttrs &attrs,
+                              mshadow::Stream<gpu>* s,
+                              const std::vector<TBlob> &inputs,
+                              const std::vector<OpReqType> &req,
+                              const std::vector<TBlob> &outputs) {
+  using namespace binary_scalar;
   if (req[0] == kNullOp) return;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
@@ -167,14 +170,14 @@ void VectorizedCompute(const nnvm::NodeAttrs &attrs,
   });
 }
 
-template<typename OP>
-void VectorizedBwdCompute(const nnvm::NodeAttrs &attrs,
-                          const OpContext &ctx,
-                          const std::vector<TBlob> &inputs,
-                          const std::vector<OpReqType> &req,
-                          const std::vector<TBlob> &outputs) {
+template <typename OP>
+void BinaryScalarOp::Backward_(const nnvm::NodeAttrs &attrs,
+                               mshadow::Stream<gpu>* s,
+                               const std::vector<TBlob> &inputs,
+                               const std::vector<OpReqType> &req,
+                               const std::vector<TBlob> &outputs) {
+  using namespace binary_scalar;
   if (req[0] == kNullOp) return;
-  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   const double alpha = nnvm::get<double>(attrs.parsed);
@@ -193,17 +196,6 @@ void VectorizedBwdCompute(const nnvm::NodeAttrs &attrs,
       VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
     });
   });
-}
-
-}  // namespace binary_scalar
-
-template <typename OP>
-void BinaryScalarOp::Compute_(const nnvm::NodeAttrs &attrs,
-                              mshadow::Stream<gpu>* s,
-                              const std::vector<TBlob> &inputs,
-                              const std::vector<OpReqType> &req,
-                              const std::vector<TBlob> &outputs) {
-  binary_scalar::VectorizedCompute<OP>(attrs, s, inputs, req, outputs);
 }
 
 }  // namespace op
