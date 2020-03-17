@@ -21,6 +21,7 @@
  * \file np_matrix_op.cc
  * \brief Implementation of the API of functions in src/operator/tensor/matrix_op.cc
  */
+#include <vector>
 #include <mxnet/api_registry.h>
 #include "../utils.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
@@ -59,13 +60,12 @@ MXNET_REGISTER_API("_npi.column_stack")
   attrs.op = op;
   SetAttrDict<op::NumpyColumnStackParam>(&attrs);
   int num_outputs = 0;
-  NDArray** inputs = new NDArray*[param.num_args];
+  std::vector<NDArray*> inputs;
   for (int i = 0; i < param.num_args; ++i) {
-    inputs[i] = args[i].operator mxnet::NDArray*();
+    inputs.push_back(args[i].operator mxnet::NDArray*());
   }
-  auto ndoutputs = Invoke(op, &attrs, param.num_args, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, param.num_args, &inputs[0], &num_outputs, nullptr);
   *ret = ndoutputs[0];
-  delete[] inputs;
 });
 
 MXNET_REGISTER_API("_npi.hstack")
@@ -80,13 +80,12 @@ MXNET_REGISTER_API("_npi.hstack")
   attrs.op = op;
   SetAttrDict<op::ConcatParam>(&attrs);
   int num_outputs = 0;
-  NDArray** inputs = new NDArray*[param.num_args];
+  std::vector<NDArray*> inputs;
   for (int i = 0; i < param.num_args; ++i) {
-    inputs[i] = args[i].operator mxnet::NDArray*();
+    inputs.push_back(args[i].operator mxnet::NDArray*());
   }
-  auto ndoutputs = Invoke(op, &attrs, param.num_args, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, param.num_args, &inputs[0], &num_outputs, nullptr);
   *ret = ndoutputs[0];
-  delete[] inputs;
 });
 
 }  // namespace mxnet

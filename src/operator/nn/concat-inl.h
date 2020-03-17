@@ -60,6 +60,7 @@ struct ConcatParam : public dmlc::Parameter<ConcatParam> {
     std::ostringstream ss;
     ss << num_args;
     (*dict)["num_args"] = ss.str();
+    ss.clear();
     ss << dim;
     (*dict)["dim"] = ss.str();
   }
