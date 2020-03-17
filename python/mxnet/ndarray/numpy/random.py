@@ -21,7 +21,6 @@ from ...context import current_context
 from . import _internal as _npi
 from . import _api_internal
 from ..ndarray import NDArray
-from . import _api_internal
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
@@ -124,8 +123,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(low, np_ndarray), isinstance(high, np_ndarray))
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
@@ -133,22 +130,10 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     else:
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = np.dtype(dtype).name
     if size == ():
         size = None
     return _api_internal.uniform(low, high, size, ctx, dtype, out)
-    # if input_type == (True, True):
-    #     return _npi.uniform(low, high, low=None, high=None, size=size,
-    #                         ctx=ctx, dtype=dtype, out=out)
-    # elif input_type == (False, True):
-    #     return _npi.uniform(high, low=low, high=None, size=size,
-    #                         ctx=ctx, dtype=dtype, out=out)
-    # elif input_type == (True, False):
-    #     return _npi.uniform(low, low=None, high=high, size=size,
-    #                         ctx=ctx, dtype=dtype, out=out)
-    # else:
-    #     return _npi.uniform(low=low, high=high, size=size,
-    #                         ctx=ctx, dtype=dtype, out=out)
 
 
 def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -180,8 +165,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized normal distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
     if dtype is None:
         dtype = 'float32'
     if ctx is None:
@@ -189,7 +172,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     else:
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = np.dtype(dtype).name
     if size == ():
         size = None
     return _api_internal.normal(loc, scale, size, ctx, dtype, out)
@@ -785,8 +768,6 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     electronic components, and arises naturally in processes for which the
     waiting times between Poisson distributed events are relevant.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(shape, np_ndarray), isinstance(scale, np_ndarray))
     if dtype is None:
         dtype = 'float32'
     if out is not None:
@@ -798,10 +779,8 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     else:
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
-        dtype = _np.dtype(dtype).name
+        dtype = np.dtype(dtype).name
     return _api_internal.gamma(shape, scale, size, ctx, dtype, out)
-
-    raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
 
 
 def beta(a, b, size=None, dtype=None, ctx=None):
