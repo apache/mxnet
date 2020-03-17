@@ -30,6 +30,7 @@
 #include <mxnet/runtime/object.h>
 #include <mxnet/runtime/ndarray.h>
 #include <mxnet/runtime/container.h>
+#include <mxnet/runtime/ndarray_handle.h>
 #include <mxnet/runtime/ffi_helper.h>
 #include <mxnet/runtime/data_type.h>
 #include <mxnet/runtime/py_arg.h>
@@ -651,6 +652,9 @@ class MXNetRetValue : public MXNetPODValue_ {
     return *this;
   }
   MXNetRetValue& operator=(ObjectRef other) {
+    if (other.as<NDArrayHandleObj>()) {
+      return operator=(Downcast<NDArrayHandle, ObjectRef>(other));
+    }
     return operator=(std::move(other.data_));
   }
   template<typename T>
@@ -670,9 +674,14 @@ class MXNetRetValue : public MXNetPODValue_ {
     this->Assign(other);
     return *this;
   }
-  MXNetRetValue& operator=(::mxnet::NDArray* value) {
+  MXNetRetValue& operator=(NDArray* value) {
     this->SwitchToPOD(kNDArrayHandle);
     value_.v_handle = reinterpret_cast<void*>(value);
+    return *this;
+  }
+  MXNetRetValue& operator=(NDArrayHandle value) {
+    this->SwitchToPOD(kNDArrayHandle);
+    value_.v_handle = reinterpret_cast<void*>(value->value);
     return *this;
   }
   MXNetRetValue& operator=(const PythonArg& value) {

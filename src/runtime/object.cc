@@ -213,3 +213,17 @@ int MXNetObjectFree(MXNetObjectHandle obj) {
   mxnet::runtime::ObjectInternal::ObjectFree(obj);
   API_END();
 }
+
+int MXNetObjectGetTypeIndex(MXNetObjectHandle obj, unsigned* out_tindex) {
+  API_BEGIN();
+  CHECK(obj != nullptr);
+  out_tindex[0] = static_cast<mxnet::runtime::Object*>(obj)->type_index();
+  API_END();
+}
+
+int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tindex) {
+  API_BEGIN();
+  out_tindex[0] = mxnet::runtime::ObjectInternal::ObjectTypeKey2Index(
+      type_key);
+  API_END();
+}

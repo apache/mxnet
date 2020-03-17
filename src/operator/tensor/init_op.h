@@ -39,6 +39,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../../api/operator/op_utils.h"
 
 
 namespace mxnet {
@@ -61,11 +62,10 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Target data type.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream shape_s, dtype_s;
+    std::ostringstream shape_s;
     shape_s << shape;
-    dtype_s << dtype;
     (*dict)["shape"] = shape_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
     // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
     // Setting ctx here results in an error.
   }

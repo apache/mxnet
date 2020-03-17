@@ -39,8 +39,9 @@ inline static void _npi_tensordot_int_axes(runtime::MXNetArgs args,
   attrs.parsed = param;
   SetAttrDict<op::TensordotIntAxesParam>(&attrs);
   int num_outputs = 0;
+  int num_inputs = 2;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 }
 
@@ -52,9 +53,11 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
   nnvm::NodeAttrs attrs;
   ADT adt = Downcast<ADT, ObjectRef>(args[2].operator ObjectRef());
   if (const IntegerObj* lop = adt[0].as<IntegerObj>()) {
+    // axes is a tuple of int, like axes=(0, 1)
     param.a_axes_summed = Tuple<int>(1, lop->value);
     param.b_axes_summed = Tuple<int>(1, Downcast<Integer, ObjectRef>(adt[1])->value);
   } else {
+    // axes is a tuple of tuples of int, like axes=((0, 1), (1, 0))
     param.a_axes_summed = Tuple<int>(adt[0]);
     param.b_axes_summed = Tuple<int>(adt[1]);
   }
@@ -62,8 +65,9 @@ inline static void _npi_tensordot(runtime::MXNetArgs args,
   attrs.parsed = std::move(param);
   SetAttrDict<op::TensordotParam>(&attrs);
   int num_outputs = 0;
+  int num_inputs = 2;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*(), args[1].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, 2, inputs, &num_outputs, nullptr);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 }
 

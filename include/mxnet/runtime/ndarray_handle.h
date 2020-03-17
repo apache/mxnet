@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -18,19 +18,35 @@
  */
 
 /*!
- * \file op_utils.h
- * \brief Utility functions for modification in src/operator
+ * \file ndarray_handle.h
+ * \brief NDArray handle types
  */
-#ifndef MXNET_API_OPERATOR_OP_UTILS_H_
-#define MXNET_API_OPERATOR_OP_UTILS_H_
-
-#include <string>
+#ifndef MXNET_RUNTIME_NDARRAY_HANDLE_H_
+#define MXNET_RUNTIME_NDARRAY_HANDLE_H_
+#include <mxnet/ndarray.h>
+#include <mxnet/runtime/object.h>
 
 namespace mxnet {
 
-std::string MXNetTypeWithBool2String(int dtype);
-std::string MXNetPercentileType2String(int interpolation);
+class NDArrayHandleObj : public Object {
+ public:
+  /*! \brief the Internal value. */
+  NDArray* value;
 
-}  // namespace mxnet
+  static constexpr const char* _type_key = "MXNet.NDArrayHandle";
+  MXNET_DECLARE_FINAL_OBJECT_INFO(NDArrayHandleObj, Object)
+};
 
-#endif  // MXNET_API_OPERATOR_OP_UTILS_H_
+class NDArrayHandle : public ObjectRef {
+ public:
+  explicit NDArrayHandle(NDArray* value) {
+    runtime::ObjectPtr<NDArrayHandleObj> node = make_object<NDArrayHandleObj>();
+    node->value = value;
+    data_ = std::move(node);
+  }
+  MXNET_DEFINE_OBJECT_REF_METHODS(NDArrayHandle, ObjectRef, NDArrayHandleObj)
+};
+
+};  // namespace mxnet
+
+#endif  // MXNET_RUNTIME_NDARRAY_HANDLE_H_

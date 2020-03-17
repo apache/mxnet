@@ -18,19 +18,30 @@
  */
 
 /*!
- * \file op_utils.h
- * \brief Utility functions for modification in src/operator
+ * \file np_gesvd.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/linalg/np_gesvd.cc
  */
-#ifndef MXNET_API_OPERATOR_OP_UTILS_H_
-#define MXNET_API_OPERATOR_OP_UTILS_H_
-
-#include <string>
+#include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
+#include "../../utils.h"
 
 namespace mxnet {
 
-std::string MXNetTypeWithBool2String(int dtype);
-std::string MXNetPercentileType2String(int interpolation);
+MXNET_REGISTER_API("_npi.svd")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  const nnvm::Op* op = Op::Get("_npi_svd");
+  attrs.op = op;
+  // inputs
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  int num_inputs = 1;
+  // outputs
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ADT(0, {NDArrayHandle(ndoutputs[0]),
+                 NDArrayHandle(ndoutputs[1]),
+                 NDArrayHandle(ndoutputs[2])});
+});
 
 }  // namespace mxnet
-
-#endif  // MXNET_API_OPERATOR_OP_UTILS_H_

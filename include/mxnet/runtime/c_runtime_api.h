@@ -156,6 +156,24 @@ MXNET_DLL int MXNetFuncListGlobalNames(int* out_size,
  */
 MXNET_DLL int MXNetObjectFree(MXNetObjectHandle obj);
 
+
+/*!
+ * \brief Get the type_index from an object.
+ *
+ * \param obj The object handle.
+ * \param out_tindex the output type index.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNetObjectGetTypeIndex(MXNetObjectHandle obj, unsigned* out_tindex);
+
+/*!
+ * \brief Convert type key to type index.
+ * \param type_key The key of the type.
+ * \param out_tindex the corresponding type index.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tindex);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif
