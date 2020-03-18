@@ -34,6 +34,7 @@ using namespace mshadow;
 using mxnet_op::unravel;
 using mxnet_op::ravel;
 using mxnet_op::dot;
+using mxnet_op::unravel_dot;
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
 MSHADOW_XINLINE void seq_reduce_assign_wr(const index_t idx, const size_t M, const bool addto,
