@@ -35,7 +35,6 @@ elif (os.name=='nt'):
     mx.library.load(path)
 
 a = mx.nd.array([[1,2,3],[0,0,0],[4,0,5],[0,0,0],[0,0,0]])
-# a = mx.nd.array([[1,3,0,2,1],[0,1,0,0,0],[0,2,4,5,3]])
 a = a.tostype('row_sparse')
 print("--------Input CSR Array---------")
 print("data:", a.data.asnumpy())
@@ -48,14 +47,14 @@ print("data:", b.data.asnumpy())
 print("indices:", b.indices.asnumpy())
 
 print("Stateful Compute Result:")
-c = mx.nd.state_transposerowsp(a, test_kw=100)
+c = mx.nd.my_state_transposerowsp(a, test_kw=100)
 print("data:", c.data.asnumpy())
 print("indices:", c.indices.asnumpy())
 
 print("--------start symbolic compute--------")
 d = mx.sym.Variable('d')
 e = mx.sym.my_transposerowsp(d)
-f = mx.sym.state_transposerowsp(d, test_kw=200)
+f = mx.sym.my_state_transposerowsp(d, test_kw=200)
 
 exe = e.bind(ctx=mx.cpu(),args={'d':a})
 exe2 = f.bind(ctx=mx.cpu(),args={'d':a})

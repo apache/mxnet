@@ -453,6 +453,7 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
+  /*! \brief allocate sparse memory controlled by MXNet */
   void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
     sparse_malloc(sparse_alloc, index, indices_len, indptr_len, 
                    &(sparse->data), &(sparse->indices), &(sparse->indptr));
@@ -991,6 +992,7 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      void** in_indptr, void** out_indptr,
                                      int64_t* in_indices_shapes, int64_t* out_indices_shapes,
                                      int64_t* in_indptr_shapes, int64_t* out_indptr_shapes);
+
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
 

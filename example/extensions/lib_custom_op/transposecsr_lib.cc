@@ -102,11 +102,9 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     std::cout << "Expected 1 inputs to inferType" << std::endl;
     return MX_FAIL;
   }
-  for (unsigned i = 0; i < intypes.size(); i++) {
-    if (intypes[i] != kFloat32) {
-      std::cout << "Expected input " << i << " to have float32 type" << std::endl;
-      return MX_FAIL;
-    }
+  if (intypes[0] != kFloat32) {
+    std::cout << "Expected input to have float32 type" << std::endl;
+    return MX_FAIL;
   }
 
   outtypes[0] = intypes[0];
@@ -181,7 +179,7 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-REGISTER_OP(state_transposecsr)
+REGISTER_OP(my_state_transposecsr)
 .setParseAttrs(parseAttrs)
 .setInferType(inferType)
 .setInferSType(inferSType)
