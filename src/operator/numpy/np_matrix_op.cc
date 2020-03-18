@@ -1155,7 +1155,7 @@ inline bool NumpyRollShape(const nnvm::NodeAttrs& attrs,
   return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
 }
 
-NNVM_REGISTER_OP(_np_roll)
+NNVM_REGISTER_OP(_npi_roll)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyRollParam>)
@@ -1180,7 +1180,7 @@ NNVM_REGISTER_OP(_np_roll)
      os1 << dmlc::optional<mxnet::TShape>(shifts);
      std::ostringstream os2;
      os2 << param.axis;
-     return MakeNonlossGradNode("_np_roll", n, ograds, {},
+     return MakeNonlossGradNode("_npi_roll", n, ograds, {},
                                 {{"shift", os1.str()}, {"axis", os2.str()}});
 })
 .set_attr<FResourceRequest>("FResourceRequest",
