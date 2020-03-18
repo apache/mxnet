@@ -71,7 +71,7 @@ NNVM_REGISTER_OP(_npi_column_stack)
 NNVM_REGISTER_OP(_backward_np_column_stack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_roll)
+NNVM_REGISTER_OP(_npi_roll)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
 
 template<>

@@ -302,6 +302,13 @@ struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
     .describe("Axis or axes along which elements are shifted. By default, the array is flattened"
               "before shifting, after which the original shape is restored.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shift_s, axis_s;
+    shift_s << shift;
+    axis_s << axis;
+    (*dict)["shift"] = shift_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 template<int req>
@@ -605,6 +612,13 @@ struct NumpyRot90Param : public dmlc::Parameter<NumpyRot90Param> {
     .set_default(dmlc::optional<mxnet::TShape>())
     .describe(" The array is rotated in the plane defined by the axes. Axes must be different.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s, axes_s;
+    k_s << k;
+    axes_s << axes;
+    (*dict)["k"] = k_s.str();
+    (*dict)["axes"] = axes_s.str();
+  }
 };
 
 struct rot90reverse {
@@ -851,6 +865,10 @@ inline void HSplitOpForward(const nnvm::NodeAttrs &attrs,
     real_axis = 1;
   } else {
     real_axis = 0;
+  }
+  if (param.sections > 0) {
+    CHECK_EQ(inputs[0].shape_[real_axis] % param.sections, 0U)
+      << "ValueError: array split does not result in an equal division";
   }
   SplitOpForwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
