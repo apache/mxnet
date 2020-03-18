@@ -4529,7 +4529,7 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+    return _api_internal.argmax(a, axis, False, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4597,7 +4597,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _npi.argmin(a, axis=axis, keepdims=False, out=out)
+    return _api_internal.argmin(a, axis, False, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4945,8 +4945,10 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
     """
     if isinstance(dimensions, (tuple, list)):
         if ctx is None:
-            ctx = current_context()
-        return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+            ctx = str(current_context())
+        else:
+            ctx = str(ctx)
+        return _api_internal.indices(dimensions, dtype, ctx)
     else:
         raise ValueError("The dimensions must be sequence of ints")
 # pylint: enable=redefined-outer-name
