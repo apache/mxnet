@@ -43,7 +43,8 @@ MXNET_REGISTER_API("_npi.diff")
 
   int num_outputs = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, 1, inputs, &num_outputs, nullptr);
+  int num_inputs = 1;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
