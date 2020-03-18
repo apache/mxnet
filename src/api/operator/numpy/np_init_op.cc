@@ -21,6 +21,7 @@
  * \file np_init_op.cc
  * \brief Implementation of the API of functions in src/operator/numpy/np_init_op.cc
  */
+#include <dmlc/optional.h>
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
@@ -52,6 +53,38 @@ MXNET_REGISTER_API("_npi.zeros")
   }
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.full_like")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_full_like");
+  nnvm::NodeAttrs attrs;
+  op::FullLikeOpParam param;
+  param.fill_value = args[1].operator double();
+  if (args[2].type_code() == kNull) {
+    param.dtype = dmlc::nullopt;
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  if (args[3].type_code() != kNull) {
+    attrs.dict["ctx"] = args[3].operator std::string();
+  }
+  SetAttrDict<op::FullLikeOpParam>(&attrs);
+  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(4);
+  } else {
+    *ret = ndoutputs[0];
+  }
   *ret = ndoutputs[0];
 });
 

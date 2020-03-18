@@ -36,4 +36,56 @@ MXNET_REGISTER_API("_npi.add")
   UFuncHelper(args, ret, op, op_scalar, nullptr);
 });
 
+MXNET_REGISTER_API("_npi.subtract")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_subtract");
+  const nnvm::Op* op_scalar = Op::Get("_npi_subtract_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rsubtract_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
+MXNET_REGISTER_API("_npi.multiply")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_multiply");
+  const nnvm::Op* op_scalar = Op::Get("_npi_multiply_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.true_divide")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_true_divide");
+  const nnvm::Op* op_scalar = Op::Get("_npi_true_divide_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rtrue_divide_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
+MXNET_REGISTER_API("_npi.mod")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_mod");
+  const nnvm::Op* op_scalar = Op::Get("_npi_mod_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rmod_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
+MXNET_REGISTER_API("_npi.power")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_power");
+  const nnvm::Op* op_scalar = Op::Get("_npi_power_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rpower_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
+MXNET_REGISTER_API("_npi.lcm")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_lcm");
+  const nnvm::Op* op_scalar = Op::Get("_npi_lcm_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
 }  // namespace mxnet
