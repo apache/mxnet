@@ -75,7 +75,7 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
     size_s << size;
     (*dict)["low"] = low_s.str();
     (*dict)["high"] = high_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
     (*dict)["size"] = size_s.str();
   }
 };

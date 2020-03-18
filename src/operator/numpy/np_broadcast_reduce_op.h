@@ -75,7 +75,7 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
     initial_s << initial;
     (*dict)["axis"] = axis_s.str();
     if (dtype.has_value()) {
-      (*dict)["dtype"] = String2MXNetTypeWithBool(dtype.value());
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
     } else {
       (*dict)["dtype"] = dtype_s.str();
     }

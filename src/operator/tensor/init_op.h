@@ -240,7 +240,7 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     (*dict)["step"] = step_s.str();
     (*dict)["repeat"] = repeat_s.str();
     (*dict)["infer_range"] = infer_range_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -343,7 +343,7 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     (*dict)["stop"] = stop_s.str();
     (*dict)["num"] = num_s.str();
     (*dict)["endpoint"] = endpoint_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

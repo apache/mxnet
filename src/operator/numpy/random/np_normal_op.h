@@ -76,7 +76,7 @@ struct NumpyNormalParam : public dmlc::Parameter<NumpyNormalParam> {
     size_s << size;
     (*dict)["loc"] = loc_s.str();
     (*dict)["scale"] = scale_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
     (*dict)["size"] = size_s.str();
   }
 };

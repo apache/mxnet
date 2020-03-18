@@ -64,7 +64,7 @@ struct NumpyWindowsParam : public dmlc::Parameter<NumpyWindowsParam> {
     M_s << M;
     dtype_s << dtype;
     (*dict)["M"] = M_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

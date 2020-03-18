@@ -73,7 +73,7 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     (*dict)["N"] = N_s.str();
     (*dict)["M"] = M_s.str();
     (*dict)["k"] = k_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -270,13 +270,12 @@ struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
     num_s << num;
     endpoint_s << endpoint;
     base_s << base;
-    dtype_s << dtype;
     (*dict)["start"] = start_s.str();
     (*dict)["stop"] = stop_s.str();
     (*dict)["num"] = num_s.str();
     (*dict)["endpoint"] = endpoint_s.str();
     (*dict)["base"] = base_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
