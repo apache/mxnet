@@ -36,6 +36,7 @@ MXNET_REGISTER_API("_npi.gamma")
   nnvm::NodeAttrs attrs;
   op::NumpyGammaParam param;
   int num_inputs = 0;
+  std::vector<NDArray*> inputs;
   if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {
     if (args[0].type_code() == kNull) {
       param.shape = dmlc::nullopt;
@@ -43,7 +44,7 @@ MXNET_REGISTER_API("_npi.gamma")
       param.shape = args[0].operator double();
     }
     if (args[1].type_code() == kDLFloat || args[1].type_code() == kDLInt) {
-      // bith 'shape' and 'scale' are numeric types
+      // both 'shape' and 'scale' are numeric types
       num_inputs = 0;
       if (args[1].type_code() == kNull) {
         param.scale = dmlc::nullopt;
@@ -54,9 +55,11 @@ MXNET_REGISTER_API("_npi.gamma")
       // 'shape' is numeric types but 'scale' is not
       num_inputs = 1;
       param.scale = dmlc::nullopt;
+      inputs.push_back(args[1].operator mxnet::NDArray*());
     }
   } else {
     param.shape = dmlc::nullopt;
+    inputs.push_back(args[0].operator mxnet::NDArray*());
     if (args[1].type_code() == kDLFloat || args[1].type_code() == kDLInt) {
       // 'shape' is not numeric types but 'scale' is numeric types
       num_inputs = 1;
@@ -69,6 +72,7 @@ MXNET_REGISTER_API("_npi.gamma")
       // nither 'shape' or 'scale' is numeric types
       num_inputs = 2;
       param.scale = dmlc::nullopt;
+      inputs.push_back(args[1].operator mxnet::NDArray*());
     }
   }
   if (args[2].type_code() == kNull) {
@@ -83,10 +87,6 @@ MXNET_REGISTER_API("_npi.gamma")
     param.dtype = mshadow::kFloat32;
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
-  }
-  std::vector<NDArray*> inputs;
-  for (int i = 0; i < num_inputs; ++i) {
-    inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;

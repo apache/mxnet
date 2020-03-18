@@ -4811,10 +4811,6 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     >>> np.mean(a, dtype=np.float64)
     array(0.55)
     """
-    if ctx is None:
-        ctx = str(current_context())
-    else:
-        ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
         dtype = _np.dtype(dtype).name
     return _api_internal.mean(a, axis, dtype, keepdims, out)
