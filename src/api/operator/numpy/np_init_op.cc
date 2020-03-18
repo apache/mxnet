@@ -26,6 +26,7 @@
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/tensor/init_op.h"
+#include "../../../operator/numpy/np_init_op.h"
 
 namespace mxnet {
 
@@ -85,6 +86,37 @@ MXNET_REGISTER_API("_npi.full_like")
   } else {
     *ret = ndoutputs[0];
   }
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.indices")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_indices");
+  nnvm::NodeAttrs attrs;
+  op::IndicesOpParam param;
+  // param.dimensions
+  if (args[0].type_code() == kDLInt) {
+    param.dimensions = TShape(1, args[0].operator int64_t());
+  } else {
+    param.dimensions = TShape(args[0].operator ObjectRef());
+  }
+  // param.dtype
+  if (args[1].type_code() == kNull) {
+    param.dtype = mshadow::kInt32;
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::IndicesOpParam>(&attrs);
+  // param.ctx
+  if (args[2].type_code() != kNull) {
+    attrs.dict["ctx"] = args[2].operator std::string();
+  }
+  int num_inputs = 0;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
