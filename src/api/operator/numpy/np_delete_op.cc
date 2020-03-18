@@ -43,48 +43,47 @@ MXNET_REGISTER_API("_npi.delete")
   param.axis = dmlc::nullopt;
   if (args.num_args == 3) {
     if (args[1].type_code() == kDLInt ||
-        args[1].type_code() == kDLUInt ||
         args[1].type_code() == kDLFloat) {
-      if (args[1].type_code() == kNull) {
-        param.int_ind = dmlc::nullopt;
-      } else {
+      if (args[1].type_code() == kDLInt) {
         param.int_ind = args[1].operator int();
+      } else if (args[1].type_code() == kDLFloat) {
+        param.int_ind = static_cast<int>(args[1].operator double());
       }
-      if (args[2].type_code() == kNull) {
-        param.axis = dmlc::nullopt;
-      } else {
+      if (args[2].type_code() == kDLInt) {
         param.axis = args[2].operator int();
+      } else if (args[2].type_code() == kDLFloat) {
+        param.axis = static_cast<int>(args[2].operator double());
       }
       num_inputs = 1;
     } else {
-      if (args[2].type_code() == kNull) {
-        param.axis = dmlc::nullopt;
-      } else {
+      if (args[2].type_code() == kDLInt) {
         param.axis = args[2].operator int();
+      } else if (args[2].type_code() == kDLFloat) {
+        param.axis = static_cast<int>(args[2].operator double());
       }
       num_inputs = 2;
     }
   } else {
     num_inputs = 1;
-    if (args[1].type_code() == kNull) {
-      param.start = dmlc::nullopt;
-    } else {
+    if (args[1].type_code() == kDLInt) {
       param.start = args[1].operator int();
+    } else if (args[1].type_code() == kDLFloat) {
+      param.start = static_cast<int>(args[1].operator double());
     }
-    if (args[2].type_code() == kNull) {
-      param.stop = dmlc::nullopt;
-    } else {
+    if (args[2].type_code() == kDLInt) {
       param.stop = args[2].operator int();
+    } else if (args[2].type_code() == kDLFloat) {
+      param.stop = static_cast<int>(args[2].operator double());
     }
-    if (args[3].type_code() == kNull) {
-      param.step = dmlc::nullopt;
-    } else {
+    if (args[3].type_code() == kDLInt) {
       param.step = args[3].operator int();
+    } else if (args[3].type_code() == kDLFloat) {
+      param.step = static_cast<int>(args[3].operator double());
     }
-    if (args[4].type_code() == kNull) {
-      param.axis = dmlc::nullopt;
-    } else {
+    if (args[4].type_code() == kDLInt) {
       param.axis = args[4].operator int();
+    } else if (args[4].type_code() == kDLFloat) {
+      param.axis = static_cast<int>(args[4].operator double());
     }
   }
   std::vector<NDArray*> inputs;
