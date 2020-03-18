@@ -74,3 +74,5 @@ print("data:", out2[0].data.asnumpy())
 print("indices:", out2[0].indices.asnumpy())
 print("indptr:", out2[0].indptr.asnumpy())
 
+print("--------Baseline(dense)--------")
+print(mx.nd.transpose(a.tostype('default')))

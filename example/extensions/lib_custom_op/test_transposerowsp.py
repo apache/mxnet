@@ -68,3 +68,6 @@ out2 = exe2.forward()
 print("Stateful Compute Result:")
 print("data:", out2[0].data.asnumpy())
 print("indices:", out2[0].indices.asnumpy())
+
+print("--------Baseline(dense)--------")
+print(mx.nd.transpose(a.tostype('default')))
