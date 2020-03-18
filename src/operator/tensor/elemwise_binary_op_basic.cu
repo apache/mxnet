@@ -218,7 +218,7 @@ void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<gpu> *s,
 }
 
 NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu,op::mshadow_op::plus>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, op::mshadow_op::plus>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_grad_add)

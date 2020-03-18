@@ -161,15 +161,19 @@ class ElemwiseBinaryOp : public OpBase {
           (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
           / mxnet_op::DataType<DType>::kLanes);
         DType * lgrad_dptr = outputs[0].dptr<DType>();
-        mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<LOP>, Req>, cpu>::Launch(
-          s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
+        mxnet_op::Kernel<
+          mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<LOP>, Req>, cpu>::Launch(
+            s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);
+      });
       MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
         const int size = static_cast<int>(
           (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
           / mxnet_op::DataType<DType>::kLanes);
         DType * rgrad_dptr = outputs[1].dptr<DType>();
-        mxnet_op::Kernel<mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<ROP>, Req>, cpu>::Launch(
-          s, size, rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);});
+        mxnet_op::Kernel<
+          mxnet_op::op_with_req<mxnet_op::backward_grad_tuned<ROP>, Req>, cpu>::Launch(
+            s, size, rgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);
+      });
     });
   }
 
