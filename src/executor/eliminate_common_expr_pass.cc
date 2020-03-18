@@ -217,7 +217,7 @@ nnvm::Graph EliminateCommonExpr(nnvm::Graph&& g) {
       EliminateCommonNodes(&g, common_nodes);
     }
   }
-  return g;
+  return std::move(g);
 }
 
 }  // namespace exec

@@ -212,9 +212,7 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
-    return _npi.full_like(a, fill_value=0, dtype=dtype, ctx=ctx, out=out)
+    return full_like(a, 0, dtype=dtype, order=order, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -270,11 +268,7 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     >>> np.ones_like(y)
     array([1., 1., 1.], dtype=float64)
     """
-    if order != 'C':
-        raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
-    return _npi.full_like(a, fill_value=1, dtype=dtype, ctx=ctx, out=out)
+    return full_like(a, 1, dtype=dtype, order=order, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -433,11 +427,15 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylin
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
-    return _npi.full_like(a, fill_value=fill_value, dtype=dtype, ctx=ctx, out=out)
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.full_like(a, fill_value, dtype, ctx, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -997,7 +995,7 @@ def add(x1, x2, out=None, **kwargs):
         * If both inputs are of integer types (including boolean), not supported yet.
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.add(x1, x2, out=out)
+        return _np.add(x1, x2, out=out)
     return _api_internal.add(x1, x2, out)
 
 
@@ -1032,8 +1030,9 @@ def subtract(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), not supported yet.
     """
-    return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar,
-                         _npi.rsubtract_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.subtract(x1, x2, out=out)
+    return _api_internal.subtract(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1067,7 +1066,9 @@ def multiply(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), not supported yet.
     """
-    return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.multiply(x1, x2, out=out)
+    return _api_internal.multiply(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1102,8 +1103,9 @@ def divide(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is of float32 type.
     """
-    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
-                         _npi.rtrue_divide_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.divide(x1, x2, out=out)
+    return _api_internal.true_divide(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1140,8 +1142,9 @@ def true_divide(x1, x2, out=None):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is of float32 type.
     """
-    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
-                         _npi.rtrue_divide_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.true_divide(x1, x2, out=out)
+    return _api_internal.true_divide(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1168,7 +1171,9 @@ def mod(x1, x2, out=None, **kwargs):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.mod(x1, x2, out=out)
+    return _api_internal.mod(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1356,7 +1361,9 @@ def remainder(x1, x2, out=None):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.mod(x1, x2, out=out)
+    return _api_internal.mod(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1384,7 +1391,9 @@ def power(x1, x2, out=None, **kwargs):
         The bases in x1 raised to the exponents in x2.
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.power(x1, x2, out=out)
+    return _api_internal.power(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1983,7 +1992,9 @@ def lcm(x1, x2, out=None, **kwargs):
     >>> np.lcm(np.arange(6, dtype=int), 20)
     array([ 0, 20, 20, 60, 20, 20], dtype=int64)
     """
-    return _ufunc_helper(x1, x2, _npi.lcm, _np.lcm, _npi.lcm_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.lcm(x1, x2, out=out)
+    return _api_internal.lcm(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3705,21 +3716,9 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
     """
-    axis_size = ary.shape[axis]
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-        if axis_size % sections:
-            raise ValueError('array split does not result in an equal division')
-        section_size = int(axis_size / sections)
-        indices = [i * section_size for i in range(sections)]
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False)
-    assert isinstance(ret, list), 'Output of split should be list,' \
-                                  ' got a return type {}'.format(type(ret))
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.split(ary, indices_or_sections, axis))
 # pylint: enable=redefined-outer-name
 
 
@@ -6673,7 +6672,7 @@ def nonzero(a):
     >>> (a > 3).nonzero()
     (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
     """
-    out = _npi.nonzero(a).transpose()
+    out = _api_internal.nonzero(a).transpose()
     return tuple([out[i] for i in range(len(out))])
 
 
@@ -6858,7 +6857,7 @@ def shares_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `may_share_memory` in MXNet DeepNumPy
     """
-    return _npi.share_memory(a, b).item()
+    return _api_internal.share_memory(a, b).item()
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6899,7 +6898,7 @@ def may_share_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `shares_memory` in MXNet DeepNumPy
     """
-    return _npi.share_memory(a, b).item()
+    return _api_internal.share_memory(a, b).item()
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6986,24 +6985,7 @@ def ediff1d(ary, to_end=None, to_begin=None):
     >>> np.ediff1d(x, to_begin=y)
     array([ 1.,  2.,  4.,  1.,  6., 24.,  1.,  2.,  3., -7.])
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(to_begin, np_ndarray), isinstance(to_end, np_ndarray))
-    # case 1: when both `to_begin` and `to_end` are arrays
-    if input_type == (True, True):
-        return _npi.ediff1d(ary, to_begin, to_end, to_begin_arr_given=True, to_end_arr_given=True,
-                            to_begin_scalar=None, to_end_scalar=None)
-    # case 2: only `to_end` is array but `to_begin` is scalar/None
-    elif input_type == (False, True):
-        return _npi.ediff1d(ary, to_end, to_begin_arr_given=False, to_end_arr_given=True,
-                            to_begin_scalar=to_begin, to_end_scalar=None)
-    # case 3: only `to_begin` is array but `to_end` is scalar/None
-    elif input_type == (True, False):
-        return _npi.ediff1d(ary, to_begin, to_begin_arr_given=True, to_end_arr_given=False,
-                            to_begin_scalar=None, to_end_scalar=to_end)
-    # case 4: both `to_begin` and `to_end` are scalar/None
-    else:
-        return _npi.ediff1d(ary, to_begin_arr_given=False, to_end_arr_given=False,
-                            to_begin_scalar=to_begin, to_end_scalar=to_end)
+    return _api_internal.ediff1d(ary, to_end, to_begin)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7151,8 +7133,8 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
         if x.dtype in ['int8', 'uint8', 'int32', 'int64']:
             return x
         if not copy:
-            return _npi.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf, out=x)
-        return _npi.nan_to_num(x, copy=copy, nan=nan, posinf=posinf, neginf=neginf, out=None)
+            return _api_internal.nan_to_num(x, copy, nan, posinf, neginf, x)
+        return _api_internal.nan_to_num(x, copy, nan, posinf, neginf, None)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -7485,16 +7467,7 @@ def where(condition, x=None, y=None):  # pylint: disable=too-many-return-stateme
             else:
                 return y
         else:
-            if isinstance(x, numeric_types) and isinstance(y, numeric_types):
-                return _npi.where_scalar2(condition, float(x), float(y), out=None)
-            elif isinstance(x, NDArray) and isinstance(y, NDArray):
-                return _npi.where(condition, x, y, out=None)
-            elif isinstance(y, NDArray):
-                return _npi.where_lscalar(condition, y, float(x), out=None)
-            elif isinstance(x, NDArray):
-                return _npi.where_rscalar(condition, x, float(y), out=None)
-            else:
-                raise TypeError('type {0} and {1} not supported'.format(str(type(x)), str(type(y))))
+            return _api_internal.where(condition, x, y)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7541,10 +7514,10 @@ def polyval(p, x):
     array([76., 49.])
     """
     from ...numpy import ndarray
-    if isinstance(p, ndarray) and isinstance(x, ndarray):
-        return _npi.polyval(p, x)
-    elif not isinstance(p, ndarray) and not isinstance(x, ndarray):
+    if isinstance(p, numeric_types) and isinstance(x, numeric_types):
         return _np.polyval(p, x)
+    elif isinstance(p, ndarray) and isinstance(x, ndarray):
+        return _api_internal.polyval(p, x)
     else:
         raise TypeError('type not supported')
 
