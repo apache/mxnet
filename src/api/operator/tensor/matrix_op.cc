@@ -46,7 +46,7 @@ MXNET_REGISTER_API("_npi.clip")
     param.a_min = -INFINITY;
   }
 
-  if (args[2].type_code() == kDLInt) {
+  if (args[2].type_code() != kNull) {
     param.a_max = args[2].operator double();
   } else {
     param.a_max = INFINITY;
