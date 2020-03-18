@@ -99,6 +99,13 @@ struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolPara
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
@@ -259,6 +266,7 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "initial is not supported yet";
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -415,6 +423,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_NE(outputs[0].type_flag_, kBool) << "reduce operators do not support gradient calculation "
                                             "for input tensors of boolean type.";
+  if (outputs[0].shape_.Size() == 0) return;
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   TShape small;
   if (param.keepdims) {

@@ -32,14 +32,11 @@ cdef enum MXNetTypeCode:
     kNull = 4
     kMXNetType = 5
     kMXNetContext = 6
-    kArrayHandle = 7
-    kObjectHandle = 8
-    kModuleHandle = 9
-    kFuncHandle = 10
-    kStr = 11
-    kBytes = 12
-    kNDArrayContainer = 13
-    kNDArrayHandle = 14
+    kObjectHandle = 7
+    kStr = 8
+    kBytes = 9
+    kPyArg = 10
+    kNDArrayHandle = 11
     kExtBegin = 15
 
 cdef extern from "mxnet/runtime/c_runtime_api.h":
@@ -62,6 +59,8 @@ cdef extern from "mxnet/runtime/c_runtime_api.h":
                       MXNetValue* ret_val,
                       int* ret_type_code)
     int MXNetFuncFree(MXNetFunctionHandle func)
+    int MXNetObjectFree(ObjectHandle obj)
+    int MXNetObjectGetTypeIndex(ObjectHandle obj, unsigned* out_index)
 
 
 cdef inline py_str(const char* x):

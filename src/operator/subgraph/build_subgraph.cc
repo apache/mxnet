@@ -733,7 +733,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
       LOG(INFO) << "The graph has no attribute of subgraph_property attached. "
                    "The original graph is returned.";
     }
-    return g;
+    return std::move(g);
   }
   using namespace sg;
 
@@ -770,7 +770,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
       AdjustSubgraphNode(&g, subgraph_nodes[i], subgraph_selectors[i], i);
     }
   }
-  return g;
+  return std::move(g);
 }
 
 NNVM_REGISTER_PASS(BuildSubgraph)

@@ -13,6 +13,19 @@ add_library(mshadow INTERFACE)
 file(GLOB_RECURSE MSHADOWSOURCE "mshadow/*.h")
 target_include_directories(mshadow INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_sources(mshadow INTERFACE ${MSHADOWSOURCE})
+if(UNIX)
+  target_compile_options(mshadow INTERFACE
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-braced-scalar-init>"
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-pass-failed>"
+    # TODO Replace Wno-unused-lambda-capture with [[maybe_unused]] annotation once requiring C++17
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-unused-lambda-capture>"
+    # TODO Fixing the warning leads to compile error on 4.8; fix once 4.8 support is dropped
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-undefined-var-template>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>"
+    "$<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>")
+endif()
 
 if(USE_CUDA)
   enable_language(CUDA)
@@ -67,7 +80,8 @@ else()
 endif()
 
 set(mshadow_LINT_DIRS mshadow mshadow-ps)
+find_package(Python3)
 add_custom_target(mshadow_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC}
-  -DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
+  -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE} -DLINT_DIRS=${mshadow_LINT_DIRS}
   -DPROJECT_SOURCE_DIR=${PROJECT_SOURCE_DIR} -DPROJECT_NAME=mshadow
   -P ${PROJECT_SOURCE_DIR}/../dmlc-core/cmake/lint.cmake)

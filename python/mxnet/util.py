@@ -647,6 +647,93 @@ def wrap_np_binary_func(func):
     return _wrap_np_binary_func
 
 
+# pylint: disable=exec-used
+def numpy_fallback(func):
+    """decorator for falling back to offical numpy for a specific function"""
+    def get_ctx(ctx, new_ctx):
+        if ctx is None:
+            return new_ctx
+        else:
+            if new_ctx is None:
+                new_ctx = ctx
+            assert ctx == new_ctx, "inconsistent context %s and %s" % (str(ctx), str(new_ctx))
+            return ctx
+
+    def _as_official_np_array(object):
+        ctx = None
+        if hasattr(object, 'asnumpy'):
+            return object.asnumpy(), object.ctx
+        elif isinstance(object, (list, tuple)):
+            tmp = []
+            for arr in object:
+                new_arr, new_ctx = _as_official_np_array(arr)
+                ctx = get_ctx(ctx, new_ctx)
+                tmp.append(new_arr)
+            return object.__class__(tmp), ctx
+        elif isinstance(object, dict):
+            tmp = {}
+            for k, v in object.items():
+                new_v, new_ctx = _as_official_np_array(v)
+                ctx = get_ctx(ctx, new_ctx)
+                tmp[k] = new_v
+            return tmp, ctx
+        else:
+            return object, None
+
+    from .ndarray import from_numpy
+    from .numpy import array
+    from .context import current_context
+    def _as_mx_np_array(object, ctx=current_context()):
+        import numpy as _np
+        if isinstance(object, _np.ndarray):
+            try:
+                ret = from_numpy(object).as_np_ndarray()
+            except ValueError:
+                ret = array(object, dtype=object.dtype, ctx=ctx)
+            return (ret if ('cpu' in str(ctx)) else ret.as_in_ctx(ctx))
+        elif isinstance(object, (list, tuple)):
+            tmp = [_as_mx_np_array(arr, ctx) for arr in object]
+            return object.__class__(tmp)
+        elif isinstance(object, dict):
+            return {k:_as_mx_np_array(v, ctx) for k, v in object}
+        else:
+            return object
+
+    import re
+    func_name = func.__name__
+    func_doc = func.__doc__
+    func_source = inspect.getsource(func)
+    func_source = re.sub(r'np\.', 'onp.', func_source)
+    func_source = func_source.split('\n')[1:]
+    indentation = func_source[0].find('def')
+    if indentation == -1:
+        raise ValueError("should wrap a function")
+    stripped = []
+    for line in func_source:
+        stripped.append(line[indentation:])
+    stripped.insert(1, '    import numpy as onp')
+    func_source = '\n'.join(stripped)
+    local = {}
+    exec(func_source, None, local)
+    func = local[func_name]
+    func.__doc__ = func_doc
+
+    @functools.wraps(func)
+    def _fallback_to_official_np(*args, **kwargs):
+        # for every ndarray input, fallback
+        new_args, ctx0 = _as_official_np_array(args)
+        new_kwargs, ctx1 = _as_official_np_array(kwargs)
+        ctx = get_ctx(ctx0, ctx1)
+        ret = func(*new_args, **new_kwargs)
+        if ret is None:
+            raise ValueError("Only functions with return values are allowed to use this decorator")
+        ret = _as_mx_np_array(ret, ctx=ctx)
+        return ret
+
+    return _fallback_to_official_np
+# pylint: enable=exec-used
+
+
 def _set_np_array(active):
     """Turns on/off NumPy array semantics for the current thread in which `mxnet.numpy.ndarray`
     is expected to be created, instead of the legacy `mx.nd.NDArray`.
