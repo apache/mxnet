@@ -28,32 +28,6 @@
 
 using namespace mshadow::cuda;
 
-template<int ndim, typename DType, typename OP, int unroll>
-__launch_bounds__(kMaxThreadsPerBlock)
-__global__ void binary_broadcast_kernel(const int N, const bool addto,
-                                        const DType* __restrict lhs,
-                                        const DType* __restrict rhs, DType *out,
-                                        const Shape<ndim> lstride, const Shape<ndim> rstride,
-                                        const Shape<ndim> oshape) {
-  for (int idx = blockIdx.x * blockDim.x * unroll + threadIdx.x; idx < N;
-    idx += blockDim.x * gridDim.x * unroll)
-  {
-    int j[unroll];
-    int k[unroll];
-    DType val[unroll];
-    #pragma unroll
-    for (int i=0;i < unroll;i++) {
-      unravel_dot(idx + i*blockDim.x, oshape, lstride, rstride, &j[i], &k[i]);
-      val[i] = OP::Map(lhs[j[i]], rhs[k[i]]);
-    }
-    #pragma unroll
-    for (int i=0;i < unroll;i++) {
-      if (idx + i*blockDim.x < N) assign(&out[idx + i*blockDim.x], addto, val[i]);
-    }
-
-  }
-}
-
 template <int ndim, typename DType>
 struct VectorizedBinaryBroadcastParam {
   const DType* inputs[2];
@@ -132,7 +106,7 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
 #pragma unroll
     for (int i = 0; i < lloader.nvec(); ++i) {
       if (i != 0) {
-        rindex = unravel_dot(idx * nvec + i, param.oshape, param.stride[other_side]);
+        rindex = mxnet_op::unravel_dot(idx * nvec + i, param.oshape, param.stride[other_side]);
       }
       DType rinput = param.inputs[other_side][rindex];
       DType temp;
@@ -154,22 +128,6 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
     }
     storer.store(idx, N);
   }
-}
-template<int ndim, typename DType, typename OP>
-void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
-                                const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
-  if (req == kNullOp) return;
-  cudaStream_t stream = Stream<gpu>::GetStream(s);
-  int N = out.shape_.Size();
-  const int warpSize = 32;
-  const int unroll = 2;
-  int nthread = std::min(kMaxThreadsPerBlock, ((N + warpSize - 1)/warpSize)*warpSize );
-  int ngrid = std::min(kBaseGridNum, (N + nthread*unroll - 1) / (nthread*unroll));
-  Shape<ndim> lstride = calc_stride(lhs.shape_.get<ndim>());
-  Shape<ndim> rstride = calc_stride(rhs.shape_.get<ndim>());
-  binary_broadcast_kernel<ndim, DType, OP, unroll><<<ngrid, nthread, 0, stream>>>(
-    N, req == kAddTo, lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>(), lstride, rstride,
-    out.shape_.get<ndim>());
 }
 
 template <typename DType, typename OP, int req, int ndim>
@@ -207,17 +165,16 @@ class VectorizedBinaryBroadcastFwd {
   }
 };
 
-using common::cuda::VectorizedKernelLauncher;
-
 template<int ndim, typename DType, typename OP>
-void BinaryBroadcastComputeImpl2(Stream<gpu> *s, const OpReqType req,
-                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
+void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
+                                const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
+  using common::cuda::VectorizedKernelLauncher;
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
   const index_t N = out.shape_.Size();
 
-  Shape<ndim> lstride = calc_stride(lhs.shape_.get<ndim>());
-  Shape<ndim> rstride = calc_stride(rhs.shape_.get<ndim>());
+  Shape<ndim> lstride = mxnet_op::calc_stride(lhs.shape_.get<ndim>());
+  Shape<ndim> rstride = mxnet_op::calc_stride(rhs.shape_.get<ndim>());
   MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     using LType = uint2;
     using Kernel = VectorizedBinaryBroadcastFwd<DType, OP, Req, ndim>;
@@ -270,8 +227,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
     const int Mend   = (int)((uint64_t)M*(uint64_t)(m0 + 1)/(uint64_t)Mnext);
     for (int idx0 = blockIdx.x*bx; idx0 < N; idx0 += bx*gridDim.x) {
       int idx = idx0 + tidx;
-      Shape<ndim> coord = unravel(idx, small_shape);
-      int idx_big0 = ravel(coord, big_shape0);
+      Shape<ndim> coord = mxnet_op::unravel(idx, small_shape);
+      int idx_big0 = mxnet_op::ravel(coord, big_shape0);
 
       AType val, residual;
       Reducer::SetInitValue(val, residual);
@@ -280,7 +237,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           int idx_big[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            idx_big[u] = idx_big0 + unravel_dot(k + u*by, big_shape, big_stride);
+            idx_big[u] = idx_big0 + mxnet_op::unravel_dot(k + u*by, big_shape, big_stride);
           }
           DType tmp[unroll];
           #pragma unroll
@@ -353,10 +310,10 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
     const int Mend   = (int)((uint64_t)M*(uint64_t)(m0 + 1)/(uint64_t)Mnext);
     for (int idx0 = blockIdx.x*bx; idx0 < N; idx0 += bx*gridDim.x) {
       int idx = idx0 + tidx;
-      Shape<ndim> coord = unravel(idx, small_shape);
-      int idx_big0 = ravel(coord, big_shape0);
-      int idx_lhs0 = ravel(coord, lhs_shape0);
-      int idx_rhs0 = ravel(coord, rhs_shape0);
+      Shape<ndim> coord = mxnet_op::unravel(idx, small_shape);
+      int idx_big0 = mxnet_op::ravel(coord, big_shape0);
+      int idx_lhs0 = mxnet_op::ravel(coord, lhs_shape0);
+      int idx_rhs0 = mxnet_op::ravel(coord, rhs_shape0);
 
       DType val, residual;
       Reducer::SetInitValue(val, residual);
@@ -367,9 +324,9 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           int idx_rhs[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            idx_big[u] = idx_big0 + unravel_dot(k + u*by, big_shape, big_stride);
-            idx_lhs[u] = idx_lhs0 + unravel_dot(k + u*by, lhs_shape, lhs_stride);
-            idx_rhs[u] = idx_rhs0 + unravel_dot(k + u*by, rhs_shape, rhs_stride);
+            idx_big[u] = idx_big0 + mxnet_op::unravel_dot(k + u*by, big_shape, big_stride);
+            idx_lhs[u] = idx_lhs0 + mxnet_op::unravel_dot(k + u*by, lhs_shape, lhs_stride);
+            idx_rhs[u] = idx_rhs0 + mxnet_op::unravel_dot(k + u*by, rhs_shape, rhs_stride);
           }
           DType tmp[unroll];
           #pragma unroll
@@ -445,8 +402,8 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
                                 const DType* __restrict big, OType *small, const Shape<ndim> bshape,
                                 const Shape<ndim> sshape) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    Shape<ndim> coord = unravel(idx, sshape);
-    int j = ravel(coord, bshape);
+    Shape<ndim> coord = mxnet_op::unravel(idx, sshape);
+    int j = mxnet_op::ravel(coord, bshape);
     AType val, residual;
     Reducer::SetInitValue(val, residual);
     Reducer::Reduce(val, AType(OP::Map(big[j])), residual);
@@ -467,10 +424,10 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
                                  const Shape<ndim> rhs_shape,
                                  const Shape<ndim> small_shape) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    Shape<ndim> coord = unravel(idx, small_shape);
-    int idx_big = ravel(coord, big_shape);
-    int idx_lhs = ravel(coord, lhs_shape);
-    int idx_rhs = ravel(coord, rhs_shape);
+    Shape<ndim> coord = mxnet_op::unravel(idx, small_shape);
+    int idx_big = mxnet_op::ravel(coord, big_shape);
+    int idx_lhs = mxnet_op::ravel(coord, lhs_shape);
+    int idx_rhs = mxnet_op::ravel(coord, rhs_shape);
     DType val, residual;
     Reducer::SetInitValue(val, residual);
     Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);

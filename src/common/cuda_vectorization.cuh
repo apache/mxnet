@@ -26,10 +26,11 @@
 #ifndef MXNET_COMMON_CUDA_VECTORIZATION_CUH_
 #define MXNET_COMMON_CUDA_VECTORIZATION_CUH_
 
+#if MXNET_USE_CUDA && __CUDACC__
+
 #include <cuda_runtime.h>
 #include "cuda_utils.h"
 
-#if MXNET_USE_CUDA && __CUDACC__
 
 namespace mxnet {
 namespace common {
