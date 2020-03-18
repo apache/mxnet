@@ -95,6 +95,7 @@ class OperatorDataInitializer {
   OperatorDataInitializer()
   : generator_(new std::mt19937()) {
   }
+  virtual ~OperatorDataInitializer() {}
 
   /*!
    * \brief Fill a blob with random values
