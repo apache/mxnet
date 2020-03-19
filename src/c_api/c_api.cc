@@ -138,13 +138,12 @@ void CustomFComputeDispatcher(const std::string op_name,
     const char* ctx_str = inputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
     in_dev_type.push_back(ctx_str);
     in_dev_id.push_back(inputs[i].ctx().real_dev_id());
-    
-    if(inputs[i].storage_type() == mxnet::kRowSparseStorage) {
+
+    if (inputs[i].storage_type() == mxnet::kRowSparseStorage) {
       in_stypes[i] = 1;
       in_indices[i] = inputs[i].aux_data(rowsparse::kIdx).dptr_;
       in_indices_shapes[i] = inputs[i].aux_shape(rowsparse::kIdx).Size();
-    }
-    else if(inputs[i].storage_type() == mxnet::kCSRStorage) {
+    } else if (inputs[i].storage_type() == mxnet::kCSRStorage) {
       in_stypes[i] = 2;
       in_indices[i] = inputs[i].aux_data(csr::kIdx).dptr_;
       in_indptr[i] = inputs[i].aux_data(csr::kIndPtr).dptr_;
@@ -163,12 +162,11 @@ void CustomFComputeDispatcher(const std::string op_name,
     out_dev_type.push_back(ctx_str);
     out_dev_id.push_back(outputs[i].ctx().real_dev_id());
 
-    if(outputs[i].storage_type() == mxnet::kRowSparseStorage) {
+    if (outputs[i].storage_type() == mxnet::kRowSparseStorage) {
       out_stypes[i] = 1;
       out_indices[i] = outputs[i].aux_data(rowsparse::kIdx).dptr_;
       out_indices_shapes[i] = outputs[i].aux_shape(rowsparse::kIdx).Size();
-    }
-    else if(outputs[i].storage_type() == mxnet::kCSRStorage) {
+    } else if (outputs[i].storage_type() == mxnet::kCSRStorage) {
       out_stypes[i] = 2;
       out_indices[i] = outputs[i].aux_data(csr::kIdx).dptr_;
       out_indptr[i] = outputs[i].aux_data(csr::kIndPtr).dptr_;
@@ -199,18 +197,17 @@ void CustomFComputeDispatcher(const std::string op_name,
   // returns allocated arrays for data, indices and indptr.
   auto sparse_alloc = [&](int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
-    // Row Sparse
-    if(idxptr_len == 0) {
+    if (idxptr_len == 0) {
+      // Row Sparse
       outputs[index].CheckAndAlloc({mshadow::Shape1(indices_len)});
       *data = outputs[index].data().dptr_;
-      *indices = (int64_t*)outputs[index].aux_data(rowsparse::kIdx).dptr_;
-    }
-    // CSR
-    else {
+      *indices = reinterpret_cast<int64_t*>(outputs[index].aux_data(rowsparse::kIdx).dptr_);
+    } else {
+      // CSR
       outputs[index].CheckAndAlloc({mshadow::Shape1(idxptr_len), mshadow::Shape1(indices_len)});
       *data = outputs[index].data().dptr_;
-      *indices = (int64_t*)outputs[index].aux_data(csr::kIdx).dptr_;
-      *indptr = (int64_t*)outputs[index].aux_data(csr::kIndPtr).dptr_;
+      *indices = reinterpret_cast<int64_t*>(outputs[index].aux_data(csr::kIdx).dptr_);
+      *indptr = reinterpret_cast<int64_t*>(outputs[index].aux_data(csr::kIndPtr).dptr_);
     }
   };
 
@@ -231,7 +228,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   };
 
   typedef decltype(sparse_alloc) alloc_type_sparse;
-  auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len, 
+  auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
     alloc_type_sparse* sparsealloc = static_cast<alloc_type_sparse*>(_sparse_alloc);
     (*sparsealloc)(index, indices_len, idxptr_len, data, indices, indptr);
@@ -263,10 +260,10 @@ void CustomFComputeDispatcher(const std::string op_name,
                     in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
                     out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
                     out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
-                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream, 
+                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
                     sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(), 
-                    in_indices_shapes.data(), out_indices_shapes.data(), 
+                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                    in_indices_shapes.data(), out_indices_shapes.data(),
                     in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
@@ -288,7 +285,8 @@ void CustomFComputeDispatcher(const std::string op_name,
                             out_data.size(),
                             cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
                             sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                            in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                            in_indices.data(), out_indices.data(),
+                            in_indptr.data(), out_indptr.data(),
                             in_indices_shapes.data(), out_indices_shapes.data(),
                             in_indptr_shapes.data(), out_indptr_shapes.data()))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
@@ -644,16 +642,15 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
-      // InferSType is not defineid in customized lib.
       if (stype_fp == nullptr) {
+        // InferSType is not defineid in customized lib.
         CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
         << "Error input tensors are not dense for custom operator '" << name_str << "'";
         // set outputs as dense
         return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
                                        dispatch_mode, DispatchMode::kFComputeEx);
-      }
-      // InferSType is defined in customized lib.
-      else {
+      } else {
+        // InferSType is defined in customized lib.
         // convert attributes to vector of char*
         std::vector<const char*> attr_keys, attr_vals;
         for (auto kv : attrs.dict) {

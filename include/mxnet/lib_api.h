@@ -220,7 +220,7 @@ enum MXDType {
 enum MXStorageType {
   // dense
   kDefaultStorage = 0,
-  // row sparse 
+  // row sparse
   kRowSparseStorage = 1,
   // csr
   kCSRStorage = 2,
@@ -255,7 +255,7 @@ struct MXSparse {
   int64_t indices_len;
 
   // For CSR, indptr gives the start and end index of data for each row.
-  // For row sparse, indptr is not used. 
+  // For row sparse, indptr is not used.
   int64_t* indptr = nullptr;
   int64_t indptr_len;
 
@@ -265,16 +265,16 @@ struct MXSparse {
     // If CSR, num of non-zero elemets is num_idx,
     // If row sparse, num of elements is num_idx * width.
     data_len = num_idx;
-    if(!idx_ptr) {
-      for(int i = 1; i < ndims; ++i)
+    if (!idx_ptr) {
+      for (int i = 1; i < ndims; ++i)
          data_len *= dims[i];
     }
 
-    indices = (int64_t*)idx;
+    indices = reinterpret_cast<int64_t*>(idx);
     indices_len = num_idx;
 
-    if(idx_ptr) {
-      indptr = (int64_t*)idx_ptr;
+    if (idx_ptr) {
+      indptr = reinterpret_cast<int64_t*>(idx_ptr);
       indptr_len = num_idx_ptr;
     }
   }
@@ -387,7 +387,7 @@ struct MXTensor {
            verID == oth.verID &&
            ctx.dev_type == oth.ctx.dev_type &&
            ctx.dev_id == oth.ctx.dev_id &&
-           shape == oth.shape && 
+           shape == oth.shape &&
            stype == oth.stype;
   }
 
@@ -455,7 +455,7 @@ class OpResource {
 
   /*! \brief allocate sparse memory controlled by MXNet */
   void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
-    sparse_malloc(sparse_alloc, index, indices_len, indptr_len, 
+    sparse_malloc(sparse_alloc, index, indices_len, indptr_len,
                    &(sparse->data), &(sparse->indices), &(sparse->indptr));
   }
 
@@ -700,8 +700,8 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name) : name(op_name),
-    parse_attrs(NULL), infer_type(NULL), infer_storage_type(NULL),
-    infer_shape(NULL), mutate_inputs(NULL), isSGop(false) {}
+    parse_attrs(NULL), infer_type(NULL), infer_storage_type(NULL), infer_shape(NULL),
+    mutate_inputs(NULL), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
     if (forward_ctx_map.count(ctx) > 0)
       raiseDuplicateContextError();
@@ -1186,13 +1186,13 @@ extern "C" {
     return retval;
   }
 
-   /*! \brief returns status of calling inferSType function for operator from library */
+  /*! \brief returns status of calling inferSType function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
 #else
   int
 #endif
-   _opCallInferSType(inferSType_t inferSType, const char* const* keys,
+  _opCallInferSType(inferSType_t inferSType, const char* const* keys,
                    const char* const* vals, int num,
                    int* instypes, int num_in, int* outstypes, int num_out) {
     // create map of attributes from list
@@ -1239,7 +1239,7 @@ extern "C" {
                   sparse_malloc_t sparse_malloc, void* sparse_alloc,
                   int* instypes, int* outstypes, void** in_indices, void** out_indices,
                   void** in_indptr, void** out_indptr,
-                  int64_t* in_indices_shapes, int64_t* out_indices_shapes, 
+                  int64_t* in_indices_shapes, int64_t* out_indices_shapes,
                   int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
@@ -1254,24 +1254,22 @@ extern "C" {
 
     for (int i = 0; i < num_in; i++) {
       // Dense representation.
-      if(instypes[i] == 0) {
+      if (instypes[i] == 0) {
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
                             inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
-      }
-      // Sparse representation.
-      else {
+      } else {
+        // Sparse representation.
         MXStorageType type;
-        if(instypes[i] == 1) {
+        if (instypes[i] == 1) {
           type = kRowSparseStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
-        }
-        else {
+        } else {
           type = kCSRStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i],
                            in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
         }
-        inputs[i].setTensor((void*)(&in_sparse[i]), (MXDType)intypes[i], inshapes[i], indims[i],
-                            inIDs[i], {indev_type[i], indev_id[i]}, type);
+        inputs[i].setTensor(reinterpret_cast<void*>(&in_sparse[i]), (MXDType)intypes[i],
+                            inshapes[i], indims[i], inIDs[i], {indev_type[i], indev_id[i]}, type);
       }
     }
 
@@ -1281,28 +1279,29 @@ extern "C" {
 
     for (int i = 0; i < num_out; i++) {
       // Dense representation.
-      if(outstypes[i] == 0) {
+      if (outstypes[i] == 0) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
-      }
-      // Sparse representation.
-      else {
+      } else {
+        // Sparse representation.
         MXStorageType type;
-        if(outstypes[i] == 1) {
+        if (outstypes[i] == 1) {
           type = kRowSparseStorage;
-          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
-        }
-        else {
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i],
+                            out_indices[i], out_indices_shapes[i]);
+        } else {
           type = kCSRStorage;
           out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
                             out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
-        outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
-                            outIDs[i], {outdev_type[i], outdev_id[i]}, type);
+        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (MXDType)outtypes[i],
+                            outshapes[i], outdims[i], outIDs[i], {outdev_type[i],
+                            outdev_id[i]}, type);
       }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream, sparse_malloc, sparse_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
+                   cuda_stream, sparse_malloc, sparse_alloc);
     return fcomp(attrs, inputs, outputs, res);
   }
 
@@ -1377,32 +1376,30 @@ extern "C" {
                           void** in_indptr, void** out_indptr,
                           int64_t* in_indices_shapes, int64_t* out_indices_shapes,
                           int64_t* in_indptr_shapes, int64_t* out_indptr_shapes) {
-    
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     // create a vector for sparse inputs
     std::vector<MXSparse> in_sparse(num_in);
 
     for (int i = 0; i < num_in; i++) {
-      // Dense representation.
-      if(instypes[i] == 0) {
+      if (instypes[i] == 0) {
+        // Dense representation.
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
                             inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
-      }
-      // Sparse representation.
-      else {
+      } else {
+        // Sparse representation.
         MXStorageType type;
-        if(instypes[i] == 1) {
+        if (instypes[i] == 1) {
           type = kRowSparseStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
-        }
-        else {
+        } else {
           type = kCSRStorage;
           in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i],
                            in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
         }
-        inputs[i].setTensor((void*)(&in_sparse[i]), (MXDType)intypes[i], inshapes[i], indims[i],
-                            inIDs[i], {indev_type[i], indev_id[i]}, type);
+        inputs[i].setTensor(reinterpret_cast<void*>(&in_sparse[i]), (MXDType)intypes[i],
+                            inshapes[i], indims[i], inIDs[i], {indev_type[i],
+                            indev_id[i]}, type);
       }
     }
 
@@ -1412,29 +1409,30 @@ extern "C" {
     std::vector<MXSparse> out_sparse(num_out);
 
     for (int i = 0; i < num_out; i++) {
-      // Dense representation.
-      if(outstypes[i] == 0) {
+      if (outstypes[i] == 0) {
+        // Dense representation.
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
                              outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
-      }
-      // Sparse representation.
-      else {
+      } else {
+        // Sparse representation.
         MXStorageType type;
-        if(outstypes[i] == 1) {
+        if (outstypes[i] == 1) {
           type = kRowSparseStorage;
-          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i], out_indices_shapes[i]);
-        }
-        else {
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+                            out_indices_shapes[i]);
+        } else {
           type = kCSRStorage;
           out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
                             out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
-        outputs[i].setTensor((void*)(&out_sparse[i]), (MXDType)outtypes[i], outshapes[i], outdims[i],
-                             outIDs[i], {outdev_type[i], outdev_id[i]}, type);
+        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (MXDType)outtypes[i],
+                             outshapes[i], outdims[i], outIDs[i], {outdev_type[i],
+                             outdev_id[i]}, type);
       }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream, sparse_malloc, sparse_alloc);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
+                   stream, sparse_malloc, sparse_alloc);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
