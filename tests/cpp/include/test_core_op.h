@@ -840,6 +840,7 @@ class CoreOpProp {
  public:
   virtual void Init(const kwargs_t& kwargs) { kwargs_ = kwargs; }
   const kwargs_t& GetArgs() const { return kwargs_; }
+  virtual ~CoreOpProp() {}
  private:
   kwargs_t          kwargs_;
 };

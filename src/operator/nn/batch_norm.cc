@@ -178,8 +178,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
       }
       if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
+                    [thisBias, thisMean, thisInvstd](const DType *in_data, DType *out_data) {
                       *out_data = static_cast<DType>(
                         ((*in_data - thisMean) * thisInvstd) + thisBias);
                     });
@@ -330,7 +329,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
       : param.axis);
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
-  const int channelCount = dshape[channelAxis];
+  const index_t channelCount = dshape[channelAxis];
 
   if (!mxnet::ndim_is_known(dshape)) {
     return false;

@@ -1133,13 +1133,21 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
+
+        Returns
+        -------
+        symbol_filename : str
+            Filename to which model symbols were saved, including `path` prefix.
+        params_filename : str
+            Filename to which model parameters were saved, including `path` prefix.
         """
         if not self._cached_graph:
             raise RuntimeError(
                 "Please first call block.hybridize() and then run forward with "
                 "this block at least once before calling export.")
         sym = self._cached_graph[1]
-        sym.save('%s-symbol.json'%path, remove_amp_cast=remove_amp_cast)
+        sym_filename = '%s-symbol.json'%path
+        sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
@@ -1151,7 +1159,9 @@ class HybridBlock(Block):
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
-        save_fn('%s-%04d.params'%(path, epoch), arg_dict)
+        params_filename = '%s-%04d.params'%(path, epoch)
+        save_fn(params_filename, arg_dict)
+        return (sym_filename, params_filename)
 
     def register_op_hook(self, callback, monitor_all=False):
         """Install op hook for block recursively.
