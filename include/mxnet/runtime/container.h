@@ -171,8 +171,8 @@ class ADTObj : public Object, public InplaceArrayBase<ADTObj, ObjectRef> {
   uint32_t size{0};
   // The fields of the structure follows directly in memory.
 
-  static constexpr const uint32_t _type_index = TypeIndex::kMXNetADT;
   static constexpr const char* _type_key = "MXNet.ADT";
+  static constexpr const uint32_t _type_index = TypeIndex::kMXNetADT;
   MXNET_DECLARE_FINAL_OBJECT_INFO(ADTObj, Object)
 
  private:

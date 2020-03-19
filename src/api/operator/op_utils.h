@@ -28,7 +28,7 @@
 
 namespace mxnet {
 
-std::string String2MXNetTypeWithBool(int dtype);
+std::string MXNetTypeWithBool2String(int dtype);
 std::string MXNetPercentileType2String(int interpolation);
 
 }  // namespace mxnet

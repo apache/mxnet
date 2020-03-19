@@ -220,7 +220,7 @@ inline void AccessAsCPU(const TBlob& src,
 constexpr const size_t MPRINT_PRECISION = 5;
 template<typename DType>
 inline void fill(const RunContext &run_ctx, const TBlob& _blob, const DType val) {
-  AccessAsCPU(_blob, run_ctx, [&run_ctx, val](const TBlob& blob) {
+  AccessAsCPU(_blob, run_ctx, [val](const TBlob& blob) {
     MSHADOW_TYPE_SWITCH(blob.type_flag_, DTypeX, {
       DTypeX *p1 = blob.dptr<DTypeX>();
       for (size_t i = 0, n = blob.Size(); i < n; ++i) {

@@ -23,18 +23,19 @@ set -ex
 
 pushd .
 
-yum -y install autoconf
-yum -y install asciidoc
+yum -y install autoconf libb2-devel libzstd-devel
 
 mkdir -p /work/deps
 cd /work/deps
 
-git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
-
+git clone --recursive https://github.com/ccache/ccache.git
 cd ccache
+# Checkout a fixed & tested pre-release commit of ccache 4
+# ccache 4 contains fixes for caching nvcc output: https://github.com/ccache/ccache/pull/381
+git checkout 2e7154e67a5dd56852dae29d4c418d4ddc07c230
 
 ./autogen.sh
-./configure
+CXXFLAGS="-Wno-missing-field-initializers" ./configure --disable-man
 make -j$(nproc)
 make install
 
@@ -42,4 +43,3 @@ cd /work/deps
 rm -rf /work/deps/ccache
 
 popd
-
