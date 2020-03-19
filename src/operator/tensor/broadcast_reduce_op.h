@@ -108,6 +108,13 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
       .describe("If this is set to `True`, the reduced axis is left "
                 "in the result as dimension with size one.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 enum PickOpMode {kWrap, kClip};
