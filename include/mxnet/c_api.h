@@ -314,6 +314,13 @@ MXNET_DLL int MXSetProcessProfilerState(int state, int profile_process,
 MXNET_DLL int MXSetProfilerState(int state);
 
 /*!
+ * \brief Set the scope of profiler for current process
+ * \param scope indicate the working scope of profiler
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerScope(const char* scope);
+
+/*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
  * \param profile_process an int,
@@ -2170,8 +2177,10 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,
                                    const int dev_type,
                                    SymbolHandle* ret_sym_handle,
-                                   const mx_uint len,
+                                   const mx_uint args_len,
                                    NDArrayHandle* in_args_handle,
+                                   const mx_uint aux_len,
+                                   NDArrayHandle* in_aux_handle,
                                    const mx_uint num_options,
                                    const char** keys,
                                    const char** vals);

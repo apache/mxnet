@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include <climits>
@@ -703,6 +704,17 @@ struct NumpyNanToNumParam : public dmlc::Parameter<NumpyNanToNumParam> {
     .describe("Value to be used to fill negative infinity values."
               "If no value is passed then negative infinity values"
               "will be replaced with a very small (or negative) number.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream copy_s, nan_s, posinf_s, neginf_s;
+    copy_s << copy;
+    nan_s << nan;
+    posinf_s << posinf;
+    neginf_s << neginf;
+    (*dict)["copy"] = copy_s.str();
+    (*dict)["nan"] = nan_s.str();
+    (*dict)["posinf"] = posinf_s.str();
+    (*dict)["neginf"] = neginf_s.str();
   }
 };
 

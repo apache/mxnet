@@ -24,13 +24,10 @@
 #ifndef MXNET_API_OPERATOR_UTILS_H_
 #define MXNET_API_OPERATOR_UTILS_H_
 
-#include <mxnet/runtime/ffi_helper.h>
-#include <mxnet/runtime/container.h>
-#include <mxnet/runtime/packed_func.h>
-#include <mxnet/api_registry.h>
 #include <mxnet/base.h>
 #include <nnvm/c_api.h>
 #include <vector>
+#include <string>
 #include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
@@ -44,28 +41,18 @@ void SetInOut(std::vector<NDArray*>* ndinputs,
               int num_visible_outputs,
               NDArray** out_array);
 
-template<typename T>
 std::vector<NDArray*> Invoke(const nnvm::Op* op,
                              nnvm::NodeAttrs* attrs,
                              int num_inputs,
                              NDArray** inputs,
                              int* num_outputs,
-                             NDArray** outputs) {
-  int infered_num_outputs;
-  int num_visible_outputs;
-  imperative::SetNumOutputs(op, *attrs, num_inputs, &infered_num_outputs, &num_visible_outputs);
+                             NDArray** outputs);
 
-  std::vector<NDArray*> ndinputs, ndoutputs;
-  SetInOut(&ndinputs, &ndoutputs, num_inputs, inputs,
-      num_outputs, infered_num_outputs, num_visible_outputs, outputs);
-
-  auto state = Imperative::Get()->Invoke(Context::CPU(), *attrs, ndinputs, ndoutputs);
+template<typename T>
+void SetAttrDict(nnvm::NodeAttrs* attrs) {
   if (Imperative::Get()->is_recording()) {
     ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
-    Imperative::Get()->RecordOp(std::move(*attrs), ndinputs, ndoutputs, state);
   }
-  for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
-  return ndoutputs;
 }
 
 }  // namespace mxnet

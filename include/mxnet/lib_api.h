@@ -40,7 +40,7 @@
 #include <stdexcept>
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 4
+#define MX_LIBRARY_VERSION 5
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -235,10 +235,15 @@ enum MXReturnValue {
  */
 struct MXTensor {
   MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
-
+  MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), shape(oth.shape),
+    dtype(oth.dtype), verID(oth.verID), ctx(oth.ctx) {
+    setDLTensor();
+  }
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
            size_t vID, MXContext mx_ctx)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {}
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {
+    setDLTensor();
+  }
 
   /*! \brief populate internal tensor fields */
   void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
@@ -446,7 +451,35 @@ class OpResource {
  * \brief Json utility to parse serialized subgraph symbol
  */
 /*! \brief Macro to help passing serialized subgraph through attribute dict */
-#define SUBGRAPH_SYM_JSON "subgraph_sym_json"
+#define MX_STR_SUBGRAPH_SYM_JSON "subgraph_sym_json"
+#define MX_STR_DTYPE "__dtype__"
+#define MX_STR_SHAPE "__shape__"
+
+/* \brief get shape value from list of shapes string
+ * format: [[1]] or [[1],[2]]
+ */
+std::string getShapeAt(const std::string& shape, unsigned index) {
+  int idx = 1;  // start at 1 to skip the first square bracket [
+  // find the beginning of the output shape for the particular output index
+  for (unsigned x=0; x < index; x++)
+    idx = shape.find("[", idx+1);
+  int stop = shape.find("]", idx);  // find stop index for this output shape
+  // add this shape to the list
+  return shape.substr(idx, stop-idx+1);
+}
+
+/* \brief get dtype value from list of dtypes string
+ * format: [1] or [1,2]
+ */
+std::string getDtypeAt(const std::string& dtype, unsigned index) {
+  // find the beginning of the output dtype for the particular output index
+  int idx = 0;
+  for (unsigned x=0; x < index; x++)
+    idx = dtype.find(",", idx+1);
+  int stop = dtype.find(",", idx+1);  // find stop index for this output dtype
+  if (stop == -1) stop = dtype.find("]", idx+1);
+  return dtype.substr(idx+1, stop-idx-1);
+}
 
 /*! \brief Types of JSON objects */
 enum JsonType {ERR, STR, NUM, LIST, MAP};
@@ -753,11 +786,13 @@ class CustomOp {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<bool>,
+typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<bool>&,
                                         std::unordered_map<std::string, std::string>&);
 typedef MXReturnValue (*reviewSubgraph_t)(std::string, int, bool*,
                                           std::unordered_map<std::string, std::string>&,
-                                          std::unordered_map<std::string, std::string>&);
+                                          std::unordered_map<std::string, std::string>&,
+                                          std::map<std::string, MXTensor>&,
+                                          std::map<std::string, MXTensor>&);
 
 /*!
  * \brief An abstract class for subgraph property
@@ -962,7 +997,17 @@ typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *j
 typedef int (*partCallReviewSubgraph_t)(reviewSubgraph_t reviewSubgraph, const char *json,
                                         int subgraph_id, int *accept, const char* const* opt_keys,
                                         const char* const* opt_vals, int num_opts,
-                                        char*** attr_keys, char*** attr_vals, int *num_attrs);
+                                        char*** attr_keys, char*** attr_vals, int *num_attrs,
+                                        const char* const* arg_names, int num_args,
+                                        void* const* arg_data, const int64_t* const* arg_shapes,
+                                        const int* arg_dims, const int* arg_types,
+                                        const size_t* arg_IDs, const char* const* arg_dev_type,
+                                        const int* arg_dev_id,
+                                        const char* const* aux_names, int num_aux,
+                                        void* const* aux_data, const int64_t* const* aux_shapes,
+                                        const int* aux_dims, const int* aux_types,
+                                        const size_t* aux_IDs, const char* const* aux_dev_type,
+                                        const int* aux_dev_id);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
@@ -1312,11 +1357,11 @@ extern "C" {
                         int num_ids, int *ids, const char* const* opt_keys,
                         const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
-    // create map of attributes from list
+    // create map of options from list
     std::unordered_map<std::string, std::string> opts;
-    for (int i = 0; i < num_opts; i++) {
+    for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
-    }
+
     // create array of bools for operator support
     std::vector<bool> _ids(num_ids, false);
     // call user's supportedOps function
@@ -1339,19 +1384,55 @@ extern "C" {
   _partCallReviewSubgraph(reviewSubgraph_t reviewSubgraph, const char *json,
                           int subgraph_id, int *accept, const char* const* opt_keys,
                           const char* const* opt_vals, int num_opts,
-                          char*** attr_keys, char*** attr_vals, int *num_attrs) {
+                          char*** attr_keys, char*** attr_vals, int *num_attrs,
+                          const char* const* arg_names, int num_args,
+                          void* const* arg_data, const int64_t* const* arg_shapes,
+                          const int* arg_dims, const int* arg_types,
+                          const size_t* arg_IDs, const char* const* arg_dev_type,
+                          const int* arg_dev_id,
+                          const char* const* aux_names, int num_aux,
+                          void* const* aux_data, const int64_t* const* aux_shapes,
+                          const int* aux_dims, const int* aux_types,
+                          const size_t* aux_IDs, const char* const* aux_dev_type,
+                          const int* aux_dev_id) {
     std::string subgraph_json(json);
     bool accept_bool = false;
     // create map of attributes from list
     std::unordered_map<std::string, std::string> opts;
-    for (int i = 0; i < num_opts; i++) {
+    for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+
+    // create a map of named tensors for args
+    std::map<std::string, MXTensor> args;
+    for (int i = 0; i < num_args; i++) {
+      std::vector<int64_t> shapes;
+      for (int j = 0; j < arg_dims[i]; j++)
+        shapes.push_back(arg_shapes[i][j]);
+
+      MXTensor tensor(arg_data[i], shapes, (MXDType)arg_types[i],
+            arg_IDs[i], {arg_dev_type[i], arg_dev_id[i]});
+      args[arg_names[i]] = tensor;
     }
+    // create a map of named tensors for aux
+    std::map<std::string, MXTensor> aux;
+    for (int i = 0; i < num_aux; i++) {
+      std::vector<int64_t> shapes;
+      for (int j = 0; j < aux_dims[i]; j++)
+        shapes.push_back(aux_shapes[i][j]);
+
+      MXTensor tensor(aux_data[i], shapes, (MXDType)aux_types[i],
+            aux_IDs[i], {aux_dev_type[i], aux_dev_id[i]});
+      aux[aux_names[i]] = tensor;
+    }
+
 
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
-    MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool, opts, attrs);
+    MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool,
+                                          opts, attrs, args, aux);
+    if (!retval) return retval;
+
     *accept = accept_bool;
 
     if (attrs.size() > 0) {

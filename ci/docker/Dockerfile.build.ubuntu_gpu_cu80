@@ -65,6 +65,9 @@ RUN /work/ubuntu_docs.sh
 COPY install/ubuntu_tutorials.sh /work/
 RUN /work/ubuntu_tutorials.sh
 
+COPY install/ubuntu_binutils.sh /work/
+RUN /work/ubuntu_binutils.sh
+
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

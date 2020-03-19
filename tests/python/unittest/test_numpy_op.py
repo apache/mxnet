@@ -571,63 +571,63 @@ def test_np_sum():
     def is_int(dtype):
         return 'int' in dtype
 
-    in_data_dim = random.choice([2, 3, 4])
-    shape = rand_shape_nd(in_data_dim, dim=3)
+    in_data_dim = 4
+    shapes = [rand_shape_nd(in_data_dim, dim=4), (4, 0, 4, 0)]
     acc_type = {'float16': 'float32', 'float32': 'float64', 'float64': 'float64',
                 'int8': 'int32', 'int32': 'int64', 'int64': 'int64', 'bool': 'int64'}
     is_windows = sys.platform.startswith('win')
-    for hybridize in [False, True]:
-        for keepdims in [True, False]:
-            for axis in ([i for i in range(in_data_dim)] + [(), None]):
-                for itype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']:
-                    for dtype in ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']:
-                        if (is_int(dtype) and not is_int(itype)) or (is_windows and is_int(itype))\
-                                or (itype == 'bool' and\
-                                    (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
-                            continue
-                        # test gluon
-                        test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
-                        if hybridize:
-                            test_sum.hybridize()
-                        if is_int(itype):
-                            x = _np.random.randint(-128, 128, shape, dtype=itype)
-                            x = np.array(x)
-                        elif itype == 'bool':
-                            x = _np.random.randint(0, 2, shape) < 1
-                            x = np.array(x, dtype='bool')
-                        else:
-                            x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
-                        expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
-                        expected_ret = expected_ret.astype(dtype)
-                        if itype == 'bool':
-                            if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
-                                y = test_sum(x)
-                                assert y.dtype == expected_ret.dtype
-                                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
-                                                    use_broadcast=False)
-                            continue
+    flags = [False, True]
+    axes = ([i for i in range(in_data_dim)] + [(), None])
+    itypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']
+    dtypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
+    combinations = itertools.product(flags, flags, axes, itypes, dtypes, shapes)
+    for hybridize, keepdims, axis, itype, dtype, shape in combinations:
+        if (is_int(dtype) and not is_int(itype)) or (is_windows and is_int(itype))\
+                or (itype == 'bool' and\
+                    (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
+            continue
+        # test gluon
+        test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
+        if hybridize:
+            test_sum.hybridize()
+        if is_int(itype):
+            x = _np.random.randint(-128, 128, shape, dtype=itype)
+            x = np.array(x)
+        elif itype == 'bool':
+            x = _np.random.randint(0, 2, shape) < 1
+            x = np.array(x, dtype='bool')
+        else:
+            x = np.random.uniform(-1.0, 1.0, size=shape, dtype=itype)
+        expected_ret = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims)
+        expected_ret = expected_ret.astype(dtype)
+        if itype == 'bool':
+            if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
+                y = test_sum(x)
+                assert y.dtype == expected_ret.dtype
+                assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
+                                    use_broadcast=False)
+            continue
 
-                        x.attach_grad()
-                        with mx.autograd.record():
-                            y = test_sum(x)
-                        assert y.shape == expected_ret.shape
-                        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
-                                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
+        x.attach_grad()
+        with mx.autograd.record():
+            y = test_sum(x)
+        assert y.shape == expected_ret.shape
+        assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
+        y.backward()
+        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
 
-                        y.backward()
-                        assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
+        # test numeric
+        if itype == 'float32' and dtype == 'float32' and shape != (4, 0, 4, 0):
+            x_sym = mx.sym.Variable("x").as_np_ndarray()
+            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
+            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
+                                    numeric_eps=1e-3, rtol=1e-2, atol=1e-3, dtype=_np.float32)
 
-                        # test numeric
-                        if itype == 'float32' and dtype == 'float32':
-                            x_sym = mx.sym.Variable("x").as_np_ndarray()
-                            mx_sym = mx.sym.np.sum(x_sym, axis=axis, dtype=dtype, keepdims=keepdims).as_nd_ndarray()
-                            check_numeric_gradient(mx_sym, [x.as_nd_ndarray()],
-                                                   numeric_eps=1e-3, rtol=1e-2, atol=1e-3, dtype=_np.float32)
-
-                        # test imperative
-                        mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
-                        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
-                        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+        # test imperative
+        mx_out = np.sum(x, axis=axis, dtype=dtype, keepdims=keepdims)
+        np_out = _np.sum(x.asnumpy(), axis=axis, dtype=acc_type[itype], keepdims=keepdims).astype(dtype)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
@@ -3487,6 +3487,16 @@ def test_np_clip():
 
         def hybrid_forward(self, F, x):
             return x.clip(self._a_min, self._a_max)
+    
+    # Test scalar case
+    for _, a_min, a_max, throw_exception in workloads:
+        a = _np.random.uniform() # A scalar
+        if throw_exception:
+            # No need to test the exception case here.
+            continue
+        mx_ret = np.clip(a, a_min, a_max)
+        np_ret = _np.clip(a, a_min, a_max)
+        assert_almost_equal(mx_ret, np_ret, atol=1e-4, rtol=1e-3, use_broadcast=False)
 
     for shape, a_min, a_max, throw_exception in workloads:
         for dtype in dtypes:
@@ -3764,10 +3774,9 @@ def test_npx_sample_n():
         def hybrid_forward(self, F, param1, param2):
             op = getattr(F.npx.random, self._op_name, None)
             assert op is not None
-            # return param1 + param2 + op(batch_shape=self._shape)
             return op(param1, param2, batch_shape=self._shape)
 
-    batch_shapes = [(10,), (2, 3), 6, (), None]
+    batch_shapes = [(10,), (2, 3), 6, ()]
     event_shapes = [(), (2,), (2,2)]
     dtypes = ['float16', 'float32', 'float64']
     op_names = ['uniform_n', 'normal_n']
@@ -3788,7 +3797,7 @@ def test_npx_sample_n():
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
-    op_names = ['uniform', 'normal', 'gamma']
+    op_names = ['uniform', 'normal', 'gamma', 'laplace']
     for shape in shapes:
         for dtype in dtypes:
             for op_name in op_names:
@@ -3903,6 +3912,37 @@ def test_np_random_beta():
         # test scalar
         mx_out_imperative = mx.np.random.beta(1, 1, size=param_shape, dtype=out_dtype)
         assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
+
+
+@with_seed()
+@use_np
+def test_np_random_f():
+    class TestRandomF(HybridBlock):
+        def __init__(self, size=None):
+            super(TestRandomF, self).__init__()
+            self._size = size
+
+        def hybrid_forward(self, F, dfnum, dfden):
+            return F.np.random.f(dfnum, dfden, size=self._size)
+
+    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    hybridize_list = [False, True]
+    df = np.array([1])
+    for [param_shape, hybridize] in itertools.product(shape_list,
+         hybridize_list):
+        if sys.version_info.major < 3 and param_shape == ():
+            continue
+        mx_df = df
+        np_df = mx_df.asnumpy()
+        test_random_f = TestRandomF(size=param_shape)
+        if hybridize:
+            test_random_f.hybridize()
+        np_out = _np.random.f(np_df, np_df, size=param_shape)
+        mx_out = test_random_f(mx_df, mx_df)
+        mx_out_imperative = mx.np.random.f(mx_df, mx_df, size=param_shape)
+
+        assert_almost_equal(np_out.shape, mx_out.shape)
+        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
 
 
 @with_seed()
@@ -7645,10 +7685,8 @@ def test_np_diag():
         test_diag = TestDiag(k)
         if hybridize:
             test_diag.hybridize()
-
         x = np.random.uniform(-2.0, 2.0, size=shape).astype(dtype) if len(shape) != 0 else np.array(())
         x.attach_grad()
-
         np_out = _np.diag(x.asnumpy(), k)
         with mx.autograd.record():
             mx_out = test_diag(x)

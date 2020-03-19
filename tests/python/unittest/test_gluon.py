@@ -1191,7 +1191,9 @@ def test_export():
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
-    model.export('gluon')
+    symbol_filename, params_filename = model.export('gluon')
+    assert symbol_filename == 'gluon-symbol.json'
+    assert params_filename == 'gluon-0000.params'
 
     module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
     module.bind(data_shapes=[('data', data.shape)])

@@ -1,11 +1,17 @@
 Run the following command:
 
-<div class="v1-5-0">
+<div class="v1-6-0">
 
 {% highlight bash %}
 $ pip install mxnet
 {% endhighlight %}
-</div> <!-- End of v1-5-0 -->
+</div> <!-- End of v1-6-0 -->
+<div class="v1-5-1">
+
+{% highlight bash %}
+$ pip install mxnet==1.5.1
+{% endhighlight %}
+</div> <!-- End of v1-5-1 -->
 <div class="v1-4-1">
 
 {% highlight bash %}

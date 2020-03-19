@@ -39,6 +39,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../../api/operator/op_utils.h"
 
 
 namespace mxnet {
@@ -61,11 +62,10 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .describe("Target data type.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream shape_s, dtype_s;
+    std::ostringstream shape_s;
     shape_s << shape;
-    dtype_s << dtype;
     (*dict)["shape"] = shape_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
     // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
     // Setting ctx here results in an error.
   }
@@ -104,6 +104,17 @@ struct FullLikeOpParam : public dmlc::Parameter<FullLikeOpParam> {
       .set_default(dmlc::optional<int>())
       MXNET_ADD_ALL_TYPES_WITH_BOOL
       .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream fill_value_s, dtype_s;
+    fill_value_s << fill_value;
+    dtype_s << dtype;
+    (*dict)["fill_value"] = fill_value_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
   }
 };
 

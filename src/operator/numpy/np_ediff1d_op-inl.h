@@ -28,6 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
@@ -53,6 +54,18 @@ struct EDiff1DParam : public dmlc::Parameter<EDiff1DParam> {
       .set_default(dmlc::optional<double>())
       .describe("If the `to_end`is a scalar, the value of this parameter.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream to_end_arr_given_s, to_begin_arr_given_s,
+                       to_end_scalar_s, to_begin_scalar_s;
+    to_end_arr_given_s << to_end_arr_given;
+    to_begin_arr_given_s << to_begin_arr_given;
+    to_end_scalar_s << to_end_scalar;
+    to_begin_scalar_s << to_begin_scalar;
+    (*dict)["to_end_arr_given"] = to_end_arr_given_s.str();
+    (*dict)["to_begin_arr_given"] = to_begin_arr_given_s.str();
+    (*dict)["to_end_scalar"] = to_end_scalar_s.str();
+    (*dict)["to_begin_scalar"] = to_begin_scalar_s.str();
+  }
 };
 
 template<typename DType>
@@ -65,7 +78,12 @@ struct set_to_val {
 template <typename DType>
 void copyArr(DType* dest, DType* src, size_t count,
              mshadow::Stream<cpu> *s) {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
   memcpy(dest, src, count);
+#pragma GCC diagnostic pop
 }
 
 template <typename DType>

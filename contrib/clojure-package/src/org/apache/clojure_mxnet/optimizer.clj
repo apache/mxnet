@@ -96,30 +96,30 @@
   ([]
    (ada-delta {})))
 
-(s/def gamma1 number?)
-(s/def gamma2 number?)
-(s/def ::rms-prop-opts (s/keys :opt-un [::learning-rate ::rescale-gradient ::gamma1 ::gamma2 ::wd ::clip-gradient]))
+(s/def rho number?)
+(s/def momentum number?)
+(s/def ::rms-prop-opts (s/keys :opt-un [::learning-rate ::rescale-gradient ::rho ::momentum ::wd ::clip-gradient]))
 
 (defn rms-prop
   "RMSProp optimizer as described in Tieleman & Hinton, 2012.
    http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
    - learningRate Step size.
-   - gamma1  decay factor of moving average for gradient, gradient^^2.
-   -  gamma2  momentum factor of moving average for gradient.
-   -  rescale-gradient rescaling factor of gradient.
-   -  wd L2 regularization coefficient add to all the weights
-   -  clip-gradient clip gradient in range [-clip_gradient, clip_gradient]
-   -  lr-scheduler The learning rate scheduler"
-  ([{:keys [learning-rate rescale-gradient gamma1 gamma2 wd lr-scheduler clip-gradient] :as opts
+   - rho  decay factor of moving average for gradient, gradient^^2.
+   - momentum  momentum factor of moving average for gradient.
+   - rescale-gradient rescaling factor of gradient.
+   - wd L2 regularization coefficient add to all the weights
+   - clip-gradient clip gradient in range [-clip_gradient, clip_gradient]
+   - lr-scheduler The learning rate scheduler"
+  ([{:keys [learning-rate rescale-gradient rho momentum wd lr-scheduler clip-gradient] :as opts
      :or {learning-rate 0.002
           rescale-gradient 1.0
-          gamma1 0.95
-          gamma2 0.9
+          rho 0.95
+          momentum 0.9
           wd 0.0
           clip-gradient 0}}]
    (util/validate! ::rms-prop-opts opts "Incorrect rms-prop optimizer options")
-   (new RMSProp (float learning-rate) (float rescale-gradient) (float gamma1)
-        (float gamma2) (float wd) lr-scheduler (float clip-gradient)))
+   (new RMSProp (float learning-rate) (float rescale-gradient) (float rho)
+        (float momentum) (float wd) lr-scheduler (float clip-gradient)))
   ([]
    (rms-prop {})))
 

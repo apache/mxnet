@@ -38,6 +38,7 @@
 #include "../imperative/imperative_utils.h"
 #include "../imperative/cached_op.h"
 #include "../imperative/cached_op_threadsafe.h"
+#include "../profiler/profiler.h"
 
 using namespace mxnet;
 
@@ -98,6 +99,10 @@ void MXImperativeInvokeImpl(AtomicSymbolCreator creator,
 
   nnvm::NodeAttrs attrs = imperative::ParseAttrs(op, num_inputs, num_params,
                                                  param_keys, param_vals);
+  attrs.dict["__profiler_scope__"] = profiler::ProfilerScope::Get()->GetCurrentProfilerScope();
+  if (attrs.op) {
+    attrs.name = attrs.op->name;
+  }
 
   int infered_num_outputs;
   int num_visible_outputs;
