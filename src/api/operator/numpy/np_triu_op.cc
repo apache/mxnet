@@ -39,7 +39,7 @@ MXNET_REGISTER_API("_npi.triu")
   NDArray* inputs[] = {args[0].operator NDArray*()};
 
   attrs.op = op;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::TriuParam>(&attrs);
 
   int num_outputs = 0;
