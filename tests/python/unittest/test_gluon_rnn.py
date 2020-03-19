@@ -657,13 +657,16 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
     stack_layer_params = stack_layer.collect_params()
 
     for name, value in fused_layer_params.items():
-        w = mx.nd.random.uniform(shape=value.shape)
+        if 'rnn' in fused_layer.prefix and 'weight' in name:
+            w = mx.nd.zeros(shape=value.shape)
+        else:
+            w = mx.nd.random.normal(shape=value.shape)
         value.set_data(w.copy())
         stack_layer_params[name].set_data(w.copy())
 
     fx = x.copy()
     sx = x.copy()
-    y = nd.random.normal(shape=(1, 5, hidden_size * 2 if bidirectional else hidden_size))
+    y = nd.random.uniform(shape=(1, 5, hidden_size * 2 if bidirectional else hidden_size))
 
     fx.attach_grad()
     with mx.autograd.record():
@@ -768,10 +771,11 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss):
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
 
 
+@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_rnn_layer():
-    input_sizes = [128]
-    hidden_sizes = [128, 256]
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
     modes = ['lstm', 'gru', 'rnn_relu', 'rnn_tanh']
     for mode, input_size, hidden_size in product(modes, input_sizes, hidden_sizes):
         loss = mx.gluon.loss.L2Loss()
