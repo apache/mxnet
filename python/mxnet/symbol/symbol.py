@@ -1446,7 +1446,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
+    def optimize_for(self, backend, args=None, aux=None, ctx=None, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
 
@@ -1457,6 +1457,13 @@ class Symbol(SymbolBase):
 
         args : list of NDArray or dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
+
+            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
+            - If type is a dict of str to `NDArray`, then it maps the name of arguments
+              to the corresponding `NDArray`.
+
+        aux : list of NDArray or dict of str to NDArray, optional
+            Input auxiliary arguments to the symbol
 
             - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
@@ -1476,13 +1483,19 @@ class Symbol(SymbolBase):
         out = SymbolHandle()
         assert isinstance(backend, str)
 
-        if args is None:
+        if args is None or len(args) == 0:
             args = []
             args_handle = c_array(NDArrayHandle, [])
         else:
-            listed_arguments = self.list_arguments()
-            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+            args_handle, args = self._get_ndarray_inputs('args', args,
+                                                         self.list_arguments(), False)
 
+        if aux is None or len(aux) == 0:
+            aux = []
+            aux_handle = c_array(NDArrayHandle, [])
+        else:
+            aux_handle, aux = self._get_ndarray_inputs('aux_states', aux,
+                                                       self.list_auxiliary_states(), False)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
@@ -1498,6 +1511,8 @@ class Symbol(SymbolBase):
                                              ctypes.byref(out),
                                              mx_uint(len(args)),
                                              args_handle,
+                                             mx_uint(len(aux)),
+                                             aux_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
                                              c_str_array(val_list)))
