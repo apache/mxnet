@@ -85,6 +85,8 @@ MXNET_REGISTER_API("_npi.lcm")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_lcm");
   const nnvm::Op* op_scalar = Op::Get("_npi_lcm_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
 
 MXNET_REGISTER_API("_npi.logical_and")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
