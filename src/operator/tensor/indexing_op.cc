@@ -46,7 +46,12 @@ struct TakeZeroAxisCPU {
       j = j % K;
       j += (j < 0) ? K : 0;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+#pragma GCC diagnostic pop
   }
 };
 
@@ -296,8 +301,8 @@ void TakeOpForward<cpu>(const nnvm::NodeAttrs& attrs,
   Stream<cpu> *s = ctx.get_stream<cpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         IType min = 0;
         IType max = static_cast<IType>(arrshape[actual_axis] - 1);
@@ -480,7 +485,7 @@ void GatherNDForwardCPU(const nnvm::NodeAttrs& attrs,
     strides[i] = stride;
     mshape[i] = dshape[i];
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       // check whether indices are out of bound
       IType* idx_ptr = inputs[1].dptr<IType>();
@@ -898,6 +903,7 @@ Examples::
 
 NNVM_REGISTER_OP(gather_nd)
 .add_alias("_npi_gather_nd")
+.add_alias("_npx_gather_nd")
 .describe(R"code(Gather elements or slices from `data` and store to a tensor whose
 shape is defined by `indices`.
 

@@ -359,6 +359,14 @@ mkldnn::memory::desc GetDesc(const mkldnn::memory::desc &desc,
   return mkldnn::memory::desc(dims, cpp_type, cpp_format);
 }
 
+// reorder mkldnn src to dst format dtype
+void ReorderTo(const mkldnn::memory *src, const mkldnn::memory *dst) {
+  mkldnn::stream s(CpuEngine::Get()->get_engine());
+  auto new_src = *src;
+  auto new_dst = *dst;
+  mkldnn::reorder(new_src, new_dst).execute(s, new_src, new_dst);
+}
+
 template <typename Compute, typename AttrState>
 void FallBackCompute(Compute fn, const AttrState &attrs_states,
                      const OpContext &ctx,
@@ -373,12 +381,16 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
     // call data() directly, which will change the layout of the NDArray.
     // Instead, we should save the converted data in another NDArray.
     // TODO(zhengda) we should use temp space to save the converted data.
-    if (inputs[i].IsDefaultData()) {
+    if (inputs[i].IsDefaultData() && inputs[i].dtype() != mshadow::kBfloat16) {
       in_blobs[i] = inputs[i].data();
     } else {
       if (in_bufs.empty())
         in_bufs.reserve(inputs.size());
-      in_bufs.push_back(inputs[i].Reorder2Default());
+      if (inputs[i].dtype() != mshadow::kBfloat16) {
+        in_bufs.push_back(inputs[i].Reorder2Default());
+      } else {
+        in_bufs.push_back(inputs[i].Reorder2DefaultFloatFormat());
+      }
       in_blobs[i] = in_bufs.back().data();
     }
   }
@@ -386,29 +398,46 @@ void FallBackCompute(Compute fn, const AttrState &attrs_states,
 
   std::vector<TBlob> out_blobs(outputs.size());
   std::vector<NDArray> temp_src, temp_dst;
+  std::vector<NDArray> temp_bf16_src, temp_bf16_dst;
   for (size_t i = 0; i < out_blobs.size(); i++) {
     NDArray output = outputs[i];
-    // ensure output does not use mkldnn mem.
-    // for inplace, we already converted & copied input above.
-    if ((req[i] == kWriteTo) || (req[i] == kWriteInplace)) {
-      const_cast<NDArray &>(output).InvalidateMKLDNNData();
+    // for bf16, fisrt change it to f32
+    if (outputs[i].dtype() == mshadow::kBfloat16) {
+      NDArray temp = outputs[i].Reorder2DefaultFloatFormat();
+      temp_bf16_src.emplace_back(temp);
+      temp_bf16_dst.emplace_back(outputs[i]);
+      output = temp;
       if (req[i] == kWriteInplace) {
         new_req[i] = kWriteTo;
       }
-    } else if (req[i] == kAddTo && output.IsMKLDNNData()) {
-      NDArray temp = outputs[i].Reorder2Default();
-      temp_src.emplace_back(temp);
-      temp_dst.emplace_back(outputs[i]);
-      output = temp;
+    } else {
+      // ensure output does not use mkldnn mem.
+      // for inplace, we already converted & copied input above.
+      if ((req[i] == kWriteTo) || (req[i] == kWriteInplace)) {
+        const_cast<NDArray &>(output).InvalidateMKLDNNData();
+        if (req[i] == kWriteInplace) {
+          new_req[i] = kWriteTo;
+        }
+      } else if (req[i] == kAddTo && output.IsMKLDNNData()) {
+        NDArray temp = outputs[i].Reorder2Default();
+        temp_src.emplace_back(temp);
+        temp_dst.emplace_back(outputs[i]);
+        output = temp;
+      }
     }
     CHECK(output.IsDefaultData());
     out_blobs[i] = output.data();
   }
-
   fn(attrs_states, ctx, in_blobs, new_req, out_blobs);
-  for (size_t i = 0; i < out_blobs.size(); i++) {
-    if (req[i] == kAddTo && outputs[i].IsMKLDNNData())
+  for (size_t i = 0, bf16_pos = 0; i < out_blobs.size(); i++) {
+    if (outputs[i].dtype() == mshadow::kBfloat16) {
+      auto src_mem = temp_bf16_src[bf16_pos].GetMKLDNNData();
+      auto dst_mem = temp_bf16_dst[bf16_pos].GetMKLDNNData();
+      bf16_pos++;
+      ReorderTo(src_mem, dst_mem);
+    } else if (req[i] == kAddTo && outputs[i].IsMKLDNNData()) {
       mxnet::common::CastNonDefaultStorage(temp_src, temp_dst, ctx, false);
+    }
   }
 }
 
@@ -457,8 +486,11 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
   for (size_t i = 0; i < arr1.shape().Size(); i++)
 #endif
   {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
     if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
       success.store(false);
+#pragma clang diagnostic pop
   }
   return success.load();
 }
@@ -529,7 +561,8 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
     if (req[i] == kNullOp)
       continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
-      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-2, 1e-2);
+      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], static_cast<DType>(1e-2),
+                                         static_cast<DType>(1e-2));
       if (!similar) {
         LOG(ERROR) << attrs.op->name << " fails";
       }

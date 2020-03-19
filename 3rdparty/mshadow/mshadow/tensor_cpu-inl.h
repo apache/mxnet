@@ -127,6 +127,10 @@ template<int dim, typename DType>
 inline void Copy(Tensor<cpu, dim, DType> _dst,
                  const Tensor<cpu, dim, DType> &_src,
                  Stream<cpu> *stream) {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
   CHECK_EQ(_dst.shape_, _src.shape_)
       << "Copy:shape mismatch:" << _dst.shape_ << " vs " << _src.shape_;
   if (_dst.CheckContiguous() && _src.CheckContiguous()) {
@@ -138,6 +142,7 @@ inline void Copy(Tensor<cpu, dim, DType> _dst,
       memcpy(dst[y].dptr_, src[y].dptr_, sizeof(DType) * dst.size(1));
     }
   }
+#pragma GCC diagnostic pop
 }
 
 template<typename Saver, typename R, int dim,

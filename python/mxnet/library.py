@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Library management API of mxnet."""
-from __future__ import absolute_import
 import ctypes
 import sys
 import os

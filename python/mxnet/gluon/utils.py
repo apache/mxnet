@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
-from __future__ import absolute_import
 
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download', 'replace_file']
@@ -35,7 +34,7 @@ import requests
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array, makedirs
+from ..util import is_np_shape, is_np_array
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
@@ -226,11 +225,9 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
-
     def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""
-        if not isinstance(x, text_type):
+        if not isinstance(x, str):
             return x.decode(sys.getfilesystemencoding())
         return x
 
@@ -310,7 +307,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
-            makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
         while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703

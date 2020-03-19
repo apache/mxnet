@@ -302,6 +302,13 @@ struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
     .describe("Axis or axes along which elements are shifted. By default, the array is flattened"
               "before shifting, after which the original shape is restored.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shift_s, axis_s;
+    shift_s << shift;
+    axis_s << axis;
+    (*dict)["shift"] = shift_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 template<int req>
@@ -605,6 +612,13 @@ struct NumpyRot90Param : public dmlc::Parameter<NumpyRot90Param> {
     .set_default(dmlc::optional<mxnet::TShape>())
     .describe(" The array is rotated in the plane defined by the axes. Axes must be different.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s, axes_s;
+    k_s << k;
+    axes_s << axes;
+    (*dict)["k"] = k_s.str();
+    (*dict)["axes"] = axes_s.str();
+  }
 };
 
 struct rot90reverse {
@@ -851,6 +865,10 @@ inline void HSplitOpForward(const nnvm::NodeAttrs &attrs,
     real_axis = 1;
   } else {
     real_axis = 0;
+  }
+  if (param.sections > 0) {
+    CHECK_EQ(inputs[0].shape_[real_axis] % param.sections, 0U)
+      << "ValueError: array split does not result in an equal division";
   }
   SplitOpForwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
@@ -1500,6 +1518,38 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs& attrs,
 
   NumpyDiagflatOpImpl<xpu, true>(in_data, out_data, oshape,
                                  ishape, in_data.Size(), param, s, req);
+}
+
+struct diag_indices_from {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const int length) {
+    int index = i % length;
+    out[i] = index;
+  }
+};
+
+template<typename xpu>
+void NumpyDiagIndicesFromForward(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const int length = in_data.shape_[0];
+  if (in_data.Size() == 0) return;
+
+  MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, DType, {
+    Kernel<diag_indices_from, xpu>::Launch(
+      s, out_data.Size(), out_data.dptr<DType>(), length);
+  });
 }
 
 }  // namespace op

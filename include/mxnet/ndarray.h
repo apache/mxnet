@@ -361,6 +361,9 @@ class NDArray {
     CheckAndAlloc();
     return ptr_->shandle;
   }
+  /*! \brief assign profiler scope and name to the storage handles */
+  void AssignStorageInfo(const std::string& profiler_scope,
+                         const std::string& name);
   /*!
    * \brief Block until all the pending write operations with respect
    *    to current NDArray are finished, and read can be performed.
@@ -770,6 +773,12 @@ class NDArray {
    */
   NDArray Reorder2Default() const;
 
+    /*
+   * This creates a new NDArray using f32 with the reordered data.
+   * It doesn't affect the data of the original NDArray.
+   */
+  NDArray Reorder2DefaultFloatFormat() const;
+
   void InvalidateMKLDNNData();
 
   /*
@@ -983,7 +992,7 @@ class NDArray {
     /*! \brief check if delay alloc is on, do alloc if not yet done */
     inline void CheckAndAlloc(void) {
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(shandle.size, shandle.ctx);
+        Storage::Get()->Alloc(&shandle);
 #if MXNET_USE_MKLDNN == 1
         mkl_mem_ = nullptr;
 #endif
@@ -998,7 +1007,8 @@ class NDArray {
           << "CheckAndAlloc(dbytes) is only intended for kDefaultStorage";
       dbytes = std::max(dbytes, static_cast<uint64_t>(shandle.size));
       if (delay_alloc) {
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+        shandle.size = dbytes;
+        Storage::Get()->Alloc(&shandle);
 #if MXNET_USE_MKLDNN == 1
         mkl_mem_ = nullptr;
 #endif
@@ -1007,7 +1017,8 @@ class NDArray {
         // free storage
         Storage::Get()->Free(shandle);
         // init storage
-        shandle = Storage::Get()->Alloc(dbytes, shandle.ctx);
+        shandle.size = dbytes;
+        Storage::Get()->Alloc(&shandle);
 #if MXNET_USE_MKLDNN == 1
         mkl_mem_ = nullptr;
 #endif

@@ -35,13 +35,14 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
     custom_steps.compile_centos7_cpu(),
+    custom_steps.compile_centos7_cpu_make(),
     custom_steps.compile_centos7_cpu_mkldnn()
-  ]) 
+  ])
 
   utils.parallel_stage('Tests', [
     custom_steps.test_centos7_python3_cpu(),
     custom_steps.test_centos7_scala_cpu()
-  ]) 
+  ])
 }
 ,
 failure_handler: {

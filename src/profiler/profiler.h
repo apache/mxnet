@@ -601,7 +601,7 @@ struct ProfileCounter : public ProfileObject {
   }
   /*! \brief operator: object -= v */
   inline uint64_t operator -=(int64_t v) {
-    CHECK_GE(value_, v);
+    CHECK_GE(value_, static_cast<uint64_t>(v));
     if (v >= 0) {
       return DecrementValue(static_cast<uint64_t>(v));
     } else {
@@ -1313,6 +1313,18 @@ inline void Profiler::AddProfileStat<ProfileOperator::OprExecStat>(
 }
 
 #undef VTUNE_ONLY_CODE  // This macro not meant to be used outside of this file
+
+class ProfilerScope {
+ public:
+  /*! \brief Get the profiler scope instance */
+  static ProfilerScope* Get();
+  /*! \brief Set the current profiler scope */
+  void SetCurrentProfilerScope(const std::string& scope);
+  /*! \brief Get the current profiler scope */
+  std::string GetCurrentProfilerScope() const;
+ private:
+  std::string current_profiler_scope_ = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
+};
 
 }  // namespace profiler
 }  // namespace mxnet

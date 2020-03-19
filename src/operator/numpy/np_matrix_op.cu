@@ -71,7 +71,7 @@ NNVM_REGISTER_OP(_npi_column_stack)
 NNVM_REGISTER_OP(_backward_np_column_stack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_roll)
+NNVM_REGISTER_OP(_npi_roll)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
 
 template<>
@@ -121,6 +121,9 @@ NNVM_REGISTER_OP(_npi_hsplit)
 NNVM_REGISTER_OP(_npi_hsplit_backward)
 .set_attr<FCompute>("FCompute<gpu>", HSplitOpBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_dsplit)
+.set_attr<FCompute>("FCompute<gpu>", SplitOpForward<gpu>);
+
 NNVM_REGISTER_OP(_npx_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
@@ -141,6 +144,9 @@ NNVM_REGISTER_OP(_np_diagflat)
 
 NNVM_REGISTER_OP(_backward_np_diagflat)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_npi_diag_indices_from)
+.set_attr<FCompute>("FCompute<gpu>", NumpyDiagIndicesFromForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -107,6 +107,7 @@ NNVM_REGISTER_OP(_backward_topk)
 });
 
 NNVM_REGISTER_OP(sort)
+.add_alias("_npi_sort")
 .describe(R"code(Returns a sorted copy of an input array along the given axis.
 
 Examples::

@@ -19,7 +19,6 @@
 
 # coding: utf-8
 """MXNet: a concise, fast and flexible framework for deep learning."""
-from __future__ import absolute_import
 
 from .context import Context, current_context, cpu, gpu, cpu_pinned
 from . import engine, error
@@ -104,3 +103,9 @@ from . import tvmop
 from . import numpy_op_signature
 from . import numpy_dispatch_protocol
 from . import numpy_op_fallback
+
+from . import _global_var
+
+from . import _api_internal
+from . import api
+from . import container

@@ -141,7 +141,7 @@ void TVMOpModule::CallEx(const std::string &func_name,
 
 const TVMOpConfig& GetOpConfig(const std::string& name) {
   const TVMOpConfig* ret = ::dmlc::Registry<TVMOpConfig>::Get()->Find(name);
-  CHECK(ret != NULL)
+  CHECK(ret != nullptr)
     << "op " << name << "does not exist.";
   return *ret;
 }

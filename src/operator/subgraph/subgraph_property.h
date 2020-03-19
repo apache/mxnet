@@ -251,6 +251,7 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
  */
 class SubgraphProperty {
  public:
+  virtual ~SubgraphProperty() {}
   /*! \brief Property type */
   enum SgPropertyType {
     kCreate,

@@ -21,7 +21,7 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.base import py_str
+from mxnet.base import py_str, MXNetError
 from mxnet.test_utils import assert_almost_equal
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
@@ -894,7 +894,13 @@ def test_instancenorm():
 def test_layernorm():
     layer = nn.LayerNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
-
+    # Check for the case of error raising
+    for hybridize in [False, True]:
+        layer = nn.LayerNorm(in_channels=10)
+        layer.initialize()
+        if hybridize:
+            layer.hybridize()
+        assert_raises(MXNetError, lambda: layer(mx.nd.ones((2, 11))))
 
 @with_seed()
 def test_groupnorm():
@@ -1185,7 +1191,9 @@ def test_export():
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
-    model.export('gluon')
+    symbol_filename, params_filename = model.export('gluon')
+    assert symbol_filename == 'gluon-symbol.json'
+    assert params_filename == 'gluon-0000.params'
 
     module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
     module.bind(data_shapes=[('data', data.shape)])

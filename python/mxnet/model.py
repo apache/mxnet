@@ -18,7 +18,6 @@
 # pylint: disable=fixme, invalid-name, too-many-arguments, too-many-locals, too-many-lines
 # pylint: disable=too-many-branches, too-many-statements
 """MXNet model module"""
-from __future__ import absolute_import, print_function
 
 import os
 import time

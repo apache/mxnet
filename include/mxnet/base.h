@@ -71,9 +71,9 @@
 #endif
 
 /*! \brief major version */
-#define MXNET_MAJOR 1
+#define MXNET_MAJOR 2
 /*! \brief minor version */
-#define MXNET_MINOR 6
+#define MXNET_MINOR 0
 /*! \brief patch version */
 #define MXNET_PATCH 0
 /*! \brief mxnet version */
@@ -351,11 +351,11 @@ struct RunContext {
   /*! \brief base Context */
   Context ctx;
   /*!
-   * \brief the stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   * \brief the stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *stream;
   /*!
-   * \brief the auxiliary stream of the device, can be NULL or Stream<gpu>* in GPU mode
+   * \brief the auxiliary stream of the device, can be nullptr or Stream<gpu>* in GPU mode
    */
   void *aux_stream;
   /*!

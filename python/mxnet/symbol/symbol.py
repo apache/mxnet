@@ -19,7 +19,6 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments, too-many-lines
 # pylint: disable=import-error, no-name-in-module
 """Symbolic configuration API of MXNet."""
-from __future__ import absolute_import as _abs
 try:
     from __builtin__ import slice as py_slice
 except ImportError:
@@ -29,7 +28,6 @@ from array import array
 import ctypes
 import warnings
 from numbers import Number
-import sys
 import numpy as _numpy  # pylint: disable=relative-import
 
 from ..attribute import AttrScope
@@ -46,6 +44,7 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
+from ..profiler import Scope
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -1212,7 +1211,7 @@ class Symbol(SymbolBase):
         aux_shape_size = mx_uint()
         aux_shape_ndim = ctypes.POINTER(mx_int)()
         complete = ctypes.c_int()
-        if sys.version_info[0] > 2 and _int64_enabled():
+        if _int64_enabled():
             arg_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
@@ -1366,7 +1365,7 @@ class Symbol(SymbolBase):
         else:
             check_call(_LIB.MXSymbolSaveToFile(self.handle, c_str(fname)))
 
-    def tojson(self):
+    def tojson(self, remove_amp_cast=True):
         """Saves symbol to a JSON string.
 
         See Also
@@ -1374,7 +1373,12 @@ class Symbol(SymbolBase):
         symbol.load_json : Used to load symbol from JSON string.
         """
         json_str = ctypes.c_char_p()
-        check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(self.handle, ctypes.byref(handle)))
+            check_call(_LIB.MXSymbolSaveToJSON(handle, ctypes.byref(json_str)))
+        else:
+            check_call(_LIB.MXSymbolSaveToJSON(self.handle, ctypes.byref(json_str)))
         return py_str(json_str.value)
 
     @staticmethod
@@ -1700,7 +1704,7 @@ class Symbol(SymbolBase):
         aux_state_handles = ctypes.POINTER(NDArrayHandle)()
 
         try:
-            if sys.version_info[0] > 2 and _int64_enabled():
+            if _int64_enabled():
                 check_call(_LIB.MXExecutorSimpleBindEx64(self.handle,
                                                          ctypes.c_int(ctx.device_typeid),
                                                          ctypes.c_int(ctx.device_id),
@@ -2739,7 +2743,7 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.backward, None)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
-        init=None, stype=None, **kwargs):
+        init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
     Example
@@ -2774,6 +2778,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         Initializer for this variable to (optionally) override the default initializer.
     stype : str
         The storage type of the variable, such as 'row_sparse', 'csr', 'default', etc
+    profiler_scope : str
+        The profiler scope for input variable.
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 
@@ -2798,13 +2804,23 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if wd_mult is not None:
         attr['__wd_mult__'] = str(wd_mult)
     if dtype is not None:
-        attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
+        np_dtype = _numpy.dtype(dtype)
+        if np_dtype == _numpy.dtype([('bfloat16', _numpy.uint16)]):
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[np_dtype])
+        else:
+            attr['__dtype__'] = str(_DTYPE_NP_TO_MX[_numpy.dtype(dtype).type])
     if init is not None:
         if not isinstance(init, string_types):
             init = init.dumps()
         attr['__init__'] = init
     if stype is not None:
         attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[stype])
+    if profiler_scope is not None:
+        attr['__profiler_scope__'] = profiler_scope
+    else:
+        if not hasattr(Scope._current, "value"):
+            Scope._current.value = Scope()
+        attr['__profiler_scope__'] = Scope._current.value.name
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

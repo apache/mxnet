@@ -37,22 +37,22 @@ from test_bucketing import train_model
 set_default_context(mx.gpu(0))
 
 def test_amp_coverage():
-    conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
+    conditional = [item[0] for item in amp.lists.symbol_fp16.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
-    for a in [amp.lists.symbol.FP16_FUNCS,
-          amp.lists.symbol.FP16_FP32_FUNCS,
-          amp.lists.symbol.FP32_FUNCS,
-          amp.lists.symbol.WIDEST_TYPE_CASTS,
+    for a in [amp.lists.symbol_fp16.FP16_FUNCS,
+          amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+          amp.lists.symbol_fp16.FP32_FUNCS,
+          amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
           conditional]:
         ret = [item for item, count in collections.Counter(a).items() if count > 1]
         assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
 
     t = []
-    for a in [amp.lists.symbol.FP16_FUNCS,
-              amp.lists.symbol.FP16_FP32_FUNCS,
-              amp.lists.symbol.FP32_FUNCS,
-              amp.lists.symbol.WIDEST_TYPE_CASTS,
+    for a in [amp.lists.symbol_fp16.FP16_FUNCS,
+              amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+              amp.lists.symbol_fp16.FP32_FUNCS,
+              amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
               conditional]:
         t += a
     ret = [item for item, count in collections.Counter(t).items() if count > 1]
@@ -77,7 +77,7 @@ def test_amp_coverage():
 
     if ret1 != set():
         warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                       "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
+                       "python/mxnet/contrib/amp/lists/symbol_fp16.py) - please add them. "
                        """Please follow these guidelines for choosing a proper list:
                        - if your operator is not to be used in a computational graph
                          (e.g. image manipulation operators, optimizers) or does not have
@@ -111,10 +111,10 @@ def test_amp_conversion():
 
         x_fp16 = mx.sym.amp_cast(x, dtype="float16")
         y_fp16 = mx.sym.amp_cast(y, dtype="float16")
-        amp_casted_siny = mx.sym.sin(mx.sym.amp_cast(y, dtype="float32"))
+        siny = mx.sym.sin(y)
         z = mx.sym.FullyConnected(x_fp16, y_fp16, num_hidden=10, no_bias=True)
-        outs = mx.sym.amp_multicast(z, amp_casted_siny, num_outputs=2)
-        res_expected = outs[0] + outs[1]
+        amp_casted_z = mx.sym.amp_cast(z, dtype="float32")
+        res_expected = amp_casted_z + siny
         assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph"
 

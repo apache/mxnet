@@ -18,7 +18,6 @@
 """Util functions for the numpy module."""
 
 
-from __future__ import absolute_import
 
 import ctypes
 from .. util import is_np_array, is_np_shape
