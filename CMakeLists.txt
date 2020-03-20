@@ -171,10 +171,7 @@ else()
   endif()
   check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
   check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-compare")
-  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-braced-scalar-init")
-  endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-sign-compare")
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_ASSERTIONS")
@@ -299,10 +296,6 @@ if(USE_MKLDNN)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set(INSTALL_MKLDNN ON)
-endif()
-
-if(USE_CPP_PACKAGE)
-    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -930,11 +923,12 @@ endif()
 
 if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
+  target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
+  if(BUILD_CPP_EXAMPLES)
+    add_subdirectory(example/image-classification/predict-cpp)
+  endif()
 endif()
 
-if(BUILD_CPP_EXAMPLES)
-  add_subdirectory(example/image-classification/predict-cpp)
-endif()
 add_subdirectory(tests)
 
 # ---[ Linter target

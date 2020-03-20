@@ -43,7 +43,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'where', 'bincount', 'pad', 'cumsum']
@@ -212,9 +212,7 @@ def zeros_like(a, dtype=None, order='C', ctx=None, out=None):
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
-    return _npi.full_like(a, fill_value=0, dtype=dtype, ctx=ctx, out=out)
+    return full_like(a, 0, dtype=dtype, order=order, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -270,11 +268,7 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
     >>> np.ones_like(y)
     array([1., 1., 1.], dtype=float64)
     """
-    if order != 'C':
-        raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
-    return _npi.full_like(a, fill_value=1, dtype=dtype, ctx=ctx, out=out)
+    return full_like(a, 1, dtype=dtype, order=order, ctx=ctx, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -433,11 +427,15 @@ def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylin
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
-    return _npi.full_like(a, fill_value=fill_value, dtype=dtype, ctx=ctx, out=out)
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.full_like(a, fill_value, dtype, ctx, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1025,8 +1023,9 @@ def subtract(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), not supported yet.
     """
-    return _ufunc_helper(x1, x2, _npi.subtract, _np.subtract, _npi.subtract_scalar,
-                         _npi.rsubtract_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.subtract(x1, x2, out=out)
+    return _api_internal.subtract(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1060,7 +1059,9 @@ def multiply(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), not supported yet.
     """
-    return _ufunc_helper(x1, x2, _npi.multiply, _np.multiply, _npi.multiply_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.multiply(x1, x2, out=out)
+    return _api_internal.multiply(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1095,8 +1096,9 @@ def divide(x1, x2, out=None, **kwargs):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is of float32 type.
     """
-    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
-                         _npi.rtrue_divide_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.divide(x1, x2, out=out)
+    return _api_internal.true_divide(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1133,8 +1135,9 @@ def true_divide(x1, x2, out=None):
         * If only one of the inputs is floating number type, the result is that type.
         * If both inputs are of integer types (including boolean), the output is of float32 type.
     """
-    return _ufunc_helper(x1, x2, _npi.true_divide, _np.divide, _npi.true_divide_scalar,
-                         _npi.rtrue_divide_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.true_divide(x1, x2, out=out)
+    return _api_internal.true_divide(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1161,7 +1164,9 @@ def mod(x1, x2, out=None, **kwargs):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.mod(x1, x2, out=out)
+    return _api_internal.mod(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1349,7 +1354,9 @@ def remainder(x1, x2, out=None):
     out : ndarray or scalar
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.mod, _np.mod, _npi.mod_scalar, _npi.rmod_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.mod(x1, x2, out=out)
+    return _api_internal.mod(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1377,7 +1384,9 @@ def power(x1, x2, out=None, **kwargs):
         The bases in x1 raised to the exponents in x2.
         This is a scalar if both x1 and x2 are scalars.
     """
-    return _ufunc_helper(x1, x2, _npi.power, _np.power, _npi.power_scalar, _npi.rpower_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.power(x1, x2, out=out)
+    return _api_internal.power(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1976,7 +1985,9 @@ def lcm(x1, x2, out=None, **kwargs):
     >>> np.lcm(np.arange(6, dtype=int), 20)
     array([ 0, 20, 20, 60, 20, 20], dtype=int64)
     """
-    return _ufunc_helper(x1, x2, _npi.lcm, _np.lcm, _npi.lcm_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.lcm(x1, x2, out=out)
+    return _api_internal.lcm(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4518,7 +4529,7 @@ def argmax(a, axis=None, out=None):
     >>> b
     array([2., 2.])
     """
-    return _npi.argmax(a, axis=axis, keepdims=False, out=out)
+    return _api_internal.argmax(a, axis, False, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4586,7 +4597,7 @@ def argmin(a, axis=None, out=None):
     >>> b
     array([0., 0.])
     """
-    return _npi.argmin(a, axis=axis, keepdims=False, out=out)
+    return _api_internal.argmin(a, axis, False, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4934,8 +4945,10 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
     """
     if isinstance(dimensions, (tuple, list)):
         if ctx is None:
-            ctx = current_context()
-        return _npi.indices(dimensions=dimensions, dtype=dtype, ctx=ctx)
+            ctx = str(current_context())
+        else:
+            ctx = str(ctx)
+        return _api_internal.indices(dimensions, dtype, ctx)
     else:
         raise ValueError("The dimensions must be sequence of ints")
 # pylint: enable=redefined-outer-name
@@ -6297,6 +6310,72 @@ def less_equal(x1, x2, out=None):
 
 
 @set_module('mxnet.ndarray.numpy')
+def roll(a, shift, axis=None):
+    """
+    Roll array elements along a given axis.
+
+    Elements that roll beyond the last position are re-introduced at
+    the first.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    shift : int or tuple of ints
+        The number of places by which elements are shifted.  If a tuple,
+        then `axis` must be a tuple of the same size, and each of the
+        given axes is shifted by the corresponding number.  If an int
+        while `axis` is a tuple of ints, then the same value is used for
+        all given axes.
+    axis : int or tuple of ints, optional
+        Axis or axes along which elements are shifted.  By default, the
+        array is flattened before shifting, after which the original
+        shape is restored.
+
+    Returns
+    -------
+    res : ndarray
+        Output array, with the same shape as `a`.
+
+    Notes
+    -----
+    Supports rolling over multiple dimensions simultaneously.
+
+    Examples
+    --------
+    >>> x = np.arange(10)
+    >>> np.roll(x, 2)
+    array([8., 9., 0., 1., 2., 3., 4., 5., 6., 7.])
+    >>> np.roll(x, -2)
+    array([2., 3., 4., 5., 6., 7., 8., 9., 0., 1.])
+
+    >>> x2 = np.reshape(x, (2,5))
+    >>> x2
+    array([[0., 1., 2., 3., 4.],
+           [5., 6., 7., 8., 9.]])
+    >>> np.roll(x2, 1)
+    array([[9., 0., 1., 2., 3.],
+           [4., 5., 6., 7., 8.]])
+    >>> np.roll(x2, -1)
+    array([[1., 2., 3., 4., 5.],
+           [6., 7., 8., 9., 0.]])
+    >>> np.roll(x2, 1, axis=0)
+    array([[5., 6., 7., 8., 9.],
+           [0., 1., 2., 3., 4.]])
+    >>> np.roll(x2, -1, axis=0)
+    array([[5., 6., 7., 8., 9.],
+           [0., 1., 2., 3., 4.]])
+    >>> np.roll(x2, 1, axis=1)
+    array([[4., 0., 1., 2., 3.],
+           [9., 5., 6., 7., 8.]])
+    >>> np.roll(x2, -1, axis=1)
+    array([[1., 2., 3., 4., 0.],
+           [6., 7., 8., 9., 5.]])
+   """
+    return _api_internal.roll(a, shift, axis)
+
+
+@set_module('mxnet.ndarray.numpy')
 def rot90(m, k=1, axes=(0, 1)):
     """
     Rotate an array by 90 degrees in the plane specified by axes.
@@ -6339,7 +6418,7 @@ def rot90(m, k=1, axes=(0, 1)):
            [[5., 7.],
             [4., 6.]]])
     """
-    return _npi.rot90(m, k=k, axes=axes)
+    return _api_internal.rot90(m, k, axes)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6658,7 +6737,7 @@ def nonzero(a):
     >>> (a > 3).nonzero()
     (array([1, 1, 1, 2, 2, 2], dtype=int64), array([0, 1, 2, 0, 1, 2], dtype=int64))
     """
-    out = _npi.nonzero(a).transpose()
+    out = _api_internal.nonzero(a).transpose()
     return tuple([out[i] for i in range(len(out))])
 
 

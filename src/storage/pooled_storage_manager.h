@@ -302,8 +302,6 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
   }
 
  private:
-  // number of devices
-  const int NDEV = 32;
   // log2 of maximum page size. 16GB
   const size_t LOG2_MAX_MEM = 34;
   // address width in bits

@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,18 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+# Explicitly set GENERATED property https://gitlab.kitware.com/cmake/cmake/issues/18399
+set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/../../include/mxnet-cpp/op.h PROPERTY GENERATED 1)
 
-set -ex
-
-apt-get update && \
-apt-get install -y \
-    wget
-
-cd /usr/local/src
-wget -nv https://mirror.clarkson.edu/gnu/binutils/binutils-2.27.tar.gz
-tar -xvf binutils-2.27.tar.gz && rm binutils-2.27.tar.gz && cd binutils-2.27
-./configure --prefix=/usr/local
-make -j$(nproc)
-make install
+add_executable(imagenet_inference "imagenet_inference.cpp")
+target_link_libraries(imagenet_inference mxnet_cpp)

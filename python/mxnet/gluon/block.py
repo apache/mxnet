@@ -989,10 +989,14 @@ class HybridBlock(Block):
             # get list of params in the order of out.list_arguments
             arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
                          for name in out.list_arguments()]
+            aux_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
+                         for name in out.list_auxiliary_states()]
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, ctx, **self._backend_opts)
-
+            out = out.optimize_for(self._backend, arg_array, aux_array, ctx, **self._backend_opts)
+            #update cached graph with partitioned graph
+            self._cached_graph = data, out
         self._cached_op = ndarray.CachedOp(out, flags)
+
 
     def _deferred_infer_shape(self, *args):
         try:
@@ -1041,6 +1045,69 @@ class HybridBlock(Block):
         if isinstance(out, NDArray):
             out = [out]
         return _regroup(out, self._out_format)
+
+    def optimize_for(self, x, *args, backend=None, backend_opts=None, **kwargs):
+        """Partitions the current HybridBlock and optimizes it for a given backend
+        without executing a forward pass. Modifies the HybridBlock in-place.
+
+        Immediately partitions a HybridBlock using the specified backend. Combines
+        the work done in the hybridize API with part of the work done in the forward
+        pass without calling the CachedOp. Can be used in place of hybridize,
+        afterwards `export` can be called or inference can be run. See README.md in
+        example/extensions/lib_subgraph/README.md for more details.
+
+        Examples
+        --------
+        # partition and then export to file
+        block.optimize_for(x, backend='myPart')
+        block.export('partitioned')
+
+        # partition and then run inference
+        block.optimize_for(x, backend='myPart')
+        block(x)
+
+        Parameters
+        ----------
+        x : NDArray
+            first input to model
+        *args : NDArray
+            other inputs to model
+        backend : str
+            The name of backend, as registered in `SubgraphBackendRegistry`, default None
+        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
+            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+        static_alloc : bool, default False
+            Statically allocate memory to improve speed. Memory usage may increase.
+        static_shape : bool, default False
+            Optimize for invariant input shapes between iterations. Must also
+            set static_alloc to True. Change of input shapes is still allowed
+            but slower.
+        """
+
+        # do hybrize API call
+        self.hybridize(True, backend, backend_opts, **kwargs)
+
+        # do part of forward API call
+        has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
+        if has_symbol:
+            raise ValueError('Inputs must be NDArrays for the optimize_for API'
+                             ' Please check the type of the args.\n')
+        if not has_symbol and not has_ndarray:
+            raise ValueError('In HybridBlock, there must be one NDArray as input.'
+                             ' Please check the type of the args.\n')
+        if len(ctx_set) > 1:
+            raise ValueError('Find multiple contexts in the input, '
+                             'After hybridized, the HybridBlock only supports one input '
+                             'context. You can print the ele.ctx in the '
+                             'input arguments to inspect their contexts. '
+                             'Find all contexts = {}'.format(ctx_set))
+
+        self._build_cache(x, *args)
+        assert self._cached_op, "Gluon failed to build the cache. " \
+                                "This should never happen. " \
+                                "Please submit an issue on Github" \
+                                " https://github.com/apache/incubator-mxnet."
+        # do not actually call the cached_op
 
     def _clear_cached_op(self):
         self._cached_graph = ()
@@ -1133,13 +1200,21 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
+
+        Returns
+        -------
+        symbol_filename : str
+            Filename to which model symbols were saved, including `path` prefix.
+        params_filename : str
+            Filename to which model parameters were saved, including `path` prefix.
         """
         if not self._cached_graph:
             raise RuntimeError(
                 "Please first call block.hybridize() and then run forward with "
                 "this block at least once before calling export.")
         sym = self._cached_graph[1]
-        sym.save('%s-symbol.json'%path, remove_amp_cast=remove_amp_cast)
+        sym_filename = '%s-symbol.json'%path
+        sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
@@ -1151,7 +1226,9 @@ class HybridBlock(Block):
                 assert name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
-        save_fn('%s-%04d.params'%(path, epoch), arg_dict)
+        params_filename = '%s-%04d.params'%(path, epoch)
+        save_fn(params_filename, arg_dict)
+        return (sym_filename, params_filename)
 
     def register_op_hook(self, callback, monitor_all=False):
         """Install op hook for block recursively.
