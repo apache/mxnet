@@ -437,13 +437,14 @@ def compile_unix_clang_3_9_cpu() {
     }]
 }
 
-def compile_unix_clang_6_cpu() {
-    return ['CPU: Clang 6': {
+// TODO(leezu) delete once DUSE_DIST_KVSTORE=ON builds in -WError build
+def compile_unix_clang_10_cpu() {
+    return ['CPU: Clang 10': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-clang60') {
+        ws('workspace/build-cpu-clang100') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang100', false)
           }
         }
       }
@@ -470,21 +471,20 @@ def compile_unix_clang_3_9_mkldnn_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang3', mx_mkldnn_lib)
           }
         }
       }
     }]
 }
 
-def compile_unix_clang_6_mkldnn_cpu() {
-    return ['CPU: Clang 6 MKLDNN': {
+// TODO(leezu) delete once DUSE_DIST_KVSTORE=ON builds in -WError build
+def compile_unix_clang_10_mkldnn_cpu() {
+    return ['CPU: Clang 10 MKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang60') {
+        ws('workspace/build-cpu-mkldnn-clang100') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang60_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu_clang6', mx_mkldnn_lib)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang100_mkldnn', false)
           }
         }
       }
@@ -592,6 +592,34 @@ def compile_unix_gcc8_werror() {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_gcc8_werror', false)
             utils.pack_lib('cpu_gcc8', mx_lib)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_clang10_werror() {
+    return ['CPU: Clang10 -WError': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang10') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang10_werror', false)
+            utils.pack_lib('cpu_clang10', mx_lib)
+          }
+        }
+      }
+    }]
+}
+
+def compile_unix_clang10_cuda_werror() {
+    return ['GPU: Clang10 -WError': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cpu-clang10') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_clang10_werror', false)
+            utils.pack_lib('gpu_clang10', mx_lib)
           }
         }
       }

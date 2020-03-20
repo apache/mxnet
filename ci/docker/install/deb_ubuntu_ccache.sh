@@ -26,6 +26,7 @@ pushd .
 apt update || true
 apt install -y \
     autoconf \
+    gperf \
     xsltproc
 
 mkdir -p /work/deps
@@ -50,12 +51,15 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 git clone --recursive https://github.com/ccache/ccache.git
 cd ccache
-# Checkout a fixed & tested pre-release commit of ccache 4
-# ccache 4 contains fixes for caching nvcc output: https://github.com/ccache/ccache/pull/381
-git checkout 2e7154e67a5dd56852dae29d4c418d4ddc07c230
+git checkout v3.7.8
+# Backport cuda related fixes: https://github.com/ccache/ccache/pull/381
+git config user.name "MXNet CI"
+git config user.email "MXNetCI@example.com"
+git cherry-pick --strategy-option=theirs c4fffda031034f930df2cf188878b8f9160027df
+git cherry-pick 0dec5c2df3e3ebc1fbbf33f74c992bef6264f37a
 
 ./autogen.sh
-./configure --disable-man --with-libzstd-from-internet --with-libb2-from-internet
+./configure --disable-man
 make -j$(nproc)
 make install
 

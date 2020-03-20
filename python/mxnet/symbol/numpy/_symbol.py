@@ -48,7 +48,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
-           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'rot90', 'einsum',
+           'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'where', 'bincount', 'pad', 'cumsum']
@@ -5839,6 +5839,41 @@ def less_equal(x1, x2, out=None):
     """
     return _ufunc_helper(x1, x2, _npi.less_equal, _np.less_equal, _npi.less_equal_scalar,
                          _npi.greater_equal_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def roll(a, shift, axis=None):
+    """
+    Roll array elements along a given axis.
+
+    Elements that roll beyond the last position are re-introduced at
+    the first.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    shift : int or tuple of ints
+        The number of places by which elements are shifted.  If a tuple,
+        then `axis` must be a tuple of the same size, and each of the
+        given axes is shifted by the corresponding number.  If an int
+        while `axis` is a tuple of ints, then the same value is used for
+        all given axes.
+    axis : int or tuple of ints, optional
+        Axis or axes along which elements are shifted.  By default, the
+        array is flattened before shifting, after which the original
+        shape is restored.
+
+    Returns
+    -------
+    res : _Symbol
+        Output array, with the same shape as `a`.
+
+    Notes
+    -----
+    Supports rolling over multiple dimensions simultaneously.
+    """
+    return _npi.roll(a, shift, axis=axis)
 
 
 @set_module('mxnet.symbol.numpy')
