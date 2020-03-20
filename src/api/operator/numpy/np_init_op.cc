@@ -86,7 +86,6 @@ MXNET_REGISTER_API("_npi.full_like")
   } else {
     *ret = ndoutputs[0];
   }
-  *ret = ndoutputs[0];
 });
 
 MXNET_REGISTER_API("_npi.indices")

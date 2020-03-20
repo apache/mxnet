@@ -41,7 +41,11 @@ MXNET_REGISTER_API("_npi.matmul")
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
-  *ret = ndoutputs[0];
+  if (out) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = ndoutputs[0];
+  }
 });
 
 }  // namespace mxnet
