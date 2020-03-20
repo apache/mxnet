@@ -6230,8 +6230,8 @@ def test_np_flip():
         for oneType in types:
             rtol, atol=1e-3, 1e-5
             for shape in shapes:
-                axis = random.randint(-1, len(shape) - 1)
-                if axis is -1:
+                axis = random.randint(-len(shape), len(shape))
+                if axis == len(shape):
                     axis = None
                 test_flip = TestFlip(axis)
                 if hybridize:
