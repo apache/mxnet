@@ -20,7 +20,7 @@ all: html
 html:
 	mkdir -p build
 	cd src && bundle install && JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../build/html && cd ..
-	apt install wget
+	sudo apt install wget
 	/usr/bin/wget https://mxnet-static-artifacts.s3.amazonaws.com/versions.zip && unzip versions.zip -d build/html && rm -rf build/html/__MACOSX && rm versions.zip
 
 clean:
