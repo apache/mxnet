@@ -773,14 +773,46 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss):
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_fused_rnn_layer():
+def test_fused_lstm_layer():
     input_sizes = [8]
     hidden_sizes = [8, 16]
-    modes = ['lstm', 'gru', 'rnn_relu', 'rnn_tanh']
-    for mode, input_size, hidden_size in product(modes, input_sizes, hidden_sizes):
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
         loss = mx.gluon.loss.L2Loss()
-        check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, loss)
-        check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss)
+        check_rnn_unidir_layer_gradients('lstm', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('lstm', input_size, hidden_size, loss)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_fused_gru_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
+        loss = mx.gluon.loss.L2Loss()
+        check_rnn_unidir_layer_gradients('gru', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('gru', input_size, hidden_size, loss)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_fused_rnnrelu_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
+        loss = mx.gluon.loss.L2Loss()
+        check_rnn_unidir_layer_gradients('rnn_relu', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('rnn_relu', input_size, hidden_size, loss)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_fused_rnntanh_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
+        loss = mx.gluon.loss.L2Loss()
+        check_rnn_unidir_layer_gradients('rnn_tanh', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('rnn_tanh', input_size, hidden_size, loss)
 
 
 def test_rnn_unroll_variant_length():
