@@ -61,6 +61,28 @@ def _distribution_method_invoker(dist, func, *args):
 
 @with_seed()
 @use_np
+def test_mvn_rsample():
+    class TestMvnRsample(HybridBlock):
+        def hybrid_forward(self, F, loc, scale_tril):
+            shape_tensor = loc + scale_tril[..., 0]
+            noise = F.np.random.normal(F.np.zeros_like(shape_tensor), F.np.ones_like(shape_tensor))
+            out = loc + F.np.einsum('...jk,...j->...k', scale_tril, noise)
+            return out
+
+    dim_size = 4
+    batch_sizes = [(2,), (3, 4)]
+    for batch_size in batch_sizes:
+        for hybridize in [False]:
+            scale_tril = np.random.randn(*batch_size, 4, 4)
+            loc = np.random.randn(*batch_size, 4)
+            net = TestMvnRsample()
+            if hybridize:
+                net.hybridize()
+            out = net(loc, scale_tril)
+
+
+@with_seed()
+@use_np
 def test_gluon_uniform():
     class TestUniform(HybridBlock):
         def __init__(self, func):
