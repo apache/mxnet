@@ -120,17 +120,28 @@ void CustomFComputeDispatcher(const std::string op_name,
   std::vector<size_t> in_verIDs, out_verIDs;
   std::vector<const char*> in_dev_type, out_dev_type;
   std::vector<int> in_dev_id, out_dev_id;
+  std::vector<NDArray> conv_mkl;  // converted NDArrays from MKLDNN format
 
   // convert inputs/outpus NDArray to C types to be passed to lib_api.h
   for (size_t i = 0; i < inputs.size(); i++) {
-    in_data.push_back(inputs[i].data().dptr_);
-    in_shapes.push_back(inputs[i].shape().data());
-    in_dims.push_back(inputs[i].shape().ndim());
-    in_types.push_back(inputs[i].dtype());
-    in_verIDs.push_back(inputs[i].version());
-    const char* ctx_str = inputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+    NDArray const* in_nd = &(inputs[i]);
+#if MXNET_USE_MKLDNN == 1
+    // reorder data if in MKLDNN format
+    if (in_nd->IsMKLDNNData()) {
+      // convert from MKLDNN
+      conv_mkl.push_back(in_nd->Reorder2Default());
+      in_nd = &(conv_mkl.back());
+    }
+#endif
+    // pull out parts to pass over to library
+    in_data.push_back(in_nd->data().dptr_);
+    in_shapes.push_back(in_nd->shape().data());
+    in_dims.push_back(in_nd->shape().ndim());
+    in_types.push_back(in_nd->dtype());
+    in_verIDs.push_back(in_nd->version());
+    const char* ctx_str = in_nd->ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
     in_dev_type.push_back(ctx_str);
-    in_dev_id.push_back(inputs[i].ctx().real_dev_id());
+    in_dev_id.push_back(in_nd->ctx().real_dev_id());
   }
 
   for (size_t i = 0; i < outputs.size(); i++) {
@@ -193,7 +204,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   if (fcomp_fp != nullptr) {
     // convert attributes to vector of char*
     std::vector<const char*> attr_keys, attr_vals;
-    for (auto kv : attrs->dict) {
+    for (auto &kv : attrs->dict) {
       attr_keys.push_back(kv.first.c_str());
       attr_vals.push_back(kv.second.c_str());
     }
@@ -361,7 +372,7 @@ int MXLoadLib(const char *path) {
     auto attr_parser = [=](const NodeAttrs* attrs) {
       // convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs->dict) {
+      for (auto &kv : attrs->dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -371,7 +382,7 @@ int MXLoadLib(const char *path) {
         nnvm::Graph g;
         g.outputs = attrs->subgraphs[0].get()->outputs;
         subgraph_json = nnvm::pass::SaveJSON(g);
-        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_keys.push_back(MX_STR_SUBGRAPH_SYM_JSON);
         attr_vals.push_back(subgraph_json.c_str());
       }
 
@@ -388,7 +399,7 @@ int MXLoadLib(const char *path) {
     auto num_inputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -406,7 +417,7 @@ int MXLoadLib(const char *path) {
     auto num_outputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -425,7 +436,7 @@ int MXLoadLib(const char *path) {
     auto num_inouts = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -445,7 +456,7 @@ int MXLoadLib(const char *path) {
                             mxnet::ShapeVector *out_shape) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -516,7 +527,7 @@ int MXLoadLib(const char *path) {
                             std::vector<int> *out_type) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -544,7 +555,7 @@ int MXLoadLib(const char *path) {
     auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -629,7 +640,7 @@ int MXLoadLib(const char *path) {
                                const std::vector<int>& in_types) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -640,7 +651,7 @@ int MXLoadLib(const char *path) {
         nnvm::Graph g;
         g.outputs = attrs.subgraphs[0].get()->outputs;
         subgraph_json = nnvm::pass::SaveJSON(g);
-        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_keys.push_back(MX_STR_SUBGRAPH_SYM_JSON);
         attr_vals.push_back(subgraph_json.c_str());
       }
 
@@ -858,12 +869,10 @@ int MXLoadLib(const char *path) {
       std::string op_name_str(op_name);
       LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
                 << " subgraphOp: '" << op_name_str << "'";
-
-      // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
-                            std::make_shared<mxnet::op::CustomSubgraphProperty>(
-                           strategy_str, callSupportedOps, supportedOps_fp,
-                           callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
+      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__
+        (name_str, std::make_shared<mxnet::op::CustomSubgraphProperty>
+          (strategy_str, callSupportedOps, supportedOps_fp,
+           callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
     }
   }
   API_END();

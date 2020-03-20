@@ -284,6 +284,7 @@ if(USE_MKLDNN)
   set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
   set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
   set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+  set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
 
   if(NOT USE_OPENMP)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
@@ -296,10 +297,6 @@ if(USE_MKLDNN)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set(INSTALL_MKLDNN ON)
-endif()
-
-if(USE_CPP_PACKAGE)
-    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -927,11 +924,12 @@ endif()
 
 if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
+  target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
+  if(BUILD_CPP_EXAMPLES)
+    add_subdirectory(example/image-classification/predict-cpp)
+  endif()
 endif()
 
-if(BUILD_CPP_EXAMPLES)
-  add_subdirectory(example/image-classification/predict-cpp)
-endif()
 add_subdirectory(tests)
 
 # ---[ Linter target
