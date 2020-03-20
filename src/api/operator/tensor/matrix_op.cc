@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.clip")
   const nnvm::Op* op = Op::Get("_npi_clip");
   nnvm::NodeAttrs attrs;
   op::ClipParam param;
-  NDArray** inputs = new NDArray*[1]();
+  NDArray* inputs[1];
 
   if (args[0].type_code() != kNull) {
     inputs[0] = args[0].operator mxnet::NDArray *();

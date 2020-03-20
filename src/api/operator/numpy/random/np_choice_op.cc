@@ -23,7 +23,6 @@
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
-#include <algorithm>
 #include "../../utils.h"
 #include "../../../../operator/numpy/random/np_choice_op.h"
 
@@ -36,14 +35,14 @@ MXNET_REGISTER_API("_npi.choice")
   nnvm::NodeAttrs attrs;
   op::NumpyChoiceParam param;
 
-  NDArray** in = new NDArray*[2];
+  NDArray* inputs[2];
   int num_inputs = 0;
 
   if (args[0].type_code() == kDLInt) {
     param.a = args[0].operator int();
   } else if (args[0].type_code() == kNDArrayHandle) {
     param.a = dmlc::nullopt;
-    in[num_inputs] = args[0].operator mxnet::NDArray*();
+    inputs[num_inputs] = args[0].operator mxnet::NDArray*();
     num_inputs++;
   }
 
@@ -67,11 +66,10 @@ MXNET_REGISTER_API("_npi.choice")
     param.weighted = false;
   } else if (args[0].type_code() == kNDArrayHandle) {
     param.weighted = true;
-    in[num_inputs] = args[3].operator mxnet::NDArray*();
+    inputs[num_inputs] = args[3].operator mxnet::NDArray*();
     num_inputs++;
   }
 
-  NDArray** inputs = in == nullptr ? nullptr : in;
   attrs.parsed = std::move(param);
   attrs.op = op;
   if (args[4].type_code() != kNull) {

@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.take")
   const nnvm::Op* op = Op::Get("_npi_take");
   nnvm::NodeAttrs attrs;
   op::TakeParam param;
-  NDArray** inputs = new NDArray*[2]();
+  NDArray* inputs[2];
 
   if (args[0].type_code() != kNull) {
     inputs[0] = args[0].operator mxnet::NDArray *();

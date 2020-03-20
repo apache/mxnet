@@ -680,13 +680,6 @@ def take(a, indices, axis=None, mode='raise', out=None):
     array([[4., 3.],
            [5., 7.]])
     """
-    # if mode not in ('wrap', 'clip', 'raise'):
-    #     raise NotImplementedError(
-    #         "function take does not support mode '{}'".format(mode))
-    # if axis is None:
-    #     return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
-    # else:
-    #     return _npi.take(a, indices, axis, mode, out)
     if mode not in ('wrap', 'clip', 'raise'):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
