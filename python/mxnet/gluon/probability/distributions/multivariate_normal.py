@@ -38,9 +38,9 @@ class MultivariateNormal(Distribution):
                              "`scale_tril` may be specified")
         _F = F if F is not None else getF(cov, precision, scale_tril)
         self.loc = loc
-        self.cov = cov
-        self.precision = precision
-        self.scale_tril = scale_tril
+        self._cov = cov
+        self._precision = precision
+        self._scale_tril = scale_tril
         super(MultivariateNormal, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
 
     def _precision_to_scale_tril(self, P):
@@ -52,31 +52,37 @@ class MultivariateNormal(Distribution):
         """
         F = self.F
         L_flip_inv_T = F.np.linalg.cholesky(F.np.flip(P, (-1, -2)))
-        L = F.np.linalg.inv(F.np.transpose(F.np.flip(L_flip_inv_T, (-1, -2)), (-1, -2)))
+        L = F.np.linalg.inv(F.np.swapaxes(F.np.flip(L_flip_inv_T, (-1, -2)), -1, -2))
         return L
 
     @cached_property
     def scale_tril(self):
+        if self._scale_tril is not None:
+            return self._scale_tril
         F = self.F
-        if self.cov is not None:
-            return F.np.linalg.cholesky(cov)
+        if self._cov is not None:
+            return F.np.linalg.cholesky(self.cov)
         return self._precision_to_scale_tril(self.precision)
     
     @cached_property
     def cov(self):
+        if self._cov is not None:
+            return self._cov
         F = self.F
-        if self.scale_tril is not None:
-            scale_triu = F.np.transpose(self.scale_tril, (-1, -2))
+        if self._scale_tril is not None:
+            scale_triu = F.np.swapaxes(self.scale_tril, -1, -2)
             return F.np.matmul(self.scale_tril, scale_triu)
         return F.np.linalg.inv(self.precision)
 
     @cached_property
     def precision(self):
+        if self._precision is not None:
+            return self._precision
         F = self.F
-        if self.cov is not None:
+        if self._cov is not None:
             return F.np.linalg.inv(self.cov)
         scale_tril_inv = F.np.linalg.inv(self.scale_tril)
-        scale_triu_inv = F.np.transpose(scale_tril_inv, (-1, -2))
+        scale_triu_inv = F.np.swapaxes(scale_tril_inv, -1, -2)
         return F.np.matmul(scale_triu_inv, scale_tril_inv)
 
     @property
@@ -90,7 +96,7 @@ class MultivariateNormal(Distribution):
     def sample(self, size=None):
         F = self.F
         # symbol does not support `np.broadcast`
-        shape_tensor = self.loc + self.scale_tril[..., 0]
+        shape_tensor = self.loc + self.scale_tril.sum(-1)
         if size is not None:
             if isinstance(size, int):
                 size = (size,)
@@ -115,7 +121,6 @@ class MultivariateNormal(Distribution):
     def log_prob(self, value):
         import math
         F = self.F
-        k = F.np.ones_like(self.loc).sum(-1).flatten()[0]  # Number of dimension
         diff = value - self.loc
         # diff.T * inv(\Sigma) * diff
         M = F.np.einsum(
@@ -123,12 +128,20 @@ class MultivariateNormal(Distribution):
             diff,
             F.np.einsum('...jk,...j->...k', self.precision, diff)  # Batch matrix vector multiply
             )
-        #   det(\Sigma)^{-1/2} 
-        # = det(L * L.T)^{-1/2}
-        # = det(L)^{-1}
-        half_log_det = F.np.log(F.np.diagonal(self.scale_tril, axis1=-2,axis2=-1)).sum(-1)
-        return -0.5 * (k * math.log(2 * math.pi) + M) - half_log_det
+        #   (2 * \pi)^{-k/2} * det(\Sigma)^{-1/2} 
+        # = det(2 * \pi * L * L.T)^{-1/2}
+        # = det(\sqrt(2 * \pi) * L)^{-1}
+        half_log_det = F.np.log(
+            F.np.diagonal(F.np.sqrt(2 * math.pi) * self.scale_tril, axis1=-2, axis2=-1)
+        ).sum(-1)
+        return M - half_log_det
 
     def entropy(self):
-        # TODO
-        raise NotImplementedError
+        import math
+        F = self.F
+        #   det(2 * \pi * e * \Sigma)
+        # = det(\sqrt(2 * \pi * e) * L)^2
+        return F.np.log(F.np.diagonal(
+                F.np.sqrt(2 * math.pi * math.e) * self.scale_tril,
+                axis1=-2, axis2=-1
+        )).sum(-1)

@@ -61,28 +61,6 @@ def _distribution_method_invoker(dist, func, *args):
 
 @with_seed()
 @use_np
-def test_mvn_rsample():
-    class TestMvnRsample(HybridBlock):
-        def hybrid_forward(self, F, loc, scale_tril):
-            shape_tensor = loc + scale_tril[..., 0]
-            noise = F.np.random.normal(F.np.zeros_like(shape_tensor), F.np.ones_like(shape_tensor))
-            out = loc + F.np.einsum('...jk,...j->...k', scale_tril, noise)
-            return out
-
-    dim_size = 4
-    batch_sizes = [(2,), (3, 4)]
-    for batch_size in batch_sizes:
-        for hybridize in [False]:
-            scale_tril = np.random.randn(*batch_size, 4, 4)
-            loc = np.random.randn(*batch_size, 4)
-            net = TestMvnRsample()
-            if hybridize:
-                net.hybridize()
-            out = net(loc, scale_tril)
-
-
-@with_seed()
-@use_np
 def test_gluon_uniform():
     class TestUniform(HybridBlock):
         def __init__(self, func):
@@ -1371,6 +1349,90 @@ def test_relaxed_one_hot_categorical():
             mx_out = net(param, samples)
             # Check shape
             assert mx_out.shape == desired_shape    
+
+
+@with_seed()
+@use_np
+def test_gluon_mvn():
+    class TestMVN(HybridBlock):
+        def __init__(self, func, param_type):
+            super(TestMVN, self).__init__()
+            self._func = func
+            # cov, precision or scale_tril
+            self._param_type = param_type
+
+        def hybrid_forward(self, F, loc, cov, *args):
+            mvn = mgp.MultivariateNormal(loc=loc, **{self._param_type: cov}, F=F)
+            return _distribution_method_invoker(mvn, self._func, *args)
+
+    event_shapes = [3, 5, 10]
+    loc_shapes = [(), (2,), (4, 2)]
+    cov_shapes = [(), (2,), (4, 2)]
+    cov_func = {
+        'cov': lambda s: s,
+        'precision': lambda s: np.linalg.inv(s),
+        'scale_tril': lambda s: np.linalg.cholesky(s)
+    }
+
+    # Test sampling
+    for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
+        for cov_type in cov_func.keys():
+            for hybridize in [True, False]:
+                loc = np.random.randn(*(loc_shape + (event_shape,)))
+                _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
+                loc.attach_grad()
+                _s.attach_grad()
+                # Full covariance matrix
+                sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+                cov_param = cov_func[cov_type](sigma)
+                net = TestMVN('sample', cov_type)
+                if hybridize:
+                    net.hybridize()
+                with autograd.record():
+                    mx_out = net(loc, cov_param)
+                desired_shape = (loc + sigma[..., 0]).shape
+                assert mx_out.shape == desired_shape
+                mx_out.backward()
+                assert loc.grad.shape == loc.shape
+                assert _s.grad.shape == _s.shape
+
+    # Test log_prob
+    for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
+        for cov_type in cov_func.keys():
+            for hybridize in [True, False]:
+                loc = np.random.randn(*(loc_shape + (event_shape,)))
+                _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
+                samples = np.random.normal(np.zeros_like(loc), np.ones_like(_s[..., 0]))
+                loc.attach_grad()
+                _s.attach_grad()
+                # Full covariance matrix
+                sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+                cov_param = cov_func[cov_type](sigma)
+                net = TestMVN('log_prob', cov_type)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(loc, cov_param, samples)
+                assert mx_out.shape == samples.shape[:-1]
+                # Correctness to be tested.
+
+    # Test entropy
+    for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
+        for cov_type in cov_func.keys():
+            for hybridize in [True, False]:
+                loc = np.random.randn(*(loc_shape + (event_shape,)))
+                _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
+                loc.attach_grad()
+                _s.attach_grad()
+                # Full covariance matrix
+                sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+                cov_param = cov_func[cov_type](sigma)
+                net = TestMVN('entropy', cov_type)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(loc, cov_param)
+                assert mx_out.shape == sigma.shape[:-2]
+                # Correctness to be tested.
+
 
 
 @with_seed()

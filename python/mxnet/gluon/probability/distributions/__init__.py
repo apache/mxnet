@@ -69,6 +69,8 @@ from .relaxed_one_hot_categorical import *
 
 from .multinomial import *
 
+from .multivariate_normal import *
+
 from .transformed_distribution import *
 
 from .divergence import *

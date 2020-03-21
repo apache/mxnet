@@ -500,6 +500,9 @@ void NumpyFlipForward(const nnvm::NodeAttrs& attrs,
   for (int axis : axistemp) {
     CHECK_LT(axis, ishape.ndim()) << "axis " << axis
       << " is out of bounds for array of dimension " << ishape.ndim() << std::endl;
+    CHECK_GE(axis, -ishape.ndim()) << "axis" << axis
+    << " is out of bounds for array of dimension " << ishape.ndim() << std::endl;
+    axis = (axis < 0) ? axis + ishape.ndim() : axis;
     stride_[flip_index] = ishape[axis];
     trailing_[flip_index] = 1;
     for (int i2 = axis + 1; i2 < ishape.ndim(); ++i2) {
