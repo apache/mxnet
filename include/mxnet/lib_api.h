@@ -712,8 +712,24 @@ struct JsonParser {
   }
 };
 
+/* \brief An abstract class for library authors creating custom
+ * partitioners. Optional, can just implement supportedOps instead
+ */
+class CustomOpSelector {
+ public:
+  virtual MXReturnValue Select(int nodeID) = 0;
+  virtual MXReturnValue SelectInput(int nodeID, int input_nodeID) = 0;
+  virtual MXReturnValue SelectOutput(int nodeID, int output_nodeID) = 0;
+  virtual MXReturnValue Filter(std::vector<int> candidates,
+                               std::vector<int> keep) {
+    keep.insert(keep.end(), candidates.begin(), candidates.end());
+    return MX_SUCCESS;
+  }
+  virtual void Reset() {}
+};
+
 /*!
- * \brief An abstract class for library author creating stateful op
+ * \brief An abstract class for library authors creating stateful op
  * custom library should override Forward and destructor, and has an
  * option to implement Backward
  */
@@ -852,9 +868,33 @@ class CustomOp {
   std::unordered_map<const char*, createOpState_t> create_op_ctx_map;
 };
 
+/*! \brief Custom Pass Create function template */
+typedef MXReturnValue (*graphPass_t)(const std::string&, const std::string**,
+                                     std::unordered_map<std::string, std::string>&);
+
+/*!
+ * \brief An abstract class for graph passes
+ */
+class CustomPass {
+ public:
+  CustomPass() : name("ERROR") {}
+  explicit CustomPass(const char* pass_name) :
+    name(pass_name) {}
+  CustomPass& setBody(graphPass_t fn) {
+    pass = fn;
+    return *this;
+  }
+  
+  /*! \brief pass name */
+  const char* name;
+  graphPass_t pass;
+};
+
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<bool>&,
+typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<int>&,
                                         std::unordered_map<std::string, std::string>&);
+typedef MXReturnValue (*createSelector_t)(std::string, CustomOpSelector**,
+                                          std::unordered_map<std::string, std::string>&);
 typedef MXReturnValue (*reviewSubgraph_t)(std::string, int, bool*,
                                           std::unordered_map<std::string, std::string>&,
                                           std::unordered_map<std::string, std::string>&,
@@ -870,32 +910,52 @@ class CustomPartitioner {
   explicit CustomPartitioner(const char* backend_name) :
     name(backend_name) {}
   CustomPartitioner& addStrategy(const char* prop_name,
-                                 supportedOps_t fn,
                                  const char* sg_name) {
     strategies.push_back(prop_name);
-    supportedOps.push_back(fn);
     op_names.push_back(sg_name);
+    return *this;
+  }
+  CustomPartitioner& setSupportedOps(const char* prop_name, supportedOps_t fn) {
+    supported_map[std::string(prop_name)] = fn;
+    return *this;
+  }
+  CustomPartitioner& setCreateSelector(const char* prop_name, createSelector_t fn) {
+    selector_map[std::string(prop_name)] = fn;
     return *this;
   }
   CustomPartitioner& setReviewSubgraph(const char* prop_name, reviewSubgraph_t fn) {
     review_map[std::string(prop_name)] = fn;
     return *this;
   }
+  supportedOps_t getSupportedOps(int stg_id) {
+    std::string prop(strategies[stg_id]);
+    if (supported_map.count(prop) > 0)
+      return supported_map[prop];
+    else
+      return nullptr;
+  }
+  createSelector_t getCreateSelector(int stg_id) {
+    std::string prop(strategies[stg_id]);
+    if (selector_map.count(prop) > 0)
+      return selector_map[prop];
+    else
+      return nullptr;
+  }
   reviewSubgraph_t getReviewSubgraph(int stg_id) {
     std::string prop(strategies[stg_id]);
-    if (review_map.find(prop) != review_map.end())
+    if (review_map.count(prop) > 0)
       return review_map[prop];
     else
       return nullptr;
   }
 
-  /*! \brief partitioner  name */
+  /*! \brief partitioner name */
   const char* name;
+  std::map<std::string, supportedOps_t> supported_map;
+  std::map<std::string, createSelector_t> selector_map;
   std::map<std::string, reviewSubgraph_t> review_map;
   /*! \brief strategy names */
   std::vector<const char*> strategies;
-  /*! \brief supported ops function */
-  std::vector<supportedOps_t> supportedOps;
   /*! \brief subgraph operator name */
   std::vector<const char*> op_names;
 };
@@ -959,6 +1019,9 @@ class Registry {
 #define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
 #define MX_REGISTER_PROP_DEF_(Name) CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
 
+#define MX_REGISTER_PASS_NAME_(Name) MXNet ## _CustomPass ## _
+#define MX_REGISTER_PASS_DEF_(Name) CustomPass MX_REGISTER_PASS_NAME_(Name)
+
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
     Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
@@ -966,6 +1029,10 @@ class Registry {
 #define REGISTER_PARTITIONER(Name) \
   MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
     Registry<CustomPartitioner>::get()->add(MX_TOSTRING(Name))
+
+#define REGISTER_PASS(Name) \
+  MX_STR_CONCAT(MX_REGISTER_PASS_DEF_(Name), __COUNTER__) = \
+    Registry<CustomPass>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
@@ -1069,13 +1136,18 @@ typedef int (*partRegGetCount_t)(int idx, const char** name);
 
 #define MXLIB_PARTREGGET_STR "_partRegGet"
 typedef void (*partRegGet_t)(int part_idx, int stg_idx, const char** strategy,
-                             supportedOps_t* supportedOps, reviewSubgraph_t* reviewSubgraph,
-                             const char** op_name);
+                             supportedOps_t* supportedOps, createSelector_t* createSelector,
+                             reviewSubgraph_t* reviewSubgraph, const char** op_name);
 
 #define MXLIB_PARTCALLSUPPORTEDOPS_STR "_partCallSupportedOps"
 typedef int (*partCallSupportedOps_t)(supportedOps_t supportedOps, const char *json,
                                       int num_ids, int *ids, const char* const* opt_keys,
                                       const char* const* opt_vals, int num_opts);
+
+#define MXLIB_PARTCALLCREATESELECTOR_STR "_partCallCreateSelector"
+typedef int (*partCallCreateSelector_t)(createSelector_t createSelector, const char *json,
+                                        void** selector, const char* const* opt_keys,
+                                        const char* const* opt_vals, int num_opts);
 
 #define MXLIB_PARTCALLREVIEWSUBGRAPH_STR "_partCallReviewSubgraph"
 typedef int (*partCallReviewSubgraph_t)(reviewSubgraph_t reviewSubgraph, const char *json,
@@ -1093,45 +1165,51 @@ typedef int (*partCallReviewSubgraph_t)(reviewSubgraph_t reviewSubgraph, const c
                                         const size_t* aux_IDs, const char* const* aux_dev_type,
                                         const int* aux_dev_id);
 
+#define MXLIB_PASSREGSIZE_STR "_passRegSize"
+typedef int (*passRegSize_t)(void);
+
+#define MXLIB_PASSREGGET_STR "_passRegGet"
+typedef void (*passRegGet_t)(int pass_idx, graphPass_t* graphPass, const char** pass_name);
+
+#define MXLIB_PASSCALLGRAPHPASS_STR "_passCallGraphPass"
+typedef int (*passCallGraphPass_t)(graphPass_t graphPass, const char *in_graph,
+                                   char** out_graph, const char* const* opt_keys,
+                                   const char* const* opt_vals, int num_opts,
+                                   const char* pass_name);
+
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
 
 #define MXLIB_OPVERSION_STR "_opVersion"
 typedef int (*opVersion_t)();
 
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#define MX_INT_RET  __declspec(dllexport) int __cdecl
+#define MX_VOID_RE  __declspec(dllexport) void __cdecl
+#else
+#define MX_INT_RET  int
+#define MX_VOID_RET void
+#endif
+
 extern "C" {
   /*! \brief returns MXNet library version */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opVersion() {
+  MX_INT_RET _opVersion() {
     return MX_LIBRARY_VERSION;
   }
 
   /*! \brief returns number of ops registered in this library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opRegSize() {
+  MX_INT_RET _opRegSize() {
     return Registry<CustomOp>::get()->size();
   }
 
   /*! \brief returns operator registration at specified index */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) void __cdecl
-#else
-  void
-#endif
-  _opRegGet(int idx, const char** name, int *isSGop,
-            const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
-            const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
-            const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
-            parseAttrs_t* parse, inferType_t* type, inferSType_t* stype,
-            inferShape_t* shape, mutateInputs_t* mutate) {
+  MX_VOID_RET _opRegGet(int idx, const char** name, int *isSGop,
+                        const char*** forward_ctx, fcomp_t** forward_fp,
+                        int* forward_count, const char*** backward_ctx,
+                        fcomp_t** backward_fp, int* backward_count,
+                        const char*** create_op_ctx, createOpState_t** create_op_fp,
+                        int* create_op_count, parseAttrs_t* parse, inferType_t* type,
+                        inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp &op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *parse = op.parse_attrs;
@@ -1153,24 +1231,14 @@ extern "C" {
   }
 
   /*! \brief calls free from the external library for library allocated arrays */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) void __cdecl
-#else
-  void
-#endif
-  _opCallFree(void* ptr) {
+  MX_VOID_RET _opCallFree(void* ptr) {
     free(ptr);
   }
 
   /*! \brief returns status of calling parse attributes function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys,
-                    const char* const* vals, int num,
-                    int* num_in, int* num_out) {
+  MX_INT_RET _opCallParseAttrs(parseAttrs_t parseAttrs, const char* const* keys,
+                               const char* const* vals, int num,
+                               int* num_in, int* num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1181,15 +1249,10 @@ extern "C" {
   }
 
   /*! \brief returns status of calling inferShape function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallInferShape(inferShape_t inferShape, const char* const* keys,
-                    const char* const* vals, int num,
-                    unsigned int** inshapes, int* indims, int num_in,
-                    unsigned int*** outshapes, int** outdims, int num_out) {
+  MX_INT_RET _opCallInferShape(inferShape_t inferShape, const char* const* keys,
+                               const char* const* vals, int num,
+                               unsigned int** inshapes, int* indims, int num_in,
+                               unsigned int*** outshapes, int** outdims, int num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1228,14 +1291,9 @@ extern "C" {
   }
 
   /*! \brief returns status of calling inferType function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallInferType(inferType_t inferType, const char* const* keys,
-                   const char* const* vals, int num,
-                   int* intypes, int num_in, int* outtypes, int num_out) {
+  MX_INT_RET _opCallInferType(inferType_t inferType, const char* const* keys,
+                              const char* const* vals, int num,
+                              int* intypes, int num_in, int* outtypes, int num_out) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1301,24 +1359,19 @@ extern "C" {
   }
 
   /*! \brief returns status of calling Forward/Backward function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals, int num,
-                  const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                  size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
-                  const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                  size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
-                  xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
-                  sparse_malloc_t sparse_malloc, void* sparse_alloc,
-                  int* instypes, int* outstypes, void** in_indices, void** out_indices,
-                  void** in_indptr, void** out_indptr,
-                  int64_t* in_indices_shapes, int64_t* out_indices_shapes,
-                  int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
-                  void* rng_cpu_states, void* rng_gpu_states) {
+  MX_INT_RET _opCallFCompute(fcomp_t fcomp, const char* const* keys, const char* const* vals,
+                             int num, const int64_t** inshapes, int* indims, void** indata,
+                             int* intypes, size_t* inIDs, const char** indev_type, int* indev_id,
+                             int num_in, const int64_t** outshapes, int* outdims, void** outdata,
+                             int* outtypes, size_t* outIDs, const char** outdev_type,
+                             int* outdev_id, int num_out, xpu_malloc_t cpu_malloc, void* cpu_alloc,
+                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
+                             sparse_malloc_t sparse_malloc, void* sparse_alloc,
+                             int* instypes, int* outstypes, void** in_indices, void** out_indices,
+                             void** in_indptr, void** out_indptr,
+                             int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                             int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
+                             void* rng_cpu_states, void* rng_gpu_states) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1384,14 +1437,9 @@ extern "C" {
   }
 
   /*! \brief returns status of calling mutateInputs function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallMutateInputs(mutateInputs_t mutate, const char* const* keys,
-                      const char* const* vals, int num,
-                      int** mutate_indices, int* indices_size) {
+  MX_INT_RET _opCallMutateInputs(mutateInputs_t mutate, const char* const* keys,
+                                 const char* const* vals, int num,
+                                 int** mutate_indices, int* indices_size) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1416,14 +1464,9 @@ extern "C" {
   }
 
   /*! \brief returns status of calling createStatefulOp function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallCreateOpState(createOpState_t create_op, const char* const* keys,
-                       const char* const* vals, int num,
-                       void** state_op) {
+  MX_INT_RET _opCallCreateOpState(createOpState_t create_op, const char* const* keys,
+                                  const char* const* vals, int num,
+                                  void** state_op) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1437,24 +1480,20 @@ extern "C" {
   }
 
   /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _opCallFStatefulCompute(int is_forward, void* state_op,
-                          const int64_t** inshapes, int* indims, void** indata, int* intypes,
-                          size_t* inIDs, const char** indev_type, int* indev_id, int num_in,
-                          const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
-                          size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
-                          xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
-                          sparse_malloc_t sparse_malloc, void* sparse_alloc,
-                          int* instypes, int* outstypes, void** in_indices, void** out_indices,
-                          void** in_indptr, void** out_indptr,
-                          int64_t* in_indices_shapes, int64_t* out_indices_shapes,
-                          int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
-                          void* rng_cpu_states, void* rng_gpu_states) {
+  MX_INT_RET _opCallFStatefulCompute(int is_forward, void* state_op, const int64_t** inshapes,
+                                     int* indims, void** indata, int* intypes, size_t* inIDs,
+                                     const char** indev_type, int* indev_id, int num_in,
+                                     const int64_t** outshapes, int* outdims, void** outdata,
+                                     int* outtypes, size_t* outIDs, const char** outdev_type,
+                                     int* outdev_id, int num_out, xpu_malloc_t cpu_malloc,
+                                     void* cpu_alloc, xpu_malloc_t gpu_malloc, void* gpu_alloc,
+                                     void* stream, sparse_malloc_t sparse_malloc,
+                                     void* sparse_alloc, int* instypes, int* outstypes,
+                                     void** in_indices, void** out_indices, void** in_indptr,
+                                     void** out_indptr, int64_t* in_indices_shapes,
+                                     int64_t* out_indices_shapes, int64_t* in_indptr_shapes,
+                                     int64_t* out_indptr_shapes,
+                                     void* rng_cpu_states, void* rng_gpu_states) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
     // create a vector for sparse inputs
@@ -1521,52 +1560,34 @@ extern "C" {
   }
 
   /*! \brief returns number of partitioners registered in this library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _partRegSize() {
+  MX_INT_RET _partRegSize() {
     return Registry<CustomPartitioner>::get()->size();
   }
 
   /* returns number of strategies registered for partitioner
    * at specified index */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _partRegGetCount(int idx, const char** name) {
+  MX_INT_RET _partRegGetCount(int idx, const char** name) {
     CustomPartitioner part = Registry<CustomPartitioner>::get()->get(idx);
     *name = part.name;
     return part.strategies.size();
   }
 
   /*! \brief returns partitioner registration at specified index */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) void __cdecl
-#else
-  void
-#endif
-  _partRegGet(int part_idx, int stg_idx, const char** strategy, supportedOps_t* supportedOps,
-              reviewSubgraph_t* reviewSubgraph, const char** op_name) {
+  MX_VOID_RET _partRegGet(int part_idx, int stg_idx, const char** strategy,
+                        supportedOps_t* supportedOps, createSelector_t* createSelector,
+                        reviewSubgraph_t* reviewSubgraph, const char** op_name) {
     CustomPartitioner part = Registry<CustomPartitioner>::get()->get(part_idx);
     *strategy = part.strategies[stg_idx];
-    *supportedOps = part.supportedOps[stg_idx];
     *op_name = part.op_names[stg_idx];
+    *supportedOps = part.getSupportedOps(stg_idx);
+    *createSelector = part.getCreateSelector(stg_idx);
     *reviewSubgraph = part.getReviewSubgraph(stg_idx);
   }
 
-  /*! \brief returns status of calling parse attributes function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
-                        int num_ids, int *ids, const char* const* opt_keys,
-                        const char* const* opt_vals, int num_opts) {
+  /*! \brief returns status of calling supported ops function from library */
+  MX_INT_RET _partCallSupportedOps(supportedOps_t supportedOps, const char *json,
+                                   int num_ids, int *ids, const char* const* opt_keys,
+                                   const char* const* opt_vals, int num_opts) {
     std::string subgraph_json(json);
     // create map of options from list
     std::unordered_map<std::string, std::string> opts;
@@ -1574,7 +1595,7 @@ extern "C" {
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
 
     // create array of bools for operator support
-    std::vector<bool> _ids(num_ids, false);
+    std::vector<int> _ids(num_ids, -1);
     // call user's supportedOps function
     MXReturnValue retval = supportedOps(subgraph_json, _ids, opts);
     if (!retval) return retval;
@@ -1586,26 +1607,40 @@ extern "C" {
     return retval;
   }
 
-    /*! \brief returns status of calling parse attributes function for operator from library */
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-  __declspec(dllexport) int __cdecl
-#else
-  int
-#endif
-  _partCallReviewSubgraph(reviewSubgraph_t reviewSubgraph, const char *json,
-                          int subgraph_id, int *accept, const char* const* opt_keys,
-                          const char* const* opt_vals, int num_opts,
-                          char*** attr_keys, char*** attr_vals, int *num_attrs,
-                          const char* const* arg_names, int num_args,
-                          void* const* arg_data, const int64_t* const* arg_shapes,
-                          const int* arg_dims, const int* arg_types,
-                          const size_t* arg_IDs, const char* const* arg_dev_type,
-                          const int* arg_dev_id,
-                          const char* const* aux_names, int num_aux,
-                          void* const* aux_data, const int64_t* const* aux_shapes,
-                          const int* aux_dims, const int* aux_types,
-                          const size_t* aux_IDs, const char* const* aux_dev_type,
-                          const int* aux_dev_id) {
+  /*! \brief returns status of calling create selector function from library */
+  MX_INT_RET _partCallCreateSelector(createSelector_t createSelector, const char *json,
+                                     void** selector, const char* const* opt_keys,
+                                     const char* const* opt_vals, int num_opts) {
+    std::string symbol_json(json);
+    // create map of options from list
+    std::unordered_map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++)
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+
+    // void pointer to hold selector instance created in custom library
+    // eventually pointer is populated by instance from custom library
+    CustomOpSelector** sel_ptr = reinterpret_cast<CustomOpSelector**>(selector);
+
+    // call user's createSelector function
+    return createSelector(symbol_json, sel_ptr, opts);
+  }
+
+  
+  /*! \brief returns status of calling review subgraph function from library */
+  MX_INT_RET _partCallReviewSubgraph(reviewSubgraph_t reviewSubgraph, const char *json,
+                                     int subgraph_id, int *accept, const char* const* opt_keys,
+                                     const char* const* opt_vals, int num_opts,
+                                     char*** attr_keys, char*** attr_vals, int *num_attrs,
+                                     const char* const* arg_names, int num_args,
+                                     void* const* arg_data, const int64_t* const* arg_shapes,
+                                     const int* arg_dims, const int* arg_types,
+                                     const size_t* arg_IDs, const char* const* arg_dev_type,
+                                     const int* arg_dev_id,
+                                     const char* const* aux_names, int num_aux,
+                                     void* const* aux_data, const int64_t* const* aux_shapes,
+                                     const int* aux_dims, const int* aux_types,
+                                     const size_t* aux_IDs, const char* const* aux_dev_type,
+                                     const int* aux_dev_id) {
     std::string subgraph_json(json);
     bool accept_bool = false;
     // create map of attributes from list
@@ -1666,6 +1701,45 @@ extern "C" {
     return retval;
   }
 
+  /*! \brief returns number of graph passes registered in this library */
+  MX_INT_RET _passRegSize() {
+    return Registry<CustomPass>::get()->size();
+  }
+
+  /*! \brief returns pass registration at specified index */
+  MX_VOID_RET _passRegGet(int pass_idx, graphPass_t* graphPass,
+                          const char** pass_name) {
+    CustomPass pass = Registry<CustomPass>::get()->get(pass_idx);
+    *graphPass = pass.pass;
+    *pass_name = pass.name;
+  }
+
+  /*! \brief returns status of calling graph pass function from library */
+  MX_INT_RET _passCallGraphPass(graphPass_t graphPass, const char *json,
+                                char** graph, const char* const* opt_keys,
+                                const char* const* opt_vals, int num_opts,
+                                const char* pass_name) {
+    std::string graph_json(json);
+    const std::string* out_graph = nullptr;
+    // create map of attributes from list
+    std::unordered_map<std::string, std::string> opts;
+    for (int i = 0; i < num_opts; i++)
+      opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
+    
+    MXReturnValue retval = graphPass(graph_json, &out_graph, opts);
+    if (!retval) return retval;
+
+    if (out_graph == nullptr) {
+      std::cout << "Error calling graph pass '" << pass_name
+                << "' returned out_graph string is null" << std::endl;
+      return MX_FAIL;
+    }
+    *graph = static_cast<char*>(malloc((out_graph->length()+1) * sizeof(char)));
+    out_graph->copy(*graph, out_graph->size()+1);
+    delete out_graph;
+    return retval;
+  }
+  
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.

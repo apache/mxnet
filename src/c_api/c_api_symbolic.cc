@@ -1440,14 +1440,25 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   for (mx_uint i = 0; i < num_options; ++i)
     options_map.emplace_back(keys[i], vals[i]);
 
-  const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
-  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
-  for (auto property : subgraph_prop_list) {
-    property->PrePartition(g, options_map);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-    g = ApplyPass(std::move(g), "BuildSubgraph");
-    g.attrs.erase("subgraph_property");
-    property->PostPartition(g);
+  if (mxnet::op::SubgraphBackendRegistry::Get()->backend_map_.count(backend_name) > 0) {
+    // use subgraph backend
+    const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
+    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+    for (auto property : subgraph_prop_list) {
+      property->PrePartition(g, options_map);
+      g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+      g = ApplyPass(std::move(g), "BuildSubgraph");
+      g.attrs.erase("subgraph_property");
+      property->PostPartition(g);
+    }
+  } else if(dmlc::Registry<nnvm::PassFunctionReg>::Find(backend_name) != nullptr) {
+    // use graph pass
+    g.attrs["options_map"] = std::make_shared<nnvm::any>(options_map);
+    g.attrs["pass_name"] = std::make_shared<nnvm::any>(backend_name);
+    g = ApplyPass(std::move(g), backend_name);
+  } else {
+    // cannot find graph pass or subgraph backend registered in this name
+    LOG(ERROR) << "Error optimizing for backend '" << backend_name << "' cannot be found";
   }
   s->outputs = g.outputs;
   *ret_sym_handle = s;

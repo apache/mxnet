@@ -24,12 +24,16 @@ from .base import _LIB, check_call, MXNetError, _init_op_module
 from .ndarray.register import _make_ndarray_function
 from .symbol.register import _make_symbol_function
 
-def load(path):
+def load(path, verbose=True):
     """Loads library dynamically.
 
     Parameters
     ---------
-    path : Path to library .so/.dll file
+    path : string
+        Path to library .so/.dll file
+
+    verbose : boolean
+        defaults to True, set to False to avoid printing library info
 
     Returns
     ---------

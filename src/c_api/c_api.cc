@@ -325,7 +325,7 @@ void CustomFComputeDispatcher(const std::string op_name,
  * \brief Loads dynamic custom library and initializes it
  * \param path library path
  */
-int MXLoadLib(const char *path) {
+int MXLoadLib(const char *path, int verbose) {
   API_BEGIN();
   void *lib = LibraryInitializer::Get()->lib_load(path);
   if (!lib)
@@ -376,10 +376,13 @@ int MXLoadLib(const char *path) {
   partCallReviewSubgraph_t callReviewSubgraph =
     get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
 
+  passCallGraphPass_t callGraphPass =
+    get_func<passCallGraphPass_t>(lib, const_cast<char*>(MXLIB_PASSCALLGRAPHPASS_STR));
+
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
-  LOG(INFO) << "Found " << numOps << " operators in library";
+  if (verbose) LOG(INFO) << "Found " << numOps << " operators in library";
 
   /*
    * Get all custom operators implementation from custom library
@@ -444,8 +447,8 @@ int MXLoadLib(const char *path) {
       CHECK(createop_map.size() != 0) << "Error loading '" << name
                             << "' custom subgraph op, CreateOpState function was not set.";
     }
-    LOG(INFO) << "\tOp[" << i << "] " << name;
-    if (isSubgraphOp) LOG(INFO) << "\t\tisSubgraphOp";
+    if (verbose) LOG(INFO) << "\tOp[" << i << "] " << name;
+    if (verbose && isSubgraphOp) LOG(INFO) << "\t\tisSubgraphOp";
     std::string name_str(name);
 
     /*
@@ -943,7 +946,7 @@ int MXLoadLib(const char *path) {
   partRegSize_t partRegSize = get_func<partRegSize_t>(lib,
                                                       const_cast<char*>(MXLIB_PARTREGSIZE_STR));
   int numParts = partRegSize();
-  LOG(INFO) << "Found " << numParts << " partitioners in library";
+  if (verbose) LOG(INFO) << "Found " << numParts << " partitioners in library";
 
   /*
    * Get all custom partitioners implementation from custom library
@@ -959,7 +962,7 @@ int MXLoadLib(const char *path) {
     CHECK(count > 0) << "Error loading '" << name
                      << "' custom partitioner, no strategies defined";
     std::string name_str(name);
-    LOG(INFO) << "\tPartitioner[" << i << "] " << name;
+    if (verbose) LOG(INFO) << "\tPartitioner[" << i << "] " << name;
 
     mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_BACKEND__(name);
 
@@ -967,25 +970,123 @@ int MXLoadLib(const char *path) {
       const char* strategy;
       // function pointers holding implementation from custom library
       supportedOps_t supportedOps_fp = nullptr;
+      createSelector_t createSelector_fp = nullptr;
       reviewSubgraph_t reviewSubgraph_fp = nullptr;
       // name of subgraph op
       const char* op_name = nullptr;
 
-    // get custom partitioner strategy from the dynamic library
-      partRegGet(i, j, &strategy, &supportedOps_fp, &reviewSubgraph_fp, &op_name);
+      // get custom partitioner strategy from the dynamic library
+      partRegGet(i, j, &strategy, &supportedOps_fp, &createSelector_fp,
+                 &reviewSubgraph_fp, &op_name);
       // validate custom partitioner functions from the dynamic library
-      CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
-                                        << "' custom partitioner strategy '" << strategy
-                                        << "', supportedOps function was not set.";
+      if (supportedOps_fp == nullptr && createSelector_fp == nullptr)
+        LOG(ERROR) << "Error loading '" << name << "' custom partitioner strategy '"
+                   << strategy << "', must implement supportedOps or createSelector";
       std::string strategy_str(strategy);
       std::string op_name_str(op_name);
-      LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
-                << " subgraphOp: '" << op_name_str << "'";
+      if (verbose) LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
+                             << " subgraphOp: '" << op_name_str << "'";
       mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__
         (name_str, std::make_shared<mxnet::op::CustomSubgraphProperty>
           (strategy_str, callSupportedOps, supportedOps_fp,
            callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
     }
+  }
+
+  // get number of passes registered in the library
+  partRegSize_t passRegSize = get_func<passRegSize_t>(lib,
+                                                      const_cast<char*>(MXLIB_PASSREGSIZE_STR));
+  int numPasses = passRegSize();
+  if (verbose) LOG(INFO) << "Found " << numPasses << " graph passes in library";
+
+  /*
+   * Get all custom pass implementation from custom library
+   * loop and register each pass in the library to NNVM
+   */
+  passRegGet_t passRegGet = get_func<passRegGet_t>(lib, const_cast<char*>(MXLIB_PASSREGGET_STR));
+  for (int i = 0; i < numPasses; i++) {
+    const char* name;
+    // function pointers holding implementation from custom library
+    graphPass_t pass_fp = nullptr;
+
+    // main function to get custom pass implemenation from the custom library
+    passRegGet(i, &pass_fp, &name);
+
+    if (verbose) LOG(INFO) << "\tGraph Pass [" << i << "] " << name;
+
+    auto pass_lambda = [=] (nnvm::Graph&& g) {
+      const char* pass_name = g.GetAttr<const char*>("pass_name");
+      const std::vector<std::pair<std::string, std::string>>& options_map =
+            g.GetAttr<const std::vector<std::pair<std::string, std::string>>>("options_map");
+
+      mxnet::ShapeVector shapes;
+      if (g.HasAttr("shape"))
+        shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+      std::vector<int> dtypes;
+      if (g.HasAttr("dtype"))
+        dtypes = g.GetAttr<std::vector<int> >("dtype");
+      g.attrs.clear();
+      const nnvm::IndexedGraph& indexed_graph = g.indexed_graph();
+
+      // set shape attrs for each node in the graph
+      if (shapes.size() > 0) {
+        for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+          nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+          std::stringstream ss;
+          ss << "[";
+          // set the output shapes for this node
+          for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
+            const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
+            mxnet::TShape& shape = shapes[out_entry_id];
+            ss << shape;
+            if (oid < node->num_outputs()-1) ss << ",";
+          }
+          ss << "]";
+          node->attrs.dict[MX_STR_SHAPE] = ss.str();
+        }
+      }
+      // set dtype attrs for each node in the graph
+      if (dtypes.size() > 0) {
+        for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+          nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+          std::stringstream ss;
+          ss << "[";
+          // set the output dtypes for this node
+          for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
+            const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
+            int dtype = dtypes[out_entry_id];
+            ss << dtype;
+            if (oid < node->num_outputs()-1) ss << ",";
+          }
+          ss << "]";
+          node->attrs.dict[MX_STR_DTYPE] = ss.str();
+        }
+      }
+      
+      std::string in_json = nnvm::pass::SaveJSON(g);
+      // convert options_map_ to char* to pass to backend library
+      std::vector<const char*> opt_keys, opt_vals;
+      for (auto& kv : options_map) {
+        opt_keys.push_back(kv.first.c_str());
+        opt_vals.push_back(kv.second.c_str());
+      }
+
+      char* out_json;
+      CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
+                          opt_vals.data(), opt_keys.size(), pass_name))
+      << "Error calling graph pass for '" << pass_name << "'";
+      
+      std::string out_string(out_json);
+      nnvm::Graph out_graph = nnvm::pass::LoadJSON(out_string);
+
+      callFree(out_json);
+      return out_graph;
+    };
+    
+    nnvm::PassFunctionReg& pass = dmlc::Registry<nnvm::PassFunctionReg>::Get()->__REGISTER__(name);
+    pass.set_body(pass_lambda);
+    pass.set_change_graph(true);
+    
   }
   API_END();
 }

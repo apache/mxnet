@@ -177,7 +177,7 @@ REGISTER_OP(_custom_subgraph_op)
 const std::vector<std::string> op_names({"exp","log"});
 
 MXReturnValue mySupportedOps(std::string json,
-                             std::vector<bool>& ids,
+                             std::vector<int>& ids,
                              std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
@@ -208,8 +208,8 @@ MXReturnValue mySupportedOps(std::string json,
     if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
-        // found op in whitelist, set value to 1 to include op in subgraph
-        ids[i]=true;
+        // found op in whitelist, set value to 0 to include op in subgraph0
+        ids[i]=0;
       }
     }
   }
@@ -255,7 +255,8 @@ MXReturnValue myReviewSubgraph(std::string json, int subgraph_id, bool* accept,
 }
 
 REGISTER_PARTITIONER(myProp)
-.addStrategy("strategy1", mySupportedOps, "_custom_subgraph_op")
+.addStrategy("strategy1", "_custom_subgraph_op")
+.setSupportedOps("strategy1", mySupportedOps)
 .setReviewSubgraph("strategy1", myReviewSubgraph);
 
 MXReturnValue initialize(int version) {

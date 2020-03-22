@@ -47,18 +47,22 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  explicit CustomContainOpSelector(std::unordered_set<std::string> supported_nodes) :
+  explicit CustomContainOpSelector(std::unordered_map<std::string, int> supported_nodes) :
     supported_nodes_(supported_nodes) {}
   virtual bool Select(const nnvm::Node &n) {
     return supported_nodes_.count(n.attrs.name) > 0;
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return supported_nodes_.count(new_node.attrs.name) > 0;
+    // check that op type is supported and that both nodes have the same ID
+    return supported_nodes_.count(new_node.attrs.name) > 0 &&
+      supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
   }
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    return supported_nodes_.count(new_node.attrs.name) > 0;
+    // check that op type is supported and that both nodes have the same ID
+    return supported_nodes_.count(new_node.attrs.name) > 0 &&
+      supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
   }
-  std::unordered_set<std::string> supported_nodes_;
+  std::unordered_map<std::string, int> supported_nodes_;
 };
 
 /*
@@ -218,7 +222,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       << "call_supported_ops_ is null for " << subgraph_prop << std::endl;
 
     std::string subgraph_json = nnvm::pass::SaveJSON(graph);
-    std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), 0);
+    std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -1);
     const char* json = subgraph_json.c_str();
     int *ids = supported_node_IDs.data();
 
@@ -243,8 +247,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     const auto& idx = g.indexed_graph();
     // loop and add node names for each supported node ID
     for (unsigned i = 0; i < supported_node_IDs.size(); i++) {
-      if (supported_node_IDs[i]) {
-        supported_nodes.insert(idx[i].source->attrs.name);
+      if (supported_node_IDs[i] != -1) {
+        supported_nodes[idx[i].source->attrs.name] = supported_node_IDs[i];
       }
     }
   }
@@ -404,7 +408,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   partCallReviewSubgraph_t call_review_subgraph_;
   reviewSubgraph_t review_subgraph_;
   opCallFree_t call_free_;
-  std::unordered_set<std::string> supported_nodes;
+  std::unordered_map<std::string, int> supported_nodes;
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
