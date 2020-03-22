@@ -171,7 +171,7 @@ NNVM_REGISTER_OP(_reduce_sum_brodcasted)
     ReduceAxesComputeImpl<cpu, mshadow::red::sum, false, false,
       op::mshadow_op::identity>(ctx, inputs, req, outputs, inputs[1].shape_);
   })
-.set_attr<nnvm::FGradient>("FGradient",
+.set_attr<nnvm::FGradient>("FGradient", NonlossGradFGradient{
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     auto head_grad = ograds[0];
     std::vector<nnvm::NodeEntry> ret;
@@ -180,7 +180,7 @@ NNVM_REGISTER_OP(_reduce_sum_brodcasted)
     ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                           {n->inputs[1]}, nullptr, &n));
     return ret;
-  });
+  }});
 
 NNVM_REGISTER_OP(broadcast_like)
 .set_num_inputs(2)
@@ -190,9 +190,8 @@ NNVM_REGISTER_OP(broadcast_like)
       return std::vector<std::string>{"lhs", "rhs"};
     })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
-.set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::ObjectPtr& n,
-    const std::vector<nnvm::NodeEntry>& ograds) {
+.set_attr<nnvm::FGradient>("FGradient", NonlossGradFGradient{
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds))
         return MakeZeroGradNodes(n, ograds);
       std::vector<nnvm::NodeEntry> ret;
@@ -201,7 +200,7 @@ NNVM_REGISTER_OP(broadcast_like)
       ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                        {n->inputs[1]}, nullptr, &n));
       return ret;
-    })
+  }})
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.")
 .describe(R"code(Broadcasts lhs to have the same shape as rhs.

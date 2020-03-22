@@ -192,7 +192,7 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
    - otherwise, ``elemwise_sub`` generates output with default storage
 
 )code")
-.set_attr<nnvm::FGradient>("FGradient",
+.set_attr<nnvm::FGradient>("FGradient", NonlossGradFGradient{
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   auto head_grad = ograds[0];
   auto x = n->inputs[0];
@@ -204,7 +204,7 @@ The storage type of ``elemwise_sub`` output depends on storage types of inputs
   ret.emplace_back(MakeNode("negative", n->attrs.name + "_rhs_backward",
                             {head_grad}, nullptr, &n));
   return ret;
-});
+}});
 
 MXNET_OPERATOR_REGISTER_BINARY(elemwise_mul)
 MXNET_ADD_SPARSE_OP_ALIAS(elemwise_mul)
@@ -231,7 +231,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
                               })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .add_alias("_mul").add_alias("_Mul")
-.set_attr<nnvm::FGradient>("FGradient",
+.set_attr<nnvm::FGradient>("FGradient", NonlossGradFGradient{
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   auto head_grad = ograds[0];
   auto x = n->inputs[0];
@@ -243,7 +243,7 @@ The storage type of ``elemwise_mul`` output depends on storage types of inputs
   ret.emplace_back(MakeNode("elemwise_mul", n->attrs.name + "_rhs_backward",
                             {head_grad, x}, nullptr, &n));
   return ret;
-});
+}});
 
 
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(elemwise_div, op::mshadow_op::div)

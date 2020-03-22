@@ -44,7 +44,7 @@ Example::
 
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
-.set_attr<nnvm::FGradient>("FGradient",
+.set_attr<nnvm::FGradient>("FGradient", NonlossGradFGradient{
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
   // input[0] = x
   // input[1] = y;
@@ -82,7 +82,7 @@ Example::
   ret.emplace_back(MakeNode("_reduce_sum_brodcasted", n->attrs.name + "rhs_backward",
                             {broadcasted_rhs_backward, n->inputs[1]}, nullptr, &n));
   return ret;
-});
+}});
 
 MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(broadcast_maximum)
 .add_alias("_npi_maximum")
