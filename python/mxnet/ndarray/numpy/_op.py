@@ -30,7 +30,8 @@ from ..ndarray import NDArray
 
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
-           'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
+           'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
+           'power', 'bitwise_not',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'insert', 'fabs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'matmul',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
@@ -38,7 +39,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_', 'flatnonzero',
+           'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'around', 'round', 'round_', 'flatnonzero',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
@@ -1167,6 +1168,35 @@ def mod(x1, x2, out=None, **kwargs):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.mod(x1, x2, out=out)
     return _api_internal.mod(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def fmod(x1, x2, out=None, **kwargs):
+    """
+    Return element-wise remainder of division.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmod(x1, x2, out=out)
+    return _api_internal.fmod(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4393,6 +4423,27 @@ def maximum(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 @wrap_np_binary_func
+def fmax(x1, x2, out=None, **kwargs):
+    """
+    Returns element-wise maximum of the input arrays with broadcasting. (Ignores NaNs)
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmax(x1, x2, out=out)
+    return _api_internal.fmax(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
 def minimum(x1, x2, out=None, **kwargs):
     """
     Returns element-wise minimum of the input arrays with broadcasting.
@@ -4408,6 +4459,27 @@ def minimum(x1, x2, out=None, **kwargs):
     out : mxnet.numpy.ndarray or scalar
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
     return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def fmin(x1, x2, out=None, **kwargs):
+    """
+    Returns element-wise minimum of the input arrays with broadcasting. (Ignores NaNs)
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmin(x1, x2, out=out)
+    return _api_internal.fmin(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')

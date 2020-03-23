@@ -1432,6 +1432,13 @@ def _add_workload_mod(array_pool):
     OpArgMngr.add_workload('mod', array_pool['4x1'], array_pool['1x1x0'])
 
 
+def _add_workload_fmod(array_pool):
+    OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('fmod', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('fmod', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x1x0'])
+
+
 def _add_workload_remainder():
     # test remainder basic
     OpArgMngr.add_workload('remainder', np.array([0, 1, 2, 4, 2], dtype=np.float16),
@@ -1498,11 +1505,25 @@ def _add_workload_maximum(array_pool):
     OpArgMngr.add_workload('maximum', array_pool['4x1'], array_pool['1x1x0'])
 
 
+def _add_workload_fmax(array_pool):
+    OpArgMngr.add_workload('fmax', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('fmax', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('fmax', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('fmax', array_pool['4x1'], array_pool['1x1x0'])
+
+
 def _add_workload_minimum(array_pool):
     OpArgMngr.add_workload('minimum', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('minimum', array_pool['4x1'], 2)
     OpArgMngr.add_workload('minimum', 2, array_pool['4x1'])
     OpArgMngr.add_workload('minimum', array_pool['4x1'], array_pool['1x1x0'])
+
+
+def _add_workload_fmin(array_pool):
+    OpArgMngr.add_workload('fmin', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('fmin', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('fmin', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('fmin', array_pool['4x1'], array_pool['1x1x0'])
 
 
 def _add_workload_negative(array_pool):
@@ -2850,9 +2871,12 @@ def _prepare_workloads():
     _add_workload_multiply(array_pool)
     _add_workload_power(array_pool)
     _add_workload_mod(array_pool)
+    _add_workload_fmod(array_pool)
     _add_workload_remainder()
     _add_workload_maximum(array_pool)
+    _add_workload_fmax(array_pool)
     _add_workload_minimum(array_pool)
+    _add_workload_fmin(array_pool)
     _add_workload_negative(array_pool)
     _add_workload_absolute(array_pool)
     _add_workload_sign(array_pool)
