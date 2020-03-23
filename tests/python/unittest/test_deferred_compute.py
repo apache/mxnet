@@ -324,6 +324,10 @@ def test_dc_tuple_indexing():
 
 
 def test_dc_simple_boolean_indexing():
+    if mx.test_utils.default_context() == mx.gpu(0) and mx.runtime.Features().is_enabled("TVM_OP"):
+        # Skip due to https://github.com/apache/incubator-mxnet/issues/17886
+        return
+
     def setup(*, nd):
         assert nd is mx.np
         x = mx.np.array([[0, 1], [1, 1], [2, 2]])
@@ -468,6 +472,10 @@ def test_dc_hybridblock_deferred_init():
 
 
 def test_dc_hybridblock_dynamic_shape():
+    if mx.test_utils.default_context() == mx.gpu(0) and mx.runtime.Features().is_enabled("TVM_OP"):
+        # Skip due to https://github.com/apache/incubator-mxnet/issues/17886
+        return
+
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self, *, prefix=None, params=None):
             super().__init__(prefix, params)
