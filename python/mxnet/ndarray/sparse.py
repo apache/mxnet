@@ -230,6 +230,7 @@ class BaseSparseNDArray(NDArray):
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
+        # Use copyto for casting, as op.cast(self, dtype=dtype) doesn't support sparse stype
         res = zeros(shape=self.shape, ctx=self.context,
                     dtype=dtype, stype=self.stype)
         self.copyto(res)

@@ -32,6 +32,7 @@ from array import array as native_array
 import ctypes
 import warnings
 import numpy as _np
+from .. import _deferred_compute as dc
 from ..autograd import is_recording
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _GRAD_REQ_MAP
 from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_code,\
@@ -614,8 +615,11 @@ class ndarray(NDArray):
                     key = new_key
             except Exception as err:
                 raise TypeError('{}'.format(str(err)))
-        if isinstance(key, _np.ndarray) and key.dtype == _np.bool_:
-            key = array(key, dtype='bool', ctx=self.ctx)
+        if isinstance(key, _np.ndarray):
+            if dc.is_deferred_compute():
+                raise TypeError('Indexing with a numpy array is not supported in HybridBlock.')
+            if key.dtype == _np.bool_:
+                key = array(key, dtype='bool', ctx=self.ctx)
 
         # Handle single boolean index of matching dimensionality and size first for higher speed
         # If the boolean array is mixed with other idices, it is instead expanded into (multiple)
@@ -671,6 +675,8 @@ class ndarray(NDArray):
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            if dc.is_deferred_compute():
+                raise TypeError('Advanced indexing is not supported in HybridBlock.')
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
                 return empty((0,) + self._get_np_adanced_indexing(key).shape,
                              dtype=self.dtype, ctx=self.ctx)
@@ -1273,12 +1279,12 @@ class ndarray(NDArray):
             raise ValueError('casting must be equal to \'unsafe\'')
         if not subok:
             raise ValueError('subok must be equal to True')
+        if dtype is None:
+            dtype = _np.float32
         if not copy and _np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, dtype=dtype, ctx=self.ctx)
-        self.copyto(res)
-        return res
+        return _npi.cast(self, dtype=dtype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.
