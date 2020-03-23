@@ -53,6 +53,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
+           'atleast_1d', 'atleast_2d', 'atleast_3d',
            'where', 'bincount', 'pad', 'cumsum']
 
 
@@ -6630,6 +6631,76 @@ def isfinite(x, out=None, **kwargs):
     is also supplied when x is a scalar input, or if first and second arguments have different shapes.
     """
     return _unary_func_helper(x, _npi.isfinite, _np.isfinite, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : _Symbol
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : _Symbol
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+    """
+    return _npi.atleast_1d(*arys)
+
+
+@set_module('mxnet.symbol.numpy')
+def atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : _Symbol
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : _Symbol
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+    """
+    return _npi.atleast_2d(*arys)
+
+
+@set_module('mxnet.symbol.numpy')
+def atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : _Symbol
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : _Symbol
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+    """
+    return _npi.atleast_3d(*arys)
 
 
 @set_module('mxnet.symbol.numpy')
