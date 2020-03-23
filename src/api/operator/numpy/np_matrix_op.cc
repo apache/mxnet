@@ -22,6 +22,7 @@
  * \brief Implementation of the API of functions in src/operator/tensor/matrix_op.cc
  */
 #include <mxnet/api_registry.h>
+#include <mxnet/runtime/packed_func.h>
 #include <vector>
 #include "../utils.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
@@ -44,7 +45,101 @@ MXNET_REGISTER_API("_npi.expand_dims")
 
   int num_outputs = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  auto ndoutputs = Invoke(op, &attrs, 1, inputs, &num_outputs, nullptr);
+  int num_inputs = 1;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.split")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_split");
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  nnvm::NodeAttrs attrs;
+  op::SplitParam param;
+  param.axis = args[2].operator int();
+  param.squeeze_axis = false;
+  if (args[1].type_code() == kDLInt) {
+    param.indices = TShape(0, 0);
+    param.sections = args[1].operator int();
+    CHECK_GT(param.sections, 0)
+      << "ValueError: number sections must be larger than 0";
+    CHECK_EQ(inputs[0]->shape()[param.axis] % param.sections, 0)
+      << "ValueError: array split does not result in an equal division";
+  } else {
+    TShape t = TShape(args[1].operator ObjectRef());
+    param.indices = TShape(t.ndim() + 1, 0);
+    for (int i = 0; i < t.ndim(); ++i) {
+      param.indices[i + 1] = t[i];
+    }
+    param.sections = 0;
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::SplitParam>(&attrs);
+
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  std::vector<NDArrayHandle> ndarray_handles;
+  ndarray_handles.reserve(num_outputs);
+  for (int i = 0; i < num_outputs; ++i) {
+    ndarray_handles.emplace_back(ndoutputs[i]);
+  }
+  *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
+
+MXNET_REGISTER_API("_npi.roll")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_roll");
+  nnvm::NodeAttrs attrs;
+  op::NumpyRollParam param;
+  if (args[1].type_code() == kNull) {
+    param.shift = dmlc::nullopt;
+  } else if (args[1].type_code() == kDLInt) {
+    param.shift = TShape(1, args[1].operator int64_t());
+  } else {
+    param.shift = TShape(args[1].operator ObjectRef());
+  }
+  if (args[2].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else if (args[2].type_code() == kDLInt) {
+    param.axis = TShape(1, args[2].operator int64_t());
+  } else {
+    param.axis = TShape(args[2].operator ObjectRef());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyRollParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.rot90")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_rot90");
+  nnvm::NodeAttrs attrs;
+  op::NumpyRot90Param param;
+  param.k = args[1].operator int();
+  if (args[2].type_code() == kNull) {
+    param.axes = dmlc::nullopt;
+  } else if (args[2].type_code() == kDLInt) {
+    param.axes = TShape(1, args[2].operator int64_t());
+  } else {
+    param.axes = TShape(args[2].operator ObjectRef());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyRot90Param>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 

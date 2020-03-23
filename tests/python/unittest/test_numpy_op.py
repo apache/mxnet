@@ -2254,6 +2254,12 @@ def test_np_binary_funcs():
                 [lambda y, x1, x2: -_np.floor(x1 / x2),
                  lambda y, x1, x2: _np.zeros(y.shape)],
                 [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
+        'fmod': (1.0, 10.0,
+                [lambda y, x1, x2: _np.ones(y.shape),
+                 lambda y, x1, x2: _np.zeros(y.shape)],
+                [lambda y, x1, x2: -_np.floor(x1 / x2),
+                 lambda y, x1, x2: _np.zeros(y.shape)],
+                [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
         'remainder': (1.0, 10.0,
                       [lambda y, x1, x2: _np.ones(y.shape),
                        lambda y, x1, x2: _np.zeros(y.shape)],
@@ -2268,8 +2274,12 @@ def test_np_binary_funcs():
         'bitwise_or': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
+        'fmax': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
+                        [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
         'minimum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 > x2)]),
+        'fmin': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
+                        [lambda y, x1, x2: _np.ones(y.shape) * (x1 > x2)]),
         'copysign': (-1, 1,
                      [lambda y, x1, x2: _np.ones(y.shape) * (((x1 * x2) >= 0).astype(_np.float32) - ((x1 * x2) < 0).astype(_np.float32))],
                      [lambda y, x1, x2: _np.zeros(y.shape)]),
@@ -3797,7 +3807,7 @@ def test_npx_sample_n():
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     dtypes = ['float16', 'float32', 'float64']
-    op_names = ['uniform', 'normal', 'gamma']
+    op_names = ['uniform', 'normal', 'gamma', 'laplace']
     for shape in shapes:
         for dtype in dtypes:
             for op_name in op_names:

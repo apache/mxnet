@@ -20,4 +20,5 @@
 include "./base.pxi"
 include "./ndarray.pxi"
 include "./convert.pxi"
+include "./object.pxi"
 include "./function.pxi"
