@@ -51,7 +51,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
 
     def __init__(self, T, num_events, prob=None, logit=None, F=None, validate_args=None):
         self.T = T
-        _F = F if F is not None else getF([prob, logit])
+        _F = F if F is not None else getF(prob, logit)
         if (num_events > 0):
             num_events = int(num_events)
             self.num_events = num_events
@@ -112,7 +112,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
         exp = F.np.exp
         logit = self.logit
         y = logit - value * self.T
-        log_sum_exp = log(exp(y).sum(-1, keepdims=True))
+        log_sum_exp = log(exp(y).sum(-1, keepdims=True) + 1e-20)
         log_scale = lgamma(K) - log(self.T) * (-(K - 1))
         return (y - log_sum_exp).sum(-1) + log_scale
 
@@ -127,8 +127,8 @@ class _LogRelaxedOneHotCategorical(Distribution):
                 logit = F.np.broadcast_to(self.logit, (size) + (-2,))
             else:
                 logit = F.np.broadcast_to(self.logit, size + (-2,))
-        scores = F.np.random.gumbel(F.np.zeros_like(logit)) / self.T
-        return F.npx.log_softmax(scores, axis=-1)
+        scores = F.np.random.gumbel(logit) / self.T
+        return F.np.log(F.npx.softmax(scores, axis=-1) + 1e-20)
 
 
 class RelaxedOneHotCategorical(TransformedDistribution):
