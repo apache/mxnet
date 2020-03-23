@@ -39,6 +39,7 @@
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
+#include "../../api/operator/op_utils.h"
 
 
 namespace mxnet {
@@ -59,6 +60,14 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s;
+    shape_s << shape;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
+    // Setting ctx here results in an error.
   }
 };
 
@@ -86,14 +95,26 @@ struct FullLikeOpParam : public dmlc::Parameter<FullLikeOpParam> {
   dmlc::optional<int> dtype;
   DMLC_DECLARE_PARAMETER(FullLikeOpParam) {
     DMLC_DECLARE_FIELD(fill_value)
-    .describe("Value with which to fill newly created tensor");
+      .describe("Value with which to fill newly created tensor");
     DMLC_DECLARE_FIELD(ctx)
-    .set_default("")
-    .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
-              "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(dmlc::optional<int>())
-    MXNET_ADD_ALL_TYPES
-    .describe("Target data type.");
+      .set_default("")
+      .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
+                "Only used for imperative calls.");
+    DMLC_DECLARE_FIELD(dtype)
+      .set_default(dmlc::optional<int>())
+      MXNET_ADD_ALL_TYPES_WITH_BOOL
+      .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream fill_value_s, dtype_s;
+    fill_value_s << fill_value;
+    dtype_s << dtype;
+    (*dict)["fill_value"] = fill_value_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
   }
 };
 

@@ -683,6 +683,9 @@ OpStatePtr CachedOp::StaticForward(
     if (!outputs[i]->is_none()) continue;
     *outputs[i] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
                           shapes[eid], default_ctx, true, dtypes[eid]);
+    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
+    outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs),
+                                  attrs.name);
   }
 
   StaticRunOps(default_ctx, g, state_ptr, arrays, 0, idx.num_nodes());
@@ -766,6 +769,22 @@ OpStatePtr CachedOp::Forward(
   static const auto cached_op = nnvm::Op::Get("_CachedOp");
 
   CHECK_EQ(inputs.size(), num_inputs());
+  // Assign the storage information for the input arguments. Similar to the
+  // implementation in `graph_executor.cc`, we use `mutable_input_nodes()` to
+  // distinguish between weight parameters and auxiliary states.
+  const auto& fwd_idx = fwd_graph_.indexed_graph();
+  const auto& mutable_input_nodes = fwd_idx.mutable_input_nodes();
+  for (size_t i = 0; i < fwd_idx.input_nodes().size(); ++i) {
+    const uint32_t nid = fwd_idx.input_nodes().at(i);
+    const nnvm::NodeAttrs& attrs = fwd_idx[nid].source->attrs;
+    const std::string& arg_name = attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(attrs);
+    if (mutable_input_nodes.count(nid)) {
+      inputs[i]->AssignStorageInfo(profiler_scope + "aux_state:", arg_name);
+    } else {
+      inputs[i]->AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
+    }
+  }
 
   Context default_ctx = inputs[0]->ctx();
   {
@@ -993,6 +1012,27 @@ void CachedOp::Backward(
     const std::vector<NDArray*>& inputs,
     const std::vector<OpReqType>& reqs,
     const std::vector<NDArray*>& outputs) {
+  const auto& fwd_idx = fwd_graph_.indexed_graph();
+  const auto& full_idx = full_graph_.indexed_graph();
+  const auto& mutable_input_nodes = fwd_idx.mutable_input_nodes();
+  for (size_t i = 0, j = 0; i < fwd_idx.input_nodes().size(); ++i) {
+    const uint32_t nid = fwd_idx.input_nodes().at(i);
+    const std::string& arg_name = fwd_idx[nid].source->attrs.name;
+    const std::string profiler_scope =
+        common::NodeAttrsGetProfilerScope(fwd_idx[nid].source->attrs);
+    if (mutable_input_nodes.count(nid)) {
+      continue;
+    }
+    outputs[j++]->AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
+  }
+  for (size_t i = fwd_idx.input_nodes().size(), j = 0;
+       i < full_idx.input_nodes().size(); ++i) {
+    const nnvm::NodeAttrs& attrs = full_idx[full_idx.input_nodes().at(i)].source->attrs;
+    const std::string& entry_name = attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(attrs);
+    inputs[j++]->AssignStorageInfo(profiler_scope, entry_name);
+  }
+
   using namespace imperative;
   CHECK(!Imperative::Get()->is_recording())
       << "CachedOp does not support higher order gradients. "

@@ -102,7 +102,7 @@ def get_module(ctx, sym, provide_data, provide_label, batch_size=None, is_train=
         mod.bind(data_shapes=provide_data, label_shapes=provide_label, for_training=False, inputs_need_grad=False)
 
     mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-    mod.init_optimizer(optimizer='ccsgd',
+    mod.init_optimizer(optimizer='sgd',
                        optimizer_params={
                             'learning_rate': 0.0001,
                             'momentum': 0.0,

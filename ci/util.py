@@ -96,18 +96,19 @@ def under_ci() -> bool:
 
 def ec2_instance_info() -> str:
     import requests
+    urls = [
+            "http://instance-data/latest/meta-data/instance-type",
+            "http://instance-data/latest/meta-data/instance-id",
+            "http://instance-data/latest/meta-data/public-hostname",
+            "http://instance-data/latest/meta-data/ami-id"
+    ]
     if under_ci():
         result = []
         try:
-            r = requests.get("http://instance-data/latest/meta-data/instance-type")
-            if r.status_code == 200:
-                result.append(r.content.decode())
-            r = requests.get("http://instance-data/latest/meta-data/instance-id")
-            if r.status_code == 200:
-                result.append(r.content.decode())
-            r = requests.get("http://instance-data/latest/meta-data/public-hostname")
-            if r.status_code == 200:
-                result.append(r.content.decode())
+            for url in urls:
+                r = requests.get(url)
+                if r.status_code == 200:
+                    result.append(r.content.decode())
             return ' '.join(result)
         except ConnectionError:
             pass

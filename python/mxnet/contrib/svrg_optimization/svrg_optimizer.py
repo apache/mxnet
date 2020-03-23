@@ -14,6 +14,8 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+
+# pylint: disable=W0223
 """A `_SVRGOptimizer` encapsulates two optimizers to support SVRGModule in single machine and distributed settings.
 Both `_AssignmentOptimizer` and `_SVRGOptimizer` are designed to be used with SVRGModule only.
 """
@@ -27,24 +29,24 @@ class _AssignmentOptimizer(mx.optimizer.Optimizer):
     """_AssignmentOptimizer assigns gradients to weights for SVRGModule's full gradients
     accumulation in the KVStore. It is a helper optimizer that is designed to be used with SVRGModule only.
     """
-    def update(self, index, weight, grad, state):
+    def update(self, indices, weights, grads, states):
         """Assign the gradients to weight for accumulating full gradients in the KVStore across all devices and workers.
 
         Parameters
         ----------
-        index : int
-            The unique index of the parameter into the individual learning
-            rates and weight decays. Learning rates and weight decay
-            may be set via `set_lr_mult()` and `set_wd_mult()`, respectively.
-        weight : NDArray
-            The parameter to be updated.
-        grad : NDArray
-            The gradient of the objective with respect to this parameter.
-        state: any obj
+        indices : list of int
+            List of unique indices of the parameters into the individual learning rates
+            and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
+            and `set_wd_mult()`, respectively.
+        weights : list of NDArray
+            List of parameters to be updated.
+        grads : list of NDArray
+            List of gradients of the objective with respect to this parameter.
+        states : List of any obj
             AssignmentOptimizer will not need to be associated with state.
         """
-
-        weight[:] = grad
+        for weight, grad in zip(weights, grads):
+            weight[:] = grad
 
 
 @mx.optimizer.register
@@ -98,31 +100,32 @@ class _SVRGOptimizer(mx.optimizer.Optimizer):
 
         return default_params
 
-    def update(self, index, weight, grad, state):
+    def update(self, indices, weights, grads, states):
         """Updates the given parameter using the corresponding gradient and state. If key contains 'full', update with
         `_AssignmentOptimizer` otherwise will use default optimizer.
 
         Parameters
         ----------
-        index : int
-            The unique index of the parameter into the individual learning
-            rates and weight decays. Learning rates and weight decay
-            may be set via `set_lr_mult()` and `set_wd_mult()`, respectively.
-        weight : NDArray
-            The parameter to be updated.
-        grad : NDArray
-            The gradient of the objective with respect to this parameter.
-        state : any obj
-            The state returned by `create_state()`.
+        indices : list of int
+            List of unique indices of the parameters into the individual learning rates
+            and weight decays. Learning rates and weight decay may be set via `set_lr_mult()`
+            and `set_wd_mult()`, respectively.
+        weights : list of NDArray
+            List of parameters to be updated.
+        grads : list of NDArray
+            List of gradients of the objective with respect to this parameter.
+        states : List of any obj
+            List of state returned by `create_state()`.
         """
 
-        name = self._check_index(index)
+        for index, weight, grad, state in zip(indices, weights, grads, states):
+            name = self._check_index(index)
 
-        if "full" in name:
-            self.aux_opt.update(index, weight, grad, state)
-        else:
-            # use the default optimizer
-            self.default_opt.update(index, weight, grad, state)
+            if "full" in name:
+                self.aux_opt.update([index], [weight], [grad], [state])
+            else:
+                # use the default optimizer
+                self.default_opt.update([index], [weight], [grad], [state])
 
     def create_state(self, index, weight):
         """Creates auxiliary state for a given weight.

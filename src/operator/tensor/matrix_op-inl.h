@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
@@ -496,6 +497,12 @@ struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
 
   bool operator==(const ExpandDimParam &other) const {
     return this->axis == other.axis;
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
   }
 };
 
@@ -2721,6 +2728,17 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
               " only if ``input.shape[axis] == num_outputs``.");
     DMLC_DECLARE_FIELD(sections).set_default(0)
     .describe("Number of sections if equally splitted. Default to 0 which means split by indices.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream indices_s, axis_s, squeeze_axis_s, sections_s;
+    indices_s << indices;
+    axis_s << axis;
+    squeeze_axis_s << squeeze_axis;
+    sections_s << sections;
+    (*dict)["indices"] = indices_s.str();
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["squeeze_axis"] = squeeze_axis_s.str();
+    (*dict)["sections"] = sections_s.str();
   }
 };  // struct SplitParam
 

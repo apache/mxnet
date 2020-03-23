@@ -46,7 +46,12 @@ struct TakeZeroAxisCPU {
       j = j % K;
       j += (j < 0) ? K : 0;
     }
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(out_data + i * M, in_data + j * M, M * sizeof(DType));
+#pragma GCC diagnostic pop
   }
 };
 
@@ -480,7 +485,7 @@ void GatherNDForwardCPU(const nnvm::NodeAttrs& attrs,
     strides[i] = stride;
     mshape[i] = dshape[i];
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       // check whether indices are out of bound
       IType* idx_ptr = inputs[1].dptr<IType>();

@@ -136,6 +136,9 @@ def check_unary_ops():
     for act_type in ['relu', 'sigmoid', 'tanh', 'softrelu', 'softsign']:
         announce_check("Activation(act_type='{}')".format(act_type))
         check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=arr)
+        if act_type == 'softrelu':
+            # Check that softrelu implementation doesn't overflow on large inputs
+            check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=1000 * arr)
 
     # Cast requires dtype
     for dtype in ['float16', 'float32', 'float64', 'int32']:

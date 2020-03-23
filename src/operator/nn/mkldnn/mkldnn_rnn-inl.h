@@ -378,7 +378,6 @@ class MKLDNNRnnBackward {
   const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }
 
  private:
-  bool initialized_;
   RnnBwdPrimitive bwd_;
   const MKLDNNRnnForwardTraining* fwd_ptr_;
 
@@ -440,6 +439,18 @@ class MKLDNNRnnOp {
             const std::vector<OpReqType> &req,
             const std::vector<NDArray> &outputs);
 };
+
+inline bool SupportMKLDNNRnn(const int input_dtype) {
+  if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+    return true;
+  }
+  return false;
+}
+
+inline bool SupportMKLDNNRnn(const RNNParam &param, const int input_dtype) {
+  if (param.projection_size.has_value()) return false;
+  return SupportMKLDNNRnn(input_dtype);
+}
 
 }  // namespace op
 }  // namespace mxnet
