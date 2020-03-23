@@ -132,15 +132,23 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
       False. Otherwise a float is returned.
 
     """
-    def _norm(array):
-        if array.stype == 'default':
-            x = array.reshape((-1,))
-            return ndarray.dot(x, x)
-        return array.norm().square()
-    assert len(arrays) > 0
+    # group arrays by ctx
+    def group_by_ctx(arr_list):
+        groups = collections.defaultdict(list)
+        for arr in arr_list:
+            ctx = arr.context
+            groups[ctx].append(arr)
+        return groups
+    arrays_groups = group_by_ctx(arrays)
+    all_ctx_sum = []
     ctx = arrays[0].context
-    total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
-    total_norm = ndarray.sqrt(total_norm)
+    for group in arrays_groups:
+        sum_sq = ndarray.multi_sum_sq(*arrays_groups[group],
+                                      num_arrays=len(arrays_groups[group]))
+        sum_sq = ndarray.add_n(*sum_sq)
+        all_ctx_sum.append(sum_sq.as_in_context(ctx))
+    # global reduce
+    total_norm = ndarray.add_n(*all_ctx_sum).sqrt()
     if check_isfinite:
         if not np.isfinite(total_norm.asscalar()):
             warnings.warn(
