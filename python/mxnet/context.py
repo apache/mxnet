@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Context management API of mxnet."""
-from __future__ import absolute_import
 import threading
 import warnings
 import ctypes

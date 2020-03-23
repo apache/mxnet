@@ -282,7 +282,7 @@ def check_subgraph_exe6(sym, subgraph_backend, op_names):
     # infer shape/type before partition before simple_bind
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                  c_str_array(op_names)))
-    part_sym = sym.optimize_for(subgraph_backend, exe1.arg_dict)
+    part_sym = sym.optimize_for(subgraph_backend, exe1.arg_dict, exe1.aux_dict)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
     exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
@@ -335,7 +335,7 @@ def check_subgraph_exe8(sym, subgraph_backend, op_names):
     # infer shape/type before partition before bind
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                  c_str_array(op_names)))
-    part_sym = sym.optimize_for(subgraph_backend, arg_array)
+    part_sym = sym.optimize_for(subgraph_backend, arg_array, aux_array)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
     exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')

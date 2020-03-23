@@ -30,6 +30,7 @@
 #include "mxnet/base.h"
 #include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
+#include "../profiler/storage_profiler.h"
 
 namespace mxnet {
 namespace storage {
@@ -60,6 +61,8 @@ inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
   // make the memory available across all devices
   CUDA_CALL(cudaHostAlloc(&handle->dptr, size, cudaHostAllocPortable));
+  // record the allocation event in the memory profiler
+  profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, false);
 }
 
 inline void PinnedMemoryStorage::Free(Storage::Handle handle) {
@@ -72,6 +75,8 @@ inline void PinnedMemoryStorage::Free(Storage::Handle handle) {
   if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
   }
+  // record the deallocation event in the memory profiler
+  profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
 }
 
 }  // namespace storage

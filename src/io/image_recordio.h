@@ -69,7 +69,7 @@ struct ImageRecordIO {
   size_t content_size;
   /*! \brief constructor */
   ImageRecordIO(void)
-      : label(NULL), num_label(0), content(NULL), content_size(0) {
+      : label(nullptr), num_label(0), content(nullptr), content_size(0) {
     memset(&header, 0, sizeof(header));
   }
   /*! \brief get image id from record */
@@ -93,7 +93,7 @@ struct ImageRecordIO {
       content = reinterpret_cast<uint8_t*>(label + header.flag);
       content_size -= sizeof(float)*header.flag;
     } else {
-      label = NULL;
+      label = nullptr;
       num_label = 0;
     }
   }

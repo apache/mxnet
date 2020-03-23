@@ -314,6 +314,13 @@ MXNET_DLL int MXSetProcessProfilerState(int state, int profile_process,
 MXNET_DLL int MXSetProfilerState(int state);
 
 /*!
+ * \brief Set the scope of profiler for current process
+ * \param scope indicate the working scope of profiler
+ * \return 0 when success, -1 when failure happens.
+ */
+MXNET_DLL int MXSetProfilerScope(const char* scope);
+
+/*!
  * \brief Save profile and stop profiler
  * \param finished true if stat output should stop after this point
  * \param profile_process an int,
@@ -1416,6 +1423,44 @@ MXNET_DLL int MXCachedOpRegisterOpHook(NDArrayHandle handle,
                                        CachedOpMonitorCallback callback,
                                        bool monitor_all);
 
+/*!
+ * \brief Get current status of deferred compute mode
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayIsDeferredCompute(int *curr);
+
+/*!
+ * \brief set whether to enable deferred compute mode
+ * \param deferred_compute_enabled 1 to enable, 0 to disable.
+ * \param prev returns the previous status before this set.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetIsDeferredCompute(int deferred_compute_enabled, int *prev);
+
+/*!
+ * \brief Associate variables with deferred compute arrays
+ * \param arrays ndarray handles to be matched with variables
+ * \param variables symbol handles of variables to be matched with ndarrays
+ * \param num number of arrays and variables respectively
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays,
+                                                  SymbolHandle *variables,
+                                                  int num);
+
+/*!
+ * \brief Convert the graph constructed during deferred computation mode to a Symbol.
+ * \param output_handles ndarray handles of outputs
+ * \param out grouped output symbol handle
+ *
+ * Construct a Symbol for the deferred computation graph. output_handles
+ * specifies the outputs of interest which the returned symbol will compute.
+ */
+MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles,
+                                                int num_outputs,
+                                                SymbolHandle *out);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -1494,6 +1539,10 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char **return_type DEFAULT(NULL));
 /*!
  * \brief Create an AtomicSymbol.
+ *
+ * A Symbol is said to be atomic if it is not composed of other Symbols. Atomic
+ * Symbols can be composed.
+ *
  * \param creator the AtomicSymbolCreator
  * \param num_param the number of parameters
  * \param keys the keys to the params
@@ -1744,7 +1793,7 @@ MXNET_DLL int MXSymbolGrad(SymbolHandle sym,
  * \brief DEPRECATED. Use MXSymbolInferShapeEx instead.
  * infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1782,7 +1831,7 @@ MXNET_DLL int MXSymbolInferShape(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
@@ -1821,7 +1870,7 @@ MXNET_DLL int MXSymbolInferShapeEx(SymbolHandle sym,
 /*!
  * \brief infer shape of unknown input shapes given the known one.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  * \param sym symbol handle
@@ -1863,7 +1912,7 @@ MXNET_DLL int MXSymbolInferShapeEx64(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -1903,7 +1952,7 @@ MXNET_DLL int MXSymbolInferShapePartial(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  *
@@ -1945,7 +1994,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx(SymbolHandle sym,
  *
  *  Return partially inferred results if not all shapes could be inferred.
  *  The shapes are packed into a CSR matrix represented by arg_ind_ptr and arg_shape_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
  *
@@ -1985,7 +2034,7 @@ MXNET_DLL int MXSymbolInferShapePartialEx64(SymbolHandle sym,
 /*!
  * \brief infer type of unknown input types given the known one.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -2017,7 +2066,7 @@ MXNET_DLL int MXSymbolInferType(SymbolHandle sym,
  *
  *  Return partially inferred results if not all types could be inferred.
  *  The types are packed into a CSR matrix represented by arg_ind_ptr and arg_type_data
- *  The call will be treated as a kwargs call if key != nullptr or num_args==0, otherwise it is positional.
+ *  The call will be treated as a kwargs call if key != NULL or num_args==0, otherwise it is positional.
  *
  * \param sym symbol handle
  * \param num_args numbe of input arguments.
@@ -2170,8 +2219,10 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,
                                    const int dev_type,
                                    SymbolHandle* ret_sym_handle,
-                                   const mx_uint len,
+                                   const mx_uint args_len,
                                    NDArrayHandle* in_args_handle,
+                                   const mx_uint aux_len,
+                                   NDArrayHandle* in_aux_handle,
                                    const mx_uint num_options,
                                    const char** keys,
                                    const char** vals);

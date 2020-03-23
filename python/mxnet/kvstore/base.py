@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """ Key value store interface of MXNet for parameter synchronization."""
-from __future__ import absolute_import
 
 from array import array
 import ctypes

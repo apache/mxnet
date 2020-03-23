@@ -25,76 +25,39 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import with_seed
 
 
-# * GroupAdaGrad
-class PyGroupAdaGrad(mx.optimizer.Optimizer):
-    """The python reference of Group AdaGrad optimizer.
-
-    Parameters
-    ----------
-    eps: float, optional
-        Small value to avoid division by 0.
-
-    """
-
-    def __init__(self, eps=1e-5, **kwargs):
-        super(PyGroupAdaGrad, self).__init__(**kwargs)
-        self.float_stable_eps = eps
-
-    def create_state(self, index, weight):
-        assert len(weight.shape) == 2
-        history = mx.nd.zeros(
-            (weight.shape[0], 1), weight.context, stype=weight.stype)
-        return history
-
-    def update(self, index, weight, grad, state):
-        self._update_count(index)
-        lr = self._get_lr(index)
-        wd = self._get_wd(index)
-        assert wd == 0
-
-        history = state
-        grad = grad * self.rescale_grad
-        if self.clip_gradient is not None:
-            grad = mx.nd.clip(grad, -self.clip_gradient, self.clip_gradient)
-        history[:] += mx.nd.mean(mx.nd.square(grad), axis=1, keepdims=True)
-        div = lr * grad / mx.nd.sqrt(history + self.float_stable_eps)
-        weight[:] -= div
-
-
 def test_group_adagrad():
     mx.random.seed(0)
-    opt1 = PyGroupAdaGrad
+    opt1 = mx.optimizer.contrib.GroupAdaGrad
     opt2 = mx.optimizer.contrib.GroupAdaGrad
-    shape = (3, 4)
-    eps_options = [{}, {'eps': 1e-8}]
+    shapes = [(3, 4), [5, 6]]
+    eps_options = [{}, {'epsilon': 1e-8}]
     cg_options = [{}, {'clip_gradient': 0.4}, {'clip_gradient': 0.5}]
     rg_options = [{}, {'rescale_grad': 0.14}, {'rescale_grad': 0.8}]
+    agg_options = [{}, {'aggregate_num': 0}, {'aggregate_num': 1},
+                   {'aggregate_num': 4}, {'aggregate_num': np.inf}]
     for dtype in [np.float32]:
-        for options in itertools.product(eps_options, cg_options, rg_options):
+        for options in itertools.product(eps_options, cg_options, rg_options, agg_options):
             kwarg = dict(wd=0.0)
             for option in options:
                 kwarg.update(option)
             compare_optimizer(
-                opt1(**kwarg),
-                opt2(**kwarg),
-                shape,
-                dtype,
-                compare_states=False)
+                opt1(use_fused_step=False, **kwarg),
+                opt2(use_fused_step=True, **kwarg),
+                shapes,
+                dtype)
             compare_optimizer(
-                opt1(**kwarg),
-                opt2(**kwarg),
-                shape,
+                opt1(use_fused_step=False, **kwarg),
+                opt2(use_fused_step=True, **kwarg),
+                shapes,
                 dtype,
                 w_stype='row_sparse',
-                g_stype='row_sparse',
-                compare_states=False)
+                g_stype='row_sparse')
             compare_optimizer(
-                opt1(**kwarg),
-                opt2(**kwarg),
-                shape,
+                opt1(use_fused_step=False, **kwarg),
+                opt2(use_fused_step=True, **kwarg),
+                shapes,
                 dtype,
-                g_stype='row_sparse',
-                compare_states=False)
+                g_stype='row_sparse')
 
 
 @with_seed()

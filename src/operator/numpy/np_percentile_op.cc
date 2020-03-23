@@ -42,15 +42,16 @@ bool CheckInvalidInput(mshadow::Stream<cpu> *s, const QType *data,
 inline bool NumpyPercentileShape(const nnvm::NodeAttrs& attrs,
                                  std::vector<TShape> *in_attrs,
                                  std::vector<TShape> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_GE(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  mxnet::TShape qshape = in_attrs->at(1);
-  CHECK_LE(qshape.ndim(), 1U);
   if (!shape_is_known(in_attrs->at(0))) {
     return false;
   }
   const NumpyPercentileParam& param = nnvm::get<NumpyPercentileParam>(attrs.parsed);
   mxnet::TShape shape = NumpyReduceAxesShapeImpl((*in_attrs)[0], param.axis, param.keepdims);
+
+  mxnet::TShape qshape = param.q_scalar.has_value()? mxnet::TShape(0, 1) : in_attrs->at(1);
+  CHECK_LE(qshape.ndim(), 1U);
 
   if (qshape.ndim() == 0) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
@@ -67,7 +68,7 @@ inline bool NumpyPercentileShape(const nnvm::NodeAttrs& attrs,
 inline bool NumpyPercentileType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
-  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_GE(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
   if (in_attrs->at(0) == mshadow::kFloat64) {
@@ -81,14 +82,22 @@ inline bool NumpyPercentileType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(NumpyPercentileParam);
 
 NNVM_REGISTER_OP(_npi_percentile)
-.set_num_inputs(2)
+.set_num_inputs([](const NodeAttrs& attrs) {
+  const NumpyPercentileParam& param =
+    nnvm::get<NumpyPercentileParam>(attrs.parsed);
+  return param.q_scalar.has_value()? 1 : 2;
+  })
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyPercentileParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyPercentileShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyPercentileType)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "q"};
+    const NumpyPercentileParam& param =
+      nnvm::get<NumpyPercentileParam>(attrs.parsed);
+    return param.q_scalar.has_value() ?
+           std::vector<std::string>{"a"} :
+           std::vector<std::string>{"a", "q"};
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyPercentileForward<cpu>)
 .set_attr<FResourceRequest>("FResourceRequest",
