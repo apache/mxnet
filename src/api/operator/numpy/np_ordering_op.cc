@@ -66,11 +66,11 @@ MXNET_REGISTER_API("_npi.argsort")
   } else {
     param.axis = args[1].operator int();
   }
-  param.is_ascend = args[2].operator bool();
+  param.is_ascend = true;
   if (args[3].type_code() == kNull) {
     param.dtype = mshadow::kFloat32;
   } else {
-    param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
+    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }
 
   attrs.parsed = std::move(param);

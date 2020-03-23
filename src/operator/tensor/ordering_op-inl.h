@@ -36,6 +36,7 @@
 #include "../elemwise_op_common.h"
 #include "./sort_op.h"
 #include "./indexing_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mshadow {
 template<typename xpu, int src_dim, typename DType, int dst_dim>
@@ -145,7 +146,7 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
     dtype_s << dtype;
     (*dict)["axis"] = axis_s.str();
     (*dict)["is_ascend_s"] = is_ascend_s.str();
-    (*dict)["dtype"] = String2MXNetTypeWithBool(dtype);
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

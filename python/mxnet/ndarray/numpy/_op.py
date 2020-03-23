@@ -4581,7 +4581,7 @@ def vstack(arrays, out=None):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.vstack(*arrays)
+    return _api_internal.vstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4626,7 +4626,7 @@ def row_stack(arrays):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.vstack(*arrays)
+    return _api_internal.vstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
