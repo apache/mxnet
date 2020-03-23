@@ -70,6 +70,9 @@ ENV CUDNN_VERSION=7.6.5.32
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
+COPY install/ubuntu_binutils.sh /work/
+RUN /work/ubuntu_binutils.sh
+
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

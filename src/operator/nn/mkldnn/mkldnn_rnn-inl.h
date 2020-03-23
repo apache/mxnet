@@ -378,7 +378,6 @@ class MKLDNNRnnBackward {
   const mkldnn_args_map_t& GetArgsMap() const { return net_args_; }
 
  private:
-  bool initialized_;
   RnnBwdPrimitive bwd_;
   const MKLDNNRnnForwardTraining* fwd_ptr_;
 

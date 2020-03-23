@@ -36,6 +36,8 @@
 namespace mxnet {
 namespace op {
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
 static constexpr char func_equal_cpu[] = "equal_cpu";
 static constexpr char func_equal_gpu[] = "equal_gpu";
 static constexpr char func_not_equal_cpu[] = "not_equal_cpu";
@@ -48,6 +50,7 @@ static constexpr char func_greater_equal_cpu[] = "greater_equal_cpu";
 static constexpr char func_greater_equal_gpu[] = "greater_equal_gpu";
 static constexpr char func_less_equal_cpu[] = "less_equal_cpu";
 static constexpr char func_less_equal_gpu[] = "less_equal_gpu";
+#pragma clang diagnostic pop
 
 bool NumpyBinaryLogicOpType(const nnvm::NodeAttrs& attrs,
                             std::vector<int>* in_attrs,
@@ -248,6 +251,8 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less_equal);
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-const-variable"
 static constexpr char func_equal_scalar_cpu[] = "equal_scalar_cpu";
 static constexpr char func_equal_scalar_gpu[] = "equal_scalar_gpu";
 static constexpr char func_not_equal_scalar_cpu[] = "not_equal_scalar_cpu";
@@ -260,6 +265,7 @@ static constexpr char func_greater_equal_scalar_cpu[] = "greater_equal_scalar_cp
 static constexpr char func_greater_equal_scalar_gpu[] = "greater_equal_scalar_gpu";
 static constexpr char func_less_equal_scalar_cpu[] = "less_equal_scalar_cpu";
 static constexpr char func_less_equal_scalar_gpu[] = "less_equal_scalar_gpu";
+#pragma clang diagnostic pop
 
 #if MXNET_USE_TVM_OP
 
