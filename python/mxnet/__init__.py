@@ -87,6 +87,8 @@ from . import test_utils
 from . import rnn
 from . import gluon
 
+from . import _deferred_compute
+
 # With the native kvstore module (such as 'dist_sync_device'), the module launches a separate
 # process when role is set to "server". This should be done after other modules are initialized.
 # Otherwise this may result in errors when unpickling custom LR scheduler/optimizers.
