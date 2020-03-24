@@ -46,6 +46,7 @@ from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
+from ..ndarray.numpy import _api_internal
 from ..ndarray.ndarray import _storage_type, from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
