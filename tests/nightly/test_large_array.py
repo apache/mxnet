@@ -1253,21 +1253,6 @@ def test_basic():
         l = nd.topk(b, k=1, axis=-1, dtype=np.int64, ret_typ="value")
         assert l.sum() == np.sum(np.arange(0, SMALL_Y))
 
-    def check_topk_small():
-        LARGE_XX = 1200
-        SMALL_YY = 500
-        ctx = mx.gpu(0) if mx.context.num_gpus() > 0 else None
-
-        b = create_2d_tensor(rows=LARGE_XX, columns=SMALL_YY, ctx=ctx)
-        k = nd.topk(b, k=10, axis=0, dtype=np.int64)
-        assert np.sum(k.asnumpy() == (LARGE_XX - 1)) == SMALL_YY
-        ind, val = mx.nd.topk(b, k=3, axis=0, dtype=np.int64, ret_typ="both", is_ascend=False)
-        assert np.all(ind == val)
-
-        b = create_2d_tensor(rows=SMALL_YY, columns=LARGE_XX, ctx=ctx)
-        l = nd.topk(b, k=1, axis=-1, dtype=np.int64, ret_typ="value")
-        assert l.sum() == np.sum(np.arange(0, SMALL_YY))
-
     def check_exponent_logarithm_operators():
         a = 2*nd.ones(shape=(LARGE_X, SMALL_Y))
         # exponent
@@ -1784,7 +1769,6 @@ def test_basic():
     check_argsort()
     check_sort()
     check_topk()
-    check_topk_small()
     check_exponent_logarithm_operators()
     check_power_operators()
     check_elemwise_add()
