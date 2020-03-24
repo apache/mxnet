@@ -48,7 +48,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'pad', 'cumsum']
+           'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5131,6 +5131,7 @@ def ravel(x, order='C'):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+@set_module('mxnet.ndarray.numpy')
 def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
@@ -5160,11 +5161,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     if order == 'C':
         if isinstance(indices, numeric_types):
             return _np.unravel_index(indices, shape)
-        ret = _npi.unravel_index_fallback(indices, shape=shape)
-        ret_list = []
-        for item in ret:
-            ret_list += [item]
-        return tuple(ret_list)
+        return tuple(_npi.unravel_index_fallback(indices, shape=shape))
     else:
         raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
@@ -5208,6 +5205,7 @@ def flatnonzero(a):
     return nonzero(ravel(a))[0]
 
 
+@set_module('mxnet.ndarray.numpy')
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
@@ -5244,7 +5242,7 @@ def diag_indices_from(arr):
         [  8,   9, 100,  11],
         [ 12,  13,  14, 100]])
     """
-    return tuple(_npi.diag_indices_from(arr))
+    return tuple(_api_internal.diag_indices_from(arr))
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -8059,3 +8057,97 @@ def cumsum(a, axis=None, dtype=None, out=None):
            [ 4,  9, 15]])
     """
     return _api_internal.cumsum(a, axis, dtype, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diag(v, k=0):
+    """
+    Extracts a diagonal or constructs a diagonal array.
+    - 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero.
+    - 2-D arrays: extracts the k-th Diagonal
+
+    Parameters
+    ----------
+    array : ndarray
+        The array to apply diag method.
+    k : offset
+        extracts or constructs kth diagonal given input array
+
+    Returns
+    ----------
+    out : ndarray
+    The extracted diagonal or constructed diagonal array.
+
+    Examples
+    --------
+    >>> x = np.arange(9).reshape((3,3))
+    >>> x
+    array([[0, 1, 2],
+           [3, 4, 5],
+           [6, 7, 8]])
+    >>> np.diag(x)
+    array([0, 4, 8])
+    >>> np.diag(x, k=1)
+    array([1, 5])
+    >>> np.diag(x, k=-1)
+    array([3, 7])
+
+    >>> np.diag(np.diag(x))
+    array([[0, 0, 0],
+           [0, 4, 0],
+           [0, 0, 8]])
+    """
+    return _api_internal.diag(v, k)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diagonal(a, offset=0, axis1=0, axis2=1):
+    """
+    If a is 2-D, returns the diagonal of a with the given offset, i.e., the collection of elements of
+    the form a[i, i+offset]. If a has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-array whose diagonal is returned. The shape of the
+    resulting array can be determined by removing axis1 and axis2 and appending an index to the
+    right equal to the size of the resulting diagonals.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data from which diagonal are taken.
+    offset: int, Optional
+        Offset of the diagonal from the main diagonal
+    axis1: int, Optional
+        Axis to be used as the first axis of the 2-D sub-arrays
+    axis2: int, Optional
+        Axis to be used as the second axis of the 2-D sub-arrays
+
+    Returns
+    -------
+    out : ndarray
+        Output result
+
+    Raises
+    -------
+    ValueError:  If the dimension of a is less than 2.
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape(2,2)
+    >>> a
+    array([[0, 1],
+        [2, 3]])
+    >>> np.diagonal(a)
+    array([0, 3])
+    >>> np.diagonal(a, 1)
+    array([1])
+
+    >>> a = np.arange(8).reshape(2,2,2)
+    >>>a
+    array([[[0, 1],
+            [2, 3]],
+            [[4, 5],
+            [6, 7]]])
+    >>> np.diagonal(a, 0, 0, 1)
+    array([[0, 6],
+            [1, 7]])
+    """
+    return _api_internal.diagonal(a, offset, axis1, axis2)
