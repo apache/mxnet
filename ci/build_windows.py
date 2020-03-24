@@ -249,7 +249,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=KNOWN_VCVARS['VS 2017'],
+        default=KNOWN_VCVARS['VS 2019'],
         type=str)
 
     parser.add_argument("--arch",
@@ -270,7 +270,7 @@ def main():
     if system == 'Windows':
         logging.info("Detected Windows platform")
         if 'CUDA_PATH' not in os.environ:
-            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
+            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2"
         if 'MKL_ROOT' not in os.environ:
             os.environ["MKL_ROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
         windows_build(args)
