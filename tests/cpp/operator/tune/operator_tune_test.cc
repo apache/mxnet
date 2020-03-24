@@ -106,7 +106,8 @@ static float EvaluateTune(const bool verbose = true) {
       {"sigmoid",      ""},
       {"sqrt",         ""},
       {"elemwise_add", "_backward_add"},
-      {"elemwise_mul", "_backward_mul"},
+      // TODO(Deng, Wenqi): See comment in tests/cpp/operator/runner/core_op_runner_test.cc:49
+      // {"elemwise_mul", "_backward_mul"},
       {"elemwise_div", "_backward_div"}
     };
   } else {

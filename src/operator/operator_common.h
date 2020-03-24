@@ -481,7 +481,8 @@ inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
 
 struct NonlossGradFGradient {
   nnvm::FGradient grad_func;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) const {
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
+          const std::vector<nnvm::NodeEntry>& ograds) const {
     if (CheckGradAllZero(ograds))
       return MakeZeroGradNodes(n, ograds);
     return grad_func(n, ograds);

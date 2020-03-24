@@ -46,7 +46,15 @@ static const std::vector<std::pair<std::string, std::string>> test_unary_operato
 
 static const std::vector<std::pair<std::string, std::string>> test_binary_operators = {
   { "elemwise_add", "_backward_add" },
-  { "elemwise_mul", "_backward_mul" }
+  // TODO(Deng, Wenqi): In https://github.com/apache/incubator-mxnet/pull/17754,
+  //  we have changed backward op to graph of ops for computing backward of elemwise_mul,
+  //  but the CoreOpExecutor in tests/cpp/include/test_core_op.h actually has issues
+  //  to support this way even it provides CoreOpExecutor::GetBackward for the case.
+  //  e.g: It actually assumes there is one backward for all kinds of op, but elemwise_mul has two.
+  //  It will get wrong dependency for the second backward in CoreOpExecutor::GetBackwardDependency
+  //  due to "return igrad_entries[0].node;" //  and failed to call CoreOpExecutor::bwd_inputs()
+  //  and CoreOpExecutor::bwd_outpuss() due to "CHECK_EQ(backward_.size(), 1U)";.
+//  { "elemwise_mul", "_backward_mul" }
 };
 
 template<typename TT>
