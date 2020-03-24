@@ -1633,6 +1633,8 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const mx_uint in,
                                    NDArrayHandle* in,
                                    const mx_uint in,
+                                   NDArrayHandle* in,
+                                   const mx_uint in,
                                    const char** keys,
                                    const char** vals);
 
