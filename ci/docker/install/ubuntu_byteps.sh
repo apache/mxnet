@@ -27,4 +27,5 @@ cd byteps
 # into master and there is yet a version tag
 git checkout v0.2
 
+apt-get install -y python-setuptools
 python setup.py install
