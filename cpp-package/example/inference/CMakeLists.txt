@@ -15,19 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: gemm_lib relu_lib transposecsr_lib transposerowsp_lib
+# Explicitly set GENERATED property https://gitlab.kitware.com/cmake/cmake/issues/18399
+set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/../../include/mxnet-cpp/op.h PROPERTY GENERATED 1)
 
-gemm_lib:
-	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
-
-relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
-
-transposecsr_lib:
-	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc -o libtransposecsr_lib.so -I ../../../include/mxnet
-
-transposerowsp_lib:
-	g++ -shared -fPIC -std=c++11 transposerowsp_lib.cc -o libtransposerowsp_lib.so -I ../../../include/mxnet
-
-clean:
-	rm -rf libgemm_lib.so librelu_lib.so libtransposecsr_lib.so libtransposerowsp_lib.so
+add_executable(imagenet_inference "imagenet_inference.cpp")
+target_link_libraries(imagenet_inference mxnet_cpp)
