@@ -4364,7 +4364,7 @@ def maximum(x1, x2, out=None, **kwargs):
     out : mxnet.numpy.ndarray or scalar
         The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.maximum(x1, x2, out=out)
+        return _np.maximum(x1, x2, out=out)
     return _api_internal.maximum(x1, x2, out)
 
 
@@ -4385,7 +4385,7 @@ def minimum(x1, x2, out=None, **kwargs):
     out : mxnet.numpy.ndarray or scalar
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.minimum(x1, x2, out=out)
+        return _np.minimum(x1, x2, out=out)
     return _api_internal.minimum(x1, x2, out)
 
 
@@ -6148,7 +6148,7 @@ def equal(x1, x2, out=None):
     array([ True])
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.equal(x1, x2, out=out)
+        return _np.equal(x1, x2, out=out)
     return _api_internal.equal(x1, x2, out)
 
 
@@ -6182,7 +6182,7 @@ def not_equal(x1, x2, out=None):
     array([False])
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.not_equal(x1, x2, out=out)
+        return _np.not_equal(x1, x2, out=out)
     return _api_internal.not_equal(x1, x2, out)
 
 
@@ -6250,7 +6250,7 @@ def less(x1, x2, out=None):
     array([False])
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.less(x1, x2, out=out)
+        return _np.less(x1, x2, out=out)
     return _api_internal.less(x1, x2, out)
 
 
@@ -6284,7 +6284,7 @@ def greater_equal(x1, x2, out=None):
     array([True])
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.greater_equal(x1, x2, out=out)
+        return _np.greater_equal(x1, x2, out=out)
     return _api_internal.greater_equal(x1, x2, out)
 
 
@@ -6319,7 +6319,7 @@ def less_equal(x1, x2, out=None):
     array([True])
     """
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
-        _np.less_equal(x1, x2, out=out)
+        return _np.less_equal(x1, x2, out=out)
     return _api_internal.less_equal(x1, x2, out)
 
 

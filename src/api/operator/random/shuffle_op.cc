@@ -34,7 +34,7 @@ MXNET_REGISTER_API("_npi.shuffle")
   const nnvm::Op* op = Op::Get("_npi_shuffle");
   nnvm::NodeAttrs attrs;
 
-  NDArray** inputs = new NDArray*[1]();
+  NDArray* inputs[1];
   int num_inputs = 1;
 
   if (args[0].type_code() != kNull) {
@@ -42,7 +42,6 @@ MXNET_REGISTER_API("_npi.shuffle")
   }
 
   attrs.op = op;
-  inputs = inputs == nullptr ? nullptr : inputs;
 
   NDArray* out = args[1].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
