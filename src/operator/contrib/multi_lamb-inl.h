@@ -282,10 +282,14 @@ inline void MultiLAMB(const nnvm::NodeAttrs& attrs,
     FillMultiLAMBKernelParam<xpu, DType, MPDType, MultiLAMBParam, input_stride>
             (attrs, ctx, inputs, outputs, &kernel_params);
 
-    // create vector of TBlob with all the weights contiguous
-    std::vector<TBlob> weights;
+    // create vector of TBlob with all the weights contiguous to compute the norm
+    // if mixed precision, use fp32 copy
+    std::vector<TBlob> weights_for_norm;
+    int position_weights = 0;
+    if (!std::is_same<DType, MPDType>::value)
+      position_weights = input_stride - 1;
     for (size_t index = 0; index < kernel_params.ntensors; ++index) {
-        weights.emplace_back(inputs[index*input_stride]);
+      weights_for_norm.emplace_back(inputs[index * input_stride + position_weights]);
     }
 
     // Calculate amount of temporary storage (temp_g, r1, r2, block_to_tensor, block_to_chunk)
@@ -327,7 +331,7 @@ inline void MultiLAMB(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, int> block_to_chunk(reinterpret_cast<int*>(&workspace[pos_wspace]),
       Shape1(kernel_params.nchunks), s);
 
-    MultiSumSqRun<xpu>(weights, kernel_params.ntensors, r1.dptr_, ctx);
+    MultiSumSqRun<xpu>(weights_for_norm, kernel_params.ntensors, r1.dptr_, ctx);
     CallKernel1<MPDType, DType>(s, kernel_params, param, temp_g.dptr_,
                                 block_to_tensor.dptr_,
                                 block_to_chunk.dptr_);
