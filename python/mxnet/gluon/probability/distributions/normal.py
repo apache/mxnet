@@ -23,7 +23,7 @@ __all__ = ['Normal']
 import math
 from .constraint import Real, Positive
 from .exp_family import ExponentialFamily
-from .utils import getF
+from .utils import getF, erf, erfinv
 
 
 class Normal(ExponentialFamily):
@@ -116,14 +116,14 @@ class Normal(ExponentialFamily):
         return new_instance
 
     def cdf(self, value):
-        erf_func = self.F.npx.erf
+        erf_func = erf(self.F)
         standarized_samples = ((value - self.loc) /
                                 (math.sqrt(2) * self.scale))
         erf_term = erf_func(standarized_samples)
         return 0.5 * (1 + erf_term)
 
     def icdf(self, value):
-        erfinv_func = self.F.npx.erfinv
+        erfinv_func = erfinv(self.F)
         return self.loc + self.scale * erfinv_func(2 * value - 1) * math.sqrt(2)
 
     @property

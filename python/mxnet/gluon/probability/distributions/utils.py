@@ -19,7 +19,7 @@
 # pylint: disable=wildcard-import
 """Distribution utilities"""
 __all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter',
-           'gammaln']
+           'gammaln', 'erfinv', 'erf']
 
 from functools import update_wrapper
 from numbers import Number
@@ -36,6 +36,24 @@ def gammaln(F):
         if isinstance(value, Number):
             return sc.gammaln(value)
         return F.npx.gammaln(value)
+    return compute
+
+def erf(F):
+    """Unified erf interface for both scalar and tensor
+    """
+    def compute(value):
+        if isinstance(value, Number):
+            return sc.erf(value)
+        return F.npx.erf(value)
+    return compute
+
+def erfinv(F):
+    """Unified erfinv interface for both scalar and tensor
+    """
+    def compute(value):
+        if isinstance(value, Number):
+            return sc.erfinv(value)
+        return F.npx.erfinv(value)
     return compute
 
 def sample_n_shape_converter(size):

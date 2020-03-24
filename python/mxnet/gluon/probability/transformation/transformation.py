@@ -21,6 +21,7 @@ __all__ = ["Transformation", "ComposeTransform", "ExpTransform", "AffineTransfor
            "PowerTransform", "AbsTransform", 'SigmoidTransform', 'SoftmaxTransform']
 
 from ..distributions.utils import _clip_prob, cached_property, sum_right_most
+from ...block import HybridBlock
 import weakref
 
 
@@ -111,6 +112,14 @@ class _InverseTransformation(Transformation):
 
     def log_det_jacobian(self, x, y):
         return -self._inv.log_det_jacobian(y, x)
+
+
+class TransformBlock(Transformation, HybridBlock):
+    """Transform with learnable parameters should inherit from this class
+    rather than `Transformation`.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class ComposeTransform(Transformation):
