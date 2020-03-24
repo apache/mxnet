@@ -289,7 +289,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);

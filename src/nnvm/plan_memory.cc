@@ -38,20 +38,22 @@ namespace {
 // Return bytes of data flag.
 static int MXGetDTypeSize(int type_flag) {
   switch (type_flag) {
-    case kUint8:
-    case kInt8:
+    case mshadow::kUint8:
+    case mshadow::kInt8:
+    case mshadow::kBool:
       return 1;
-    case kFloat16:
-    case kInt16:
-    case kUint16:
+    case mshadow::kFloat16:
+    case mshadow::kBfloat16:
+    case mshadow::kInt16:
+    case mshadow::kUint16:
       return 2;
-    case kFloat32:
-    case kInt32:
-    case kUint32:
+    case mshadow::kFloat32:
+    case mshadow::kInt32:
+    case mshadow::kUint32:
       return 4;
-    case kFloat64:
-    case kInt64:
-    case kUint64:
+    case mshadow::kFloat64:
+    case mshadow::kInt64:
+    case mshadow::kUint64:
       return 8;
     default:
       LOG(FATAL) << "unknown type_flag=" << type_flag;

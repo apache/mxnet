@@ -1155,7 +1155,7 @@ inline bool NumpyRollShape(const nnvm::NodeAttrs& attrs,
   return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
 }
 
-NNVM_REGISTER_OP(_np_roll)
+NNVM_REGISTER_OP(_npi_roll)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyRollParam>)
@@ -1180,7 +1180,7 @@ NNVM_REGISTER_OP(_np_roll)
      os1 << dmlc::optional<mxnet::TShape>(shifts);
      std::ostringstream os2;
      os2 << param.axis;
-     return MakeNonlossGradNode("_np_roll", n, ograds, {},
+     return MakeNonlossGradNode("_npi_roll", n, ograds, {},
                                 {{"shift", os1.str()}, {"axis", os2.str()}});
 })
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -1363,6 +1363,8 @@ inline bool HSplitOpShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_attrs->size(), 1U);
   mxnet::TShape dshape = in_attrs->at(split_enum::kData);
+  CHECK_GE(dshape.ndim(), 1U)
+    << "ValueError: hsplit only works on arrays of 1 or more dimensions";
   if (!mxnet::ndim_is_known(dshape)) return false;
   int real_axis;
   if (dshape.ndim() > 1) {
@@ -1402,6 +1404,36 @@ NNVM_REGISTER_OP(_npi_hsplit_backward)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<FCompute>("FCompute<cpu>", HSplitOpBackward<cpu>);
+
+inline bool DSplitOpShape(const nnvm::NodeAttrs& attrs,
+                          mxnet::ShapeVector* in_attrs,
+                          mxnet::ShapeVector* out_attrs) {
+  using namespace mshadow;
+  CHECK_EQ(in_attrs->size(), 1U);
+  mxnet::TShape dshape = in_attrs->at(split_enum::kData);
+  if (!mxnet::ndim_is_known(dshape)) return false;
+  CHECK(dshape.ndim() >= 3) << "ValueError: dsplit only works on arrays of 3 or more dimensions";
+  return SplitOpShapeImpl(attrs, in_attrs, out_attrs, 2);
+}
+
+NNVM_REGISTER_OP(_npi_dsplit)
+.set_attr_parser(ParamParser<SplitParam>)
+.set_num_inputs(1)
+.set_num_outputs(SplitNumOutputs)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+     return std::vector<std::string>{"data"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", DSplitOpShape)
+.set_attr<nnvm::FInferType>("FInferType", SplitOpType)
+.set_attr<FCompute>("FCompute<cpu>", SplitOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_split_v2_backward"})
+.add_argument("data", "NDArray-or-Symbol", "The input")
+.add_arguments(SplitParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_np_diag)
 .set_attr_parser(ParamParser<NumpyDiagParam>)

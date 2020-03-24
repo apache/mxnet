@@ -84,7 +84,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, {"cpu", 0});
+      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, {"cpu", 0}, kDefaultStorage);
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute log operator
@@ -95,7 +95,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, {"cpu", 0});
+      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, {"cpu", 0}, kDefaultStorage);
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute exp operator 
@@ -160,11 +160,11 @@ MXReturnValue createOpState(std::map<std::string, std::string> attrs,
   std::string serialized_subgraph = "[empty]";
   // MXNet subgraph is stored as Symbol in operator node attrs subgraphs field
   // custom subgraph is stored as json string in custom operator attrs map entry
-  if (attrs.count(SUBGRAPH_SYM_JSON)) {
+  if (attrs.count(MX_STR_SUBGRAPH_SYM_JSON)) {
     // user can now parse json and run other custom ops inside subgraph
-    serialized_subgraph = attrs[SUBGRAPH_SYM_JSON];
+    serialized_subgraph = attrs[MX_STR_SUBGRAPH_SYM_JSON];
   }
-  attrs.erase(SUBGRAPH_SYM_JSON);
+  attrs.erase(MX_STR_SUBGRAPH_SYM_JSON);
   *op_inst = new MyStatefulOp(serialized_subgraph, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
@@ -177,8 +177,7 @@ REGISTER_OP(_custom_subgraph_op)
 const std::vector<std::string> op_names({"exp","log"});
 
 MXReturnValue mySupportedOps(std::string json,
-                             const int num_ids,
-                             int *ids,
+                             std::vector<bool>& ids,
                              std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
@@ -205,26 +204,46 @@ MXReturnValue mySupportedOps(std::string json,
         dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
     }
 
-    //check if op dtype is float
-    if(dtype == kFloat32) {
+    //check if op dtype is float, and if option was specified to require float types
+    if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
         // found op in whitelist, set value to 1 to include op in subgraph
-        ids[i]=1;
+        ids[i]=true;
       }
     }
   }
   return MX_SUCCESS;
 }
 
-MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
+MXReturnValue myReviewSubgraph(std::string json, int subgraph_id, bool* accept,
                                std::unordered_map<std::string, std::string>& options,
-                               std::unordered_map<std::string, std::string>& attrs) {
+                               std::unordered_map<std::string, std::string>& attrs,
+                               std::map<std::string, MXTensor>& args,
+                               std::map<std::string, MXTensor>& aux) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
-  if(options.find("reject") != options.end() &&
-     options["reject"].compare("True") == 0) {
+  for (auto kv : args) {
+    std::cout << "arg: " << kv.first << " ==> (";
+    for (auto s : kv.second.shape)
+      std::cout << s << ",";
+    std::cout << ") [";
+    for (int i=0; i<kv.second.size(); i++)
+      std::cout << kv.second.data<float>()[i] << ", ";
+    std::cout << "]" << std::endl;
+  }
+
+  // check if option `reqArgs` was specified, and if so check if args were provided
+  if(options.count("reqArgs") > 0 && args.size() == 0) {
+    *accept = false;
+    std::cout << "rejecting subgraph since args were not provided" << std::endl;
+    return MX_SUCCESS;
+  }
+
+  // check if option `reject` was specified, and if so check if value is 'True'
+  if(options.count("reject") > 0 && options["reject"].compare("True") == 0) {
+    // if specified, reject the subgraph. this is only used for testing
     *accept = false;
     std::cout << "rejecting subgraph" << std::endl;
   } else {
@@ -237,7 +256,7 @@ MXReturnValue myAcceptSubgraph(std::string json, int subraph_id, bool* accept,
 
 REGISTER_PARTITIONER(myProp)
 .addStrategy("strategy1", mySupportedOps, "_custom_subgraph_op")
-.setAcceptSubgraph("strategy1", myAcceptSubgraph);
+.setReviewSubgraph("strategy1", myReviewSubgraph);
 
 MXReturnValue initialize(int version) {
   if (version >= 10400) {

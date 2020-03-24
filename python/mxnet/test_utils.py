@@ -17,7 +17,6 @@
 
 """Tools for testing."""
 # pylint: disable=too-many-lines
-from __future__ import absolute_import, print_function, division
 import time
 import gzip
 import struct
@@ -542,6 +541,22 @@ def almost_equal(a, b, rtol=None, atol=None, equal_nan=False, use_broadcast=True
     return np.allclose(a, b, rtol=get_rtol(rtol), atol=get_atol(atol), equal_nan=equal_nan)
     # pylint: enable=unexpected-keyword-arg
 
+def locationError(a, b, index, names, maxError=False):
+    """Create element mismatch comment
+
+    Parameters
+    ----------
+    a, b : compared np.ndarray's
+    index : tuple of coordinate arrays
+        Location of violation
+    names : tuple of names
+        The names of compared arrays.
+    maxError: boolean, optional
+        Flag indicating that maximum error is reporting.
+    """
+    maximum = "maximum " if maxError else ""
+    return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
+            % (maximum, str(index), names[0], a[index], names[1], b[index])
 
 def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=False,
                         use_broadcast=True, mismatches=(10, 10)):
@@ -590,23 +605,6 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         a = a.asnumpy()
         b = b.asnumpy()
 
-    def locationError(a, b, index, names, maxError=False):
-        """Create element mismatch comment
-
-        Parameters
-        ----------
-        a, b : compared np.ndarray's
-        index : tuple of coordinate arrays
-            Location of violation
-        names : tuple of names
-            The names of compared arrays.
-        maxError: boolean, optional
-            Flag indicating that maximum error is reporting.
-        """
-        maximum = "maximum " if maxError else ""
-        return "Location of %serror: %s, %s=%.8f, %s=%.8f" \
-               % (maximum, str(index), names[0], a[index], names[1], b[index])
-
     index, rel = find_max_violation(a, b, rtol, atol)
     indexErr = index
     relErr = rel
@@ -643,7 +641,8 @@ def assert_allclose(a, b, rtol=1e-07, atol=0, equal_nan=True):
     assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
-def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('a', 'b'), equal_nan=False):
+def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
+                                 names=('a', 'b'), equal_nan=False, mismatches=(10, 10)):
     """Test that two numpy arrays are almost equal within given error rate. Raise exception message if not.
 
     Parameters
@@ -656,35 +655,48 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None, names=('
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
     """
-    rtol = get_rtol(rtol)
-    atol = get_atol(atol)
     etol = get_etol(etol)
-    if etol:
+    if etol > 0:
+        rtol = get_rtol(rtol)
+        atol = get_atol(atol)
+        if isinstance(a, mx.nd.NDArray):
+            a = a.asnumpy()
+        if isinstance(b, mx.nd.NDArray):
+            b = b.asnumpy()
         equals = np.isclose(a, b, rtol=rtol, atol=atol)
         err = 1 - np.count_nonzero(equals) / equals.size
         if err > etol:
             index, rel = find_max_violation(a, b, rtol, atol)
-            np.set_printoptions(threshold=4, suppress=True)
-            msg = npt.build_err_msg([a, b],
-                                    err_msg="Error %f exceeds tolerance rtol=%f, atol=%f, etol=%f."
-                                            " Error_rate=%f. Location of maximum error:%s, a=%f, b=%f"
-                                    % (rel, rtol, atol, etol, err, str(index), a[index], b[index]),
-                                    names=names)
-            raise AssertionError(msg)
+            indexErr = index
+            relErr = rel
 
-        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
-            return
+            print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
+            aTmp = a.copy()
+            bTmp = b.copy()
+            i = 1
+            while i <= a.size:
+                if i <= mismatches[0]:
+                    print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
+
+                aTmp[index] = bTmp[index] = 0
+                if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
+                    break
+
+                i += 1
+                if i <= mismatches[1] or mismatches[1] <= 0:
+                    index, rel = find_max_violation(aTmp, bTmp, rtol, atol)
+                else:
+                    break
+
+            mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
+            errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
+                    (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
+                    locationError(a, b, indexErr, names, maxError=True))
+            np.set_printoptions(threshold=4, suppress=True)
+            msg = npt.build_err_msg([a, b], err_msg=errMsg)
+            raise AssertionError(msg)
     else:
-        if almost_equal(a, b, rtol, atol, equal_nan=equal_nan):
-            return
-        index, rel = find_max_violation(a, b, rtol, atol)
-        np.set_printoptions(threshold=4, suppress=True)
-        msg = npt.build_err_msg([a, b],
-                                err_msg="Error %f exceeds tolerance rtol=%f, atol=%f. "
-                                        " Location of maximum error:%s, a=%f, b=%f"
-                                % (rel, rtol, atol, str(index), a[index], b[index]),
-                                names=names)
-        raise AssertionError(msg)
+        assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
 def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
@@ -2256,6 +2268,7 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
                                 str(buckets), str(probs)))
     return cs_ret_l
 
+
 def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
     """Compare ndarray tuple."""
     if t1 is None or t2 is None:
@@ -2268,11 +2281,14 @@ def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
         assert_almost_equal(t1, t2, rtol=rtol, atol=atol)
 
 
-def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
-                      rtol=1e-4, atol=1e-5, compare_states=True, ntensors=1):
+def compare_optimizer(opt1, opt2, shapes, dtype, w_stype='default', g_stype='default',
+                      rtol=1e-4, atol=1e-5, compare_states=True):
     """Compare opt1 and opt2."""
-    if not isinstance(shape, list):
-        assert(ntensors == 1)
+
+    w1_list, w2_list = [], []
+    g1_list, g2_list = [], []
+    s1_list, s2_list = [], []
+    for i, shape in enumerate(shapes):
         if w_stype == 'default':
             w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
             w1 = w2.copyto(default_context())
@@ -2289,37 +2305,77 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
             g1 = g2.copyto(default_context()).tostype('default')
         else:
             raise Exception("type not supported yet")
+        s1 = opt1.create_state_multi_precision(i, w1)
+        s2 = opt2.create_state_multi_precision(i, w2)
 
-        state1 = opt1.create_state_multi_precision(0, w1)
-        state2 = opt2.create_state_multi_precision(0, w2)
         if compare_states:
-            compare_ndarray_tuple(state1, state2)
+            compare_ndarray_tuple(s1, s2)
 
-        opt1.update_multi_precision(0, w1, g1, state1)
-        opt2.update_multi_precision(0, w2, g2, state2)
+        w1_list.append(w1)
+        w2_list.append(w2)
+        g1_list.append(g1)
+        g2_list.append(g2)
+        s1_list.append(s1)
+        s2_list.append(s2)
+
+    indices = list(range(len(shapes)))
+    opt1.update_multi_precision(indices, w1_list, g1_list, s1_list)
+    opt2.update_multi_precision(indices, w2_list, g2_list, s2_list)
+    if compare_states:
+        compare_ndarray_tuple(tuple(s1_list), tuple(s2_list), rtol=rtol, atol=atol)
+    compare_ndarray_tuple(tuple(w1_list), tuple(w2_list), rtol=rtol, atol=atol)
+
+
+def compare_optimizer_noise_seeded(opt1, opt2, shapes, dtype, noise_seed,
+                                   w_stype='default', g_stype='default',
+                                   rtol=1e-4, atol=1e-5, compare_states=True):
+    """Compare opt1 and opt2 with the added functionality that the seed for generating random noise
+    in the SGLD optimizer update is set so that the same noise is used in opt1 and opt2.
+
+    """
+    w1_list, w2_list = [], []
+    g1_list, g2_list = [], []
+    s1_list, s2_list = [], []
+    for i, shape in enumerate(shapes):
+        if w_stype == 'default':
+            w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            w1 = w2.copyto(default_context())
+        elif w_stype in ('row_sparse', 'csr'):
+            w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+            w1 = w2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+        if g_stype == 'default':
+            g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            g1 = g2.copyto(default_context())
+        elif g_stype in ('row_sparse', 'csr'):
+            g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+            g1 = g2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+        s1 = opt1.create_state_multi_precision(i, w1)
+        s2 = opt2.create_state_multi_precision(i, w2)
+
         if compare_states:
-            compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-        assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
-    else:
-        # test multi-tensor: Opt1 single-tensor reference, Opt2 multi-tensor
-        from copy import deepcopy
-        w1, g1 = [], []
-        for s in shape:
-            w1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
-            g1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
-        w1 = tuple(w1)
-        w2 = deepcopy(w1)
-        g1 = tuple(g1)
-        g2 = deepcopy(g1)
-        state2 = [opt2.create_state_multi_precision(0, w2[i]) for i in range(ntensors)]
+            compare_ndarray_tuple(s1, s2)
 
-        opt2.update_multi_precision(list(range(ntensors)), w2, g2, state2)
-        for i in range(ntensors):
-            state1 = opt1.create_state_multi_precision(i, w1[i])
-            opt1.update_multi_precision(i, w1[i], g1[i], state1)
-            if compare_states:
-                compare_ndarray_tuple(state1, state2[i], rtol, atol)
-            compare_ndarray_tuple(w1[i], w2[i], rtol, atol)
+        w1_list.append(w1)
+        w2_list.append(w2)
+        g1_list.append(g1)
+        g2_list.append(g2)
+        s1_list.append(s1)
+        s2_list.append(s2)
+
+    indices = list(range(len(shapes)))
+    # set seed for Gaussian noise replication
+    mx.random.seed(noise_seed)
+    opt1.update_multi_precision(indices, w1_list, g1_list, s1_list)
+    mx.random.seed(noise_seed)
+    opt2.update_multi_precision(indices, w2_list, g2_list, s2_list)
+    if compare_states:
+        compare_ndarray_tuple(tuple(s1_list), tuple(s2_list), rtol=rtol, atol=atol)
+    compare_ndarray_tuple(tuple(w1_list), tuple(w2_list), rtol=rtol, atol=atol)
+
 
 def same_symbol_structure(sym1, sym2):
     """Compare two symbols to check if they have the same computation graph structure.

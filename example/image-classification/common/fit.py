@@ -235,7 +235,7 @@ def fit(args, network, data_loader, **kwargs):
         'multi_precision': True}
 
     # Only a limited number of optimizers have 'momentum' property
-    has_momentum = {'sgd', 'dcasgd', 'nag', 'signum', 'lbsgd'}
+    has_momentum = {'sgd', 'dcasgd', 'nag', 'signum'}
     if args.optimizer in has_momentum:
         optimizer_params['momentum'] = args.mom
 
@@ -243,7 +243,7 @@ def fit(args, network, data_loader, **kwargs):
         args.monitor, pattern=".*") if args.monitor > 0 else None
 
     # A limited number of optimizers have a warmup period
-    has_warmup = {'lbsgd', 'lbnag'}
+    has_warmup = {'lbnag'}
     if args.optimizer in has_warmup:
         nworkers = kv.num_workers
         if epoch_size < 1:
