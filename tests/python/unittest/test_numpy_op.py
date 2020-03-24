@@ -3554,6 +3554,97 @@ def test_np_argmin_argmax():
 
 @with_seed()
 @use_np
+def test_np_nanargmin_nanargmax():
+    workloads = [
+        ((5, 3), None),
+        ((5, 3), -1),
+        ((5, 3), 1),
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    ops = ['nanargmin', 'nanargmax']
+
+    class TestArgExtreme(HybridBlock):
+        def __init__(self, op_name, axis=None):
+            super(TestArgExtreme, self).__init__()
+            self._op_name = op_name
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return getattr(F.np, self._op_name, None)(x, self._axis)
+
+    for op_name in ops:
+        for shape, axis in workloads:
+            for dtype in dtypes:
+                a = np.random.uniform(size=shape, dtype=dtype)
+                mx_num = getattr(np, op_name)(a, axis=axis)
+                [a[0][1], a[1][1], a[2][1], a[3][2]] = [np.nan for i in range(4)]
+
+                mx_ret = getattr(np, op_name)(a, axis=axis)
+                np_ret = getattr(_np, op_name)(a.asnumpy(), axis=axis)
+                assert mx_ret.dtype == np_ret.dtype
+                assert same(mx_ret.asnumpy(), np_ret)
+
+                for hybridize in [False, False]:
+                    net = TestArgExtreme(op_name, axis)
+                    if hybridize:
+                        net.hybridize()
+                    mx_ret = net(a)
+                    assert mx_ret.dtype == np_ret.dtype
+                    assert same(mx_ret.asnumpy(), np_ret)
+
+    def _test_nanarg_exception(op_name):
+        a = np.array([np.nan for i in range(6)])
+        output = getattr(np, op_name)(a).asnumpy()
+    for op_name in ops:
+        assertRaises(ValueError, _test_nanarg_exception, op_name)
+
+
+@with_seed()
+@use_np
+def test_np_nancumsum():
+    workloads = [
+        ((5, 3), None),
+        ((5, 3), 1),
+    ]
+    dtypes = ['float16', 'float32', 'float64']
+    ops = ['nancumsum', 'nansum']
+
+    class TestArgExtreme(HybridBlock):
+        def __init__(self, op_name, axis=None):
+            super(TestArgExtreme, self).__init__()
+            self._op_name = op_name
+            self._axis = axis
+
+        def hybrid_forward(self, F, x):
+            return getattr(F.np, self._op_name, None)(x, self._axis)
+
+    for op_name in ops:
+        for shape, axis in workloads:
+            for dtype in dtypes:
+                a = np.random.uniform(size=shape, dtype=dtype)
+                mx_num = getattr(np, op_name)(a, axis=axis)
+                [a[0][1], a[1][1], a[2][1], a[3][2]] = [np.nan for i in range(4)]
+                b = a.asnumpy()
+                c = a.copy()
+
+                mx_ret = getattr(np, op_name)(a, axis=axis)
+                np_ret = getattr(_np, op_name)(b, axis=axis)
+                assert mx_ret.dtype == np_ret.dtype
+                assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=1e-4, atol=1e-4,
+                                    use_broadcast=False, equal_nan=True)
+
+                for hybridize in [False, False]:
+                    net = TestArgExtreme(op_name, axis)
+                    if hybridize:
+                        net.hybridize()
+                    mx_ret = net(c)
+                    assert mx_ret.dtype == np_ret.dtype
+                    assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=1e-4, atol=1e-4,
+                                        use_broadcast=False, equal_nan=True)
+
+
+@with_seed()
+@use_np
 def test_np_clip():
     workloads = [
         ((), None, None, True),

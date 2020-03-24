@@ -40,6 +40,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
+           'copyto', 'nanargmin', 'nanargmax', 'nansum', 'nancumsum',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
@@ -690,13 +691,13 @@ class _Symbol(Symbol):
         """Return the sum of the array elements over the given axis."""
         return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
-    def nansum(self, *args, **kwargs):
+    def nansum(self, axis=None, dtype=None, out=None, keepdims=False): # pylint: disable=W0221
         """Convenience fluent method for :py:func:`nansum`.
 
         The arguments are the same as for :py:func:`nansum`, with
         this array as data.
         """
-        raise AttributeError('_Symbol object has no attribute nansum')
+        return _mx_np_op.nansum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def prod(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the product of the array elements over the given axis."""
@@ -1207,6 +1208,237 @@ def bitwise_not(x, out=None, **kwargs):
     True
     """
     return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def copyto(dst, src, casting='same_kind', where=True):  # pylint: disable=W0621
+    r"""
+    Copies values from one array to another, broadcasting as necessary.
+
+    Raises a TypeError if the `casting` rule is violated, and if
+    `where` is provided, it selects which elements to copy.
+
+    Parameters
+    ----------
+    dst : ndarray
+        The array into which values are copied.
+    src : ndarray
+        The array from which values are copied.
+    casting : {'no', 'equiv', 'safe', 'same_kind', 'unsafe'}, optional
+        Controls what kind of data casting may occur when copying.
+
+        * 'no' means the data types should not be cast at all.
+        * 'equiv' means only byte-order changes are allowed.
+        * 'safe' means only casts which can preserve values are allowed.
+        * 'same_kind' means only safe casts or casts within a kind,
+            like float64 to float32, are allowed.
+        * 'unsafe' means any data conversions may be done.
+    where : array_like of bool, optional
+        A boolean array which is broadcasted to match the dimensions
+        of `dst`, and selects elements to copy from `src` to `dst`
+        wherever it contains the value True.
+    """
+
+    if not isinstance(src, numeric_types):
+        src.astype(dst.dtype, casting=casting)
+        if not isinstance(where, numeric_types):
+            _npi.copy2(dst, src, where, src=None,
+                       casting=casting, where=None)
+        else:
+            _npi.copy2(dst, src, src=None, casting=casting, where=where)
+    else:
+        if not isinstance(where, numeric_types):
+            _npi.copy2(dst, where, src=src, casting=casting, where=None)
+        else:
+            _npi.copy2(dst, src=src, casting=casting, where=where)
+
+
+@set_module('mxnet.symbol.numpy')
+def nanargmin(a, axis=None):
+    """
+    Return the indices of the minimum values in the specified axis ignoring
+    NaNs. For all-NaN slices ``ValueError`` is raised. Warning: the results
+    cannot be trusted if a slice contains only NaNs and Infs.
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default flattened input is used.
+    Returns
+    -------
+    index_array : ndarray
+        An array of indices or a single index value.
+    See Also
+    --------
+    argmin, nanargmax
+    Examples
+    --------
+    >>> a = np.array([[np.nan, 4], [2, 3]])
+    >>> np.argmin(a)
+    0
+    >>> np.nanargmin(a)
+    2
+    >>> np.nanargmin(a, axis=0)
+    array([1, 1])
+    >>> np.nanargmin(a, axis=1)
+    array([1, 0])
+    """
+    mask = isnan(a)
+    if mask is not None:
+        copyto(a, 2147483647, where=mask)
+
+    res = argmin(a, axis=axis)
+    if mask is not None:
+        mask = all(mask, axis=axis)
+        if any(mask):
+            raise ValueError("All-NaN slice encountered")
+    return res
+
+
+@set_module('mxnet.symbol.numpy')
+def nanargmax(a, axis=None):
+    """
+    Return the indices of the maximum values in the specified axis ignoring
+    NaNs. For all-NaN slices ``ValueError`` is raised. Warning: the
+    results cannot be trusted if a slice contains only NaNs and -Infs.
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default flattened input is used.
+    Returns
+    -------
+    index_array : ndarray
+        An array of indices or a single index value.
+    See Also
+    --------
+    argmax, nanargmin
+    Examples
+    --------
+    >>> a = np.array([[np.nan, 4], [2, 3]])
+    >>> np.argmax(a)
+    0
+    >>> np.nanargmax(a)
+    1
+    >>> np.nanargmax(a, axis=0)
+    array([1, 0])
+    >>> np.nanargmax(a, axis=1)
+    array([1, 1])
+    """
+    mask = isnan(a)
+    if mask is not None:
+        copyto(a, 2147483647, where=mask)
+
+    res = argmax(a, axis=axis)
+    if mask is not None:
+        mask = all(mask, axis=axis)
+        if any(mask):
+            raise ValueError("All-NaN slice encountered")
+    return res
+
+
+@set_module('mxnet.symbol.numpy')
+def nansum(a, axis=None, dtype=None, out=None, keepdims=False):
+    """
+    Return the sum of array elements over a given axis treating Not a
+    Numbers (NaNs) as zero.
+    In NumPy versions <= 1.9.0 Nan is returned for slices that are all-NaN or
+    empty. In later versions zero is returned.
+    Parameters
+    ----------
+    a : _Symbol
+        Array containing numbers whose sum is desired. If `a` is not an
+        array, a conversion is attempted.
+    axis : {int, tuple of int, None}, optional
+        Axis or axes along which the sum is computed. The default is to compute the
+        sum of the flattened array.
+    dtype : data-type, optional
+        The type of the returned array and of the accumulator in which the
+        elements are summed.  By default, the dtype of `a` is used.  An
+        exception is when `a` has an integer type with less precision than
+        the platform (u)intp. In that case, the default will be either
+        (u)int32 or (u)int64 depending on whether the platform is 32 or 64
+        bits. For inexact inputs, dtype must be inexact.
+        .. versionadded:: 1.8.0
+    out : ndarray, optional
+        Alternate output array in which to place the result.  The default
+        is ``None``. If provided, it must have the same shape as the
+        expected output, but the type will be cast if necessary.  See
+        `doc.ufuncs` for details. The casting of NaN to integer can yield
+        unexpected results.
+        .. versionadded:: 1.8.0
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `a`.
+        If the value is anything but the default, then
+        `keepdims` will be passed through to the `mean` or `sum` methods
+        of sub-classes of `ndarray`.  If the sub-classes methods
+        does not implement `keepdims` any exceptions will be raised.
+        .. versionadded:: 1.8.0
+    Returns
+    -------
+    nansum : ndarray.
+        A new array holding the result is returned unless `out` is
+        specified, in which it is returned. The result has the same
+        size as `a`, and the same shape as `a` if `axis` is not None
+        or `a` is a 1-d array.
+    See Also
+    --------
+    numpy.sum : Sum across array propagating NaNs.
+    isnan : Show which elements are NaN.
+    isfinite: Show which elements are not NaN or +/-inf.
+    """
+    mask = isnan(a)
+    if mask is not None:
+        copyto(a, 0, where=mask)
+    return sum(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def nancumsum(a, axis=None, dtype=None, out=None):
+    """
+    Return the cumulative sum of array elements over a given axis treating Not a
+    Numbers (NaNs) as zero.  The cumulative sum does not change when NaNs are
+    encountered and leading NaNs are replaced by zeros.
+    Zeros are returned for slices that are all-NaN or empty.
+    .. versionadded:: 1.12.0
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axis : int, optional
+        Axis along which the cumulative sum is computed. The default
+        (None) is to compute the cumsum over the flattened array.
+    dtype : dtype, optional
+        Type of the returned array and of the accumulator in which the
+        elements are summed.  If `dtype` is not specified, it defaults
+        to the dtype of `a`, unless `a` has an integer dtype with a
+        precision less than that of the default platform integer.  In
+        that case, the default platform integer is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output
+        but the type will be cast if necessary. See `doc.ufuncs`
+        (Section "Output arguments") for more details.
+    Returns
+    -------
+    nancumsum : ndarray.
+        A new array holding the result is returned unless `out` is
+        specified, in which it is returned. The result has the same
+        size as `a`, and the same shape as `a` if `axis` is not None
+        or `a` is a 1-d array.
+    See Also
+    --------
+    numpy.cumsum : Cumulative sum across array propagating NaNs.
+    isnan : Show which elements are NaN.
+    """
+    mask = isnan(a)
+    if mask is not None:
+        copyto(a, 0, where=mask)
+    return cumsum(a, axis=axis, dtype=dtype, out=out)
 
 
 @set_module('mxnet.symbol.numpy')

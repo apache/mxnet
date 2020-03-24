@@ -60,13 +60,10 @@ __all__ = [
     'mirr',
     'modf',
     'msort',
-    'nanargmax',
-    'nanargmin',
     'nancumprod',
-    'nancumsum',
-    'nanmax',
+    # 'nanmax',
     'nanmedian',
-    'nanmin',
+    # 'nanmin',
     'nanpercentile',
     'nanprod',
     'nanquantile',
@@ -148,18 +145,14 @@ min_scalar_type = onp.min_scalar_type
 mirr = onp.mirr
 modf = onp.modf
 msort = onp.msort
-nanargmax = onp.nanargmax
-nanargmin = onp.nanargmin
 nancumprod = onp.nancumprod
-nancumsum = onp.nancumsum
-nanmax = onp.nanmax
+# nanmax = onp.nanmax
 nanmedian = onp.nanmedian
-nanmin = onp.nanmin
+# nanmin = onp.nanmin
 nanpercentile = onp.nanpercentile
 nanprod = onp.nanprod
 nanquantile = onp.nanquantile
 nanstd = onp.nanstd
-nansum = onp.nansum
 nanvar = onp.nanvar
 ndim = onp.ndim
 npv = onp.npv
