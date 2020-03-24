@@ -127,16 +127,16 @@ NNVM_REGISTER_OP(_npi_dsplit)
 NNVM_REGISTER_OP(_npx_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_diag)
+NNVM_REGISTER_OP(_npi_diag)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_diag)
+NNVM_REGISTER_OP(_backward_npi_diag)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_diagonal)
+NNVM_REGISTER_OP(_npi_diagonal)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_diagonal)
+NNVM_REGISTER_OP(_backward_npi_diagonal)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_np_diagflat)
