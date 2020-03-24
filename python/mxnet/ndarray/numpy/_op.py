@@ -30,7 +30,8 @@ from ..ndarray import NDArray
 
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
-           'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'power', 'bitwise_not',
+           'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
+           'power', 'bitwise_not',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'insert', 'fabs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'matmul',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
@@ -38,15 +39,15 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
-           'average', 'mean', 'maximum', 'minimum', 'around', 'round', 'round_', 'flatnonzero',
+           'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'around', 'round', 'round_', 'flatnonzero',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount', 'pad', 'cumsum']
+           'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1167,6 +1168,35 @@ def mod(x1, x2, out=None, **kwargs):
     if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
         return _np.mod(x1, x2, out=out)
     return _api_internal.mod(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def fmod(x1, x2, out=None, **kwargs):
+    """
+    Return element-wise remainder of division.
+
+    Parameters
+    ----------
+    x1 : ndarray or scalar
+        Dividend array.
+
+    x2 : ndarray or scalar
+        Divisor array.
+
+    out : ndarray
+        A location into which the result is stored. If provided, it must have a shape
+        that the inputs broadcast to. If not provided or None, a freshly-allocated array
+        is returned.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        This is a scalar if both x1 and x2 are scalars.
+    """
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmod(x1, x2, out=out)
+    return _api_internal.fmod(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4368,6 +4398,27 @@ def maximum(x1, x2, out=None, **kwargs):
 
 @set_module('mxnet.ndarray.numpy')
 @wrap_np_binary_func
+def fmax(x1, x2, out=None, **kwargs):
+    """
+    Returns element-wise maximum of the input arrays with broadcasting. (Ignores NaNs)
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmax(x1, x2, out=out)
+    return _api_internal.fmax(x1, x2, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
 def minimum(x1, x2, out=None, **kwargs):
     """
     Returns element-wise minimum of the input arrays with broadcasting.
@@ -4383,6 +4434,27 @@ def minimum(x1, x2, out=None, **kwargs):
     out : mxnet.numpy.ndarray or scalar
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
     return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+@wrap_np_binary_func
+def fmin(x1, x2, out=None, **kwargs):
+    """
+    Returns element-wise minimum of the input arrays with broadcasting. (Ignores NaNs)
+
+    Parameters
+    ----------
+    x1, x2 : scalar or mxnet.numpy.ndarray
+        The arrays holding the elements to be compared. They must have the same shape,
+        or shapes that can be broadcast to a single shape.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        _np.fmin(x1, x2, out=out)
+    return _api_internal.fmin(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5058,6 +5130,7 @@ def ravel(x, order='C'):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+@set_module('mxnet.ndarray.numpy')
 def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
@@ -5087,11 +5160,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     if order == 'C':
         if isinstance(indices, numeric_types):
             return _np.unravel_index(indices, shape)
-        ret = _npi.unravel_index_fallback(indices, shape=shape)
-        ret_list = []
-        for item in ret:
-            ret_list += [item]
-        return tuple(ret_list)
+        return tuple(_npi.unravel_index_fallback(indices, shape=shape))
     else:
         raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
@@ -5135,6 +5204,7 @@ def flatnonzero(a):
     return nonzero(ravel(a))[0]
 
 
+@set_module('mxnet.ndarray.numpy')
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
@@ -5171,7 +5241,7 @@ def diag_indices_from(arr):
         [  8,   9, 100,  11],
         [ 12,  13,  14, 100]])
     """
-    return tuple(_npi.diag_indices_from(arr))
+    return tuple(_api_internal.diag_indices_from(arr))
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6072,6 +6142,51 @@ def outer(a, b):
         [-2., -1.,  0.,  1.,  2.]])
     """
     return tensordot(a.flatten(), b.flatten(), 0)
+
+
+@set_module('mxnet.ndarray.numpy')
+def kron(a, b):
+    r"""
+    Kronecker product of two arrays.
+    Computes the Kronecker product, a composite array made of blocks of the
+    second array scaled by the first.
+
+    Parameters
+    ----------
+    a, b : ndarray
+
+    Returns
+    -------
+    out : ndarray
+
+    See Also
+    --------
+    outer : The outer product
+
+    Notes
+    -----
+    The function assumes that the number of dimensions of `a` and `b`
+    are the same, if necessary prepending the smallest with ones.
+    If `a.shape = (r0,r1,..,rN)` and `b.shape = (s0,s1,...,sN)`,
+    the Kronecker product has shape `(r0*s0, r1*s1, ..., rN*SN)`.
+    The elements are products of elements from `a` and `b`, organized
+    explicitly by::
+        kron(a,b)[k0,k1,...,kN] = a[i0,i1,...,iN] * b[j0,j1,...,jN]
+    where::
+        kt = it * st + jt,  t = 0,...,N
+    In the common 2-D case (N=1), the block structure can be visualized::
+        [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
+        [  ...                              ...   ],
+        [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
+
+    Examples
+    --------
+    >>> np.kron([1,10,100], [5,6,7])
+    array([  5,   6,   7,  50,  60,  70, 500, 600, 700])
+    >>> np.kron([5,6,7], [1,10,100])
+    array([  5,  50, 500,   6,  60, 600,   7,  70, 700])
+    """
+    return _api_internal.kron(a, b)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7904,3 +8019,97 @@ def cumsum(a, axis=None, dtype=None, out=None):
            [ 4,  9, 15]])
     """
     return _api_internal.cumsum(a, axis, dtype, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diag(v, k=0):
+    """
+    Extracts a diagonal or constructs a diagonal array.
+    - 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero.
+    - 2-D arrays: extracts the k-th Diagonal
+
+    Parameters
+    ----------
+    array : ndarray
+        The array to apply diag method.
+    k : offset
+        extracts or constructs kth diagonal given input array
+
+    Returns
+    ----------
+    out : ndarray
+    The extracted diagonal or constructed diagonal array.
+
+    Examples
+    --------
+    >>> x = np.arange(9).reshape((3,3))
+    >>> x
+    array([[0, 1, 2],
+           [3, 4, 5],
+           [6, 7, 8]])
+    >>> np.diag(x)
+    array([0, 4, 8])
+    >>> np.diag(x, k=1)
+    array([1, 5])
+    >>> np.diag(x, k=-1)
+    array([3, 7])
+
+    >>> np.diag(np.diag(x))
+    array([[0, 0, 0],
+           [0, 4, 0],
+           [0, 0, 8]])
+    """
+    return _api_internal.diag(v, k)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diagonal(a, offset=0, axis1=0, axis2=1):
+    """
+    If a is 2-D, returns the diagonal of a with the given offset, i.e., the collection of elements of
+    the form a[i, i+offset]. If a has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-array whose diagonal is returned. The shape of the
+    resulting array can be determined by removing axis1 and axis2 and appending an index to the
+    right equal to the size of the resulting diagonals.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data from which diagonal are taken.
+    offset: int, Optional
+        Offset of the diagonal from the main diagonal
+    axis1: int, Optional
+        Axis to be used as the first axis of the 2-D sub-arrays
+    axis2: int, Optional
+        Axis to be used as the second axis of the 2-D sub-arrays
+
+    Returns
+    -------
+    out : ndarray
+        Output result
+
+    Raises
+    -------
+    ValueError:  If the dimension of a is less than 2.
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape(2,2)
+    >>> a
+    array([[0, 1],
+        [2, 3]])
+    >>> np.diagonal(a)
+    array([0, 3])
+    >>> np.diagonal(a, 1)
+    array([1])
+
+    >>> a = np.arange(8).reshape(2,2,2)
+    >>>a
+    array([[[0, 1],
+            [2, 3]],
+            [[4, 5],
+            [6, 7]]])
+    >>> np.diagonal(a, 0, 0, 1)
+    array([[0, 6],
+            [1, 7]])
+    """
+    return _api_internal.diagonal(a, offset, axis1, axis2)

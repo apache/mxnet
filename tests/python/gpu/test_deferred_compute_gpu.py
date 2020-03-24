@@ -15,19 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: gemm_lib relu_lib transposecsr_lib transposerowsp_lib
+import os
+import sys
 
-gemm_lib:
-	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
+import mxnet as mx
+mx.test_utils.set_default_context(mx.gpu(0))
 
-relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+# We import all tests from ../unittest/test_deferred_compute.py
+# They will be detected by nose, as long as the current file has a different filename
+from test_deferred_compute import *
 
-transposecsr_lib:
-	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc -o libtransposecsr_lib.so -I ../../../include/mxnet
 
-transposerowsp_lib:
-	g++ -shared -fPIC -std=c++11 transposerowsp_lib.cc -o libtransposerowsp_lib.so -I ../../../include/mxnet
-
-clean:
-	rm -rf libgemm_lib.so librelu_lib.so libtransposecsr_lib.so libtransposerowsp_lib.so
+if __name__ == "__main__":
+    import nose
+    nose.runmodule()
