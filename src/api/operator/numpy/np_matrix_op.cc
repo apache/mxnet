@@ -142,4 +142,53 @@ MXNET_REGISTER_API("_npi.rot90")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.diag")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diag");
+  nnvm::NodeAttrs attrs;
+  op::NumpyDiagParam param;
+  param.k = args[1].operator int();
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyDiagParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.diagonal")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diagonal");
+  nnvm::NodeAttrs attrs;
+  op::NumpyDiagonalParam param;
+  param.offset = args[1].operator int();
+  param.axis1 = args[2].operator int();
+  param.axis2 = args[3].operator int();
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyDiagonalParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.diag_indices_from")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diag_indices_from");
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet
