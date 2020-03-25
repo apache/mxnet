@@ -241,8 +241,13 @@ const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups) {
   auto format_tag = mkldnn::memory::format_tag::undef;
   auto engine = CpuEngine::Get()->get_engine();
   const int ndim = arr.shape().ndim();
-  const int D = (ndim == 5) ? 2 : 1;
-  const int O = 0, I = 1, H = D + 1, W = D + 2;
+  int O = 0, I = 1, H = 2, W = 3;
+  int D = -1;
+  if (ndim == 5) {
+    D = 2;
+    H = 3;
+    W = 4;
+  }
   if (ndim == 2) {
     tz = mkldnn::memory::dims{arr.shape()[O], arr.shape()[I]};
     format_tag = mkldnn::memory::format_tag::oi;

@@ -118,15 +118,15 @@ mkldnn::algorithm GetMKLDNNPoolAlgo(const PoolingParam &param) {
 
 void InitPoolingPrimitiveParams(const PoolingParam &param,
                                 const mkldnn::memory::desc &data_md,
-                                mkldnn::memory::dims *new_kernel,
-                                mkldnn::memory::dims *new_strides,
-                                mkldnn::memory::dims *new_pad_l,
-                                mkldnn::memory::dims *new_pad_r) {
+                                const mkldnn::memory::dims &new_kernel,
+                                const mkldnn::memory::dims &new_strides,
+                                const mkldnn::memory::dims &new_pad_l,
+                                const mkldnn::memory::dims &new_pad_r) {
   const int kernel_ndims = param.kernel.ndim();
-  mkldnn::memory::dims& kernel = *new_kernel;
-  mkldnn::memory::dims& strides = *new_strides;
-  mkldnn::memory::dims& pad_l = *new_pad_l;
-  mkldnn::memory::dims& pad_r = *new_pad_r;
+  mkldnn::memory::dims& kernel = const_cast<mkldnn::memory::dims&>(new_kernel);
+  mkldnn::memory::dims& strides = const_cast<mkldnn::memory::dims&>(new_strides);
+  mkldnn::memory::dims& pad_l = const_cast<mkldnn::memory::dims&>(new_pad_l);
+  mkldnn::memory::dims& pad_r = const_cast<mkldnn::memory::dims&>(new_pad_r);
   if (kernel_ndims == 1) {
     CHECK_GE(param.pad.ndim(), 1);
     CHECK_GE(param.stride.ndim(), 1);
@@ -238,7 +238,7 @@ mkldnn::pooling_forward::primitive_desc GetPoolingFwdPdesc(
   mkldnn::memory::dims pad_l(kernel_ndims);
   mkldnn::memory::dims pad_r(kernel_ndims);
 
-  InitPoolingPrimitiveParams(param, data_md, &kernel, &strides, &pad_l, &pad_r);
+  InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
   const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
   mkldnn::prop_kind kind = mkldnn::prop_kind::forward_scoring;
@@ -283,7 +283,7 @@ MKLDNNPoolingFwd &GetPoolingFwd(const PoolingParam &param,
     mkldnn::memory::dims strides(kernel_ndims);
     mkldnn::memory::dims pad_l(kernel_ndims);
     mkldnn::memory::dims pad_r(kernel_ndims);
-    InitPoolingPrimitiveParams(param, data_md, &kernel, &strides, &pad_l, &pad_r);
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
     const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
     MKLDNNPoolingFwd fwd(data, output, kernel, strides,
@@ -353,7 +353,7 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
     mkldnn::memory::dims pad_l(kernel_ndims);
     mkldnn::memory::dims pad_r(kernel_ndims);
 
-    InitPoolingPrimitiveParams(param, data_md, &kernel, &strides, &pad_l, &pad_r);
+    InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
     const mkldnn::pooling_backward::desc desc(
                 alg, diff_in_md, diff_md, strides, kernel, pad_l, pad_r);

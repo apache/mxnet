@@ -207,6 +207,9 @@ def test_quantized_conv():
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_conv for gpu uint8 since it is not supported yet')
             return
+        elif is_test_for_gpu() and len(data_shape) != 4:
+            print('skipped testing quantized_conv for gpu 5d layout since it is not supported yet')
+            return
 
         # run fp32 conv
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
@@ -276,8 +279,6 @@ def test_quantized_conv():
     for qdtype in ['int8', 'uint8']:
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), (1, 1), True, qdtype)
         check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), (1, 1), False, qdtype)
-        check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), (2, 2), True, qdtype)
-        check_quantized_conv((3, 4, 28, 28), (3, 3), 128, (1, 1), (1, 1), (2, 2), False, qdtype)
         check_quantized_conv((1, 3, 4, 28, 28), (1, 3, 3), 128, (1, 1, 1), (1, 1, 1), (1, 1, 1), False, qdtype)
         check_quantized_conv((1, 3, 4, 28, 28), (1, 3, 3), 128, (1, 1, 1), (1, 1, 1), (1, 1, 1), True, qdtype)
         check_quantized_conv((1, 3, 4, 28, 28), (1, 3, 3), 128, (1, 1, 1), (1, 1, 1), (2, 2, 2), False, qdtype)
@@ -415,6 +416,9 @@ def test_quantized_pooling():
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_pooling for gpu uint8 since it is not supported yet')
+            return
+        elif is_test_for_gpu() and len(data_shape) != 4:
+            print('skipped testing quantized_pooling for gpu 5d layout since it is not supported yet')
             return
 
         data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')

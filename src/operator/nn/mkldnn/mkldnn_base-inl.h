@@ -154,7 +154,7 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
     return false;
   }
   return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
-                    (ndim >= 1 && ndim <= 5);
+                    (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
@@ -327,8 +327,13 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
     CHECK((ndim == 3) || (ndim == 4) || (ndim == 5))
         << "MKL-DNN weight currently supports 3d or 4d or 5d layout";
     auto tz = mkldnn::memory::dims{0};
-    const int D = (ndim == 5) ? 2 : 1;
-    const int N = 0, C = 1, H = D + 1, W = D + 2;
+    int N = 0, C = 1, H = 2, W = 3;
+    int D = -1;
+    if (ndim == 5) {
+      D = 2;
+      H = 3;
+      W = 4;
+    }
     switch (ndim) {
       case 3:
         tz = mkldnn::memory::dims{

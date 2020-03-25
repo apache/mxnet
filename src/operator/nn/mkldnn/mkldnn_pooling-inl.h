@@ -106,19 +106,25 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param) {
 }
 
 inline bool SupportMKLDNNPooling(const PoolingParam &param,
-                                 const mxnet::TShape &dshape) {
-  bool ret = SupportMKLDNNPooling(param);
-  if (!ret)
+                                 const NDArray &input) {
+  const auto dshape = input.shape();
+  const auto ndim = dshape.ndim();
+  const auto dtype = input.dtype();
+
+  if (!(SupportStorageMKLDNN(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
+       (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
+    return false;
+
+  if (!SupportMKLDNNPooling(param))
     return false;
 
   if (param.pooling_convention == pool_enum::kValid) {
     return true;
   } else {
     if (param.pool_type == pool_enum::kAvgPooling) {
-      CHECK(dshape.ndim() == 3 || dshape.ndim() == 4 || dshape.ndim() == 5);
       // mkldnn works differently when padding is asymmetric, so let's skip this case.
       bool is_symmetric = true;
-      switch (dshape.ndim()) {
+      switch (ndim) {
         case 5:
           is_symmetric = is_symmetric && (param.pad[2] == GetPaddingSizeFull(dshape[4],
                                 param.pad[2], param.pad[2], param.kernel[2], param.stride[2]));
