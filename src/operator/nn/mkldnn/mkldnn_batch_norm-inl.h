@@ -332,17 +332,20 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     const NDArray &beta     = in_data[batchnorm::kBeta];
     DType *weight_buf = reinterpret_cast<DType *>(bwd.GetWeight().get_data_handle());
     nnvm::dim_t channels_ = data.shape()[1];
-    for (int i = 0; i < channels_; i++) {
-      if (!param.fix_gamma)
-        weight_buf[i] = (gamma.data().dptr<DType>())[i];   // weight
-      else
+    DType *weight_ptr = reinterpret_cast<DType *>(gamma.data().dptr<DType>());
+    DType* bias_ptr = reinterpret_cast<DType *>(beta.data().dptr<DType>());
+    size_t copy_size = sizeof(DType) * channels_;
+    if (!param.fix_gamma) {
+      memcpy(weight_buf, weight_ptr, copy_size);
+      memcpy(&weight_buf[channels_], bias_ptr, copy_size);
+    } else {
+      for (int i = 0; i < channels_; i++) {
         weight_buf[i] = static_cast<DType>(1.0f);
+      }
+      for (int i = 0; i < channels_; i++) {
+        weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
+      }
     }
-
-    for (int i = 0; i < channels_; i++) {
-      weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
-    }
-
     mkldnn_args_map_t net_args;
     net_args[MKLDNN_ARG_SRC] = *data_mem;
     net_args[MKLDNN_ARG_DIFF_SRC] = *gradi_mem;
@@ -381,15 +384,19 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
 
     // copy data from gradw_mem to in_grad[1] and in_grad[2]
     DType *gw_buf = reinterpret_cast<DType *>(bwd.GetGradw().get_data_handle());
-    for (int i = 0; i < channels_; i++) {
-      if (!param.fix_gamma)
-        (in_grad[1].data().dptr<DType>())[i] = gw_buf[i];
-      else
-        (in_grad[1].data().dptr<DType>())[i] = 0.0f;
-    }
+    DType *w_grad_1 = reinterpret_cast<DType *>(in_grad[1].data().dptr<DType>());
+    DType *w_grad_2 = reinterpret_cast<DType *>(in_grad[2].data().dptr<DType>());
 
-    for (int i = 0; i < channels_; i++) {
-      (in_grad[2].data().dptr<DType>())[i] = gw_buf[i + channels_];
+    if (!param.fix_gamma) {
+      memcpy(w_grad_1, gw_buf, copy_size);
+      memcpy(w_grad_2, &gw_buf[channels_], copy_size);
+    } else {
+      for (int i = 0; i < channels_; i++) {
+        (in_grad[1].data().dptr<DType>())[i] = 0.0f;
+      }
+      for (int i = 0; i < channels_; i++) {
+        (in_grad[2].data().dptr<DType>())[i] = gw_buf[i + channels_];
+      }
     }
   } else {
     LOG(FATAL) << "MKLDNN batch normalization backward: should not reach here ...";
