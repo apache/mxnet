@@ -80,11 +80,11 @@ def test_pushpull():
             check_diff_to_scalar(big_arr, num)
 
     check_default_keys(nrepeat=3)
-    logger.debug('worker ' + str(my_rank) + ' is done')
+    logger.info('worker ' + str(my_rank) + ' is done')
 
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
-        logger.debug("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
+        logger.info("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
         ctx = get_current_context(device=device)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
@@ -92,23 +92,23 @@ def test_broadcast():
             tmpNDarray = [mx.nd.ones(cur_shape, ctx) * i]
             kv.broadcast(cur_keys[i], tmpNDarray, out=val[i])
             check_diff_to_scalar(val[i], expected, my_rank)
-        logger.debug("check_broadcast passed: ", val)
-    #check_broadcast(kv, init_test_keys, shape) #Byteps doesn't support pure CPU training
-    #check_broadcast(kv, init_test_keys_big, big_shape) #Byteps doesn't support pure CPU training
+        logger.info("check_broadcast passed: ", val)
+    # check_broadcast(kv, init_test_keys, shape) #Byteps doesn't support pure CPU training
+    # check_broadcast(kv, init_test_keys_big, big_shape) #Byteps doesn't support pure CPU training
     check_broadcast(kv, init_test_keys_device, shape, device=True)
     check_broadcast(kv, init_test_keys_device_big, big_shape, device=True)
-    logger.debug('worker ' + str(my_rank) + ' is initialized')
+    logger.info('worker ' + str(my_rank) + ' is initialized')
 
 def test_type():
     assert kv.type == args.name
 
 if __name__ == "__main__":
-    logger.debug("Type Test Begin")
+    logger.info("Type Test Begin")
     test_type()
-    logger.debug("Type Test Passed")
-    logger.debug("Broadcast Test Begin")
+    logger.info("Type Test Passed")
+    logger.info("Broadcast Test Begin")
     test_broadcast()
-    logger.debug("Broadcast Test Passed")
-    logger.debug("PushPull Test Begin")
+    logger.info("Broadcast Test Passed")
+    logger.info("PushPull Test Begin")
     test_pushpull()
-    logger.debug("PushPull Test Passed")
+    logger.info("PushPull Test Passed")
