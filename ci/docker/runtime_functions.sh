@@ -767,6 +767,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
         -DUSE_CPP_PACKAGE=ON \
+		-DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
     ninja
