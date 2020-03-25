@@ -10818,7 +10818,7 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
         values = kwargs.get("constant_values", 0)
         if isinstance(values, tuple):
             raise TypeError("unsupported constant_values type: {'tuple'}.")
-        return _mx_nd_np.pad(x, pad_width, mode='constant', constant_value=values)
+        return _mx_nd_np.pad(x, pad_width, mode='constant', constant_values=values)
     elif mode == "symmetric":
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:
@@ -10841,7 +10841,7 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
         if values is not None:
             raise ValueError("unsupported stat_length '{}'".format(values))
         return _mx_nd_np.pad(x, pad_width, mode='minimum')
-    return _mx_nd_np.pad(x, pad_width, mode='constant', constant_value=0)
+    return _mx_nd_np.pad(x, pad_width, mode='constant', constant_values=0)
 
 
 # pylint: disable=redefined-outer-name
