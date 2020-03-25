@@ -8681,7 +8681,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         values = kwargs.get("constant_values", 0)
         if isinstance(values, tuple):
             raise TypeError("unsupported constant_values type: {'tuple'}.")
-        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+        return _api_internal.pad(x, pad_width, mode='constant', constant_value=values)
     elif mode == "symmetric":
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:

@@ -144,7 +144,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("fmin", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("fmod", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("may_share_memory", pool['2x3'][:0], pool['2x3'][:1])
-    OpArgMngr.add_workload("pad", pool['2x2'], pad_width=((1,2),(1,2)), mode=1)
+    OpArgMngr.add_workload("pad", pool['2x2'], pad_width=((1,2),(1,2)), mode="constant")
     OpArgMngr.add_workload("diag", pool['2x2'], k=1)
     OpArgMngr.add_workload("diagonal", pool['2x2x2'], offset=-1, axis1=0, axis2=1)
     OpArgMngr.add_workload("diag_indices_from", pool['2x2'])
