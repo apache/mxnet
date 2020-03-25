@@ -34,17 +34,17 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_mkldnn_gpu(),
-    custom_steps.compile_unix_mkldnn_nocudnn_gpu(),
+    // custom_steps.compile_unix_mkldnn_gpu(),
+    // custom_steps.compile_unix_mkldnn_nocudnn_gpu(),
     custom_steps.compile_unix_full_gpu(),
-    custom_steps.compile_unix_full_gpu_make(),
-    custom_steps.compile_unix_cmake_gpu(),
-    custom_steps.compile_unix_tensorrt_gpu(),
-    custom_steps.compile_unix_int64_gpu(),
-    custom_steps.compile_unix_full_gpu_no_tvm_op(),
-    custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
-    custom_steps.compile_unix_cmake_gpu_no_rtc(),
-    custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
+    // custom_steps.compile_unix_full_gpu_make(),
+    // custom_steps.compile_unix_cmake_gpu(),
+    // custom_steps.compile_unix_tensorrt_gpu(),
+    // custom_steps.compile_unix_int64_gpu(),
+    // custom_steps.compile_unix_full_gpu_no_tvm_op(),
+    // custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
+    // custom_steps.compile_unix_cmake_gpu_no_rtc(),
+    // custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
   ])
 
   utils.parallel_stage('Tests', [
