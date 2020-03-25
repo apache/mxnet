@@ -122,6 +122,18 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
                   "the extended part of the array is created by subtracting the "
                   "reflected values from two times the edge value.");
   }
+  // Added SetAttrDict function here
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream pad_width_s, mode_s, constant_value_s, reflect_type_s;
+    pad_width_s << pad_width;
+    mode_s << mode;
+    constant_value_s << constant_value;
+    reflect_type_s << reflect_type;
+    (*dict)["pad_width"] = pad_width_s.str();
+    (*dict)["mode"] = mode_s.str();
+    (*dict)["constant_value"] = constant_value_s.str();
+    (*dict)["reflect_type"] = reflect_type_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,

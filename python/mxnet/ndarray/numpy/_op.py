@@ -8686,25 +8686,25 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:
             raise ValueError("unsupported reflect_type '{}'".format(values))
-        return _npi.pad(x, pad_width, mode='symmetric', reflect_type="even")
+        return _api_internal.pad(x, pad_width, mode='symmetric', reflect_type="even")
     elif mode == "edge":
-        return _npi.pad(x, pad_width, mode='edge')
+        return _api_internal.pad(x, pad_width, mode='edge')
     elif mode == "reflect":
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:
             raise ValueError("unsupported reflect_type '{}'".format(values))
-        return _npi.pad(x, pad_width, mode='reflect', reflect_type="even")
+        return _api_internal.pad(x, pad_width, mode='reflect', reflect_type="even")
     elif mode == "maximum":
         values = kwargs.get("stat_length", None)
         if values is not None:
             raise ValueError("unsupported stat_length '{}'".format(values))
-        return _npi.pad(x, pad_width, mode='maximum')
+        return _api_internal.pad(x, pad_width, mode='maximum')
     elif mode == "minimum":
         values = kwargs.get("stat_length", None)
         if values is not None:
             raise ValueError("unsupported stat_length '{}'".format(values))
-        return _npi.pad(x, pad_width, mode='minimum')
-    return _npi.pad(x, pad_width, mode='constant', constant_value=0)
+        return _api_internal.pad(x, pad_width, mode='minimum')
+    return _api_internal.pad(x, pad_width, mode='constant', constant_value=0)
 
 
 @set_module('mxnet.ndarray.numpy')
