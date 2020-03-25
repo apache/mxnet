@@ -180,9 +180,10 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(float) * 2);
     float* weight_ptr = gamma.data().dptr<float>();
     float* bias_ptr = beta.data().dptr<float>();
+    size_t copy_size = sizeof(weight_buf[0]) * channels_;
     if (!param.fix_gamma) {
-      memcpy(weight_buf, weight_ptr, sizeof(weight_buf[0]) * channels_);
-      memcpy(&weight_buf[channels_], bias_ptr, sizeof(weight_buf[0]) * channels_);
+      memcpy(weight_buf, weight_ptr, copy_size);
+      memcpy(&weight_buf[channels_], bias_ptr, copy_size);
     } else if (IsBNWriting(req[batchnorm::kGamma])) {
       for (int i = 0; i < channels_; i++) {
         weight_buf[i] = 1.0f;
@@ -342,9 +343,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       for (int i = 0; i < channels_; i++) {
         weight_buf[i] = static_cast<DType>(1.0f);
       }
-      for (int i = 0; i < channels_; i++) {
-        weight_buf[channels_ + i] = (beta.data().dptr<DType>())[i];  // bias
-      }
+      memcpy(&weight_buf[channels_], bias_ptr, copy_size);
     }
     mkldnn_args_map_t net_args;
     net_args[MKLDNN_ARG_SRC] = *data_mem;
@@ -394,9 +393,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       for (int i = 0; i < channels_; i++) {
         (in_grad[1].data().dptr<DType>())[i] = 0.0f;
       }
-      for (int i = 0; i < channels_; i++) {
-        (in_grad[2].data().dptr<DType>())[i] = gw_buf[i + channels_];
-      }
+      memcpy(w_grad_2, &gw_buf[channels_], copy_size);
     }
   } else {
     LOG(FATAL) << "MKLDNN batch normalization backward: should not reach here ...";
