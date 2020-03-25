@@ -126,6 +126,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("diag", pool['2x2'], k=1)
     OpArgMngr.add_workload("diagonal", pool['2x2x2'], offset=-1, axis1=0, axis2=1)
     OpArgMngr.add_workload("diag_indices_from", pool['2x2'])
+    OpArgMngr.add_workload("unpackbits", pool['2x2'].astype('uint8'))
     OpArgMngr.add_workload("bincount", dnp.arange(3, dtype=int), pool['3'], minlength=4)
     OpArgMngr.add_workload("percentile", pool['2x2x2'], 80, axis=0, out=pool['2x2'],\
                            interpolation='midpoint')

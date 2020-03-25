@@ -7422,6 +7422,55 @@ def test_np_diagflat():
 
 @with_seed()
 @use_np
+def test_np_unpackbits():
+    def _test_unpackbits_exception_axis(a, axis):
+        output = np.unpackbits(a, axis=axis).asnumpy()
+
+    def _test_unpackbits_exception_bitorder(a, bitorder):
+        output = np.unpackbits(a, bitorder=bitorder).asnumpy()
+
+    class TestUnpackbits(HybridBlock):
+        def __init__(self, axis=None, count=None, bitorder="big"):
+            super(TestUnpackbits,self).__init__()
+            self._axis = axis
+            self._count = count
+            self._bitorder = bitorder
+        def hybrid_forward(self,F,a):
+            return F.np.unpackbits(a, self._axis, self._count, self._bitorder)
+
+    shapes = [(), (5,), (1, 5), (3, 3), (3, 4, 5), (3, 0, 5), (0, 3, 5, 6)]
+    bitorder_list = ["big", "little"]
+    hybridize_list = [False, True]
+    np_version = _np.version.version
+    for hybridize, shape, bitorder in itertools.product(hybridize_list, shapes, bitorder_list):
+        ndim = len(shape)
+        axis_list = [i for i in range(-ndim, ndim)]
+        axis_list.append(None)
+        mx_data = np.random.randint(-256, 256, shape).astype(np.uint8)
+        np_data = mx_data.asnumpy()
+        for axis in axis_list:
+            if StrictVersion(np_version) >= StrictVersion('1.17.0'):
+                test_np_unpackbits = TestUnpackbits(axis=axis, bitorder=bitorder)
+                np_out = _np.unpackbits(np_data, axis=axis, bitorder=bitorder)
+                mx_out_imperative = np.unpackbits(mx_data, axis=axis, bitorder=bitorder)
+            else:
+                test_np_unpackbits = TestUnpackbits(axis=axis)
+                np_out = _np.unpackbits(np_data, axis=axis)
+                mx_out_imperative = np.unpackbits(mx_data, axis=axis)
+            assert_almost_equal(np_out, mx_out_imperative.asnumpy(), rtol=1e-3, atol=1e-5)
+
+            if hybridize:
+                test_np_unpackbits.hybridize()
+            mx_out = test_np_unpackbits(mx_data)
+            assert_almost_equal(np_out, mx_out.asnumpy(), rtol=1e-3, atol=1e-5)
+
+    a = np.array(100, dtype=np.uint8)
+    assertRaises(ValueError, _test_unpackbits_exception_axis, a, 1)
+    assertRaises(ValueError, _test_unpackbits_exception_bitorder, a, "right")
+
+
+@with_seed()
+@use_np
 def test_np_pad():
     class TestPad(HybridBlock):
         def __init__(self, pad_width, mode='constant'):

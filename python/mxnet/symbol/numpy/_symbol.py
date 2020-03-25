@@ -54,7 +54,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'rollaxis', 'pad', 'cumsum', 'diag', 'diagonal']
+           'where', 'bincount', 'unpackbits', 'rollaxis', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -7074,6 +7074,56 @@ def bincount(x, weights=None, minlength=0):
     if weights is None:
         return _npi.bincount(x, minlength=minlength, has_weights=False)
     return _npi.bincount(x, weights=weights, minlength=minlength, has_weights=True)
+
+
+@set_module('mxnet.symbol.numpy')
+def unpackbits(a, axis=None, count=None, bitorder='big'):
+    """
+    unpackbits(a, axis=None, count=None, bitorder='big')
+
+    Unpacks elements of a uint8 array into a binary-valued output array.
+
+    Each element of `a` represents a bit-field that should be unpacked
+    into a binary-valued output array. The shape of the output array is
+    either 1-D (if `axis` is ``None``) or the same shape as the input
+    array with unpacking done along the axis specified.
+
+    Parameters
+    ----------
+    a : _Symbol, uint8 type
+       Input array.
+    axis : int, optional
+        The dimension over which bit-unpacking is done.
+        ``None`` implies unpacking the flattened array.
+    count : int or None, optional (not supported at this moment)
+        The number of elements to unpack along `axis`, provided as a way
+        of undoing the effect of packing a size that is not a multiple
+        of eight. A non-negative number means to only unpack `count`
+        bits. A negative number means to trim off that many bits from
+        the end. ``None`` means to unpack the entire array (the
+        default). Counts larger than the available number of bits will
+        add zero padding to the output. Negative counts must not
+        exceed the available number of bits.
+
+    bitorder : {'big', 'little'}, optional
+        The order of the returned bits. 'big' will mimic bin(val),
+        ``3 = 0b00000011 => [0, 0, 0, 0, 0, 0, 1, 1]``, 'little' will reverse
+        the order to ``[1, 1, 0, 0, 0, 0, 0, 0]``.
+        Defaults to 'big'.
+
+    Returns
+    -------
+    unpacked : _Symbol, uint8 type
+       The elements are binary-valued (0 or 1).
+
+    See Also
+    --------
+    packbits : Packs the elements of a binary-valued array into bits in
+               a uint8 array.
+    """
+    if count is not None:
+        raise NotImplementedError("Parameter `count` is not supported at this moment")
+    return _npi.unpackbits(a, axis=axis, bitorder=bitorder)
 
 
 @set_module('mxnet.symbol.numpy')

@@ -186,6 +186,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'where',
     'full_like',
     'bincount',
+    'unpackbits',
     'empty_like',
     'nan_to_num',
     'isnan',
