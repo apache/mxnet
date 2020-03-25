@@ -77,12 +77,16 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     subgraph_prop("error"),
     call_supported_ops_(nullptr),
     supported_ops_(nullptr),
+    call_create_selector_(nullptr),
+    create_selector_(nullptr),
     call_review_subgraph_(nullptr),
     review_subgraph_(nullptr),
     subgraph_op_name("error") {}
   CustomSubgraphProperty(std::string subgraph_prop_name,
                          partCallSupportedOps_t call_supported_ops,
                          supportedOps_t supported_ops,
+                         partCallCreateSelector_t call_create_selector,
+                         createSelector_t create_selector,
                          partCallReviewSubgraph_t call_review_subgraph,
                          reviewSubgraph_t review_subgraph,
                          opCallFree_t call_free,
@@ -90,6 +94,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       subgraph_prop(subgraph_prop_name),
       call_supported_ops_(call_supported_ops),
       supported_ops_(supported_ops),
+      call_create_selector_(call_create_selector),
+      create_selector_(create_selector),
       call_review_subgraph_(call_review_subgraph),
       review_subgraph_(review_subgraph),
       call_free_(call_free),
@@ -216,15 +222,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
     }
 
-    CHECK(supported_ops_ != nullptr)
-      << "supported_ops_ is null for " << subgraph_prop << std::endl;
-    CHECK(call_supported_ops_ != nullptr)
-      << "call_supported_ops_ is null for " << subgraph_prop << std::endl;
-
-    std::string subgraph_json = nnvm::pass::SaveJSON(graph);
-    std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -1);
-    const char* json = subgraph_json.c_str();
-    int *ids = supported_node_IDs.data();
+    std::string graph_json = nnvm::pass::SaveJSON(graph);
+    const char* json = graph_json.c_str();
 
     // clear options from previous call
     opt_keys_.clear();
@@ -240,17 +239,34 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       opt_vals_.push_back(kv.second.c_str());
     }
 
-    CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,
-                            opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
-      << "Error calling supported_ops for '" << subgraph_prop << "'";
+    if(supported_ops_ && call_supported_ops_) {
+      std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -1);
+      int *ids = supported_node_IDs.data();
 
-    const auto& idx = g.indexed_graph();
-    // loop and add node names for each supported node ID
-    for (unsigned i = 0; i < supported_node_IDs.size(); i++) {
-      if (supported_node_IDs[i] != -1) {
-        supported_nodes[idx[i].source->attrs.name] = supported_node_IDs[i];
+      CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,
+                                opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
+        << "Error calling supported_ops for '" << subgraph_prop << "'";
+
+      const auto& idx = g.indexed_graph();
+      // loop and add node names for each supported node ID
+      for (unsigned i = 0; i < supported_node_IDs.size(); i++) {
+        if (supported_node_IDs[i] != -1) {
+          supported_nodes[idx[i].source->attrs.name] = supported_node_IDs[i];
+        }
       }
+    } else if(call_create_selector_ && create_selector_) {
+      void* sel_inst = nullptr;
+      CHECK(call_create_selector_(create_selector_, json, &sel_inst,
+                                opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
+        << "Error calling supported_ops for '" << subgraph_prop << "'";
+      
+    } else {
+      CHECK(supported_ops_ != nullptr)
+        << "supported_ops_ is null for " << subgraph_prop << std::endl;
+      CHECK(call_supported_ops_ != nullptr)
+        << "call_supported_ops_ is null for " << subgraph_prop << std::endl;
     }
+    
   }
   // override CreateSubgraphNode
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
@@ -405,6 +421,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::string subgraph_prop;
   partCallSupportedOps_t call_supported_ops_;
   supportedOps_t supported_ops_;
+  partCallCreateSelector_t call_create_selector_;
+  createSelector_t create_selector_;
   partCallReviewSubgraph_t call_review_subgraph_;
   reviewSubgraph_t review_subgraph_;
   opCallFree_t call_free_;

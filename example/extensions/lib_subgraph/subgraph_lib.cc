@@ -259,6 +259,48 @@ REGISTER_PARTITIONER(myProp)
 .setSupportedOps("strategy1", mySupportedOps)
 .setReviewSubgraph("strategy1", myReviewSubgraph);
 
+class MySelector : public CustomOpSelector {
+ public:
+  MySelector(std::string& json,
+             std::unordered_map<std::string, std::string>& attrs) :
+    graph_json(json), attrs_(attrs) {
+    for (auto kv : attrs) {
+      std::cout << "selector attributes: " << kv.first
+                << " ==> " << kv.second << std::endl;
+    }
+  }
+  virtual MXReturnValue Select(int nodeID) {
+    return MX_FAIL;
+  }
+  virtual MXReturnValue SelectInput(int nodeID, int input_nodeID) {
+    return MX_FAIL;
+  }
+  virtual MXReturnValue SelectOutput(int nodeID, int output_nodeID) {
+    return MX_FAIL;
+  }
+  virtual MXReturnValue Filter(std::vector<int>& candidates,
+                               std::vector<int>& keep) {
+    keep.insert(keep.end(), candidates.begin(), candidates.end());
+    return MX_SUCCESS;
+  }
+  virtual void Reset() {}
+ private:
+  std::string graph_json;
+  std::unordered_map<std::string, std::string> attrs_;
+};
+
+MXReturnValue createSelector(std::string& json, CustomOpSelector** sel_inst,
+                             std::unordered_map<std::string, std::string>& attrs) {
+  *sel_inst = new MySelector(json, attrs);
+  std::cout << "Info: selector created" << std::endl;
+  return MX_SUCCESS;
+}
+
+REGISTER_PARTITIONER(mySelect)
+.addStrategy("strategy1", "_custom_subgraph_op")
+.setCreateSelector("strategy1", createSelector)
+.setReviewSubgraph("strategy1", myReviewSubgraph);
+
 MXReturnValue initialize(int version) {
   if (version >= 10400) {
     std::cout << "MXNet version " << version << " supported" << std::endl;

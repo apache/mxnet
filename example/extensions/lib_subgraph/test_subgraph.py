@@ -37,9 +37,6 @@ elif (os.name=='nt'):
     path = os.path.abspath('libsubgraph_lib.dll')
     mx.library.load(path)
 
-###############################################
-# Test with subgraph not consuming params
-###############################################
 # example model, ops to be partitioned do not have args (use outputs from other ops as inputs)
 a = mx.sym.var('a')
 b = mx.sym.var('b')
@@ -47,98 +44,104 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-#execute in MXNet
-print('-------------------------------')
-print('Testing regular MXNet execution')
-exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out = exe.forward()
-print(out)
-
-# with propogating shapes/types
-print('-------------------------------')
-print('Testing partitioning with shapes/types')
-arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-mysym2 = sym.optimize_for("myProp",arg_array)
-print(mysym2.tojson())
-exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out2 = exe2.forward()
-print(out2)
-
-# with propogating shapes/types, rejecting subgraph
-print('-------------------------------')
-print('Testing partitioning with shapes/types - rejecting subgraph')
-arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-mysym2 = sym.optimize_for("myProp", arg_array, reject=True)
-exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out2 = exe2.forward()
-print(out2)
-
-# without propogating shapes/types
-print('-------------------------------')
-print('Testing partitioning without shapes/types')
-mysym3 = sym.optimize_for("myProp", myOpt='yello')
-exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out3 = exe3.forward()
-print(out3)
-
-# Gluon Hybridize partitioning with shapes/types
-print('-------------------------------')
-print('Testing Gluon Hybridize partitioning with shapes/types')
-inputs = [a,b]
-sym_block = nn.SymbolBlock(sym, inputs)
-sym_block.initialize()
-sym_block.hybridize(backend='myProp')
-out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
-print(out4)
-
-# Gluon Hybridize partitioning with shapes/types without inference
-print('-------------------------------')
-print('Testing Gluon Hybridize partitioning with shapes/types without inference')
-inputs = [a,b]
-sym_block2 = nn.SymbolBlock(sym, inputs)
-sym_block2.initialize()
-sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend='myProp')
-sym_block2.export('partitioned')
-
-
-###############################################
-# Test with subgraph directly consuming params
-###############################################
 # example model, ops to be partitioned have args
 d2 = mx.sym.exp(a)
 sym2 = mx.sym.log(d2)
 
-#execute in MXNet
-print('-------------------------------')
-print('Testing regular MXNet execution')
-exe5 = sym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
-out5 = exe5.forward()
-print(out5)
+def test(backend):
+    ###############################################
+    # Test with subgraph not consuming params
+    ###############################################
+    #execute in MXNet
+    print('-------------------------------')
+    print('Testing regular MXNet execution')
+    exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out = exe.forward()
+    print(out)
 
-# with propogating shapes/types
-print('-------------------------------')
-print('Testing partitioning with shapes/types')
-arg_array = [mx.nd.ones((3,2),dtype='float32')]
-mysym6 = sym2.optimize_for("myProp", arg_array, reqArgs=True)
-print(mysym6.tojson())
-exe6 = mysym6.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
-out6 = exe6.forward()
-print(out6)
+    # with propogating shapes/types
+    print('-------------------------------')
+    print('Testing partitioning with shapes/types')
+    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
+    mysym2 = sym.optimize_for(backend,arg_array)
+    print(mysym2.tojson())
+    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out2 = exe2.forward()
+    print(out2)
 
-# without propogating shapes/types
-print('-------------------------------')
-print('Testing partitioning without shapes/types')
-mysym7 = sym2.optimize_for("myProp", reqArgs=True)
-exe7 = mysym7.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
-out7 = exe7.forward()
-print(out7)
+    # with propogating shapes/types, rejecting subgraph
+    print('-------------------------------')
+    print('Testing partitioning with shapes/types - rejecting subgraph')
+    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
+    mysym2 = sym.optimize_for(backend, arg_array, reject=True)
+    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out2 = exe2.forward()
+    print(out2)
 
-# Gluon Hybridize partitioning with shapes/types
-print('-------------------------------')
-print('Testing Gluon Hybridize partitioning with shapes/types')
-inputs = [a]
-sym2_block = nn.SymbolBlock(sym2, inputs)
-sym2_block.initialize()
-sym2_block.hybridize(backend='myProp')
-out8 = sym2_block(mx.nd.ones((3,2)))
-print(out8)
+    # without propogating shapes/types
+    print('-------------------------------')
+    print('Testing partitioning without shapes/types')
+    mysym3 = sym.optimize_for(backend, myOpt='yello')
+    exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out3 = exe3.forward()
+    print(out3)
+
+    # Gluon Hybridize partitioning with shapes/types
+    print('-------------------------------')
+    print('Testing Gluon Hybridize partitioning with shapes/types')
+    inputs = [a,b]
+    sym_block = nn.SymbolBlock(sym, inputs)
+    sym_block.initialize()
+    sym_block.hybridize(backend=backend)
+    out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+    print(out4)
+
+    # Gluon Hybridize partitioning with shapes/types without inference
+    print('-------------------------------')
+    print('Testing Gluon Hybridize partitioning with shapes/types without inference')
+    inputs = [a,b]
+    sym_block2 = nn.SymbolBlock(sym, inputs)
+    sym_block2.initialize()
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend=backend)
+    sym_block2.export('partitioned')
+
+    ###############################################
+    # Test with subgraph directly consuming params
+    ###############################################
+    #execute in MXNet
+    print('-------------------------------')
+    print('Testing regular MXNet execution')
+    exe5 = sym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+    out5 = exe5.forward()
+    print(out5)
+
+    # with propogating shapes/types
+    print('-------------------------------')
+    print('Testing partitioning with shapes/types')
+    arg_array = [mx.nd.ones((3,2),dtype='float32')]
+    mysym6 = sym2.optimize_for(backend, arg_array, reqArgs=True)
+    print(mysym6.tojson())
+    exe6 = mysym6.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+    out6 = exe6.forward()
+    print(out6)
+
+    # without propogating shapes/types
+    print('-------------------------------')
+    print('Testing partitioning without shapes/types')
+    mysym7 = sym2.optimize_for(backend, reqArgs=True)
+    exe7 = mysym7.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+    out7 = exe7.forward()
+    print(out7)
+
+    # Gluon Hybridize partitioning with shapes/types
+    print('-------------------------------')
+    print('Testing Gluon Hybridize partitioning with shapes/types')
+    inputs = [a]
+    sym2_block = nn.SymbolBlock(sym2, inputs)
+    sym2_block.initialize()
+    sym2_block.hybridize(backend=backend)
+    out8 = sym2_block(mx.nd.ones((3,2)))
+    print(out8)
+
+test("myProp")
+test("mySelect")

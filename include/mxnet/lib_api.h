@@ -589,14 +589,14 @@ struct JsonVal {
 
 /*! \brief functions used for parsing JSON */
 struct JsonParser {
-  JsonVal parse_to_json(std::string json) {
+  JsonVal parse_to_json(const std::string& json) {
     unsigned int idx = 0;
     return parse(json, &idx);
   }
-  void print_json_val(JsonVal val) {
+  void print_json_val(const JsonVal& val) {
     std::cout << json_val_string(val) << std::endl;
   }
-  // debug function to convert a JSON object to a string
+  // debug function to dump data structure to string
   std::string json_val_string(const JsonVal &val) {
     std::string ret;
     switch (val.type) {
@@ -625,7 +625,7 @@ struct JsonParser {
     return ret;
   }
   // parse a string JSON object
-  JsonVal parse_string(std::string json, unsigned int* idx) {
+  JsonVal parse_string(const std::string& json, unsigned int* idx) {
     JsonVal ret(STR);
     while (*idx < json.size()) {
       if (json[*idx] == '"') {
@@ -640,7 +640,7 @@ struct JsonParser {
     return JsonVal();
   }
   // parse a number JSON object
-  JsonVal parse_num(std::string json, unsigned int* idx) {
+  JsonVal parse_num(const std::string& json, unsigned int* idx) {
     JsonVal ret(NUM);
     while (*idx < json.size()) {
       if (json[*idx] >= '0' && json[*idx] <= '9') {
@@ -654,7 +654,7 @@ struct JsonParser {
     return ret;
   }
   // parse a list of JSON objects
-  JsonVal parse_list(std::string json, unsigned int* idx) {
+  JsonVal parse_list(const std::string& json, unsigned int* idx) {
     JsonVal ret(LIST);
     while (*idx < json.size()) {
       if (json[*idx] == ']') {
@@ -670,7 +670,7 @@ struct JsonParser {
     return JsonVal();
   }
   // parse a map of JSON objects
-  JsonVal parse_map(std::string json, unsigned int* idx) {
+  JsonVal parse_map(const std::string& json, unsigned int* idx) {
     JsonVal ret(MAP), key;
     while (*idx < json.size()) {
       if (json[*idx] == '}') {
@@ -690,7 +690,7 @@ struct JsonParser {
     return JsonVal();
   }
   // generic parse function
-  JsonVal parse(std::string json, unsigned int *idx) {
+  JsonVal parse(const std::string& json, unsigned int *idx) {
     JsonVal ret;
     while (*idx < json.size()) {
       if (json[*idx] == '"') {
@@ -710,6 +710,42 @@ struct JsonParser {
     }
     return ret;
   }
+  // convert JSON object back to JSON-compatible string
+  std::string dump(const JsonVal &val) {
+    std::string ret;
+    switch (val.type) {
+    case ERR:
+      ret = "json(Error)";
+      break;
+    case STR:
+      ret = "\"" + val.str + "\"";
+      break;
+    case NUM:
+      ret = val.str;
+      break;
+    case LIST:
+      ret = "[";
+      for (unsigned i=0; i<val.list.size(); i++) {
+        auto &item = val.list[i];
+        ret += dump(item);
+        if (i < val.list.size()-1)
+          ret += ",";
+      }
+      ret += "]";
+      break;
+    case MAP:
+      ret = "{";
+      unsigned cnt=0;
+      for (auto &item : val.map) {
+        ret += dump(item.first) + " : " + dump(item.second);
+        if(cnt++ < val.map.size()-1)
+          ret += ",";
+      }
+      ret += "}";
+      break;
+    }
+    return ret;
+  }
 };
 
 /* \brief An abstract class for library authors creating custom
@@ -720,8 +756,8 @@ class CustomOpSelector {
   virtual MXReturnValue Select(int nodeID) = 0;
   virtual MXReturnValue SelectInput(int nodeID, int input_nodeID) = 0;
   virtual MXReturnValue SelectOutput(int nodeID, int output_nodeID) = 0;
-  virtual MXReturnValue Filter(std::vector<int> candidates,
-                               std::vector<int> keep) {
+  virtual MXReturnValue Filter(std::vector<int>& candidates,
+                               std::vector<int>& keep) {
     keep.insert(keep.end(), candidates.begin(), candidates.end());
     return MX_SUCCESS;
   }
@@ -893,8 +929,8 @@ class CustomPass {
 /*! \brief Custom Subgraph Create function template */
 typedef MXReturnValue (*supportedOps_t)(std::string, std::vector<int>&,
                                         std::unordered_map<std::string, std::string>&);
-typedef MXReturnValue (*createSelector_t)(std::string, CustomOpSelector**,
-                                          std::unordered_map<std::string, std::string>&);
+typedef MXReturnValue (*createSelector_t)(std::string& json, CustomOpSelector** sel_inst,
+                                          std::unordered_map<std::string, std::string>& attrs);
 typedef MXReturnValue (*reviewSubgraph_t)(std::string, int, bool*,
                                           std::unordered_map<std::string, std::string>&,
                                           std::unordered_map<std::string, std::string>&,

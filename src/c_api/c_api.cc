@@ -373,6 +373,9 @@ int MXLoadLib(const char *path, int verbose) {
   partCallSupportedOps_t callSupportedOps =
     get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
 
+  partCallCreateSelector_t callCreateSelector =
+    get_func<partCallCreateSelector_t>(lib, const_cast<char*>(MXLIB_PARTCALLCREATESELECTOR_STR));
+
   partCallReviewSubgraph_t callReviewSubgraph =
     get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
 
@@ -988,8 +991,9 @@ int MXLoadLib(const char *path, int verbose) {
                              << " subgraphOp: '" << op_name_str << "'";
       mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__
         (name_str, std::make_shared<mxnet::op::CustomSubgraphProperty>
-          (strategy_str, callSupportedOps, supportedOps_fp,
-           callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
+         (strategy_str, callSupportedOps, supportedOps_fp, callCreateSelector,
+          createSelector_fp, callReviewSubgraph, reviewSubgraph_fp, callFree,
+          op_name_str));
     }
   }
 
