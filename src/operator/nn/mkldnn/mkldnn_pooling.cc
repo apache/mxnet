@@ -30,9 +30,8 @@
 namespace mxnet {
 namespace op {
 
-// This can be replaced by mkldnn::memory::desc::data_type() after 1.2 release
 static inline mkldnn::memory::data_type get_data_type(const mkldnn::memory::desc &md) {
-  return static_cast<mkldnn::memory::data_type>(md.data.data_type);
+  return static_cast<mkldnn::memory::data_type>(md.data_type());
 }
 
 void MKLDNNPoolingFwd::Init(const mxnet::NDArray &input, const mxnet::NDArray &output,
