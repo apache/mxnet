@@ -58,9 +58,6 @@ RUN /work/ubuntu_caffe.sh
 COPY install/ubuntu_onnx.sh /work/
 RUN /work/ubuntu_onnx.sh
 
-COPY install/ubuntu_byteps.sh /work/
-RUN /work/ubuntu_byteps.sh
-
 COPY install/ubuntu_docs.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_docs.sh
