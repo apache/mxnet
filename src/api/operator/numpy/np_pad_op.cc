@@ -46,7 +46,7 @@ MXNET_REGISTER_API("_npi.pad")
   param.pad_width = Tuple<Tuple<int>>(temp.begin(), temp.end());
   param.mode = args[2].operator int();
   if (args[3].type_code() != kNull) {
-    param.constant_value = args[3].operator double();
+    param.constant_values = args[3].operator double();
   }
   if (args[4].type_code() != kNull) {
     param.reflect_type = args[3].operator std::string();
