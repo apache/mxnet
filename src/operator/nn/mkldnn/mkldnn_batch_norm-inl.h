@@ -180,7 +180,7 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     CHECK(weight_mem.get_desc().get_size() == channels_ * sizeof(float) * 2);
     float* weight_ptr = gamma.data().dptr<float>();
     float* bias_ptr = beta.data().dptr<float>();
-    size_t copy_size = sizeof(weight_buf[0]) * channels_;
+    const size_t copy_size = sizeof(weight_buf[0]) * channels_;
     if (!param.fix_gamma) {
       memcpy(weight_buf, weight_ptr, copy_size);
       memcpy(&weight_buf[channels_], bias_ptr, copy_size);
@@ -333,9 +333,9 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     const NDArray &beta     = in_data[batchnorm::kBeta];
     DType *weight_buf = reinterpret_cast<DType *>(bwd.GetWeight().get_data_handle());
     nnvm::dim_t channels_ = data.shape()[1];
-    DType *weight_ptr = reinterpret_cast<DType *>(gamma.data().dptr<DType>());
-    DType* bias_ptr = reinterpret_cast<DType *>(beta.data().dptr<DType>());
-    size_t copy_size = sizeof(DType) * channels_;
+    DType *weight_ptr = gamma.data().dptr<DType>();
+    DType* bias_ptr = beta.data().dptr<DType>();
+    const size_t copy_size = sizeof(DType) * channels_;
     if (!param.fix_gamma) {
       memcpy(weight_buf, weight_ptr, copy_size);
       memcpy(&weight_buf[channels_], bias_ptr, copy_size);
@@ -354,10 +354,10 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
 
     // training but no input mean and variance
     if (ctx.is_train && !param.use_global_stats) {
-      DType* moving_mean_ptr  = reinterpret_cast<DType *>(moving_mean.data().dptr<DType>());
-      DType* moving_var_ptr   = reinterpret_cast<DType *>(moving_var.data().dptr<DType>());
-      DType* out_mean_ptr     = reinterpret_cast<DType *>(out_mean.data().dptr<DType>());
-      DType* out_var_ptr      = reinterpret_cast<DType *>(out_var.data().dptr<DType>());
+      DType* moving_mean_ptr  = moving_mean.data().dptr<DType>();
+      DType* moving_var_ptr   = moving_var.data().dptr<DType>();
+      DType* out_mean_ptr     = out_mean.data().dptr<DType>();
+      DType* out_var_ptr      = out_var.data().dptr<DType>();
       mkldnn::memory var_mem(bwd.pd.variance_desc(), CpuEngine::Get()->get_engine());
       DType *tmp_var_ptr = reinterpret_cast<DType *>(var_mem.get_data_handle());
 
@@ -383,8 +383,8 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
 
     // copy data from gradw_mem to in_grad[1] and in_grad[2]
     DType *gw_buf = reinterpret_cast<DType *>(bwd.GetGradw().get_data_handle());
-    DType *w_grad_1 = reinterpret_cast<DType *>(in_grad[1].data().dptr<DType>());
-    DType *w_grad_2 = reinterpret_cast<DType *>(in_grad[2].data().dptr<DType>());
+    DType *w_grad_1 = in_grad[1].data().dptr<DType>();
+    DType *w_grad_2 = in_grad[2].data().dptr<DType>();
 
     if (!param.fix_gamma) {
       memcpy(w_grad_1, gw_buf, copy_size);
