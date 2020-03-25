@@ -147,7 +147,7 @@ def submit(args):
     for (node, port) in [('127.0.0.1', str(22))]:
         name = 'scheduler'
         pass_envs['DMLC_ROLE'] = name
-        print('Laucnhing Scheduler...')
+        print('Launching Scheduler...')
         prog = get_env(pass_envs) + (" python3 -c " +
                                      "\"" + "import byteps.server" + "\"")
         threads.append(start_ssh(prog, node, port, username, name))
@@ -156,7 +156,7 @@ def submit(args):
         name = 'worker'
         pass_envs['DMLC_ROLE'] = name
         pass_envs['DMLC_WORKER_ID'] = str(i)
-        print('Laucnhing Worker{} ...'.format(i))
+        print('Launching Worker{} ...'.format(i))
         local_size = max(len(os.getenv("NVIDIA_VISIBLE_DEVICES", "1").split(",")), len(pass_envs.get("NVIDIA_VISIBLE_DEVICES", "1").split(",")))
 
         for local_rank in range(local_size):
@@ -186,7 +186,7 @@ def submit(args):
     for i, (node, port) in enumerate(server_hosts):
         name = 'server'
         pass_envs['DMLC_ROLE'] = name
-        print('Laucnhing Server{} ...'.format(i))
+        print('Launching Server{} ...'.format(i))
         prog = get_env(pass_envs) + (" python3 -c " +
                                      "\"" + "import byteps.server" + "\"")
         threads.append(start_ssh(prog, node, port, username, name + str(i)))

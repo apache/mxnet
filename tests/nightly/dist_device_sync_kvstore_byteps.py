@@ -80,11 +80,11 @@ def test_pushpull():
             check_diff_to_scalar(big_arr, num)
 
     check_default_keys(nrepeat=3)
-    logger.info('worker ' + str(my_rank) + ' is done')
+    print('worker ' + str(my_rank) + ' is done')
 
 def test_broadcast():
     def check_broadcast(kv, cur_keys, cur_shape, device=False):
-        logger.info("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
+        print("check_broadcast: {}, {}, {}, {}".format(kv, cur_keys, cur_shape, device))
         ctx = get_current_context(device=device)
         val = [mx.nd.zeros(cur_shape, ctx) for i in cur_keys]
         for i in range(len(cur_keys)):
@@ -92,23 +92,23 @@ def test_broadcast():
             tmpNDarray = [mx.nd.ones(cur_shape, ctx) * i]
             kv.broadcast(cur_keys[i], tmpNDarray, out=val[i])
             check_diff_to_scalar(val[i], expected, my_rank)
-        logger.info("check_broadcast passed: ", val)
+        print("check_broadcast passed: ", val)
     # check_broadcast(kv, init_test_keys, shape) #Byteps doesn't support pure CPU training
     # check_broadcast(kv, init_test_keys_big, big_shape) #Byteps doesn't support pure CPU training
     check_broadcast(kv, init_test_keys_device, shape, device=True)
     check_broadcast(kv, init_test_keys_device_big, big_shape, device=True)
-    logger.info('worker ' + str(my_rank) + ' is initialized')
+    print('worker ' + str(my_rank) + ' is initialized')
 
 def test_type():
     assert kv.type == args.name
 
 if __name__ == "__main__":
-    logger.info("Type Test Begin")
+    print("Type Test Begin")
     test_type()
-    logger.info("Type Test Passed")
-    logger.info("Broadcast Test Begin")
+    print("Type Test Passed")
+    print("Broadcast Test Begin")
     test_broadcast()
-    logger.info("Broadcast Test Passed")
-    logger.info("PushPull Test Begin")
+    print("Broadcast Test Passed")
+    print("PushPull Test Begin")
     test_pushpull()
-    logger.info("PushPull Test Passed")
+    print("PushPull Test Passed")
