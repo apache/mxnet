@@ -1357,11 +1357,10 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
 integrationtest_ubuntu_gpu_byteps() {
     set -ex
     pushd .
-
+    export PYTHONPATH=$PWD/python/
     git clone -b v0.2 https://github.com/bytedance/byteps/ --recursive
     cd byteps && python3 setup.py install --user && cd -
 
-    export PYTHONPATH=./python/
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
