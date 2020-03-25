@@ -118,8 +118,6 @@ endif()
 
 #Switch off modern thread local for dmlc-core, please see: https://github.com/dmlc/dmlc-core/issues/571#issuecomment-543467484
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
-# disable stack trace in exception by default.
-add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
 add_definitions(-DDMLC_LOG_FATAL_THROW=1)
 
 if(MSVC)
