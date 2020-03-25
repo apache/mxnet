@@ -51,7 +51,7 @@ log = logging.getLogger(__name__)
 DEPS = {
     'openblas': 'https://windows-post-install.s3-us-west-2.amazonaws.com/OpenBLAS-windows-v0_2_19.zip',
     'opencv': 'https://windows-post-install.s3-us-west-2.amazonaws.com/opencv-windows-4.1.2-vc14_vc15.zip',
-    'cudnn': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cudnn-9.2-windows10-x64-v7.4.2.24.zip',
+    'cudnn': 'https://mxnet-windows-build.s3-us-west-2.amazonaws.com/cudnn-10.2-windows10-x64-v7.6.5.32.zip',
     'nvdriver': 'https://windows-post-install.s3-us-west-2.amazonaws.com/nvidia_display_drivers_398.75_server2016.zip',
     'perl': 'http://strawberryperl.com/download/5.30.1.1/strawberry-perl-5.30.1.1-64bit.msi',
     'clang': 'https://github.com/llvm/llvm-project/releases/download/llvmorg-9.0.1/LLVM-9.0.1-win64.exe',
@@ -191,11 +191,10 @@ def on_rm_error(func, path, exc_info):
 
 
 def install_vs():
-    # Visual Studio CE 2017
-    # Path: C:\Program Files (x86)\Microsoft Visual Studio 14.0
-    # Components: https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-community?view=vs-2017#visual-studio-core-editor-included-with-visual-studio-community-2017
-    logging.info("Installing Visual Studio CE 2017...")
-    vs_file_path = download('https://aka.ms/eac464')
+    # Visual Studio 2019
+    # Components: https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-community?view=vs-2019#visual-studio-core-editor-included-with-visual-studio-community-2019
+    logging.info("Installing Visual Studio 2019...")
+    vs_file_path = download('https://mxnet-windows-build.s3-us-west-2.amazonaws.com/vs_community__8852911.1581404820.exe')
     run_command("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(vs_file_path,
                                                                              vs_file_path.split('\\')[-1]), shell=True)
     vs_file_path = vs_file_path + '.exe'
@@ -212,10 +211,11 @@ def install_vs():
                ' --add Microsoft.VisualStudio.Component.Static.Analysis.Tools'
                ' --add Microsoft.VisualStudio.Component.VC.CMake.Project'
                ' --add Microsoft.VisualStudio.Component.VC.140'
-               ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.Desktop'
-               ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.UWP'
-               ' --add Microsoft.VisualStudio.Component.Windows10SDK.15063.UWP.Native'
-               ' --add Microsoft.VisualStudio.ComponentGroup.Windows10SDK.15063'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.18362.Desktop'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.18362.UWP'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.18362.UWP.Native'
+               ' --add Microsoft.VisualStudio.ComponentGroup.Windows10SDK.18362'
+               ' --add Microsoft.VisualStudio.Component.Windows10SDK.16299'
                ' --wait'
                ' --passive'
                ' --norestart'
@@ -301,9 +301,9 @@ def install_cudnn():
         local_file = download(DEPS['cudnn'])
         with zipfile.ZipFile(local_file, 'r') as zip:
             zip.extractall(tmpdir)
-        copy(tmpdir+"\\cuda\\bin\\cudnn64_7.dll", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\bin")
-        copy(tmpdir+"\\cuda\\include\\cudnn.h", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\include")
-        copy(tmpdir+"\\cuda\\lib\\x64\\cudnn.lib", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2\\lib\\x64")
+        copy(tmpdir+"\\cuda\\bin\\cudnn64_7.dll", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2\\bin")
+        copy(tmpdir+"\\cuda\\include\\cudnn.h", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2\\include")
+        copy(tmpdir+"\\cuda\\lib\\x64\\cudnn.lib", "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2\\lib\\x64")
     logging.info("cuDNN install complete")
 
 
@@ -326,46 +326,14 @@ def install_nvdriver():
 
 
 def install_cuda():
-    # CUDA 9.2 and patches
-    logging.info("Installing CUDA 9.2 and Patches...")
-    cuda_9_2_file_path = download(
-        'https://developer.nvidia.com/compute/cuda/9.2/Prod2/network_installers2/cuda_9.2.148_win10_network')
-    check_call("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(cuda_9_2_file_path,
-                                                                             cuda_9_2_file_path.split('\\')[-1]), shell=True)
-    cuda_9_2_file_path = cuda_9_2_file_path + '.exe'
-    check_call(cuda_9_2_file_path
-                + ' -s nvcc_9.2'
-                + ' cuobjdump_9.2'
-                + ' nvprune_9.2'
-                + ' cupti_9.2'
-                + ' gpu_library_advisor_9.2'
-                + ' memcheck_9.2'
-                + ' nvdisasm_9.2'
-                + ' nvprof_9.2'
-                + ' visual_profiler_9.2'
-                + ' visual_studio_integration_9.2'
-                + ' demo_suite_9.2'
-                + ' documentation_9.2'
-                + ' cublas_9.2'
-                + ' cublas_dev_9.2'
-                + ' cudart_9.2'
-                + ' cufft_9.2'
-                + ' cufft_dev_9.2'
-                + ' curand_9.2'
-                + ' curand_dev_9.2'
-                + ' cusolver_9.2'
-                + ' cusolver_dev_9.2'
-                + ' cusparse_9.2'
-                + ' cusparse_dev_9.2'
-                + ' nvgraph_9.2'
-                + ' nvgraph_dev_9.2'
-                + ' npp_9.2'
-                + ' npp_dev_9.2'
-                + ' nvrtc_9.2'
-                + ' nvrtc_dev_9.2'
-                + ' nvml_dev_9.2'
-                + ' occupancy_calculator_9.2'
-                )
+    # CUDA 10.2 and patches
+    logging.info("Installing CUDA 10.2 and Patches...")
+    cuda_10_2_file_path = download(
+        'http://developer.download.nvidia.com/compute/cuda/10.2/Prod/network_installers/cuda_10.2.89_win10_network.exe')
+    check_call("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(cuda_10_2_file_path,
+                                                                             cuda_10_2_file_path.split('\\')[-1]), shell=True)
+    cuda_10_2_file_path = cuda_10_2_file_path + '.exe'
+    check_call(cuda_10_2_file_path + ' -s')
 
 
 def add_paths():
