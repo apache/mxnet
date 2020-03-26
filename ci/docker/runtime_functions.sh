@@ -1341,7 +1341,10 @@ integrationtest_ubuntu_gpu_scala() {
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
+    pushd .
+    cd tests/nightly
     ./test_distributed_training-gpu.sh
+    popd
 }
 
 test_ubuntu_cpu_python3() {
