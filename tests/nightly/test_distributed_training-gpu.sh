@@ -30,7 +30,6 @@ test_args=(
 )
 
 for arg in "${test_args[@]}"; do
-    echo "$i"
     python3 ../../tools/launch.py "$arg"
     if [ $? -ne 0 ]; then
         return $?
