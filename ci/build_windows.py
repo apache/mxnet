@@ -154,7 +154,7 @@ def windows_build(args):
 
         with remember_cwd():
             os.chdir(path)
-            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
+            cmd = "\"{}\" && {} -A x64 -T host=x64 -G \"NMake Makefiles JOM\" {} {}".format(
                 args.vcvars,
                 os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
                 CMAKE_FLAGS[args.flavour], mxnet_root)
