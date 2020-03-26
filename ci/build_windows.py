@@ -185,7 +185,7 @@ def windows_build(args):
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True)
 
-            cmd = "\"{}\" && cmake --build".format(args.vcvars)
+            cmd = "\"{}\" && cmake --build .".format(args.vcvars)
             logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
