@@ -54,10 +54,14 @@ class BuildFlavour(Enum):
 
 CMAKE_FLAGS = {
     'WIN_CPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
-        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENCV=OFF '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -67,10 +71,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
-        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENCV=OFF '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -80,10 +88,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
-        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENCV=OFF '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
@@ -93,10 +105,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
-        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENCV=OFF '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
@@ -106,10 +122,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
-        '-DUSE_OPENCV=ON  '
+        '-DUSE_OPENCV=OFF  '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -120,10 +140,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
-        '-DUSE_OPENCV=ON '
+        '-DUSE_OPENCV=OFF '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -154,15 +178,15 @@ def windows_build(args):
 
         with remember_cwd():
             os.chdir(path)
-            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
+            cmd = "\"{}\" && {} -T host=x64 {} {}".format(
                 args.vcvars,
                 os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
                 CMAKE_FLAGS[args.flavour], mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True)
 
-            cmd = "\"{}\" && jom".format(args.vcvars)
-            logging.info("Building with jom:\n{}".format(cmd))
+            cmd = "\"{}\" && cmake --build".format(args.vcvars)
+            logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
             check_call(cmd, shell=True)
