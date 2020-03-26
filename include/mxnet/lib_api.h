@@ -431,19 +431,6 @@ typedef void (*sparse_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t
   typedef void* mx_stream_t;
 #endif
 
-/*! \brief union to hold random number generator return type from MXNet */
-union RandRetType {
-    int32_t i;
-    int64_t l;
-    double d;
-};
-
-/*! \brief enum to hold random number generator call types from MXNet */
-enum RandGenType {RAND_INT, RAND_INT64, RAND_UNIFORM, RAND_NORMAL};
-
-/*! \brief function to call MXNet backend random number generator */
-typedef RandRetType (*rng_caller_t)(void*, RandGenType, int);
-
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
  */
@@ -485,7 +472,7 @@ class OpResource {
     return cpu_rand_states;
   }
 
-  /*! \brief get pointer to gpu random number inited and seeded states, of type curandStatePhilox4_32_10_t */
+  /*! \brief get pointer to gpu random number inited and seeded states */
   /* this global states are located on gpu, of type curandStatePhilox4_32_10_t */
   /* note that if you are usign cpu build, then it will return a nullptr */
   void* get_gpu_rand_states() {
@@ -499,10 +486,6 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
-  /*! \brief RNG lambda function wrapper */
-  rng_caller_t rng_caller_nocap;
-  /*! \brief lambda function to return random number */
-  void* rng_caller;
   /*! \brief sparse allocation lambda function */
   sparse_malloc_t sparse_malloc;
   /*! \brief lambda function to return allocated sparse memory handle */

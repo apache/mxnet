@@ -47,7 +47,7 @@ MXReturnValue forwardCPU(std::map<std::string, std::string> attrs,
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
     for (int i=0; i<inputs[0].size(); i++) {
-        out_data[i] = in_data[i] ? in_data[i] : 0;
+        out_data[i] = in_data[i] > 0 ? in_data[i] : 0;
     }
     return MX_SUCCESS;
 }
