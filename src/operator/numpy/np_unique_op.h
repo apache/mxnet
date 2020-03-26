@@ -80,6 +80,17 @@ struct NumpyUniqueParam : public dmlc::Parameter<NumpyUniqueParam> {
     .set_default(dmlc::optional<int>())
     .describe("An integer that represents the axis to operator on.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream return_index_s, return_inverse_s, return_counts_s, axis_s;
+    return_index_s << return_index;
+    return_inverse_s << return_inverse;
+    return_counts_s << return_counts;
+    axis_s << axis;
+    (*dict)["return_index"] = return_index_s.str();
+    (*dict)["return_inverse"] = return_inverse_s.str();
+    (*dict)["return_counts"] = return_counts_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 }  // namespace op
