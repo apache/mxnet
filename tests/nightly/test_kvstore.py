@@ -27,53 +27,73 @@ import copy
 
 from mxnet.test_utils import assert_almost_equal
 
+
 def check_diff_to_scalar(A, x, rank=None):
     """ assert A == x"""
     assert(np.sum(np.abs((A - x).asnumpy())) == 0), (rank, A.asnumpy(), x)
 
-def compute_expected_2bit_quantization(arr, curr_residual, threshold):
-    from struct import pack,unpack
-    def bits2int(bits):
-        bits = [int(x) for x in bits[::-1]]
-        x = 0
-        for i in range(len(bits)):
-            x += bits[i]*2**i
-        return x
-
-    def as_float32(s):
-        return unpack("f",pack("I", bits2int(s)))[0]
-
-    # str_quant stores the quantized representation as a sequence of bits
-    str_quant = ''
+def compute_1bit(arr, curr_residual, threshold):
+    str_quant = ""
     new_residual = []
     decompr = []
 
-    arr_npy = arr.asnumpy()
-    for i, a in np.ndenumerate(arr_npy):
-        a += curr_residual[i]
-        if a >= threshold:
-            str_quant += '11'
-            new_residual.append(a - threshold)
-            decompr.append(threshold)
-        elif a <= (-1*threshold):
-            str_quant += '10'
-            new_residual.append(a + threshold)
-            decompr.append(-1*threshold)
+    for idx, val in np.ndenumerate(arr):
+        val += curr_residual[idx]
+        if val > threshold:
+            str_quant += "1"
+            new_residual.append(val - 1)
+            decompr.append(1)
         else:
-            str_quant += '00'
-            new_residual.append(a)
-            decompr.append(0)
-    # append extra bits when size of array not a factor of 16
-    if len(str_quant)%16 != 0:
-        str_quant += '0'*(16 - len(str_quant)%16)
+            str_quant += "0"
+            new_residual.append(val + 1)
+            decompr.append(-1)
 
+    # append extra bits when size of array not a factor of 32
+    if len(str_quant) != 32:
+        str_quant += "0" * (32 - len(str_quant) % 32)
+    return str_quant, new_residual, decompr
+
+def compute_2bit(arr, curr_residual, threshold):
+    str_quant = ""
+    new_residual = []
+    decompr = []
+
+    for idx, val in np.ndenumerate(arr):
+        val += curr_residual[idx]
+        if val >= threshold:
+            str_quant += "11"
+            new_residual.append(val - threshold)
+            decompr.append(threshold)
+        elif val <= -threshold:
+            str_quant += "10"
+            new_residual.append(val + threshold)
+            decompr.append(-threshold)
+        else:
+            str_quant += "00"
+            new_residual.append(val)
+            decompr.append(0)
+
+    # append extra bits when size of array not a factor of 16
+    if len(str_quant) % 16 != 0:
+        str_quant += "0" * (16 - len(str_quant) % 16)
+    return str_quant, new_residual, decompr
+
+def compute_expected_quantization(arr, curr_residual, threshold, quantize_func):
+
+    from struct import pack,unpack
+    def as_float32(s):
+        return unpack("f",pack("I", int(s, 2)))[0]
+
+    arr_npy = arr.asnumpy()
+    # str_quant stores the quantized representation as a sequence of bits
+    str_quant, new_residual, decompr = quantize_func(arr_npy, curr_residual, threshold)
+    
     compr = []
     # converts the string generated into integers 32chars at a time
-    i = 0
-    while i<len(str_quant):
+    for i in range(0, len(str_quant), 32):
         cur_float = str_quant[i+24:i+32] + str_quant[i+16:i+24] + str_quant[i+8:i+16] + str_quant[i:i+8]
         compr.append(as_float32(cur_float))
-        i+=32
+
     return np.array(compr), np.array(new_residual).reshape(arr.shape), np.array(decompr).reshape(arr.shape)
 
 ## individual key interface
@@ -99,8 +119,15 @@ def test_kvstore(kv_type, stype):
             assert(err < 1e-6), (err, shapes[j])
 
 def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
-    print(kv_type + ' with ' + compression + ' compression')
+    print(kv_type + ' with ' + compression + ' compression and threshold is ' + str(threshold))
     rate = 2
+    quantize_func = None
+    if compression == '1bit':
+        quantize_func = compute_1bit
+    elif compression == '2bit':
+        quantize_func = compute_2bit
+    else:
+        raise RuntimeError("Unknown gradient compression type!")
     kv = mx.kv.create(kv_type)
     kv.set_gradient_compression({'type':compression, 'threshold':threshold})
     kv.set_optimizer(mx.optimizer.create('test', rescale_grad=rate))
@@ -131,6 +158,56 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 for o in out:
                     assert_almost_equal(o.asnumpy(), exp)
 
+    def push_ones(kv, sign=1):
+        for i in range(nrepeat):
+            for j in range(len(keys)):
+                kv.push(keys[j], [sign * mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)])
+                out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+                kv.pull(keys[j], out=out)
+                if sign == 1:
+                    exp = (i + 1) * rate * nworker * np.ones_like(out[0].asnumpy())
+                else:
+                    exp = (nrepeat - i - 1) * rate * nworker * np.ones_like(out[0].asnumpy())
+                for o in out:
+                    assert_almost_equal(o.asnumpy(), exp)
+
+    def verify_residual_1bit(kv, threshold, rate):
+        # current values must equal to zero
+        for j in range(len(keys)):
+            out = [mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j], out=out)
+            exp = np.zeros_like(out[0].asnumpy())
+            for o in out:
+                assert_almost_equal(o.asnumpy(), exp)
+        
+        curr_residual = 0
+        curr_val = rate * nworker if 2 > threshold else -rate * nworker
+        for j in range(len(keys)):
+            kv.push(keys[j], [2 * mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j], out=out)
+            
+            for o in out:
+                check_diff_to_scalar(o, curr_val)
+
+        curr_residual = 1 if 2 > threshold else 3
+        curr_val += rate * nworker if 0 + curr_residual > threshold else -rate * nworker
+        for j in range(len(keys)):
+            kv.push(keys[j], [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j], out=out)
+            for o in out:
+                check_diff_to_scalar(o, curr_val)
+
+        curr_residual += -1 if curr_residual > threshold else +1
+        curr_val += rate * nworker if -2 + curr_residual > threshold else -rate * nworker
+        for j in range(len(keys)):
+            kv.push(keys[j], [-2 * mx.nd.ones(shapes[j], mx.gpu(g)) for g in range(nworker)])
+            out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
+            kv.pull(keys[j], out=out)
+            for o in out:
+                check_diff_to_scalar(o, curr_val)
+    
     def push_zeros(kv):
         for i in range(nrepeat):
             for j in range(len(keys)):
@@ -141,7 +218,7 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
                 for o in out:
                     assert_almost_equal(o.asnumpy(), exp)
 
-    def verify_residual(kv, threshold, rate):
+    def verify_residual_2bit(kv, threshold, rate):
         for j in range(len(keys)):
             kv.push(keys[j], [mx.nd.ones(shapes[j], mx.gpu(g))*0.4 for g in range(nworker)])
             out = [mx.nd.zeros(shapes[j], mx.gpu(g)) for g in range(nworker)]
@@ -197,8 +274,8 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
             # on cpu
             sum_dequantized_vals = np.zeros(s)
             for g in range(nworker):
-                compr, curr_residual[g], decompr = compute_expected_2bit_quantization(
-                                                    grads_cpy[g], curr_residual[g], threshold)
+                compr, curr_residual[g], decompr = compute_expected_quantization(
+                                                    grads_cpy[g], curr_residual[g], threshold, quantize_func)
                 sum_dequantized_vals += (decompr * rate)
 
             for g in range(nworker):
@@ -206,9 +283,14 @@ def test_compress_kvstore(kv_type, compression='2bit', threshold=0.5):
 
     pull_init_test(kv)
     pull_before_push(kv)
-    push_zeros(kv)
-    curval = verify_residual(kv, threshold, rate)
-    check_neg(kv, -1*threshold, rate, curval)
+    if compression == '1bit':
+        push_ones(kv, sign=1)
+        push_ones(kv, sign=-1)
+        verify_residual_1bit(kv, threshold, rate)
+    elif compression == '2bit':
+        push_zeros(kv)
+        curval = verify_residual_2bit(kv, threshold, rate)
+        check_neg(kv, -1*threshold, rate, curval)
     check_compr_random(kv, threshold)
 
 ## group keys interface
@@ -252,7 +334,10 @@ if __name__ == "__main__":
         test_kvstore('local_allreduce_device', stype)
 
     ## compression for local kvstore happens only when reduce is on device
-    test_compress_kvstore('local_allreduce_device')
+    test_compress_kvstore('local_allreduce_device', '1bit', -.5)
+    test_compress_kvstore('local_allreduce_device', '1bit', 0)
+    test_compress_kvstore('local_allreduce_device', '1bit', .5)
+    test_compress_kvstore('local_allreduce_device', '2bit', .5)
     for stype in stypes:
         test_group_kvstore('local_update_cpu', stype)
         test_group_kvstore('local_allreduce_cpu', stype)

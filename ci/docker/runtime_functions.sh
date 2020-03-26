@@ -1315,8 +1315,10 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=gluon_type_cpu
     python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py
     python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --no-multiprecision
-    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu
-    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu_1bit
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu_1bit --no-multiprecision
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu_2bit
+    python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu_2bit --no-multiprecision
     python3 ../../tools/launch.py -n 3 --launcher local python3 test_server_profiling.py
     popd
 }

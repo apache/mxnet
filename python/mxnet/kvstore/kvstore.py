@@ -498,6 +498,9 @@ class KVStore(KVStoreBase):
         """ Specifies type of low-bit quantization for gradient compression \
          and additional arguments depending on the type of compression being used.
 
+        The 1bit compression works as follows: values which is above the threshold in the
+        gradient will be set to +1, whereas values below threshold will be set to -1.
+
         2bit Gradient Compression takes a positive float `threshold`.
         The technique works by thresholding values such that positive values in the
         gradient above threshold will be set to threshold. Negative values whose absolute
@@ -538,7 +541,7 @@ class KVStore(KVStoreBase):
             A dictionary specifying the type and parameters for gradient compression.
             The key `type` in this dictionary is a
             required string argument and specifies the type of gradient compression.
-            Currently `type` can be only `2bit`
+            Currently `type` can be only `1bit` and `2bit`
             Other keys in this dictionary are optional and specific to the type
             of gradient compression.
         """

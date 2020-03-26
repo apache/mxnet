@@ -35,7 +35,7 @@ namespace mxnet {
 namespace kvstore {
 
 enum class CompressionType {
-  kNone, kTwoBit
+  kNone, kOneBit, kTwoBit
 };
 
 struct GradientCompressionParam : public dmlc::Parameter<GradientCompressionParam> {
@@ -71,6 +71,12 @@ class GradientCompression {
    * \brief returns as string the enum value of compression type
    */
   std::string get_type_str();
+
+  /*!
+   * \biref sets one bit gradient compression
+   * \param threshold float value used for thresholding gradients
+   */
+  void SetOneBitCompression(const float threshold);
 
   /*!
    * \brief sets two bit gradient compression
