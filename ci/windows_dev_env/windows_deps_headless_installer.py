@@ -51,7 +51,7 @@ log = logging.getLogger(__name__)
 DEPS = {
     'openblas': 'https://windows-post-install.s3-us-west-2.amazonaws.com/OpenBLAS-windows-v0_2_19.zip',
     'opencv': 'https://windows-post-install.s3-us-west-2.amazonaws.com/opencv-windows-4.1.2-vc14_vc15.zip',
-    'cudnn': 'https://mxnet-windows-build.s3-us-west-2.amazonaws.com/cudnn-10.2-windows10-x64-v7.6.5.32.zip',
+    'cudnn': 'https://windows-post-install.s3-us-west-2.amazonaws.com/cudnn-10.2-windows10-x64-v7.6.5.32.zip',
     'nvdriver': 'https://windows-post-install.s3-us-west-2.amazonaws.com/nvidia_display_drivers_398.75_server2016.zip',
     'perl': 'http://strawberryperl.com/download/5.30.1.1/strawberry-perl-5.30.1.1-64bit.msi',
     'clang': 'https://github.com/llvm/llvm-project/releases/download/llvmorg-9.0.1/LLVM-9.0.1-win64.exe',
@@ -194,7 +194,7 @@ def install_vs():
     # Visual Studio 2019
     # Components: https://docs.microsoft.com/en-us/visualstudio/install/workload-component-id-vs-community?view=vs-2019#visual-studio-core-editor-included-with-visual-studio-community-2019
     logging.info("Installing Visual Studio 2019...")
-    vs_file_path = download('https://mxnet-windows-build.s3-us-west-2.amazonaws.com/vs_community__8852911.1581404820.exe')
+    vs_file_path = download('https://windows-post-install.s3-us-west-2.amazonaws.com/vs_community__1246179388.1585201415.exe')
     run_command("PowerShell Rename-Item -Path {} -NewName \"{}.exe\"".format(vs_file_path,
                                                                              vs_file_path.split('\\')[-1]), shell=True)
     vs_file_path = vs_file_path + '.exe'
