@@ -222,7 +222,7 @@ void CustomFComputeDispatcher(const std::string op_name,
     }
   };
 
-  // create lambda without captures so that we can cast it to function pointer
+  // create no-capture lambda so that we can cast it to function pointer
   // lambda with captures cannot be cast to function pointer and pass to lib_api.h
   // this needs to be a lambda function so that we can do the decltype cast
   typedef decltype(cpu_alloc) alloc_type_cpu;
@@ -232,39 +232,13 @@ void CustomFComputeDispatcher(const std::string op_name,
     // call cpu_alloc to actually allocate memory and return the pointer
     return static_cast<void*>((*cpualloc)(size));
   };
+
   typedef decltype(gpu_alloc) alloc_type_gpu;
   auto gpu_malloc = [](void* _gpu_alloc, int size) {
     alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
     return static_cast<void*>((*gpualloc)(size));
   };
 
-  // MXNet random number generator lambda to be invoked by custom library
-  // custom library will use gpu rng whenever possible
-  auto rng_caller = [&](RandGenType rand_type, int seed) {
-#if MXNET_USE_CUDA
-    typedef mxnet::gpu Device;
-#else
-    typedef mxnet::cpu Device;
-#endif
-    mxnet::common::random::RandGenerator<Device, double> *pgen =
-      ctx.requested[1].get_parallel_random<Device, double>();
-    typename mxnet::common::random::RandGenerator<Device, double>::Impl rng_inst(pgen, seed);
-    RandRetType ret;
-    switch (rand_type) {
-      case RAND_INT: ret.i = rng_inst.rand(); break;
-      case RAND_INT64: ret.l = rng_inst.rand_int64(); break;
-      case RAND_UNIFORM: ret.d = rng_inst.uniform(); break;
-      case RAND_NORMAL: ret.d = rng_inst.normal(); break;
-      default: LOG(FATAL) << "unsupported random generator call";
-    }
-    return ret;
-  };
-
-  // no-capture lambda passing in enum of rng call types and seed state
-  typedef decltype(rng_caller) type_rng_caller;
-  auto rng_caller_nocap = [](void *rng_call, RandGenType rand_type, int seed) {
-      type_rng_caller* rngcaller = static_cast<type_rng_caller*>(rng_call);
-      return (*rngcaller)(rand_type, seed);
   typedef decltype(sparse_alloc) alloc_type_sparse;
   auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
@@ -278,6 +252,17 @@ void CustomFComputeDispatcher(const std::string op_name,
   if (inputs.size() > 0 && inputs[0].ctx().dev_mask() == Context::kGPU) {
     cuda_stream = static_cast<void*>(gpu_stream->stream_);
   }
+#endif
+
+  // get mxnet inited and seeded rng states and pass to lib_api.h
+  void *cpu_states = nullptr, *gpu_states = nullptr;
+  mxnet::common::random::RandGenerator<cpu, float> *pgen_cpu =
+      ctx.requested[1].get_parallel_random<cpu, float>();
+  cpu_states = pgen_cpu->GetStates();
+#if MXNET_USE_CUDA
+  mxnet::common::random::RandGenerator<gpu, float> *pgen_gpu =
+      ctx.requested[1].get_parallel_random<gpu, float>();
+  gpu_states = pgen_gpu->GetStates();
 #endif
 
   CHECK((fcomp_fp != nullptr && state_ptr == nullptr)
@@ -302,7 +287,8 @@ void CustomFComputeDispatcher(const std::string op_name,
                     sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
                     in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
                     in_indices_shapes.data(), out_indices_shapes.data(),
-                    in_indptr_shapes.data(), out_indptr_shapes.data()))
+                    in_indptr_shapes.data(), out_indptr_shapes.data(),
+                    cpu_states, gpu_states))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -326,7 +312,8 @@ void CustomFComputeDispatcher(const std::string op_name,
                             in_indices.data(), out_indices.data(),
                             in_indptr.data(), out_indptr.data(),
                             in_indices_shapes.data(), out_indices_shapes.data(),
-                            in_indptr_shapes.data(), out_indptr_shapes.data()))
+                            in_indptr_shapes.data(), out_indptr_shapes.data(),
+                            cpu_states, gpu_states))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
   }
 }
