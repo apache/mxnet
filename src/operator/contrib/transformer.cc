@@ -705,7 +705,7 @@ the equivalent code would be:
 tmp = mx.nd.reshape(queries_keys_values, shape=(0, 0, num_heads, 3, -1))
 v_proj = mx.nd.transpose(tmp[:,:,:,2,:], axes=(1, 2, 0, 3))
 v_proj = mx.nd.reshape(v_proj, shape=(-1, 0, 0), reverse=True)
-output = mx.nd.batch_dot(attention, v_proj, transpose_b=True)
+output = mx.nd.batch_dot(attention, v_proj)
 output = mx.nd.reshape(output, shape=(-1, num_heads, 0, 0), reverse=True)
 output = mx.nd.transpose(output, axes=(0, 2, 1, 3))
 output = mx.nd.reshape(output, shape=(0, 0, -1))
