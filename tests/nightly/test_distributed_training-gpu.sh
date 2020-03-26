@@ -1,9 +1,7 @@
-pushd .
 export PYTHONPATH=./python/
 export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 export MXNET_SUBGRAPH_VERBOSE=0
 export DMLC_LOG_STACK_TRACE_DEPTH=10
-cd tests/nightly/
 
 test_args=(
     "-n 4 --launcher local python3 dist_device_sync_kvstore.py"
@@ -19,5 +17,3 @@ for arg in "${test_args[@]}"; do
         return $?
     fi 
 done
-
-popd
