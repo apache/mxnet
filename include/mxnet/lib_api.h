@@ -753,13 +753,12 @@ struct JsonParser {
  */
 class CustomOpSelector {
  public:
-  virtual MXReturnValue Select(int nodeID) = 0;
-  virtual MXReturnValue SelectInput(int nodeID, int input_nodeID) = 0;
-  virtual MXReturnValue SelectOutput(int nodeID, int output_nodeID) = 0;
-  virtual MXReturnValue Filter(std::vector<int>& candidates,
+  virtual bool Select(int nodeID) = 0;
+  virtual bool SelectInput(int nodeID, int input_nodeID) = 0;
+  virtual bool SelectOutput(int nodeID, int output_nodeID) = 0;
+  virtual void Filter(std::vector<int>& candidates,
                                std::vector<int>& keep) {
     keep.insert(keep.end(), candidates.begin(), candidates.end());
-    return MX_SUCCESS;
   }
   virtual void Reset() {}
 };
@@ -1185,6 +1184,24 @@ typedef int (*partCallCreateSelector_t)(createSelector_t createSelector, const c
                                         void** selector, const char* const* opt_keys,
                                         const char* const* opt_vals, int num_opts);
 
+#define MXLIB_PARTCALLSELECT_STR "_partCallSelect"
+typedef void (*partCallSelect_t)(void* sel_inst, int nodeID, int* selected);
+
+#define MXLIB_PARTCALLSELECTINPUT_STR "_partCallSelectInput"
+typedef void (*partCallSelectInput_t)(void* sel_inst, int nodeID, int input_nodeID,
+                                  int* selected);
+
+#define MXLIB_PARTCALLSELECTOUTPUT_STR "_partCallSelectOutput"
+typedef void (*partCallSelectOutput_t)(void* sel_inst, int nodeID, int output_nodeID,
+                                   int* selected);
+
+#define MXLIB_PARTCALLFILTER_STR "_partCallFilter"
+typedef void (*partCallFilter_t)(void* sel_inst, int* candidates, int num_candidates,
+                             int** keep, int* num_keep);
+
+#define MXLIB_PARTCALLRESET_STR "_partCallReset"
+typedef void (*partCallReset_t)(void* sel_inst);
+
 #define MXLIB_PARTCALLREVIEWSUBGRAPH_STR "_partCallReviewSubgraph"
 typedef int (*partCallReviewSubgraph_t)(reviewSubgraph_t reviewSubgraph, const char *json,
                                         int subgraph_id, int *accept, const char* const* opt_keys,
@@ -1221,7 +1238,7 @@ typedef int (*opVersion_t)();
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #define MX_INT_RET  __declspec(dllexport) int __cdecl
-#define MX_VOID_RE  __declspec(dllexport) void __cdecl
+#define MX_VOID_RET __declspec(dllexport) void __cdecl
 #else
 #define MX_INT_RET  int
 #define MX_VOID_RET void
@@ -1661,6 +1678,48 @@ extern "C" {
     return createSelector(symbol_json, sel_ptr, opts);
   }
 
+  /*! \brief returns status of calling select function from library */
+  MX_VOID_RET _partCallSelect(void* sel_inst, int nodeID, int* selected) {
+    CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
+    *selected = sel_ptr->Select(nodeID);
+  }
+  
+  /*! \brief returns status of calling select input function from library */
+  MX_VOID_RET _partCallSelectInput(void* sel_inst, int nodeID,
+                                  int input_nodeID, int* selected) {
+    CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
+    *selected = sel_ptr->SelectInput(nodeID, input_nodeID);
+  }
+
+  /*! \brief returns status of calling select output function from library */
+  MX_VOID_RET _partCallSelectOutput(void* sel_inst, int nodeID,
+                                    int output_nodeID, int* selected) {
+    CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
+    *selected = sel_ptr->SelectOutput(nodeID, output_nodeID);
+  }
+
+  /*! \brief returns status of calling filter function from library */
+  MX_VOID_RET _partCallFilter(void* sel_inst, int* candidates, int num_candidates,
+                              int** keep, int* num_keep) {
+    CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
+    std::vector<int> candidates_(num_candidates);
+    for (int i=0; i < num_candidates; i++)
+      candidates_[i] = candidates[i];
+    std::vector<int> keep_;
+
+    sel_ptr->Filter(candidates_, keep_);
+
+    *num_keep = keep_.size();
+    *keep = (int*)malloc(keep_.size() * sizeof(int));
+    for (unsigned i=0; i < keep_.size(); i++)
+      (*keep)[i] = keep_[i];
+  }
+
+  /*! \brief returns status of calling reset selector function from library */
+  MX_VOID_RET _partCallReset(void* sel_inst) {
+    CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
+    sel_ptr->Reset();
+  }
   
   /*! \brief returns status of calling review subgraph function from library */
   MX_INT_RET _partCallReviewSubgraph(reviewSubgraph_t reviewSubgraph, const char *json,

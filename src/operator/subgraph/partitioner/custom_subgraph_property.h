@@ -37,6 +37,7 @@
 #include "../common.h"
 #include "../subgraph_property.h"
 #include "../../include/mxnet/lib_api.h"
+
 namespace mxnet {
 namespace op {
 
@@ -47,22 +48,83 @@ namespace op {
  */
 class CustomContainOpSelector: public SubgraphSelector {
  public:
-  explicit CustomContainOpSelector(std::unordered_map<std::string, int> supported_nodes) :
-    supported_nodes_(supported_nodes) {}
+  explicit CustomContainOpSelector(std::unordered_map<std::string, int> supported_nodes,
+                                   void* sel_inst, partCallSelect_t callSelect,
+                                   partCallSelectInput_t callSelectInput,
+                                   partCallSelectOutput_t callSelectOutput,
+                                   partCallFilter_t callFilter,
+                                   partCallReset_t callReset,
+                                   opCallFree_t callFree,
+                                   std::unordered_map<const nnvm::Node*, unsigned> node2id) :
+  supported_nodes_(supported_nodes), sel_inst_(sel_inst), callSelect_(callSelect),
+    callSelectInput_(callSelectInput), callSelectOutput_(callSelectOutput),
+    callFilter_(callFilter), callReset_(callReset), callFree_(callFree),
+    node2id_(node2id) {}
   virtual bool Select(const nnvm::Node &n) {
-    return supported_nodes_.count(n.attrs.name) > 0;
+    if (!sel_inst_)
+      return supported_nodes_.count(n.attrs.name) > 0;
+    else {
+      int selected = 0;
+      callSelect_(sel_inst_, node2id_[&n], &selected);
+      return selected;
+    }
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    // check that op type is supported and that both nodes have the same ID
-    return supported_nodes_.count(new_node.attrs.name) > 0 &&
-      supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
+    if (!sel_inst_)
+      // check that op type is supported and that both nodes have the same ID
+      return supported_nodes_.count(new_node.attrs.name) > 0 &&
+        supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
+    else {
+      int selected = 0;
+      callSelectInput_(sel_inst_, node2id_[&n], node2id_[&new_node], &selected);
+      return selected;
+    }
   }
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    // check that op type is supported and that both nodes have the same ID
-    return supported_nodes_.count(new_node.attrs.name) > 0 &&
-      supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
+    if (!sel_inst_)
+      // check that op type is supported and that both nodes have the same ID
+      return supported_nodes_.count(new_node.attrs.name) > 0 &&
+        supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
+    else {
+      int selected = 0;
+      callSelectOutput_(sel_inst_, node2id_[&n], node2id_[&new_node], &selected);
+      return selected;
+    }
   }
+  virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
+    if (!sel_inst_)
+      return candidates;
+    else {
+      std::unordered_map<int, nnvm::Node*> rev_map;
+      std::vector<int> cand(candidates.size());
+      for (nnvm::Node* node : candidates) {
+        cand.push_back(node2id_[node]);
+        rev_map[node2id_[node]] = node;
+      }
+      int* keep_ = nullptr;
+      int num_keep = 0;
+      callFilter_(sel_inst_, cand.data(), cand.size(), &keep_, &num_keep);
+      std::vector<nnvm::Node*> keep(num_keep);
+      for (int i=0; i < num_keep; i++)
+        keep.push_back(rev_map[keep_[i]]);
+      callFree_(keep_);
+      return keep;
+    }
+  }
+  virtual void Reset() {
+    if (sel_inst_)
+      return callReset_(sel_inst_);
+  }
+
   std::unordered_map<std::string, int> supported_nodes_;
+  void* sel_inst_;
+  partCallSelect_t callSelect_;
+  partCallSelectInput_t callSelectInput_;
+  partCallSelectOutput_t callSelectOutput_;
+  partCallFilter_t callFilter_;
+  partCallReset_t callReset_;
+  opCallFree_t callFree_;
+  std::unordered_map<const nnvm::Node*, unsigned> node2id_;
 };
 
 /*
@@ -79,6 +141,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     supported_ops_(nullptr),
     call_create_selector_(nullptr),
     create_selector_(nullptr),
+    callSelect_(nullptr),
+    callSelectInput_(nullptr),
+    callSelectOutput_(nullptr),
+    callFilter_(nullptr),
+    callReset_(nullptr),
     call_review_subgraph_(nullptr),
     review_subgraph_(nullptr),
     subgraph_op_name("error") {}
@@ -87,6 +154,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
                          supportedOps_t supported_ops,
                          partCallCreateSelector_t call_create_selector,
                          createSelector_t create_selector,
+                         partCallSelect_t callSelect,
+                         partCallSelectInput_t callSelectInput,
+                         partCallSelectOutput_t callSelectOutput,
+                         partCallFilter_t callFilter,
+                         partCallReset_t callReset,
                          partCallReviewSubgraph_t call_review_subgraph,
                          reviewSubgraph_t review_subgraph,
                          opCallFree_t call_free,
@@ -96,6 +168,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       supported_ops_(supported_ops),
       call_create_selector_(call_create_selector),
       create_selector_(create_selector),
+      callSelect_(callSelect),
+      callSelectInput_(callSelectInput),
+      callSelectOutput_(callSelectOutput),
+      callFilter_(callFilter),
+      callReset_(callReset),
       call_review_subgraph_(call_review_subgraph),
       review_subgraph_(review_subgraph),
       call_free_(call_free),
@@ -185,6 +262,13 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     graph.attrs.clear();
     const nnvm::IndexedGraph& indexed_graph = graph.indexed_graph();
 
+    // create map from nnvm::Node to nid
+    node2id.clear();
+    for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+        nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+        node2id[node] = nid;
+    }
+    
     // set shape attrs for each node in the graph
     if (g.HasAttr("shape")) {
       mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
@@ -254,12 +338,13 @@ class  CustomSubgraphProperty: public SubgraphProperty {
           supported_nodes[idx[i].source->attrs.name] = supported_node_IDs[i];
         }
       }
-    } else if(call_create_selector_ && create_selector_) {
-      void* sel_inst = nullptr;
+    } else if(call_create_selector_ && callSelect_ && callSelectInput_ &&
+              callSelectOutput_ && callFilter_ && callReset_ &&
+              create_selector_) {
+      sel_inst = nullptr;
       CHECK(call_create_selector_(create_selector_, json, &sel_inst,
                                 opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
         << "Error calling supported_ops for '" << subgraph_prop << "'";
-      
     } else {
       CHECK(supported_ops_ != nullptr)
         << "supported_ops_ is null for " << subgraph_prop << std::endl;
@@ -415,7 +500,9 @@ class  CustomSubgraphProperty: public SubgraphProperty {
 
   // override CreateSubgraphSelector
   virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
-    return std::make_shared<CustomContainOpSelector>(supported_nodes);
+    return std::make_shared<CustomContainOpSelector>(supported_nodes,
+               sel_inst, callSelect_, callSelectInput_, callSelectOutput_,
+               callFilter_, callReset_, call_free_, node2id);
   }
 
   std::string subgraph_prop;
@@ -423,6 +510,11 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   supportedOps_t supported_ops_;
   partCallCreateSelector_t call_create_selector_;
   createSelector_t create_selector_;
+  partCallSelect_t callSelect_;
+  partCallSelectInput_t callSelectInput_;
+  partCallSelectOutput_t callSelectOutput_;
+  partCallFilter_t callFilter_;
+  partCallReset_t callReset_;
   partCallReviewSubgraph_t call_review_subgraph_;
   reviewSubgraph_t review_subgraph_;
   opCallFree_t call_free_;
@@ -441,6 +533,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::vector<size_t> arg_verIDs, aux_verIDs;
   std::vector<const char*> arg_dev_type, aux_dev_type;
   std::vector<int> arg_dev_id, aux_dev_id;
+  void* sel_inst = nullptr;
+  std::unordered_map<const nnvm::Node*, unsigned> node2id;  
 };
 }  // namespace op
 }  // namespace mxnet
