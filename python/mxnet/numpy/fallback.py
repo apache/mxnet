@@ -61,9 +61,7 @@ __all__ = [
     'modf',
     'msort',
     'nancumprod',
-    # 'nanmax',
     'nanmedian',
-    # 'nanmin',
     'nanpercentile',
     'nanprod',
     'nanquantile',
@@ -146,9 +144,7 @@ mirr = onp.mirr
 modf = onp.modf
 msort = onp.msort
 nancumprod = onp.nancumprod
-# nanmax = onp.nanmax
 nanmedian = onp.nanmedian
-# nanmin = onp.nanmin
 nanpercentile = onp.nanpercentile
 nanprod = onp.nanprod
 nanquantile = onp.nanquantile
