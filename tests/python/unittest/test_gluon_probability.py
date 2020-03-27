@@ -1413,7 +1413,18 @@ def test_gluon_mvn():
                     net.hybridize()
                 mx_out = net(loc, cov_param, samples)
                 assert mx_out.shape == samples.shape[:-1]
-                # Correctness to be tested.
+                # Select the first element in the batch, because scipy does not support batching.
+                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape, event_shape)[0].asnumpy()
+                if mx_out.shape == ():
+                    mx_out_t = mx_out.asnumpy()
+                else:
+                    mx_out_t = mx_out.flatten()[0].asnumpy()
+                samples_t = samples.reshape(-1, event_shape).asnumpy()[0]
+                scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
+                ss_out = scipy_mvn.logpdf(samples_t)
+                assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False) 
 
     # Test entropy
     for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
@@ -1431,7 +1442,17 @@ def test_gluon_mvn():
                     net.hybridize()
                 mx_out = net(loc, cov_param)
                 assert mx_out.shape == sigma.shape[:-2]
-                # Correctness to be tested.
+                # Select the first element in the batch, because scipy does not support batching.
+                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape, event_shape)[0].asnumpy()
+                if mx_out.shape == ():
+                    mx_out_t = mx_out.asnumpy()
+                else:
+                    mx_out_t = mx_out.flatten()[0].asnumpy()
+                scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
+                ss_out = scipy_mvn.entropy()
+                assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False) 
 
 
 

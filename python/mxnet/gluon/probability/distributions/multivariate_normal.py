@@ -127,7 +127,7 @@ class MultivariateNormal(Distribution):
             '...i,...i->...',
             diff,
             F.np.einsum('...jk,...j->...k', self.precision, diff)  # Batch matrix vector multiply
-            )
+            ) * -0.5
         #   (2 * \pi)^{-k/2} * det(\Sigma)^{-1/2} 
         # = det(2 * \pi * L * L.T)^{-1/2}
         # = det(\sqrt(2 * \pi) * L)^{-1}
