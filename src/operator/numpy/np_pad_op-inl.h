@@ -41,6 +41,10 @@
 namespace mxnet {
 namespace op {
 
+namespace pad_enum {
+enum PadOpType { kConstant, kEdge, kReflect, kSymmetric, kMinimum, kMaximum };
+}
+
 template <int ndim>
 MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
                                const index_t* shape) {
@@ -86,10 +90,6 @@ inline std::string MXNetPadType2String(const int s) {
   }
   LOG(FATAL) << "should not reach here ";
   return 0;
-}
-
-namespace pad_enum {
-enum PadOpType { kConstant, kEdge, kReflect, kSymmetric, kMinimum, kMaximum };
 }
 
 struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
