@@ -18,29 +18,18 @@
  */
 
 /*!
- * \file ufunc_helper.h
- * \brief ufunc helper
+ * \file ndarray.cc
+ * \brief Implementation of the API of functions in src/ndarray/ndarray.cc
  */
-#ifndef MXNET_API_OPERATOR_UFUNC_HELPER_H_
-#define MXNET_API_OPERATOR_UFUNC_HELPER_H_
-#include <mxnet/runtime/packed_func.h>
+#include <mxnet/api_registry.h>
+#include "../operator/utils.h"
+
 namespace mxnet {
 
-/*
- * Ufunc helper for unary operators
- */
-void UFuncHelper(runtime::MXNetArgs args,
-                 runtime::MXNetRetValue* ret,
-                 const nnvm::Op* fn_array);
+MXNET_REGISTER_API("_npi.copyto")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  const nnvm::Op* op = Op::Get("_npi_copyto");
+  UFuncHelper(args, ret, op);
+});
 
-/*
- * Ufunc helper for binary operators
- */
-void UFuncHelper(runtime::MXNetArgs args,
-                 runtime::MXNetRetValue* ret,
-                 const nnvm::Op* fn_array,
-                 const nnvm::Op* lfn_scalar,
-                 const nnvm::Op* rfn_scalar);
 }  // namespace mxnet
-
-#endif  // MXNET_API_OPERATOR_UFUNC_HELPER_H_
