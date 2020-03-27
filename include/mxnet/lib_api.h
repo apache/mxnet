@@ -38,6 +38,11 @@
 #include <iostream>
 #include <utility>
 #include <stdexcept>
+#include <random>
+
+#if defined(__NVCC__)
+  #include <curand_kernel.h>
+#endif
 
 /* Make sure to update the version number everytime you make changes */
 #define MX_LIBRARY_VERSION 6
@@ -396,8 +401,8 @@ struct MXTensor {
            stype == oth.stype;
   }
 
-  // For dense, data_ptr points to data.
-  // For sparse, data_ptr points to MXSparse.
+  // For dense, data_ptr points to 1D flattened tensor data
+  // For sparse, data_ptr points to MXSparse
   void *data_ptr;
 
   // shape is in [2,3,4] format to represent high-dim tensor
@@ -427,9 +432,16 @@ typedef void (*sparse_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t
 
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
+  typedef curandStatePhilox4_32_10_t* mx_gpu_rand_pt;
 #else
   typedef void* mx_stream_t;
+  typedef void* mx_gpu_rand_pt;
 #endif
+
+/*! \brief MXNet initialized random states for each device, used for parallelism */
+/* Each thread should generate random number unique sequence out of different states */
+#define NumCPURandomStates 1024
+#define NumGPURandomStates 32768
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
@@ -466,17 +478,17 @@ class OpResource {
                    &(sparse->data), &(sparse->indices), &(sparse->indptr));
   }
 
-  /*! \brief get pointer to cpu random number inited and seeded states */
-  /* this global states are located on cpu, of type std::mt19937 */
-  void* get_cpu_rand_states() {
-    return cpu_rand_states;
+  /*! \brief get pointer to initialized and seeded random number states located on CPU */
+  /* Access each state by states[id], but this id should not be more than NumCPURandomStates */
+  std::mt19937* get_cpu_rand_states() {
+    return static_cast<std::mt19937*>(cpu_rand_states);
   }
 
-  /*! \brief get pointer to gpu random number inited and seeded states */
-  /* this global states are located on gpu, of type curandStatePhilox4_32_10_t */
-  /* note that if you are using cpu build, it will return a nullptr */
-  void* get_gpu_rand_states() {
-    return gpu_rand_states;
+  /*! \brief get pointer to initialized and seeded random number states located on GPU */
+  /* Access each state by states[id], but this id should not be more than NumGPURandomStates */
+  /* Note that if you are using cpu build, it will return a nullptr */
+  mx_gpu_rand_pt get_gpu_rand_states() {
+    return static_cast<mx_gpu_rand_pt>(gpu_rand_states);
   }
 
  private:

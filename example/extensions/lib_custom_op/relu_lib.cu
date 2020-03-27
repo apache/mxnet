@@ -182,20 +182,21 @@ REGISTER_OP(my_state_relu)
 .setCreateOpState(createOpStateCPU, "cpu")
 .setCreateOpState(createOpStateGPU, "gpu");
 
-
-
-/* ------------------------ Below is noisy relu operator example ---------------------*/
-
-#include <curand_kernel.h>
-#include <random>
+/*
+ * Below is noisy ReLU operator example
+ * noisy ReLU is made from ReLU extended to include Gaussian noise
+ * forward - add Gaussian noise generated from normal distribution to each unit
+ * backward - gradient doesn't need to change since noise is constant
+ */
 
 #define NumRandomPerThread 64 // mxnet recommended random numbers generated per thread
 
-__global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, void *states, int step) {
+__global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_rand_pt states, int step) {
+    // the launcher logic ensures tid less than NumGPURandomStates
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    curandStatePhilox4_32_10_t* global_states = (curandStatePhilox4_32_10_t*)states;
-    curandStatePhilox4_32_10_t thread_state = global_states[tid];
-
+    // each thread generates unique sequence of random numbers
+    curandStatePhilox4_32_10_t thread_state = states[tid];
+    // each thread works on <step> number of calculation
     int start = tid * step;
     int end = start + step;
     for (int i=start; i<end && i<N; ++i) {
@@ -211,7 +212,7 @@ MXReturnValue noisyForwardCPU(std::map<std::string, std::string> attrs,
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    std::mt19937 *states = static_cast<std::mt19937*>(res.get_cpu_rand_states());
+    std::mt19937 *states = res.get_cpu_rand_states();
     std::normal_distribution<float> dist_normal;
 
     for (int i=0; i<inputs[0].size(); ++i) {
@@ -231,13 +232,17 @@ MXReturnValue noisyForwardGPU(std::map<std::string, std::string> attrs,
     mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
 
-    int num_thread_need = (N + NumRandomPerThread - 1) / NumRandomPerThread;
+    // below is mxnet recommended workflow to parallel random number generating
+    int num_thread = (N + NumRandomPerThread - 1) / NumRandomPerThread;
+    // we should not launch more threads than mxnet supported random number GPU states
+    int num_thread_need = num_thread < NumGPURandomStates ? num_thread : NumGPURandomStates;
     // each cuda thread processes [step * tid, step * id + step) snippet of input tensor
     int step = (N + num_thread_need - 1) / num_thread_need;
+    // this can ensure number of parallel threads less than mxnet supported random number states
     int num_block = (num_thread_need + NumThreadPerBlock - 1) / NumThreadPerBlock;
-    void *global_states = res.get_gpu_rand_states();
 
-    noisy_relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(out_data, in_data, N, global_states, step);
+    noisy_relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(
+                                out_data, in_data, N, res.get_gpu_rand_states(), step);
 
     return MX_SUCCESS;
 }

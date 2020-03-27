@@ -256,16 +256,16 @@ void CustomFComputeDispatcher(const std::string op_name,
   }
 #endif
 
-  // get mxnet inited and seeded rng states and pass to lib_api.h
-  void *cpu_states = nullptr, *gpu_states = nullptr;
+  // get mxnet initialized and seeded RNG states and pass to lib_api.h
+  void *rng_cpu_states = nullptr, *rng_gpu_states = nullptr;
   if (!is_subgraph_op) {
     mxnet::common::random::RandGenerator<cpu, float> *pgen_cpu =
         ctx.requested[1].get_parallel_random<cpu, float>();
-    cpu_states = pgen_cpu->GetStates();
+    rng_cpu_states = pgen_cpu->GetStates();
 #if MXNET_USE_CUDA
     mxnet::common::random::RandGenerator<gpu, float> *pgen_gpu =
         ctx.requested[1].get_parallel_random<gpu, float>();
-    gpu_states = pgen_gpu->GetStates();
+    rng_gpu_states = pgen_gpu->GetStates();
 #endif
   }
 
@@ -292,7 +292,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                     in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
                     in_indices_shapes.data(), out_indices_shapes.data(),
                     in_indptr_shapes.data(), out_indptr_shapes.data(),
-                    cpu_states, gpu_states))
+                    rng_cpu_states, rng_gpu_states))
       << "Error calling FCompute for custom operator '" << op_name << "'";
   }
 
@@ -317,7 +317,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                             in_indptr.data(), out_indptr.data(),
                             in_indices_shapes.data(), out_indices_shapes.data(),
                             in_indptr_shapes.data(), out_indptr_shapes.data(),
-                            cpu_states, gpu_states))
+                            rng_cpu_states, rng_gpu_states))
       << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
   }
 }
