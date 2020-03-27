@@ -70,7 +70,7 @@ MXNET_REGISTER_API("_npi.pad")
     param.constant_values = args[3].operator double();
   }
   if (args[4].type_code() != kNull) {
-    param.reflect_type = args[3].operator std::string();
+    param.reflect_type = args[4].operator std::string();
   }
   attrs.op = op;
   attrs.parsed = std::move(param);
