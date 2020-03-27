@@ -251,7 +251,7 @@ List of Contributors
 * [Piljae Chae](https://github.com/IHateMint)
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
-* [Deng, Wenqi](https://tbc.dengwenqi%40gmail.com@github.com/tobecontinued)
+* [Deng, Wenqi](https://github.com/tobecontinued)
 
 Label Bot
 ---------
