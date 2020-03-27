@@ -30,6 +30,27 @@
 
 namespace mxnet {
 
+inline int String2MXNetPadType(const std::string& s) {
+  using namespace op;
+  if (s == "constant") {
+    return pad_enum::kConstant;
+  } else if (s == "edge") {
+    return pad_enum::kEdge;
+  } else if (s == "reflect") {
+    return pad_enum::kReflect;
+  } else if (s == "symmetric") {
+    return pad_enum::kSymmetric;
+  } else if (s == "maximum") {
+    return pad_enum::kMaximum;
+  } else if (s == "minimum") {
+    return pad_enum::kMinimum;
+  } else {
+    LOG(FATAL) << "unknown type " << s;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return 0;
+}
+
 MXNET_REGISTER_API("_npi.pad")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
@@ -44,7 +65,7 @@ MXNET_REGISTER_API("_npi.pad")
     temp.push_back(mxnet::Tuple<int>(adt[counter]));
   }
   param.pad_width = Tuple<Tuple<int>>(temp.begin(), temp.end());
-  param.mode = args[2].operator int();
+  param.mode = String2MXNetPadType(args[2].operator std::string());
   if (args[3].type_code() != kNull) {
     param.constant_values = args[3].operator double();
   }
