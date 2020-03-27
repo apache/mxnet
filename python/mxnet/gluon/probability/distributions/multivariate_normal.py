@@ -38,9 +38,15 @@ class MultivariateNormal(Distribution):
                              "`scale_tril` may be specified")
         _F = F if F is not None else getF(cov, precision, scale_tril)
         self.loc = loc
-        self._cov = cov
-        self._precision = precision
-        self._scale_tril = scale_tril
+        if cov is not None:
+            self.cov = cov
+        elif precision is not None:
+            self.precision = precision
+        else:
+            self.scale_tril = scale_tril
+        # self._cov = cov
+        # self._precision = precision
+        # self._scale_tril = scale_tril
         super(MultivariateNormal, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
 
     def _precision_to_scale_tril(self, P):
@@ -57,29 +63,23 @@ class MultivariateNormal(Distribution):
 
     @cached_property
     def scale_tril(self):
-        if self._scale_tril is not None:
-            return self._scale_tril
         F = self.F
-        if self._cov is not None:
+        if 'cov' in self.__dict__:
             return F.np.linalg.cholesky(self.cov)
         return self._precision_to_scale_tril(self.precision)
     
     @cached_property
     def cov(self):
-        if self._cov is not None:
-            return self._cov
         F = self.F
-        if self._scale_tril is not None:
+        if 'scale_tril' in self.__dict__:
             scale_triu = F.np.swapaxes(self.scale_tril, -1, -2)
             return F.np.matmul(self.scale_tril, scale_triu)
         return F.np.linalg.inv(self.precision)
 
     @cached_property
     def precision(self):
-        if self._precision is not None:
-            return self._precision
         F = self.F
-        if self._cov is not None:
+        if 'cov' in self.__dict__:
             return F.np.linalg.inv(self.cov)
         scale_tril_inv = F.np.linalg.inv(self.scale_tril)
         scale_triu_inv = F.np.swapaxes(scale_tril_inv, -1, -2)
