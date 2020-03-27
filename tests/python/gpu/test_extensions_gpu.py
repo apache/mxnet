@@ -75,8 +75,8 @@ def test_custom_op_gpu():
     assert_almost_equal(in_grad_base[0].asnumpy(), in_grad[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
     # test custom noisy relu producing deterministic result given same seed managed by mxnet
-    d1 = mx.nd.ones(shape=(10,10), ctx=mx.cpu())
-    d2 = mx.nd.ones(shape=(10,10), ctx=mx.gpu())
+    d1 = mx.nd.ones(shape=(10,10,10), ctx=mx.cpu())
+    d2 = mx.nd.ones(shape=(10,10,10), ctx=mx.gpu())
 
     mx.random.seed(128, ctx=mx.cpu())
     r1 = mx.nd.my_noisy_relu(d1)

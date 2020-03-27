@@ -474,7 +474,7 @@ class OpResource {
 
   /*! \brief get pointer to gpu random number inited and seeded states */
   /* this global states are located on gpu, of type curandStatePhilox4_32_10_t */
-  /* note that if you are usign cpu build, then it will return a nullptr */
+  /* note that if you are using cpu build, it will return a nullptr */
   void* get_gpu_rand_states() {
     return gpu_rand_states;
   }

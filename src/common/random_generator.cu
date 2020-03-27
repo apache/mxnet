@@ -72,7 +72,7 @@ void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu> *inst) {
 
 template<>
 void* RandGenerator<gpu, float>::GetStates() {
-  return (void*)states_;
+  return static_cast<void*>(states_);
 }
 
 }  // namespace random

@@ -108,6 +108,7 @@ void CustomFComputeDispatcher(const std::string op_name,
                               const nnvm::NodeAttrs* attrs,
                               const opCallFStatefulComp_t callFStatefulComp,
                               int stateful_forward_flag,
+                              bool is_subgraph_op,
                               const OpStatePtr* state_ptr,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
@@ -146,6 +147,7 @@ void CustomFComputeDispatcher(const std::string op_name,
     in_dims.push_back(in_nd->shape().ndim());
     in_types.push_back(in_nd->dtype());
     in_verIDs.push_back(in_nd->version());
+    // string repr of supported context for custom library, currently only "cpu" and "gpu"
     const char* ctx_str = in_nd->ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
     in_dev_type.push_back(ctx_str);
 
@@ -256,14 +258,16 @@ void CustomFComputeDispatcher(const std::string op_name,
 
   // get mxnet inited and seeded rng states and pass to lib_api.h
   void *cpu_states = nullptr, *gpu_states = nullptr;
-  mxnet::common::random::RandGenerator<cpu, float> *pgen_cpu =
-      ctx.requested[1].get_parallel_random<cpu, float>();
-  cpu_states = pgen_cpu->GetStates();
+  if (!is_subgraph_op) {
+    mxnet::common::random::RandGenerator<cpu, float> *pgen_cpu =
+        ctx.requested[1].get_parallel_random<cpu, float>();
+    cpu_states = pgen_cpu->GetStates();
 #if MXNET_USE_CUDA
-  mxnet::common::random::RandGenerator<gpu, float> *pgen_gpu =
-      ctx.requested[1].get_parallel_random<gpu, float>();
-  gpu_states = pgen_gpu->GetStates();
+    mxnet::common::random::RandGenerator<gpu, float> *pgen_gpu =
+        ctx.requested[1].get_parallel_random<gpu, float>();
+    gpu_states = pgen_gpu->GetStates();
 #endif
+  }
 
   CHECK((fcomp_fp != nullptr && state_ptr == nullptr)
         || (fcomp_fp == nullptr && state_ptr != nullptr))
@@ -837,7 +841,8 @@ int MXLoadLib(const char *path) {
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
         CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                 callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs);
+                                 callFStatefulComp, 1, isSubgraphOp, &state_ptr,
+                                 ctx, inputs, req, outputs);
       };
       if (createop_map.count("cpu") > 0)
         regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
@@ -853,12 +858,14 @@ int MXLoadLib(const char *path) {
           CHECK_GT(forward_ctx_map.count("cpu"), 0);
           fcomp_t fcomp = forward_ctx_map.at("cpu");
           CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
+                                   nullptr, 0, isSubgraphOp, nullptr,
+                                   ctx, inputs, req, outputs);
         } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
           CHECK_GT(forward_ctx_map.count("gpu"), 0);
           fcomp_t fcomp = forward_ctx_map.at("gpu");
           CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
+                                   nullptr, 0, isSubgraphOp, nullptr,
+                                   ctx, inputs, req, outputs);
         }
       };
       if (forward_ctx_map.count("cpu") > 0)
@@ -902,7 +909,7 @@ int MXLoadLib(const char *path) {
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
           CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                   callFStatefulComp, 0, &state_ptr,
+                                   callFStatefulComp, 0, isSubgraphOp, &state_ptr,
                                    ctx, inputs, req, outputs);
         };
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
@@ -917,7 +924,8 @@ int MXLoadLib(const char *path) {
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
             CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
-                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
+                                     nullptr, 0, isSubgraphOp, nullptr,
+                                     ctx, inputs, req, outputs);
           };
           gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
         }
@@ -929,7 +937,8 @@ int MXLoadLib(const char *path) {
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
             CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
-                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
+                                     nullptr, 0, isSubgraphOp, nullptr,
+                                     ctx, inputs, req, outputs);
           };
           gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
         }
