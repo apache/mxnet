@@ -63,6 +63,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("sum", pool['2x2'], axis=0, keepdims=True, out=pool['1x2'])
     OpArgMngr.add_workload("std", pool['2x2'], axis=0, ddof=0, keepdims=True, out=pool['1x2'])
     OpArgMngr.add_workload("var", pool['2x2'], axis=0, ddof=1, keepdims=True, out=pool['1x2'])
+    OpArgMngr.add_workload("average", pool['2x2'], weights=pool['2'], axis=1, returned=True)
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("linalg.eig", pool['3x3'])
     OpArgMngr.add_workload("linalg.eigh", pool['3x3'])

@@ -578,6 +578,16 @@ struct NumpyWeightedAverageParam : public dmlc::Parameter<NumpyWeightedAveragePa
       .set_default(true)
       .describe("Auxiliary flag to deal with none weights.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, returned_s, weighted_s;
+    axis_s << axis;
+    returned_s << returned;
+    weighted_s << weighted;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["returned"] = returned_s.str();
+    (*dict)["weighted"] = weighted_s.str();
+  }
 };
 
 inline bool NumpyWeightedAverageShape(const nnvm::NodeAttrs& attrs,

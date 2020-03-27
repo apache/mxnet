@@ -4883,10 +4883,7 @@ def average(a, axis=None, weights=None, returned=False, out=None):
     >>> np.average(data, axis=1, weights=weights)
     array([0.75, 2.75, 4.75])
     """
-    if weights is None:
-        return _npi.average(a, axis=axis, weights=None, returned=returned, weighted=False, out=out)
-    else:
-        return _npi.average(a, axis=axis, weights=weights, returned=returned, out=out)
+    return _api_internal.average(a, weights, axis, returned, weights is not None, out)
 
 
 @set_module('mxnet.ndarray.numpy')
