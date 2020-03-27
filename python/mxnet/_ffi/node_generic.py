@@ -52,6 +52,8 @@ def convert_to_node(value):
     """
     if isinstance(value, Integral):
         return _api_internal._Integer(value)
+    elif isinstance(value, float):
+        return _api_internal._Float(value)
     elif isinstance(value, (list, tuple)):
         value = [convert_to_node(x) for x in value]
         return _api_internal._ADT(*value)

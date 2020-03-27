@@ -1739,13 +1739,13 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
     if isinstance(bins, numeric_types):
         if range is None:
             raise NotImplementedError("automatic range is not supported yet...")
-        return _npi.histogram(a, bin_cnt=bins, range=range)
+        return tuple(_api_internal.histogram(a, None, bins, range))
     if isinstance(bins, (list, tuple)):
         raise NotImplementedError("array_like bins is not supported yet...")
     if isinstance(bins, str):
         raise NotImplementedError("string bins is not supported yet...")
     if isinstance(bins, NDArray):
-        return _npi.histogram(a, bins=bins)
+        return tuple(_api_internal.histogram(a, bins, None, None))
     raise ValueError("np.histogram fails with", locals())
 
 
