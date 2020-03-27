@@ -2424,6 +2424,8 @@ def test_np_mixed_precision_binary_funcs():
                                 use_broadcast=False, equal_nan=True)
 
             if lgrad:
+                if (ltype in itypes) and (rtype in itypes):
+                    continue
                 y.backward()
                 if ltype not in itypes:
                     assert_almost_equal(mx_test_x1.grad.asnumpy(),
@@ -2474,6 +2476,13 @@ def test_np_mixed_precision_binary_funcs():
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type2, type1)
 
             for type1, type2 in itertools.product(ftypes, ftypes):
+                if type1 == type2:
+                    continue
+                check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
+
+            if func == 'subtract':
+                continue
+            for type1, type2 in itertools.product(itypes, itypes):
                 if type1 == type2:
                     continue
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
