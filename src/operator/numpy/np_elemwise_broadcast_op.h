@@ -52,7 +52,8 @@ inline void PrintErrorMessage(const std::string& op_name, const int dtype1, cons
 }
 
 inline bool is_integer(const int dtype) {
-  return dtype == mshadow::kBool || dtype == mshadow::kInt8 || dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
+  return dtype == mshadow::kBool || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
 }
 
 #ifndef _WIN32
