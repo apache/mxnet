@@ -108,7 +108,6 @@ void CustomFComputeDispatcher(const std::string op_name,
                               const nnvm::NodeAttrs* attrs,
                               const opCallFStatefulComp_t callFStatefulComp,
                               int stateful_forward_flag,
-                              bool is_subgraph_op,
                               const OpStatePtr* state_ptr,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
@@ -258,16 +257,13 @@ void CustomFComputeDispatcher(const std::string op_name,
 
   // get mxnet initialized and seeded RNG states and pass to lib_api.h
   void *rng_cpu_states = nullptr, *rng_gpu_states = nullptr;
-  if (!is_subgraph_op) {
-    mxnet::common::random::RandGenerator<cpu, float> *pgen_cpu =
-        ctx.requested[1].get_parallel_random<cpu, float>();
-    rng_cpu_states = pgen_cpu->GetStates();
+  using mxnet::common::random::RandGenerator;
+  RandGenerator<cpu, float> *pgen_cpu = ctx.requested[1].get_parallel_random<cpu, float>();
+  rng_cpu_states = pgen_cpu->GetStates();
 #if MXNET_USE_CUDA
-    mxnet::common::random::RandGenerator<gpu, float> *pgen_gpu =
-        ctx.requested[1].get_parallel_random<gpu, float>();
-    rng_gpu_states = pgen_gpu->GetStates();
+  RandGenerator<gpu, float> *pgen_gpu = ctx.requested[1].get_parallel_random<gpu, float>();
+  rng_gpu_states = pgen_gpu->GetStates();
 #endif
-  }
 
   CHECK((fcomp_fp != nullptr && state_ptr == nullptr)
         || (fcomp_fp == nullptr && state_ptr != nullptr))
@@ -815,7 +811,6 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
-      regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
@@ -827,11 +822,10 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<mxnet::FInferShape>("FInferShape", DefaultSubgraphOpShape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType",
                                         DefaultSubgraphOpStorageType, plevel);
-      regOp.set_attr<FResourceRequest>("FResourceRequest",
-                                       DefaultSubgraphOpResourceRequest, plevel);
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                           DefaultSubgraphOpMutableInputs, plevel);
     }
+    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
     // optionally add stateful forward
     if (createop_map.size() != 0) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
@@ -841,8 +835,7 @@ int MXLoadLib(const char *path) {
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
         CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                 callFStatefulComp, 1, isSubgraphOp, &state_ptr,
-                                 ctx, inputs, req, outputs);
+                                 callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs);
       };
       if (createop_map.count("cpu") > 0)
         regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
@@ -858,14 +851,12 @@ int MXLoadLib(const char *path) {
           CHECK_GT(forward_ctx_map.count("cpu"), 0);
           fcomp_t fcomp = forward_ctx_map.at("cpu");
           CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, isSubgraphOp, nullptr,
-                                   ctx, inputs, req, outputs);
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
         } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
           CHECK_GT(forward_ctx_map.count("gpu"), 0);
           fcomp_t fcomp = forward_ctx_map.at("gpu");
           CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, isSubgraphOp, nullptr,
-                                   ctx, inputs, req, outputs);
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
         }
       };
       if (forward_ctx_map.count("cpu") > 0)
@@ -909,8 +900,7 @@ int MXLoadLib(const char *path) {
                                    const std::vector<OpReqType>& req,
                                    const std::vector<NDArray>& outputs) {
           CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                   callFStatefulComp, 0, isSubgraphOp, &state_ptr,
-                                   ctx, inputs, req, outputs);
+                                   callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs);
         };
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
         gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
@@ -924,8 +914,7 @@ int MXLoadLib(const char *path) {
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
             CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
-                                     nullptr, 0, isSubgraphOp, nullptr,
-                                     ctx, inputs, req, outputs);
+                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
           };
           gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
         }
@@ -937,8 +926,7 @@ int MXLoadLib(const char *path) {
                                          const std::vector<OpReqType>& req,
                                          const std::vector<NDArray>& outputs) {
             CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
-                                     nullptr, 0, isSubgraphOp, nullptr,
-                                     ctx, inputs, req, outputs);
+                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
           };
           gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
         }

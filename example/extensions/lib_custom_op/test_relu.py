@@ -79,8 +79,8 @@ print((t3 - t2) * 1000)
 
 print("--------test noisy relu identical sequence---------")
 
-a = mx.nd.ones(shape=(10,10), ctx=mx.cpu())
-b = mx.nd.ones(shape=(10,10), ctx=mx.gpu())
+a = mx.nd.ones(shape=(13,5), ctx=mx.cpu())
+b = mx.nd.ones(shape=(13,5), ctx=mx.gpu())
 
 mx.random.seed(128, ctx=mx.cpu())
 print(mx.nd.my_noisy_relu(a))

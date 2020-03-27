@@ -191,11 +191,11 @@ REGISTER_OP(my_state_relu)
 
 #define NumRandomPerThread 64 // mxnet recommended random numbers generated per thread
 
-__global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_rand_pt states, int step) {
+__global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_rand_t* states, int step) {
     // the launcher logic ensures tid less than NumGPURandomStates
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     // each thread generates unique sequence of random numbers
-    curandStatePhilox4_32_10_t thread_state = states[tid];
+    mx_gpu_rand_t thread_state = states[tid];
     // each thread works on <step> number of calculation
     int start = tid * step;
     int end = start + step;
@@ -212,7 +212,7 @@ MXReturnValue noisyForwardCPU(std::map<std::string, std::string> attrs,
     float* in_data = inputs[0].data<float>();
     float* out_data = outputs[0].data<float>();
 
-    std::mt19937 *states = res.get_cpu_rand_states();
+    mx_cpu_rand_t* states = res.get_cpu_rand_states();
     std::normal_distribution<float> dist_normal;
 
     for (int i=0; i<inputs[0].size(); ++i) {
@@ -233,9 +233,9 @@ MXReturnValue noisyForwardGPU(std::map<std::string, std::string> attrs,
     int64_t N = inputs[0].size();
 
     // below is mxnet recommended workflow to parallel random number generating
-    int num_thread = (N + NumRandomPerThread - 1) / NumRandomPerThread;
+    int nthread = (N + NumRandomPerThread - 1) / NumRandomPerThread;
     // we should not launch more threads than mxnet supported random number GPU states
-    int num_thread_need = num_thread < NumGPURandomStates ? num_thread : NumGPURandomStates;
+    int num_thread_need = nthread < MX_NUM_GPU_RANDOM_STATES ? nthread : MX_NUM_GPU_RANDOM_STATES;
     // each cuda thread processes [step * tid, step * id + step) snippet of input tensor
     int step = (N + num_thread_need - 1) / num_thread_need;
     // this can ensure number of parallel threads less than mxnet supported random number states
