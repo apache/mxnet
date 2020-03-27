@@ -67,6 +67,27 @@ MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const int idx,
   return ret;
 }
 
+inline std::string MXNetPadType2String(const int s) {
+  using namespace op;
+  if (s == pad_enum::kConstant) {
+    return "constant";
+  } else if (s == pad_enum::kEdge) {
+    return "edge";
+  } else if (s == pad_enum::kReflect) {
+    return "reflect";
+  } else if (s == pad_enum::kSymmetric) {
+    return "symmetric";
+  } else if (s == pad_enum::kMaximum) {
+    return "maximum";
+  } else if (s == pad_enum::kMinimum) {
+    return "minimum";
+  } else {
+    LOG(FATAL) << "unknown type " << s;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return 0;
+}
+
 namespace pad_enum {
 enum PadOpType { kConstant, kEdge, kReflect, kSymmetric, kMinimum, kMaximum };
 }
@@ -126,11 +147,11 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream pad_width_s, mode_s, constant_values_s, reflect_type_s;
     pad_width_s << pad_width;
-    mode_s << mode;
+    // mode_s << mode;
     constant_values_s << constant_values;
     reflect_type_s << reflect_type;
     (*dict)["pad_width"] = pad_width_s.str();
-    (*dict)["mode"] = mode_s.str();
+    (*dict)["mode"] = MXNetPadType2String(mode);
     (*dict)["constant_values"] = constant_values_s.str();
     (*dict)["reflect_type"] = reflect_type_s.str();
   }
