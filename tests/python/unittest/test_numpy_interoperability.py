@@ -2421,6 +2421,13 @@ def _add_workload_nanargmin():
     OpArgMngr.add_workload('nanargmin', a, axis=1)
 
 
+def _add_workload_nansum():
+    a = np.array([[1, 1], [1, np.nan]])
+    OpArgMngr.add_workload('nansum', a)
+    OpArgMngr.add_workload('nansum', a, axis=0)
+    OpArgMngr.add_workload('nansum', a, axis=1)
+
+
 def _add_workload_nancumprod():
     a = np.array([[1, 2], [3, np.nan]])
     OpArgMngr.add_workload('nancumprod', a)
@@ -2920,6 +2927,8 @@ def _prepare_workloads():
     _add_workload_full_like(array_pool)
     _add_workload_empty_like()
     _add_workload_nan_to_num()
+    _add_workload_nanargmax()
+    _add_workload_nanargmax()
     _add_workload_polyval()
     _add_workload_isnan(array_pool)
     _add_workload_isinf(array_pool)
@@ -2965,6 +2974,7 @@ def _prepare_workloads():
     _add_workload_msort()
     _add_workload_nanargmax()
     _add_workload_nanargmin()
+    _add_workload_nansum()
     _add_workload_nancumprod()
     _add_workload_nancumsum()
     _add_workload_nanmax()
