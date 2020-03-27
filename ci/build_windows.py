@@ -122,6 +122,7 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
+        '-DUSE_SPLIT_ARCH_DLL=OFF '
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DOpenCV_RUNTIME=vc15 '
@@ -140,6 +141,7 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': (
+        '-DUSE_SPLIT_ARCH_DLL=OFF '
         '-DCMAKE_C_COMPILER=cl '
         '-DCMAKE_CXX_COMPILER=cl '
         '-DOpenCV_RUNTIME=vc15 '
