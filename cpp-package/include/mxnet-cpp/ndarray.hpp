@@ -429,7 +429,7 @@ inline const mx_float *NDArray::GetData() const {
   void *ret;
   MXNDArrayGetData(blob_ptr_->handle_, &ret);
   if (GetDType() != 0) {
-    return NULL;
+    return nullptr;
   }
   return static_cast<mx_float*>(ret);
 }

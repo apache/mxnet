@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Callback functions that can be used to track various status during epoch."""
-from __future__ import absolute_import
 
 import logging
 import math

@@ -41,6 +41,7 @@ IMPLEMENTED_OPERATORS_TEST = {
              'test_globalaveragepool',
              'test_slice_cpu',
              'test_slice_neg',
+             'test_slice_end',
              'test_reciprocal',
              'test_sqrt',
              'test_pow',

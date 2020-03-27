@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Information about mxnet."""
-from __future__ import absolute_import
 import os
 import platform
 import logging
@@ -142,4 +141,4 @@ def find_conf_path(prefix='tvmop'):
 
 
 # current version
-__version__ = "1.6.0"
+__version__ = "2.0.0"

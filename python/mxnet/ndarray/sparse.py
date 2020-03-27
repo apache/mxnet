@@ -19,8 +19,6 @@
 # pylint: disable=wildcard-import, unused-wildcard-import, too-many-lines
 """Sparse NDArray API of MXNet."""
 
-from __future__ import absolute_import
-from __future__ import division
 try:
     from __builtin__ import slice as py_slice
     from __builtin__ import sum as py_sum
@@ -232,6 +230,7 @@ class BaseSparseNDArray(NDArray):
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
+        # Use copyto for casting, as op.cast(self, dtype=dtype) doesn't support sparse stype
         res = zeros(shape=self.shape, ctx=self.context,
                     dtype=dtype, stype=self.stype)
         self.copyto(res)

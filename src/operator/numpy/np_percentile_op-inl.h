@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_PERCENTILE_OP_INL_H_
 
 #include <vector>
+#include <string>
 #include "../tensor/ordering_op-inl.h"
 #include "../tensor/matrix_op-inl.h"
 #include "../../common/utils.h"
@@ -32,6 +33,7 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "np_broadcast_reduce_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -44,6 +46,7 @@ struct NumpyPercentileParam : public dmlc::Parameter<NumpyPercentileParam> {
   dmlc::optional<mxnet::Tuple<int>> axis;
   int interpolation;
   bool keepdims;
+  dmlc::optional<double> q_scalar;
   DMLC_DECLARE_PARAMETER(NumpyPercentileParam) {
     DMLC_DECLARE_FIELD(axis)
       .set_default(dmlc::optional<mxnet::Tuple<int>>())
@@ -61,6 +64,18 @@ struct NumpyPercentileParam : public dmlc::Parameter<NumpyPercentileParam> {
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(q_scalar).set_default(dmlc::optional<double>())
+      .describe("inqut q is a scalar");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s, q_scalar_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    q_scalar_s << q_scalar;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["interpolation"] = MXNetPercentileType2String(interpolation);
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["q_scalar"] = q_scalar_s.str();
   }
 };
 
@@ -133,22 +148,22 @@ void NumpyPercentileForward(const nnvm::NodeAttrs& attrs,
   if (req[0] == kNullOp) return;
   using namespace mxnet;
   using namespace mxnet_op;
-  CHECK_EQ(inputs.size(), 2U);
+  CHECK_GE(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   const TBlob &data = inputs[0];
-  const TBlob &percentile = inputs[1];
   const TBlob &out = outputs[0];
   const NumpyPercentileParam& param = nnvm::get<NumpyPercentileParam>(attrs.parsed);
   const int interpolation = param.interpolation;
   dmlc::optional<mxnet::Tuple<int>> axis = param.axis;
+  dmlc::optional<double> q_scalar = param.q_scalar;
 
   auto small = NumpyReduceAxesShapeImpl(data.shape_, axis, false);
 
   TShape r_shape;
   r_shape = TShape(small.ndim()+1, 1);
-  r_shape[0] = percentile.Size();
+  r_shape[0] = q_scalar.has_value()? 1 : inputs[1].Size();
   for (int i = 1; i < r_shape.ndim(); ++i) {
     r_shape[i] = small[i-1];
   }
@@ -216,7 +231,7 @@ void NumpyPercentileForward(const nnvm::NodeAttrs& attrs,
     size_t temp_data_size = data.Size() * sizeof(DType);
     size_t idx_size = data.Size() * sizeof(index_t);
     size_t temp_mem_size = 2 * temp_data_size + idx_size;
-    size_t workspace_size = topk_workspace_size * 2 + temp_mem_size + 8;
+    size_t workspace_size = topk_workspace_size * 2 + temp_mem_size + 16;
 
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -224,6 +239,20 @@ void NumpyPercentileForward(const nnvm::NodeAttrs& attrs,
     char* workspace_curr_ptr = temp_mem.dptr_;
     DType* trans_ptr, *sort_ptr;
     index_t* idx_ptr;
+    TBlob percentile;
+    double q;
+
+    if (q_scalar.has_value()) {
+      q = q_scalar.value();
+      Tensor<cpu, 1, double> host_q(&q, Shape1(1), ctx.get_stream<cpu>());
+      Tensor<xpu, 1, double> device_q(reinterpret_cast<double*>(workspace_curr_ptr),
+                                      Shape1(1), ctx.get_stream<xpu>());
+      mshadow::Copy(device_q, host_q, ctx.get_stream<xpu>());
+      percentile = TBlob(device_q.dptr_, TShape(0, 1), xpu::kDevMask);
+      workspace_curr_ptr += 8;
+    } else {
+      percentile = inputs[1];
+    }   // handle input q is a scalar
 
     char* is_valid_ptr = reinterpret_cast<char*>(workspace_curr_ptr);
     MSHADOW_TYPE_SWITCH(percentile.type_flag_, QType, {

@@ -173,7 +173,7 @@ inline int parse_operand_subscripts(const char *subscripts, int length,
       /* Search for the next matching label. */
       char *next = reinterpret_cast<char*>(memchr(op_labels + idim + 1, label, ndim - idim - 1));
 
-      while (next != NULL) {
+      while (next != nullptr) {
         /* The offset from next to op_labels[idim] (negative). */
         *next = static_cast<char>((op_labels + idim) - next);
         /* Search for the next matching label. */
@@ -208,7 +208,7 @@ inline int parse_output_subscripts(const char *subscripts, int length,
     /* A proper label for an axis. */
     if (label > 0 && isalpha(label)) {
       /* Check that it doesn't occur again. */
-      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == NULL)
+      CHECK(memchr(subscripts + i + 1, label, length - i - 1) == nullptr)
         << "einstein sum subscripts string includes "
         << "output subscript '" << static_cast<char>(label)
         << "' multiple times";
@@ -356,7 +356,7 @@ inline static int prepare_op_axes(int ndim, int iop, char *labels,
       /* It's a labeled dimension, find the matching one */
       char *match = reinterpret_cast<char*>(memchr(labels, label, ndim));
       /* If the op doesn't have the label, broadcast it */
-      if (match == NULL) {
+      if (match == nullptr) {
         axes[i] = -1;
       } else {
         /* Otherwise use it */
@@ -383,6 +383,15 @@ struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
       " subscript labels of the precise output form.");
     DMLC_DECLARE_FIELD(optimize)
       .set_default(0);
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s, optimize_s, subscripts_s;
+    num_args_s << num_args;
+    optimize_s << optimize;
+    subscripts_s << subscripts;
+    (*dict)["num_args"] = num_args_s.str();
+    (*dict)["optimize"] = optimize_s.str();
+    (*dict)["subscripts"] = subscripts_s.str();
   }
 };
 
@@ -585,7 +594,7 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
   int ndim_iter = ndim_output;
   for (label = min_label; label <= max_label; ++label) {
     if (label_counts[label] > 0 &&
-        memchr(output_labels, label, ndim_output) == NULL) {
+        memchr(output_labels, label, ndim_output) == nullptr) {
       CHECK(ndim_iter < NPY_MAXDIMS)
         << "too many subscripts in einsum";
       iter_labels[ndim_iter++] = label;

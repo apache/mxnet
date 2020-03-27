@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """Automatic naming support for symbolic API."""
-from __future__ import absolute_import
 import threading
 import warnings
 from .base import classproperty, with_metaclass, _MXClassPropertyMetaClass

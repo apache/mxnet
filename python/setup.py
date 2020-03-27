@@ -70,10 +70,7 @@ def config_cython():
 
     try:
         from Cython.Build import cythonize
-        if sys.version_info >= (3, 0):
-            subdir = "_cy3"
-        else:
-            subdir = "_cy2"
+        subdir = "_cy3"
         ret = []
         path = "mxnet/cython"
         if os.name == 'nt':
@@ -95,6 +92,20 @@ def config_cython():
                 include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
+                extra_link_args=extra_link_args,
+                language="c++"))
+        
+        path = "mxnet/_ffi/_cython"
+        for fn in os.listdir(path):
+            if not fn.endswith(".pyx"):
+                continue
+            ret.append(Extension(
+                "mxnet._ffi.%s.%s" % (subdir, fn[:-4]),
+                ["mxnet/_ffi/_cython/%s" % fn],
+                include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
+                library_dirs=library_dirs,
+                libraries=libraries,
+                extra_compile_args=["-std=c++11"],
                 extra_link_args=extra_link_args,
                 language="c++"))
 

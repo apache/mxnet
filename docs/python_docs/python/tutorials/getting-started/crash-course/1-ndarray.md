@@ -17,14 +17,14 @@
 
 # Manipulate data with `ndarray`
 
-We'll start by introducing the `NDArray`, MXNet’s primary tool for storing and transforming data. If you’ve worked with `NumPy` before, you’ll notice that a NDArray is, by design, similar to NumPy’s multi-dimensional array.
+We'll start by introducing the `NDArray`, MXNet’s primary tool for storing and transforming data. If you’ve worked with `NumPy` before, you’ll notice that an NDArray is, by design, similar to NumPy’s multi-dimensional array.
 
 ## Get started
 
-To get started, let's import the `ndarray` package (`nd` is shortform) from MXNet.
+To get started, let's import the `ndarray` package (`nd` is a shorter alias) from MXNet.
 
 ```{.python .input  n=1}
-# If you hasn't install MXNet yet, you can uncomment the following line to
+# If you haven't installed MXNet yet, you can uncomment the following line to
 # install the latest stable release
 # !pip install -U mxnet
 
@@ -67,7 +67,7 @@ As with NumPy, the dimensions of each NDArray are accessible by accessing the `.
 
 ## Operations
 
-NDArray supports a large number of standard mathematical operations. Such as element-wise multiplication:
+NDArray supports a large number of standard mathematical operations, such as element-wise multiplication:
 
 ```{.python .input  n=18}
 x * y
@@ -79,7 +79,7 @@ Exponentiation:
 y.exp()
 ```
 
-And grab a matrix’s transpose to compute a proper matrix-matrix product:
+And transposing a matrix to compute a proper matrix-matrix product:
 
 ```{.python .input  n=24}
 nd.dot(x, y.T)
@@ -99,7 +99,7 @@ Read the second and third columns from `y`.
 y[:,1:3]
 ```
 
-and writing to a specific element
+and write to a specific element.
 
 ```{.python .input  n=27}
 y[:,1:3] = 2

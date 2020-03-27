@@ -302,6 +302,13 @@ struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
     .describe("Axis or axes along which elements are shifted. By default, the array is flattened"
               "before shifting, after which the original shape is restored.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shift_s, axis_s;
+    shift_s << shift;
+    axis_s << axis;
+    (*dict)["shift"] = shift_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 template<int req>
@@ -605,6 +612,13 @@ struct NumpyRot90Param : public dmlc::Parameter<NumpyRot90Param> {
     .set_default(dmlc::optional<mxnet::TShape>())
     .describe(" The array is rotated in the plane defined by the axes. Axes must be different.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s, axes_s;
+    k_s << k;
+    axes_s << axes;
+    (*dict)["k"] = k_s.str();
+    (*dict)["axes"] = axes_s.str();
+  }
 };
 
 struct rot90reverse {
@@ -852,6 +866,10 @@ inline void HSplitOpForward(const nnvm::NodeAttrs &attrs,
   } else {
     real_axis = 0;
   }
+  if (param.sections > 0) {
+    CHECK_EQ(inputs[0].shape_[real_axis] % param.sections, 0U)
+      << "ValueError: array split does not result in an equal division";
+  }
   SplitOpForwardImpl<xpu>(attrs, ctx, inputs, req, outputs, real_axis);
 }
 
@@ -965,6 +983,11 @@ struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. ");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
@@ -988,7 +1011,7 @@ inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
   auto s = std::max(std::min(h, w), a);
   // s is the length of diagonal with k as the offset
 
-  int32_t n_dim = ishape.ndim() - 1;
+  int n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
   oshape[n_dim - 1] = s;
   return oshape;
@@ -1159,8 +1182,8 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
   int offset;
-  int32_t axis1;
-  int32_t axis2;
+  int axis1;
+  int axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
     DMLC_DECLARE_FIELD(offset)
       .set_default(0)
@@ -1177,12 +1200,21 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
       .describe("The second axis of the sub-arrays of interest. "
                 "Ignored when the input is a 1-D array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream offset_s, axis1_s, axis2_s;
+    offset_s << offset;
+    axis1_s << axis1;
+    axis2_s << axis2;
+    (*dict)["offset"] = offset_s.str();
+    (*dict)["axis1"] = axis1_s.str();
+    (*dict)["axis2"] = axis2_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
-                                            const int32_t axis1, const int32_t axis2) {
-  int32_t x1 = CheckAxis(axis1, ishape.ndim());
-  int32_t x2 = CheckAxis(axis2, ishape.ndim());
+                                            const int axis1, const int axis2) {
+  int x1 = CheckAxis(axis1, ishape.ndim());
+  int x2 = CheckAxis(axis2, ishape.ndim());
 
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
 
@@ -1197,11 +1229,11 @@ inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const i
   if (s < 0) s = 0;
   if (x1 > x2) std::swap(x1, x2);
 
-  int32_t n_dim = ishape.ndim() - 1;
+  int n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
 
   // remove axis1 and axis2 and append the new axis to the end
-  uint32_t idx = 0;
+  int idx = 0;
   for (int i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
@@ -1274,22 +1306,22 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
                          const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
-  uint32_t x1 = CheckAxis(param.axis1, ishape.ndim());
-  uint32_t x2 = CheckAxis(param.axis2, ishape.ndim());
-  uint32_t idim = ishape.ndim(), odim = oshape.ndim();
-  uint32_t minx = x1, maxx = x2;
+  int x1 = CheckAxis(param.axis1, ishape.ndim());
+  int x2 = CheckAxis(param.axis2, ishape.ndim());
+  int idim = ishape.ndim(), odim = oshape.ndim();
+  int minx = x1, maxx = x2;
   if (minx > maxx) std::swap(minx, maxx);
 
   index_t oleading = 1,
           obody = 1,
           otrailing = 1;
-  for (uint32_t i = 0; i < minx; ++i) {
+  for (int i = 0; i < minx; ++i) {
     oleading *= ishape[i];
   }
-  for (uint32_t i = minx + 1; i < maxx; ++i) {
+  for (int i = minx + 1; i < maxx; ++i) {
     obody *= ishape[i];
   }
-  for (uint32_t i = maxx + 1; i < idim; ++i) {
+  for (int i = maxx + 1; i < idim; ++i) {
     otrailing *= ishape[i];
   }
 
@@ -1500,6 +1532,38 @@ void NumpyDiagflatOpBackward(const nnvm::NodeAttrs& attrs,
 
   NumpyDiagflatOpImpl<xpu, true>(in_data, out_data, oshape,
                                  ishape, in_data.Size(), param, s, req);
+}
+
+struct diag_indices_from {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, const int length) {
+    int index = i % length;
+    out[i] = index;
+  }
+};
+
+template<typename xpu>
+void NumpyDiagIndicesFromForward(const nnvm::NodeAttrs& attrs,
+                                 const OpContext& ctx,
+                                 const std::vector<TBlob>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& in_data = inputs[0];
+  const TBlob& out_data = outputs[0];
+  const int length = in_data.shape_[0];
+  if (in_data.Size() == 0) return;
+
+  MSHADOW_IDX_TYPE_SWITCH(out_data.type_flag_, DType, {
+    Kernel<diag_indices_from, xpu>::Launch(
+      s, out_data.Size(), out_data.dptr<DType>(), length);
+  });
 }
 
 }  // namespace op

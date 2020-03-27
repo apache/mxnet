@@ -31,8 +31,8 @@ from benchmark.opperf.utils.op_registry_utils import get_all_reduction_operators
 from benchmark.opperf.utils.benchmark_utils import run_op_benchmarks
 
 
-def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype)for all the reduction
+def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and input data size (int64_tensor) for all the reduction
     operators in MXNet.
 
     Parameters
@@ -41,6 +41,10 @@ def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profile
         Context to run benchmarks
     dtype: str, default 'float32'
         Precision to use for benchmarks
+    profiler: str, default 'native'
+        Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -54,5 +58,5 @@ def run_mx_reduction_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profile
     # Fetch all Reduction Operators
     mx_reduction_broadcast_ops = get_all_reduction_operators()
     # Run benchmarks
-    mx_reduction_op_results = run_op_benchmarks(mx_reduction_broadcast_ops, dtype, ctx, profiler, warmup, runs)
+    mx_reduction_op_results = run_op_benchmarks(mx_reduction_broadcast_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_reduction_op_results

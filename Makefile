@@ -96,6 +96,7 @@ CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 # disable stack trace in exception by default.
 CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
+CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
 	CFLAGS += -g -Werror
@@ -222,11 +223,15 @@ ifeq (,$(wildcard /lib/liblapack.a))
 ifeq (,$(wildcard /lib/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.a))
 ifeq (,$(wildcard /usr/lib/liblapack.so))
+ifeq (,$(wildcard /usr/lib/x86_64-linux-gnu/liblapack.a))
+ifeq (,$(wildcard /usr/lib/x86_64-linux-gnu/liblapack.so))
 ifeq (,$(wildcard /usr/lib/liblapack.dylib))
 ifeq (,$(wildcard /usr/lib64/liblapack.a))
 ifeq (,$(wildcard /usr/lib64/liblapack.so))
 	USE_LAPACK = 0
         $(warning "USE_LAPACK disabled because libraries were not found")
+endif
+endif
 endif
 endif
 endif
@@ -521,6 +526,12 @@ ifeq ($(USE_CUDA), 1)
 	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
+	ifeq ($(USE_NVML), 1)
+		LDFLAGS += -lnvidia-ml
+		CFLAGS += -DMXNET_USE_NVML=1
+	else
+		CFLAGS += -DMXNET_USE_NVML=0
+	endif
 	ifeq ($(USE_NCCL), 1)
 		ifneq ($(USE_NCCL_PATH), NONE)
 			CFLAGS += -I$(USE_NCCL_PATH)/include
@@ -532,6 +543,7 @@ ifeq ($(USE_CUDA), 1)
 		CFLAGS += -DMXNET_USE_NCCL=0
 	endif
 else
+	CFLAGS += -DMXNET_USE_NVML=0
 	CFLAGS += -DMXNET_USE_NCCL=0
 endif
 
@@ -666,18 +678,21 @@ pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
 # MXNet extension dynamically loading libraries
-EXT_LIBS = custom_op_lib subgraph_lib
+EXT_LIBS = build/libcustomop_lib.so build/libsubgraph_lib.so
 ifeq ($(USE_CUDA), 1)
-	EXT_LIBS += custom_op_gpu_lib
+        EXT_LIBS += build/libcustomop_gpu_lib.so
 endif
 extension_libs: $(EXT_LIBS)
 
-custom_op_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o build/libcustomop_lib.so -I include/mxnet
-custom_op_gpu_lib:
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o build/libcustomop_gpu_lib.so -I include/mxnet
-subgraph_lib:
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o build/libsubgraph_lib.so -I include/mxnet
+build/libcustomop_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+build/libcustomop_gpu_lib.so:
+	@mkdir -p $(@D)
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+build/libsubgraph_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
 
 # Cython build
 cython:
@@ -711,15 +726,15 @@ rclean:
 	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
 		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
-build/rat/apache-rat/target/apache-rat-0.13.jar:
-	mkdir -p build
-	svn co http://svn.apache.org/repos/asf/creadur/rat/tags/apache-rat-project-0.13/ build/rat; \
+build/rat/apache-rat-0.13/apache-rat-0.13.jar:
+	mkdir -p build/rat
 	cd build/rat; \
-	mvn -Dmaven.test.skip=true install;
+	wget http://mirror.metrocast.net/apache//creadur/apache-rat-0.13/apache-rat-0.13-bin.zip; \
+	unzip apache-rat-0.13-bin.zip;
 
-ratcheck: build/rat/apache-rat/target/apache-rat-0.13.jar
+ratcheck: build/rat/apache-rat-0.13/apache-rat-0.13.jar
 	exec 5>&1; \
-	RAT_JAR=build/rat/apache-rat/target/apache-rat-0.13.jar; \
+	RAT_JAR=build/rat/apache-rat-0.13/apache-rat-0.13.jar; \
 	OUTPUT=$(java -jar $(RAT_JAR) -E tests/nightly/apache_rat_license_check/rat-excludes -d .|tee >(cat - >&5)); \
     ERROR_MESSAGE="Printing headers for text files without a valid license header"; \
     echo "-------Process The Output-------"; \

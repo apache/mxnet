@@ -19,7 +19,6 @@
 # pylint: disable=no-member, too-many-lines
 
 """Online evaluation metric module."""
-from __future__ import absolute_import
 import math
 from collections import OrderedDict
 

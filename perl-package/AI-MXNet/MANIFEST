@@ -75,6 +75,7 @@ lib/AI/MXNet/NDArray/Base.pm
 lib/AI/MXNet/NDArray/Doc.pm
 lib/AI/MXNet/NDArray/Slice.pm
 lib/AI/MXNet/NDArray/Sparse.pm
+lib/AI/MXNet/NS.pm
 lib/AI/MXNet/Optimizer.pm
 lib/AI/MXNet/Profiler.pm
 lib/AI/MXNet/Random.pm
@@ -82,6 +83,7 @@ lib/AI/MXNet/RecordIO.pm
 lib/AI/MXNet/RNN.pm
 lib/AI/MXNet/RNN/Cell.pm
 lib/AI/MXNet/RNN/IO.pm
+lib/AI/MXNet/RunTime.pm
 lib/AI/MXNet/Symbol.pm
 lib/AI/MXNet/Symbol/AttrScope.pm
 lib/AI/MXNet/Symbol/Base.pm
@@ -125,6 +127,7 @@ t/test_optimizers.t
 t/test_random.t
 t/test_recordio.t
 t/test_rnn.t
+t/test_runtime.t
 t/test_sparse_ndarray.t
 t/test_symbol.t
 t/test_viz.t

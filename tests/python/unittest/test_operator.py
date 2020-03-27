@@ -2600,6 +2600,10 @@ def test_convolution_dilated_impulse_response():
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 3D
+    for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
+        for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
 @with_seed()
@@ -4802,11 +4806,14 @@ def test_cast_float32_to_float16():
                     fp32_val, model_fp16_val, np_fp16_val)
 
     check_cast(mx.sym.Cast, input_np, expected_output)
-    check_cast(mx.sym.amp_cast, input_np, expected_output)
+    if default_context().device_type == 'gpu':
+        check_cast(mx.sym.amp_cast, input_np, expected_output)
 
 
 @with_seed()
 def test_amp_multicast():
+    if default_context().device_type == 'cpu':
+        return
     x = mx.sym.Variable('x', dtype=np.float16)
     y = mx.sym.Variable('y', dtype=np.float32)
     z = mx.sym.Variable('z', dtype=np.float16)

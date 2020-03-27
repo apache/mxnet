@@ -88,8 +88,6 @@ class IFFTOp : public Operator {
     }
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
-    const mxnet::TShape& ishape = in_data[ifft::kData].shape_;
-    const mxnet::TShape& oshape = out_data[ifft::kOut].shape_;
     Tensor<xpu, 2, DType> data = in_data[ifft::kData].get_with_shape<xpu, 2, DType>(
           Shape2(n_iffts, dim_*2), s);
     Tensor<xpu, 2, DType> out = out_data[ifft::kOut].get_with_shape<xpu, 2, DType>(
@@ -150,8 +148,6 @@ class IFFTOp : public Operator {
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    const mxnet::TShape& ishape = in_grad[ifft::kData].shape_;
-    const mxnet::TShape& oshape = out_grad[ifft::kOut].shape_;
     Tensor<xpu, 2, DType> gdata = in_grad[ifft::kData].get_with_shape<xpu, 2, DType>(
           Shape2(n_iffts, dim_*2), s);
     Tensor<xpu, 2, DType> grad = out_grad[ifft::kOut].get_with_shape<xpu, 2, DType>(
@@ -299,7 +295,7 @@ class IFFTProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx, mxnet::ShapeVector *in_shape,

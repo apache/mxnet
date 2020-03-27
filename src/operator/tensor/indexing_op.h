@@ -66,8 +66,8 @@ enum QuantizedEmbeddingOpResource {kTempSpace};
 
 
 struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool deterministic;
   DMLC_DECLARE_PARAMETER(SparseEmbeddingParam) {
@@ -89,8 +89,8 @@ struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
 };
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool sparse_grad;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
@@ -140,7 +140,7 @@ inline void AddTakeGradLargeBatch(mshadow::Tensor<cpu, 2, DType> dst,
                                   const mshadow::Tensor<cpu, 1, IndexType>& sorted,
                                   const mshadow::Tensor<cpu, 1, IndexType>& index,
                                   const mshadow::Tensor<cpu, 2, DType> &src,
-                                  mshadow::Tensor<cpu, 1, char>* workspace = NULL) {
+                                  mshadow::Tensor<cpu, 1, char>* workspace = nullptr) {
   for (index_t y = 0; y < sorted.size(0); ++y) {
     dst[sorted[y]] += src[index[y]];
   }
@@ -1447,8 +1447,8 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());

@@ -61,7 +61,7 @@ Updates are applied by::
 
     grad = clip(grad * rescale_grad, clip_gradient)
     history += mean(square(grad), axis=1, keepdims=True)
-    div = grad / sqrt(history + float_stable_eps)
+    div = grad / (sqrt(history) + epsilon)
     weight -= div * lr
 
 Weights are updated lazily if the gradient is sparse.

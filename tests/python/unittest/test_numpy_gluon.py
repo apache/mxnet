@@ -368,6 +368,16 @@ def test_symbolic_basic_slicing():
                 TestSlicingWithVSplit, [x],
                 numpy_func=lambda a: _np.concatenate(_np.vsplit(a, shape[0])[1:-1], axis=0))
 
+    for data_shape, idx in [((4, 3), 2),
+                            ((3,), -1),
+                            ((3,), 0)]:
+        class IntegerIndexing(gluon.HybridBlock):
+            def hybrid_forward(self, F, x):
+                return x[idx]
+        check_gluon_hybridize_consistency(IntegerIndexing,
+                                          [mx.np.ones(data_shape)],
+                                          numpy_func=lambda a: a[idx])
+
 
 @with_seed()
 @use_np
@@ -399,6 +409,27 @@ def test_net_symbol_save_load():
     check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
+
+@with_seed()
+@use_np
+def test_hybridize_boolean_dtype():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
+
+        def hybrid_forward(self, F, valid_length):
+            mask = ((F.np.ones((10,)) / 2) < valid_length)
+            return mask
+
+    valid_length = mx.np.random.uniform(size=(10,))
+    foo = Foo()
+    out1 = foo(valid_length)
+
+    foo = Foo()
+    foo.hybridize()
+    out2 = foo(valid_length)
+
+    assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
 
 
 if __name__ == '__main__':

@@ -84,7 +84,7 @@ inline bool MultiSumSqType(const NodeAttrs& attrs,
 
 template<typename xpu>
 size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs,
-                                    int* param_max_chunks_per_tensor = NULL);
+                                    int* param_max_chunks_per_tensor = nullptr);
 
 template<typename xpu>
 void MultiSumSqRun(const std::vector<TBlob> &inputs, int nInputs,
