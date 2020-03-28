@@ -269,19 +269,18 @@ class MySelector : public CustomOpSelector {
                 << " ==> " << kv.second << std::endl;
     }
   }
-  virtual MXReturnValue Select(int nodeID) {
-    return MX_FAIL;
+  virtual bool Select(int nodeID) {
+    return false;
   }
-  virtual MXReturnValue SelectInput(int nodeID, int input_nodeID) {
-    return MX_FAIL;
+  virtual bool SelectInput(int nodeID, int input_nodeID) {
+    return false;
   }
-  virtual MXReturnValue SelectOutput(int nodeID, int output_nodeID) {
-    return MX_FAIL;
+  virtual bool SelectOutput(int nodeID, int output_nodeID) {
+    return false;
   }
-  virtual MXReturnValue Filter(std::vector<int>& candidates,
-                               std::vector<int>& keep) {
+  virtual void Filter(std::vector<int>& candidates,
+                      std::vector<int>& keep) {
     keep.insert(keep.end(), candidates.begin(), candidates.end());
-    return MX_SUCCESS;
   }
   virtual void Reset() {}
  private:

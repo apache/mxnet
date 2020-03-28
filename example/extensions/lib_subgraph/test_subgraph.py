@@ -61,7 +61,7 @@ def test(backend):
 
     # with propogating shapes/types
     print('-------------------------------')
-    print('Testing partitioning with shapes/types')
+    print('Testing %s partitioning with shapes/types' % backend)
     arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
     mysym2 = sym.optimize_for(backend,arg_array)
     print(mysym2.tojson())
@@ -71,7 +71,7 @@ def test(backend):
 
     # with propogating shapes/types, rejecting subgraph
     print('-------------------------------')
-    print('Testing partitioning with shapes/types - rejecting subgraph')
+    print('Testing %s partitioning with shapes/types - rejecting subgraph' % backend)
     arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
     mysym2 = sym.optimize_for(backend, arg_array, reject=True)
     exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
@@ -80,7 +80,7 @@ def test(backend):
 
     # without propogating shapes/types
     print('-------------------------------')
-    print('Testing partitioning without shapes/types')
+    print('Testing %s partitioning without shapes/types' % backend)
     mysym3 = sym.optimize_for(backend, myOpt='yello')
     exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
     out3 = exe3.forward()
@@ -88,7 +88,7 @@ def test(backend):
 
     # Gluon Hybridize partitioning with shapes/types
     print('-------------------------------')
-    print('Testing Gluon Hybridize partitioning with shapes/types')
+    print('Testing %s Gluon Hybridize partitioning with shapes/types' % backend)
     inputs = [a,b]
     sym_block = nn.SymbolBlock(sym, inputs)
     sym_block.initialize()
@@ -98,7 +98,7 @@ def test(backend):
 
     # Gluon Hybridize partitioning with shapes/types without inference
     print('-------------------------------')
-    print('Testing Gluon Hybridize partitioning with shapes/types without inference')
+    print('Testing %s Gluon Hybridize partitioning with shapes/types without inference' % backend)
     inputs = [a,b]
     sym_block2 = nn.SymbolBlock(sym, inputs)
     sym_block2.initialize()
@@ -117,7 +117,7 @@ def test(backend):
 
     # with propogating shapes/types
     print('-------------------------------')
-    print('Testing partitioning with shapes/types')
+    print('Testing %s partitioning with shapes/types' % backend)
     arg_array = [mx.nd.ones((3,2),dtype='float32')]
     mysym6 = sym2.optimize_for(backend, arg_array, reqArgs=True)
     print(mysym6.tojson())
@@ -127,7 +127,7 @@ def test(backend):
 
     # without propogating shapes/types
     print('-------------------------------')
-    print('Testing partitioning without shapes/types')
+    print('Testing %s partitioning without shapes/types' % backend)
     mysym7 = sym2.optimize_for(backend, reqArgs=True)
     exe7 = mysym7.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
     out7 = exe7.forward()
@@ -135,7 +135,7 @@ def test(backend):
 
     # Gluon Hybridize partitioning with shapes/types
     print('-------------------------------')
-    print('Testing Gluon Hybridize partitioning with shapes/types')
+    print('Testing %s Gluon Hybridize partitioning with shapes/types' % backend)
     inputs = [a]
     sym2_block = nn.SymbolBlock(sym2, inputs)
     sym2_block.initialize()

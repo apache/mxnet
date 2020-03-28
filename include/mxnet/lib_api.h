@@ -757,7 +757,7 @@ class CustomOpSelector {
   virtual bool SelectInput(int nodeID, int input_nodeID) = 0;
   virtual bool SelectOutput(int nodeID, int output_nodeID) = 0;
   virtual void Filter(std::vector<int>& candidates,
-                               std::vector<int>& keep) {
+                      std::vector<int>& keep) {
     keep.insert(keep.end(), candidates.begin(), candidates.end());
   }
   virtual void Reset() {}
