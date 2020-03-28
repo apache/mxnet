@@ -46,9 +46,6 @@ Example::
 .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::power>)
 .set_attr<nnvm::FGradient>("FGradient", NonlossGradFGradient{
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-  // input[0] = x
-  // input[1] = y;
-  // ograds[0] = head_grad_z
   auto head_grad_z = ograds[0];
   auto x = nnvm::NodeEntry{mxnet::op::MakeNode("broadcast_like",
       n->attrs.name + "_broadcast_like", {n->inputs[0], head_grad_z}, nullptr, &n)};
