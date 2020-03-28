@@ -130,7 +130,9 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
 
   const MemoryPlanVector& mem_plan = g.GetAttr<MemoryPlanVector>("forward_mem_plan");
   // Collect input output pointers to ndarray into the arrays data structure
-  CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+  std::vector<size_t> input_map(inputs.size());
+  std::iota(input_map.begin(), input_map.end(), 0);
+  CollectInputOutputNDRefs(g, inputs, input_map, outputs, &arrays);
   // The SetForwardGraph call in DynamicForward runs the memory planning phase
   // and allocates storage for intermediate and final outputs of the graph
   // We need to still create NDArrays (pointer data structure), based on this

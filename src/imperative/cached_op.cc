@@ -147,10 +147,9 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
   auto& state = state_ptr.get_state<CachedOpState>();
 
   nnvm::Graph& g = state.info.fwd_graph;
-  ShapeVector shape_inputs;
-  shape_inputs.reserve(inputs.size());
-  for (auto input : inputs) {
-    shape_inputs.emplace_back(input->shape());
+  ShapeVector shape_inputs(inputs.size());
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    shape_inputs[i] = inputs[state.info.input_map[i]]->shape();
   }
   // We leverage the shape inference pass to detect whether dynamic shape exists.
   // If so, the pass will fail with `contain_dynamic_shape = true`,
@@ -176,16 +175,13 @@ bool CachedOp::SetForwardGraph(
   CHECK_EQ(inputs.size(), num_inputs());
   nnvm::Graph& g = info->fwd_graph;
 
-  ShapeVector shape_inputs;
-  DTypeVector dtype_inputs;
-  StorageTypeVector storage_type_inputs;
-  shape_inputs.reserve(inputs.size());
-  dtype_inputs.reserve(inputs.size());
-  storage_type_inputs.reserve(inputs.size());
-  for (auto input : inputs) {
-    shape_inputs.emplace_back(input->shape());
-    dtype_inputs.emplace_back(input->dtype());
-    storage_type_inputs.emplace_back(input->storage_type());
+  ShapeVector shape_inputs(inputs.size());
+  DTypeVector dtype_inputs(inputs.size());
+  StorageTypeVector storage_type_inputs(inputs.size());
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    shape_inputs[i] = inputs[info->input_map[i]]->shape();
+    dtype_inputs[i] = inputs[info->input_map[i]]->dtype();
+    storage_type_inputs[i] = inputs[info->input_map[i]]->storage_type();
   }
 
   bool match = true;
@@ -649,22 +645,22 @@ OpStatePtr CachedOp::StaticForward(
   if (config_.static_shape) {
     for (auto i : config_.param_indices) {
       auto nid = idx.input_nodes()[i];
-      if (!arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[i])) {
+      if (!arrays[idx.entry_id(nid, 0)]->IsSame(*inputs[state.info.input_map[i]])) {
         match = false;
         auto ptr = &state.buff[idx.entry_id(nid, 0)];
         CHECK_EQ(arrays[idx.entry_id(nid, 0)], ptr);
-        *arrays[idx.entry_id(nid, 0)] = *inputs[i];
+        *arrays[idx.entry_id(nid, 0)] = *inputs[state.info.input_map[i]];
         state.dynamic_entries[idx.entry_id(nid, 0)] = false;
       }
     }
     for (auto i : config_.data_indices) {
       auto eid = idx.entry_id(idx.input_nodes()[i], 0);
-      arrays[eid] = inputs[i];
+      arrays[eid] = inputs[state.info.input_map[i]];
     }
   } else {
     for (size_t i = 0; i < num_inputs(); ++i) {
       auto nid = idx.input_nodes()[i];
-      arrays[idx.entry_id(nid, 0)] = inputs[i];
+      arrays[idx.entry_id(nid, 0)] = inputs[state.info.input_map[i]];
     }
   }
 
@@ -714,6 +710,7 @@ OpStatePtr CachedOp::DynamicForward(
     std::lock_guard<std::mutex> lock(state.mutex);
     SetForwardGraph(default_ctx, &state.info, recording, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
+    runtime.info.input_map = state.info.input_map;
   }
   nnvm::Graph& g = runtime.info.fwd_graph;
   const auto& idx = g.indexed_graph();
@@ -736,7 +733,7 @@ OpStatePtr CachedOp::DynamicForward(
   for (size_t i = 0; i < idx.num_node_entries(); ++i) {
     if (ref_count[i] == 0) array_reqs[i] = kNullOp;
   }
-  CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+  CollectInputOutputNDRefs(g, inputs, runtime.info.input_map, outputs, &arrays);
 
   if (!use_naive_run) {
     const auto& mem_plan = g.GetAttr<MemoryPlanVector >(AddPrefix(graph_type, MEM_PLAN));
