@@ -183,14 +183,14 @@ def windows_build(args):
 
         with remember_cwd():
             os.chdir(path)
-            cmd = "\"{}\" && {} -A x64 -T host=x64 {} {}".format(
+            cmd = "\"{}\" && {} -G Ninja -A x64 -T host=x64 {} {}".format(
                 args.vcvars,
                 os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
                 CMAKE_FLAGS[args.flavour], mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True)
 
-            cmd = "\"{}\" && cmake --build .".format(args.vcvars)
+            cmd = "\"{}\" && ninja".format(args.vcvars)
             logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
