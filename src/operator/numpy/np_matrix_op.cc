@@ -1292,7 +1292,7 @@ inline bool NumpyRot90Shape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  if (!param.axes.has_value() || (param.axes.has_value() && param.axes.value().ndim() != 2)) {
+  if (!param.axes.has_value() || param.axes.value().ndim() != 2) {
     LOG(FATAL) << "The length of axes must be 2.";
   }
   int real_k(param.k);
