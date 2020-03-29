@@ -194,6 +194,7 @@ def windows_build(args):
         logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
     windows_package(args)
 
+
 def windows_package(args):
     pkgfile = 'windows_package.7z'
     pkgdir = os.path.abspath('windows_package')
@@ -219,7 +220,8 @@ def windows_package(args):
         copy_tree('include', j(pkgdir, 'include'))
         logging.info("Compressing package: %s", pkgfile)
         check_call(['7z', 'a', pkgfile, pkgdir])
-
+    check_call('refreshenv', shell=True)
+    
 
 def nix_build(args):
     path = args.output
