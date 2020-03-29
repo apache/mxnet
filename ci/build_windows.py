@@ -33,7 +33,7 @@ import time
 import zipfile
 from distutils.dir_util import copy_tree
 from enum import Enum
-from subprocess import check_call
+from subprocess import check_call, call
 
 from util import *
 
