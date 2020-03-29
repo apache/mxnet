@@ -171,27 +171,40 @@ def windows_build(args):
     logging.info("Using vcvars environment:\n{}".format(args.vcvars))
 
     path = args.output
-    os.makedirs(path, exist_ok=True)
+    
+    # cuda thrust + VS is flaky so try multiple times if fail
+    MAXIMUM_TRY = 5
+    build_try = 0
 
-    mxnet_root = get_mxnet_root()
-    logging.info("Found MXNet root: {}".format(mxnet_root))
+    while build_try < MAXIMUM_TRY:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        os.makedirs(path, exist_ok=True)
 
-    with remember_cwd():
-        os.chdir(path)
-        cmd = "\"{}\" && cmake -G Ninja {} {}".format(args.vcvars,
-                                                                        CMAKE_FLAGS[args.flavour],
-                                                                        mxnet_root)
-        logging.info("Generating project with CMake:\n{}".format(cmd))
-        check_call(cmd, shell=True)
+        mxnet_root = get_mxnet_root()
+        logging.info("Found MXNet root: {}".format(mxnet_root))
 
-        cmd = "\"{}\" && ninja".format(args.vcvars)
-        logging.info("Building:\n{}".format(cmd))
+        with remember_cwd():
+            os.chdir(path)
+            cmd = "\"{}\" && cmake -G Ninja {} {}".format(args.vcvars,
+                                                          CMAKE_FLAGS[args.flavour],
+                                                          mxnet_root)
+            logging.info("Generating project with CMake:\n{}".format(cmd))
+            check_call(cmd, shell=True)
 
-        t0 = int(time.time())
-        check_call(cmd, shell=True)
+            cmd = "\"{}\" && ninja".format(args.vcvars)
+            logging.info("Building:\n{}".format(cmd))
 
-        logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
-        logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+            t0 = int(time.time())
+            ret = call(cmd, shell=True)
+            
+            if ret != 0:
+                build_try += 1
+                logging.info("{} build(s) have failed".format(build_try))
+            else:
+                logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+                logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+                break
     windows_package(args)
 
 
