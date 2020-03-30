@@ -208,6 +208,18 @@ def windows_build(args):
     windows_package(args)
 
 
+def add_path(path):
+    logging.info("Adding windows_package to PATH...")
+    current_path = run_command(
+        "PowerShell (Get-Itemproperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path).Path")
+    current_path = current_path.rstrip()
+    logging.debug("current_path: {}".format(current_path))
+    new_path = current_path + \
+        ";" + path
+    logging.debug("new_path: {}".format(new_path))
+    run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path -Value '" + new_path + "'")
+
+
 def windows_package(args):
     pkgfile = 'windows_package.7z'
     pkgdir = os.path.abspath('windows_package')
@@ -220,13 +232,14 @@ def windows_package(args):
         libs = list(glob.iglob('**/*.lib', recursive=True))
         dlls = list(glob.iglob('**/*.dll', recursive=True))
         os.makedirs(pkgdir_lib, exist_ok=True)
-        shutil.copy("C:\\Program Files\\opencv\\x64\\vc15\\bin\\opencv_world412.dll", pkgdir_lib)
         for lib in libs:
             logging.info("packing lib: %s", lib)
             shutil.copy(lib, pkgdir_lib)
         for dll in dlls:
             logging.info("packing dll: %s", dll)
             shutil.copy(dll, pkgdir_lib)
+        add_path(pkgdir_lib)
+        
         os.chdir(get_mxnet_root())
         logging.info('packing python bindings')
         copy_tree('python', j(pkgdir, 'python'))
