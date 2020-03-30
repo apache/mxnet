@@ -651,6 +651,7 @@ def compile_unix_amalgamation() {
       }
     }]
 }
+*/
 
 def compile_windows_cpu() {
     return ['Build CPU windows':{
@@ -707,7 +708,7 @@ def compile_windows_cpu_mkl() {
       }
     }]
 }
-*/
+
 
 def compile_windows_gpu() {
     return ['Build GPU windows':{
@@ -1382,7 +1383,7 @@ def test_windows_python3_gpu_mkldnn() {
       }
     }]
 }
-/*
+
 def test_windows_python3_cpu() {
     return ['Python 3: CPU Win': {
       node(NODE_WINDOWS_CPU) {
@@ -1428,7 +1429,7 @@ def test_windows_julia10_cpu() {
       }
     }]
 }
-
+/*
 def test_qemu_armv7_cpu() {
     return ['ARMv7 QEMU': {
       node(NODE_LINUX_CPU) {
