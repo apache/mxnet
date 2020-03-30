@@ -39,6 +39,8 @@ from .cauchy import *
 
 from .half_cauchy import *
 
+from .poisson import *
+
 from .gamma import *
 
 from .dirichlet import *

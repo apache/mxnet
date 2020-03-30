@@ -34,7 +34,7 @@ def gammaln(F):
         """Return log(gamma(value))
         """
         if isinstance(value, Number):
-            return sc.gammaln(value)
+            return sc.gammaln(value, dtype='float32')
         return F.npx.gammaln(value)
     return compute
 

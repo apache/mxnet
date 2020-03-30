@@ -415,6 +415,41 @@ def test_gluon_half_cauchy():
 
 @with_seed()
 @use_np
+def test_gluon_poisson():
+    class TestPoisson(HybridBlock):
+        def __init__(self, func):
+            self._func = func
+            super(TestPoisson, self).__init__()
+
+        def hybrid_forward(self, F, rate, *args):
+            poisson = mgp.Poisson(rate, F)
+            return _distribution_method_invoker(poisson, self._func, *args)
+
+    shapes = [(1,), (2, 3), (1, 0, 2), 6]
+    # Test sampling
+    for shape, hybridize in itertools.product(shapes, [False]):
+        rate = np.random.uniform(0.5, 1.5, shape)
+        net = TestPoisson("sample")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(rate).asnumpy()
+        assert mx_out.shape == rate.shape
+
+    # Test log_prob
+    for shape, hybridize in itertools.product(shapes, [False]):
+        rate = np.random.uniform(0.5, 1.5, shape)
+        samples = np.random.randint(0, 5, shape).astype('float')
+        net = TestPoisson("log_prob")
+        if hybridize:
+            net.hybridize()
+        mx_out = net(rate, samples).asnumpy()
+        np_out = ss.poisson(mu=rate.asnumpy()).logpmf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_exponential():
     class TestExponential(HybridBlock):
         def __init__(self, func):

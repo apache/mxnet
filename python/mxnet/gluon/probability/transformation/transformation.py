@@ -17,8 +17,9 @@
 
 # coding: utf-8
 """Transformation Classes"""
-__all__ = ["Transformation", "ComposeTransform", "ExpTransform", "AffineTransform",
-           "PowerTransform", "AbsTransform", 'SigmoidTransform', 'SoftmaxTransform']
+__all__ = ["Transformation", "TransformBlock","ComposeTransform", "ExpTransform",
+           "AffineTransform", "PowerTransform", "AbsTransform", 'SigmoidTransform',
+           'SoftmaxTransform']
 
 from ..distributions.utils import _clip_prob, cached_property, sum_right_most
 from ...block import HybridBlock
