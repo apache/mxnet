@@ -220,6 +220,7 @@ def windows_package(args):
         libs = list(glob.iglob('**/*.lib', recursive=True))
         dlls = list(glob.iglob('**/*.dll', recursive=True))
         os.makedirs(pkgdir_lib, exist_ok=True)
+        shutil.copy("C:\\Program Files\\opencv\\x64\\vc15\\bin\\opencv_world412.dll", pkgdir_lib)
         for lib in libs:
             logging.info("packing lib: %s", lib)
             shutil.copy(lib, pkgdir_lib)
