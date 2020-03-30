@@ -250,7 +250,8 @@ void CustomFComputeDispatcher(const std::string op_name,
   // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
   void *cuda_stream = nullptr;
 #if MXNET_USE_CUDA
-  if (inputs.size() > 0 && inputs[0].ctx().dev_mask() == Context::kGPU) {
+  if ((inputs.size() > 0 && inputs[0].ctx().dev_mask() == Context::kGPU) ||
+      (outputs.size() > 0 && outputs[0].ctx().dev_mask() == Context::kGPU)) {
     cuda_stream = static_cast<void*>(gpu_stream->stream_);
   }
 #endif
@@ -804,6 +805,8 @@ int MXLoadLib(const char *path) {
       // TODO(samskalicky): enable constant overwriting of registertion multiple times
       plevel++;
     }
+    // define supported resources for both subgraph ops and regular ops
+    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
     if (!isSubgraphOp) {
       regOp.set_attr_parser(attr_parser);
       regOp.set_num_inputs(num_inputs);
@@ -825,7 +828,6 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                           DefaultSubgraphOpMutableInputs, plevel);
     }
-    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
     // optionally add stateful forward
     if (createop_map.size() != 0) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
