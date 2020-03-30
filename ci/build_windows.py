@@ -238,7 +238,9 @@ def windows_package(args):
         for dll in dlls:
             logging.info("packing dll: %s", dll)
             shutil.copy(dll, pkgdir_lib)
-        add_path(pkgdir_lib)
+
+        if pkgdir_lib.find('gpu') != -1:
+            add_path("C:\\jenkins_slave\\workspace\\ut-python-gpu\\windows_package\\lib")
         
         os.chdir(get_mxnet_root())
         logging.info('packing python bindings')
