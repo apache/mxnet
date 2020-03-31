@@ -182,6 +182,7 @@ struct SquareSumRspGradKernel<req, 0> {
   MSHADOW_XINLINE static void Map(int i, IType* in_grad_row_idx, DType* in_grad,
                                   const DType* out_grad, const IType* in_row_idx,
                                   const DType* in_data, const int64_t num_cols) {
+    CHECK_GT(num_cols, 0) << "num_cols is zero";
     const int64_t row = i / num_cols;
     in_grad_row_idx[row] = in_row_idx[row];
     KERNEL_ASSIGN(in_grad[i], req, 2*in_data[i]*out_grad[i%num_cols]);
@@ -202,6 +203,7 @@ struct SquareSumRspGradKernel<req, 1> {
   MSHADOW_XINLINE static void Map(int i, IType* in_grad_row_idx, DType* in_grad,
                                   const DType* out_grad, const IType* in_row_idx,
                                   const DType* in_data, const int64_t num_cols) {
+    CHECK_GT(num_cols, 0) << "num_cols is zero";
     const int64_t row = i / num_cols;
     in_grad_row_idx[row] = in_row_idx[row];
     KERNEL_ASSIGN(in_grad[i], req, 2*in_data[i]*out_grad[in_row_idx[row]]);
@@ -226,6 +228,7 @@ struct SquareSumRspGradKernel<req, 1, kRowSparseStorage, false> {
   MSHADOW_XINLINE static void Map(int i, IType* in_grad_row_idx, DType* in_grad,
                                   const IType* out_grad_row_idx, const DType* out_grad,
                                   const DType* in_data, const int64_t num_cols) {
+    CHECK_GT(num_cols, 0) << "num_cols is zero";
     const int64_t row = i / num_cols;
     in_grad_row_idx[row] = out_grad_row_idx[row];
     KERNEL_ASSIGN(in_grad[i], req, 2 * in_data[i] * out_grad[row]);
@@ -250,6 +253,7 @@ struct SquareSumRspGradKernel<req, 1, kRowSparseStorage, true> {
   MSHADOW_XINLINE static void Map(int i, IType* in_grad_row_idx, DType* in_grad,
                                   const IType* out_grad_row_idx, const DType* out_grad,
                                   const DType* in_data, const int64_t num_cols) {
+    CHECK_GT(num_cols, 0) << "num_cols is zero";
     const int64_t row = i / num_cols;
     const int64_t row_dns = out_grad_row_idx[row];
     in_grad_row_idx[row] = row_dns;
