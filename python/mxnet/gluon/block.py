@@ -27,7 +27,7 @@ import re
 from collections import OrderedDict, defaultdict
 import numpy as np
 
-from ..base import mx_real_t, MXNetError
+from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
 from .. import symbol, ndarray, initializer, np_symbol, autograd, _deferred_compute as dc
 from ..symbol import Symbol
 from ..ndarray import NDArray
@@ -1299,8 +1299,6 @@ class HybridBlock(Block):
         def c_callback(name, op_name, array):
             """wrapper for user callback"""
             import ctypes
-            from mxnet.base import NDArrayHandle, py_str
-            from mxnet.ndarray import NDArray
             array = ctypes.cast(array, NDArrayHandle)
             array = NDArray(array, writable=False)
             name = py_str(name)
