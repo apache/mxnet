@@ -55,20 +55,16 @@ class Poisson(ExponentialFamily):
     def sample(self, size=None):
         F = self.F
         lam = self.rate
+        if size is None:
+                size = ()
         if isinstance(lam, Number):
             # Scalar case
-            if size is None:
-                size = ()
             return F.npx.scalar_poisson(lam, size)
         else:
             # Tensor case
-            if size is not None:
-                raise NotImplementedError(
-            "`size` parameter in `sample()` is currently compatible " + 
-            "with `rate` tensor")
-            else:
-                # shape = () currently not supported
-                return F.npx.tensor_poisson(lam)
+            shape_tensor = F.np.ones(size)
+            # shape = () currently not supported
+            return F.npx.tensor_poisson(lam * shape_tensor)
 
     def sample_n(self, size=None):
         F = self.F

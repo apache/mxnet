@@ -138,6 +138,7 @@ Example::
 
 MXNET_OPERATOR_REGISTER_SAMPLE(_random_poisson, SamplePoissonParam)
 .add_alias("random_poisson")
+.add_alias("_npx_scalar_poisson")
 .describe(R"code(Draw random samples from a Poisson distribution.
 
 Samples are distributed according to a Poisson distribution parametrized by *lambda* (rate).
