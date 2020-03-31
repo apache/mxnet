@@ -33,13 +33,20 @@ import time
 import zipfile
 from distutils.dir_util import copy_tree
 from enum import Enum
-from subprocess import check_call
+from subprocess import check_call, call
 
 from util import *
 
+
+# Fix for broken PATH with newline inserted presumably by VS studio installation of SQL server or
+# other component which makes visual studio stop working.
+os.environ['PATH']=os.environ.get('PATH').replace('\n','')
+
 KNOWN_VCVARS = {
+    # https://gitlab.kitware.com/cmake/cmake/issues/18920
     'VS 2015': r'C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\x86_amd64\vcvarsx86_amd64.bat',
-    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsx86_amd64.bat'
+    'VS 2017': r'C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat',
+    'VS 2019': r'C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat'
 }
 
 
@@ -54,10 +61,14 @@ class BuildFlavour(Enum):
 
 CMAKE_FLAGS = {
     'WIN_CPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -67,10 +78,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -80,10 +95,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKLDNN_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
@@ -93,10 +112,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_CPU_MKL': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
         '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
@@ -106,10 +129,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON  '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -120,10 +147,14 @@ CMAKE_FLAGS = {
         '-DCMAKE_BUILD_TYPE=Release')
 
     , 'WIN_GPU_MKLDNN': (
+        '-DCMAKE_C_COMPILER=cl '
+        '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
         '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON '
+        '-DOpenCV_RUNTIME=vc15 '
+        '-DOpenCV_ARCH=x64 '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
@@ -140,39 +171,53 @@ def windows_build(args):
     logging.info("Using vcvars environment:\n{}".format(args.vcvars))
 
     path = args.output
-    os.makedirs(path, exist_ok=True)
+    
+    # cuda thrust + VS is flaky so try multiple times if fail
+    MAXIMUM_TRY = 5
+    build_try = 0
 
-    mxnet_root = get_mxnet_root()
-    logging.info("Found MXNet root: {}".format(mxnet_root))
+    while build_try < MAXIMUM_TRY:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        os.makedirs(path, exist_ok=True)
 
-    url = 'https://github.com/Kitware/CMake/releases/download/v3.16.1/cmake-3.16.1-win64-x64.zip'
-    with tempfile.TemporaryDirectory() as tmpdir:
-        cmake_file_path = download_file(url, tmpdir)
-        with zipfile.ZipFile(cmake_file_path, 'r') as zip_ref:
-            # Create $tmpdir\cmake-3.16.1-win64-x64\bin\cmake.exe
-            zip_ref.extractall(tmpdir)
+        mxnet_root = get_mxnet_root()
+        logging.info("Found MXNet root: {}".format(mxnet_root))
 
         with remember_cwd():
             os.chdir(path)
-            cmd = "\"{}\" && {} -G \"NMake Makefiles JOM\" {} {}".format(
-                args.vcvars,
-                os.path.join(tmpdir, 'cmake-3.16.1-win64-x64', 'bin', 'cmake.exe'),
-                CMAKE_FLAGS[args.flavour], mxnet_root)
+            cmd = "\"{}\" && cmake -G Ninja {} {}".format(args.vcvars,
+                                                          CMAKE_FLAGS[args.flavour],
+                                                          mxnet_root)
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True)
 
-            cmd = "\"{}\" && jom".format(args.vcvars)
-            logging.info("Building with jom:\n{}".format(cmd))
+            cmd = "\"{}\" && ninja".format(args.vcvars)
+            logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
-            check_call(cmd, shell=True)
-
-            logging.info(
-                "Build flavour: {} complete in directory: \"{}\"".format(
-                    args.flavour, os.path.abspath(path)))
-            logging.info("Build took {}".format(
-                datetime.timedelta(seconds=int(time.time() - t0))))
+            ret = call(cmd, shell=True)
+            
+            if ret != 0:
+                build_try += 1
+                logging.info("{} build(s) have failed".format(build_try))
+            else:
+                logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+                logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+                break
     windows_package(args)
+
+
+def add_path(path):
+    logging.info("Adding windows_package to PATH...")
+    current_path = run_command(
+        "PowerShell (Get-Itemproperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path).Path")
+    current_path = current_path.rstrip()
+    logging.debug("current_path: {}".format(current_path))
+    new_path = current_path + \
+        ";" + path
+    logging.debug("new_path: {}".format(new_path))
+    run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path -Value '" + new_path + "'")
 
 
 def windows_package(args):
@@ -193,6 +238,10 @@ def windows_package(args):
         for dll in dlls:
             logging.info("packing dll: %s", dll)
             shutil.copy(dll, pkgdir_lib)
+
+        if pkgdir_lib.find('gpu') != -1:
+            add_path("C:\\jenkins_slave\\workspace\\ut-python-gpu\\windows_package\\lib")
+        
         os.chdir(get_mxnet_root())
         logging.info('packing python bindings')
         copy_tree('python', j(pkgdir, 'python'))
@@ -200,7 +249,8 @@ def windows_package(args):
         copy_tree('include', j(pkgdir, 'include'))
         logging.info("Compressing package: %s", pkgfile)
         check_call(['7z', 'a', pkgfile, pkgdir])
-
+    check_call('refreshenv', shell=True)
+    
 
 def nix_build(args):
     path = args.output
@@ -221,9 +271,6 @@ def main():
     logging.getLogger().setLevel(logging.INFO)
     logging.basicConfig(format='%(asctime)-15s %(message)s')
     logging.info("MXNet Windows build helper")
-    instance_info = ec2_instance_info()
-    if instance_info:
-        logging.info("EC2: %s", instance_info)
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--output",
@@ -233,7 +280,7 @@ def main():
 
     parser.add_argument("--vcvars",
         help="vcvars batch file location, typically inside vs studio install dir",
-        default=KNOWN_VCVARS['VS 2015'],
+        default=KNOWN_VCVARS['VS 2019'],
         type=str)
 
     parser.add_argument("--arch",
@@ -253,12 +300,8 @@ def main():
     system = platform.system()
     if system == 'Windows':
         logging.info("Detected Windows platform")
-        if 'OpenBLAS_HOME' not in os.environ:
-            os.environ["OpenBLAS_HOME"] = "C:\\Program Files\\OpenBLAS-v0.2.19"
-        if 'OpenCV_DIR' not in os.environ:
-            os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
         if 'CUDA_PATH' not in os.environ:
-            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v9.2"
+            os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2"
         if 'MKL_ROOT' not in os.environ:
             os.environ["MKL_ROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
         windows_build(args)

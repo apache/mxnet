@@ -89,7 +89,7 @@ def python3_gpu_ut_cython(docker_container_name) {
 }
 
 //------------------------------------------------------------------------------------------
-
+/*
 def compile_unix_cpu_openblas() {
     return ['CPU: Openblas': {
       node(NODE_LINUX_CPU) {
@@ -651,6 +651,7 @@ def compile_unix_amalgamation() {
       }
     }]
 }
+*/
 
 def compile_windows_cpu() {
     return ['Build CPU windows':{
@@ -708,6 +709,7 @@ def compile_windows_cpu_mkl() {
     }]
 }
 
+
 def compile_windows_gpu() {
     return ['Build GPU windows':{
       node(NODE_WINDOWS_CPU) {
@@ -735,7 +737,7 @@ def compile_windows_gpu_mkldnn() {
       }
     }]
 }
-
+/*
 def test_static_scala_cpu() {
   return ['Static build CPU 14.04 Scala' : {
     node(NODE_LINUX_CPU) {
@@ -1343,7 +1345,7 @@ def test_centos7_scala_cpu() {
       }
     }]
 }
-
+*/
 def test_windows_python3_gpu() {
     return ['Python 3: GPU Win':{
       node(NODE_WINDOWS_GPU) {
@@ -1427,7 +1429,7 @@ def test_windows_julia10_cpu() {
       }
     }]
 }
-
+/*
 def test_qemu_armv7_cpu() {
     return ['ARMv7 QEMU': {
       node(NODE_LINUX_CPU) {
@@ -1794,5 +1796,5 @@ def test_artifact_repository() {
       }
     }]
 }
-
+*/
 return this
