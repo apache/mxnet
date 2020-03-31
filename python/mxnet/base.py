@@ -339,11 +339,6 @@ def classproperty(func):
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    print('libpath: ', lib_path[0])
-    print('libpath: ', lib_path[0], file=sys.stderr)
-    dir = os.path.dirname(lib_path[0])
-    print('lib:', os.listdir(dir))
-    print('lib:', os.listdir(dir), file=sys.stderr)
     lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
