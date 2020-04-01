@@ -29,6 +29,7 @@ echo "Printing env vars"
 echo $env:MXNET_LIBRARY_PATH
 echo $env:PYTHONPATH
 echo $env:MXNET_HOME
+echo $env:PATH
 Get-ChildItem -Path (join-path $pwd.Path windows_package\lib)
 echo "All printed"
 
