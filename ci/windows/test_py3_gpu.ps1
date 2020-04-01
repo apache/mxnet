@@ -35,6 +35,8 @@ Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/instance-type
 echo "All printed"
 
 C:\Python37\Scripts\pip install -r tests\requirements.txt
+C:\Python37\Scripts\pip install -e $env:PYTHONPATH
+
 C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
 if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
