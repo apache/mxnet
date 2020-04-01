@@ -208,18 +208,6 @@ def windows_build(args):
     windows_package(args)
 
 
-def add_path(path):
-    logging.info("Adding windows_package to PATH...")
-    current_path = run_command(
-        "PowerShell (Get-Itemproperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path).Path")
-    current_path = current_path.rstrip()
-    logging.debug("current_path: {}".format(current_path))
-    new_path = current_path + \
-        ";" + path
-    logging.debug("new_path: {}".format(new_path))
-    run_command("PowerShell Set-ItemProperty -path 'hklm:\\system\\currentcontrolset\\control\\session manager\\environment' -Name Path -Value '" + new_path + "'")
-
-
 def windows_package(args):
     pkgfile = 'windows_package.7z'
     pkgdir = os.path.abspath('windows_package')
@@ -238,9 +226,6 @@ def windows_package(args):
         for dll in dlls:
             logging.info("packing dll: %s", dll)
             shutil.copy(dll, pkgdir_lib)
-
-        if pkgdir_lib.find('gpu') != -1:
-            add_path("C:\\jenkins_slave\\workspace\\ut-python-gpu\\windows_package\\lib")
         
         os.chdir(get_mxnet_root())
         logging.info('packing python bindings')
@@ -250,7 +235,7 @@ def windows_package(args):
         logging.info("Compressing package: %s", pkgfile)
         check_call(['7z', 'a', pkgfile, pkgdir])
     check_call('refreshenv', shell=True)
-    
+
 
 def nix_build(args):
     path = args.output
