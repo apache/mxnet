@@ -185,6 +185,7 @@ inline int GetRnnBiasSize(int num_layer,
 inline size_t GetRNNWorkspaceSize(int seq_length,
                                   int batch_size,
                                   int hidden_size,
+                                  int projection_size,
                                   int direction,
                                   int mode) {
   size_t size = 0;
@@ -324,6 +325,7 @@ void RNNForwardInference(DType* ws,
                          const int batch_size,
                          const int input_size,
                          const int state_size,
+                         const int projection_size,
                          DType* x_ptr,
                          DType* hx_ptr,
                          DType* cx_ptr,
@@ -336,8 +338,8 @@ void RNNForwardInference(DType* ws,
   switch (mode) {
     case rnn_enum::kLstm:
       LstmForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
-                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                  w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
+                                  batch_size, input_size, state_size, projection_size,
+                                  x_ptr, hx_ptr, cx_ptr, w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr);
       break;
     case rnn_enum::kGru:
       GruForwardInference<DType>(ws, state_outputs, num_layers, direction, seq_length,
@@ -511,10 +513,7 @@ class RNNOp {
       this->temp_init_space_ = false;
       this->reserve_cpu_space_size_ = 0;
       this->temp_cpu_space_size_ = 0;
-      if (param_.projection_size.has_value()) {
-        LOG(FATAL) <<
-            "hidden layer projection is only supported for GPU with CuDNN later than 7.1.1";
-      }
+
       if (param_.lstm_state_clip_min.has_value()
           || param_.lstm_state_clip_max.has_value()) {
         LOG(FATAL) << "LSTM state clipping is only supported for GPU with CuDNN later than 7.2.1";
@@ -843,9 +842,14 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
     if (ctx_.dev_type == kCPU) {
+      int projection_size = 0;
+      if (param_.projection_size.has_value()) {
+        projection_size = param_.projection_size.value();
+      }
+
       // allocate temp space
       const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-          param_.state_size, direction, param_.mode);
+          param_.state_size, projection_size, direction, param_.mode);
       if (!temp_init_space_ || temp_cpu_space_size_ < work_cpu_space_size) {
         temp_cpu_space_size_ = work_cpu_space_size;
         temp_cpu_space_ = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}), ctx_,
@@ -856,6 +860,9 @@ class RNNOp {
 
       if (ctx.is_train || ctx.need_grad) {
         // allocate reserve space
+        if (param_.projection_size.has_value()) {
+          LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
+        }
 
         const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
                                                      param_.seq_length_, param_.batch_size_,
@@ -896,6 +903,7 @@ class RNNOp {
                                    param_.batch_size_,
                                    param_.input_size_,
                                    param_.state_size,
+                                   projection_size,
                                    x.dptr_,
                                    hx.dptr_,
                                    cx_ptr,
@@ -1096,10 +1104,17 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
     if (ctx_.dev_type == kCPU) {
+      int projection_size = 0;
+      if (param_.projection_size.has_value()) {
+        // TODO(zixuanweeei): Add training support for LSTM with projection on CPU.
+        // projection_size = param_.projection_size.value();
+        LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
+      }
+
       // allocate temp space
       const size_t work_cpu_space_size =
-          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-                              param_.state_size, direction, param_.mode);
+          GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_, param_.state_size,
+                              projection_size, direction, param_.mode);
       if (!temp_init_space_ || temp_cpu_space_size_ != work_cpu_space_size) {
         LOG(FATAL) << "Check temp init error";
       }
