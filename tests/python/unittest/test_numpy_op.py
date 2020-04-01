@@ -8669,6 +8669,46 @@ def test_np_empty_like():
         assert ret.asnumpy().shape == expected_ret.shape
 
 
+@with_seed()
+@use_np
+def test_np_rollaxis():
+    class TestRollaxis(HybridBlock):
+        def __init__(self, axis=0, start=0):
+            super(TestRollaxis, self).__init__()
+            self._axis = axis
+            self._start = start
+             
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return F.np.rollaxis(a, axis=self._axis, start=self._start)
+
+    dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
+    for hybridize in [False, True]:
+        for dtype in dtypes:
+            for ndim in [0, 1, 2, 3, 4, 5, 6]:
+                shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
+                np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
+                mx_data = np.array(np_data, dtype=dtype)
+                for axis in range(-ndim, ndim):
+                    for start in range(-ndim, ndim + 1):
+                        # test gluon
+                        test_rollaxis = TestRollaxis(axis, start)
+                        if hybridize:
+                            test_rollaxis.hybridize()
+                        np_out = _np.rollaxis(np_data, axis=axis, start=start)
+                        mx_data.attach_grad()
+                        with mx.autograd.record():
+                            mx_out = test_rollaxis(mx_data)
+                        assert mx_out.shape == np_out.shape
+                        mx_out.backward()
+                        assert same(mx_data.grad.shape, mx_data.shape)
+                        assert same(mx_data.grad.asnumpy(), _np.ones(shape))
+                        # test imperative
+                        np_out = _np.rollaxis(np_data, axis=axis, start=start)
+                        mx_out = np.rollaxis(mx_data, axis=axis, start=start)
+                        assert np_out.dtype == mx_out.dtype
+                        assert same(mx_out.asnumpy(), np_out)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()

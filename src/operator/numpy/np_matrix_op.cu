@@ -112,6 +112,12 @@ NNVM_REGISTER_OP(_backward_npi_flip)
 NNVM_REGISTER_OP(_np_moveaxis)
 .set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_rollaxis)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_rollaxis_backward)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisBackward<gpu>);
+
 NNVM_REGISTER_OP(_npi_rot90)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);
 
