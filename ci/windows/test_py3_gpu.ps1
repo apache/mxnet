@@ -23,7 +23,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
-$env:PATH+=";"+[io.path]::combine($pwd.Path,"windows_package\lib")
+$env:PATH+=[io.path]::combine($pwd.Path,"windows_package\lib")
 
 echo "Printing env vars"
 echo $env:MXNET_LIBRARY_PATH
