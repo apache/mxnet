@@ -31,6 +31,7 @@ echo $env:PYTHONPATH
 echo $env:MXNET_HOME
 echo $env:PATH
 Get-ChildItem -Path (join-path $pwd.Path windows_package\lib)
+echo (Invoke-WebRequest -Uri "http://instance-data/latest/meta-data/instance-type")
 echo "All printed"
 
 C:\Python37\Scripts\pip install -r tests\requirements.txt
