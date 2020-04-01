@@ -52,10 +52,6 @@ core_logic: {
   utils.parallel_stage('Prepare', [
     custom_steps.docs_prepare()
   ])
-
-  utils.parallel_stage('Publish', [
-    custom_steps.docs_publish()
-  ])
 }
 ,
 failure_handler: {
