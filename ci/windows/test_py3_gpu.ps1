@@ -23,6 +23,12 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
+echo "Printing env vars"
+echo $env:MXNET_LIBRARY_PATH
+echo $env:PYTHONPATH
+echo $env:MXNET_HOME
+echo "All printed"
+
 C:\Python37\Scripts\pip install -r tests\requirements.txt
 C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
 if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
