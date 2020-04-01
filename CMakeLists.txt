@@ -482,6 +482,8 @@ set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
 set(GTEST_LIBRARIES gtest gtest_main)
 set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
+set(GTEST_LIBRARY_TYPE SHARED)
+set(GTEST_MAIN_LIBRARY_TYPE SHARED)
 
 add_subdirectory(${GTEST_ROOT})
 find_package(GTest REQUIRED)
