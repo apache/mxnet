@@ -337,7 +337,7 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument,too-many-arguments
+    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument,too-many-arguments,redefined-outer-name
         """
         Copy of the array, cast to a specified type.
 
@@ -6518,7 +6518,7 @@ def resize(a, new_shape):
 
 
 @set_module('mxnet.symbol.numpy')
-def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
+def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):  # pylint: disable=redefined-outer-name
     """
     Replace NaN with zero and infinity with large finite numbers (default
     behaviour) or with the numbers defined by the user using the `nan`,

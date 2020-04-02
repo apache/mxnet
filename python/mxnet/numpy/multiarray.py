@@ -9652,7 +9652,7 @@ def ones_like(a, dtype=None, order='C', ctx=None, out=None):
 
 
 @set_module('mxnet.numpy')
-def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
+def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):  # pylint: disable=redefined-outer-name
     """
     Replace NaN with zero and infinity with large finite numbers (default
     behaviour) or with the numbers defined by the user using the `nan`,
