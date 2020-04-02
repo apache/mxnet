@@ -1274,7 +1274,7 @@ Other axes remain in their original order.
      os1 << param.source;
      std::ostringstream os2;
      os2 << param.destination;
-     return MakeNonlossGradNode("_np_moveaxis", n, ograds, {},
+     return MakeNonlossGradNode("_npi_moveaxis", n, ograds, {},
                                 {{"source", os2.str()}, {"destination", os1.str()}});
 })
 .set_attr<FCompute>("FCompute<cpu>", NumpyMoveaxisCompute<cpu>)

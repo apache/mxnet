@@ -23,6 +23,7 @@
  */
 #include <mxnet/api_registry.h>
 #include "../operator/utils.h"
+#include "../operator/ufunc_helper.h"
 
 namespace mxnet {
 
