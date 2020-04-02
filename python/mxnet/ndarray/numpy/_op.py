@@ -685,7 +685,7 @@ def take(a, indices, axis=None, mode='raise', out=None):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
     if axis is None:
-        return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+        return _npi.take(_api_internal.reshape_ex(a, -1), indices, 0, mode, out)
     else:
         return _npi.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
@@ -5167,7 +5167,7 @@ def ravel(x, order='C'):
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
     elif isinstance(x, NDArray):
-        return _npi.reshape(x, -1)
+        return _api_internal.reshape_ex(x, -1)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
