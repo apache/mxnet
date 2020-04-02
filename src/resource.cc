@@ -428,9 +428,8 @@ void* Resource::get_host_space_internal(size_t size) const {
 void Resource::get_cudnn_dropout_desc(
     cudnnDropoutDescriptor_t *dropout_desc,
     mshadow::Stream<gpu> *stream,
-    const float dropout, uint64_t seed,
-    const std::string &name,
-    bool reset) const {
+    const float dropout, uint64_t seed, bool reset,
+    const std::string &name) const {
 
   CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
