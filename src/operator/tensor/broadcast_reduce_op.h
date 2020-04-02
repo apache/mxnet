@@ -108,6 +108,13 @@ struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
       .describe("If this is set to `True`, the reduced axis is left "
                 "in the result as dimension with size one.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 enum PickOpMode {kWrap, kClip};
@@ -155,6 +162,11 @@ struct BroadcastToParam : public dmlc::Parameter<BroadcastToParam> {
                 " We can set the dim to zero if it's same as the original."
                 " E.g `A = broadcast_to(B, shape=(10, 0, 0))` "
                 "has the same meaning as `A = broadcast_axis(B, axis=0, size=10)`.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s;
+    shape_s << shape;
+    (*dict)["shape"] = shape_s.str();
   }
 };
 
@@ -1155,7 +1167,7 @@ inline void AxesParamParser(nnvm::NodeAttrs* attrs) {
 
 struct ReduceGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
     return MakeNonlossGradNode(
         op_name, n,
@@ -1670,7 +1682,7 @@ Defined in )code";
   .set_num_outputs(1)                                           \
   .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>) \
   .set_attr<nnvm::FGradient>("FGradient",                       \
-    [](const nnvm::NodePtr& n,                                  \
+    [](const nnvm::ObjectPtr& n,                                  \
        const std::vector<nnvm::NodeEntry>& ograds) {            \
       return MakeNonlossGradNode("_broadcast_backward", n, ograds, {},    \
                                  {{"keepdims", "true"}});              \

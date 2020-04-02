@@ -39,6 +39,7 @@
 #include "./storage_manager.h"
 #include "../common/cuda_utils.h"
 #include "../common/utils.h"
+#include "../profiler/storage_profiler.h"
 
 
 namespace mxnet {
@@ -97,6 +98,7 @@ class GPUPooledStorageManager final : public StorageManager {
       LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
     }
     used_memory_ -= size;
+    profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
   }
 
   // Round a value 'x' up to the next multiple of 'multiple'
@@ -166,11 +168,15 @@ void GPUPooledStorageManager::Alloc(Storage::Handle* handle) {
     }
     used_memory_ += size;
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, false);
   } else {
     auto&& reuse_pool = reuse_it->second;
     auto ret = reuse_pool.back();
     reuse_pool.pop_back();
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, true);
   }
 }
 
@@ -292,11 +298,10 @@ class GPUPooledRoundedStorageManager final : public StorageManager {
       LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
     }
     used_memory_ -= size;
+    profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
   }
 
  private:
-  // number of devices
-  const int NDEV = 32;
   // log2 of maximum page size. 16GB
   const size_t LOG2_MAX_MEM = 34;
   // address width in bits
@@ -349,10 +354,14 @@ void GPUPooledRoundedStorageManager::Alloc(Storage::Handle* handle) {
     }
     used_memory_ += size;
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, false);
   } else {
     auto ret = reuse_pool.back();
     reuse_pool.pop_back();
     handle->dptr = ret;
+    // record the allocation event in the memory profiler
+    profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, true);
   }
 }
 

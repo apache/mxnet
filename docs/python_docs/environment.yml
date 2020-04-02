@@ -23,7 +23,7 @@ dependencies:
 - pip
 - python
 - jupyter
-- sphinx
+- sphinx==2.4.0
 - matplotlib
 - notebook
 - pip:
@@ -35,4 +35,4 @@ dependencies:
   - breathe==4.13.1
   - mock==3.0.5
   - awscli==1.16.266
-  - autodocsumm==0.1.11
+  - autodocsumm==0.1.12

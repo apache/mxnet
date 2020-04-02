@@ -99,6 +99,13 @@ struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolPara
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+  }
 };
 
 inline TShape NumpyReduceAxesShapeImpl(const TShape& ishape,
@@ -259,6 +266,7 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "initial is not supported yet";
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
@@ -327,7 +335,7 @@ void NumpyReduceAxesNoDTypeCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
 }
 
-template<typename xpu, typename reducer, typename OP = op::mshadow_op::NonZero>
+template<typename xpu, typename reducer, typename OP = op::mshadow_op::NonZero, int init>
 void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
                                 const OpContext& ctx,
                                 const std::vector<TBlob>& inputs,
@@ -335,9 +343,14 @@ void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
                                 const std::vector<TBlob>& outputs) {
   const NumpyReduceAxesBoolParam& param = nnvm::get<NumpyReduceAxesBoolParam>(attrs.parsed);
   mshadow::Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    Kernel<set_false, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    if (init == 0) {
+      Kernel<set_false, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    } else {
+      Kernel<set_true, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<bool>());
+    }
     return;
   }
   if (param.axis.has_value() && param.axis.value().ndim() == 0) {
@@ -352,6 +365,54 @@ void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeBoolImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
 }
 
+template<typename xpu, typename reducer>
+void NumpySearchAxisCompute(const nnvm::NodeAttrs& attrs,
+                            const OpContext& ctx,
+                            const std::vector<TBlob>& inputs,
+                            const std::vector<OpReqType>& req,
+                            const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const ReduceAxisParam& param = nnvm::get<ReduceAxisParam>(attrs.parsed);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  int axis = inputs[0].ndim();
+  TBlob input = inputs[0];
+  if (param.axis.has_value()) {
+    axis = param.axis.value();
+  } else {
+    // If global reduction, reshape the input tensor into 2D shape (1, inputs[0].shape_.Size())
+    // and search on axis = 1.
+    mxnet::TShape shape_2d(2, 1);
+    shape_2d[1] = input.shape_.Size();
+    input = TBlob(input.dptr_, shape_2d, input.dev_mask(), input.type_flag_, input.dev_id());
+    axis = 1;
+  }
+
+  axis = CheckAxis(axis, input.shape_.ndim());
+  if (inputs[0].shape_.ndim() != 0) {
+    if (param.axis.has_value()) {
+      // cannot do argmax in an empty dimension
+      CHECK_NE(inputs[0].shape_[axis], 0)
+          << "searching input tensor of shape " << inputs[0].shape_
+          << " along axis = " << axis << " of zero dim-size is not allowed";
+    } else {
+      // cannot do argmax on an empty array
+      CHECK_NE(inputs[0].shape_.Size(), 0U) << "attempt to search an empty sequence";
+    }
+  }
+
+  if (input.shape_.Size() == 0U) return;  // zero-size tensor
+  mxnet::TShape shape = AxisShapeCompact(input.shape_, &axis, false);
+  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+    Tensor<xpu, 2, int64_t> out =
+      outputs[0].get_with_shape<xpu, 2, int64_t>(Shape2(shape[0], shape[2]), s);
+    Tensor<xpu, 3, DType> in =
+      input.get_with_shape<xpu, 3, DType>(shape.get<3>(), s);
+    CHECK(req[0] != kAddTo) << "AddTo is not supported";
+    ASSIGN_DISPATCH(out, req[0], tcast<int64_t>(reduce_with_axis<reducer, true>(in, 1)));
+  });
+}
+
 template<typename xpu, bool normalize = false>
 inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
                                            const OpContext& ctx,
@@ -362,6 +423,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_NE(outputs[0].type_flag_, kBool) << "reduce operators do not support gradient calculation "
                                             "for input tensors of boolean type.";
+  if (outputs[0].shape_.Size() == 0) return;
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   TShape small;
   if (param.keepdims) {

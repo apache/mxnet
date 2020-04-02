@@ -758,7 +758,7 @@ static inline std::vector<std::string> SoftmaxGradOpInputNames(const nnvm::NodeA
 
 struct SoftmaxFGradient {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     if (softmax_has_dtype_override(n->attrs) || softmax_use_length(n->attrs)) {
       return ElemwiseGradUseInOut {op_name}(n, ograds);

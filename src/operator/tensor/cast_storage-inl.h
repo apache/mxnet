@@ -283,7 +283,7 @@ struct CopyCsrDataToDns {
    * \param num_cols  number of columns of the dns tensor
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* dns_data,
                                   const CType* col_idx,
                                   const IType* indptr,

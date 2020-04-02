@@ -47,15 +47,17 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
   CHECK(axis >= 0 && axis < dshape.ndim())
     << "Channel axis out of range: axis=" << param.axis;
 
-  const int channelCount = dshape[axis];
+  const index_t channelCount = dshape[axis];
 
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
   }
-
-  in_shape->at(layernorm::kGamma) = mxnet::TShape(Shape1(channelCount));
-  in_shape->at(layernorm::kBeta) = mxnet::TShape(Shape1(channelCount));
-
+  SHAPE_ASSIGN_CHECK(*in_shape,
+                     layernorm::kGamma,
+                     mxnet::TShape(Shape1(channelCount)));
+  SHAPE_ASSIGN_CHECK(*in_shape,
+                     layernorm::kBeta,
+                     mxnet::TShape(Shape1(channelCount)));
   out_shape->clear();
   out_shape->push_back(dshape);                // kOut
   mxnet::TShape moments_shape(dshape.begin(), dshape.end());
@@ -177,7 +179,7 @@ axis to be the last item in the input shape.
 #else
 .set_attr<FCompute>("FCompute<cpu>", LayerNormCompute<cpu>)
 #endif
-.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::NodePtr& n,
+.set_attr<nnvm::FGradient>("FGradient", [](const nnvm::ObjectPtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> heads;
   heads.push_back(ograds[0]);  // ograd

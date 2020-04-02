@@ -131,6 +131,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
   });
 
 NNVM_REGISTER_OP(broadcast_like)
+.add_alias("_npx_broadcast_like")
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
@@ -139,7 +140,7 @@ NNVM_REGISTER_OP(broadcast_like)
     })
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<2, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n,
+  [](const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
       if (CheckGradAllZero(ograds))
         return MakeZeroGradNodes(n, ograds);

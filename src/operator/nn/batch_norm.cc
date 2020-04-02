@@ -178,8 +178,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
       }
       if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
+                    [thisBias, thisMean, thisInvstd](const DType *in_data, DType *out_data) {
                       *out_data = static_cast<DType>(
                         ((*in_data - thisMean) * thisInvstd) + thisBias);
                     });
@@ -330,7 +329,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
       : param.axis);
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
-  const int channelCount = dshape[channelAxis];
+  const index_t channelCount = dshape[channelAxis];
 
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
@@ -395,10 +394,12 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
   if (SupportMKLDNNBN(inputs[0], param)) {
-      MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNBatchNormForward<float>, attrs, ctx, inputs, req, outputs);
-      MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
-      return;
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
+        MKLDNNRun(MKLDNNBatchNormForward<DTYPE>, attrs, ctx, inputs, req, outputs);
+      });
+    MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
   }
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
@@ -452,7 +453,7 @@ static inline bool BatchNormStorageType(const nnvm::NodeAttrs &attrs,
   return dispatched;
 }
 
-std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
+std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::ObjectPtr& n,
                                            const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> out_data;
   out_data.reserve(n->num_outputs());
@@ -469,7 +470,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   heads.emplace_back(n->inputs.at(batchnorm::kInMovingMean));
   heads.emplace_back(n->inputs.at(batchnorm::kInMovingVar));
 
-  nnvm::NodePtr gnode = nnvm::Node::Create();
+  nnvm::ObjectPtr gnode = nnvm::Node::Create();
   gnode->inputs = std::move(heads);
   gnode->control_deps.emplace_back(n);
   gnode->attrs = n->attrs;
@@ -481,7 +482,7 @@ std::vector<nnvm::NodeEntry> BatchNormGrad(const nnvm::NodePtr& n,
   for (size_t i = 0; i < 3; ++i)
     in_grad.emplace_back(gnode, i, 0);
   // attach no gradient node to forbid gradient on aux_state
-  nnvm::NodePtr ng = nnvm::Node::Create();
+  nnvm::ObjectPtr ng = nnvm::Node::Create();
   ng->attrs.op = Op::Get("_NoGradient");
   ng->attrs.name = "NoGradient";
   // the aux state of batchnorm
@@ -583,7 +584,7 @@ then set ``gamma`` to 1 and its gradient to 0.
 .add_arguments(BatchNormParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>(
   "FSetInputVarAttrOnCompose",
-  [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+  [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
     if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
     if (index == 3) {
       var->attrs.dict["__init__"] = "[\"zero\", {}]";

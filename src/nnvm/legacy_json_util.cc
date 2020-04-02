@@ -39,7 +39,7 @@ namespace mxnet {
 using nnvm::Graph;
 using nnvm::Op;
 using nnvm::Node;
-using nnvm::NodePtr;
+using nnvm::ObjectPtr;
 using nnvm::NodeAttrs;
 using nnvm::NodeEntry;
 using nnvm::Symbol;
@@ -57,7 +57,7 @@ Graph UpgradeJSON_FixParsing(Graph g) {
       for (auto it = n->attrs.dict.begin(); it != n->attrs.dict.end();) {
         bool erase = false;
         // remove hidden keys
-        for (const auto key : kHiddenKeys) {
+        for (const auto& key : kHiddenKeys) {
           size_t pos = it->first.rfind(key);
           if (pos == 0 || (pos != std::string::npos && pos == it->first.length() - key.length())) {
             hidden_keys.emplace_back(*it);

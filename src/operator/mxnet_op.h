@@ -210,6 +210,7 @@ inline int get_num_threads<cpu>(const int N) {
     }                                                      \
     break;                                                 \
   case mshadow::kFloat16:                                  \
+  case mshadow::kBfloat16:                                 \
     {                                                      \
       typedef mshadow::half::half_t DType;                 \
       {__VA_ARGS__}                                        \
@@ -599,6 +600,7 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("float32", mshadow::kFloat32) \
   .add_enum("float64", mshadow::kFloat64) \
   .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
   .add_enum("uint8", mshadow::kUint8) \
   .add_enum("int8", mshadow::kInt8) \
   .add_enum("int32", mshadow::kInt32) \
@@ -609,6 +611,7 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("float32", mshadow::kFloat32) \
   .add_enum("float64", mshadow::kFloat64) \
   .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
   .add_enum("uint8", mshadow::kUint8) \
   .add_enum("int8", mshadow::kInt8) \
   .add_enum("int32", mshadow::kInt32) \

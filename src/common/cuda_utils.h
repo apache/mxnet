@@ -56,6 +56,9 @@ extern __cuda_fake_struct blockIdx;
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <curand.h>
+#if MXNET_USE_NVML
+#include <nvml.h>
+#endif  // MXNET_USE_NVML
 
 #include <vector>
 
@@ -174,6 +177,22 @@ inline __device__ bool __is_supported_cuda_architecture() {
     }                                                                   \
   }
 
+
+#if MXNET_USE_NVML
+/*!
+ * \brief Protected NVML call.
+ * \param func Expression to call.
+ *
+ * It checks for NVML errors after invocation of the expression.
+ */
+#define NVML_CALL(func)                                 \
+  {                                                     \
+    nvmlReturn_t result = (func);                       \
+    CHECK_EQ(result, NVML_SUCCESS)                      \
+      << #func " failed with error "                    \
+      << nvmlErrorString(result);                       \
+  }
+#endif  // MXNET_USE_NVML
 
 #if !defined(_MSC_VER)
 #define CUDA_UNROLL _Pragma("unroll")

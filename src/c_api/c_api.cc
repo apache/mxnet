@@ -1,4 +1,3 @@
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -57,6 +56,7 @@
 #include "../operator/subgraph/partitioner/custom_subgraph_property.h"
 #include "../operator/subgraph/subgraph_property.h"
 #include "../common/utils.h"
+#include "../profiler/profiler.h"
 #include "nnvm/pass_functions.h"
 
 using namespace mxnet;
@@ -99,7 +99,213 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 // NOTE: return value is added in API_END
 
 /*!
- * \brief Loads dynamic library and initializes it
+ * \brief Common compute function dispatcher for forward/backward and stateful forward/backward
+ * state_ptr will be nullptr for regular ops; fcomp_fp is nullptr for stateful ops
+ */
+void CustomFComputeDispatcher(const std::string op_name,
+                              const opCallFComp_t callFComp,
+                              const fcomp_t fcomp_fp,
+                              const nnvm::NodeAttrs* attrs,
+                              const opCallFStatefulComp_t callFStatefulComp,
+                              int stateful_forward_flag,
+                              const OpStatePtr* state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+  std::vector<void*> in_data, out_data;
+  std::vector<const int64_t*> in_shapes, out_shapes;
+  std::vector<int> in_dims, out_dims;
+  std::vector<int> in_types, out_types;
+  std::vector<size_t> in_verIDs, out_verIDs;
+  std::vector<const char*> in_dev_type, out_dev_type;
+  std::vector<int> in_dev_id, out_dev_id;
+  std::vector<NDArray> conv_mkl;  // converted NDArrays from MKLDNN format
+
+  // Extra data for sparse inputs and outputs.
+  std::vector<int> in_stypes(inputs.size(), 0), out_stypes(outputs.size(), 0);
+  std::vector<void*> in_indices(inputs.size(), nullptr), out_indices(outputs.size(), nullptr);
+  std::vector<void*> in_indptr(inputs.size(), nullptr), out_indptr(outputs.size(), nullptr);
+  std::vector<int64_t> in_indices_shapes(inputs.size(), 0), out_indices_shapes(outputs.size(), 0);
+  std::vector<int64_t> in_indptr_shapes(inputs.size(), 0), out_indptr_shapes(outputs.size(), 0);
+
+  // convert inputs/outpus NDArray to C types to be passed to lib_api.h
+  for (size_t i = 0; i < inputs.size(); i++) {
+    NDArray const* in_nd = &(inputs[i]);
+#if MXNET_USE_MKLDNN == 1
+    // reorder data if in MKLDNN format
+    if (in_nd->IsMKLDNNData()) {
+      // convert from MKLDNN
+      conv_mkl.push_back(in_nd->Reorder2Default());
+      in_nd = &(conv_mkl.back());
+    }
+#endif
+    // pull out parts to pass over to library
+    in_data.push_back(in_nd->data().dptr_);
+    in_shapes.push_back(in_nd->shape().data());
+    in_dims.push_back(in_nd->shape().ndim());
+    in_types.push_back(in_nd->dtype());
+    in_verIDs.push_back(in_nd->version());
+    const char* ctx_str = in_nd->ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+    in_dev_type.push_back(ctx_str);
+
+    in_dev_id.push_back(in_nd->ctx().real_dev_id());
+    if (inputs[i].storage_type() == mxnet::kRowSparseStorage) {
+      in_stypes[i] = 1;
+      in_indices[i] = inputs[i].aux_data(rowsparse::kIdx).dptr_;
+      in_indices_shapes[i] = inputs[i].aux_shape(rowsparse::kIdx).Size();
+    } else if (inputs[i].storage_type() == mxnet::kCSRStorage) {
+      in_stypes[i] = 2;
+      in_indices[i] = inputs[i].aux_data(csr::kIdx).dptr_;
+      in_indptr[i] = inputs[i].aux_data(csr::kIndPtr).dptr_;
+      in_indices_shapes[i] = inputs[i].aux_shape(csr::kIdx).Size();
+      in_indptr_shapes[i] = inputs[i].aux_shape(csr::kIndPtr).Size();
+    }
+  }
+
+  for (size_t i = 0; i < outputs.size(); i++) {
+    out_data.push_back(outputs[i].data().dptr_);
+    out_shapes.push_back(outputs[i].shape().data());
+    out_dims.push_back(outputs[i].shape().ndim());
+    out_types.push_back(outputs[i].dtype());
+    out_verIDs.push_back(outputs[i].version());
+    const char* ctx_str = outputs[i].ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+    out_dev_type.push_back(ctx_str);
+    out_dev_id.push_back(outputs[i].ctx().real_dev_id());
+
+    if (outputs[i].storage_type() == mxnet::kRowSparseStorage) {
+      out_stypes[i] = 1;
+      out_indices[i] = outputs[i].aux_data(rowsparse::kIdx).dptr_;
+      out_indices_shapes[i] = outputs[i].aux_shape(rowsparse::kIdx).Size();
+    } else if (outputs[i].storage_type() == mxnet::kCSRStorage) {
+      out_stypes[i] = 2;
+      out_indices[i] = outputs[i].aux_data(csr::kIdx).dptr_;
+      out_indptr[i] = outputs[i].aux_data(csr::kIndPtr).dptr_;
+      out_indices_shapes[i] = outputs[i].aux_shape(csr::kIdx).Size();
+      out_indptr_shapes[i] = outputs[i].aux_shape(csr::kIndPtr).Size();
+    }
+  }
+
+  // get memory resource and mxnet backend streams
+  const Resource &resource = ctx.requested[0];
+  mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
+  mshadow::Stream<mxnet::gpu> *gpu_stream = ctx.get_stream<mxnet::gpu>();
+
+  // create lambda that captures stream & resource objects
+  // this temp workspace holds memory allocated by custom library via OpResource
+  auto cpu_alloc = [&](int size) {
+    mshadow::Tensor<mxnet::cpu, 1, char> workspace =
+      resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
+    return workspace.dptr_;
+  };
+  auto gpu_alloc = [&](int size) {
+    mshadow::Tensor<mxnet::gpu, 1, char> workspace =
+      resource.get_space_typed<mxnet::gpu, 1, char>(mshadow::Shape1(size), gpu_stream);
+    return workspace.dptr_;
+  };
+
+  // create lambda that allocates memory for sparse and
+  // returns allocated arrays for data, indices and indptr.
+  auto sparse_alloc = [&](int index, int indices_len, int idxptr_len,
+                           void** data, int64_t** indices, int64_t** indptr) {
+    if (idxptr_len == 0) {
+      // Row Sparse
+      outputs[index].CheckAndAlloc({mshadow::Shape1(indices_len)});
+      *data = outputs[index].data().dptr_;
+      *indices = reinterpret_cast<int64_t*>(outputs[index].aux_data(rowsparse::kIdx).dptr_);
+    } else {
+      // CSR
+      outputs[index].CheckAndAlloc({mshadow::Shape1(idxptr_len), mshadow::Shape1(indices_len)});
+      *data = outputs[index].data().dptr_;
+      *indices = reinterpret_cast<int64_t*>(outputs[index].aux_data(csr::kIdx).dptr_);
+      *indptr = reinterpret_cast<int64_t*>(outputs[index].aux_data(csr::kIndPtr).dptr_);
+    }
+  };
+
+  // create lambda without captures so that we can cast it to function pointer
+  // lambda with captures cannot be cast to function pointer and pass to lib_api.h
+  // this needs to be a lambda function so that we can do the decltype cast
+  typedef decltype(cpu_alloc) alloc_type_cpu;
+  auto cpu_malloc = [](void* _cpu_alloc, int size) {
+    // cast the void* argument to the type for the cpu_alloc lambda function
+    alloc_type_cpu* cpualloc = static_cast<alloc_type_cpu*>(_cpu_alloc);
+    // call cpu_alloc to actually allocate memory and return the pointer
+    return static_cast<void*>((*cpualloc)(size));
+  };
+  typedef decltype(gpu_alloc) alloc_type_gpu;
+  auto gpu_malloc = [](void* _gpu_alloc, int size) {
+    alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
+    return static_cast<void*>((*gpualloc)(size));
+  };
+
+  typedef decltype(sparse_alloc) alloc_type_sparse;
+  auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len,
+                           void** data, int64_t** indices, int64_t** indptr) {
+    alloc_type_sparse* sparsealloc = static_cast<alloc_type_sparse*>(_sparse_alloc);
+    (*sparsealloc)(index, indices_len, idxptr_len, data, indices, indptr);
+  };
+
+  // get actual cudaStream_t out of mxnet gpu stream and pass to lib_api.h
+  void *cuda_stream = nullptr;
+#if MXNET_USE_CUDA
+  if (inputs[0].ctx().dev_mask() == Context::kGPU) {
+    cuda_stream = static_cast<void*>(gpu_stream->stream_);
+  }
+#endif
+
+  CHECK((fcomp_fp != nullptr && state_ptr == nullptr)
+        || (fcomp_fp == nullptr && state_ptr != nullptr))
+    << "Can only register either regular op or stateful op for '" << op_name << "'";
+
+  if (fcomp_fp != nullptr) {
+    // convert attributes to vector of char*
+    std::vector<const char*> attr_keys, attr_vals;
+    for (auto &kv : attrs->dict) {
+      attr_keys.push_back(kv.first.c_str());
+      attr_vals.push_back(kv.second.c_str());
+    }
+
+    // call fcompute function
+    CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                    in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                    in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
+                    out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                    out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
+                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                    sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
+                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                    in_indices_shapes.data(), out_indices_shapes.data(),
+                    in_indptr_shapes.data(), out_indptr_shapes.data()))
+      << "Error calling FCompute for custom operator '" << op_name << "'";
+  }
+
+  if (state_ptr != nullptr) {
+    // retrieve op state object created from CreateOpState
+    CustomStatefulOpWrapper& op = state_ptr->get_state<CustomStatefulOpWrapper>();
+    CustomStatefulOp* state_op_inst = op.get_instance();
+    CHECK(state_op_inst != nullptr)
+      << "Error custom stateful operator is null for operator '" << op_name << "'";
+
+    // call fcompute function
+    CHECK(callFStatefulComp(stateful_forward_flag, state_op_inst,
+                            in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                            in_verIDs.data(), in_dev_type.data(), in_dev_id.data(),
+                            in_data.size(),
+                            out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                            out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
+                            out_data.size(),
+                            cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                            sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
+                            in_indices.data(), out_indices.data(),
+                            in_indptr.data(), out_indptr.data(),
+                            in_indices_shapes.data(), out_indices_shapes.data(),
+                            in_indptr_shapes.data(), out_indptr_shapes.data()))
+      << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
+  }
+}
+
+/*!
+ * \brief Loads dynamic custom library and initializes it
  * \param path library path
  */
 int MXLoadLib(const char *path) {
@@ -132,6 +338,9 @@ int MXLoadLib(const char *path) {
   opCallInferType_t callInferType =
     get_func<opCallInferType_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERTYPE_STR));
 
+  opCallInferSType_t callInferSType =
+    get_func<opCallInferSType_t>(lib, const_cast<char*>(MXLIB_OPCALLINFERSTYPE_STR));
+
   opCallFComp_t callFComp =
     get_func<opCallFComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFCOMP_STR));
 
@@ -148,8 +357,8 @@ int MXLoadLib(const char *path) {
     get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
 
 
-  partCallAcceptSubgraph_t callAcceptSubgraph =
-    get_func<partCallAcceptSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLACCEPTSUBGRAPH_STR));
+  partCallReviewSubgraph_t callReviewSubgraph =
+    get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
 
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
@@ -164,40 +373,63 @@ int MXLoadLib(const char *path) {
   for (int i = 0; i < numOps; i++) {
     const char* name;
     // function pointers holding implementation from custom library
-    fcomp_t fcomp_fp = nullptr;
     parseAttrs_t parse_fp = nullptr;
     inferType_t type_fp = nullptr;
+    inferSType_t stype_fp = nullptr;
     inferShape_t shape_fp = nullptr;
     // optional attributes
-    fcomp_t fgrad_fp = nullptr;
     mutateInputs_t mutate_fp = nullptr;
-    createOpState_t create_opstate_fp = nullptr;
     bool isSubgraphOp = false;
     int _isSubgraphOp = 0;
+    // lists of forward and backward function associated with each context
+    const char **forward_ctx, **backward_ctx, **createop_ctx;
+    fcomp_t *forward_fcomp, *backward_fcomp;
+    createOpState_t *createop_fp;
+    int forward_count, backward_count, createop_count;
 
-    // get custom operator implemenation from the dynamic library
-    opRegGet(i, &name, &fcomp_fp, &fgrad_fp, &parse_fp, &type_fp, &shape_fp,
-             &mutate_fp, &create_opstate_fp, &_isSubgraphOp);
+    // main function to get custom operator implemenation from the custom library
+    opRegGet(i, &name, &_isSubgraphOp,
+             &forward_ctx, &forward_fcomp, &forward_count,
+             &backward_ctx, &backward_fcomp, &backward_count,
+             &createop_ctx, &createop_fp, &createop_count,
+             &parse_fp, &type_fp, &stype_fp, &shape_fp, &mutate_fp);
+
+    // construct maps of context to forward/backward custom library function
+    std::unordered_map<std::string, fcomp_t> forward_ctx_map;
+    std::unordered_map<std::string, fcomp_t> backward_ctx_map;
+    std::unordered_map<std::string, createOpState_t> createop_map;
+    for (int i=0; i < forward_count; i++) {
+      std::string ctx_str(forward_ctx[i]);
+      forward_ctx_map[ctx_str] = forward_fcomp[i];
+    }
+    for (int i=0; i < backward_count; i++) {
+      std::string ctx_str(backward_ctx[i]);
+      backward_ctx_map[ctx_str] = backward_fcomp[i];
+    }
+    for (int i=0; i < createop_count; i++) {
+      std::string ctx_str(createop_ctx[i]);
+      createop_map[ctx_str] = createop_fp[i];
+    }
     // set bool, dont pass bool across ABI boundary
     isSubgraphOp = _isSubgraphOp;
 
+    // validate custom operator functions from the dynamic library
     if (!isSubgraphOp) {
-      // validate custom operator functions from the dynamic library
       CHECK(parse_fp != nullptr) << "Error loading '" << name
                                  << "' custom op, ParseAttrs function was not set.";
-      CHECK(fcomp_fp != nullptr || create_opstate_fp != nullptr) << "Error loading '" << name
+      CHECK(forward_ctx_map.size() != 0 || createop_map.size() != 0)
+                            << "Error loading '" << name
                             << "' custom op, Forward or CreateOpState function was not set.";
-      CHECK(type_fp  != nullptr) << "Error loading '" << name
+      CHECK(type_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferType function was not set.";
       CHECK(shape_fp != nullptr) << "Error loading '" << name
                             << "' custom op, InferShape function was not set.";
     } else {
-      // validate custom operator functions from the dynamic library
-      CHECK(create_opstate_fp != nullptr) << "Error loading '" << name
+      CHECK(createop_map.size() != 0) << "Error loading '" << name
                             << "' custom subgraph op, CreateOpState function was not set.";
     }
-
     LOG(INFO) << "\tOp[" << i << "] " << name;
+    if (isSubgraphOp) LOG(INFO) << "\t\tisSubgraphOp";
     std::string name_str(name);
 
     /*
@@ -210,7 +442,7 @@ int MXLoadLib(const char *path) {
     auto attr_parser = [=](const NodeAttrs* attrs) {
       // convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs->dict) {
+      for (auto &kv : attrs->dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -220,7 +452,7 @@ int MXLoadLib(const char *path) {
         nnvm::Graph g;
         g.outputs = attrs->subgraphs[0].get()->outputs;
         subgraph_json = nnvm::pass::SaveJSON(g);
-        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_keys.push_back(MX_STR_SUBGRAPH_SYM_JSON);
         attr_vals.push_back(subgraph_json.c_str());
       }
 
@@ -237,7 +469,7 @@ int MXLoadLib(const char *path) {
     auto num_inputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -255,7 +487,7 @@ int MXLoadLib(const char *path) {
     auto num_outputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -274,7 +506,7 @@ int MXLoadLib(const char *path) {
     auto num_inouts = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -284,8 +516,8 @@ int MXLoadLib(const char *path) {
       CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
-
-      return num_in + 2*num_out;
+      // for backward passes, inputs + outputs + input gradients (one for each output)
+      return num_in + 2 * num_out;
     };
 
     // lambda function to call infer shape
@@ -294,7 +526,7 @@ int MXLoadLib(const char *path) {
                             mxnet::ShapeVector *out_shape) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -365,7 +597,7 @@ int MXLoadLib(const char *path) {
                             std::vector<int> *out_type) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -389,100 +621,11 @@ int MXLoadLib(const char *path) {
       return true;
     };
 
-    // lambda function to convert from external fcompute to internal MXNet types
-    auto fcomp_lambda = [=](fcomp_t fcomp_fp,
-                            const nnvm::NodeAttrs& attrs,
-                            const OpContext& ctx,
-                            const std::vector<NDArray>& inputs,
-                            const std::vector<OpReqType>& req,
-                            const std::vector<NDArray>& outputs) {
-      // convert attributes to vector of char*
-      std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
-        attr_keys.push_back(kv.first.c_str());
-        attr_vals.push_back(kv.second.c_str());
-      }
-
-      std::vector<void*> in_data, out_data;
-      std::vector<const int64_t *> in_shapes, out_shapes;
-      std::vector<int> in_dims, out_dims;
-      std::vector<int> in_types, out_types;
-      std::vector<size_t> in_verIDs, out_verIDs;
-
-      // convert input tensors to constituent parts
-      for (size_t i = 0; i < inputs.size(); i++) {
-        in_data.push_back(inputs[i].data().dptr_);
-        in_shapes.push_back(inputs[i].shape().data());
-        in_dims.push_back(inputs[i].shape().ndim());
-        in_types.push_back(inputs[i].dtype());
-        in_verIDs.push_back(inputs[i].version());
-      }
-
-      // convert output tensors to constituent parts
-      for (size_t i = 0; i < outputs.size(); i++) {
-        out_data.push_back(outputs[i].data().dptr_);
-        out_shapes.push_back(outputs[i].shape().data());
-        out_dims.push_back(outputs[i].shape().ndim());
-        out_types.push_back(outputs[i].dtype());
-        out_verIDs.push_back(outputs[i].version());
-      }
-
-      // get memory resource
-      const Resource &resource = ctx.requested[0];
-      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
-
-      // create lambda that captures stream & resource objects
-      // this temp workspace holds memory allocated by custom library via OpResource
-      auto cpu_alloc = [&](int size) {
-        mshadow::Tensor<mxnet::cpu, 1, char> workspace =
-          resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
-        return workspace.dptr_;
-      };
-
-      // create lambda without captures so that we can cast it to function pointer
-      // this needs to be a lambda function so that we can do the decltype cast
-      typedef decltype(cpu_alloc) alloc_type;
-      auto cpu_malloc = [](void* _cpu_alloc, int size) {
-        // cast the void* argument to the type for the cpu_alloc lambda function
-        alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
-        // call cpu_alloc to actually allocate memory and get the pointer
-        void* ptr = (*cpualloc)(size);
-        return ptr;
-      };
-
-      // call fcompute function
-      CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                      in_shapes.data(), in_dims.data(), in_data.data(),
-                      in_types.data(), in_verIDs.data(), in_data.size(),
-                      out_shapes.data(), out_dims.data(), out_data.data(),
-                      out_types.data(), out_verIDs.data(), out_data.size(),
-                      cpu_malloc, &cpu_alloc))
-      << "Error calling FCompute for custom operator '" << name_str << "'";
-
-      // return type void
-    };
-
-    auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs) {
-      return fcomp_lambda(fcomp_fp, attrs, ctx, inputs, req, outputs);
-    };
-
-    auto backward_lambda = [=](const nnvm::NodeAttrs& attrs,
-                              const OpContext& ctx,
-                              const std::vector<NDArray>& inputs,
-                              const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs) {
-      return fcomp_lambda(fgrad_fp, attrs, ctx, inputs, req, outputs);
-    };
-
     // lambda function to convert from external mutate_inputs to internal MXNet types
     auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -510,29 +653,76 @@ int MXLoadLib(const char *path) {
                                 DispatchMode* dispatch_mode,
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
-      // TODO(ziyimu): remove this dense enforce check after supporting sparse tensor
-      CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
-      << "Error input tensors are not dense for custom operator '" << name_str << "'";
-      // set outputs as dense
-      return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
-                                     dispatch_mode, DispatchMode::kFComputeEx);
+      if (stype_fp == nullptr) {
+        // InferSType is not defineid in customized lib.
+        CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
+        << "Error input tensors are not dense for custom operator '" << name_str << "'";
+        // set outputs as dense
+        return op::storage_type_assign(out_stypes, mxnet::kDefaultStorage,
+                                       dispatch_mode, DispatchMode::kFComputeEx);
+      } else {
+        // InferSType is defined in customized lib.
+        // convert attributes to vector of char*
+        std::vector<const char*> attr_keys, attr_vals;
+        for (auto kv : attrs.dict) {
+          attr_keys.push_back(kv.first.c_str());
+          attr_vals.push_back(kv.second.c_str());
+        }
+        // copy input types from in_stype
+        std::vector<int> instypes(*in_stypes);
+
+        // output types will be populated by inferType function
+        std::vector<int> outstypes(out_stypes->size());
+        CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                             instypes.data(), in_stypes->size(),
+                             outstypes.data(), out_stypes->size()))
+        << "Error calling InferSType for custom operator '" << name_str << "'";
+
+        // copy and assign output storage types from custom op to MXNet memory.
+        for (size_t i = 0; i < out_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, outstypes[i]);
+        }
+        // assign dispatch mode
+        DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
+        return true;
+      }
     };
 
     // FGradient register lambda
-    auto grad_reg = [=](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
-        // copy gradients first
-        std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-        // copy inputs second
-        for (auto& h : n->inputs) {
-          heads.push_back(h);
-        }
-        // copy outputs last
-        uint32_t n_out = n->num_outputs();
-        for (uint32_t i = 0; i < n_out; ++i) {
-          heads.emplace_back(n, i, 0);
-        }
-        std::string grad_name = "_backward_" + name_str;
-        return mxnet::op::MakeGradNode(grad_name.c_str(), n, heads, n->attrs.dict);
+    auto grad_reg = [=](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      // create node for gradient
+      auto p = nnvm::Node::Create();
+      std::string grad_name = "_backward_" + name_str;
+      p->attrs.op = nnvm::Op::Get(grad_name.c_str());
+      p->attrs.name = n->attrs.name + "_backward";
+      // copy attributes and subgraphs
+      p->attrs.dict = n->attrs.dict;
+      for (auto s : n->attrs.subgraphs)
+        p->attrs.subgraphs.push_back(s);
+      // set control dependency and attr parser
+      p->control_deps.emplace_back(n);
+      if (p->op()->attr_parser != nullptr) {
+        p->op()->attr_parser(&(p->attrs));
+      }
+      // gradient inputs: copy gradients first
+      std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
+      // copy inputs second
+      for (auto& h : n->inputs) {
+        heads.push_back(h);
+      }
+      // gradient inputs: copy outputs last
+      uint32_t n_out = n->num_outputs();
+      for (uint32_t i = 0; i < n_out; ++i) {
+        heads.emplace_back(n, i, 0);
+      }
+      // set inputs to gradient node
+      p->inputs = heads;
+      CHECK_EQ(p->num_inputs(), p->inputs.size())
+      << "Number of inputs to operator " << grad_name << " (" << p->num_inputs()
+      << ") does not match the actual number of inputs provided to operator "
+      << p->attrs.name << " (" << p->inputs.size() << ").";
+      // create output node entries
+      return mxnet::op::CreateNodeEntries(p);
     };
 
     auto resc_req = [=](const NodeAttrs& attrs) {
@@ -542,12 +732,12 @@ int MXLoadLib(const char *path) {
     // library author should implement and return a 'state' which points to an instance
     // in lambda we create OpStatePtr using the returned 'state'
     auto create_opstate = [=] (const NodeAttrs& attrs,
-                                Context ctx,
-                                const std::vector<TShape>& in_shapes,
-                                const std::vector<int>& in_types) {
+                               Context ctx,
+                               const std::vector<TShape>& in_shapes,
+                               const std::vector<int>& in_types) {
       // convert attributes to vector of char*
       std::vector<const char*> attr_keys, attr_vals;
-      for (auto kv : attrs.dict) {
+      for (auto &kv : attrs.dict) {
         attr_keys.push_back(kv.first.c_str());
         attr_vals.push_back(kv.second.c_str());
       }
@@ -558,106 +748,36 @@ int MXLoadLib(const char *path) {
         nnvm::Graph g;
         g.outputs = attrs.subgraphs[0].get()->outputs;
         subgraph_json = nnvm::pass::SaveJSON(g);
-        attr_keys.push_back(SUBGRAPH_SYM_JSON);
+        attr_keys.push_back(MX_STR_SUBGRAPH_SYM_JSON);
         attr_vals.push_back(subgraph_json.c_str());
       }
 
       // create a pointer to hold custom op state object
+      // only create one stateful op depending on passing context
+      // user can add new supported context and call to custom library
       void* state_op_inst = nullptr;
-      CHECK(callCreateOpState(create_opstate_fp, attr_keys.data(), attr_vals.data(),
-                              attr_keys.size(), &state_op_inst))
-      << "Error calling CreateOpState for custom operator '" << name_str << "'";
+      if (ctx.dev_mask() == Context::kCPU) {
+        CHECK(createop_map.count("cpu") > 0)
+          << "CPU CreateOpState not implemented for '" << name_str << "'";
+        CHECK(callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
+                                attr_keys.size(), &state_op_inst))
+          << "Error calling CreateOpState CPU for custom operator '" << name_str << "'";
+      } else if (ctx.dev_mask() == Context::kGPU) {
+        CHECK(createop_map.count("gpu") > 0)
+          << "GPU CreateOpState not implemented for '" << name_str << "'";
+        CHECK(callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
+                                attr_keys.size(), &state_op_inst))
+          << "Error calling CreateOpState GPU for custom operator '" << name_str << "'";
+      }
 
       CHECK(state_op_inst != nullptr)
-      << "Error custom library failed to create stateful operator '" << name_str << "'";
+        << "Error custom library failed to create stateful operator '" << name_str << "'";
 
       CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
       return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
     };
 
-    // stateful forward and backward
-    auto fstateful_lambda = [=](bool is_forward,
-                                const OpStatePtr& state_ptr,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
-      std::vector<void*> in_data, out_data;
-      std::vector<const int64_t *> in_shapes, out_shapes;
-      std::vector<int> in_dims, out_dims;
-      std::vector<int> in_types, out_types;
-      std::vector<size_t> in_verIDs, out_verIDs;
-
-      // convert input tensors to constituent parts
-      for (size_t i = 0; i < inputs.size(); i++) {
-        in_data.push_back(inputs[i].data().dptr_);
-        in_shapes.push_back(inputs[i].shape().data());
-        in_dims.push_back(inputs[i].shape().ndim());
-        in_types.push_back(inputs[i].dtype());
-        in_verIDs.push_back(inputs[i].version());
-      }
-
-      // convert output tensors to constituent parts
-      for (size_t i = 0; i < outputs.size(); i++) {
-        out_data.push_back(outputs[i].data().dptr_);
-        out_shapes.push_back(outputs[i].shape().data());
-        out_dims.push_back(outputs[i].shape().ndim());
-        out_types.push_back(outputs[i].dtype());
-        out_verIDs.push_back(outputs[i].version());
-      }
-
-      // get memory resource
-      const Resource &resource = ctx.requested[0];
-      mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
-
-      // create lambda that captures stream & resource objects
-      // this temp workspace holds memory allocated by custom library via OpResource
-      auto cpu_alloc = [&](int size) {
-        mshadow::Tensor<mxnet::cpu, 1, char> data =
-        resource.get_space_typed<mxnet::cpu, 1, char>(mshadow::Shape1(size), cpu_stream);
-        return data.dptr_;
-      };
-
-      // create lambda without captures so that we can cast it to function pointer
-      // this needs to be a lambda function so that we can do the decltype cast
-      typedef decltype(cpu_alloc) alloc_type;
-      auto cpu_malloc = [](void* _cpu_alloc, int size) {
-        // cast the void* argument to the type for the cpu_alloc lambda function
-        alloc_type* cpualloc = static_cast<alloc_type*>(_cpu_alloc);
-        // call cpu_alloc to actually allocate memory and get the pointer
-        void* ptr = (*cpualloc)(size);
-        return ptr;
-      };
-
-      // retrieve op state object created from CreateOpState
-      CustomStatefulOpWrapper& op = state_ptr.get_state<CustomStatefulOpWrapper>();
-      CustomStatefulOp* state_op_inst = op.get_instance();
-      CHECK(state_op_inst != nullptr)
-      << "Error MXNet cannot load custom stateful operator'" << name_str << "'";
-
-      // call fcompute function
-      CHECK(callFStatefulComp(is_forward, state_op_inst, in_shapes.data(), in_dims.data(),
-                              in_data.data(), in_types.data(), in_verIDs.data(), in_data.size(),
-                              out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                              out_verIDs.data(), out_data.size(), cpu_malloc, &cpu_alloc))
-      << "Error calling FStatefulCompute for custom operator '" << name_str << "'";
-    };
-
-    auto fstateful_forward = [=](const OpStatePtr& state_ptr,
-                                 const OpContext& ctx,
-                                 const std::vector<NDArray>& inputs,
-                                 const std::vector<OpReqType>& req,
-                                 const std::vector<NDArray>& outputs) {
-      fstateful_lambda(true, state_ptr, ctx, inputs, req, outputs);
-    };
-
-    auto fstateful_backward = [=](const OpStatePtr& state_ptr,
-                                  const OpContext& ctx,
-                                  const std::vector<NDArray>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<NDArray>& outputs) {
-      fstateful_lambda(false, state_ptr, ctx, inputs, req, outputs);
-    };
+    /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
 
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
@@ -675,8 +795,8 @@ int MXLoadLib(const char *path) {
       regOp.set_num_inputs(num_inputs);
       regOp.set_num_outputs(num_outputs);
       regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
       regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
       // optionally add fmutate inputs if user specified a function
       if (mutate_fp != nullptr)
@@ -685,10 +805,8 @@ int MXLoadLib(const char *path) {
       using namespace mxnet::op;
       regOp.set_num_inputs(DefaultSubgraphOpNumInputs);
       regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
-      regOp.set_attr<nnvm::FInferType>("FInferType",
-                                       DefaultSubgraphOpType, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape",
-                                         DefaultSubgraphOpShape, plevel);
+      regOp.set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType, plevel);
+      regOp.set_attr<mxnet::FInferShape>("FInferShape", DefaultSubgraphOpShape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType",
                                         DefaultSubgraphOpStorageType, plevel);
       regOp.set_attr<FResourceRequest>("FResourceRequest",
@@ -696,32 +814,111 @@ int MXLoadLib(const char *path) {
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                           DefaultSubgraphOpMutableInputs, plevel);
     }
-
     // optionally add stateful forward
-    if (create_opstate_fp != nullptr) {
+    if (createop_map.size() != 0) {
       regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
-      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                        fstateful_forward, plevel);
+      auto fstate_forward = [=](const OpStatePtr& state_ptr,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+        CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
+                                 callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs);
+      };
+      if (createop_map.count("cpu") > 0)
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
+      if (createop_map.count("gpu") > 0)
+        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
     } else {
-      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
+      auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                const OpContext& ctx,
+                                const std::vector<NDArray>& inputs,
+                                const std::vector<OpReqType>& req,
+                                const std::vector<NDArray>& outputs) {
+        if (ctx.run_ctx.ctx.dev_mask() == Context::kCPU) {
+          CHECK_GT(forward_ctx_map.count("cpu"), 0);
+          fcomp_t fcomp = forward_ctx_map.at("cpu");
+          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
+        } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
+          CHECK_GT(forward_ctx_map.count("gpu"), 0);
+          fcomp_t fcomp = forward_ctx_map.at("gpu");
+          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
+        }
+      };
+      if (forward_ctx_map.count("cpu") > 0)
+        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
+      if (forward_ctx_map.count("gpu") > 0)
+        regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
     }
-    // optionally add fgradient if user specified a function
-    if (fgrad_fp != nullptr || create_opstate_fp != nullptr) {
-      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
+    // optionally add fgradient if user specified a function, or for stateful ops
+    if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
       std::string grad_name = "_backward_" + name_str;
       nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
+      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
       gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
-      gradOp.set_attr_parser(attr_parser);
-      gradOp.set_num_inputs(num_inouts);
-      gradOp.set_num_outputs(num_inputs);
       gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
       gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-      if (create_opstate_fp != nullptr) {
-        gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>",
-                                            fstateful_backward, plevel);
+
+      if (!isSubgraphOp) {
+        // register attr parser and standard functions for non-subgraph ops
+        gradOp.set_attr_parser(attr_parser);
+        gradOp.set_num_inputs(num_inouts);
+        gradOp.set_num_outputs(num_inputs);
       } else {
-        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_lambda, plevel);
+        // for subgraph ops use special functions that do not invoke attr_parser
+        using namespace mxnet::op;
+        auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
+          // for backward passes, inputs + outputs + input gradients (one for each output)
+          uint32_t cnt = DefaultSubgraphOpNumInputs(attrs);
+          cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
+          return cnt;
+        };
+        gradOp.set_num_inputs(grad_inouts);
+        gradOp.set_num_outputs(DefaultSubgraphOpNumInputs);
+      }
+
+      if (createop_map.size() != 0) {
+        // for stateful operators
+        gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
+        auto fstate_backward = [=](const OpStatePtr& state_ptr,
+                                   const OpContext& ctx,
+                                   const std::vector<NDArray>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<NDArray>& outputs) {
+          CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
+                                   callFStatefulComp, 0, &state_ptr,
+                                   ctx, inputs, req, outputs);
+        };
+        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
+        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
+      } else {
+        // for stateless operators
+        if (backward_ctx_map.count("cpu") > 0) {
+          fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
+          auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
+            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
+                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
+          };
+          gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
+        }
+        if (backward_ctx_map.count("gpu") > 0) {
+          fcomp_t fcomp_back_gpu = backward_ctx_map.at("gpu");
+          auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<NDArray>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<NDArray>& outputs) {
+            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
+                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
+          };
+          gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
+        }
       }
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
@@ -755,12 +952,12 @@ int MXLoadLib(const char *path) {
       const char* strategy;
       // function pointers holding implementation from custom library
       supportedOps_t supportedOps_fp = nullptr;
-      acceptSubgraph_t acceptSubgraph_fp = nullptr;
+      reviewSubgraph_t reviewSubgraph_fp = nullptr;
       // name of subgraph op
       const char* op_name = nullptr;
 
     // get custom partitioner strategy from the dynamic library
-      partRegGet(i, j, &strategy, &supportedOps_fp, &acceptSubgraph_fp, &op_name);
+      partRegGet(i, j, &strategy, &supportedOps_fp, &reviewSubgraph_fp, &op_name);
       // validate custom partitioner functions from the dynamic library
       CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
                                         << "' custom partitioner strategy '" << strategy
@@ -769,12 +966,10 @@ int MXLoadLib(const char *path) {
       std::string op_name_str(op_name);
       LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
                 << " subgraphOp: '" << op_name_str << "'";
-
-      // MXNET_REGISTER_SUBGRAPH_PROPERTY(customBackend, CustomSubgraphProperty);
-      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__(name_str,
-                            std::make_shared<mxnet::op::CustomSubgraphProperty>(
-                           strategy_str, callSupportedOps, supportedOps_fp,
-                           callAcceptSubgraph, acceptSubgraph_fp, callFree, op_name_str));
+      mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__
+        (name_str, std::make_shared<mxnet::op::CustomSubgraphProperty>
+          (strategy_str, callSupportedOps, supportedOps_fp,
+           callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
     }
   }
   API_END();
@@ -887,9 +1082,9 @@ int MXNDArrayCreateNone(NDArrayHandle *out) {
   API_END();
 }
 
-template<typename DataType, typename dimtype>
+template<typename DataType>
 void CreateNDArray(const DataType* shape,
-                   dimtype ndim,
+                   int ndim,
                    int dev_type,
                    int dev_id,
                    int delay_alloc,
@@ -901,9 +1096,12 @@ void CreateNDArray(const DataType* shape,
               "[CreateNDArray] Size of tensor you are trying to allocate is larger than "
               "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
   }
-  *out = new NDArray(requested_shape,
-                     Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                     delay_alloc != 0, dtype);
+  NDArray* nd = new NDArray(requested_shape,
+                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+                            delay_alloc != 0, dtype);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
 }
 
 int MXNDArrayCreate(const uint32_t *shape,
@@ -913,9 +1111,12 @@ int MXNDArrayCreate(const uint32_t *shape,
                     int delay_alloc,
                     NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(mxnet::TShape(shape, shape + ndim),
-                     Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                     delay_alloc != 0);
+  NDArray* nd = new NDArray(mxnet::TShape(shape, shape + ndim),
+                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+                            delay_alloc != 0);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
   API_END();
 }
 
@@ -927,7 +1128,7 @@ int MXNDArrayCreateEx64(const int64_t *shape,
                         int dtype,
                         NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<int64_t, int>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
 }
 
@@ -939,8 +1140,42 @@ int MXNDArrayCreateEx(const uint32_t *shape,
                       int dtype,
                       NDArrayHandle *out) {
   API_BEGIN();
-  CreateNDArray<uint32_t, uint32_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
+}
+
+template<typename DType>
+void CreateSparseNDArray(int storage_type,
+                         const DType *shape,
+                         int ndim,
+                         int dev_type,
+                         int dev_id,
+                         int delay_alloc,
+                         int dtype,
+                         uint32_t num_aux,
+                         int *aux_type,
+                         int *aux_ndims,
+                         const DType *aux_shape,
+                         NDArrayHandle *out) {
+  std::vector<int> aux_types;
+  mxnet::ShapeVector aux_shapes;
+  auto shape_start = aux_shape;
+  for (size_t i = 0; i < num_aux; i++) {
+    // types
+    aux_types.push_back(aux_type[i]);
+    // shapes
+    aux_shapes.emplace_back(shape_start, shape_start + aux_ndims[i]);
+    shape_start += aux_ndims[i];
+  }
+  NDArray* nd = new NDArray(
+      NDArrayStorageType(storage_type),
+      mxnet::TShape(shape, shape + ndim),
+      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
+      delay_alloc != 0,
+      dtype, aux_types, aux_shapes);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
 }
 
 int MXNDArrayCreateSparseEx(int storage_type,
@@ -956,22 +1191,29 @@ int MXNDArrayCreateSparseEx(int storage_type,
                             const uint32_t *aux_shape,
                             NDArrayHandle *out) {
   API_BEGIN();
-  std::vector<int> aux_types;
-  mxnet::ShapeVector aux_shapes;
-  auto shape_start = aux_shape;
-  for (size_t i = 0; i < num_aux; i++) {
-    // types
-    aux_types.push_back(aux_type[i]);
-    // shapes
-    aux_shapes.emplace_back(shape_start, shape_start + aux_ndims[i]);
-    shape_start += aux_ndims[i];
-  }
-  *out = new NDArray(
-      NDArrayStorageType(storage_type),
-      mxnet::TShape(shape, shape + ndim),
-      Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-      delay_alloc != 0,
-      dtype, aux_types, aux_shapes);
+  CreateSparseNDArray<uint32_t>(storage_type, shape, static_cast<int>(ndim), dev_type, dev_id,
+                                delay_alloc, dtype, num_aux, aux_type,
+                                reinterpret_cast<int *>(aux_ndims), aux_shape, out);
+  API_END();
+}
+
+
+int MXNDArrayCreateSparseEx64(int storage_type,
+                            const int64_t *shape,
+                            int ndim,
+                            int dev_type,
+                            int dev_id,
+                            int delay_alloc,
+                            int dtype,
+                            uint32_t num_aux,
+                            int *aux_type,
+                            int *aux_ndims,
+                            const int64_t *aux_shape,
+                            NDArrayHandle *out) {
+  API_BEGIN();
+  CreateSparseNDArray<int64_t>(storage_type, shape, static_cast<int>(ndim), dev_type, dev_id,
+                               delay_alloc, dtype, num_aux, aux_type,
+                               reinterpret_cast<int *>(aux_ndims), aux_shape, out);
   API_END();
 }
 
@@ -1289,12 +1531,21 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
                      MXAPIThreadLocalEntry<dtype>* ret) {
   NDArray* arr = static_cast<NDArray*>(handle);
   if (!arr->is_none()) {
-    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-      CHECK_LT(arr->shape().Size(), (int64_t{1} << 31) - 1) <<
-                      "[Get Shape] Size of tensor you are trying to allocate is larger than "
-                      "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
-    }
     mxnet::TShape s = arr->shape();
+    // Handle dynamic shape in deferred compute mode
+    if (!Imperative::DCInfo::IsNone(*arr)) {
+      if (!shape_is_known(s) && !Imperative::DCInfo::IsComputed(*arr)) {
+        Imperative::DCInfo::Compute(*arr);
+        s = arr->shape();
+      }
+    }
+
+    if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
+      CHECK_LT(s.Size(), (int64_t{1} << 31) - 1) <<
+        "[Get Shape] Size of tensor you are trying to allocate is larger than "
+        "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+    }
+
     if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToLegacyShape(&s);
     }
@@ -1452,7 +1703,7 @@ int MXNDArrayGetGrad(NDArrayHandle handle, NDArrayHandle *out) {
   NDArray *arr = static_cast<NDArray*>(handle);
   NDArray ret = arr->grad();
   if (ret.is_none()) {
-    *out = NULL;
+    *out = nullptr;
   } else {
     *out = new NDArray(ret);
   }
@@ -1534,8 +1785,8 @@ int MXFuncInvoke(FunctionHandle fun,
           scalar_args,
           (NDArray**)(mutate_vars),  //  NOLINT(*)
           0,
-          NULL,
-          NULL);
+          nullptr,
+          nullptr);
   API_END();
 }
 
@@ -1579,7 +1830,7 @@ int MXDataIterGetIterInfo(DataIterCreator creator,
   DataIteratorReg *e = static_cast<DataIteratorReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 
 int MXDataIterCreateIter(DataIterCreator creator,
@@ -1776,6 +2027,58 @@ int MXKVStorePullEx(KVStoreHandle handle,
     v_vals[i] = static_cast<NDArray*>(vals[i]);
   }
   static_cast<KVStore*>(handle)->Pull(v_keys, v_vals, priority, true);
+  API_END();
+}
+
+int MXKVStoreBroadcast(KVStoreHandle handle,
+                       mx_uint vnum,
+                       const int* vkeys,
+                       mx_uint onum,
+                       const int* okeys,
+                       NDArrayHandle* vals,
+                       NDArrayHandle* outs,
+                       int priority) {
+  API_BEGIN();
+  std::vector<int> v_vkeys(vnum);
+  std::vector<int> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
+  API_END();
+}
+
+int MXKVStoreBroadcastEx(KVStoreHandle handle,
+                         mx_uint vnum,
+                         const char** vkeys,
+                         mx_uint onum,
+                         const char** okeys,
+                         NDArrayHandle* vals,
+                         NDArrayHandle* outs,
+                         int priority) {
+  API_BEGIN();
+  std::vector<std::string> v_vkeys(vnum);
+  std::vector<std::string> v_okeys(onum);
+  std::vector<NDArray> v_vals(vnum);
+  std::vector<NDArray*> v_outs(onum);
+  for (mx_uint i = 0; i < vnum; ++i) {
+    v_vkeys[i] = vkeys[i];
+    v_vals[i] = *static_cast<NDArray*>(vals[i]);
+  }
+  for (mx_uint i = 0; i < onum; ++i) {
+    v_okeys[i] = okeys[i];
+    v_outs[i] = static_cast<NDArray*>(outs[i]);
+  }
+  static_cast<KVStore*>(handle)->Broadcast(v_vkeys, v_okeys, v_vals, v_outs,
+    priority);
   API_END();
 }
 
@@ -2054,9 +2357,9 @@ int MXRecordIOWriterCreate(const char *uri,
   dmlc::Stream *stream = dmlc::Stream::Create(uri, "w");
   MXRecordIOContext *context = new MXRecordIOContext;
   context->writer = new dmlc::RecordIOWriter(stream);
-  context->reader = NULL;
+  context->reader = nullptr;
   context->stream = stream;
-  context->read_buff = NULL;
+  context->read_buff = nullptr;
   *out = reinterpret_cast<RecordIOHandle>(context);
   API_END();
 }
@@ -2094,7 +2397,7 @@ int MXRecordIOReaderCreate(const char *uri,
   dmlc::Stream *stream = dmlc::Stream::Create(uri, "r");
   MXRecordIOContext *context = new MXRecordIOContext;
   context->reader = new dmlc::RecordIOReader(stream);
-  context->writer = NULL;
+  context->writer = nullptr;
   context->stream = stream;
   context->read_buff = new std::string();
   *out = reinterpret_cast<RecordIOHandle>(context);
@@ -2121,7 +2424,7 @@ int MXRecordIOReaderReadRecord(RecordIOHandle handle,
     *buf = context->read_buff->c_str();
     *size = context->read_buff->size();
   } else {
-    *buf = NULL;
+    *buf = nullptr;
     *size = 0;
   }
   API_END();
@@ -2284,14 +2587,20 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
 int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
                                  uint32_t ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
   API_END();
 }
 
 int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
                                    int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
-  *out = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
+  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
+                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
+  *out = nd;
   API_END();
 }
 

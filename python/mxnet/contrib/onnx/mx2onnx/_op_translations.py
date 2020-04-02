@@ -51,10 +51,6 @@
 Conversion Functions for common layers.
 Add new functions here with a decorator.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 
 import re
 import logging
@@ -1499,9 +1495,12 @@ def convert_slice_axis(node, **kwargs):
 
     axes = int(attrs.get("axis"))
     starts = int(attrs.get("begin"))
-    ends = int(attrs.get("end", None))
-    if not ends:
-        raise ValueError("Slice: ONNX doesnt't support 'None' in 'end' attribute")
+    ends = attrs.get("end", None)
+    if not ends or ends == 'None':
+        # ONNX doesn't support None for ends. Since ends=None depicts
+        # length of dimension, passing dimension in this case.
+        in_shape = kwargs['in_shape'][0]
+        ends = in_shape[axes]
 
     node = onnx.helper.make_node(
         "Slice",
@@ -1509,7 +1508,7 @@ def convert_slice_axis(node, **kwargs):
         [name],
         axes=[axes],
         starts=[starts],
-        ends=[ends],
+        ends=[int(ends)],
         name=name,
     )
     return [node]

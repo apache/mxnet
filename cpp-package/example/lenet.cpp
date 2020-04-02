@@ -136,7 +136,7 @@ class Lenet {
     // args_map["fc1_b"] = 0;
 
     lenet.InferArgsMap(ctx_dev, &args_map, args_map);
-    Optimizer* opt = OptimizerRegistry::Find("ccsgd");
+    Optimizer* opt = OptimizerRegistry::Find("sgd");
     opt->SetParam("momentum", 0.9)
        ->SetParam("rescale_grad", 1.0)
        ->SetParam("clip_gradient", 10)
@@ -260,7 +260,7 @@ class Lenet {
 int main(int argc, char const *argv[]) {
   TRY
   Lenet lenet;
-  lenet.Run(argc > 1 ? strtol(argv[1], NULL, 10) : 100000);
+  lenet.Run(argc > 1 ? strtol(argv[1], nullptr, 10) : 100000);
   MXNotifyShutdown();
   CATCH
   return 0;

@@ -56,38 +56,106 @@ class Imperative {
     OpReqType grad_req;
     OpStatePtr state;
     std::vector<NDArray> outputs;
-    std::vector<NDArray> out_grads;
+    std::vector<NDArray> out_grads;  // used to hold gradient arrays the user is
+                                     // interested in (marked variables)
     bool fresh_out_grad;
 
     AGInfo() :
       grad_req(kNullOp), fresh_out_grad(false) {}
 
-    static void Clear(const nnvm::NodePtr& node) {
+    static void Clear(const nnvm::ObjectPtr& node) {
       if (node == nullptr || node->info.empty()) return;
       AGInfo& info = Get(node);
       if (info.grad_req != kNullOp) return;
       node->info.clear();
     }
 
-    static AGInfo& Get(const nnvm::NodePtr& node) {
+    static AGInfo& Get(const nnvm::ObjectPtr& node) {
       return dmlc::get<AGInfo>(node->info);
     }
 
-    static AGInfo& Create(const nnvm::NodePtr& node) {
+    static AGInfo& Create(const nnvm::ObjectPtr& node) {
       node->info.construct<AGInfo>();
       return Get(node);
     }
 
     static bool IsNone(const NDArray& arr) {
-      return arr.entry_.node == nullptr || arr.entry_.node->info.empty();
+      return arr.autograd_entry_.node == nullptr || arr.autograd_entry_.node->info.empty();
     }
 
-    static bool IsVariable(const nnvm::NodePtr& node) {
+    static bool IsVariable(const nnvm::ObjectPtr& node) {
       AGInfo& info = Get(node);
       return info.grad_req != kNullOp && info.outputs.size() == 1
              && info.out_grads.size() == 1;
     }
   };
+
+  /*! \brief DCInfo datastructure to enable deferred computation */
+  class DCInfo {
+   public:
+    explicit DCInfo(const std::vector<NDArray *> &inputs,
+                    const std::vector<NDArray *> &outputs);
+
+    /*! \brief Compute the outputs of the associated operator. */
+    static void Compute(const NDArray &arr);
+
+    static DCInfo &Get(const nnvm::ObjectPtr &node) {
+      return dmlc::get<DCInfo>(node->info);
+    }
+
+    static bool IsNone(const NDArray &arr) {
+      return arr.deferredcompute_entry_.node == nullptr ||
+             arr.deferredcompute_entry_.node->info.empty();
+    }
+
+    static bool IsComputed(const NDArray &arr) {
+      return IsNone(arr) ||
+        dmlc::get<DCInfo>(arr.deferredcompute_entry_.node->info).is_computed_;
+    }
+
+    static DCInfo &Create(const nnvm::ObjectPtr &node,
+                          const std::vector<NDArray *> &inputs,
+                          const std::vector<NDArray *> &outputs);
+
+   private:
+    friend class Imperative;
+
+    /*! \brief Copies of input NDArrays
+     *
+     * If respective input NDArray is deallocated on the frontend, we still need
+     * to keep a copy around to facilitate deferred computation of this array.
+     * The copies share the chunk.
+     *
+     * They are automatically deallocated after computation finished.
+     */
+    std::vector<NDArray> inputs_;
+
+    /*! \brief Handles of input NDArrays used by frontend
+     *
+     * Frontend may request conversion to Symbol, specifying a list of NDArray
+     * handles corresponding to inputs and outputs of the Symbol. We store the
+     * handles used by frontend to facilitate matching in
+     * GetDeferredComputeSymbol.
+     *
+     * Note that the frontend may have deallocated the NDArray* and the
+     * input_handles stored here may point to invalid memory.
+     */
+    std::vector<const NDArray *> input_handles_;
+
+    /*! \brief Copies of output NDArrays
+     *
+     * If respective output NDArray is deallocated on the frontend, we still
+     * need to keep a copy around to facilitate deferred computation of arrays
+     * relying on the output array. The copies share the chunk.
+     *
+     * They are automatically deallocated after computation finished.
+     */
+    std::vector<NDArray> outputs_;
+
+    /*! \brief Remember if the outputs associated with this DCInfo have been computed already */
+    bool is_computed_ = false;
+  };
+
   /*! \brief whether operator recording is on. */
   bool is_training() const {
     return is_train_;
@@ -107,6 +175,14 @@ class Imperative {
       bool old = is_recording_;
       is_recording_ = is_recording;
       return old;
+  }
+  /*! \brief whether deferred compute mode is on. */
+  bool is_deferred_compute() const { return is_deferred_compute_; }
+  /*! \brief turn on or turn off operator recording for autograd. */
+  bool set_is_deferred_compute(bool is_deferred_compute) {
+    bool old = is_deferred_compute_;
+    is_deferred_compute_ = is_deferred_compute;
+    return old;
   }
   /*! \brief return current numpy compatibility status,
    *  GlobalOn(2), ThreadLocalOn(1), Off(0).
@@ -143,6 +219,14 @@ class Imperative {
                 const OpStatePtr& state = OpStatePtr(),
                 std::vector<bool>* p_save_inputs = nullptr,
                 std::vector<bool>* p_save_outputs = nullptr);
+  /*! \brief to record operator, return corresponding node. */
+  void RecordDeferredCompute(nnvm::NodeAttrs&& attrs,
+                             const std::vector<NDArray*>& inputs,
+                             const std::vector<NDArray*>& outputs);
+  /*! \brief obtain symbol representation of deferred compute session. */
+  nnvm::Symbol GetDeferredComputeSymbol(const std::vector<NDArray *> &outputs);
+  /*! \brief associate arrays with variables for deferred compute */
+  void SetDeferredComputeVariable(NDArrayHandle *arrays, SymbolHandle *variables, const int num);
   /*! \brief */
   OpStatePtr Invoke(const Context& default_ctx,
                     const nnvm::NodeAttrs& attrs,
@@ -196,7 +280,7 @@ class Imperative {
   }
   /*! \brief find the input/output ndarrays that are needed for backward */
   void GetBackwardDependency(
-      const nnvm::NodePtr& node,
+      const nnvm::ObjectPtr& node,
       uint32_t num_inputs, uint32_t num_outputs,
       std::vector<bool> *p_save_inputs,
       std::vector<bool> *p_save_outputs);
@@ -204,12 +288,14 @@ class Imperative {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local bool is_train_;
   static thread_local bool is_recording_;
+  static thread_local bool is_deferred_compute_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static thread_local bool is_np_shape_thread_local_;
 #else
   static MX_THREAD_LOCAL bool is_train_;
   static MX_THREAD_LOCAL bool is_recording_;
+  static MX_THREAD_LOCAL bool is_deferred_compute_;
   // TOOD(junwu): Added numpy compatibility switch for backward compatibility.
   // Delete it in the next major release.
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;

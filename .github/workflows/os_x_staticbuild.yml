@@ -1,0 +1,26 @@
+name: continuous build
+
+on: [push, pull_request]
+
+jobs:
+  macosx-x86_64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Dependencies
+        run: |
+          brew install nasm automake ninja libtool cmake pkgconfig protobuf
+      - name: Build project
+        run: |
+          git --version
+          clang --version
+          CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
+      - name: Setup Python
+        run: |
+          python3 -m pip install --user nose nose-timer nose-exclude numpy scipy
+          python3 -m pip install --user -e python
+      - name: Test project
+        run: |
+          python3 -m nose --with-timer --verbose tests/python/unittest/ --exclude-test=test_extensions.test_subgraph --exclude-test=test_extensions.test_custom_op --exclude-test=test_gluon_data.test_recordimage_dataset_with_data_loader_multiworker
+          

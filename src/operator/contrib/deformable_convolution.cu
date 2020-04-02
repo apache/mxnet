@@ -36,7 +36,7 @@ namespace op {
     mxnet::ShapeVector *in_shape,
     mxnet::ShapeVector *out_shape,
     Context ctx) {
-    Operator *op = NULL;
+    Operator *op = nullptr;
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       op = new DeformableConvolutionOp<gpu, DType>(param);
     })

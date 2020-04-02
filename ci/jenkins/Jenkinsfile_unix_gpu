@@ -37,33 +37,33 @@ core_logic: {
     custom_steps.compile_unix_mkldnn_gpu(),
     custom_steps.compile_unix_mkldnn_nocudnn_gpu(),
     custom_steps.compile_unix_full_gpu(),
-    custom_steps.compile_unix_cmake_mkldnn_gpu(),
+    custom_steps.compile_unix_full_gpu_make(),
     custom_steps.compile_unix_cmake_gpu(),
     custom_steps.compile_unix_tensorrt_gpu(),
     custom_steps.compile_unix_int64_gpu(),
     custom_steps.compile_unix_full_gpu_no_tvm_op(),
     custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
+    custom_steps.compile_unix_cmake_gpu_no_rtc(),
+    custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_unix_python2_gpu(),
     custom_steps.test_unix_python3_gpu(),
-    custom_steps.test_unix_python2_quantize_gpu(),
     custom_steps.test_unix_python3_quantize_gpu(),
-    custom_steps.test_unix_python2_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
     custom_steps.test_unix_python3_tensorrt_gpu(),
     custom_steps.test_unix_perl_gpu(),
     custom_steps.test_unix_r_gpu(),
     custom_steps.test_unix_cpp_gpu(),
-    custom_steps.test_unix_cpp_mkldnn_gpu(),
     custom_steps.test_unix_python3_integration_gpu(),
     custom_steps.test_unix_cpp_package_gpu(),
     custom_steps.test_unix_scala_gpu(),
     custom_steps.test_unix_distributed_kvstore_gpu(),
     custom_steps.test_static_python_gpu(),
+    custom_steps.test_static_python_gpu_cmake(),
     custom_steps.test_unix_python3_gpu_no_tvm_op(),
+    custom_steps.test_unix_capi_cpp_package(),
 
     // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
     //custom_steps.test_unix_caffe_gpu()

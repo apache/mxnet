@@ -21,6 +21,8 @@
 # the whole docker cache for the image
 
 set -ex
+# FIXME(larroy) enable in a different PR
+#perl -pi -e 's/archive.ubuntu.com/us-west-2.ec2.archive.ubuntu.com/' /etc/apt/sources.list
 apt-get update || true
 
 # Avoid interactive package installers such as tzdata.
@@ -45,6 +47,8 @@ apt-get install -y \
     zlib1g-dev \
     libedit-dev \
     libxml2-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
     ninja-build \
     software-properties-common \
     sudo \

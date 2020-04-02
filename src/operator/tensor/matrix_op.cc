@@ -289,7 +289,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
@@ -332,7 +332,7 @@ Examples::
 .set_attr<mxnet::FInferShape>("FInferShape", TransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
     if (param.axes.ndim() == 0) {
       return MakeNonlossGradNode(

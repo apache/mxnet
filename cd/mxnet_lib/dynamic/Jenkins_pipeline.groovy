@@ -24,14 +24,14 @@
 
 // NOTE: the following variables are referenced in the mxnet_lib_pipeline jenkins file imported bellow
 // libmxnet location
-libmxnet = 'lib/libmxnet.so'
+libmxnet = 'build/libmxnet.so'
 
 // licenses
 licenses = 'licenses/*'
 
 // libmxnet dependencies
 mx_deps = ''
-mx_mkldnn_deps = ''
+mx_native_deps = ''
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies

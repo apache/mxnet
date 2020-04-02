@@ -16,7 +16,6 @@
 # under the License.
 
 """Register backend ops in mxnet.ndarray namespace"""
-from __future__ import absolute_import
 import os as _os
 import ctypes
 import numpy as _np  # pylint: disable=unused-import
@@ -194,8 +193,11 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             if dtype_name is not None:
                 code.append("""
     if '%s' in kwargs:
-        kwargs['%s'] = _np.dtype(kwargs['%s']).name"""%(
-            dtype_name, dtype_name, dtype_name))
+        if _np.dtype(kwargs['%s']).names:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).names[0]
+        else:
+            kwargs['%s'] = _np.dtype(kwargs['%s']).name """%(
+                dtype_name, dtype_name, dtype_name, dtype_name, dtype_name, dtype_name))
             code.append("""
     _ = kwargs.pop('name', None)
     out = kwargs.pop('out', None)
@@ -233,7 +235,11 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                     code.append("""
     if %s is not _Null:
         keys.append('%s')
-        vals.append(_np.dtype(%s).name)"""%(dtype_name, dtype_name, dtype_name))
+        if _np.dtype(%s).names:
+            vals.append(_np.dtype(%s).names[0])
+        else:
+            vals.append(_np.dtype(%s).name) """%(dtype_name, dtype_name, dtype_name,
+                                                 dtype_name, dtype_name))
 
     verify_ndarrays_fn =\
         _verify_all_np_ndarrays.__name__ if is_np_op else _verify_all_legacy_ndarrays.__name__

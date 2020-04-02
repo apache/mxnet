@@ -180,6 +180,23 @@ extern "C" {
 
   MXNET_LAPACK_FSIG_GESDD(sgesdd, float)
   MXNET_LAPACK_FSIG_GESDD(dgesdd, double)
+
+  #ifdef __ANDROID__
+    #define MXNET_LAPACK_FSIG_GEEV(func, dtype) \
+    int func##_(char *jobvl, char *jobvr, int *n, dtype *a, int *lda, \
+                dtype *wr, dtype *wi, \
+                dtype *vl, int *ldvl, dtype *vr, int *ldvr, \
+                dtype *work, int *lwork, int *info);
+  #else
+    #define MXNET_LAPACK_FSIG_GEEV(func, dtype) \
+    void func##_(char *jobvl, char *jobvr, int *n, dtype *a, int *lda, \
+                dtype *wr, dtype *wi, \
+                dtype *vl, int *ldvl, dtype *vr, int *ldvr, \
+                dtype *work, int *lwork, int *info);
+  #endif
+
+  MXNET_LAPACK_FSIG_GEEV(sgeev, float)
+  MXNET_LAPACK_FSIG_GEEV(dgeev, double)
 }
 
 #endif  // MSHADOW_USE_MKL == 0
@@ -329,6 +346,22 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_GETRI(s, float)
   MXNET_LAPACK_CWRAP_GETRI(d, double)
 
+  #define MXNET_LAPACK_CWRAP_GEEV(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geev(int matrix_layout, char jobvl, char jobvr, \
+                                         int n, dtype *a, int lda, \
+                                         dtype *wr, dtype *wi, \
+                                         dtype *vl, int ldvl, dtype *vr, int ldvr, \
+                                         dtype *work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##geev(matrix_layout, jobvl, jobvr, \
+                                    n, a, lda, wr, wi, vl, ldvl, vr, ldvr); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GEEV(s, float)
+  MXNET_LAPACK_CWRAP_GEEV(d, double)
+
 #elif MXNET_USE_LAPACK
 
   #define MXNET_LAPACK_ROW_MAJOR 101
@@ -475,6 +508,25 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_GESDD(sgesdd, float)
   MXNET_LAPACK_CWRAP_GESDD(dgesdd, double)
 
+  #define MXNET_LAPACK_CWRAP_GEEV(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geev(int matrix_layout, char jobvl, char jobvr, \
+                                         int n, dtype *a, int lda, \
+                                         dtype *wr, dtype *wi, \
+                                         dtype *vl, int ldvl, dtype *vr, int ldvr, \
+                                         dtype *work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "geev implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##geev_(&jobvl, &jobvr, \
+                    &n, a, &lda, wr, wi, vl, &ldvl, vr, &ldvr, work, &lwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GEEV(s, float)
+  MXNET_LAPACK_CWRAP_GEEV(d, double)
+
   #define MXNET_LAPACK
 
   // Note: Both MXNET_LAPACK_*getrf, MXNET_LAPACK_*getri can only be called with col-major format
@@ -560,6 +612,13 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   int MXNET_LAPACK_##func(int matrix_order, int n, int nrhs, dtype *a, \
                           int lda, int *ipiv, dtype *b, int ldb); \
 
+  #define MXNET_LAPACK_CWRAPPER8(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, char jobvl, char jobvr, \
+                          int n, dtype *a, int lda, \
+                          dtype *wr, dtype *wi, \
+                          dtype *vl, int ldvl, dtype *vr, int ldvr, \
+                          dtype *work, int lwork); \
+
   #define MXNET_LAPACK_CWRAPPER9(func, dtype) \
   int MXNET_LAPACK_##func(int matrix_layout, int m, int n, \
                           dtype *a, int lda, dtype *s, \
@@ -596,6 +655,9 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 
   MXNET_LAPACK_CWRAPPER7(sgesv, float)
   MXNET_LAPACK_CWRAPPER7(dgesv, double)
+
+  MXNET_LAPACK_CWRAPPER8(sgeev, float)
+  MXNET_LAPACK_CWRAPPER8(dgeev, double)
 
   MXNET_LAPACK_CWRAPPER9(sgesdd, float)
   MXNET_LAPACK_CWRAPPER9(dgesdd, double)

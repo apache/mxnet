@@ -140,6 +140,8 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kBfloat16:
+      return "bfloat16";
     case mshadow::kInt8:
       return "int8";
     case mshadow::kUint8:
@@ -360,7 +362,7 @@ inline bool dispatch_fallback(StorageTypeVector* stypes, DispatchMode* dispatch)
 }
 
 inline std::vector<nnvm::NodeEntry>CreateNodeEntries(
-  nnvm::NodePtr pNode,
+  nnvm::ObjectPtr pNode,
   const std::vector<nnvm::NodeEntry>* pOgrads = nullptr,
   const std::vector<nnvm::NodeEntry>* pInputs = nullptr) {
   if (pOgrads)
@@ -384,11 +386,11 @@ inline std::vector<nnvm::NodeEntry>CreateNodeEntries(
 }
 
 // make a new node with operator op_name. Inputs are not filled.
-inline nnvm::NodePtr MakeNode(
+inline nnvm::ObjectPtr MakeNode(
     const char* op_name, const std::string& name,
     std::vector<nnvm::NodeEntry> const * inputs = nullptr,
     std::unordered_map<std::string, std::string> const * dict = nullptr,
-    nnvm::NodePtr const * fwd_node = nullptr) {
+    nnvm::ObjectPtr const * fwd_node = nullptr) {
   auto p = nnvm::Node::Create();
   p->attrs.op = nnvm::Op::Get(op_name);
   p->attrs.name = name;
@@ -409,18 +411,18 @@ inline nnvm::NodePtr MakeNode(
   return p;
 }
 
-inline nnvm::NodePtr MakeNode(
+inline nnvm::ObjectPtr MakeNode(
     const char* op_name, const std::string& name,
     const std::vector<nnvm::NodeEntry>& inputs,
     std::unordered_map<std::string, std::string> const * dict,
-    nnvm::NodePtr const * fwd_node) {
+    nnvm::ObjectPtr const * fwd_node) {
   return MakeNode(op_name, name, &inputs, dict, fwd_node);
 }
 
 
 // quick helper to make node
 inline std::vector<nnvm::NodeEntry> MakeGradNode(
-    const char* op_name, const nnvm::NodePtr& n,
+    const char* op_name, const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {
   auto p = MakeNode(op_name, n->attrs.name + "_backward",
@@ -431,7 +433,7 @@ inline std::vector<nnvm::NodeEntry> MakeGradNode(
 
 // quick helper to make gradient nodes that simply pass back zero. could be used in output ops.
 inline std::vector<nnvm::NodeEntry> MakeZeroGradNodes(
-    const nnvm::NodePtr& n,
+    const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   std::vector<nnvm::NodeEntry> ret;
   for (uint32_t i = 0; i < n->num_inputs(); ++i) {
@@ -465,7 +467,7 @@ inline bool CheckGradAllZero(const std::vector<nnvm::NodeEntry>& ograds) {
 // make gradient node that doesn't add to objective.
 // i.e. igrads are always zero when ograds are zero.
 inline std::vector<nnvm::NodeEntry> MakeNonlossGradNode(
-    const char* op_name, const nnvm::NodePtr& n,
+    const char* op_name, const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds,
     const std::vector<nnvm::NodeEntry>& inputs,
     const std::unordered_map<std::string, std::string>& dict) {

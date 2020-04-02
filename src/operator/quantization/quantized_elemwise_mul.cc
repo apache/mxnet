@@ -139,7 +139,7 @@ void QuantizedElemwiseMulOpForward(const nnvm::NodeAttrs &attrs,
   float out_data_scale = 1.f;
   float out_scale = 1.f;
   if (!params.enable_float_output) {
-    float output_data_range = kInt32Range;
+    double output_data_range;
     // dataA && dataB are int8
     if (outputs[quantized_elemwise_mul::kOut].type_flag_ == mshadow::kInt8) {
       output_data_range = kInt8Range;
@@ -253,7 +253,7 @@ NNVM_REGISTER_OP(_contrib_quantized_elemwise_mul)
 
 NNVM_REGISTER_OP(elemwise_mul)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_contrib_quantized_elemwise_mul");
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;

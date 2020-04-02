@@ -41,10 +41,20 @@ void RegisterLegacyOpProp();
 void RegisterLegacyNDFunc();
 }
 const std::vector<std::string> kHiddenKeys = {
-  "ctx_group", "lr_mult", "wd_mult", "force_mirroring", "mirror_stage"
+  "ctx_group",
+  "lr_mult",
+  "wd_mult",
+  "force_mirroring",
+  "mirror_stage",
+  "profiler_scope"
 };
 const std::vector<std::string> kReplacedHiddenKeys = {
-  "__ctx_group__", "__lr_mult__", "__wd_mult__", "__force_mirroring__", "__mirror_stage__"
+  "__ctx_group__",
+  "__lr_mult__",
+  "__wd_mult__",
+  "__force_mirroring__",
+  "__mirror_stage__",
+  "__profiler_scope__"
 };
 const char *kNamespaceSeparator = "$";
 
@@ -386,7 +396,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
     const std::string &subg_name = it->second;
     std::vector<nnvm::NodeEntry *> input_entries;
     DFSVisit(s->outputs, [&subg_attr, &subg_name, &input_entries]
-             (nnvm::NodePtr n) {
+             (nnvm::ObjectPtr n) {
       // If the node itself isn't in the subgraph, we ignore it.
       auto it = n->attrs.dict.find(subg_attr);
       if (it == n->attrs.dict.end() || it->second != subg_name)
@@ -431,7 +441,7 @@ int MXSymbolCutSubgraph(SymbolHandle sym, SymbolHandle **input_symbols,
 void ConvertShapeAttrToNumPyCompatible(nnvm::Graph* g) {
   if (Imperative::Get()->is_np_shape()
     && (!g->HasAttr("is_np_shape") || !g->GetAttr<int>("is_np_shape"))) {
-    DFSVisit(g->outputs, [](nnvm::NodePtr n) {
+    DFSVisit(g->outputs, [](nnvm::ObjectPtr n) {
       if (n->is_variable()) {
         auto it = n->attrs.dict.find("__shape__");
         if (it != n->attrs.dict.end()) {
@@ -692,6 +702,27 @@ inline void SymbolInferShape(const char** keys,
   *complete = (g.GetAttr<size_t>("shape_num_unknown_nodes") == 0);
 }
 
+/*!
+ * \brief Executor for Symbol Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=0 (by default)
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapeEx(SymbolHandle sym,
                          uint32_t num_args,
                          const char** keys,
@@ -729,6 +760,27 @@ int MXSymbolInferShapeEx(SymbolHandle sym,
   API_END();
 }
 
+/*!
+ * \brief Executor for Symbol Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapeEx64(SymbolHandle sym,
                            uint32_t num_args,
                            const char** keys,
@@ -791,6 +843,27 @@ int MXSymbolInferShapePartial(SymbolHandle sym,
                             &succ);
 }
 
+/*!
+ * \brief Executor for Symbol Partial Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=0 (by default)
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapePartialEx(SymbolHandle sym,
                                 uint32_t num_args,
                                 const char** keys,
@@ -816,6 +889,27 @@ int MXSymbolInferShapePartialEx(SymbolHandle sym,
                               &succ);
 }
 
+/*!
+ * \brief Executor for Symbol Partial Shape Inference
+ *  This api is available when MXNet is built with flag
+ *  USE_INT64_TENSOR_SIZE=1 (not default) i.e. Large Tensor Support
+ * \param sym symbol handle
+ * \param num_args number of args
+ * \param keys keys
+ * \param arg_ind_ptr arg index pointer
+ * \param arg_shape_data arg shape data
+ * \param in_shape_size input shape size
+ * \param in_shape_ndim input shape number of dims
+ * \param in_shape_data input shape data
+ * \param out_shape_size ouput shape size
+ * \param out_shape_ndim output shape number of dims
+ * \param out_shape_data output shape data
+ * \param aux_shape_size shape size of auxiliary states
+ * \param aux_shape_ndim number of dims of auxiliary states shape
+ * \param aux_shape_data shape data of auxiliary states
+ * \param complete indicates completion of Shape Inference
+ * \return 0 when success, -1 when failure happens
+ */
 int MXSymbolInferShapePartialEx64(SymbolHandle sym,
                                   uint32_t num_args,
                                   const char** keys,
@@ -1010,13 +1104,13 @@ static void _SetInputDTypes(
 // if model_params is provided the function will dtype of only model params.
 // if model_params is empty, the function will dtype of all nodes which had
 // a prior dtype set.
-// args is a const_reference vector of NodePtrs. NodePtrs are immutable but
+// args is a const_reference vector of ObjectPtrs. ObjectPtrs are immutable but
 // the Nodes they are pointing will be mutated in this function
 static void _UpdateSymDTypeAttrs(
     const std::unordered_map<std::string, int>& node_name_dtype_map,
     const std::unordered_map<std::string, int>& node_without_dtype_map,
     const std::unordered_set<std::string>& model_params,
-    const std::vector<nnvm::NodePtr>& args) {
+    const std::vector<nnvm::ObjectPtr>& args) {
   const std::string dtype_keyword = "__dtype__";
 
   // Update args to have the right dtype attrs
@@ -1138,6 +1232,8 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   g.attrs["excluded_syms"] =
       std::make_shared<nnvm::any>(std::move(excluded_syms));
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
+  g.attrs["data_name_types"] = std::make_shared<nnvm::any>(kwargs);
+  g.attrs["cast_optional_params"] = std::make_shared<nnvm::any>(cast_optional_params);
 
   g = ApplyPass(std::move(g), "ReducePrecision");
   // Need to run type inference since it is possible that inferred
@@ -1166,7 +1262,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   result_sym->outputs = g.outputs;
   *ret_sym_handle = result_sym;
   nnvm::Symbol *ret_sym = static_cast<nnvm::Symbol *>(*ret_sym_handle);
-  const std::vector<nnvm::NodePtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
+  const std::vector<nnvm::ObjectPtr>& args = ret_sym->ListInputs(nnvm::Symbol::kAll);
 
   // update symbol dtype attrs using the node name -> dtype mapping, if dtype is already set
   // in the symbol, else set dtype for the model_params
@@ -1257,32 +1353,54 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const char* backend_name,
                          const int dev_type,
                          SymbolHandle* ret_sym_handle,
-                         const mx_uint len,
+                         const mx_uint args_len,
                          NDArrayHandle* in_args_handle,
+                         const mx_uint aux_len,
+                         NDArrayHandle* in_aux_handle,
                          const mx_uint num_options,
                          const char** keys,
                          const char** vals) {
+  // create copy of input symbol
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
   *s = sym->Copy();
   nnvm::Graph g = Symbol2Graph(*s);
-  if (len) {
+  const auto& indexed_graph = g.indexed_graph();
+  const auto& mutable_nodes = indexed_graph.mutable_input_nodes();
+  std::vector<std::string> input_names = sym->ListInputNames(nnvm::Symbol::kAll);
+  size_t num_forward_inputs = input_names.size();
+  if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
+    NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
     Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
-    mxnet::ShapeVector arg_shapes(len);
-    nnvm::DTypeVector arg_dtypes(len);
-    StorageTypeVector arg_stypes(len);
-    for (mx_uint i = 0; i < len; i++) {
-      const auto &in_arg = *(in_args_ptr[i]);
-      arg_shapes[i] = in_arg.shape();
-      arg_dtypes[i] = in_arg.dtype();
-      arg_stypes[i] = in_arg.storage_type();
+    mxnet::ShapeVector arg_shapes(args_len + aux_len);
+    nnvm::DTypeVector arg_dtypes(args_len + aux_len);
+    StorageTypeVector arg_stypes(args_len + aux_len);
+    size_t args_top = 0, aux_top = 0;
+    // loop over inputs to symbol in order and add to args/aux if mutable
+    for (size_t i = 0; i < num_forward_inputs; ++i) {
+      const uint32_t nid = indexed_graph.input_nodes().at(i);
+      if (mutable_nodes.count(nid)) {
+        CHECK_LT(aux_top, aux_len)
+          << "Cannot find aux '" << input_names[i] << "' in provided aux to optimize_for";
+        const auto &in_arg = *(in_aux_ptr[aux_top++]);
+        arg_shapes[i] = in_arg.shape();
+        arg_dtypes[i] = in_arg.dtype();
+        arg_stypes[i] = in_arg.storage_type();
+      } else {
+        CHECK_LT(args_top, args_len)
+          << "Cannot find arg '" << input_names[i] << "' in provided args to optimize_for";
+        const auto &in_arg = *(in_args_ptr[args_top++]);
+        arg_shapes[i] = in_arg.shape();
+        arg_dtypes[i] = in_arg.dtype();
+        arg_stypes[i] = in_arg.storage_type();
+      }
     }
-    const auto& indexed_graph = g.indexed_graph();
-    const auto num_forward_inputs = indexed_graph.input_nodes().size();
+
     g.attrs["context"] = std::make_shared<nnvm::any>(
         exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
+
     // infer shapes
     g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
     // infer dtypes
@@ -1297,11 +1415,31 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
                                           g.GetAttr<StorageTypeVector>("storage_type"));
     }
+    // set args/aux as attributes on graph so that subgraph property can use them
+    std::vector<std::string> arg_names = sym->ListInputNames(nnvm::Symbol::kReadOnlyArgs);
+    g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
+    g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
+
+    std::vector<std::string> aux_names = sym->ListInputNames(nnvm::Symbol::kAuxiliaryStates);
+    g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+    g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
+  } else {
+    // args/aux were not specified, so set nullptr/empty-lists
+    NDArray **in_args_ptr = static_cast<NDArray**>(nullptr);
+    std::vector<std::string> arg_names;
+    g.attrs["in_args"] = std::make_shared<nnvm::any>(in_args_ptr);
+    g.attrs["in_arg_names"] = std::make_shared<nnvm::any>(arg_names);
+
+    NDArray **in_aux_ptr = static_cast<NDArray**>(nullptr);
+    std::vector<std::string> aux_names;
+    g.attrs["in_aux"] = std::make_shared<nnvm::any>(in_aux_ptr);
+    g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
   }
+  // create a data structure from pointer array
   std::vector<std::pair<std::string, std::string>> options_map;
-  for (mx_uint i = 0; i < num_options; ++i) {
+  for (mx_uint i = 0; i < num_options; ++i)
     options_map.emplace_back(keys[i], vals[i]);
-  }
+
   const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
   const auto& subgraph_prop_list = backend->GetSubgraphProperties();
   for (auto property : subgraph_prop_list) {

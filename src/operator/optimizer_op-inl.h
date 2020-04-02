@@ -225,29 +225,24 @@ struct MultiSGDKernelParam {
 template <typename MPDType, bool has_momentum, bool has_mixed_precision>
 struct MultiSGDKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const MultiSGDKernelParam<DType, MPDType>& param,
+  MSHADOW_XINLINE static void Map(index_t i, const MultiSGDKernelParam<DType, MPDType>& param,
     const OpReqType req) {
     for (int index = 0; index < param.count; ++index) {
-      if ((size_t)i < param.sizes[index]) {
+      if (i < static_cast<index_t>(param.sizes[index])) {
         MPDType w = has_mixed_precision ? param.weights32[index][i] :
                                           MPDType(param.weights[index][i]);
-        MPDType mom = has_momentum ? param.mom[index][i] : MPDType(0);
+        MPDType rescale_grad = param.rescale_grad * static_cast<MPDType>(param.grads[index][i]);
         if (param.clip_gradient >= 0.0f) {
-          mom = param.momentum*mom
-                - param.lrs[index]*param.wds[index]*w
-                - param.lrs[index]
-                *mshadow_op::clip::Map(param.rescale_grad *
-                                       static_cast<MPDType>(param.grads[index][i]),
-                                     param.clip_gradient);
-        } else {
-          mom = param.momentum*mom
-                - param.lrs[index]*param.wds[index]*w
-                - param.lrs[index]*param.rescale_grad*static_cast<MPDType>(param.grads[index][i]);
+          rescale_grad = mshadow_op::clip::Map(rescale_grad, param.clip_gradient);
         }
+        rescale_grad += param.wds[index] * w;
         if (has_momentum) {
-          param.mom[index][i] = mom;
+          param.mom[index][i] *= param.momentum;
+          param.mom[index][i] -= param.lrs[index] * rescale_grad;
+          w = w + param.mom[index][i];
+        } else {
+          w -= param.lrs[index] * rescale_grad;
         }
-        w = w + mom;
         if (has_mixed_precision) {
           param.weights32[index][i] = w;
         }
@@ -381,20 +376,16 @@ inline void MultiSGDMomUpdate(const nnvm::NodeAttrs& attrs,
 
 struct SGDKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* weight_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* weight_data,
     const DType* grad_data, const DType param_clip_gradient,
     const DType param_lr, const DType param_wd, const DType param_rescale_grad,
     const OpReqType req) {
+    DType rescale_grad = param_rescale_grad * grad_data[i];
     if (param_clip_gradient >= 0.0f) {
-      KERNEL_ASSIGN(out_data[i], req,
-             (1.f-param_lr*param_wd)*weight_data[i]
-               - (param_lr)
-                 * mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient));
-    } else {
-      KERNEL_ASSIGN(out_data[i], req,
-             (1.f-param_lr*param_wd)*weight_data[i]
-               - (param_lr*param_rescale_grad)*grad_data[i]);
+      rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
+    rescale_grad += param_wd * weight_data[i];
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] - (param_lr * rescale_grad));
   }
 };
 
@@ -429,9 +420,9 @@ struct SGDDnsRspKernel<req, gpu> {
   // IType is row sparse idx type
   // i is the ith element in row sparse gradient
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const index_t row_length, DType* out, const DType* weight,
-                                  const IType* grad_idx, const DType *grad_val,
-                                  const DType clip_gradient, const DType lr,
+  MSHADOW_XINLINE static void Map(index_t i, const index_t row_length, DType* out,
+                                  const DType* weight, const IType* grad_idx,
+                                  const DType *grad_val, const DType clip_gradient, const DType lr,
                                   const DType wd, const DType rescale_grad) {
     using nnvm::dim_t;
     using namespace mshadow_op;
@@ -439,13 +430,12 @@ struct SGDDnsRspKernel<req, gpu> {
     const dim_t col_id = i % row_length;
     const dim_t row_offset = grad_idx[row_id] * row_length;
     const dim_t data_i = row_offset + col_id;
+    DType grad_rescaled = rescale_grad * grad_val[i];
     if (clip_gradient >= 0.0f) {
-      KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
-                   (lr) * mshadow_op::clip::Map(rescale_grad * grad_val[i], clip_gradient));
-    } else {
-      KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
-                    (lr * rescale_grad) * grad_val[i]);
+      grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += wd * weight[data_i];
+    KERNEL_ASSIGN(out[data_i], req, weight[data_i] - (lr * grad_rescaled));
   }
 };
 
@@ -457,20 +447,19 @@ struct SGDDnsRspKernel<req, cpu> {
   // IType is row sparse idx type
   // i is the ith row in row sparse gradient
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const index_t row_length, DType* out, const DType* weight,
-                                  const IType* grad_idx, const DType *grad_val,
-                                  const DType clip_gradient, const DType lr,
+  MSHADOW_XINLINE static void Map(index_t i, const index_t row_length, DType* out,
+                                  const DType* weight, const IType* grad_idx,
+                                  const DType *grad_val, const DType clip_gradient, const DType lr,
                                   const DType wd, const DType rescale_grad) {
     for (index_t j = 0; j < row_length; j++) {
       index_t data_i = grad_idx[i] * row_length + j;
       index_t grad_i = i * row_length + j;
+      DType grad_rescaled = rescale_grad * grad_val[grad_i];
       if (clip_gradient >= 0.0f) {
-        KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
-                     (lr) * mshadow_op::clip::Map(rescale_grad * grad_val[grad_i], clip_gradient));
-      } else {
-        KERNEL_ASSIGN(out[data_i], req, (1.f - lr * wd) * weight[data_i] -
-                      (lr * rescale_grad) * grad_val[grad_i]);
+        grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += wd * weight[data_i];
+      KERNEL_ASSIGN(out[data_i], req, weight[data_i] - (lr * grad_rescaled));
     }
   }
 };
@@ -505,7 +494,7 @@ inline void SGDUpdateDnsRspImpl(const SGDParam& param,
         // apply standard weight decay if not lazy update
         if (!param.lazy_update) {
           Kernel<op_with_req<mshadow_op::mul, req_type>, xpu>::Launch(s, weight.Size(),
-            weight_data, weight_data, static_cast<DType>(1 - param.lr * param.wd));
+          weight_data, weight_data, static_cast<DType>(1 - param.lr * param.wd));
           wd = 0;
         }
         if (!grad.storage_initialized()) return;
@@ -600,20 +589,18 @@ struct SGDMomParam : public dmlc::Parameter<SGDMomParam> {
 
 struct SGDMomKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, DType* mom_data, const DType* weight_data,
-    const DType* grad_data, const DType param_clip_gradient, const DType param_momentum,
-    const DType param_lr, const DType param_wd, const DType param_rescale_grad,
-    const OpReqType req) {
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, DType* mom_data,
+                                  const DType* weight_data, const DType* grad_data,
+                                  const DType param_clip_gradient, const DType param_momentum,
+                                  const DType param_lr, const DType param_wd,
+                                  const DType param_rescale_grad, const OpReqType req) {
+    DType rescale_grad = param_rescale_grad * grad_data[i];
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-              - param_lr*param_wd*weight_data[i]
-              - param_lr
-              *mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient);
-    } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                - param_lr*param_wd*weight_data[i]
-                - param_lr*param_rescale_grad*grad_data[i];
+      rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
+    rescale_grad += param_wd * weight_data[i];
+    mom_data[i] *= param_momentum;
+    mom_data[i] -= param_lr * rescale_grad;
     KERNEL_ASSIGN(out_data[i], req, weight_data[i] + mom_data[i]);
   }
 };
@@ -654,24 +641,19 @@ inline bool MP_InferType(const nnvm::NodeAttrs& attrs,
 
 struct MP_SGDKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* weight_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* weight_data,
     const DType* grad_data, float* weight32, const float param_clip_gradient,
     const float param_lr, const float param_wd, const float param_rescale_grad,
     const OpReqType req) {
+    float w = weight32[i];
+    float rescale_grad = param_rescale_grad * static_cast<float>(grad_data[i]);
     if (param_clip_gradient >= 0.0f) {
-      float w = weight32[i];
-      w = (1.f - param_lr*param_wd)*w -
-          (param_lr) * mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
-                                             param_clip_gradient);
-      weight32[i] = w;
-      KERNEL_ASSIGN(out_data[i], req, (DType)w);
-    } else {
-      float w = weight32[i];
-      w = (1.f-param_lr*param_wd)*w
-               - (param_lr*param_rescale_grad)*static_cast<float>(grad_data[i]);
-      weight32[i] = w;
-      KERNEL_ASSIGN(out_data[i], req, (DType)w);
+      rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
+    rescale_grad += param_wd * w;
+    w -= param_lr * rescale_grad;
+    weight32[i] = w;
+    KERNEL_ASSIGN(out_data[i], req, (DType)w);
   }
 };
 
@@ -698,23 +680,19 @@ inline void MP_SGDUpdate(const nnvm::NodeAttrs& attrs,
 
 struct MP_SGDMomKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, float* mom_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, float* mom_data,
     const DType* weight_data, const DType* grad_data, float* weight32,
     const float param_clip_gradient, const float param_momentum, const float param_lr,
     const float param_wd, const float param_rescale_grad, const OpReqType req) {
     float w = weight32[i];
     float mom = mom_data[i];
+    float grad_rescaled = param_rescale_grad*static_cast<float>(grad_data[i]);
     if (param_clip_gradient >= 0.0f) {
-      mom = param_momentum*mom
-              - param_lr*param_wd*w
-              - param_lr
-              *mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
-                                     param_clip_gradient);
-    } else {
-      mom = param_momentum*mom
-                - param_lr*param_wd*w
-                - param_lr*param_rescale_grad*static_cast<float>(grad_data[i]);
+      grad_rescaled = mshadow_op::clip::Map(grad_rescaled, param_clip_gradient);
     }
+    grad_rescaled += param_wd * w;
+    mom *= param_momentum;
+    mom -= param_lr * grad_rescaled;
     mom_data[i] = mom;
     w = w + mom;
     weight32[i] = w;
@@ -749,25 +727,20 @@ struct SGDMomDnsRspDnsKernel;
 template<int req>
 struct SGDMomDnsRspDnsKernel<req, cpu> {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, index_t row_length, DType* out_data,
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType momentum,
     const DType lr, const DType wd, const DType rescale_grad) {
-    const DType rate = lr * wd;
     for (index_t j = 0; j < row_length; j++) {
       index_t data_i = grad_idx[i] * row_length + j;
       index_t grad_i = i * row_length + j;
+      DType grad_rescaled = rescale_grad * grad_data[grad_i];
       if (clip_gradient >= 0.0f) {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                - rate * weight_data[data_i]
-                - lr *
-                mshadow_op::clip::Map(rescale_grad * grad_data[grad_i],
-                                      clip_gradient);
-      } else {
-        mom_data[data_i] = momentum * mom_data[data_i]
-                  - rate * weight_data[data_i]
-                  - lr * rescale_grad * grad_data[grad_i];
+        grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += wd * weight_data[data_i];
+      mom_data[data_i] *= momentum;
+      mom_data[data_i] -= lr * grad_rescaled;
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
     }
   }
@@ -776,26 +749,21 @@ struct SGDMomDnsRspDnsKernel<req, cpu> {
 template<int req>
 struct SGDMomDnsRspDnsKernel<req, gpu> {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, index_t row_length, DType* out_data,
     DType* mom_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType momentum,
     const DType lr, const DType wd, const DType rescale_grad) {
     using nnvm::dim_t;
-    const DType rate = lr * wd;
     const dim_t row_id = i / row_length;
     const dim_t col_id = i % row_length;
     const dim_t data_i = grad_idx[row_id] * row_length + col_id;
+    DType grad_rescaled = rescale_grad * grad_data[i];
     if (clip_gradient >= 0.0f) {
-      mom_data[data_i] = momentum * mom_data[data_i]
-              - rate * weight_data[data_i]
-              - lr *
-              mshadow_op::clip::Map(rescale_grad * grad_data[i],
-                                    clip_gradient);
-    } else {
-      mom_data[data_i] = momentum * mom_data[data_i]
-                - rate * weight_data[data_i]
-                - lr * rescale_grad * grad_data[i];
+      grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += wd * weight_data[data_i];
+    mom_data[data_i] *= momentum;
+    mom_data[data_i] -= lr * grad_rescaled;
     KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
   }
 };
@@ -1060,25 +1028,20 @@ struct NAGMomParam : public dmlc::Parameter<NAGMomParam> {
 
 struct NAGMomKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, DType* mom_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, DType* mom_data,
     const DType* weight_data, const DType* grad_data,
     const DType param_clip_gradient, const DType param_momentum,
     const DType param_lr, const DType param_wd,
     const DType param_rescale_grad, const OpReqType req) {
+    DType grad_rescaled = param_rescale_grad * grad_data[i];
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i];
-      KERNEL_ASSIGN(out_data[i], req, weight_data[i]-mom_data[i]+(param_momentum+1)
-              *(mom_data[i]-(param_lr*(mshadow_op::clip::Map(param_rescale_grad
-                              *grad_data[i], param_clip_gradient)+(param_wd*weight_data[i])))));
-      mom_data[i] = mom_data[i] - (param_lr*((mshadow_op::clip::Map(param_rescale_grad*grad_data[i],
-                          param_clip_gradient))+(param_wd*weight_data[i])));
-    } else {
-      mom_data[i] = param_momentum*mom_data[i];
-      KERNEL_ASSIGN(out_data[i], req, weight_data[i]-mom_data[i]+(param_momentum+1)
-              *(mom_data[i]-(param_lr*(param_rescale_grad*grad_data[i]+param_wd*weight_data[i]))));
-      mom_data[i] = mom_data[i] - param_lr*((param_rescale_grad*grad_data[i])
-              +(param_wd*weight_data[i]));
+      grad_rescaled = mshadow_op::clip::Map(grad_rescaled, param_clip_gradient);
     }
+    grad_rescaled += param_wd * weight_data[i];
+    mom_data[i] *= param_momentum;
+    mom_data[i] -= param_lr * grad_rescaled;
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] + (param_momentum * mom_data[i])
+                   - (param_lr * grad_rescaled));
   }
 };
 
@@ -1107,7 +1070,7 @@ inline void NAGMomUpdate(const nnvm::NodeAttrs& attrs,
 
 struct MP_NAGMomKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     float* mom_data, const DType* weight_data,
     const DType* grad_data, float* weight32,
     const float param_clip_gradient,
@@ -1115,25 +1078,16 @@ struct MP_NAGMomKernel {
     const float param_wd, const float param_rescale_grad,
     const OpReqType req) {
     float w = weight32[i];
+    float grad_rescaled = param_rescale_grad * static_cast<float>(grad_data[i]);
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i];
-      w = w-mom_data[i]+(param_momentum+1)*(mom_data[i]-param_lr
-              *(mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
-                          param_clip_gradient)+(param_wd*w)));
-      mom_data[i] = mom_data[i] - param_lr
-          *((mshadow_op::clip::Map(param_rescale_grad*static_cast<float>(grad_data[i]),
-                          param_clip_gradient))+(param_wd*w));
-      weight32[i] = w;
-      KERNEL_ASSIGN(out_data[i], req, w);
-    } else {
-      mom_data[i] = param_momentum*mom_data[i];
-      w = w-mom_data[i]+(param_momentum+1)*(mom_data[i]-param_lr
-              *(param_rescale_grad*static_cast<float>(grad_data[i])+(param_wd*w)));
-      mom_data[i] = mom_data[i] - param_lr
-          *((param_rescale_grad*static_cast<float>(grad_data[i]))+(param_wd*w));
-      weight32[i] = w;
-      KERNEL_ASSIGN(out_data[i], req, w);
+      grad_rescaled = mshadow_op::clip::Map(grad_rescaled, param_clip_gradient);
     }
+    grad_rescaled += param_wd * w;
+    mom_data[i] *= param_momentum;
+    mom_data[i] -= param_lr * grad_rescaled;
+    w += (param_momentum * mom_data[i]) - (param_lr * grad_rescaled);
+    weight32[i] = w;
+    KERNEL_ASSIGN(out_data[i], req, w);
   }
 };
 
@@ -1204,14 +1158,14 @@ struct FTMLParam : public dmlc::Parameter<FTMLParam> {
 
 struct FTMLKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out, DType* weight, DType* grad,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out, DType* weight, DType* grad,
     DType* d, DType* v, DType* z, const DType lr, const DType beta1,
     const DType beta2, const DType epsilon, const DType t,
     const DType wd, const DType rescale_grad, const DType clip_grad,
     const OpReqType req) {
     using namespace mshadow_op;
     const DType grad_i = clip_grad >= 0.0f
-        ? clip::Map(rescale_grad * grad[i] + wd * weight[i], clip_grad)
+        ? clip::Map(rescale_grad * grad[i], clip_grad) + wd * weight[i]
         : (rescale_grad * grad[i] + wd * weight[i]);
     v[i] = beta2 * v[i] + (1 - beta2) * square::Map(grad_i);
     const DType d_t = (1 - power::Map(beta1, t)) / lr *
@@ -1291,7 +1245,7 @@ struct AdamParam : public dmlc::Parameter<AdamParam> {
 
 struct AdamUpdateKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const DType* grad_data,
     const DType clip_gradient, const DType rescale_grad,
     const DType beta1, const DType beta2,
@@ -1299,10 +1253,11 @@ struct AdamUpdateKernel {
     const DType epsilon, const OpReqType req) {
     using namespace mshadow_op;
 
-    DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[i] * wd;
+    DType grad_rescaled = grad_data[i] * rescale_grad;
     if (clip_gradient >= 0.f) {
       grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += weight_data[i] * wd;
 
     mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
     var_data[i] = beta2 * var_data[i] +
@@ -1350,7 +1305,7 @@ struct AdamDnsRspDnsKernel;
 template<int req>
 struct AdamDnsRspDnsKernel<req, cpu> {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, const nnvm::dim_t row_length, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType beta1, const DType beta2,
     const DType lr, const DType wd, const DType epsilon, const DType rescale_grad) {
@@ -1362,17 +1317,13 @@ struct AdamDnsRspDnsKernel<req, cpu> {
       const dim_t data_i = row_offset + j;
       // index in grad
       const dim_t grad_i = i * row_length + j;
-      const DType grad_rescaled = grad_data[grad_i] * rescale_grad + weight_data[data_i] * wd;
+      DType grad_rescaled = grad_data[grad_i] * rescale_grad;
       if (clip_gradient >= 0.0f) {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) *
-                            clip::Map(grad_rescaled, clip_gradient);
-        var_data[data_i] =  beta2 * var_data[data_i] + (1.f - beta2) * square::Map(
-                            clip::Map(grad_rescaled, clip_gradient));
-      } else {
-        mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
-        var_data[data_i] = beta2 * var_data[data_i] +
-                           (1.f - beta2) * grad_rescaled * grad_rescaled;
+        grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
       }
+      grad_rescaled += weight_data[data_i] * wd;
+      mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
+      var_data[data_i] = beta2 * var_data[data_i] +(1.f - beta2) * grad_rescaled * grad_rescaled;
       KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] - lr * mean_data[data_i] /
                     (square_root::Map(var_data[data_i]) + epsilon));
     }
@@ -1383,7 +1334,7 @@ struct AdamDnsRspDnsKernel<req, cpu> {
 template<int req>
 struct AdamDnsRspDnsKernel<req, gpu> {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, const nnvm::dim_t row_length, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType beta1, const DType beta2,
     const DType lr, const DType wd, const DType epsilon, const DType rescale_grad) {
@@ -1395,10 +1346,11 @@ struct AdamDnsRspDnsKernel<req, gpu> {
     // index in data/mean/var
     const dim_t data_i = row_offset + col_id;
     // index in grad
-    DType grad_rescaled = grad_data[i] * rescale_grad + weight_data[data_i] * wd;
+    DType grad_rescaled = grad_data[i] * rescale_grad;
     if (clip_gradient >= 0.0f) {
       grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += weight_data[data_i] * wd;
     mean_data[data_i] = beta1 * mean_data[data_i] + (1.f - beta1) * grad_rescaled;
     var_data[data_i] = beta2 * var_data[data_i] +
                        (1.f - beta2) * grad_rescaled * grad_rescaled;
@@ -1620,7 +1572,7 @@ struct LambUpdatePhaseTwoParam : public dmlc::Parameter<LambUpdatePhaseTwoParam>
 
 struct LambUpdatePhaseOneKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     DType* mean_data, DType* var_data, const DType* weight_data, const DType* grad_data,
     const DType clip_gradient, const DType rescale_grad,
     const DType beta1, const DType beta1_t, const DType beta2, const DType beta2_t,
@@ -1704,7 +1656,7 @@ inline bool LambUpdatePhaseTwoShape(const nnvm::NodeAttrs& attrs,
 
 struct LambUpdatePhaseTwoKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     const DType* weight_data, const DType* g,
     const DType* r1, const DType* r2,
     DType lr, const DType lower_bound,
@@ -1771,7 +1723,7 @@ inline bool MPLambPhaseOneType(const nnvm::NodeAttrs& attrs,
 
 struct MPLambUpdatePhaseOneKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, float* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, float* out_data,
     float* mean_data, float* var_data, const DType* weight_data,
     const DType* grad_data, const float* weight32_data,
     const float clip_gradient, const float rescale_grad,
@@ -1861,7 +1813,7 @@ inline bool MPLambUpdatePhaseTwoShape(const nnvm::NodeAttrs& attrs,
 
 struct MPLambUpdatePhaseTwoKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     const DType* weight_data, const float* g,
     const float* r1, const float* r2, const float* weight32_data,
     float lr, const float lower_bound,
@@ -1914,8 +1866,8 @@ inline void MPLambUpdatePhaseTwo(const nnvm::NodeAttrs& attrs,
 // by Alex Graves, 2013.
 struct RMSPropAlexParam : public dmlc::Parameter<RMSPropAlexParam> {
   float lr;
-  float gamma1;
-  float gamma2;
+  float rho;
+  float momentum;
   float epsilon;
   float wd;
   float rescale_grad;
@@ -1924,9 +1876,9 @@ struct RMSPropAlexParam : public dmlc::Parameter<RMSPropAlexParam> {
   DMLC_DECLARE_PARAMETER(RMSPropAlexParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
-    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f)
+    DMLC_DECLARE_FIELD(rho).set_default(0.95f)
     .describe("Decay rate.");
-    DMLC_DECLARE_FIELD(gamma2).set_default(0.9f)
+    DMLC_DECLARE_FIELD(momentum).set_default(0.9f)
     .describe("Decay rate.");
     DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
     .describe("A small constant for numerical stability.");
@@ -1952,29 +1904,30 @@ struct RMSPropAlexParam : public dmlc::Parameter<RMSPropAlexParam> {
 
 struct RMSPropAlexUpdateKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     DType* state_n_data, DType* state_g_data, DType* delta_data,
     const DType* weight_data, const DType* grad_data,
     const DType clip_gradient, const DType rescale_grad,
-    const DType gamma1, const DType gamma2,
+    const DType rho, const DType momentum,
     const DType lr, const DType wd,
     const DType clip_weights, const DType epsilon,
     const OpReqType req) {
     using namespace mshadow_op;
 
-    DType grad_rescaled = rescale_grad * grad_data[i] + wd * weight_data[i];
+    DType grad_rescaled = rescale_grad * grad_data[i];
     if (clip_gradient >= 0.0f) {
       grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += wd * weight_data[i];
 
-    state_n_data[i] = (1.f - gamma1) * grad_rescaled * grad_rescaled +
-                      gamma1 * state_n_data[i];
-    state_g_data[i] = (1.f - gamma1) * grad_rescaled +
-                      gamma1 * state_g_data[i];
-    delta_data[i] = gamma2 * delta_data[i] -
+    state_n_data[i] = (1.f - rho) * square::Map(grad_rescaled) +
+                      rho * state_n_data[i];
+    state_g_data[i] = (1.f - rho) * grad_rescaled +
+                      rho * state_g_data[i];
+    delta_data[i] = momentum * delta_data[i] -
                     (lr * (grad_rescaled) /
                       (square_root::Map(state_n_data[i] -
-                                        state_g_data[i] * state_g_data[i] + epsilon)));
+                                        square::Map(state_g_data[i]) + epsilon)));
 
     if (clip_weights >= 0.0f) {
       const DType clipped_weight = clip::Map(weight_data[i] + delta_data[i], clip_weights);
@@ -1997,15 +1950,15 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType, {
     DType* weight_data = inputs[0].dptr<DType>();
     DType* grad_data = inputs[1].dptr<DType>();
-    DType* state_n_data = inputs[2].dptr<DType>();
-    DType* state_g_data = inputs[3].dptr<DType>();
+    DType* state_g_data = inputs[2].dptr<DType>();
+    DType* state_n_data = inputs[3].dptr<DType>();
     DType* delta_data = inputs[4].dptr<DType>();
     DType* out_data = outputs[0].dptr<DType>();
 
     Kernel<RMSPropAlexUpdateKernel, xpu>::Launch(s, inputs[0].shape_.Size(),
       out_data, state_n_data, state_g_data, delta_data, weight_data, grad_data,
       static_cast<DType>(param.clip_gradient), static_cast<DType>(param.rescale_grad),
-      static_cast<DType>(param.gamma1), static_cast<DType>(param.gamma2),
+      static_cast<DType>(param.rho), static_cast<DType>(param.momentum),
       static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.clip_weights), static_cast<DType>(param.epsilon), req[0]);
   });
@@ -2016,7 +1969,7 @@ inline void RMSPropAlexUpdate(const nnvm::NodeAttrs &attrs,
 // by Tieleman & Hinton, 2012
 struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
   float lr;
-  float gamma1;
+  float rho;
   float epsilon;
   float wd;
   float rescale_grad;
@@ -2025,7 +1978,7 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
   DMLC_DECLARE_PARAMETER(RMSPropParam) {
     DMLC_DECLARE_FIELD(lr)
     .describe("Learning rate");
-    DMLC_DECLARE_FIELD(gamma1).set_default(0.95f)
+    DMLC_DECLARE_FIELD(rho).set_default(0.95f)
     .describe("The decay rate of momentum estimates.");
     DMLC_DECLARE_FIELD(epsilon).set_default(1e-8f)
     .describe("A small constant for numerical stability.");
@@ -2051,24 +2004,25 @@ struct RMSPropParam : public dmlc::Parameter<RMSPropParam> {
 
 struct RMSPropUpdateKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
     DType* out_data, DType* state_n_data,
     const DType* weight_data, const DType* grad_data,
     const DType clip_gradient, const DType rescale_grad,
-    const DType gamma1, const DType lr, const DType wd,
+    const DType rho, const DType lr, const DType wd,
     const DType clip_weights, const DType epsilon,
     const OpReqType req) {
     using namespace mshadow_op;
 
-    DType grad_rescaled = rescale_grad * grad_data[i] + wd * weight_data[i];
+    DType grad_rescaled = rescale_grad * grad_data[i];
     if (clip_gradient >= 0.0f) {
       grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += wd * weight_data[i];
 
-    state_n_data[i] = (1.f - gamma1) * (grad_rescaled * grad_rescaled) + gamma1 * state_n_data[i];
+    state_n_data[i] = (1.f - rho) * square::Map(grad_rescaled) + rho * state_n_data[i];
 
     DType weight = weight_data[i] -
-                   lr * (grad_rescaled / square_root::Map(state_n_data[i] + epsilon));
+                   lr * (grad_rescaled) / (square_root::Map(state_n_data[i]) + epsilon);
     if (clip_weights >= 0.0f) {
       weight = clip::Map(weight, clip_weights);
     }
@@ -2093,7 +2047,7 @@ inline void RMSPropUpdate(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     Kernel<RMSPropUpdateKernel, xpu>::Launch(s, inputs[0].shape_.Size(),
       out_data, state_n_data, weight_data, grad_data,
       static_cast<DType>(param.clip_gradient), static_cast<DType>(param.rescale_grad),
-      static_cast<DType>(param.gamma1), static_cast<DType>(param.lr), static_cast<DType>(param.wd),
+      static_cast<DType>(param.rho), static_cast<DType>(param.lr), static_cast<DType>(param.wd),
       static_cast<DType>(param.clip_weights), static_cast<DType>(param.epsilon), req[0]);
   });
 }
@@ -2132,7 +2086,7 @@ struct FtrlParam : public dmlc::Parameter<FtrlParam> {
 
 struct FtrlUpdateKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
     DType* n_data, DType* z_data, const DType* weight_data, const DType* grad_data,
     const DType clip_gradient, const DType rescale_grad,
     const DType beta, const DType lamda1,
@@ -2150,10 +2104,9 @@ struct FtrlUpdateKernel {
                       weight_data[i] / lr;
     n_data[i] += square::Map(grad_rescaled);
 
-    KERNEL_ASSIGN(out_data[i], req,
-                  (sign::Map(z_data[i]) * lamda1 - z_data[i]) /
-                  ((beta + square_root::Map(n_data[i])) / lr + wd) *
-                  gt::Map(abs::Map(z_data[i]), lamda1));
+    DType d = - sign::Map(z_data[i]) * maximum::Map(abs::Map(z_data[i]) - lamda1,
+                                                    static_cast<DType>(0));
+    KERNEL_ASSIGN(out_data[i], req, d / ((beta + square_root::Map(n_data[i])) / lr + wd));
   }
 };
 
@@ -2185,7 +2138,7 @@ inline void FtrlUpdate(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct FtrlDnsRspDnsKernel {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, const nnvm::dim_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, const nnvm::dim_t row_length, DType* out_data,
     DType* z_data, DType* n_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType lamda1, const DType beta,
     const DType lr, const DType wd, const DType rescale_grad) {
@@ -2197,23 +2150,19 @@ struct FtrlDnsRspDnsKernel {
       const dim_t data_i = row_offset + j;
       // index in grad
       const dim_t grad_i = i * row_length + j;
-      const DType grad_rescaled = grad_data[grad_i] * rescale_grad;
+      DType grad_rescaled = grad_data[grad_i] * rescale_grad;
       if (clip_gradient >= 0.0f) {
-        z_data[data_i] += clip::Map(grad_rescaled, clip_gradient) -
-                          (square_root::Map(n_data[data_i] +
-                          square::Map(clip::Map(grad_rescaled, clip_gradient))) -
-                          square_root::Map(n_data[data_i])) * weight_data[data_i] / lr;
-        n_data[data_i] += square::Map(clip::Map(grad_rescaled, clip_gradient));
-      } else {
-        z_data[data_i] += grad_rescaled - (square_root::Map(n_data[data_i] +
-                          square::Map(grad_rescaled)) - square_root::Map(n_data[data_i])) *
-                          weight_data[data_i] / lr;
-        n_data[data_i] += square::Map(grad_rescaled);
+        grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
       }
+      z_data[data_i] += grad_rescaled - (square_root::Map(n_data[data_i] +
+                        square::Map(grad_rescaled)) - square_root::Map(n_data[data_i])) *
+                        weight_data[data_i] / lr;
+      n_data[data_i] += square::Map(grad_rescaled);
+
+      DType d = - sign::Map(z_data[data_i]) * maximum::Map(abs::Map(z_data[data_i]) - lamda1,
+                                                           static_cast<DType>(0));
       KERNEL_ASSIGN(out_data[data_i], req,
-                    (sign::Map(z_data[data_i]) * lamda1 - z_data[data_i]) /
-                    ((beta + square_root::Map(n_data[data_i])) / lr + wd) *
-                    gt::Map(abs::Map(z_data[data_i]), lamda1));
+                    d / ((beta + square_root::Map(n_data[data_i])) / lr + wd));
     }
   }
 };
@@ -2343,15 +2292,15 @@ struct SignSGDParam : public dmlc::Parameter<SignSGDParam> {
 
 struct SignSGDKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* weight_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* weight_data,
     const DType* grad_data, const DType param_clip_gradient,
     const DType param_lr, const DType param_wd, const DType param_rescale_grad,
     const OpReqType req) {
 
     // param_clip_gradient has no effect for SignSGD
     KERNEL_ASSIGN(out_data[i], req,
-             (1.f-param_lr*param_wd)*weight_data[i]
-               - (param_lr)*((grad_data[i] > 0) - (grad_data[i] < 0)));
+             (1.f - param_lr * param_wd) * weight_data[i]
+               - (param_lr) * ((grad_data[i] > 0) - (grad_data[i] < 0)));
   }
 };
 
@@ -2411,22 +2360,21 @@ struct SignumParam : public dmlc::Parameter<SignumParam> {
 
 struct SignumKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, DType* mom_data, const DType* weight_data,
-    const DType* grad_data, const DType param_clip_gradient, const DType param_momentum,
-    const DType param_lr, const DType param_wd, const DType param_rescale_grad,
-    const DType param_wd_lh, const OpReqType req) {
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, DType* mom_data,
+                                  const DType* weight_data, const DType* grad_data,
+                                  const DType param_clip_gradient, const DType param_momentum,
+                                  const DType param_lr, const DType param_wd,
+                                  const DType param_rescale_grad, const DType param_wd_lh,
+                                  const OpReqType req) {
+    DType rescale_grad = param_rescale_grad * grad_data[i];
     if (param_clip_gradient >= 0.0f) {
-      mom_data[i] = param_momentum*mom_data[i]
-              - (1-param_momentum)*param_wd*weight_data[i]
-              - (1-param_momentum)
-              *mshadow_op::clip::Map(param_rescale_grad*grad_data[i], param_clip_gradient);
-    } else {
-      mom_data[i] = param_momentum*mom_data[i]
-                - (1-param_momentum)*param_wd*weight_data[i]
-                - (1-param_momentum)*param_rescale_grad*grad_data[i];
+      rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
-    KERNEL_ASSIGN(out_data[i], req, (1.f-param_lr*param_wd_lh)*weight_data[i]
-      + (param_lr)*((mom_data[i] > 0) - (mom_data[i] < 0)));
+    rescale_grad += param_wd * weight_data[i];
+    mom_data[i] *= param_momentum;
+    mom_data[i] -= (1 - param_momentum) * rescale_grad;
+    KERNEL_ASSIGN(out_data[i], req, (1.f - param_lr * param_wd_lh) * weight_data[i]
+      + (param_lr) * ((mom_data[i] > 0) - (mom_data[i] < 0)));
   }
 };
 
@@ -2506,7 +2454,7 @@ struct AdagradDnsRspDnsKernel;
 template<>
 struct AdagradDnsRspDnsKernel<cpu> {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, index_t row_length, DType* out_data,
     DType* state_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType epsilon,
     const DType lr, const DType rescale_grad) {
@@ -2523,7 +2471,7 @@ struct AdagradDnsRspDnsKernel<cpu> {
       }
       const DType grad_squared = grad_rescaled * grad_rescaled;
       state_data[data_j] += grad_squared;
-      const DType div = grad_rescaled / square_root::Map(state_data[data_j] + epsilon);
+      const DType div = grad_rescaled / (square_root::Map(state_data[data_j]) + epsilon);
       // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
       out_data[data_j] = weight_data[data_j] - div * lr;
     }
@@ -2533,7 +2481,7 @@ struct AdagradDnsRspDnsKernel<cpu> {
 template<>
 struct AdagradDnsRspDnsKernel<gpu> {
   template<typename DType, typename IType>
-  MSHADOW_XINLINE static void Map(int i, index_t row_length, DType* out_data,
+  MSHADOW_XINLINE static void Map(index_t i, index_t row_length, DType* out_data,
     DType* state_data, const DType* weight_data, const IType* grad_idx,
     const DType* grad_data, const DType clip_gradient, const DType epsilon,
     const DType lr, const DType rescale_grad) {
@@ -2548,7 +2496,7 @@ struct AdagradDnsRspDnsKernel<gpu> {
     }
     const DType grad_squared = grad_rescaled * grad_rescaled;
     state_data[data_i] += grad_squared;
-    const DType div = grad_rescaled / square_root::Map(state_data[data_i] + epsilon);
+    const DType div = grad_rescaled / (square_root::Map(state_data[data_i]) + epsilon);
     // No need to use KERNEL_ASSIGN, as we already checked req is kWriteInplace
     out_data[data_i] = weight_data[data_i] - div * lr;
   }

@@ -109,7 +109,7 @@ class DeformablePSROIPoolingOp : public Operator {
     out = -FLT_MAX;
     top_count = 0.0f;
 
-    Tensor<xpu, 4, DType> trans;
+    Tensor<xpu, 4, DType> trans{nullptr, mshadow::Shape4(0, 0, 0, 0)};
     if (!param_.no_trans) {
       trans = in_data[deformablepsroipool::kTrans].get<xpu, 4, DType>(s);
     }
@@ -149,8 +149,8 @@ class DeformablePSROIPoolingOp : public Operator {
                                         .get<xpu, 4, DType>(s);
     Tensor<xpu, 4, DType> grad_in = in_grad[deformablepsroipool::kData].get<xpu, 4, DType>(s);
     Tensor<xpu, 2, DType> grad_roi = in_grad[deformablepsroipool::kBox].get<xpu, 2, DType>(s);
-    Tensor<xpu, 4, DType> grad_trans;
-    Tensor<xpu, 4, DType> trans;
+    Tensor<xpu, 4, DType> grad_trans{nullptr, mshadow::Shape4(0, 0, 0, 0)};
+    Tensor<xpu, 4, DType> trans{nullptr, mshadow::Shape4(0, 0, 0, 0)};
     if (!param_.no_trans) {
       CHECK_EQ(in_grad.size(), 3);
       trans = in_data[deformablepsroipool::kTrans].get<xpu, 4, DType>(s);
@@ -288,7 +288,7 @@ class DeformablePSROIPoolingProp : public OperatorProperty {
 
   Operator* CreateOperator(Context ctx) const override {
     LOG(FATAL) << "Not Implemented.";
-    return NULL;
+    return nullptr;
   }
 
   Operator* CreateOperatorEx(Context ctx,

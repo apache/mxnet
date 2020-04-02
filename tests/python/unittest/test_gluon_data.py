@@ -269,6 +269,12 @@ def test_multi_worker_dataloader_release_pool():
     if os.name == 'nt':
         print('Skip for windows since spawn on windows is too expensive.')
         return
+
+    from sys import platform
+    if platform == 'darwin':
+        print('Skip for MacOS due to https://github.com/apache/incubator-mxnet/issues/17782')
+        return
+
     for _ in range(10):
         A = np.random.rand(999, 2000)
         D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)

@@ -25,35 +25,44 @@ pushd .
 
 apt update || true
 apt install -y \
-    libxslt1-dev \
-    docbook-xsl \
-    xsltproc \
-    libxml2-utils
-
-apt install -y --no-install-recommends \
     autoconf \
-    asciidoc \
+    gperf \
     xsltproc
 
 mkdir -p /work/deps
 cd /work/deps
 
-git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
+# Unset ARM toolchain cross-compilation configuration on dockcross
+unset ARCH
+unset DEFAULT_DOCKCROSS_IMAGE
+unset CROSS_TRIPLE
+unset CC
+unset AS
+unset AR
+unset FC
+unset CXX
+unset CROSS_ROOT
+unset CROSS_COMPILE
+unset PKG_CONFIG_PATH
+unset CMAKE_TOOLCHAIN_FILE
+unset CPP
+unset LD
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+git clone --recursive https://github.com/ccache/ccache.git
 cd ccache
+git checkout v3.7.8
+# Backport cuda related fixes: https://github.com/ccache/ccache/pull/381
+git config user.name "MXNet CI"
+git config user.email "MXNetCI@example.com"
+git cherry-pick --strategy-option=theirs c4fffda031034f930df2cf188878b8f9160027df
+git cherry-pick 0dec5c2df3e3ebc1fbbf33f74c992bef6264f37a
 
 ./autogen.sh
-# Manually specify x86 gcc versions so that this script remains compatible with dockcross (which uses an ARM based gcc
-# by default).
-CC=/usr/bin/gcc CXX=/usr/bin/g++ ./configure
-
-# Don't build documentation #11214
-#perl -pi -e 's!\s+\Q$(installcmd) -d $(DESTDIR)$(mandir)/man1\E!!g' Makefile
-#perl -pi -e 's!\s+\Q-$(installcmd) -m 644 ccache.1 $(DESTDIR)$(mandir)/man1/\E!!g' Makefile
+./configure --disable-man
 make -j$(nproc)
 make install
 
 rm -rf /work/deps/ccache
 
 popd
-
