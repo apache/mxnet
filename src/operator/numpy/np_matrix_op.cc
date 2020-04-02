@@ -1258,7 +1258,7 @@ bool NumpyMoveaxisShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(ret);
 }
 
-NNVM_REGISTER_OP(_np_moveaxis)
+NNVM_REGISTER_OP(_npi_moveaxis)
 .describe(R"code(Move axes of an array to new positions.
 Other axes remain in their original order.
 )code" ADD_FILELINE)

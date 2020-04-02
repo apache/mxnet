@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -215,6 +215,38 @@ MXNET_REGISTER_API("_npi.diag_indices_from")
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.moveaxis")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_moveaxis");
+  nnvm::NodeAttrs attrs;
+  op::NumpyMoveaxisParam param;
+  if (args[1].type_code() == kDLInt) {
+    param.source = TShape(1, args[1].operator int64_t());
+  } else {
+    param.source = TShape(args[1].operator ObjectRef());
+  }
+  if (args[2].type_code() == kDLInt) {
+    param.destination = TShape(1, args[2].operator int64_t());
+  } else {
+    param.destination = TShape(args[2].operator ObjectRef());
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyMoveaxisParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  NDArray* out = args[1].operator NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_inputs = 1;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (outputs) {
+    *ret = PythonArg(1);
+  } else {
+    *ret = ndoutputs[0];
+  }
 });
 
 }  // namespace mxnet

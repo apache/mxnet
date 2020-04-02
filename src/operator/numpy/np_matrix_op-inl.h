@@ -527,6 +527,13 @@ struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
     .describe("Destination positions for each of the original axes. "
               "These must also be unique.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream source_s, destination_s;
+    source_s << source;
+    destination_s << destination;
+    (*dict)["source"] = source_s.str();
+    (*dict)["destination"] = destination_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyMoveaxisShapeImpl(const nnvm::NodeAttrs& attrs,
