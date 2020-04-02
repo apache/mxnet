@@ -285,6 +285,11 @@ def test_multi_worker_dataloader_release_pool():
 
 
 def test_dataloader_context():
+    if os.name == 'nt':
+        print("Skipping test_dataloader_context on Windows due to "
+              "https://github.com/apache/incubator-mxnet/issues/17961")
+        return
+
     X = np.random.uniform(size=(10, 20))
     dataset = gluon.data.ArrayDataset(X)
     default_dev_id = 0
