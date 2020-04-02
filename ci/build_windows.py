@@ -171,7 +171,7 @@ def windows_build(args):
     logging.info("Using vcvars environment:\n{}".format(args.vcvars))
 
     path = args.output
-    
+
     # cuda thrust + VS is flaky so try multiple times if fail
     MAXIMUM_TRY = 5
     build_try = 0
@@ -197,7 +197,7 @@ def windows_build(args):
 
             t0 = int(time.time())
             ret = call(cmd, shell=True)
-            
+
             if ret != 0:
                 build_try += 1
                 logging.info("{} build(s) have failed".format(build_try))
@@ -226,7 +226,7 @@ def windows_package(args):
         for dll in dlls:
             logging.info("packing dll: %s", dll)
             shutil.copy(dll, pkgdir_lib)
-        
+
         os.chdir(get_mxnet_root())
         logging.info('packing python bindings')
         copy_tree('python', j(pkgdir, 'python'))
@@ -234,7 +234,7 @@ def windows_package(args):
         copy_tree('include', j(pkgdir, 'include'))
         logging.info("Compressing package: %s", pkgfile)
         check_call(['7z', 'a', pkgfile, pkgdir])
-    
+
 
 def nix_build(args):
     path = args.output

@@ -25,15 +25,6 @@ $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
 $env:PATH+=[io.path]::combine($pwd.Path,"windows_package\lib")
 
-echo "Printing env vars"
-echo $env:MXNET_LIBRARY_PATH
-echo $env:PYTHONPATH
-echo $env:MXNET_HOME
-echo $env:PATH
-Get-ChildItem -Path (join-path $pwd.Path windows_package\lib)
-Invoke-RestMethod -uri http://169.254.169.254/latest/meta-data/instance-type
-echo "All printed"
-
 C:\Python37\Scripts\pip install -r tests\requirements.txt
 C:\Python37\Scripts\pip install -e $env:PYTHONPATH
 
