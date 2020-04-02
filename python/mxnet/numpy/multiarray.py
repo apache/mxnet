@@ -46,7 +46,6 @@ from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
-from ..ndarray.numpy import _api_internal
 from ..ndarray.ndarray import _storage_type, from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
@@ -56,7 +55,7 @@ from . import fallback
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'power', 'bitwise_not',
-           'delete',
+           'delete', 'copy',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
@@ -1324,10 +1323,10 @@ class ndarray(NDArray):
             if other.handle is self.handle:
                 warnings.warn('You are attempting to copy an array to itself', RuntimeWarning)
                 return False
-            return _npi.copyto(self, out=other)
+            return copy(self, out=other)
         elif isinstance(other, Context):
             hret = ndarray(_new_alloc_handle(self.shape, other, True, self.dtype))
-            return _npi.copyto(self, out=hret)
+            return copy(self, out=hret)
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
@@ -2721,6 +2720,54 @@ def identity(n, dtype=None, ctx=None):
     """
     return _mx_nd_np.identity(n, dtype, ctx)
 # pylint: enable=redefined-outer-name
+
+
+@set_module('mxnet.numpy')
+def copy(a, out=None):
+    """
+    Return an array copy of the given object.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    out : ndarray or None, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and dtype as the expected output.
+
+    Returns
+    -------
+    arr : ndarray
+        Array interpretation of `a`.
+
+    Notes
+    -------
+    This function differs from the original `numpy.copy
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.copy.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
+    - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
+    - Does not support "order" parameter.
+
+    Examples
+    --------
+    Create an array x, with a reference y and a copy z:
+
+    >>> x = np.array([1, 2, 3])
+    >>> y = x
+    >>> z = np.copy(x)
+
+    Note that, when ``x`` is modified, ``y`` is also modified, but not ``z``:
+
+    >>> x[0] = 10
+    >>> x[0] == y[0]
+    array([1.])
+    >>> x[0] == z[0]
+    array([0.])
+    """
+    return _mx_nd_np.copy(a, out)
 
 
 # pylint: disable=redefined-outer-name

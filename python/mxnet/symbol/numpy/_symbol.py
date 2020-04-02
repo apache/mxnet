@@ -37,7 +37,7 @@ except ImportError:
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
-           'power', 'arctan2',
+           'power', 'arctan2', 'copy',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul', 'median',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
@@ -5146,6 +5146,26 @@ def blackman(M, dtype=_np.float32, ctx=None):
     if ctx is None:
         ctx = current_context()
     return _npi.blackman(M, dtype=dtype, ctx=ctx)
+
+
+@set_module('mxnet.symbol.numpy')
+def copy(a, out=None):
+    """
+    Return an array copy of the given object.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+    out : _Symbol or None
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    arr : _Symbol
+        Array interpretation of `a`.
+    """
+    return _npi.copy(a, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
