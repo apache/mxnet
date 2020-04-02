@@ -163,9 +163,8 @@ if(MSVC)
   add_definitions(-DDMLC_STRICT_CXX11)
   add_definitions(-DNOMINMAX)
   set(CMAKE_C_FLAGS "/MP")
-  # report an accurate value for recent C++ language standards support
-  set(CMAKE_CXX_FLAGS "/Zc:__cplusplus")
-  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
+  # /Zc:__cplusplus to accurately report recent C++ language standards support
+  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj /Zc:__cplusplus")
 else()
   include(CheckCXXCompilerFlag)
   if(USE_CXX14_IF_AVAILABLE)
