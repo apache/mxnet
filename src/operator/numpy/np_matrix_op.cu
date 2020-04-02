@@ -32,7 +32,7 @@ namespace op {
 NNVM_REGISTER_OP(_np_transpose)
 .set_attr<FCompute>("FCompute<gpu>", NumpyTranspose<gpu>);
 
-NNVM_REGISTER_OP(_np_reshape)
+NNVM_REGISTER_OP(_npi_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_np_squeeze)

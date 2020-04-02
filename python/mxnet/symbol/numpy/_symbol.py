@@ -49,7 +49,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr', 'moveaxis',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
+           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron', 'reshape',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
@@ -423,9 +423,9 @@ class _Symbol(Symbol):
         if len(args) == 0:
             raise TypeError('reshape() takes exactly 1 argument (0 given)')
         if len(args) == 1 and isinstance(args[0], tuple):
-            return _mx_np_op.reshape(self, newshape=args[0], order=order)
+            return reshape(self, newshape=args[0], order=order)
         else:
-            return _mx_np_op.reshape(self, newshape=args, order=order)
+            return reshape(self, newshape=args, order=order)
 
     def argmax(self, axis=None, out=None):  # pylint: disable=arguments-differ
         """Return indices of the maximum values along the given axis.
@@ -4736,6 +4736,40 @@ def copysign(x1, x2, out=None, **kwargs):
     - ``where`` param is not supported.
     """
     return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def reshape(a, newshape, order='C', out=None):
+    """
+    Gives a new shape to an array without changing its data.
+    This function always returns a copy of the input array if
+    ``out`` is not provided.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array to be reshaped.
+    newshape : int or tuple of ints
+        The new shape should be compatible with the original shape. If
+        an integer, then the result will be a 1-D array of that length.
+        One shape dimension can be -1. In this case, the value is
+        inferred from the length of the array and remaining dimensions.
+    order : {'C'}, optional
+        Read the elements of `a` using this index order, and place the
+        elements into the reshaped array using this index order.  'C'
+        means to read / write the elements using C-like index order,
+        with the last axis index changing fastest, back to the first
+        axis index changing slowest. Other order types such as 'F'/'A'
+        may be added in the future.
+
+    Returns
+    -------
+    reshaped_array : _Symbol
+        It will be always a copy of the original array. This behavior is different
+        from the official NumPy ``reshape`` operator where views of the original array may be
+        generated.
+    """
+    return _npi.reshape(a, newshape, out=out)
 
 
 @set_module('mxnet.symbol.numpy')

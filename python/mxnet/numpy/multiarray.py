@@ -62,7 +62,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
-           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero',
+           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero', 'reshape',
            'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack', 'moveaxis',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
@@ -1443,9 +1443,9 @@ class ndarray(NDArray):
         if len(args) == 0:
             raise TypeError('reshape() takes exactly 1 argument (0 given)')
         if len(args) == 1 and isinstance(args[0], tuple):
-            return _mx_np_op.reshape(self, newshape=args[0], order=order)
+            return reshape(self, newshape=args[0], order=order)
         else:
-            return _mx_np_op.reshape(self, newshape=args, order=order)
+            return reshape(self, newshape=args, order=order)
 
     def reshape_like(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape_like`.
@@ -7093,6 +7093,66 @@ def ravel(x, order='C'):
     return _mx_nd_np.ravel(x, order)
 
 
+@set_module('mxnet.numpy')
+def reshape(a, newshape, order='C', out=None):
+    """
+    Gives a new shape to an array without changing its data.
+    This function always returns a copy of the input array if
+    ``out`` is not provided.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be reshaped.
+    newshape : int or tuple of ints
+        The new shape should be compatible with the original shape. If
+        an integer, then the result will be a 1-D array of that length.
+        One shape dimension can be -1. In this case, the value is
+        inferred from the length of the array and remaining dimensions.
+    order : {'C'}, optional
+        Read the elements of `a` using this index order, and place the
+        elements into the reshaped array using this index order.  'C'
+        means to read / write the elements using C-like index order,
+        with the last axis index changing fastest, back to the first
+        axis index changing slowest. Other order types such as 'F'/'A'
+        may be added in the future.
+
+    Returns
+    -------
+    reshaped_array : ndarray
+        It will be always a copy of the original array. This behavior is different
+        from the official NumPy ``reshape`` operator where views of the original array may be
+        generated.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape((3, 2))
+    >>> a
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+
+    >>> np.reshape(a, (2, 3)) # C-like index ordering
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> np.reshape(np.ravel(a), (2, 3)) # equivalent to C ravel then C reshape
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+    """
+    return _mx_nd_np.reshape(a, newshape, out=out)
+
+
+@set_module('mxnet.numpy')
 def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
@@ -7123,6 +7183,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     return _mx_nd_np.unravel_index(indices, shape, order=order)
 
 
+@set_module('mxnet.numpy')
 def flatnonzero(a):
     r"""
     Return indices that are non-zero in the flattened version of a.
@@ -7162,6 +7223,7 @@ def flatnonzero(a):
     return _mx_nd_np.flatnonzero(a)
 
 
+@set_module('mxnet.numpy')
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
