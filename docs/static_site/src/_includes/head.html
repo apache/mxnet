@@ -16,6 +16,11 @@
   <script src="{{'/assets/js/clipboard.js'|relative_url}}"></script>
   <script src="{{'/assets/js/copycode.js'|relative_url}}"></script>
   <style>
+  .dropdown-option-active {
+      color: #FF4500 !important;
+      font-weight: lighter;
+  }
+
   .dropdown {
     position: relative;
     display: inline-block;
@@ -34,6 +39,19 @@
 
   .dropdown:hover .dropdown-content {
     display: block;
+  }
+
+  .dropdown-header {
+      color: #FFFFFF;
+      display: inline-flex;
+  }
+
+  .dropdown-caret {
+      width: 18px;
+  }
+
+  .dropdown-caret-path {
+      fill: #FFFFFF;
   }
   </style>
 </head>
