@@ -98,6 +98,8 @@ build_ccache_wrappers() {
     ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
     ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
     ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
+    ln -sf $CCACHE /tmp/ccache-redirects/clang++-10
+    ln -sf $CCACHE /tmp/ccache-redirects/clang-10
     #Doesn't work: https://github.com/ccache/ccache/issues/373
     # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
     # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
@@ -159,37 +161,24 @@ build_ubuntu_cpu_release() {
     cd /work/build
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_MKLDNN=OFF \
-        -DUSE_CUDA=OFF \
-        -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_cpu_mkldnn_release() {
-    set -ex
-    cd /work/build
-    cmake \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_release() {
+build_ubuntu_cpu_native_release() {
     set -ex
     cd /work/build
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
-        -DUSE_DIST_KVSTORE=ON \
-        -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDA=OFF \
         -G Ninja /work/mxnet
     ninja
 }
 
-build_ubuntu_gpu_mkldnn_release() {
+build_ubuntu_gpu_release() {
     set -ex
     cd /work/build
     cmake \
@@ -204,7 +193,7 @@ build_ubuntu_gpu_mkldnn_release() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu92, etc.
 build_dynamic_libmxnet() {
     set -ex
 
@@ -215,22 +204,19 @@ build_dynamic_libmxnet() {
 
     if [[ ${mxnet_variant} = "cpu" ]]; then
         build_ubuntu_cpu_release
-    elif [[ ${mxnet_variant} = "mkl" ]]; then
-        build_ubuntu_cpu_mkldnn_release
+    elif [[ ${mxnet_variant} = "native" ]]; then
+        build_ubuntu_cpu_native_release
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         build_ubuntu_gpu_release
-    elif [[ ${mxnet_variant} =~ cu[0-9]+mkl$ ]]; then
-        build_ubuntu_gpu_mkldnn_release
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
+        exit 1
     fi
 }
 
 build_jetson() {
     set -ex
     pushd .
-
-    #build_ccache_wrappers
 
     cp make/crosscompile.jetson.mk ./config.mk
     make -j$(nproc)
@@ -254,7 +240,6 @@ build_armv6() {
 
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=OFF \
@@ -281,7 +266,6 @@ build_armv7() {
     # file tries to add -llapack. Lapack functionality though, requires -lgfortran
     # to be linked additionally.
 
-    build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DCMAKE_CROSSCOMPILING=ON \
@@ -301,7 +285,6 @@ build_armv7() {
 }
 
 build_armv8() {
-    build_ccache_wrappers
     cd /work/build
     cmake \
         -DUSE_CUDA=OFF\
@@ -325,7 +308,6 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DANDROID=ON\
         -DUSE_CUDA=OFF\
@@ -343,7 +325,6 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake\
         -DANDROID=ON \
         -DUSE_CUDA=OFF\
@@ -468,7 +449,6 @@ build_ubuntu_cpu_mkl() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -485,7 +465,6 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
@@ -506,7 +485,6 @@ build_ubuntu_cpu_cmake_asan() {
     cd /work/build
     export CXX=g++-8
     export CC=gcc-8
-    build_ccache_wrappers
     cmake \
         -DUSE_CUDA=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -530,14 +508,42 @@ build_ubuntu_cpu_cmake_asan() {
 build_ubuntu_cpu_gcc8_werror() {
     set -ex
     cd /work/build
-    export CXX=g++-8
-    export CC=gcc-8
-    cmake \
+    CXX=g++-8 CC=gcc-8 cmake \
         -DUSE_CUDA=OFF \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_CPP_PACKAGE=ON \
         -DMXNET_USE_CPU=ON \
         -GNinja /work/mxnet
+    ninja
+}
+
+build_ubuntu_cpu_clang10_werror() {
+    set -ex
+    cd /work/build
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_CUDA=OFF \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -DUSE_CPP_PACKAGE=ON \
+       -DMXNET_USE_CPU=ON \
+       -GNinja /work/mxnet
+    ninja
+}
+
+build_ubuntu_gpu_clang10_werror() {
+    set -ex
+    cd /work/build
+    # Disable cpp package as OpWrapperGenerator.py dlopens libmxnet.so,
+    # requiring presence of cuda driver libraries that are missing on CI host
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/lib/stubs
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DCMAKE_AR=/usr/local/bin/ar \
+       -DCMAKE_RANLIB=/usr/local/bin/ranlib \
+       -DUSE_CUDA=ON \
+       -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -DUSE_CPP_PACKAGE=OFF \
+       -GNinja /work/mxnet
     ninja
 }
 
@@ -555,10 +561,10 @@ build_ubuntu_cpu_clang39() {
     ninja
 }
 
-build_ubuntu_cpu_clang60() {
+build_ubuntu_cpu_clang100() {
     set -ex
     cd /work/build
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
@@ -573,10 +579,12 @@ build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
     export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
+    # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
     CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
@@ -600,10 +608,10 @@ build_ubuntu_cpu_clang39_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_clang60_mkldnn() {
+build_ubuntu_cpu_clang100_mkldnn() {
     set -ex
     cd /work/build
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
@@ -662,8 +670,6 @@ build_ubuntu_gpu_tensorrt() {
 
     set -ex
 
-    build_ccache_wrappers
-
     # Build ONNX
     pushd .
     echo "Installing ONNX."
@@ -714,7 +720,10 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -728,7 +737,10 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -743,7 +755,10 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     cd /work/build
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -799,7 +814,10 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
 build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     cd /work/build
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=OFF \
@@ -835,7 +853,6 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -857,7 +874,6 @@ build_ubuntu_gpu_cmake() {
 build_ubuntu_gpu_cmake_no_rtc() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -880,7 +896,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
 build_ubuntu_gpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
@@ -902,7 +917,6 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
@@ -919,7 +933,6 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
     cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \

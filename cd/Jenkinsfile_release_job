@@ -74,7 +74,7 @@ pipeline {
             |Release Build: ${params.RELEASE_BUILD}
             |Commit Id: ${env.GIT_COMMIT}
             |Branch: ${env.GIT_BRANCH}
-            |Variants: ${env.MXNET_VARIANTS}""".stripMargin()
+            |Variants: ${params.MXNET_VARIANTS}""".stripMargin()
           }
         }
       }

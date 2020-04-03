@@ -47,7 +47,7 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
   CHECK(axis >= 0 && axis < dshape.ndim())
     << "Channel axis out of range: axis=" << param.axis;
 
-  const int channelCount = dshape[axis];
+  const index_t channelCount = dshape[axis];
 
   if (!mxnet::ndim_is_known(dshape)) {
     return false;

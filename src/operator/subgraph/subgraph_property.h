@@ -251,6 +251,7 @@ class SubgraphSelectorV2Bridge : public SubgraphSelectorV2 {
  */
 class SubgraphProperty {
  public:
+  virtual ~SubgraphProperty() {}
   /*! \brief Property type */
   enum SgPropertyType {
     kCreate,
@@ -357,6 +358,14 @@ class SubgraphProperty {
                                      std::vector<nnvm::NodeEntry>* orig_input_entries) const {
     subgraph_node->inputs = *orig_input_entries;
   }
+  /*!
+   * \brief Initialize subgraph internal inputs with external input entries.
+   * Called before CreateSubgraphNode, optional
+   * \param input_entries input entries inside subgraph
+   * \param orig_input_entries input entries outside subgraph
+   */
+  virtual void InitSubgraphInputs(std::vector<nnvm::NodeEntry*>* input_entries,
+                                  std::vector<nnvm::NodeEntry>* orig_input_entries) const {}
   /*!
    * \brief Set an attr with name in the attr map.
    */

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,10 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Disable brew auto-update to avoid long running updates while running tests in CI.
-export HOMEBREW_NO_AUTO_UPDATE=1
+# Explicitly set GENERATED property https://gitlab.kitware.com/cmake/cmake/issues/18399
+set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/../../include/mxnet-cpp/op.h PROPERTY GENERATED 1)
 
-if [ ${TRAVIS_OS_NAME} == "osx" ]; then
-    brew install opencv
-    python -m pip install --user nose numpy cython scipy requests mock nose-timer nose-exclude mxnet-to-coreml
-fi
+add_executable(imagenet_inference "imagenet_inference.cpp")
+target_link_libraries(imagenet_inference mxnet_cpp)

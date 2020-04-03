@@ -1155,7 +1155,7 @@ inline bool NumpyRollShape(const nnvm::NodeAttrs& attrs,
   return ElemwiseShape<1, 1>(attrs, in_attrs, out_attrs);
 }
 
-NNVM_REGISTER_OP(_np_roll)
+NNVM_REGISTER_OP(_npi_roll)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyRollParam>)
@@ -1180,7 +1180,7 @@ NNVM_REGISTER_OP(_np_roll)
      os1 << dmlc::optional<mxnet::TShape>(shifts);
      std::ostringstream os2;
      os2 << param.axis;
-     return MakeNonlossGradNode("_np_roll", n, ograds, {},
+     return MakeNonlossGradNode("_npi_roll", n, ograds, {},
                                 {{"shift", os1.str()}, {"axis", os2.str()}});
 })
 .set_attr<FResourceRequest>("FResourceRequest",
@@ -1435,7 +1435,7 @@ NNVM_REGISTER_OP(_npi_dsplit)
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(SplitParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_np_diag)
+NNVM_REGISTER_OP(_npi_diag)
 .set_attr_parser(ParamParser<NumpyDiagParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -1446,18 +1446,18 @@ NNVM_REGISTER_OP(_np_diag)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagOpShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyDiagOpType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_diag"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diag"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyDiagParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_diag)
+NNVM_REGISTER_OP(_backward_npi_diag)
 .set_attr_parser(ParamParser<NumpyDiagParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpBackward<cpu>);
 
-NNVM_REGISTER_OP(_np_diagonal)
+NNVM_REGISTER_OP(_npi_diagonal)
 .set_attr_parser(ParamParser<NumpyDiagonalParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -1468,11 +1468,11 @@ NNVM_REGISTER_OP(_np_diagonal)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagonalOpShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyDiagonalOpType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diagonal"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diagonal"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyDiagonalParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_diagonal)
+NNVM_REGISTER_OP(_backward_npi_diagonal)
 .set_attr_parser(ParamParser<NumpyDiagonalParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

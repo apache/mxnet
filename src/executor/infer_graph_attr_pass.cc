@@ -521,7 +521,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   }
   // number of nodes who knows the shape.
   ret.attrs[unknown_name] = std::make_shared<any>(num_unknown);
-  return ret;
+  return std::move(ret);
 }
 
 /*!\brief
@@ -812,7 +812,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   }
   // number of nodes who knows the shape.
   ret.attrs[unknown_name] = std::make_shared<any>(num_unknown);
-  return ret;
+  return std::move(ret);
 }
 
 nnvm::Graph InferShape(nnvm::Graph&& graph,

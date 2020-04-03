@@ -28,6 +28,7 @@
 #include <mxnet/base.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/broadcast_reduce_op.h"
@@ -37,8 +38,6 @@ namespace op {
 
 struct DiffParam : public dmlc::Parameter<DiffParam> {
   int n, axis;
-  dmlc::optional<mxnet::TShape> prepend;
-  dmlc::optional<mxnet::TShape> append;
   DMLC_DECLARE_PARAMETER(DiffParam) {
     DMLC_DECLARE_FIELD(n).set_default(1).describe(
         "The number of times values are differenced."
@@ -46,6 +45,13 @@ struct DiffParam : public dmlc::Parameter<DiffParam> {
     DMLC_DECLARE_FIELD(axis).set_default(-1).describe(
         "Axis along which the cumulative sum is computed."
         " The default (None) is to compute the diff over the flattened array.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream n_s, axis_s;
+    n_s << n;
+    axis_s << axis;
+    (*dict)["n"] = n_s.str();
+    (*dict)["axis"] = axis_s.str();
   }
 };
 
