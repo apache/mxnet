@@ -496,7 +496,7 @@ void MKLDNNRnnForward::SetWeightsMem(void *w_ptr, void *b_ptr,
 
   const size_t buffer_bytes = this->GetSize()  // byte number of the buffer
       + (param_.workspace_size + param_.reserve_size) * dtype_bytes
-      + kMKLDNNAlign * 7;     // Add margin for alignment of seven times allocation for the 
+      + kMKLDNNAlign * 7;     // Add margin for alignment of seven times allocation for the
                               // dnnl memory handlers, i.e. weights_layer_, weights_iter_,
                               // weights_proj_, bias_, weights_layer_r_, weights_iter_r_,
                               // and weights_proj_r_.
