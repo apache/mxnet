@@ -832,15 +832,15 @@ __device__ inline T reduce(const T& value, OP redfun) {
   static_assert(NTHREADS <= warp_size * warp_size,
                 "Number of threads too large for reduction");
   __shared__ T scratch[NTHREADS / warp_size];
-  const int my_id = threadIdx.x % warp_size;
-  const int my_warp = threadIdx.x / warp_size;
+  const int thread_idx_in_warp = threadIdx.x % warp_size;
+  const int warp_id = threadIdx.x / warp_size;
   const T my_val = warp_reduce<warp_size>(value, redfun);
-  if (my_id == 0) {
-    scratch[my_warp] = my_val;
+  if (thread_idx_in_warp == 0) {
+    scratch[warp_id] = my_val;
   }
   __syncthreads();
   T ret = 0;
-  if (my_warp == 0) {
+  if (warp_id == 0) {
     const T prev_val = threadIdx.x < (NTHREADS / warp_size) ? scratch[threadIdx.x] : 0;
     const T my_val = warp_reduce<NTHREADS / warp_size>(prev_val, redfun);
     if (all_reduce) {

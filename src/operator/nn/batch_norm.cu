@@ -423,12 +423,12 @@ __global__ void FrozenBatchNormalizationBackwardKernelCLastPhase1(
 
   const size_t offset = blockIdx.x * warp_size;
   const int my_warp = threadIdx.x / warp_size;
-  const int my_id = threadIdx.x % warp_size;
+  const int thread_idx_in_warp = threadIdx.x % warp_size;
 
   AType invstd[nvec];  // NOLINT(*)
   AType mean[nvec];  // NOLINT(*)
   AType gamma[nvec];  // NOLINT(*)
-  size_t channel_offset = (offset + my_id) * nvec;
+  size_t channel_offset = (offset + thread_idx_in_warp) * nvec;
 
   if (channel_offset < num_channels) {
 #pragma unroll
@@ -446,9 +446,9 @@ __global__ void FrozenBatchNormalizationBackwardKernelCLastPhase1(
   const int rows_per_block = (outer + gridDim.y - 1) / gridDim.y;
   const size_t start_row = my_warp + rows_per_block * blockIdx.y;
   const size_t end_row = min(outer, static_cast<index_t>(rows_per_block * (blockIdx.y + 1)));
-  if (offset + my_id < stride) {
+  if (offset + thread_idx_in_warp < stride) {
     for (size_t i = start_row; i < end_row; i += num_warps) {
-      const index_t idx = i * stride + offset + my_id;
+      const index_t idx = i * stride + offset + thread_idx_in_warp;
       vec_gradOutput.aligned = aligned_gradOutput[idx];
       vec_input.aligned = aligned_input[idx];
 #pragma unroll
