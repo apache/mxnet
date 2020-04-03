@@ -46,7 +46,7 @@ def test_mkldnn_install():
 
     pid = os.getpid()
     rc = os.system("cat /proc/" + str(pid) +
-                   "/maps | grep libmkldnn > /dev/null")
+                   "/maps | grep libdnnl > /dev/null")
 
     if rc == 0:
         logging.info("MXNet is built/installed correctly with MKL-DNN")
