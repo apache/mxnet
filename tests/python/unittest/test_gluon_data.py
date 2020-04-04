@@ -83,7 +83,7 @@ def _dataset_transform_first_fn(x):
     return x
 
 @with_seed()
-def test_recordimage_dataset_with_data_loader_multiworker():
+def test_recordimage_dataset_with_data_loader_multiworker(): 
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
     loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
@@ -268,11 +268,6 @@ def test_multi_worker_dataloader_release_pool():
     # will trigger too many open file if pool is not released properly
     if os.name == 'nt':
         print('Skip for windows since spawn on windows is too expensive.')
-        return
-
-    from sys import platform
-    if platform == 'darwin':
-        print('Skip for MacOS due to https://github.com/apache/incubator-mxnet/issues/17782')
         return
 
     for _ in range(10):
