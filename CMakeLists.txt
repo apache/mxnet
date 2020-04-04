@@ -68,7 +68,7 @@ option(INSTALL_EXAMPLES "Install the example source files." OFF)
 option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
 option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
 option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
-option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF)
+cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
@@ -254,22 +254,6 @@ if(USE_TENSORRT)
 
   list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
-endif()
-
-# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
-if(ENABLE_TESTCOVERAGE)
-  message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
-  find_program( GCOV_PATH gcov )
-  if(NOT GCOV_PATH)
-    message(FATAL_ERROR "gcov not found! Aborting...")
-  endif() # NOT GCOV_PATH
-
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
-  set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
-  link_libraries(gcov)
 endif()
 
 if(USE_MKLDNN)
@@ -478,8 +462,6 @@ endif()
 include(CTest)
 set(GTEST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/googletest/googletest")
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-#set(GTEST_BOTH_LIBRARIES gtest gtest_main)
-set(GTEST_LIBRARIES gtest gtest_main)
 set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
 
@@ -708,6 +690,11 @@ if(UNIX)
       # Note: "=" is required to avoid breaking ccache
       string(APPEND CMAKE_CUDA_FLAGS " -Werror=cross-execution-space-call")
     endif()
+  endif()
+  if(ENABLE_TESTCOVERAGE)
+    find_program(GCOV_PATH gcov REQUIRED)
+    target_compile_options(mxnet_static PUBLIC "--coverage")
+    target_link_libraries(mxnet_static PUBLIC gcov)
   endif()
 elseif(MSVC)
   if(USE_CUDA)

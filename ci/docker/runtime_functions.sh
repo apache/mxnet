@@ -343,6 +343,7 @@ build_centos7_cpu() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
@@ -372,7 +373,6 @@ build_centos7_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
@@ -401,8 +401,9 @@ build_ubuntu_cpu() {
 build_ubuntu_cpu_openblas() {
     set -ex
     cd /work/build
-    cmake \
+    CXXFLAGS="-Wno-error=strict-overflow" cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
         -DUSE_CPP_PACKAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -437,6 +438,7 @@ build_ubuntu_cpu_mkl() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -450,13 +452,14 @@ build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
         -G Ninja \
         /work/mxnet
     ninja
@@ -639,12 +642,13 @@ build_ubuntu_cpu_mkldnn() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_MKL_IF_AVAILABLE=OFF \
-       -DUSE_TVM_OP=ON \
-       -DUSE_MKLDNN=ON \
-       -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
-       -G Ninja /work/mxnet
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_CPP_PACKAGE=ON \
+        -G Ninja /work/mxnet
     ninja
 }
 
@@ -653,6 +657,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -922,7 +927,6 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
         -DUSE_MKLDNN=OFF                        \
-        -DCMAKE_BUILD_TYPE=Release              \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
