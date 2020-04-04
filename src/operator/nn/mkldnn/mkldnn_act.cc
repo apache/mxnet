@@ -244,7 +244,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx
   const NDArray &in_grad = outputs[0];
   MKLDNNActParam param_;
   param_.alg = GetMKLDNNActAlgo(param);
-  // TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
+  TmpMemMgr::Get()->Init(ctx.requested[activation::kTempSpace]);
   auto diff_dst_memory = out_buffer.GetMKLDNNData();
   auto input_mem = in_buffer.GetMKLDNNData();
   // We need to make sure the two inputs to eltwise_backward has the same memory
@@ -258,6 +258,7 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx
   mkldnn_args_map_t args = {{MKLDNN_ARG_SRC, *input_mem},
                             {MKLDNN_ARG_DIFF_DST, *diff_dst_memory}};
   if (req[0] != kAddTo) {
+    // req[0] is kWriteTo or kWriteInplace
     auto diff_src_memory = in_grad.GetMKLDNNData(bwd.bwd_pd.diff_src_desc());
     args.insert({MKLDNN_ARG_DIFF_SRC, *diff_src_memory});
     stream->RegisterPrimArgs(bwd.GetBwd(), args);
