@@ -6542,6 +6542,9 @@ def test_np_unique():
     configs = [
         ((), True, True, True, None),
         ((1, ), True, True, True, -1),
+        ((5, ), False, False, False, 0),
+        ((5, ), True, False, False, 0),
+        ((5, ), True, True, False, 0),
         ((5, ), True, True, True, 0),
         ((5, ), True, True, True, None),
         ((5, 4), True, True, True, None),
@@ -6562,15 +6565,24 @@ def test_np_unique():
                 x = np.array(x, dtype=dtype)
                 np_out = _np.unique(x.asnumpy(), *config[1:])
                 mx_out = test_unique(x)
-                assert mx_out[0].shape == np_out[0].shape
-                for i in range(4):
-                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+                if (len(mx_out)) == 1:
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                else:
+                    for i in range(len(mx_out)):
+                        assert mx_out[i].shape == np_out[i].shape
+                        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
                 # Test imperative once again
                 mx_out = np.unique(x, *config[1:])
                 np_out = _np.unique(x.asnumpy(), *config[1:])
-                for i in range(4):
-                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+                if (len(mx_out)) == 1:
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                else:
+                    for i in range(len(mx_out)):
+                        assert mx_out[i].shape == np_out[i].shape
+                        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -7374,6 +7386,46 @@ def test_np_share_memory():
                 assert not op(x, np.ones((5, 0), dtype=adt))
                 assert not op(np.ones((5, 0), dtype=adt), x)
                 assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
+
+
+def test_np_median():
+    class TestMedian(HybridBlock):
+        def __init__(self, axis=None, keepdims=False):
+            super(TestMedian, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a):
+            return F.np.median(a, axis=self._axis, keepdims=self._keepdims)
+
+    flags = [True, False]
+    dtypes = ['float16', 'float32', 'float64']
+    qtypes = ['float32', 'float64']
+    tensor_shapes = [
+        ((2, 3), None),
+        ((2, 3, 4, 5), 3),
+        ((2, 3, 4), (0, 2)),
+        ((2, 3, 4), 1)
+    ]
+
+    for hybridize, keepdims, (a_shape, axis), dtype in \
+        itertools.product(flags, flags, tensor_shapes, dtypes):
+        atol = 3e-4 if dtype == 'float16' else 1e-4
+        rtol = 3e-2 if dtype == 'float16' else 1e-2
+        test_median = TestMedian(axis=axis, keepdims=keepdims)
+        if hybridize:
+            test_median.hybridize()
+        a = np.random.uniform(-1.0, 1.0, size=a_shape)
+        np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
+        mx_out = test_median(a)
+        
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.median(a, axis=axis, keepdims=keepdims)
+        np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
+
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
 @with_seed()
