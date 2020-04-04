@@ -420,8 +420,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         ss << "[";
         for (unsigned i=0; i < sym.outputs.size(); i++) {
           const nnvm::NodeEntry& e = sym.outputs[i];
-          if (e.node->attrs.dict.count("__shape__") > 0) {
-            std::string& shape = e.node->attrs.dict["__shape__"];
+          if (e.node->attrs.dict.count(MX_STR_SHAPE) > 0) {
+            std::string& shape = e.node->attrs.dict[MX_STR_SHAPE];
             // add this shape to the list
             ss << getShapeAt(shape, e.index);
           }
@@ -429,7 +429,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
             ss << ",";
         }
         ss << "]";
-        n->attrs.dict["__shape__"] = ss.str();
+        n->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
       // set dtypes
       {
@@ -437,8 +437,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         ss << "[";
         for (unsigned i=0; i < sym.outputs.size(); i++) {
           const nnvm::NodeEntry& e = sym.outputs[i];
-          if (e.node->attrs.dict.count("__dtype__") > 0) {
-            std::string& dtype = e.node->attrs.dict["__dtype__"];
+          if (e.node->attrs.dict.count(MX_STR_DTYPE) > 0) {
+            std::string& dtype = e.node->attrs.dict[MX_STR_DTYPE];
             // add this dtype to the list
             ss << getDtypeAt(dtype, e.index);
           }
@@ -446,7 +446,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
             ss << ",";
         }
         ss << "]";
-        n->attrs.dict["__dtype__"] = ss.str();
+        n->attrs.dict[MX_STR_DTYPE] = ss.str();
       }
       // set user specified attributes
       for (auto attr : user_attrs)
@@ -479,21 +479,21 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       }
 
       // pass down other attributes if available
-      if (orig.node->attrs.dict.count("__dtype__") > 0) {
+      if (orig.node->attrs.dict.count(MX_STR_DTYPE) > 0) {
         // get dtype string from other node
-        std::string& dtype = orig.node->attrs.dict["__dtype__"];
+        std::string& dtype = orig.node->attrs.dict[MX_STR_DTYPE];
         std::stringstream ss;
         ss << "[" << getDtypeAt(dtype, orig.index) << "]";
-        e->node->attrs.dict["__dtype__"] = ss.str();
+        e->node->attrs.dict[MX_STR_DTYPE] = ss.str();
       }
 
-      if (orig.node->attrs.dict.count("__shape__") > 0) {
+      if (orig.node->attrs.dict.count(MX_STR_SHAPE) > 0) {
         // get shape string from other node
-        std::string& shape = orig.node->attrs.dict["__shape__"];
+        std::string& shape = orig.node->attrs.dict[MX_STR_SHAPE];
         // create new shape string for this node
         std::stringstream ss;
         ss << "[" << getShapeAt(shape, orig.index) << "]";
-        e->node->attrs.dict["__shape__"] = ss.str();
+        e->node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
   }

@@ -662,6 +662,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
     const std::string name = inode.source->attrs.name;
     const uint32_t num_inputs = inode.inputs.size();
     const uint32_t num_outputs = inode.source->num_outputs();
+
     if (inode.source->is_variable()) {
       // Variable node. No operator. Only one output entry.
       CHECK(inode.source->op() == nullptr);
@@ -675,7 +676,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
           if (!Imperative::Get()->is_np_shape()) {
             common::ConvertToNumpyShape(&rshape[out_ent_id]);
           }
-        }
+	}
       }
       if (!fis_none(rshape[out_ent_id])) {
         inference_finished[nid] = true;

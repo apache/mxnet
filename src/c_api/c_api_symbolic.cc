@@ -1460,16 +1460,6 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     // cannot find graph pass or subgraph backend registered in this name
     LOG(ERROR) << "Error optimizing for backend '" << backend_name << "' cannot be found";
   }
-
-  {
-    // remove temporary attributes from shape/type inference
-    const auto& indexed_graph = g.indexed_graph();
-    for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
-      nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
-      node->attrs.dict.erase("__shape__");
-      node->attrs.dict.erase("__dtype__");
-    }
-  }
   s->outputs = g.outputs;
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);

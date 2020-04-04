@@ -512,8 +512,8 @@ class OpResource {
  */
 /*! \brief Macro to help passing serialized subgraph through attribute dict */
 #define MX_STR_SUBGRAPH_SYM_JSON "subgraph_sym_json"
-#define MX_STR_DTYPE "__dtype__"
-#define MX_STR_SHAPE "__shape__"
+#define MX_STR_DTYPE "__ext_dtype__"
+#define MX_STR_SHAPE "__ext_shape__"
 
 /* \brief get shape value from list of shapes string
  * format: [[1]] or [[1],[2]]
