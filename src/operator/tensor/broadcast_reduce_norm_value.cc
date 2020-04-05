@@ -28,6 +28,107 @@ namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(NormParam);
 
+bool supportDfltAxisLpNormCompute(const NormParam& param,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req) {
+  // check the axis = last dim
+  if (param.axis.has_value()) {
+    mxnet::TShape axes(param.axis.value());
+    if (!(axes.ndim() == 1 && (axes[0] == inputs[0].shape_.ndim() - 1 || axes[0] == -1))) {
+      return false;
+    }
+  }
+
+  if (param.ord == 1 && inputs[0].type_flag_ == mshadow::kFloat32
+      && param.keepdims == false && req[0] == kWriteTo) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool DfltAxisLpNormCompute(const std::vector<TBlob>& inputs,
+                         const std::vector<OpReqType>& req,
+                         const std::vector<TBlob>& outputs,
+                         int ord) {
+  auto& in_data = inputs[0];
+  int axis =  in_data.shape_.ndim() - 1;
+  auto& shape = in_data.shape_;
+  float* pin_data = static_cast<float*>(in_data.dptr<float>());
+
+  const size_t last_dim = shape[axis];
+  const int stride = outputs[0].Size();
+  float* pout_data = static_cast<float*>(outputs[0].dptr<float>());
+
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int i = 0; i < stride; i++) {
+    int idx = i*last_dim;
+    float sum = 0.0;
+    for (size_t j = 0; j < last_dim; j++) {
+      float in_data = pin_data[idx++];
+      sum += in_data > 0 ? in_data : -in_data;
+    }
+    pout_data[i] = sum;
+  }
+  return true;
+}
+
+void LpNormComputeCpu(const nnvm::NodeAttrs& attrs,
+                   const OpContext& ctx,
+                   const std::vector<TBlob>& inputs,
+                   const std::vector<OpReqType>& req,
+                   const std::vector<TBlob>& outputs) {
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  if (supportDfltAxisLpNormCompute(param, inputs, req)) {
+    DfltAxisLpNormCompute(inputs, req, outputs, param.ord);
+  } else {
+    LpNormCompute<cpu>(attrs, ctx, inputs, req, outputs);
+  }
+  return;
+}
+
+bool DfltAxisLpNormGradCompute(const std::vector<TBlob>& inputs,
+                             const std::vector<OpReqType>& req,
+                             const std::vector<TBlob>& outputs,
+                             int ord) {
+  auto&  in_grad = inputs[0];
+  auto&  in_data = inputs[1];
+  auto shape = in_grad.shape_;
+  const int stride = shape.Size();
+  float* pin_grad = static_cast<float*>(in_grad.dptr<float>());
+  float* psrc_data = static_cast<float*>(in_data.dptr<float>());
+
+  auto&  out_grad = outputs[0];
+  int axis =  out_grad.shape_.ndim() - 1;
+  const size_t last_dim = out_grad.shape_[axis];
+  float* pout_grad = static_cast<float*>(out_grad.dptr<float>());
+
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
+  for (int i = 0; i < stride; i++) {
+    int idx = i*last_dim;
+    float in_grad_val = pin_grad[i];
+    for (size_t j = 0; j < last_dim; j++) {
+      pout_grad[idx] = psrc_data[idx] >0 ? in_grad_val : -in_grad_val;
+      idx++;
+    }
+  }
+  return true;
+}
+
+void LpNormGradComputeCpu(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  const NormParam& param = nnvm::get<NormParam>(attrs.parsed);
+  if (supportDfltAxisLpNormCompute(param, inputs, req)) {
+    DfltAxisLpNormGradCompute(inputs, req, outputs, param.ord);
+  }  else {
+    LpNormGradCompute<cpu>(attrs, ctx, inputs, req, outputs);
+  }
+  return;
+}
+
 template<>
 void L2NormComputeEx<cpu>(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
@@ -99,7 +200,7 @@ Examples::
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<FCompute>("FCompute<cpu>", LpNormCompute<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", LpNormComputeCpu)
 .set_attr<FComputeEx>("FComputeEx<cpu>", L2NormComputeEx<cpu>)
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(NormParam::__FIELDS__());
@@ -113,7 +214,7 @@ NNVM_REGISTER_OP(_backward_norm)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", LpNormGradCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", LpNormGradComputeCpu);
 
 
 }  // namespace op

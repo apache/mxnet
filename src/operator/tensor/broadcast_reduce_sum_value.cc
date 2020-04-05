@@ -26,6 +26,46 @@
 
 namespace mxnet {
 namespace op {
+template<typename DType, typename OType, bool normalize = false>
+void ReduceDefaultAxesSumCompute(const std::vector<TBlob>& inputs,
+                                 const std::vector<TBlob>& outputs) {
+  const int in_size = inputs[0].shape_.Size();
+  DType* p_in_data = inputs[0].dptr<DType>();
+  double sum = 0;
+  #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount()) \
+                       reduction(+:sum)
+  for (int i = 0; i < in_size; i++) {
+    sum += (OType)p_in_data[i];
+  }
+  outputs[0].dptr<OType>()[0] = normalize ? (OType)(sum/in_size) : (OType)sum;
+}
+
+
+template<typename xpu, typename reducer, bool normalize = false,
+         typename OP = op::mshadow_op::identity>
+void ReduceAxesSumComputeCpu(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  const ReduceAxesParam& param = nnvm::get<ReduceAxesParam>(attrs.parsed);
+
+  if (outputs[0].shape_.Size() == 1 && req[0] == kWriteTo) {
+    MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+        ReduceDefaultAxesSumCompute<DType, OType, normalize>(inputs, outputs);
+      });
+    });
+  } else {
+    mxnet::TShape small;
+    if (param.keepdims) {
+      small = outputs[0].shape_;
+    } else {
+      small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, param.exclude);
+    }
+    ReduceAxesComputeImpl<xpu, reducer, false, normalize, OP>(ctx, inputs, req, outputs, small);
+  }
+}
 
 MXNET_OPERATOR_REGISTER_REDUCE(sum)
 MXNET_ADD_SPARSE_OP_ALIAS(sum)
@@ -63,9 +103,8 @@ Example::
 
   sum(csr, axis=1)
   [ 3.  4.  5.]
-
 )code" ADD_FILELINE)
-.set_attr<FCompute>("FCompute<cpu>", ReduceAxesCompute<cpu, mshadow::red::sum>)
+.set_attr<FCompute>("FCompute<cpu>", ReduceAxesSumComputeCpu<cpu, mshadow::red::sum>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", ReduceAxesOpForwardEx<cpu, mshadow::red::sum>)
 .set_attr<FInferStorageType>("FInferStorageType", ReduceAxesOpForwardStorage)
 .set_attr<FResourceRequest>("FResourceRequest",

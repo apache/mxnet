@@ -1770,7 +1770,7 @@ def test_norm(ctx=default_context()):
         mx_arr = mx.nd.array(np_arr, ctx=ctx)
         for ord in [1, 2]:
             for keep_dims in [True, False]:
-                for i in range(4):
+                for i in range(in_data_dim):
                     npy_out = l1norm(np_arr, i, keep_dims) if ord == 1 else l2norm(
                         np_arr, i, keep_dims)
                     mx_out = mx.nd.norm(mx_arr, ord=ord, axis=i, keepdims=keep_dims)
