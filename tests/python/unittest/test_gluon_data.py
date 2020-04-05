@@ -83,7 +83,7 @@ def _dataset_transform_first_fn(x):
     return x
 
 @with_seed()
-def test_recordimage_dataset_with_data_loader_multiworker(): 
+def test_recordimage_dataset_with_data_loader_multiworker():
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
     loader = gluon.data.DataLoader(dataset, 1, num_workers=5)
