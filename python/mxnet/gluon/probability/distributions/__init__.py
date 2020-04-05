@@ -41,6 +41,8 @@ from .half_cauchy import *
 
 from .poisson import *
 
+from .geometric import *
+
 from .gamma import *
 
 from .dirichlet import *

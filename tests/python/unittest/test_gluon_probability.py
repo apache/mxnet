@@ -41,6 +41,9 @@ from numbers import Number
 
 # set_default_context(mx.gpu(0))
 
+def prob_to_logit(prob):
+    return np.log(prob) - np.log1p(-prob)
+
 def _distribution_method_invoker(dist, func, *args):
     """Wrapper for invoking different types of class methods
     with one unified interface.
@@ -446,6 +449,66 @@ def test_gluon_poisson():
         np_out = ss.poisson(mu=rate.asnumpy()).logpmf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
+def test_gluon_geometric():
+    class TestGeometric(HybridBlock):
+        def __init__(self, func, is_logit=False):
+            super(TestGeometric, self).__init__()
+            self._is_logit = is_logit
+            self._func = func
+
+        def hybrid_forward(self, F, params, *args):
+            dist = mgp.Geometric(logit=params, F=F) if self._is_logit else \
+                        mgp.Geometric(prob=params, F=F)
+            return _distribution_method_invoker(dist, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+    # Test log_prob
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        prob = np.random.uniform(size=shape)
+        sample = np.random.randint(0, 10, size=shape).astype('float32')
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestGeometric("log_prob", use_logit)
+        if hybridize:
+            net.hybridize()
+        mx_out = net(param, sample).asnumpy()
+        np_out = ss.geom.logpmf(sample.asnumpy() + 1, prob.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
+
+    # Test variance
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        prob = np.random.uniform(size=shape)
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestGeometric("variance", use_logit)
+        if hybridize:
+            net.hybridize()
+        mx_out = net(param).asnumpy()
+        np_out = ss.geom(prob.asnumpy()).var()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
+
+    # Test entropy
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        # Add lower bound constraint, otherwise scipy would raise warning. 
+        prob = np.random.uniform(low=0.1, size=shape) 
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestGeometric("entropy", use_logit)
+        if hybridize:
+            net.hybridize()
+        mx_out = net(param).asnumpy()
+        np_out = ss.geom(prob.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
 
 
 @with_seed()
@@ -1038,9 +1101,6 @@ def test_gluon_bernoulli():
                         mgp.Bernoulli(prob=params, F=F)
             return _distribution_method_invoker(bernoulli, self._func, *args)
 
-    def prob_to_logit(prob):
-        return np.log(prob) - np.log1p(-prob)
-
     # Test log_prob
     shapes = [(), (1,), (2, 3), 6]
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
@@ -1086,23 +1146,6 @@ def test_gluon_bernoulli():
         np_out = ss.bernoulli(prob.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
-
-    # Test constraint violation
-    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
-        prob = np.random.uniform(size=shape)
-        sample = npx.random.bernoulli(prob=0.5, size=shape) + 0.1
-        param = prob
-        if use_logit:
-            param = prob_to_logit(param)
-        net = TestBernoulli("log_prob", use_logit)
-        if hybridize:
-            net.hybridize()
-        try:
-            mx_out = net(param, sample).asnumpy()
-        except ValueError:
-            pass
-        else:
-            assert False
 
 
 @with_seed()
