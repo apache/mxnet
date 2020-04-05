@@ -43,6 +43,8 @@ from .poisson import *
 
 from .geometric import *
 
+from .negative_binomial import *
+
 from .gamma import *
 
 from .dirichlet import *

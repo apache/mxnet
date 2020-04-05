@@ -513,6 +513,59 @@ def test_gluon_geometric():
 
 @with_seed()
 @use_np
+def test_gluon_negative_binomial():
+    class TestNegativeBinomial(HybridBlock):
+        def __init__(self, func, is_logit=False):
+            super(TestNegativeBinomial, self).__init__()
+            self._is_logit = is_logit
+            self._func = func
+
+        def hybrid_forward(self, F, n, params, *args):
+            dist = mgp.NegativeBinomial(n=n, logit=params, F=F) if self._is_logit else \
+                        mgp.NegativeBinomial(n=n, prob=params, F=F)
+            return _distribution_method_invoker(dist, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+    # Test log_prob
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        n = np.random.randint(1, 10, size=shape).astype('float32')
+        prob = np.random.uniform(low=0.1, size=shape)
+        sample = np.random.randint(0, 10, size=shape).astype('float32')
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestNegativeBinomial("log_prob", use_logit)
+        if hybridize:
+            net.hybridize()
+        mx_out = net(n, param, sample).asnumpy()
+        np_out = ss.nbinom(n=n.asnumpy(), p=prob.asnumpy()).logpmf(sample.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
+
+    # Test mean and variance
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        for func in ['mean', 'variance']:
+            for use_logit in [True, False]:
+                n = np.random.randint(1, 10, size=shape).astype('float32')
+                prob = np.random.uniform(low=0.1, size=shape)
+                net = TestNegativeBinomial(func, use_logit)
+                param = prob
+                if use_logit:
+                    param = prob_to_logit(param)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(n, param).asnumpy()
+                ss_nbinom = ss.nbinom(n=n.asnumpy(), p=1 - prob.asnumpy())
+                if func == 'mean':
+                    np_out = ss_nbinom.mean()
+                else:
+                    np_out = ss_nbinom.var()
+                assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                    rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_exponential():
     class TestExponential(HybridBlock):
         def __init__(self, func):

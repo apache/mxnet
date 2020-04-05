@@ -17,20 +17,25 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Geometric distribution class."""
-__all__ = ['Geometric']
+"""Negative binomial distribution class."""
+__all__ = ['NegativeBinomial']
 
 from .distribution import Distribution
+from .poisson import Poisson
+from .gamma import Gamma
 from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
-from .constraint import NonNegativeInteger, Interval, Real
+from .utils import gammaln
+from .constraint import GreaterThanEq, Interval, Real, NonNegativeInteger
 from numbers import Number
 
 
-class Geometric(Distribution):
-    r"""Create a geometric distribution object.
+class NegativeBinomial(Distribution):
+    r"""Create a negative binomial distribution object.
 
     Parameters
     ----------
+    n : Tensor or scalar
+        Non-negative number of negative Bernoulli trials to stop.
     prob : Tensor or scalar, default None
         Probability of sampling `1`.
     logit : Tensor or scalar, default None
@@ -41,11 +46,12 @@ class Geometric(Distribution):
     """
 
     support = NonNegativeInteger()
-    arg_constraints = {'prob': Interval(0, 1),
+    arg_constraints = {'n' : GreaterThanEq(0),
+                       'prob': Interval(0, 1),
                        'logit': Real()}
 
-    def __init__(self, prob=None, logit=None, F=None, validate_args=None):
-        _F = F if F is not None else getF(prob, logit)
+    def __init__(self, n, prob=None, logit=None, F=None, validate_args=None):
+        _F = F if F is not None else getF(n, prob, logit)
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
@@ -55,7 +61,8 @@ class Geometric(Distribution):
             self.prob = prob
         else:
             self.logit = logit
-        super(Geometric, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        self.n = n
+        super(NegativeBinomial, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -81,11 +88,14 @@ class Geometric(Distribution):
 
     @property
     def mean(self):
-        return 1 / self.prob - 1
+        F = self.F
+        return self.n * F.np.exp(self.logit)
 
     @property
     def variance(self):
-        return (1 / self.prob - 1) / self.prob
+        F = self.F
+        prob = self.prob
+        return self.n * prob / (1 - prob) ** 2
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
@@ -94,7 +104,8 @@ class Geometric(Distribution):
             new_instance.prob = F.np.broadcast_to(self.prob, batch_shape)
         else:
             new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
-        super(Geometric, new_instance).__init__(F=F,
+        new_instance.n = F.np.broadcast_to(self.n, batch_shape) 
+        super(NegativeBinomial, new_instance).__init__(F=F,
                                                 event_dim=self.event_dim,
                                                 validate_args=False)
         new_instance._validate_args = self._validate_args
@@ -102,26 +113,20 @@ class Geometric(Distribution):
 
     def log_prob(self, value):
         F = self.F
-        prob = self.prob
-        return value * F.np.log1p(-prob) + F.np.log(prob)
+        lgamma = gammaln(F)
+        binomal_coef = lgamma(value + self.n) - lgamma(1 + value) - lgamma(self.n)
+        # log(prob) may have numerical issue.
+        unnormalized_log_prob = self.n * F.np.log(self.prob) + value * F.np.log1p(-self.prob)
+        return binomal_coef + unnormalized_log_prob
 
     def sample(self, size=None):
         F = self.F
-        if isinstance(self.prob, Number):
-            shape_tensor = F.np.zeros(())
-        else:
-            shape_tensor = F.np.zeros_like(self.prob)
-        u = F.np.random.uniform(shape_tensor, size=size)
-        samples = F.np.floor(
-            F.np.log(u) / F.np.log1p(-self.prob)
-        )
-        return samples
+        # Sample via Poisson-Gamma mixture
+        rate = Gamma(shape=self.n, scale=F.np.exp(self.logit), F=F).sample(size)
+        return Poisson(rate, F=F).sample()
 
     def sample_n(self, size=None):
-        return self.sample(sample_n_shape_converter(size))
-
-    def entropy(self):
         F = self.F
-        logit = self.logit
-        prob = self.prob
-        return -(logit * (prob - 1) - F.np.log1p(F.np.exp(-logit))) / prob
+        # Sample via Poisson-Gamma mixture
+        rate = Gamma(shape=self.n, scale=F.np.exp(self.logit), F=F).sample_n(size)
+        return Poisson(rate, F=F).sample()
