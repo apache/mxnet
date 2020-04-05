@@ -44,6 +44,7 @@ namespace mshadow_op {
 
 using mshadow::isnan_typed::IsNan;
 using mshadow::isinf_typed::IsInf;
+using mshadow::red::sum;
 
 #ifdef __CUDA_ARCH__
 __constant__ const float PI = 3.14159265358979323846;
@@ -1231,7 +1232,15 @@ struct relu_grad : public mxnet_op::tunable {
 };
 
 /*! \brief used for computing binary operator maximum */
-struct maximum : public mshadow::red::maximum, public mxnet_op::tunable {
+struct maximum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (IsNan(a)) {
+      return a;
+    } else {
+      return (a > b ? a : b);
+    }
+  }
 };
 
 /*! \brief used for computing binary operator fmax */
@@ -1249,7 +1258,15 @@ struct fmax : public mxnet_op::tunable {
 };
 
 /*! \brief used for computing binary operator minimum */
-struct minimum : public mshadow::red::minimum, public mxnet_op::tunable {
+struct minimum : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType b) {
+    if (IsNan(a)) {
+      return a;
+    } else {
+      return DType(a < b ? a : b);
+    }
+  }
 };
 
 /*! \brief used for computing binary operator fmin */
@@ -1264,10 +1281,6 @@ struct fmin : public mxnet_op::tunable {
       return (a < b ? a : b);
     }
   }
-};
-
-/*! \brief sum reducer */
-struct sum : public mshadow::red::sum, public mxnet_op::tunable {
 };
 
 /*! \brief boolean any/all kernel that determines whether elem is NonZero */
