@@ -30,7 +30,8 @@ to communicate parameters between workers. There is no dedicated server and the 
 between workers does not depend on the number of workers. Therefore, it scales well in the case where 
 there are a large number of workers and network bandwidth is the bottleneck.
 
-# Install
+# Setup
+
 ## Install MXNet
 ```bash
 $ pip install mxnet
@@ -52,6 +53,10 @@ Steps to install Open MPI are listed [here](https://www.open-mpi.org/faq/?catego
 
 **Note**: Open MPI 3.1.3 has an issue that may cause hangs.  It is recommended
 to downgrade to Open MPI 3.1.2 or upgrade to Open MPI 4.0.0.
+
+## On Kubernetes
+
+Distributed MXNet jobs with Horovod can be submitted to a Kubernetes cluster via [Kubeflow MPI Operator](https://github.com/kubeflow/mpi-operator). Please refer to [this example](https://github.com/kubeflow/mpi-operator/tree/master/examples/mxnet) for details, including the Dockerfile with all the dependencies mentioned in previous sections, distributed training Python script based on Horovod, and the YAML configuration file that can be used for submitting a job on a Kubernetes cluster.
 
 # Usage
 
