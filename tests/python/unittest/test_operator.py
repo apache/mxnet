@@ -3127,6 +3127,7 @@ def test_broadcast_like_different_types():
     y = mx.nd.array(y).astype('int32')
     z = mx.nd.broadcast_like(x, y)
     assert_allclose(z.asnumpy(), [[0,0],[0,0]])
+    assert x.dtype == z.dtype
 
 @with_seed()
 def test_flip():
