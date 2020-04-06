@@ -553,10 +553,10 @@ build_ubuntu_gpu_clang10_werror() {
     ninja
 }
 
-build_ubuntu_cpu_clang39() {
+build_ubuntu_cpu_clang6() {
     set -ex
     cd /work/build
-    CXX=clang++-3.9 CC=clang-3.9 cmake \
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
@@ -601,10 +601,10 @@ build_ubuntu_cpu_clang_tidy() {
     $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
 }
 
-build_ubuntu_cpu_clang39_mkldnn() {
+build_ubuntu_cpu_clang6_mkldnn() {
     set -ex
     cd /work/build
-    CXX=clang++-3.9 CC=clang-3.9 cmake \
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \

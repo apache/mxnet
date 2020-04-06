@@ -29,8 +29,8 @@ fi
 
 WORKSPACE=$( echo "$1" | tr '[:upper:]' '[:lower:]' )
 
-PYTHON_VERSIONS=('2.7' '3.4' '3.6' '3.5')
-DEVICES=('pip_cu75' 'pip_cu80' 'pip_cpu')
+PYTHON_VERSIONS=('3.5' '3.6')
+DEVICES=('pip_cu92' 'pip_cu101' 'pip_cpu')
 
 CI_BUILD_DIR=tests/ci_build/pip_tests
 # build Docker images and test pip installation for each device
@@ -61,10 +61,10 @@ for DEV in "${DEVICES[@]}"; do
         DOCKER_CMD="virtualenv -p \"/usr/bin/${PYTHON}\" ${PYTHON}; source \"${PYTHON}/bin/activate\"; cd ${WORKSPACE};"
         if [[ "${DEV}" == *"cpu"* ]]; then
             DOCKER_CMD="${DOCKER_CMD} pip install mxnet --pre; python tests/python/train/test_conv.py"
-        elif [[ "${DEV}" == *"cu75"* ]]; then
-            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu75 --pre; python tests/python/train/test_conv.py --gpu"
-        elif [[ "${DEV}" == *"cu80"* ]]; then
-            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu80 --pre; python tests/python/train/test_conv.py --gpu"
+        elif [[ "${DEV}" == *"cu92"* ]]; then
+            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu92 --pre -f pip install --pre mxnet -f https://dist.mxnet.io/python/cu92; python tests/python/train/test_conv.py --gpu"
+        elif [[ "${DEV}" == *"cu101"* ]]; then
+            DOCKER_CMD="${DOCKER_CMD} pip install mxnet-cu101 --pre -f https://dist.mxnet.io/python/cu101; python tests/python/train/test_conv.py --gpu"
         fi
         ${DOCKER_BINARY} run --rm -v ${WORKSPACE}:${WORKSPACE} -w ${WORKSPACE} ${DOCKER_TAG} bash -c "tests/jenkins/run_as_user.sh `id -u` `id -un` `id -g` `id -un` '${DOCKER_CMD}'"
     done

@@ -422,13 +422,13 @@ def compile_centos7_gpu() {
     }]
 }
 
-def compile_unix_clang_3_9_cpu() {
-    return ['CPU: Clang 3.9': {
+def compile_unix_clang_6_cpu() {
+    return ['CPU: Clang 6': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-cpu-clang39') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang6', false)
           }
         }
       }
@@ -462,13 +462,13 @@ def compile_unix_clang_tidy_cpu() {
     }]
 }
 
-def compile_unix_clang_3_9_mkldnn_cpu() {
-    return ['CPU: Clang 3.9 MKLDNN': {
+def compile_unix_clang_6_mkldnn_cpu() {
+    return ['CPU: Clang 6 MKLDNN': {
       node(NODE_LINUX_CPU) {
-        ws('workspace/build-cpu-mkldnn-clang39') {
+        ws('workspace/build-cpu-mkldnn-clang6') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang39_mkldnn', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_clang6_mkldnn', false)
           }
         }
       }

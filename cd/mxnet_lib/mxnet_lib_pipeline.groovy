@@ -42,8 +42,7 @@ def get_pipeline(mxnet_variant, build_fn) {
           }
         }
 
-        // Add quantization tests for all cu variants except cu80
-        if (mxnet_variant.startsWith('cu') && !mxnet_variant.startsWith('cu80')) {
+        if (mxnet_variant.startsWith('cu')) {
           tests["${mxnet_variant}: Quantization Python 3"] = {
             stage("${mxnet_variant}: Quantization Python 3") {
               timeout(time: max_time, unit: 'MINUTES') {
