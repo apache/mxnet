@@ -73,6 +73,9 @@ ENV CUDNN_VERSION=7.6.5.32
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
+COPY install/thrust.sh /work/
+RUN /work/thrust.sh
+
 COPY install/ubuntu_binutils.sh /work/
 RUN /work/ubuntu_binutils.sh
 

@@ -541,6 +541,10 @@ build_ubuntu_gpu_clang10_werror() {
     # Disable cpp package as OpWrapperGenerator.py dlopens libmxnet.so,
     # requiring presence of cuda driver libraries that are missing on CI host
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/lib/stubs
+    # Workaround https://github.com/thrust/thrust/issues/1072
+    # Can be deleted on Cuda 11
+    export CXXFLAGS="-I/usr/local/thrust"
+
     # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CXX=clang++-10 CC=clang-10 cmake \
        -DCMAKE_AR=/usr/local/bin/ar \
