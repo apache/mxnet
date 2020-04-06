@@ -24,6 +24,7 @@
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
+#include "../../../operator/nn/concat-inl.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
 #include "../../../operator/numpy/np_matrix_op-inl.h"
 
@@ -45,6 +46,31 @@ MXNET_REGISTER_API("_npi.expand_dims")
   int num_outputs = 0;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.dstack")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_dstack");
+  nnvm::NodeAttrs attrs;
+  op::ConcatParam param;
+  int args_size = args.size();
+  // param.num_args
+  param.num_args = args_size;
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::ConcatParam>(&attrs);
+  // inputs
+  int num_inputs = args_size;
+  std::vector<NDArray*> inputs_vec(args_size, nullptr);
+  for (int i = 0; i < args_size; ++i) {
+    inputs_vec[i] = args[i].operator mxnet::NDArray*();
+  }
+  NDArray** inputs = inputs_vec.data();
+  // outputs
+  int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
@@ -135,6 +161,55 @@ MXNET_REGISTER_API("_npi.rot90")
   attrs.parsed = std::move(param);
   attrs.op = op;
   SetAttrDict<op::NumpyRot90Param>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.diag")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diag");
+  nnvm::NodeAttrs attrs;
+  op::NumpyDiagParam param;
+  param.k = args[1].operator int();
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyDiagParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.diagonal")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diagonal");
+  nnvm::NodeAttrs attrs;
+  op::NumpyDiagonalParam param;
+  param.offset = args[1].operator int();
+  param.axis1 = args[2].operator int();
+  param.axis2 = args[3].operator int();
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyDiagonalParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.diag_indices_from")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diag_indices_from");
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
   int num_outputs = 0;

@@ -178,6 +178,14 @@ def _add_workload_diagonal():
     OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
 
 
+def _add_workload_median(array_pool):
+    OpArgMngr.add_workload('median', array_pool['4x1'])
+    OpArgMngr.add_workload('median', array_pool['4x1'], axis=0, keepdims=True)
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
+
+
 def _add_workload_quantile():
     x1 = np.arange(8) * 0.5
     x2 = np.arange(100.)
@@ -2915,6 +2923,7 @@ def _prepare_workloads():
     _add_workload_diff()
     _add_workload_ediff1d()
     _add_workload_quantile()
+    _add_workload_median(array_pool)
     _add_workload_percentile()
     _add_workload_resize()
     _add_workload_full_like(array_pool)

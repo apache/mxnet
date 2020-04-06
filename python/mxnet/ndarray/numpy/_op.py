@@ -36,7 +36,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'matmul',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'all', 'any', 'sort',
-           'tensordot', 'eye', 'linspace',
+           'tensordot', 'eye', 'linspace', 'median',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'around', 'round', 'round_', 'flatnonzero',
@@ -47,7 +47,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'where', 'bincount', 'pad', 'cumsum']
+           'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -951,11 +951,8 @@ def unique(ar, return_index=False, return_inverse=False, return_counts=False, ax
     >>> u[indices]
     array([1., 2., 6., 4., 2., 3., 2.])
     """
-    ret = _npi.unique(ar, return_index, return_inverse, return_counts, axis)
-    if isinstance(ret, list):
-        return tuple(ret)
-    else:
-        return ret
+    ret = list(_api_internal.unique(ar, return_index, return_inverse, return_counts, axis))
+    return ret[0] if len(ret) == 1 else tuple(ret)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4374,7 +4371,7 @@ def dstack(arrays):
            [[2, 3]],
            [[3, 4]]])
     """
-    return _npi.dstack(*arrays)
+    return _api_internal.dstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5130,6 +5127,7 @@ def ravel(x, order='C'):
         raise TypeError('type {} not supported'.format(str(type(x))))
 
 
+@set_module('mxnet.ndarray.numpy')
 def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
@@ -5159,11 +5157,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     if order == 'C':
         if isinstance(indices, numeric_types):
             return _np.unravel_index(indices, shape)
-        ret = _npi.unravel_index_fallback(indices, shape=shape)
-        ret_list = []
-        for item in ret:
-            ret_list += [item]
-        return tuple(ret_list)
+        return tuple(_npi.unravel_index_fallback(indices, shape=shape))
     else:
         raise NotImplementedError('Do not support column-major (Fortran-style) order at this moment')
 
@@ -5207,6 +5201,7 @@ def flatnonzero(a):
     return nonzero(ravel(a))[0]
 
 
+@set_module('mxnet.ndarray.numpy')
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
@@ -5243,7 +5238,7 @@ def diag_indices_from(arr):
         [  8,   9, 100,  11],
         [ 12,  13,  14, 100]])
     """
-    return tuple(_npi.diag_indices_from(arr))
+    return tuple(_api_internal.diag_indices_from(arr))
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6774,7 +6769,7 @@ def einsum(*operands, **kwargs):
 
     subscripts = operands[0]
     operands = operands[1:]
-    return _npi.einsum(*operands, subscripts=subscripts, out=out, optimize=int(optimize_arg))
+    return _api_internal.einsum(*operands, subscripts, out, int(optimize_arg))
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6926,6 +6921,55 @@ def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='l
     if overwrite_input is not None:
         raise NotImplementedError('overwrite_input is not supported yet')
     return _api_internal.percentile(a, q, axis, interpolation, keepdims, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
+    r"""
+    Compute the median along the specified axis.
+    Returns the median of the array elements.
+    Parameters
+    ----------
+    a : array_like
+        Input array or object that can be converted to an array.
+    axis : {int, sequence of int, None}, optional
+        Axis or axes along which the medians are computed. The default
+        is to compute the median along a flattened version of the array.
+        A sequence of axes is supported since version 1.9.0.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output,
+        but the type (of the output) will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+    Returns
+    -------
+    median : ndarray
+        A new array holding the result. If the input contains integers
+        or floats smaller than ``float32``, then the output data-type is
+        ``np.float32``.  Otherwise, the data-type of the output is the
+        same as that of the input. If `out` is specified, that array is
+        returned instead.
+    See Also
+    --------
+    mean, percentile
+    Examples
+    --------
+    >>> a = np.array([[10, 7, 4], [3, 2, 1]])
+    >>> a
+    array([[10,  7,  4],
+        [ 3,  2,  1]])
+    >>> np.median(a)
+    3.5
+    >>> np.median(a, axis=0)
+    array([6.5, 4.5, 2.5])
+    >>> np.median(a, axis=1)
+    array([7.,  2.])
+    """
+    return quantile(a=a, q=0.5, axis=axis, out=out, overwrite_input=overwrite_input,
+                    interpolation='midpoint', keepdims=keepdims)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7941,3 +7985,97 @@ def cumsum(a, axis=None, dtype=None, out=None):
            [ 4,  9, 15]])
     """
     return _api_internal.cumsum(a, axis, dtype, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diag(v, k=0):
+    """
+    Extracts a diagonal or constructs a diagonal array.
+    - 1-D arrays: constructs a 2-D array with the input as its diagonal, all other elements are zero.
+    - 2-D arrays: extracts the k-th Diagonal
+
+    Parameters
+    ----------
+    array : ndarray
+        The array to apply diag method.
+    k : offset
+        extracts or constructs kth diagonal given input array
+
+    Returns
+    ----------
+    out : ndarray
+    The extracted diagonal or constructed diagonal array.
+
+    Examples
+    --------
+    >>> x = np.arange(9).reshape((3,3))
+    >>> x
+    array([[0, 1, 2],
+           [3, 4, 5],
+           [6, 7, 8]])
+    >>> np.diag(x)
+    array([0, 4, 8])
+    >>> np.diag(x, k=1)
+    array([1, 5])
+    >>> np.diag(x, k=-1)
+    array([3, 7])
+
+    >>> np.diag(np.diag(x))
+    array([[0, 0, 0],
+           [0, 4, 0],
+           [0, 0, 8]])
+    """
+    return _api_internal.diag(v, k)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diagonal(a, offset=0, axis1=0, axis2=1):
+    """
+    If a is 2-D, returns the diagonal of a with the given offset, i.e., the collection of elements of
+    the form a[i, i+offset]. If a has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-array whose diagonal is returned. The shape of the
+    resulting array can be determined by removing axis1 and axis2 and appending an index to the
+    right equal to the size of the resulting diagonals.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data from which diagonal are taken.
+    offset: int, Optional
+        Offset of the diagonal from the main diagonal
+    axis1: int, Optional
+        Axis to be used as the first axis of the 2-D sub-arrays
+    axis2: int, Optional
+        Axis to be used as the second axis of the 2-D sub-arrays
+
+    Returns
+    -------
+    out : ndarray
+        Output result
+
+    Raises
+    -------
+    ValueError:  If the dimension of a is less than 2.
+
+    Examples
+    --------
+    >>> a = np.arange(4).reshape(2,2)
+    >>> a
+    array([[0, 1],
+        [2, 3]])
+    >>> np.diagonal(a)
+    array([0, 3])
+    >>> np.diagonal(a, 1)
+    array([1])
+
+    >>> a = np.arange(8).reshape(2,2,2)
+    >>>a
+    array([[[0, 1],
+            [2, 3]],
+            [[4, 5],
+            [6, 7]]])
+    >>> np.diagonal(a, 0, 0, 1)
+    array([[0, 6],
+            [1, 7]])
+    """
+    return _api_internal.diagonal(a, offset, axis1, axis2)
