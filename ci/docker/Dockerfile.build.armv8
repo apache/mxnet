@@ -21,14 +21,11 @@
 FROM dockcross/linux-arm64
 
 ENV ARCH aarch64
-ENV HOSTCC gcc
+ENV HOSTCC gcc-7
+ENV HOSTCXX g++-7
 ENV TARGET ARMV8
 
 WORKDIR /work/deps
-
-# gh issue #11567 https://github.com/apache/incubator-mxnet/issues/11567
-#RUN sed -i '\#deb http://cdn-fastly.deb.debian.org/debian-security jessie/updates main#d' /etc/apt/sources.list
-#RUN sed -i 's/cdn-fastly.//' /etc/apt/sources.list
 
 COPY install/ubuntu_arm.sh /work/
 RUN /work/ubuntu_arm.sh

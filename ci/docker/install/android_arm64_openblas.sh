@@ -24,7 +24,7 @@ set -ex
 pushd .
 git clone https://github.com/xianyi/OpenBLAS.git
 cd OpenBLAS
-make -j$(nproc) TARGET=ARMV8 ARM_SOFTFP_ABI=1 HOSTCC=gcc NOFORTRAN=1 libs
+make -j$(nproc) TARGET=ARMV8 ARM_SOFTFP_ABI=1 HOSTCC=gcc-7 HOSTCXX=g++-7 NOFORTRAN=1 libs
 # Can't be run (utility not compiled for the target platform)
 #make install
 cp *.h /usr/include

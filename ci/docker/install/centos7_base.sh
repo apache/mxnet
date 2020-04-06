@@ -34,6 +34,10 @@ yum -y install protobuf-compiler
 yum -y install protobuf-devel
 yum -y install zeromq-devel
 
+# gcc7
+yum -y install centos-release-scl
+yum -y install devtoolset-7
+
 # Centos 7 only provides ninja-build
 ln -s /usr/bin/ninja-build /usr/bin/ninja
 

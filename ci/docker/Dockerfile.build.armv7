@@ -21,7 +21,8 @@
 FROM dockcross/linux-armv7
 
 ENV ARCH armv7l
-ENV HOSTCC gcc
+ENV HOSTCC gcc-7
+ENV HOSTCXX g++-7
 ENV TARGET ARMV7
 
 WORKDIR /work/deps

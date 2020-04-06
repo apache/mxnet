@@ -21,7 +21,8 @@
 FROM dockcross/linux-armv6
 
 ENV ARCH armv6l
-ENV HOSTCC gcc
+ENV HOSTCC gcc-6
+ENV HOSTCXX g++-6
 ENV TARGET ARMV6
 
 WORKDIR /work/deps

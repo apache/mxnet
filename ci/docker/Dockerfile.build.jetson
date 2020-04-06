@@ -28,11 +28,6 @@ ENV ARCH aarch64
 ENV HOSTCC gcc
 ENV TARGET ARMV8
 
-# gh issue #11567 https://github.com/apache/incubator-mxnet/issues/11567
-#RUN sed -i '\#deb http://cdn-fastly.deb.debian.org/debian-security jessie/updates main#d' /etc/apt/sources.list
-#RUN sed -i 's/cdn-fastly.//' /etc/apt/sources.list
-
-
 WORKDIR /work/deps
 
 COPY install/ubuntu_arm.sh /work/

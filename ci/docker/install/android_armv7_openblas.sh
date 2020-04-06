@@ -24,7 +24,7 @@ set -ex
 pushd .
 git clone https://github.com/xianyi/OpenBLAS.git
 cd OpenBLAS
-make TARGET=ARMV7 HOSTCC=gcc NOFORTRAN=1 ARM_SOFTFP_ABI=1 -j$(nproc) libs
+make TARGET=ARMV7 HOSTCC=gcc-7 HOSTCXX=g++-7 NOFORTRAN=1 ARM_SOFTFP_ABI=1 -j$(nproc) libs
 #make PREFIX=${CROSS_ROOT} TARGET=ARMV7 HOSTCC=gcc NOFORTRAN=1 ARM_SOFTFP_ABI=1 install
 cp *.h ${CROSS_ROOT}/include
 cp libopenblas*.a ${CROSS_ROOT}/lib
