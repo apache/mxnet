@@ -557,6 +557,87 @@ def test_np_matmul():
 
 @with_seed()
 @use_np
+def test_np_kron():
+    def np_kron_backward(ograd, a, b):
+        ndim = ograd.ndim
+        # Make ndim equal
+        if ndim > a.ndim:
+            a = a.reshape((1,)*(ndim - a.ndim) + a.shape)
+        else:
+            b = b.reshape((1,)*(ndim - b.ndim) + b.shape)
+        assert(a.ndim == b.ndim)
+
+        # Compute agrad
+        agrad = _np.zeros(a.shape)
+        for i in range(a.size):
+            ia = _np.asarray(_np.unravel_index(i, a.shape))
+            for j in range(b.size):
+                jb = _np.asarray(_np.unravel_index(j, b.shape))
+                k = ia * _np.asarray(b.shape) + jb
+                agrad[tuple(ia)] += ograd[tuple(k)] * b[tuple(jb)]
+        # Compute bgrad
+        bgrad = _np.zeros(b.shape)
+        for j in range(b.size):
+            jb = _np.asarray(_np.unravel_index(j, b.shape))
+            for i in range(a.size):
+                ia = _np.asarray(_np.unravel_index(i, a.shape))
+                k = ia * _np.asarray(b.shape) + jb
+                bgrad[tuple(jb)] += ograd[tuple(k)] * a[tuple(ia)]
+        return [agrad, bgrad]
+
+    class TestKron(HybridBlock):
+        def __init__(self):
+            super(TestKron, self).__init__()
+
+        def hybrid_forward(self, F, a, b):
+            return F.np.kron(a, b)
+
+    # test input
+    tensor_shapes = [
+        ((3,), (3,)),
+        ((2, 3), (3,)),
+        ((2, 3, 4), (2,)),
+        ((3, 2), ())
+    ]
+
+    for hybridize in [True, False]:
+        for a_shape, b_shape in tensor_shapes:
+            for dtype in [_np.float32, _np.float64]:
+                test_kron = TestKron()
+                if hybridize:
+                    test_kron.hybridize()
+                a = rand_ndarray(shape=a_shape, dtype=dtype).as_np_ndarray()
+                b = rand_ndarray(shape=b_shape, dtype=dtype).as_np_ndarray()
+                a.attach_grad()
+                b.attach_grad()
+
+                np_out = _np.kron(a.asnumpy(), b.asnumpy())
+                with mx.autograd.record():
+                    mx_out = test_kron(a, b)
+                assert mx_out.shape == np_out.shape
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+                mx_out.backward()
+
+                # Test imperative once again
+                mx_out = np.kron(a, b)
+                np_out = _np.kron(a.asnumpy(), b.asnumpy())
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+                # test numeric gradient
+                a_sym = mx.sym.Variable("a").as_np_ndarray()
+                b_sym = mx.sym.Variable("b").as_np_ndarray()
+                mx_sym = mx.sym.np.kron(a_sym, b_sym).as_nd_ndarray()
+                check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
+                                       rtol=1e-2, atol=1e-2, dtype=dtype)
+
+                # test gradient via backward implemented by numpy
+                np_backward = np_kron_backward(_np.ones(np_out.shape, dtype = dtype), a.asnumpy(), b.asnumpy())
+                assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol=1e-2, atol=1e-2)
+                assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol=1e-2, atol=1e-2)
+
+
+@with_seed()
+@use_np
 def test_np_sum():
     class TestSum(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
@@ -2254,6 +2335,12 @@ def test_np_binary_funcs():
                 [lambda y, x1, x2: -_np.floor(x1 / x2),
                  lambda y, x1, x2: _np.zeros(y.shape)],
                 [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
+        'fmod': (1.0, 10.0,
+                [lambda y, x1, x2: _np.ones(y.shape),
+                 lambda y, x1, x2: _np.zeros(y.shape)],
+                [lambda y, x1, x2: -_np.floor(x1 / x2),
+                 lambda y, x1, x2: _np.zeros(y.shape)],
+                [[_np.float16, _np.float32, _np.float64], [_np.int32]]),
         'remainder': (1.0, 10.0,
                       [lambda y, x1, x2: _np.ones(y.shape),
                        lambda y, x1, x2: _np.zeros(y.shape)],
@@ -2268,8 +2355,12 @@ def test_np_binary_funcs():
         'bitwise_or': (-100, 100, [None], None, [[_np.int32]]),
         'maximum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
+        'fmax': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 >= x2)],
+                        [lambda y, x1, x2: _np.ones(y.shape) * (x1 < x2)]),
         'minimum': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
                            [lambda y, x1, x2: _np.ones(y.shape) * (x1 > x2)]),
+        'fmin': (-1, 1, [lambda y, x1, x2: _np.ones(y.shape) * (x1 <= x2)],
+                        [lambda y, x1, x2: _np.ones(y.shape) * (x1 > x2)]),
         'copysign': (-1, 1,
                      [lambda y, x1, x2: _np.ones(y.shape) * (((x1 * x2) >= 0).astype(_np.float32) - ((x1 * x2) < 0).astype(_np.float32))],
                      [lambda y, x1, x2: _np.zeros(y.shape)]),
@@ -6451,6 +6542,9 @@ def test_np_unique():
     configs = [
         ((), True, True, True, None),
         ((1, ), True, True, True, -1),
+        ((5, ), False, False, False, 0),
+        ((5, ), True, False, False, 0),
+        ((5, ), True, True, False, 0),
         ((5, ), True, True, True, 0),
         ((5, ), True, True, True, None),
         ((5, 4), True, True, True, None),
@@ -6471,15 +6565,24 @@ def test_np_unique():
                 x = np.array(x, dtype=dtype)
                 np_out = _np.unique(x.asnumpy(), *config[1:])
                 mx_out = test_unique(x)
-                assert mx_out[0].shape == np_out[0].shape
-                for i in range(4):
-                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+                if (len(mx_out)) == 1:
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                else:
+                    for i in range(len(mx_out)):
+                        assert mx_out[i].shape == np_out[i].shape
+                        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
                 # Test imperative once again
                 mx_out = np.unique(x, *config[1:])
                 np_out = _np.unique(x.asnumpy(), *config[1:])
-                for i in range(4):
-                    assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
+                if (len(mx_out)) == 1:
+                    assert mx_out.shape == np_out.shape
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                else:
+                    for i in range(len(mx_out)):
+                        assert mx_out[i].shape == np_out[i].shape
+                        assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -7283,6 +7386,46 @@ def test_np_share_memory():
                 assert not op(x, np.ones((5, 0), dtype=adt))
                 assert not op(np.ones((5, 0), dtype=adt), x)
                 assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
+
+
+def test_np_median():
+    class TestMedian(HybridBlock):
+        def __init__(self, axis=None, keepdims=False):
+            super(TestMedian, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a):
+            return F.np.median(a, axis=self._axis, keepdims=self._keepdims)
+
+    flags = [True, False]
+    dtypes = ['float16', 'float32', 'float64']
+    qtypes = ['float32', 'float64']
+    tensor_shapes = [
+        ((2, 3), None),
+        ((2, 3, 4, 5), 3),
+        ((2, 3, 4), (0, 2)),
+        ((2, 3, 4), 1)
+    ]
+
+    for hybridize, keepdims, (a_shape, axis), dtype in \
+        itertools.product(flags, flags, tensor_shapes, dtypes):
+        atol = 3e-4 if dtype == 'float16' else 1e-4
+        rtol = 3e-2 if dtype == 'float16' else 1e-2
+        test_median = TestMedian(axis=axis, keepdims=keepdims)
+        if hybridize:
+            test_median.hybridize()
+        a = np.random.uniform(-1.0, 1.0, size=a_shape)
+        np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
+        mx_out = test_median(a)
+        
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.median(a, axis=axis, keepdims=keepdims)
+        np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
+
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
 @with_seed()

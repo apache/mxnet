@@ -1292,7 +1292,7 @@ inline bool NumpyRot90Shape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  if (!param.axes.has_value() || (param.axes.has_value() && param.axes.value().ndim() != 2)) {
+  if (!param.axes.has_value() || param.axes.value().ndim() != 2) {
     LOG(FATAL) << "The length of axes must be 2.";
   }
   int real_k(param.k);
@@ -1435,7 +1435,7 @@ NNVM_REGISTER_OP(_npi_dsplit)
 .add_argument("data", "NDArray-or-Symbol", "The input")
 .add_arguments(SplitParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_np_diag)
+NNVM_REGISTER_OP(_npi_diag)
 .set_attr_parser(ParamParser<NumpyDiagParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -1446,18 +1446,18 @@ NNVM_REGISTER_OP(_np_diag)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagOpShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyDiagOpType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_diag"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diag"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyDiagParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_diag)
+NNVM_REGISTER_OP(_backward_npi_diag)
 .set_attr_parser(ParamParser<NumpyDiagParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagOpBackward<cpu>);
 
-NNVM_REGISTER_OP(_np_diagonal)
+NNVM_REGISTER_OP(_npi_diagonal)
 .set_attr_parser(ParamParser<NumpyDiagonalParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -1468,11 +1468,11 @@ NNVM_REGISTER_OP(_np_diagonal)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyDiagonalOpShape)
 .set_attr<nnvm::FInferType>("FInferType", NumpyDiagonalOpType)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDiagonalOpForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_diagonal"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_diagonal"})
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyDiagonalParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_np_diagonal)
+NNVM_REGISTER_OP(_backward_npi_diagonal)
 .set_attr_parser(ParamParser<NumpyDiagonalParam>)
 .set_num_inputs(1)
 .set_num_outputs(1)

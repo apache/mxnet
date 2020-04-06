@@ -51,10 +51,14 @@ def generate_workloads():
 def prepare_workloads():
     pool = generate_workloads()
     OpArgMngr.add_workload("zeros", (2, 2))
+    OpArgMngr.add_workload("einsum", "ii", pool['2x2'], optimize=False)
+    OpArgMngr.add_workload("unique", pool['1'], return_index=True, return_inverse=True, return_counts=True, axis=-1)
+    OpArgMngr.add_workload("dstack", (pool['2x1'], pool['2x1'], pool['2x1'], pool['2x1']))
     OpArgMngr.add_workload("polyval", dnp.arange(10), pool['2x2'])
     OpArgMngr.add_workload("ediff1d", pool['2x2'], pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("nan_to_num", pool['2x2'])
     OpArgMngr.add_workload("tensordot", pool['2x2'], pool['2x2'], ((1, 0), (0, 1)))
+    OpArgMngr.add_workload("kron", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("cumsum", pool['3x2'], axis=0, out=pool['3x2'])
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("linalg.svd", pool['3x3'])
@@ -80,7 +84,22 @@ def prepare_workloads():
     OpArgMngr.add_workload("ones_like", pool['2x2'])
     OpArgMngr.add_workload("random.uniform", low=0, high=1, size=1)
     OpArgMngr.add_workload("where", pool['2x3'], pool['2x3'], pool['2x1'])
+    OpArgMngr.add_workload("fmax", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("fmin", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("fmod", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("may_share_memory", pool['2x3'][:0], pool['2x3'][:1])
+    OpArgMngr.add_workload("diag", pool['2x2'], k=1)
+    OpArgMngr.add_workload("diagonal", pool['2x2x2'], offset=-1, axis1=0, axis2=1)
+    OpArgMngr.add_workload("diag_indices_from", pool['2x2'])
+    OpArgMngr.add_workload("bincount", dnp.arange(3, dtype=int), pool['3'], minlength=4)
+    OpArgMngr.add_workload("percentile", pool['2x2x2'], 80, axis=0, out=pool['2x2'],\
+                           interpolation='midpoint')
+    OpArgMngr.add_workload("quantile", pool['2x2x2'], 0.8, axis=0, out=pool['2x2'],\
+                           interpolation='midpoint')
+    OpArgMngr.add_workload("all", pool['2x2x2'], axis=(0, 1),\
+                           out=dnp.array([False, False], dtype=bool), keepdims=False)
+    OpArgMngr.add_workload("any", pool['2x2x2'], axis=(0, 1),\
+                           out=dnp.array([False, False], dtype=bool), keepdims=False)
     OpArgMngr.add_workload("roll", pool["2x2"], 1, axis=0)
     OpArgMngr.add_workload("rot90", pool["2x2"], 2)
 

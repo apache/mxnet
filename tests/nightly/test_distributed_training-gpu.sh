@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,19 +17,28 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all: gemm_lib relu_lib transposecsr_lib transposerowsp_lib
+export PYTHONPATH=./python/
+export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+export MXNET_SUBGRAPH_VERBOSE=0
+export DMLC_LOG_STACK_TRACE_DEPTH=10
 
-gemm_lib:
-	g++ -shared -fPIC -std=c++11 gemm_lib.cc -o libgemm_lib.so -I ../../../include/mxnet
+test_kvstore() {
+    test_args=(
+        "-n 4 --launcher local python3 dist_device_sync_kvstore.py"
+        "-n 4 --launcher local python3 dist_device_sync_kvstore_custom.py"
+        "--p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py"
+        "-n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu" 
+    )
 
-relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu -o librelu_lib.so -I ../../../include/mxnet
+    for arg in "${test_args[@]}"; do
+        echo $arg
+        python3 ../../tools/launch.py $arg
+        if [ $? -ne 0 ]; then
+            return $?
+        fi 
+    done
+}
 
-transposecsr_lib:
-	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc -o libtransposecsr_lib.so -I ../../../include/mxnet
+test_kvstore
 
-transposerowsp_lib:
-	g++ -shared -fPIC -std=c++11 transposerowsp_lib.cc -o libtransposerowsp_lib.so -I ../../../include/mxnet
-
-clean:
-	rm -rf libgemm_lib.so librelu_lib.so libtransposecsr_lib.so libtransposerowsp_lib.so
+exit $errors

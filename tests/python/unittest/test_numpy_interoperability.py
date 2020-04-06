@@ -178,6 +178,14 @@ def _add_workload_diagonal():
     OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
 
 
+def _add_workload_median(array_pool):
+    OpArgMngr.add_workload('median', array_pool['4x1'])
+    OpArgMngr.add_workload('median', array_pool['4x1'], axis=0, keepdims=True)
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
+
+
 def _add_workload_quantile():
     x1 = np.arange(8) * 0.5
     x2 = np.arange(100.)
@@ -1229,6 +1237,13 @@ def _add_workload_outer():
     OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
 
 
+def _add_workload_kron():
+    OpArgMngr.add_workload('kron', np.ones((5)), np.ones((2)))
+    OpArgMngr.add_workload('kron', np.arange(16).reshape((4,4)), np.ones((4,4)))
+    OpArgMngr.add_workload('kron', np.ones((2,4)), np.zeros((2,4)))
+    OpArgMngr.add_workload('kron', np.ones(()), np.ones(()))
+
+
 def _add_workload_meshgrid():
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
@@ -1415,6 +1430,13 @@ def _add_workload_mod(array_pool):
     OpArgMngr.add_workload('mod', array_pool['4x1'], array_pool['1x1x0'])
 
 
+def _add_workload_fmod(array_pool):
+    OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('fmod', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('fmod', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('fmod', array_pool['4x1'], array_pool['1x1x0'])
+
+
 def _add_workload_remainder():
     # test remainder basic
     OpArgMngr.add_workload('remainder', np.array([0, 1, 2, 4, 2], dtype=np.float16),
@@ -1481,11 +1503,25 @@ def _add_workload_maximum(array_pool):
     OpArgMngr.add_workload('maximum', array_pool['4x1'], array_pool['1x1x0'])
 
 
+def _add_workload_fmax(array_pool):
+    OpArgMngr.add_workload('fmax', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('fmax', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('fmax', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('fmax', array_pool['4x1'], array_pool['1x1x0'])
+
+
 def _add_workload_minimum(array_pool):
     OpArgMngr.add_workload('minimum', array_pool['4x1'], array_pool['1x2'])
     OpArgMngr.add_workload('minimum', array_pool['4x1'], 2)
     OpArgMngr.add_workload('minimum', 2, array_pool['4x1'])
     OpArgMngr.add_workload('minimum', array_pool['4x1'], array_pool['1x1x0'])
+
+
+def _add_workload_fmin(array_pool):
+    OpArgMngr.add_workload('fmin', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('fmin', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('fmin', 2, array_pool['4x1'])
+    OpArgMngr.add_workload('fmin', array_pool['4x1'], array_pool['1x1x0'])
 
 
 def _add_workload_negative(array_pool):
@@ -2812,6 +2848,7 @@ def _prepare_workloads():
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
+    _add_workload_kron()
     _add_workload_meshgrid()
     _add_workload_einsum()
     _add_workload_abs()
@@ -2833,9 +2870,12 @@ def _prepare_workloads():
     _add_workload_multiply(array_pool)
     _add_workload_power(array_pool)
     _add_workload_mod(array_pool)
+    _add_workload_fmod(array_pool)
     _add_workload_remainder()
     _add_workload_maximum(array_pool)
+    _add_workload_fmax(array_pool)
     _add_workload_minimum(array_pool)
+    _add_workload_fmin(array_pool)
     _add_workload_negative(array_pool)
     _add_workload_absolute(array_pool)
     _add_workload_sign(array_pool)
@@ -2883,6 +2923,7 @@ def _prepare_workloads():
     _add_workload_diff()
     _add_workload_ediff1d()
     _add_workload_quantile()
+    _add_workload_median(array_pool)
     _add_workload_percentile()
     _add_workload_resize()
     _add_workload_full_like(array_pool)
