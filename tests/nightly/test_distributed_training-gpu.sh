@@ -31,7 +31,6 @@ test_kvstore() {
     )
 
     for arg in "${test_args[@]}"; do
-        echo $arg
         python3 ../../tools/launch.py $arg
         if [ $? -ne 0 ]; then
             return $?
@@ -39,6 +38,15 @@ test_kvstore() {
     done
 }
 
+test_horovod() {
+    pip3 install --no-cache-dir horovod
+    mpirun -n 2 -H localhost:2 python3 dist_device_sync_kvstore_horovod.py
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
+}
+
 test_kvstore
+test_horovod
 
 exit $errors
