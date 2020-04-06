@@ -1234,7 +1234,7 @@ class HybridBlock(Block):
         """Infers data type of Parameters from inputs."""
         self._infer_attrs('infer_type', 'dtype', *args)
 
-    def export(self, path, epoch=0, remove_amp_cast=True):
+    def export(self, path, epoch=0, remove_amp_cast=True, allow_extra=True):
         """Export HybridBlock to json format that can be loaded by
         `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
 
@@ -1248,7 +1248,11 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
-
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before exporting the model.
+        allow_extra : bool, optional
+            Whether to save extra parameters whose name not in the result symbol. User can set
+            allow_extra to True to load these parameters with old mxnet.mod.Module.set_params api.
         Returns
         -------
         symbol_filename : str
@@ -1275,7 +1279,8 @@ class HybridBlock(Block):
                     assert name in aux_names
                     arg_dict['aux:%s'%name] = param._reduce()
                 else:
-                    arg_dict['aux:%s'%name] = param._reduce()
+                    if allow_extra:
+                        arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
