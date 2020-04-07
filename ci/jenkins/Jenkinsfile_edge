@@ -44,7 +44,7 @@ core_logic: {
 
   utils.parallel_stage('Tests', [
     custom_steps.test_qemu_armv7_cpu()
-  ]) 
+  ])
 }
 ,
 failure_handler: {
