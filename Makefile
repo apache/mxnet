@@ -101,7 +101,9 @@ CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
-	CFLAGS += -g -Werror
+  # Excluded from Werror:
+  # 1) variables used in '#pragma omp parallel' are considered unused
+	CFLAGS += -g -Werror -Wno-error=unused-variable -Wno-error=maybe-uninitialized -Wno-error=unused-function
 	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
