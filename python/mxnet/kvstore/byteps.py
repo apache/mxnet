@@ -37,6 +37,9 @@ class BytePS(KVStoreBase):
         except ImportError as err:
             print('Did not find BytePS library. Please install BytePS first')
             raise err
+        except ModuleNotFoundError as err:
+            print('Did not find BytePS library. Please install BytePS first')
+            raise err
         self.handle.init()
 
     def broadcast(self, key, value, out, priority=0):
@@ -88,6 +91,7 @@ class BytePS(KVStoreBase):
         root_rank = 0
         if self.rank != root_rank:
             broadcast_value.__imul__(0)
+        self.handle.byteps_declare_tensor(str(key))
         self.handle.byteps_push_pull(broadcast_value, version=0, priority=priority,
                                      name=str(key), is_average=False)
         # Make sure tensors pushed to MXNet engine get processed such that all
@@ -148,6 +152,7 @@ class BytePS(KVStoreBase):
         else:
             pushpull_value = value.copy()
 
+        self.handle.byteps_declare_tensor(str(key))
         self.handle.byteps_push_pull(pushpull_value, version=0, priority=priority,
                                      name=str(key), is_average=False)
 

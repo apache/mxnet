@@ -82,18 +82,22 @@ def start_ssh(prog, node, port, username, fname):
     def run(prog):
         subprocess.check_call(prog, shell=True)
 
-    dirname = 'sshlog'
+    dirname = 'byteps-log'
     if not os.path.exists(dirname):
         os.mkdir(dirname)
 
     pname = dirname + '/' + fname
-    if username is not None:
+    redirect = ' > ' + pname + '.stdout' + ' 2> ' + pname + '.stderr'
+    if node == 'localhost' and int(port) == -1:
+        prog = prog + redirect
+    elif username is not None:
         prog = 'ssh -o StrictHostKeyChecking=no ' + ' -l ' + username \
                + ' ' + node + ' -p ' + port + ' \'' + prog + '\'' \
-               + ' > ' + pname + '.stdout' + ' 2>' + pname + '.stderr&'
+               + redirect
     else:
         prog = 'ssh -o StrictHostKeyChecking=no ' + node + ' -p ' + port + ' \'' + prog + '\'' \
-               + ' > ' + pname + '.stdout' + ' 2>' + pname + '.stderr&'
+               + redirect
+    print('logging to {}.stdout and {}.stderr'.format(pname, pname))
 
     thread = Thread(target=run, args=(prog,))
     thread.setDaemon(True)
@@ -124,9 +128,9 @@ def submit(args):
         server_hosts = []
         worker_hosts = []
         for i in range(args.num_servers):
-            server_hosts.append(('localhost', '22'))
+            server_hosts.append(('localhost', '-1'))
         for i in range(args.num_workers):
-            worker_hosts.append(('localhost', '22'))
+            worker_hosts.append(('localhost', '-1'))
 
     num_server = args.num_servers
     num_worker = args.num_workers
@@ -140,11 +144,11 @@ def submit(args):
     pass_envs['DMLC_NUM_WORKER'] = str(num_worker)
     pass_envs['DMLC_NUM_SERVER'] = str(num_server)
     pass_envs['DMLC_PS_ROOT_URI'] = '127.0.0.1'
-    pass_envs['DMLC_PS_ROOT_PORT'] = str(22)
+    pass_envs['DMLC_PS_ROOT_PORT'] = str(8888)
 
     username = None
     threads = []
-    for (node, port) in [('127.0.0.1', str(22))]:
+    for (node, port) in [('localhost', '-1')]:
         name = 'scheduler'
         pass_envs['DMLC_ROLE'] = name
         print('Launching Scheduler...')
@@ -181,7 +185,7 @@ def submit(args):
                 if not os.path.exists(trace_path):
                     os.makedirs(trace_path)
             threads.append(
-                start_ssh(prog, node, port, username, name + str(i)))
+                start_ssh(prog, node, port, username, name + '-' + str(i) + '-local-rank-' + str(local_rank)))
 
     for i, (node, port) in enumerate(server_hosts):
         name = 'server'
@@ -189,7 +193,8 @@ def submit(args):
         print('Launching Server{} ...'.format(i))
         prog = get_env(pass_envs) + (" python3 -c " +
                                      "\"" + "import byteps.server" + "\"")
-        threads.append(start_ssh(prog, node, port, username, name + str(i)))
+        threads.append(start_ssh(prog, node, port, username, name + '-' + str(i)))
 
     for t in threads:
         t.join()
+    print('Launcher exits')
