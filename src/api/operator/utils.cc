@@ -22,8 +22,13 @@
  * \brief Utility functions for operator invoke
  */
 #include "utils.h"
+#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
+
+bool is_recording() {
+  return Imperative::Get()->is_recording();
+}
 
 void SetInOut(std::vector<NDArray*>* ndinputs,
               std::vector<NDArray*>* ndoutputs,

@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../../operator_common.h"
 #include "../../mshadow_op.h"
 #include "../../tensor/la_op.h"
@@ -43,6 +44,11 @@ struct TensorinvParam : public dmlc::Parameter<TensorinvParam> {
     DMLC_DECLARE_FIELD(ind)
       .set_default(2)
       .describe("Number of first indices that are involved in the inverse sum.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream ind_s;
+    ind_s << ind;
+    (*dict)["ind"] = ind_s.str();
   }
 };
 
