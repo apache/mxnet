@@ -61,9 +61,9 @@ class CustomContainOpSelector: public SubgraphSelector {
     callFilter_(callFilter), callReset_(callReset), callFree_(callFree),
     node2id_(node2id) {}
   virtual bool Select(const nnvm::Node &n) {
-    if (!sel_inst_)
+    if (!sel_inst_) {
       return supported_nodes_.count(n.attrs.name) > 0;
-    else {
+    } else {
       int selected = 0;
       callSelect_(sel_inst_, node2id_[&n], &selected);
       return selected;
@@ -75,7 +75,7 @@ class CustomContainOpSelector: public SubgraphSelector {
       // or the new node 's subgraph ID is any (-1)
       return supported_nodes_.count(new_node.attrs.name) > 0 &&
         (supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name] ||
-	 supported_nodes_[new_node.attrs.name] == -1);
+         supported_nodes_[new_node.attrs.name] == -1);
     } else {
       int selected = 0;
       callSelectInput_(sel_inst_, node2id_[&n], node2id_[&new_node], &selected);
@@ -88,7 +88,7 @@ class CustomContainOpSelector: public SubgraphSelector {
       // or the new node 's subgraph ID is any (-1)
       return supported_nodes_.count(new_node.attrs.name) > 0 &&
         (supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name] ||
-	 supported_nodes_[new_node.attrs.name] == -1);
+         supported_nodes_[new_node.attrs.name] == -1);
     } else {
       int selected = 0;
       callSelectOutput_(sel_inst_, node2id_[&n], node2id_[&new_node], &selected);
@@ -273,7 +273,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
         node2id[node] = nid;
     }
-    
+
     // set shape attrs for each node in the graph
     if (g.HasAttr("shape")) {
       mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
@@ -329,7 +329,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     }
 
     // check if supportedOps was registered
-    if(supported_ops_ && call_supported_ops_) {
+    if (supported_ops_ && call_supported_ops_) {
       // setup array of subgraph IDs for each node
       std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -1);
       int *ids = supported_node_IDs.data();
@@ -345,12 +345,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
           supported_nodes[idx[i].source->attrs.name] = supported_node_IDs[i];
         }
       }
-    } else if(call_create_selector_ && callSelect_ && callSelectInput_ &&
+    } else if (call_create_selector_ && callSelect_ && callSelectInput_ &&
               callSelectOutput_ && callFilter_ && callReset_ &&
               create_selector_) {
       sel_inst = nullptr;
       CHECK(call_create_selector_(create_selector_, json, &sel_inst,
-                                opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
+                                  opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
         << "Error calling supported_ops for '" << subgraph_prop << "'";
     } else {
       CHECK(supported_ops_ != nullptr)
@@ -358,7 +358,6 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       CHECK(call_supported_ops_ != nullptr)
         << "call_supported_ops_ is null for " << subgraph_prop << std::endl;
     }
-    
   }
   // override CreateSubgraphNode
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
@@ -541,7 +540,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   std::vector<const char*> arg_dev_type, aux_dev_type;
   std::vector<int> arg_dev_id, aux_dev_id;
   void* sel_inst = nullptr;
-  std::unordered_map<const nnvm::Node*, unsigned> node2id;  
+  std::unordered_map<const nnvm::Node*, unsigned> node2id;
 };
 }  // namespace op
 }  // namespace mxnet

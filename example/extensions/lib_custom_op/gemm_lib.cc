@@ -53,10 +53,10 @@ void transpose(const float* A, float* At, const unsigned n, const unsigned m) {
  * Executes C = A * B
  * inputs[0] = A; inputs[1] = B; outputs[0] = C
  */
-MXReturnValue forward(std::map<std::string, std::string> attrs,
-                      std::vector<MXTensor> inputs,
-                      std::vector<MXTensor> outputs,
-                      OpResource res) {
+MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
+                      std::vector<MXTensor>& inputs,
+                      std::vector<MXTensor>& outputs,
+                      OpResource& res) {
   // simple example of using runtime data type
   if (inputs[0].dtype == kFloat32) {
     typedef float DType;
@@ -87,10 +87,10 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
  ***** gradient outputs
  * outputs[0] = dA; outputs[1] = dB
  */
-MXReturnValue backward(std::map<std::string, std::string> attrs,
-                       std::vector<MXTensor> inputs,
-                       std::vector<MXTensor> outputs,
-                       OpResource res) {
+MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs,
+                       std::vector<MXTensor>& inputs,
+                       std::vector<MXTensor>& outputs,
+                       OpResource& res) {
   // extract data pointers from tensors
   float* dC = inputs[0].data<float>();
   float* A = inputs[1].data<float>();
@@ -115,15 +115,16 @@ MXReturnValue backward(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-MXReturnValue parseAttrs(std::map<std::string, std::string> attrs, int* num_in, int* num_out) {
+MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
+                         int* num_in, int* num_out) {
   *num_in = 2;
   *num_out = 1;
   return MX_SUCCESS;
 }
 
-MXReturnValue inferType(std::map<std::string, std::string> attrs,
-                        std::vector<int> &intypes,
-                        std::vector<int> &outtypes) {
+MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
+                        const std::vector<int> &intypes,
+                        std::vector<int> *outtypes) {
   // validate inputs
   if (intypes.size() != 2) {
     std::cout << "Expected 2 inputs to inferType" << std::endl;
@@ -136,13 +137,13 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     }
   }
 
-  outtypes[0] = intypes[0];
+  outtypes->at(0) = intypes[0];
   return MX_SUCCESS;
 }
 
-MXReturnValue inferShape(std::map<std::string, std::string> attrs,
-                         std::vector<std::vector<unsigned int>> &inshapes,
-                         std::vector<std::vector<unsigned int>> &outshapes) {
+MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
+                         const std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
   if (inshapes.size() != 2) {
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
@@ -162,7 +163,7 @@ MXReturnValue inferShape(std::map<std::string, std::string> attrs,
     return MX_FAIL;
   }
 
-  outshapes[0] = {n, m};
+  outshapes->at(0) = {n, m};
   return MX_SUCCESS;
 }
 
@@ -177,41 +178,42 @@ REGISTER_OP(my_gemm)
 
 class MyStatefulGemm : public CustomStatefulOp {
  public:
-  explicit MyStatefulGemm(int count) : count(count) {}
+  explicit MyStatefulGemm(int count,
+                          const std::unordered_map<std::string, std::string>& attrs)
+    : count(count), attrs_(attrs) {}
 
   MXReturnValue Forward(std::vector<MXTensor> inputs,
                         std::vector<MXTensor> outputs,
                         OpResource op_res) {
     std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
-    std::map<std::string, std::string> attrs;
-    return forward(attrs, inputs, outputs, op_res);
+    return forward(attrs_, inputs, outputs, op_res);
   }
 
   MXReturnValue Backward(std::vector<MXTensor> inputs,
                          std::vector<MXTensor> outputs,
                          OpResource op_res) {
-    std::map<std::string, std::string> attrs;
-    return backward(attrs, inputs, outputs, op_res);
+    return backward(attrs_, inputs, outputs, op_res);
   }
 
   ~MyStatefulGemm() {}
 
  private:
   int count;
+  const std::unordered_map<std::string, std::string> attrs_;
 };
 
-MXReturnValue createOpState(std::map<std::string, std::string> attrs,
+MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
-  int count = attrs.count("test_kw") > 0 ? std::stoi(attrs["test_kw"]) : 0;
+  int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulGemm(count);
+  *op_inst = new MyStatefulGemm(count, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
 
-MXReturnValue mutateInputs(std::map<std::string, std::string> attrs,
-                           std::vector<int> &input_indices) {
+MXReturnValue mutateInputs(const std::unordered_map<std::string, std::string>& attrs,
+                           std::vector<int>* input_indices) {
   // input_indices.push_back(1);  // mark mutate input
   return MX_SUCCESS;
 }

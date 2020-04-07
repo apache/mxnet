@@ -137,7 +137,8 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(std::string sym, std::map<std::string, std::string> attrs)
+  explicit MyStatefulOp(const std::string sym,
+                        const std::unordered_map<std::string, std::string>& attrs)
     : subgraph_sym(sym), attrs_(attrs) {
     for (auto kv : attrs) {
       std::cout << "subgraphOp attributes: " << kv.first << " ==> " << kv.second << std::endl;
@@ -151,20 +152,19 @@ class MyStatefulOp : public CustomStatefulOp {
   }
 
  private:
-  std::string subgraph_sym;
-  std::map<std::string, std::string> attrs_;
+  const std::string subgraph_sym;
+  const std::unordered_map<std::string, std::string> attrs_;
 };
 
-MXReturnValue createOpState(std::map<std::string, std::string> attrs,
+MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
                             CustomStatefulOp** op_inst) {
   std::string serialized_subgraph = "[empty]";
   // MXNet subgraph is stored as Symbol in operator node attrs subgraphs field
   // custom subgraph is stored as json string in custom operator attrs map entry
   if (attrs.count(MX_STR_SUBGRAPH_SYM_JSON)) {
     // user can now parse json and run other custom ops inside subgraph
-    serialized_subgraph = attrs[MX_STR_SUBGRAPH_SYM_JSON];
+    serialized_subgraph = attrs.at(MX_STR_SUBGRAPH_SYM_JSON);
   }
-  attrs.erase(MX_STR_SUBGRAPH_SYM_JSON);
   *op_inst = new MyStatefulOp(serialized_subgraph, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
@@ -176,9 +176,9 @@ REGISTER_OP(_custom_subgraph_op)
 
 const std::vector<std::string> op_names({"exp","log"});
 
-MXReturnValue mySupportedOps(std::string json,
-                             std::vector<int>& ids,
-                             std::unordered_map<std::string, std::string>& options) {
+MXReturnValue mySupportedOps(const std::string& json,
+                             std::vector<int>* ids,
+                             const std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
@@ -209,18 +209,18 @@ MXReturnValue mySupportedOps(std::string json,
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
         // found op in whitelist, set value to -1 to include op in any subgraph
-        ids[i]=-1;
+        ids->at(i) = -1;
       }
     }
   }
   return MX_SUCCESS;
 }
 
-MXReturnValue myReviewSubgraph(std::string json, int subgraph_id, bool* accept,
-                               std::unordered_map<std::string, std::string>& options,
-                               std::unordered_map<std::string, std::string>& attrs,
-                               std::map<std::string, MXTensor>& args,
-                               std::map<std::string, MXTensor>& aux) {
+MXReturnValue myReviewSubgraph(const std::string& json, int subgraph_id, bool* accept,
+                               const std::unordered_map<std::string, std::string>& options,
+                               std::unordered_map<std::string, std::string>* attrs,
+                               const std::unordered_map<std::string, MXTensor>& args,
+                               const std::unordered_map<std::string, MXTensor>& aux) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
@@ -242,14 +242,14 @@ MXReturnValue myReviewSubgraph(std::string json, int subgraph_id, bool* accept,
   }
 
   // check if option `reject` was specified, and if so check if value is 'True'
-  if(options.count("reject") > 0 && options["reject"].compare("True") == 0) {
+  if(options.count("reject") > 0 && options.at("reject").compare("True") == 0) {
     // if specified, reject the subgraph. this is only used for testing
     *accept = false;
     std::cout << "rejecting subgraph" << std::endl;
   } else {
     *accept = true;
     std::cout << "accepting subgraph" << std::endl;
-    attrs["myKey"] = "myVal";
+    attrs->at("myKey") = "myVal";
   }
   return MX_SUCCESS;
 }
@@ -261,8 +261,8 @@ REGISTER_PARTITIONER(myProp)
 
 class MySelector : public CustomOpSelector {
  public:
-  MySelector(std::string& json,
-             std::unordered_map<std::string, std::string>& options) :
+  MySelector(const std::string& json,
+             const std::unordered_map<std::string, std::string>& options) :
     graph_json(json), options_(options) {
     for (auto kv : options) {
       std::cout << "selector options: " << kv.first
@@ -316,11 +316,11 @@ class MySelector : public CustomOpSelector {
  private:
   std::string graph_json;
   JsonVal nodes;
-  std::unordered_map<std::string, std::string> options_;
+  const std::unordered_map<std::string, std::string> options_;
 };
 
-MXReturnValue createSelector(std::string& json, CustomOpSelector** sel_inst,
-                             std::unordered_map<std::string, std::string>& options) {
+MXReturnValue createSelector(const std::string& json, CustomOpSelector** sel_inst,
+                             const std::unordered_map<std::string, std::string>& options) {
   *sel_inst = new MySelector(json, options);
   std::cout << "Info: selector created" << std::endl;
   return MX_SUCCESS;

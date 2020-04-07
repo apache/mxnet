@@ -66,10 +66,10 @@ void transpose(MXTensor src, MXTensor dst, OpResource res) {
   }
 }
 
-MXReturnValue forward(std::map<std::string, std::string> attrs,
-                      std::vector<MXTensor> inputs,
-                      std::vector<MXTensor> outputs,
-                      OpResource res) {
+MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
+                      std::vector<MXTensor>& inputs,
+                      std::vector<MXTensor>& outputs,
+                      OpResource& res) {
   // The data types and storage types of inputs and outputs should be the same.
   if(inputs[0].dtype != outputs[0].dtype || inputs[0].stype != outputs[0].stype) {
     std::cout << "Error! Expected all inputs and outputs to be the same type."
@@ -83,22 +83,23 @@ MXReturnValue forward(std::map<std::string, std::string> attrs,
   return MX_SUCCESS;
 }
 
-MXReturnValue backward(std::map<std::string, std::string> attrs,
-                       std::vector<MXTensor> inputs,
-                       std::vector<MXTensor> outputs,
-                       OpResource res) {
+MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs,
+                       std::vector<MXTensor>& inputs,
+                       std::vector<MXTensor>& outputs,
+                       OpResource& res) {
   return MX_SUCCESS;
 }
 
-MXReturnValue parseAttrs(std::map<std::string, std::string> attrs, int* num_in, int* num_out) {
+MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
+                         int* num_in, int* num_out) {
   *num_in = 1;
   *num_out = 1;
   return MX_SUCCESS;
 }
 
-MXReturnValue inferType(std::map<std::string, std::string> attrs,
-                        std::vector<int> &intypes,
-                        std::vector<int> &outtypes) {
+MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
+                        const std::vector<int>& intypes,
+                        std::vector<int>* outtypes) {
   // validate inputs
   if (intypes.size() != 1) {
     std::cout << "Expected 1 inputs to inferType" << std::endl;
@@ -109,32 +110,32 @@ MXReturnValue inferType(std::map<std::string, std::string> attrs,
     return MX_FAIL;
   }
 
-  outtypes[0] = intypes[0];
+  outtypes->at(0) = intypes[0];
   return MX_SUCCESS;
 }
 
-MXReturnValue inferSType(std::map<std::string, std::string> attrs,
-                        std::vector<int> &instypes,
-                        std::vector<int> &outstypes) {
+MXReturnValue inferSType(const std::unordered_map<std::string, std::string>& attrs,
+                         const std::vector<int>& instypes,
+                         std::vector<int>* outstypes) {
   if (instypes[0] != kRowSparseStorage) {
     std::cout << "Expected storage type is kRowSparseStorage" << std::endl;
     return MX_FAIL;
   }
-  outstypes[0] = instypes[0];
+  outstypes->at(0) = instypes[0];
   return MX_SUCCESS;
 }
 
-MXReturnValue inferShape(std::map<std::string, std::string> attrs,
-                         std::vector<std::vector<unsigned int>> &inshapes,
-                         std::vector<std::vector<unsigned int>> &outshapes) {
+MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
+                         const std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
   if (inshapes.size() != 1) {
     std::cout << "Expected 1 inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
 
-  outshapes[0].push_back(inshapes[0][1]);
-  outshapes[0].push_back(inshapes[0][0]);
+  outshapes->at(0).push_back(inshapes[0][1]);
+  outshapes->at(0).push_back(inshapes[0][0]);
   return MX_SUCCESS;
 }
 
@@ -149,34 +150,35 @@ REGISTER_OP(my_transposerowsp)
 /* ------------------------------------------------------------------------- */
 
 class MyStatefulTransposeRowSP : public CustomStatefulOp {
- public:
-  explicit MyStatefulTransposeRowSP(int count) : count(count) {}
+  public:
+    explicit MyStatefulTransposeRowSP(int count,
+                                      const std::unordered_map<std::string, std::string>& attrs)
+      : count(count), attrs_(attrs) {}
 
-  MXReturnValue Forward(std::vector<MXTensor> inputs,
-                        std::vector<MXTensor> outputs,
-                        OpResource op_res) {
-    std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
-    std::map<std::string, std::string> attrs;
-    return forward(attrs, inputs, outputs, op_res);
-  }
+    MXReturnValue Forward(std::vector<MXTensor> inputs,
+                          std::vector<MXTensor> outputs,
+                          OpResource op_res) {
+      std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
+      return forward(attrs_, inputs, outputs, op_res);
+    }
 
-  MXReturnValue Backward(std::vector<MXTensor> inputs,
-                         std::vector<MXTensor> outputs,
-                         OpResource op_res) {
-    std::map<std::string, std::string> attrs;
-    return backward(attrs, inputs, outputs, op_res);
-  }
+    MXReturnValue Backward(std::vector<MXTensor> inputs,
+                           std::vector<MXTensor> outputs,
+                           OpResource op_res) {
+      return backward(attrs_, inputs, outputs, op_res);
+    }
 
- private:
-  int count;
+  private:
+    int count;
+    const std::unordered_map<std::string, std::string> attrs_;
 };
 
-MXReturnValue createOpState(std::map<std::string, std::string> attrs,
+MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
-  int count = attrs.count("test_kw") > 0 ? std::stoi(attrs["test_kw"]) : 0;
+  int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;
   // creating stateful operator instance
-  *op_inst = new MyStatefulTransposeRowSP(count);
+  *op_inst = new MyStatefulTransposeRowSP(count, attrs);
   std::cout << "Info: stateful operator created" << std::endl;
   return MX_SUCCESS;
 }
