@@ -188,7 +188,9 @@ void CustomFComputeDispatcher(const std::string op_name,
   }
 
   // get memory resource and mxnet backend streams
-  const Resource &resource = ctx.requested[0];
+  CHECK(ctx.requested.size() >= 2)
+    << "Custom operator should register at least memory resource and parallel random resource";
+  const Resource &resource = ctx.requested.at(0);
   mshadow::Stream<mxnet::cpu> *cpu_stream = ctx.get_stream<mxnet::cpu>();
   mshadow::Stream<mxnet::gpu> *gpu_stream = ctx.get_stream<mxnet::gpu>();
 
@@ -259,10 +261,10 @@ void CustomFComputeDispatcher(const std::string op_name,
   // get mxnet initialized and seeded RNG states and pass to lib_api.h
   void *rng_cpu_states = nullptr, *rng_gpu_states = nullptr;
   using mxnet::common::random::RandGenerator;
-  RandGenerator<cpu, float> *pgen_cpu = ctx.requested[1].get_parallel_random<cpu, float>();
+  RandGenerator<cpu, float> *pgen_cpu = ctx.requested.at(1).get_parallel_random<cpu, float>();
   rng_cpu_states = pgen_cpu->GetStates();
 #if MXNET_USE_CUDA
-  RandGenerator<gpu, float> *pgen_gpu = ctx.requested[1].get_parallel_random<gpu, float>();
+  RandGenerator<gpu, float> *pgen_gpu = ctx.requested.at(1).get_parallel_random<gpu, float>();
   rng_gpu_states = pgen_gpu->GetStates();
 #endif
 
