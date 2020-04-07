@@ -39,6 +39,10 @@ yum -y install make
 yum -y install wget
 yum -y install unzip
 yum -y install ninja-build
+yum -y install automake
+yum -y install autoconf
+yum -y install libtool
+yum -y install patchelf
 
 # gcc7
 yum -y install centos-release-scl

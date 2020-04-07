@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,15 +16,24 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+FROM nvidia/cuda:10.2-cudnn7-devel-centos7
 
-set -ex
+WORKDIR /work/deps
 
-apt-get update || true
-apt-get install -y \
-    openjdk-8-jdk \
-    openjdk-8-jre \
-    software-properties-common \
-    scala \
-    maven
+COPY install/centos7_base.sh /work/
+RUN /work/centos7_base.sh
+COPY install/centos7_ccache.sh /work/
+RUN /work/centos7_ccache.sh
+COPY install/centos7_python.sh /work/
+RUN /work/centos7_python.sh
+COPY install/centos7_scala.sh /work/
+RUN /work/centos7_scala.sh
+
+ARG USER_ID=0
+COPY install/centos7_adduser.sh /work/
+RUN /work/centos7_adduser.sh
+
+ENV PYTHONPATH=./python/
+WORKDIR /work/mxnet
+
+COPY runtime_functions.sh /work/

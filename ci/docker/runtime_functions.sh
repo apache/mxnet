@@ -1943,6 +1943,7 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
+    source /opt/rh/devtoolset-7/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -1952,6 +1953,7 @@ build_static_libmxnet() {
 cd_package_pypi() {
     set -ex
     pushd .
+    source /opt/rh/devtoolset-7/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -2006,8 +2008,7 @@ build_static_scala_cpu() {
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=cpu
-    export CC=gcc-7
-    export CXX=g++-7
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/scala/build.sh
     popd
 }
@@ -2016,8 +2017,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    export CC=gcc-7
-    export CXX=g++-7
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2026,8 +2026,8 @@ build_static_python_cu101() {
     set -ex
     pushd .
     export mxnet_variant=cu101
-    export CC=gcc-7
-    export CXX=g++-7
+    export USE_SYSTEM_CUDA=1
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2037,8 +2037,7 @@ build_static_python_cpu_cmake() {
     pushd .
     export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
-    export CC=gcc-7
-    export CXX=g++-7
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2048,8 +2047,8 @@ build_static_python_cu101_cmake() {
     pushd .
     export mxnet_variant=cu101
     export CMAKE_STATICBUILD=1
-    export CC=gcc-7
-    export CXX=g++-7
+    export USE_SYSTEM_CUDA=1
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2058,8 +2057,7 @@ publish_scala_build() {
     set -ex
     pushd .
     scala_prepare
-    export CC=gcc-7
-    export CXX=g++-7
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/scala/build.sh
     popd
 }
@@ -2068,8 +2066,6 @@ publish_scala_test() {
     set -ex
     pushd .
     scala_prepare
-    export CC=gcc-7
-    export CXX=g++-7
     ./ci/publish/scala/test.sh
     popd
 }
@@ -2078,8 +2074,6 @@ publish_scala_deploy() {
     set -ex
     pushd .
     scala_prepare
-    export CC=gcc-7
-    export CXX=g++-7
     ./ci/publish/scala/deploy.sh
     popd
 }

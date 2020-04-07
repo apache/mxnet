@@ -228,7 +228,6 @@ Please run performance test aginast the MXNet you build before raising the PR.
 - [ ] Python/setup.py
 - [ ] tools/pip/setup.py
 - [ ] ci/docker/install/requirements
-- [ ] ci/docker/install/ubuntu_publish.sh
 - [ ] ci/docker/install/ubuntu_python.sh
 - [ ] ci/qemu/mxnet_requirements.txt
 - [ ] docs/install/requirements.txt 
