@@ -71,12 +71,6 @@ void linalg_gemm_axis(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 3, DType
 
 #if (MSHADOW_USE_CBLAS == 1 || MSHADOW_USE_MKL == 1)
 
-#if CUDA_VERSION < 11000
-#define VERSION_ADJUSTED_TF32_MATH CUBLAS_DEFAULT_MATH
-#else
-#define VERSION_ADJUSTED_TF32_MATH CUBLAS_TF32_TENSOR_OP_MATH
-#endif
-
 #define LINALG_CPU_GEMM(fname, DType) \
 template<> inline \
 void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
