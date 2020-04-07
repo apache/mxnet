@@ -676,7 +676,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
           if (!Imperative::Get()->is_np_shape()) {
             common::ConvertToNumpyShape(&rshape[out_ent_id]);
           }
-	}
+        }
       }
       if (!fis_none(rshape[out_ent_id])) {
         inference_finished[nid] = true;

@@ -1082,7 +1082,7 @@ int MXLoadLib(const char *path, int verbose) {
           node->attrs.dict[MX_STR_DTYPE] = ss.str();
         }
       }
-      
+
       std::string in_json = nnvm::pass::SaveJSON(g);
       // convert options_map_ to char* to pass to backend library
       std::vector<const char*> opt_keys, opt_vals;
@@ -1095,18 +1095,17 @@ int MXLoadLib(const char *path, int verbose) {
       CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
                           opt_vals.data(), opt_keys.size(), pass_name))
       << "Error calling graph pass for '" << pass_name << "'";
-      
+
       std::string out_string(out_json);
       nnvm::Graph out_graph = nnvm::pass::LoadJSON(out_string);
 
       callFree(out_json);
       return out_graph;
     };
-    
+
     nnvm::PassFunctionReg& pass = dmlc::Registry<nnvm::PassFunctionReg>::Get()->__REGISTER__(name);
     pass.set_body(pass_lambda);
-    pass.set_change_graph(true);
-    
+    pass.set_change_graph(true);    
   }
   API_END();
 }

@@ -459,22 +459,22 @@ class OpResource {
       rand_cpu_states(rng_cpu_states), rand_gpu_states(rng_gpu_states) {}
 
   /*! \brief allocate cpu memory controlled by MXNet */
-  void* alloc_cpu(int size) {
+  void* alloc_cpu(int size) const {
     return cpu_malloc(cpu_alloc, size);
   }
 
   /*! \brief allocate gpu memory controlled by MXNet */
-  void* alloc_gpu(int size) {
+  void* alloc_gpu(int size) const {
     return gpu_malloc(gpu_alloc, size);
   }
 
   /*! \brief return the cuda stream object with correct type */
-  mx_stream_t get_cuda_stream() {
+  mx_stream_t get_cuda_stream() const {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
   /*! \brief allocate sparse memory controlled by MXNet */
-  void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
+  void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) const {
     sparse_malloc(sparse_alloc, index, indices_len, indptr_len,
                    &(sparse->data), &(sparse->indices), &(sparse->indptr));
   }
@@ -791,12 +791,12 @@ class CustomOpSelector {
  */
 class CustomStatefulOp {
  public:
-  virtual MXReturnValue Forward(std::vector<MXTensor> inputs,
-                                std::vector<MXTensor> outputs,
-                                OpResource op_res) = 0;
-  virtual MXReturnValue Backward(std::vector<MXTensor> inputs,
-                                 std::vector<MXTensor> outputs,
-                                 OpResource op_res) {
+  virtual MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                                std::vector<MXTensor>* outputs,
+                                const OpResource& op_res) = 0;
+  virtual MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                                 std::vector<MXTensor>* outputs,
+                                 const OpResource& op_res) {
     std::cout << "Error! Operator does not support backward" << std::endl;
     return MX_FAIL;
   }
@@ -814,9 +814,9 @@ class CustomStatefulOpWrapper {
 /*! \brief Custom Operator function templates */
 typedef MXReturnValue (*fcomp_t)(const std::unordered_map<std::string,
                                                           std::string>& attributes,
-                                 std::vector<MXTensor>& inputs,
-                                 std::vector<MXTensor>& outputs,
-                                 OpResource& res);
+                                 std::vector<MXTensor>* inputs,
+                                 std::vector<MXTensor>* outputs,
+                                 const OpResource& res);
 typedef MXReturnValue (*parseAttrs_t)(const std::unordered_map<std::string,
                                                                std::string>& attributes,
                                       int* num_inputs, int* num_outputs);
@@ -942,18 +942,19 @@ typedef MXReturnValue (*graphPass_t)(const std::string&, const std::string**,
  * \brief An abstract class for graph passes
  */
 class CustomPass {
- public:
-  CustomPass() : name("ERROR") {}
-  explicit CustomPass(const char* pass_name) :
-    name(pass_name) {}
-  CustomPass& setBody(graphPass_t fn) {
-    pass = fn;
-    return *this;
-  }
+  public:
+    CustomPass() : name("ERROR") {}
+    explicit CustomPass(const char* pass_name)
+      : name(pass_name) {}
+    CustomPass& setBody(graphPass_t fn) {
+      pass = fn;
+      return *this;
+    }
 
-  /*! \brief pass name */
-  const char* name;
-  graphPass_t pass;
+    /*! \brief pass name */
+    const char* name;
+    /*! \brief pass function */
+    graphPass_t pass;
 };
 
 /*! \brief Custom Subgraph Create function template */
@@ -1635,9 +1636,9 @@ extern "C" {
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {
-      return op_ptr->Forward(inputs, outputs, res);
+      return op_ptr->Forward(&inputs, &outputs, res);
     }
-    return op_ptr->Backward(inputs, outputs, res);
+    return op_ptr->Backward(&inputs, &outputs, res);
   }
 
   /*! \brief returns number of partitioners registered in this library */
@@ -1711,7 +1712,7 @@ extern "C" {
     CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
     *selected = sel_ptr->Select(nodeID);
   }
-  
+
   /*! \brief returns status of calling select input function from library */
   MX_VOID_RET _partCallSelectInput(void* sel_inst, int nodeID,
                                   int input_nodeID, int* selected) {
@@ -1739,7 +1740,7 @@ extern "C" {
     sel_ptr->Filter(candidates_, &keep_);
 
     *num_keep = keep_.size();
-    *keep = (int*)malloc(keep_.size() * sizeof(int));
+    *keep = static_cast<int*>(malloc(keep_.size() * sizeof(int)));
     for (unsigned i=0; i < keep_.size(); i++)
       (*keep)[i] = keep_[i];
   }
@@ -1749,7 +1750,7 @@ extern "C" {
     CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
     sel_ptr->Reset();
   }
-  
+
   /*! \brief returns status of calling review subgraph function from library */
   MX_INT_RET _partCallReviewSubgraph(reviewSubgraph_t reviewSubgraph, const char *json,
                                      int subgraph_id, int *accept, const char* const* opt_keys,
@@ -1849,7 +1850,7 @@ extern "C" {
     std::unordered_map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
-    
+
     MXReturnValue retval = graphPass(graph_json, &out_graph, opts);
     if (!retval) return retval;
 
@@ -1863,7 +1864,7 @@ extern "C" {
     delete out_graph;
     return retval;
   }
-  
+
   /*!
    * \brief Checks if the MXNet version is supported by the library.
    * If supported, initializes the library.
