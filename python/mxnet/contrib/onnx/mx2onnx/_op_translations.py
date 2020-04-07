@@ -349,10 +349,11 @@ def convert_batchnorm(node, **kwargs):
         [name],
         name=name,
         epsilon=eps,
-        momentum=momentum,
-        # MXNet computes mean and variance per feature for batchnorm
-        # Default for onnx is across all spatial features. So disabling the parameter.
-        spatial=0
+        momentum=momentum
+        # MXNet computes mean and variance per channel for batchnorm.
+        # Default for onnx is across all spatial features. Relying on default
+        # ONNX behavior of spatial=1 for ONNX opset 8 and below. As the spatial
+        # attribute is deprecated in opset 9 and above, not explicitly encoding it.
     )
     return [bn_node]
 
