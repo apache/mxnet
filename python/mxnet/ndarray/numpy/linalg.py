@@ -92,9 +92,7 @@ def pinv(a, rcond=1e-15, hermitian=False):
     """
     if hermitian is True:
         raise NotImplementedError("hermitian is not supported yet...")
-    if _mx_nd_np._np.isscalar(rcond):
-        return _npi.pinv_scalar_rcond(a, rcond, hermitian)
-    return _npi.pinv(a, rcond, hermitian)
+    return _api_internal.pinv(a, rcond, hermitian)
 
 
 # pylint: disable=too-many-return-statements
@@ -389,7 +387,7 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _npi.cholesky(a)
+    return _api_internal.cholesky(a, True)
 
 
 def inv(a):
@@ -431,7 +429,7 @@ def inv(a):
            [[-1.2500001 ,  0.75000006],
             [ 0.75000006, -0.25000003]]])
     """
-    return _npi.inv(a)
+    return _api_internal.inv(a)
 
 
 def det(a):
@@ -595,7 +593,7 @@ def solve(a, b):
     >>> np.allclose(np.dot(a, x), b)
     True
     """
-    return _npi.solve(a, b)
+    return _api_internal.solve(a, b)
 
 
 def tensorinv(a, ind=2):
@@ -650,7 +648,7 @@ def tensorinv(a, ind=2):
     >>> np.allclose(np.tensordot(ainv, b, 1), np.linalg.tensorsolve(a, b))
     True
     """
-    return _npi.tensorinv(a, ind)
+    return _api_internal.tensorinv(a, ind)
 
 
 def tensorsolve(a, b, axes=None):
@@ -698,7 +696,7 @@ def tensorsolve(a, b, axes=None):
     >>> np.allclose(np.tensordot(a, x, axes=3), b)
     True
     """
-    return _npi.tensorsolve(a, b, axes)
+    return _api_internal.tensorsolve(a, b, axes)
 
 
 def eigvals(a):
@@ -766,7 +764,7 @@ def eigvals(a):
     >>> LA.eigvals(A)
     array([ 1., -1.]) # random
     """
-    return _npi.eigvals(a)
+    return _api_internal.eigvals(a)
 
 
 def eigvalsh(a, UPLO='L'):
@@ -825,7 +823,7 @@ def eigvalsh(a, UPLO='L'):
     >>> LA.eigvalsh(a, UPLO='L')
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
-    return _npi.eigvalsh(a, UPLO)
+    return _api_internal.eigvalsh(a, UPLO)
 
 
 def eig(a):

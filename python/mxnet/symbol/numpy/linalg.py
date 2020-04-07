@@ -378,7 +378,7 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _npi.cholesky(a)
+    return _npi.cholesky(a, True)
 
 
 def inv(a):
