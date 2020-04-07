@@ -1647,8 +1647,8 @@ extern "C" {
     for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
 
-    // create array of bools for operator support
-    std::vector<int> _ids(num_ids, -1);
+    // create array of subgraph IDs for operator support
+    std::vector<int> _ids(num_ids, -2);
     // call user's supportedOps function
     MXReturnValue retval = supportedOps(subgraph_json, _ids, opts);
     if (!retval) return retval;
@@ -1703,8 +1703,9 @@ extern "C" {
                               int** keep, int* num_keep) {
     CustomOpSelector* sel_ptr = reinterpret_cast<CustomOpSelector*>(sel_inst);
     std::vector<int> candidates_(num_candidates);
-    for (int i=0; i < num_candidates; i++)
+    for (int i=0; i < num_candidates; i++) {
       candidates_[i] = candidates[i];
+    }
     std::vector<int> keep_;
 
     sel_ptr->Filter(candidates_, keep_);

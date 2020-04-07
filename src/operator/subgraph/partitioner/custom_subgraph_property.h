@@ -70,33 +70,37 @@ class CustomContainOpSelector: public SubgraphSelector {
     }
   }
   virtual bool SelectInput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    if (!sel_inst_)
+    if (!sel_inst_) {
       // check that op type is supported and that both nodes have the same ID
+      // or the new node 's subgraph ID is any (-1)
       return supported_nodes_.count(new_node.attrs.name) > 0 &&
-        supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
-    else {
+        (supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name] ||
+	 supported_nodes_[new_node.attrs.name] == -1);
+    } else {
       int selected = 0;
       callSelectInput_(sel_inst_, node2id_[&n], node2id_[&new_node], &selected);
       return selected;
     }
   }
   virtual bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) {
-    if (!sel_inst_)
+    if (!sel_inst_) {
       // check that op type is supported and that both nodes have the same ID
+      // or the new node 's subgraph ID is any (-1)
       return supported_nodes_.count(new_node.attrs.name) > 0 &&
-        supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name];
-    else {
+        (supported_nodes_[n.attrs.name] == supported_nodes_[new_node.attrs.name] ||
+	 supported_nodes_[new_node.attrs.name] == -1);
+    } else {
       int selected = 0;
       callSelectOutput_(sel_inst_, node2id_[&n], node2id_[&new_node], &selected);
       return selected;
     }
   }
   virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
-    if (!sel_inst_)
+    if (!sel_inst_) {
       return candidates;
-    else {
+    } else {
       std::unordered_map<int, nnvm::Node*> rev_map;
-      std::vector<int> cand(candidates.size());
+      std::vector<int> cand;
       for (nnvm::Node* node : candidates) {
         cand.push_back(node2id_[node]);
         rev_map[node2id_[node]] = node;
@@ -104,9 +108,10 @@ class CustomContainOpSelector: public SubgraphSelector {
       int* keep_ = nullptr;
       int num_keep = 0;
       callFilter_(sel_inst_, cand.data(), cand.size(), &keep_, &num_keep);
-      std::vector<nnvm::Node*> keep(num_keep);
-      for (int i=0; i < num_keep; i++)
+      std::vector<nnvm::Node*> keep;
+      for (int i=0; i < num_keep; i++) {
         keep.push_back(rev_map[keep_[i]]);
+      }
       callFree_(keep_);
       return keep;
     }
@@ -323,10 +328,12 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       opt_vals_.push_back(kv.second.c_str());
     }
 
+    // check if supportedOps was registered
     if(supported_ops_ && call_supported_ops_) {
+      // setup array of subgraph IDs for each node
       std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -1);
       int *ids = supported_node_IDs.data();
-
+      // call supportedOps
       CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,
                                 opt_keys_.data(), opt_vals_.data(), opt_keys_.size()))
         << "Error calling supported_ops for '" << subgraph_prop << "'";
@@ -334,7 +341,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
       const auto& idx = g.indexed_graph();
       // loop and add node names for each supported node ID
       for (unsigned i = 0; i < supported_node_IDs.size(); i++) {
-        if (supported_node_IDs[i] != -1) {
+        if (supported_node_IDs[i] != -2) {
           supported_nodes[idx[i].source->attrs.name] = supported_node_IDs[i];
         }
       }

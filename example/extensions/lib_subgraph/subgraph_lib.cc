@@ -208,8 +208,8 @@ MXReturnValue mySupportedOps(std::string json,
     if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
       //check if op is in whitelist
       if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
-        // found op in whitelist, set value to 0 to include op in subgraph0
-        ids[i]=0;
+        // found op in whitelist, set value to -1 to include op in any subgraph
+        ids[i]=-1;
       }
     }
   }
@@ -262,21 +262,51 @@ REGISTER_PARTITIONER(myProp)
 class MySelector : public CustomOpSelector {
  public:
   MySelector(std::string& json,
-             std::unordered_map<std::string, std::string>& attrs) :
-    graph_json(json), attrs_(attrs) {
-    for (auto kv : attrs) {
-      std::cout << "selector attributes: " << kv.first
+             std::unordered_map<std::string, std::string>& options) :
+    graph_json(json), options_(options) {
+    for (auto kv : options) {
+      std::cout << "selector options: " << kv.first
                 << " ==> " << kv.second << std::endl;
     }
+    //convert json string to json object
+    JsonParser parser;
+    JsonVal json_val = parser.parse_to_json(json);
+    //get nodes list
+    nodes = json_val.map[JsonVal("nodes")];
+  }
+  bool chooseNode(int nodeID) {
+    JsonVal node = nodes.list[nodeID];
+    JsonVal op = node.map[JsonVal("op")];
+
+    //get shape/type if available
+    std::string shape;
+    int dtype = -1;
+    if(node.map.find(JsonVal("attrs")) != node.map.end()) {
+      JsonVal attrs = node.map[JsonVal("attrs")];
+      if(attrs.map.find(JsonVal("shape")) != attrs.map.end()) 
+        shape = attrs.map[JsonVal("shape")].str;
+      if(attrs.map.find(JsonVal("dtype")) != attrs.map.end())
+        dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
+    }
+
+    //check if op dtype is float, and if option was specified to require float types
+    if((dtype == kFloat32 && options_.count("reqFloat") > 0) || options_.count("reqFloat") == 0) {
+      //check if op is in whitelist
+      if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
+        // found op in whitelist, return true to include op subgraph
+	return true;
+      }
+    }
+    return false;
   }
   virtual bool Select(int nodeID) {
-    return false;
+    return chooseNode(nodeID);
   }
   virtual bool SelectInput(int nodeID, int input_nodeID) {
-    return false;
+    return chooseNode(input_nodeID);
   }
   virtual bool SelectOutput(int nodeID, int output_nodeID) {
-    return false;
+    return chooseNode(output_nodeID);
   }
   virtual void Filter(std::vector<int>& candidates,
                       std::vector<int>& keep) {
@@ -285,12 +315,13 @@ class MySelector : public CustomOpSelector {
   virtual void Reset() {}
  private:
   std::string graph_json;
-  std::unordered_map<std::string, std::string> attrs_;
+  JsonVal nodes;
+  std::unordered_map<std::string, std::string> options_;
 };
 
 MXReturnValue createSelector(std::string& json, CustomOpSelector** sel_inst,
-                             std::unordered_map<std::string, std::string>& attrs) {
-  *sel_inst = new MySelector(json, attrs);
+                             std::unordered_map<std::string, std::string>& options) {
+  *sel_inst = new MySelector(json, options);
   std::cout << "Info: selector created" << std::endl;
   return MX_SUCCESS;
 }
