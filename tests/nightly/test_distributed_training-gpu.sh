@@ -39,8 +39,8 @@ test_kvstore() {
 }
 
 test_horovod() {
-    pip3 install --no-cache-dir horovod
-    mpirun -n 2 -H localhost:2 python3 dist_device_sync_kvstore_horovod.py
+    echo "localhost slots=2" > hosts
+    mpirun -n 2 --hostfile hosts python3 dist_device_sync_kvstore_horovod.py
     if [ $? -ne 0 ]; then
         return $?
     fi

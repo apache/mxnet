@@ -1346,7 +1346,10 @@ integrationtest_ubuntu_gpu_scala() {
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
     pushd .
-    cd tests/nightly
+    cd /work/mxnet/python
+    pip3 install -e .
+    pip3 install --no-cache-dir horovod
+    cd /work/mxnet/tests/nightly
     ./test_distributed_training-gpu.sh
     popd
 }
