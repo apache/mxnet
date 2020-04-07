@@ -47,47 +47,51 @@ c = a + b
 d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
-#execute in MXNet
-print('-------------------------------')
-print('Testing regular MXNet execution')
-exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out = exe.forward()
-print(out)
+def test_model(pass_name):
+    # execute in MXNet
+    print('-------------------------------')
+    print('Testing regular MXNet execution')
+    exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out = exe.forward()
+    print(out)
 
-# Symbol optimize_for
-# with propogating shapes/types
-print('-------------------------------')
-print('Testing with shapes/types')
-arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-mysym2 = sym.optimize_for("myPass",arg_array)
-print(mysym2.tojson())
-exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out2 = exe2.forward()
-print(out2)
+    # Symbol optimize_for
+    # with propogating shapes/types
+    print('-------------------------------')
+    print('Testing pass "%s" with shapes/types' % pass_name)
+    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
+    mysym2 = sym.optimize_for("myPass",arg_array)
+    print(mysym2.tojson())
+    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out2 = exe2.forward()
+    print(out2)
 
-# without propogating shapes/types
-print('-------------------------------')
-print('Testing without shapes/types')
-mysym3 = sym.optimize_for("myPass", myOpt='yello')
-exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
-out3 = exe3.forward()
-print(out3)
+    # without propogating shapes/types
+    print('-------------------------------')
+    print('Testing pass "%s" without shapes/types' % pass_name)
+    mysym3 = sym.optimize_for("myPass", myOpt='yello')
+    exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    out3 = exe3.forward()
+    print(out3)
 
-# Gluon Hybridize
-print('-------------------------------')
-print('Testing Gluon Hybridize with shapes/types')
-inputs = [a,b]
-sym_block = nn.SymbolBlock(sym, inputs)
-sym_block.initialize()
-sym_block.hybridize(backend='myPass')
-out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
-print(out4)
+    # Gluon Hybridize
+    print('-------------------------------')
+    print('Testing pass "%s" Gluon Hybridize with shapes/types' % pass_name)
+    inputs = [a,b]
+    sym_block = nn.SymbolBlock(sym, inputs)
+    sym_block.initialize()
+    sym_block.hybridize(backend='myPass')
+    out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+    print(out4)
+    
+    # Gluon optimize_for
+    print('-------------------------------')
+    print('Testing pass "%s" Gluon Hybridize with shapes/types without inference' % pass_name)
+    inputs = [a,b]
+    sym_block2 = nn.SymbolBlock(sym, inputs)
+    sym_block2.initialize()
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend='myPass')
+    sym_block2.export('modified')
 
-# Gluon optimize_for
-print('-------------------------------')
-print('Testing Gluon Hybridize with shapes/types without inference')
-inputs = [a,b]
-sym_block2 = nn.SymbolBlock(sym, inputs)
-sym_block2.initialize()
-sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend='myPass')
-sym_block2.export('modified')
+test_model('myPass')
+test_model('jsonPass')

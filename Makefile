@@ -678,7 +678,7 @@ pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
 # MXNet extension dynamically loading libraries
-EXT_LIBS = build/libcustomop_lib.so build/libsubgraph_lib.so
+EXT_LIBS = build/libcustomop_lib.so build/libtransposecsr_lib.so build/libtransposerowsp_lib.so build/libsubgraph_lib.so build/libpass_lib.so
 ifeq ($(USE_CUDA), 1)
         EXT_LIBS += build/libcustomop_gpu_lib.so
 endif
@@ -687,12 +687,21 @@ extension_libs: $(EXT_LIBS)
 build/libcustomop_lib.so:
 	@mkdir -p $(@D)
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+build/libtransposecsr_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposecsr_lib.cc -o $@ -I include/mxnet
+build/libtransposerowsp_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposerowsp_lib.cc -o $@ -I include/mxnet
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
 	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+build/libpass_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_pass/pass_lib.cc -o $@ -I include/mxnet
 
 # Cython build
 cython:

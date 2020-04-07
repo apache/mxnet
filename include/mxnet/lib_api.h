@@ -935,8 +935,8 @@ class CustomOp {
 };
 
 /*! \brief Custom Pass Create function template */
-typedef MXReturnValue (*graphPass_t)(const std::string&, const std::string**,
-                                     std::unordered_map<std::string, std::string>&);
+typedef MXReturnValue (*graphPass_t)(const std::string& in_graph, const std::string** out_graph,
+                                     const std::unordered_map<std::string, std::string>& options);
 
 /*!
  * \brief An abstract class for graph passes

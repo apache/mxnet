@@ -54,22 +54,22 @@ void transpose(const float* A, float* At, const unsigned n, const unsigned m) {
  * inputs[0] = A; inputs[1] = B; outputs[0] = C
  */
 MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
-                      std::vector<MXTensor>& inputs,
-                      std::vector<MXTensor>& outputs,
-                      OpResource& res) {
+                      std::vector<MXTensor>* inputs,
+                      std::vector<MXTensor>* outputs,
+                      const OpResource& res) {
   // simple example of using runtime data type
-  if (inputs[0].dtype == kFloat32) {
+  if (inputs->at(0).dtype == kFloat32) {
     typedef float DType;
     // extract data pointers from tensors
     // if using dltensor repr, below lines can be changed to something like
     // DType* A = reinterpret_cast<DType*>(inputs[0].dltensor.data);
-    DType* A = inputs[0].data<DType>();
-    DType* B = inputs[1].data<DType>();
-    DType* C = outputs[0].data<DType>();
+    DType* A = inputs->at(0).data<DType>();
+    DType* B = inputs->at(1).data<DType>();
+    DType* C = outputs->at(0).data<DType>();
     // set tensor shapes
-    unsigned n = inputs[0].shape[0];
-    unsigned k = inputs[0].shape[1];
-    unsigned m = inputs[1].shape[1];
+    unsigned n = inputs->at(0).shape[0];
+    unsigned k = inputs->at(0).shape[1];
+    unsigned m = inputs->at(1).shape[1];
 
     gemm(A, B, C, n, k, m);
   }
@@ -88,19 +88,19 @@ MXReturnValue forward(const std::unordered_map<std::string, std::string>& attrs,
  * outputs[0] = dA; outputs[1] = dB
  */
 MXReturnValue backward(const std::unordered_map<std::string, std::string>& attrs,
-                       std::vector<MXTensor>& inputs,
-                       std::vector<MXTensor>& outputs,
-                       OpResource& res) {
+                       std::vector<MXTensor>* inputs,
+                       std::vector<MXTensor>* outputs,
+                       const OpResource& res) {
   // extract data pointers from tensors
-  float* dC = inputs[0].data<float>();
-  float* A = inputs[1].data<float>();
-  float* B = inputs[2].data<float>();
-  float* dA = outputs[0].data<float>();
-  float* dB = outputs[1].data<float>();
+  float* dC = inputs->at(0).data<float>();
+  float* A = inputs->at(1).data<float>();
+  float* B = inputs->at(2).data<float>();
+  float* dA = outputs->at(0).data<float>();
+  float* dB = outputs->at(1).data<float>();
   // set tensor shapes
-  unsigned n = inputs[1].shape[0];
-  unsigned k = inputs[1].shape[1];
-  unsigned m = inputs[2].shape[1];
+  unsigned n = inputs->at(1).shape[0];
+  unsigned k = inputs->at(1).shape[1];
+  unsigned m = inputs->at(2).shape[1];
   // allocate temporary workspace memory through resource manager
   // for multiple arrays better to request a big memory pool
   void *workspace = res.alloc_cpu((k*n + m*k) * sizeof(float));
@@ -182,16 +182,16 @@ class MyStatefulGemm : public CustomStatefulOp {
                           const std::unordered_map<std::string, std::string>& attrs)
     : count(count), attrs_(attrs) {}
 
-  MXReturnValue Forward(std::vector<MXTensor> inputs,
-                        std::vector<MXTensor> outputs,
-                        OpResource op_res) {
+  MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                        std::vector<MXTensor>* outputs,
+                        const OpResource& op_res) {
     std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
     return forward(attrs_, inputs, outputs, op_res);
   }
 
-  MXReturnValue Backward(std::vector<MXTensor> inputs,
-                         std::vector<MXTensor> outputs,
-                         OpResource op_res) {
+  MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const OpResource& op_res) {
     return backward(attrs_, inputs, outputs, op_res);
   }
 

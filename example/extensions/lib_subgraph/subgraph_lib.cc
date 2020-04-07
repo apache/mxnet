@@ -50,9 +50,9 @@ void myExp(MXTensor &in, MXTensor &out) {
  * so all we need to do is go through the ops in order
  * and execute each op. 
  */
-MXReturnValue myExecutor(std::vector<MXTensor> inputs,
-                         std::vector<MXTensor> outputs,
-                         std::string subgraph_sym) {
+MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const std::string& subgraph_sym) {
   std::cout << "Info: subgraph symbol is: " << std::endl;
   std::cout << subgraph_sym << std::endl;
 
@@ -79,7 +79,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
     // handle each op type
     if (op.compare("null") == 0) {
       // null is an input data to the subgraph, add to data storage
-      data.push_back(inputs[input_cnt++]);
+      data.push_back(inputs->at(input_cnt++));
     } else if (op.compare("log") == 0) {
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
@@ -118,7 +118,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
     // get computed result
     MXTensor &result = data[heads.list[0].list[0].num];
     // get output tensor to pass to MX
-    MXTensor &out = outputs[j];
+    MXTensor &out = outputs->at(j);
     float *out_data = out.data<float>();
     float *res_data = result.data<float>();
     // loop and copy data
@@ -137,7 +137,7 @@ MXReturnValue myExecutor(std::vector<MXTensor> inputs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(const std::string sym,
+  explicit MyStatefulOp(const std::string& sym,
                         const std::unordered_map<std::string, std::string>& attrs)
     : subgraph_sym(sym), attrs_(attrs) {
     for (auto kv : attrs) {
@@ -145,9 +145,9 @@ class MyStatefulOp : public CustomStatefulOp {
     }
   }
 
-  MXReturnValue Forward(std::vector<MXTensor> inputs,
-                        std::vector<MXTensor> outputs,
-                        OpResource op_res) {
+  MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                        std::vector<MXTensor>* outputs,
+                        const OpResource& op_res) {
     return myExecutor(inputs, outputs, subgraph_sym);
   }
 

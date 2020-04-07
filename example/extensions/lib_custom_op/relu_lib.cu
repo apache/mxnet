@@ -41,36 +41,36 @@ __global__ void relu_gpu_backward(float *ingrad, float *outgrad, float *indata, 
 }
 
 MXReturnValue forwardCPU(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<MXTensor>& inputs,
-                         std::vector<MXTensor>& outputs,
-                         OpResource& res) {
-  float* in_data = inputs[0].data<float>();
-  float* out_data = outputs[0].data<float>();
-  for (int i=0; i<inputs[0].size(); i++) {
+                         std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const OpResource& res) {
+  float* in_data = inputs->at(0).data<float>();
+  float* out_data = outputs->at(0).data<float>();
+  for (int i=0; i<inputs->at(0).size(); i++) {
     out_data[i] = in_data[i] > 0 ? in_data[i] : 0;
   }
   return MX_SUCCESS;
 }
 
 MXReturnValue backwardCPU(const std::unordered_map<std::string, std::string>& attrs,
-                          std::vector<MXTensor>& inputs,
-                          std::vector<MXTensor>& outputs,
-                          OpResource& res) {
-  float* out_grad = inputs[0].data<float>();
-  float* in_data = inputs[1].data<float>();
-  float* in_grad = outputs[0].data<float>();
-  for (int i=0; i<inputs[1].size(); i++) {
+                          std::vector<MXTensor>* inputs,
+                          std::vector<MXTensor>* outputs,
+                          const OpResource& res) {
+  float* out_grad = inputs->at(0).data<float>();
+  float* in_data = inputs->at(1).data<float>();
+  float* in_grad = outputs->at(0).data<float>();
+  for (int i=0; i<inputs->at(1).size(); i++) {
     in_grad[i] = in_data[i] > 0 ? 1 * out_grad[i] : 0;
   }
   return MX_SUCCESS;
 }
 
 MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<MXTensor>& inputs,
-                         std::vector<MXTensor>& outputs,
-                         OpResource& res) {
-  float* in_data = inputs[0].data<float>();
-  float* out_data = outputs[0].data<float>();
+                         std::vector<MXTensor>* inputs,
+                         std::vector<MXTensor>* outputs,
+                         const OpResource& res) {
+  float* in_data = inputs->at(0).data<float>();
+  float* out_data = outputs->at(0).data<float>();
 
   mx_stream_t cuda_stream = res.get_cuda_stream();
   int64_t N = inputs[0].size();
@@ -81,21 +81,20 @@ MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& att
   return MX_SUCCESS;
 }
 
-MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
-                          std::vector<MXTensor> inputs,
-                          std::vector<MXTensor> outputs,
-                          OpResource res) {
-    float* out_grad = inputs[0].data<float>();
-    float* in_data = inputs[1].data<float>();
-    float* in_grad = outputs[0].data<float>();
+MXReturnValue backwardGPU(const std::unordered_map<std::string, std::string>& attrs,
+                          std::vector<MXTensor>* inputs,
+                          std::vector<MXTensor>* outputs,
+                          const OpResource& res) {
+  float* out_grad = inputs->at(0).data<float>();
+  float* in_data = inputs->at(1).data<float>();
+  float* in_grad = outputs->at(0).data<float>();
 
-    mx_stream_t cuda_stream = res.get_cuda_stream();
-    int64_t N = inputs[0].size();
-    int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
+  mx_stream_t cuda_stream = res.get_cuda_stream();
+  int64_t N = inputs[0].size();
+  int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
+  relu_gpu_backward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
 
-    relu_gpu_backward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
-
-    return MX_SUCCESS;
+  return MX_SUCCESS;
 }
 
 MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& attrs,
@@ -132,14 +131,14 @@ class MyStatefulReluCPU : public CustomStatefulOp {
   public:
     explicit MyStatefulReluCPU(const std::unordered_map<std::string, std::string>& attrs)
       : attrs_(attrs) {}
-    MXReturnValue Forward(std::vector<MXTensor> inputs,
-                          std::vector<MXTensor> outputs,
-                          OpResource op_res) {
+    MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                          std::vector<MXTensor>* outputs,
+                          const OpResource& op_res) {
       return forwardCPU(attrs_, inputs, outputs, op_res);
     }
-    MXReturnValue Backward(std::vector<MXTensor> inputs,
-                           std::vector<MXTensor> outputs,
-                           OpResource op_res) {
+    MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                           std::vector<MXTensor>* outputs,
+                           const OpResource& op_res) {
       return backwardCPU(attrs_, inputs, outputs, op_res);
     }
     ~MyStatefulReluCPU() {}
@@ -151,14 +150,14 @@ class MyStatefulReluGPU : public CustomStatefulOp {
   public:
     explicit MyStatefulReluGPU(const std::unordered_map<std::string, std::string>& attrs)
       : attrs_(attrs) {}
-    MXReturnValue Forward(std::vector<MXTensor> inputs,
-                          std::vector<MXTensor> outputs,
-                          OpResource op_res) {
+    MXReturnValue Forward(std::vector<MXTensor>* inputs,
+                          std::vector<MXTensor>* outputs,
+                          const OpResource& op_res) {
       return forwardGPU(attrs_, inputs, outputs, op_res);
     }
-    MXReturnValue Backward(std::vector<MXTensor> inputs,
-                           std::vector<MXTensor> outputs,
-                           OpResource op_res) {
+    MXReturnValue Backward(std::vector<MXTensor>* inputs,
+                           std::vector<MXTensor>* outputs,
+                           const OpResource& op_res) {
       return backwardGPU(attrs_, inputs, outputs, op_res);
     }
     ~MyStatefulReluGPU() {}
