@@ -1004,6 +1004,7 @@ cd_unittest_ubuntu() {
         # Adding these here as CI doesn't test all CUDA environments
         $python_cmd example/image-classification/test_score.py
         integrationtest_ubuntu_gpu_dist_kvstore
+        integrationtest_ubuntu_gpu_byteps
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
@@ -1350,6 +1351,24 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ./test_distributed_training-gpu.sh
     popd
 }
+
+integrationtest_ubuntu_gpu_byteps() {
+    set -ex
+    pushd .
+    export PYTHONPATH=$PWD/python/
+    export BYTEPS_WITHOUT_PYTORCH=1
+    export BYTEPS_WITHOUT_TENSORFLOW=1
+    git clone -b v0.2 https://github.com/bytedance/byteps/ --recursive
+    cd byteps && python3 setup.py install --user && cd -
+
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    cd tests/nightly/
+    python3 ../../tools/launch.py -n 1 -s 1 --byteps --env NVIDIA_VISIBLE_DEVICES:0,1 python3 dist_device_sync_kvstore_byteps.py
+    popd
+}
+
 
 test_ubuntu_cpu_python3() {
     set -ex
