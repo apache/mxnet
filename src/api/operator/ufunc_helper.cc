@@ -23,6 +23,7 @@
  */
 #include "ufunc_helper.h"
 #include "utils.h"
+#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
 

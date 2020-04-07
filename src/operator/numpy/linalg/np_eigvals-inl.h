@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../../operator_common.h"
 #include "../../mshadow_op.h"
 #include "../../tensor/la_op.h"
@@ -311,6 +312,11 @@ struct EigvalshParam : public dmlc::Parameter<EigvalshParam> {
     DMLC_DECLARE_FIELD(UPLO)
     .set_default('L')
     .describe("Specifies whether the calculation is done with the lower or upper triangular part.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream UPLO_s;
+    UPLO_s << UPLO;
+    (*dict)["UPLO"] = UPLO_s.str();
   }
 };
 
