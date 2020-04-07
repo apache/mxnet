@@ -63,6 +63,8 @@ from .independent import *
 
 from .bernoulli import *
 
+from .binomial import *
+
 from .relaxed_bernoulli import *
 
 from .gumbel import *

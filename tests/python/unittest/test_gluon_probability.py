@@ -1142,6 +1142,75 @@ def test_gluon_multinomial():
 
 @with_seed()
 @use_np
+def test_gluon_binomial():
+    class TestBinomial(HybridBlock):
+        def __init__(self, func, is_logit=False, n=1):
+            super(TestBinomial, self).__init__()
+            self._is_logit = is_logit
+            self._func = func
+            self._n = n
+
+        def hybrid_forward(self, F, params, *args):
+            dist = mgp.Binomial(n=self._n, logit=params, F=F) if self._is_logit else \
+                        mgp.Binomial(n=self._n, prob=params, F=F)
+            return _distribution_method_invoker(dist, self._func, *args)
+
+    shapes = [(), (1,), (2, 3), 6]
+    # Test sampling
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        for use_logit in [True, False]:
+            n = _np.random.randint(5, 10)
+            prob = np.random.uniform(low=0.1, size=shape)
+            net = TestBinomial('sample', use_logit, n=float(n))
+            param = prob
+            if use_logit:
+                param = prob_to_logit(param)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(param).asnumpy()
+            desired_shape = (shape,) if isinstance(shape, int) else shape
+            assert mx_out.shape == desired_shape
+    
+    # Test log_prob
+    for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
+        n = _np.random.randint(5, 10)
+        prob = np.random.uniform(low=0.1, size=shape)
+        sample = np.random.randint(0, n, size=shape).astype('float32')
+        param = prob
+        if use_logit:
+            param = prob_to_logit(param)
+        net = TestBinomial("log_prob", use_logit, n=float(n))
+        if hybridize:
+            net.hybridize()
+        mx_out = net(param, sample).asnumpy()
+        np_out = ss.binom(n=n, p=prob.asnumpy()).logpmf(sample.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                        rtol=1e-3, use_broadcast=False)
+
+    # Test mean and variance
+    for shape, hybridize in itertools.product(shapes, [True, False]):
+        for func in ['mean', 'variance']:
+            for use_logit in [True, False]:
+                n = _np.random.randint(5, 10)
+                prob = np.random.uniform(low=0.1, size=shape)
+                net = TestBinomial(func, use_logit, n=float(n))
+                param = prob
+                if use_logit:
+                    param = prob_to_logit(param)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(param).asnumpy()
+                ss_binom = ss.binom(n=n, p=prob.asnumpy())
+                if func == 'mean':
+                    np_out = ss_binom.mean()
+                else:
+                    np_out = ss_binom.var()
+                assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                    rtol=1e-3, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_gluon_bernoulli():
     class TestBernoulli(HybridBlock):
         def __init__(self, func, is_logit=False):
