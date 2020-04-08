@@ -202,7 +202,7 @@ endif(MSVC)
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")
-endif(NOT mxnet_LINKER_LIBS)
+endif()
 
 if(USE_GPROF)
   message(STATUS "Using GPROF")
