@@ -1102,7 +1102,7 @@ void registerPasses(void *lib, int verbose) {
  * \brief Loads dynamic custom library and initializes it
  * \param path library path
  */
-int MXLoadLib(const char *path, int verbose) {
+int MXLoadLib(const char *path, unsigned verbose) {
   API_BEGIN();
   void *lib = LibraryInitializer::Get()->lib_load(path);
   if (!lib)

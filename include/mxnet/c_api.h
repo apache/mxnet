@@ -237,7 +237,7 @@ MXNET_DLL const char *MXGetLastError();
  * \param 0 for quiet, 1 for verbose
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXLoadLib(const char *path, int verbose);
+MXNET_DLL int MXLoadLib(const char *path, unsigned verbose);
 
 /*!
  * \brief Get list of features supported on the runtime
