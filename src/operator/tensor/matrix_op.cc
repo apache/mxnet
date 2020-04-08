@@ -1038,6 +1038,7 @@ Example::
 
 NNVM_REGISTER_OP(_split_v2)
 .add_alias("_npi_split")
+.add_alias("_npi_array_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 Example::
    x  = [[[ 1.]

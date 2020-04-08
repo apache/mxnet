@@ -73,6 +73,9 @@ def prepare_workloads():
     OpArgMngr.add_workload("split", pool['3x3'], (0, 1, 2), axis=1)
     OpArgMngr.add_workload("argmax", pool['3x2'], axis=-1)
     OpArgMngr.add_workload("argmin", pool['3x2'], axis=-1)
+    OpArgMngr.add_workload("atleast_1d", pool['2'], pool['2x2'])
+    OpArgMngr.add_workload("atleast_2d", pool['2'], pool['2x2'])
+    OpArgMngr.add_workload("atleast_3d", pool['2'], pool['2x2'])
     OpArgMngr.add_workload("indices", dimensions=(1, 2, 3))
     OpArgMngr.add_workload("subtract", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("multiply", pool['2x2'], pool['2x2'])
@@ -110,6 +113,10 @@ def prepare_workloads():
                            out=dnp.array([False, False], dtype=bool), keepdims=False)
     OpArgMngr.add_workload("roll", pool["2x2"], 1, axis=0)
     OpArgMngr.add_workload("rot90", pool["2x2"], 2)
+    OpArgMngr.add_workload("array_split", pool['2X2'], 2, axis=1)
+    OpArgMngr.add_workload("vsplit", pool['2X2'], 2)
+    OpArgMngr.add_workload("hsplit", pool['2X2'], 2)
+    OpArgMngr.add_workload("dsplit", pool['2X2x2'], 2)
 
 
 def benchmark_helper(f, *args, **kwargs):
