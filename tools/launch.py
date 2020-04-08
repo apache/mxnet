@@ -63,13 +63,7 @@ def main():
                         in default it is equal to NUM_WORKERS')
     parser.add_argument('-H', '--hostfile', type=str,
                         help = 'the hostfile of slave machines which will run \
-                        the job. Required for ssh and mpi launcher.\
-                        When -SH is set, the file provided by -H will \
-                        be used to recognize worker machines only. Otherwise, \
-                        -H is used for both server and worker machines.')
-    parser.add_argument('-SH', '--server-hostfile', type=str,
-                        help = 'the hostfile of server machines which will run \
-                        the job. Required for byteps multi-machine launching.')
+                        the job. Required for ssh and mpi launcher')
     parser.add_argument('--sync-dst-dir', type=str,
                         help = 'if specificed, it will sync the current \
                         directory into slave machines\'s SYNC_DST_DIR if ssh \
@@ -77,9 +71,6 @@ def main():
     parser.add_argument('--launcher', type=str, default='ssh',
                         choices = ['local', 'ssh', 'mpi', 'sge', 'yarn'],
                         help = 'the launcher to use')
-    bps_group = parser.add_argument_group('byteps-backend')
-    bps_group.add_argument('--byteps', action='store_true',
-                        help = 'Whether use byteps launcher to launch')
     parser.add_argument('--env-server', action='append', default=[],
                         help = 'Given a pair of environment_variable:value, sets this value of \
                         environment variable for the server processes. This overrides values of \
@@ -101,12 +92,6 @@ def main():
                         help = 'command for launching the program')
     args, unknown = parser.parse_known_args()
     args.command += unknown
-    
-    if args.byteps:
-        import byteps_launcher as bpsl
-        bpsl.submit(args)
-        return
-    
     if args.num_servers is None:
         args.num_servers = args.num_workers
     if args.p3:
