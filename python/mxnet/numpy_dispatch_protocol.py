@@ -110,6 +110,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'fliplr',
     'inner',
     'insert',
+    'interp',
     'max',
     'amax',
     'mean',
