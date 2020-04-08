@@ -480,7 +480,10 @@ void MKLDNNConvolutionBackward(const nnvm::NodeAttrs& attrs, const OpContext &ct
                                            {MKLDNN_ARG_DIFF_SRC, *in_grad_mem.second}});
     CommitOutput(in_grad[conv::kData], in_grad_mem);
   }
-  if (req[conv::kWeight] || req[conv::kBias]) {
+
+  auto req_weight = req.size() > conv::kWeight ? req.at(conv::kWeight) : kNullOp;
+  auto req_bias = req.size() > conv::kBias ? req.at(conv::kBias) : kNullOp;
+  if (req_weight || req_bias) {
     if (convBwd.GetDataPd().diff_dst_desc() != convBwd.GetWeightsPd().diff_dst_desc())
       out_grad_mem = out_grad.GetMKLDNNDataReorder(convBwd.GetWeightsPd().diff_dst_desc());
     auto data_mem = data.GetMKLDNNDataReorder(convBwd.GetWeightsPd().src_desc());
