@@ -216,15 +216,22 @@ build_dynamic_libmxnet() {
 
 build_jetson() {
     set -ex
-    pushd .
-
-    export CC=gcc-6
-    export CXX=g++-6
-    cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
-
-    build_wheel /work/mxnet/python /work/mxnet/lib
-    popd
+    cd /work/build
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="5.2" \
+        -DENABLE_CUDA_RTC=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -G Ninja /work/mxnet
+    ninja
+    build_wheel
 }
 
 #
@@ -252,7 +259,7 @@ build_armv6() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-lgfortran \
+        -Dmxnet_LINKER_LIBS=-latomic \
         -G Ninja /work/mxnet
 
     ninja
@@ -279,7 +286,6 @@ build_armv7() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
     ninja
@@ -289,14 +295,15 @@ build_armv7() {
 build_armv8() {
     cd /work/build
     cmake \
-        -DUSE_CUDA=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_OPENCV=OFF\
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_LAPACK=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=Release\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
     build_wheel
@@ -311,15 +318,18 @@ build_android_armv7() {
     set -ex
     cd /work/build
     cmake \
-        -DANDROID=ON\
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DANDROID_ABI="armeabi-v7a" \
+        -DANDROID_STL="c++_shared" \
+        -DANDROID=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -328,14 +338,17 @@ build_android_armv8() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DANDROID_ABI="arm64-v8a" \
+        -DANDROID_STL="c++_shared" \
         -DANDROID=ON \
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
 }

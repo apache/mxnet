@@ -18,26 +18,42 @@
 #
 # Dockerfile to build MXNet for ARMv6
 
-FROM dockcross/linux-armv6
+FROM ubuntu:20.04
 
-ENV ARCH armv6l
-ENV HOSTCC gcc-6
-ENV HOSTCXX g++-6
-ENV TARGET ARMV6
+ENV ARCH=armv6l \
+    HOSTCC=gcc \
+    HOSTCXX=g++ \
+    TARGET=ARMV6
 
-WORKDIR /work/deps
+WORKDIR /usr/local
 
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    ninja-build \
+    cmake \
+    ccache \
+    git \
+    curl \
+    zip \
+    python3 \
+    python3-pip \
+ && rm -rf /var/lib/apt/lists/*
 
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
+# We use a toolchain from toolchains.bootlin.com instead of Debian / Ubunut
+# crossbuild-essential-armel toolchain, as the latter targets ARM architecture
+# versions 4T, 5T, and 6, whereas we only wish to target ARMV6 and like to use
+# ARMV6 specific features. https://wiki.debian.org/ArmEabiPort
+RUN curl -o armv6-eabihf--glibc--stable-2020.02-2.tar.bz2 -L https://toolchains.bootlin.com/downloads/releases/toolchains/armv6-eabihf/tarballs/armv6-eabihf--glibc--stable-2020.02-2.tar.bz2 && \
+    tar xf armv6-eabihf--glibc--stable-2020.02-2.tar.bz2 && \
+    rm armv6-eabihf--glibc--stable-2020.02-2.tar.bz2
+ENV CMAKE_TOOLCHAIN_FILE=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/share/buildroot/toolchainfile.cmake
 
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
+RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
+    cd /usr/local/OpenBLAS && \
+    make NOFORTRAN=1 CC=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/bin/arm-linux-gcc && \
+    make PREFIX=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/arm-buildroot-linux-gnueabihf/sysroot install && \
+    cd /usr/local && \
+    rm -rf OpenBLAS
 
 ARG USER_ID=0
 ARG GROUP_ID=0

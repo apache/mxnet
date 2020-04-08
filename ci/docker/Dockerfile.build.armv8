@@ -18,26 +18,37 @@
 #
 # Dockerfile to build MXNet for ARM64/ARMv8
 
-FROM dockcross/linux-arm64
+FROM ubuntu:20.04
 
-ENV ARCH aarch64
-ENV HOSTCC gcc-7
-ENV HOSTCXX g++-7
-ENV TARGET ARMV8
+ENV ARCH=aarch64 \
+    HOSTCC=gcc \
+    HOSTCXX=g++ \
+    TARGET=ARMV8
 
-WORKDIR /work/deps
+WORKDIR /usr/local
 
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    ninja-build \
+    cmake \
+    ccache \
+    git \
+    curl \
+    zip \
+    python3 \
+    python3-pip \
+    crossbuild-essential-arm64 \
+ && rm -rf /var/lib/apt/lists/*
 
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
+COPY toolchains/aarch64-linux-gnu-toolchain.cmake /usr
+ENV CMAKE_TOOLCHAIN_FILE=/usr/aarch64-linux-gnu-toolchain.cmake
 
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
+RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
+    cd /usr/local/OpenBLAS && \
+    make NOFORTRAN=1 CC=aarch64-linux-gnu-gcc && \
+    make PREFIX=/usr/aarch64-linux-gnu install && \
+    cd /usr/local && \
+    rm -rf OpenBLAS
 
 ARG USER_ID=0
 ARG GROUP_ID=0
@@ -45,4 +56,4 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-WORKDIR /work/build
+WORKDIR /work/mxnet
