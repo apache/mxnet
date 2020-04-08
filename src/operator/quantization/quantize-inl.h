@@ -37,7 +37,7 @@ namespace mxnet {
 namespace op {
 
 struct QuantizeParam : public dmlc::Parameter<QuantizeParam> {
-  int   out_type;
+  int out_type;
   DMLC_DECLARE_PARAMETER(QuantizeParam) {
     DMLC_DECLARE_FIELD(out_type)
     .add_enum("int8", mshadow::kInt8)
