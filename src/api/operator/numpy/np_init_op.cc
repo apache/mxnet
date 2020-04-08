@@ -198,6 +198,7 @@ MXNET_REGISTER_API("_npi.atleast_3d")
     ndarray_handles.emplace_back(ndoutputs[i]);
   }
   *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
 
 MXNET_REGISTER_API("_npi.arange")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
