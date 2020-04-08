@@ -134,7 +134,7 @@ inline bool AtleastNDShape(const nnvm::NodeAttrs& attrs,
 }
 
 #define NNVM_REGISTER_ATLEAST_ND(N)                                       \
-NNVM_REGISTER_OP(_np_atleast_##N##d)                                      \
+NNVM_REGISTER_OP(_npi_atleast_##N##d)                                      \
 .set_attr_parser(ParamParser<AtleastNDParam>)                             \
 .set_num_inputs(                                                          \
 [](const NodeAttrs& attrs) {                                              \

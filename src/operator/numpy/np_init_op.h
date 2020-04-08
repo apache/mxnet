@@ -287,6 +287,11 @@ struct AtleastNDParam : dmlc::Parameter<AtleastNDParam> {
     .set_lower_bound(1)
     .describe("Number of input arrays.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s;
+    num_args_s << num_args;
+    (*dict)["num_args"] = num_args_s.str();
+  }
 };
 
 template<typename xpu>
