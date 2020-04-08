@@ -249,7 +249,7 @@ MXReturnValue myReviewSubgraph(const std::string& json, int subgraph_id, bool* a
   } else {
     *accept = true;
     std::cout << "accepting subgraph" << std::endl;
-    attrs->at("myKey") = "myVal";
+    attrs->insert(std::pair<std::string,std::string>("myKey","myVal"));
   }
   return MX_SUCCESS;
 }
