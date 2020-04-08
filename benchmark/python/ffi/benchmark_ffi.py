@@ -120,6 +120,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("diff", pool['2x2'], n=1, axis=-1)
     OpArgMngr.add_workload("inner", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("random.multinomial", n=2, pvals=[1/6.]*6, size=(2,2))
+    OpArgMngr.add_workload("random.rand", 3, 2)
     OpArgMngr.add_workload("nonzero", pool['2x2'])
     OpArgMngr.add_workload("tril", pool['2x2'], k=0)
     OpArgMngr.add_workload("random.choice", pool['2'], size=(2, 2))
