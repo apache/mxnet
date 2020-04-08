@@ -321,28 +321,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   }
 }
 
-/*!
- * \brief Loads dynamic custom library and initializes it
- * \param path library path
- */
-int MXLoadLib(const char *path, int verbose) {
-  API_BEGIN();
-  void *lib = LibraryInitializer::Get()->lib_load(path);
-  if (!lib)
-    LOG(FATAL) << "Unable to load library";
-
-  // check that library and MXNet use same version of library API
-  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
-  int libVersion =  opVersion();
-  if (MX_LIBRARY_VERSION != libVersion)
-    LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
-               << MX_LIBRARY_VERSION << ")";
-
-  // initialize library by passing MXNet version
-  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
-  if (!initialize(static_cast<int>(MXNET_VERSION)))
-    LOG(FATAL) << "Library failed to initialize";
-
+void registerOperators(void *lib, int verbose) {
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -369,33 +348,6 @@ int MXLoadLib(const char *path, int verbose) {
 
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
-
-  partCallSupportedOps_t callSupportedOps =
-    get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
-
-  partCallCreateSelector_t callCreateSelector =
-    get_func<partCallCreateSelector_t>(lib, const_cast<char*>(MXLIB_PARTCALLCREATESELECTOR_STR));
-
-  partCallSelect_t callSelect =
-    get_func<partCallSelect_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECT_STR));
-
-  partCallSelectInput_t callSelectInput =
-    get_func<partCallSelectInput_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECTINPUT_STR));
-
-  partCallSelectOutput_t callSelectOutput =
-    get_func<partCallSelectOutput_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECTOUTPUT_STR));
-
-  partCallFilter_t callFilter =
-    get_func<partCallFilter_t>(lib, const_cast<char*>(MXLIB_PARTCALLFILTER_STR));
-
-  partCallReset_t callReset =
-    get_func<partCallReset_t>(lib, const_cast<char*>(MXLIB_PARTCALLRESET_STR));
-
-  partCallReviewSubgraph_t callReviewSubgraph =
-    get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
-
-  passCallGraphPass_t callGraphPass =
-    get_func<passCallGraphPass_t>(lib, const_cast<char*>(MXLIB_PASSCALLGRAPHPASS_STR));
 
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
@@ -959,6 +911,35 @@ int MXLoadLib(const char *path, int verbose) {
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
   }
+}
+
+void registerPartitioners(void *lib, int verbose) {
+  // get C type interface functions
+  opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
+
+  partCallSupportedOps_t callSupportedOps =
+    get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
+
+  partCallCreateSelector_t callCreateSelector =
+    get_func<partCallCreateSelector_t>(lib, const_cast<char*>(MXLIB_PARTCALLCREATESELECTOR_STR));
+
+  partCallSelect_t callSelect =
+    get_func<partCallSelect_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECT_STR));
+
+  partCallSelectInput_t callSelectInput =
+    get_func<partCallSelectInput_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECTINPUT_STR));
+
+  partCallSelectOutput_t callSelectOutput =
+    get_func<partCallSelectOutput_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECTOUTPUT_STR));
+
+  partCallFilter_t callFilter =
+    get_func<partCallFilter_t>(lib, const_cast<char*>(MXLIB_PARTCALLFILTER_STR));
+
+  partCallReset_t callReset =
+    get_func<partCallReset_t>(lib, const_cast<char*>(MXLIB_PARTCALLRESET_STR));
+
+  partCallReviewSubgraph_t callReviewSubgraph =
+    get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
 
   // get number of partitioners registered in the library
   partRegSize_t partRegSize = get_func<partRegSize_t>(lib,
@@ -1012,6 +993,14 @@ int MXLoadLib(const char *path, int verbose) {
           op_name_str));
     }
   }
+}
+
+void registerPasses(void *lib, int verbose) {
+  // get C type interface functions
+  opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
+
+  passCallGraphPass_t callGraphPass =
+    get_func<passCallGraphPass_t>(lib, const_cast<char*>(MXLIB_PASSCALLGRAPHPASS_STR));
 
   // get number of passes registered in the library
   partRegSize_t passRegSize = get_func<passRegSize_t>(lib,
@@ -1107,6 +1096,34 @@ int MXLoadLib(const char *path, int verbose) {
     pass.set_body(pass_lambda);
     pass.set_change_graph(true);
   }
+}
+
+/*!
+ * \brief Loads dynamic custom library and initializes it
+ * \param path library path
+ */
+int MXLoadLib(const char *path, int verbose) {
+  API_BEGIN();
+  void *lib = LibraryInitializer::Get()->lib_load(path);
+  if (!lib)
+    LOG(FATAL) << "Unable to load library";
+
+  // check that library and MXNet use same version of library API
+  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+  int libVersion =  opVersion();
+  if (MX_LIBRARY_VERSION != libVersion)
+    LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
+               << MX_LIBRARY_VERSION << ")";
+
+  // initialize library by passing MXNet version
+  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
+  if (!initialize(static_cast<int>(MXNET_VERSION)))
+    LOG(FATAL) << "Library failed to initialize";
+
+  // find ops, partitioners, and passes in library
+  registerOperators(lib, verbose);
+  registerPartitioners(lib, verbose);
+  registerPasses(lib, verbose);
   API_END();
 }
 
