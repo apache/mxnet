@@ -5466,6 +5466,82 @@ def test_np_linalg_tensorsolve():
 
 @with_seed()
 @use_np
+def test_np_linalg_lstsq():
+    class TestLstsq(HybridBlock):
+        def __init__(self, rcond):
+            super(TestLstsq, self).__init__()
+            self._rcond = rcond
+        
+        def hybrid_forward(self, F, a, b, rcond='warn'):
+            return F.np.linalg.lstsq(a, b, rcond=self._rcond)
+
+    def check_lstsq(a_np, b_np, rcond_np, x, residuals, rank, s):
+        try:
+            if rcond_np == 'warn':
+                rcond_np = -1
+            x_expected, residuals_expected, rank_expected, s_expected = _np.linalg.lstsq(a_np, b_np, rcond_np)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print("b:", b_np)
+            print("b shape:", b_np.shape)
+            print(e)
+        else:
+            assert x.shape == x_expected.shape
+            assert residuals.shape == residuals_expected.shape
+            assert rank.shape == rank_expected.shape
+            assert s.shape == s_expected.shape
+            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(residuals.asnumpy(), residuals_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(rank.asnumpy(), rank_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(s.asnumpy(), s_expected, rtol=rtol, atol=atol)
+
+    shapes = [
+        ((4, 0), (4,)),   # ncol == 0
+        ((4, 0), (4, 2)), # ncol == 0
+        ((0, 2), (0,)),   # nrow == 0
+        ((0, 2), (0, 4)), # nrow == 0
+        ((4, 2), (4, 0)), # nrhs == 0
+        ((4, 4), (4, 0)), # nrhs == 0
+        ((4, 6), (4, 0)), # nrhs == 0
+        ((0, 0), (0, 4)), # nrow == 0, ncol == 0
+        ((0, 2), (0, 0)), # nrow == 0, nrhs == 0
+        ((4, 0), (4, 0)), # ncol == 0, nrhs == 0
+        ((0, 0), (0,)),   # nrow == 0, ncol == 0, nrhs = none
+        ((0, 0), (0, 0)), # nrow == 0, ncol == 0, nrhs = 0
+        ((2, 1), (2,)),
+        ((4, 1), (4,)),
+        ((4, 2), (4,)),
+        ((4, 4), (4,)),
+        ((1, 4), (1, 4)),
+        ((4, 2), (4, 1)),
+        ((4, 2), (4, 3)),
+        ((4, 4), (4, 3)),
+        ((4, 6), (4, 3)),
+    ]
+    rconds = [None, "random", "warn"]
+    dtypes = ['float32', 'float64']
+    for rcond, hybridize in itertools.product(rconds, [True, False]):
+        for dtype in dtypes:
+            for a_shape, b_shape in shapes:
+                rtol = 1e-2 if dtype == 'float32' else 1e-3
+                atol = 1e-4 if dtype == 'float32' else 1e-5
+                if rcond == "random":
+                    rcond = _np.random.uniform(100, 200)
+                test_lstsq = TestLstsq(rcond)
+                if hybridize:
+                    test_lstsq.hybridize()
+                a_np = _np.random.uniform(-10.0, 10.0, a_shape)
+                b_np = _np.random.uniform(-10.0, 10.0, b_shape)
+                a = np.array(a_np, dtype=dtype)
+                b = np.array(b_np, dtype=dtype)
+                x, residuals, rank, s = test_lstsq(a, b)
+                # check lstsq validity
+                check_lstsq(a_np, b_np, rcond, x, residuals, rank, s)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_pinv():
     class TestPinv(HybridBlock):
         def __init__(self, hermitian):
@@ -5910,7 +5986,6 @@ def test_np_linalg_det():
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-1, atol=1e-1)
         if grad_req != 'null':
-            print(shape, grad_req)
             mx_out.backward()
 
         # Test imperative once again
@@ -7386,6 +7461,46 @@ def test_np_share_memory():
                 assert not op(x, np.ones((5, 0), dtype=adt))
                 assert not op(np.ones((5, 0), dtype=adt), x)
                 assert not op(np.ones((5, 0), dtype=dt), np.ones((0, 3, 0), dtype=adt))
+
+
+def test_np_median():
+    class TestMedian(HybridBlock):
+        def __init__(self, axis=None, keepdims=False):
+            super(TestMedian, self).__init__()
+            self._axis = axis
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a):
+            return F.np.median(a, axis=self._axis, keepdims=self._keepdims)
+
+    flags = [True, False]
+    dtypes = ['float16', 'float32', 'float64']
+    qtypes = ['float32', 'float64']
+    tensor_shapes = [
+        ((2, 3), None),
+        ((2, 3, 4, 5), 3),
+        ((2, 3, 4), (0, 2)),
+        ((2, 3, 4), 1)
+    ]
+
+    for hybridize, keepdims, (a_shape, axis), dtype in \
+        itertools.product(flags, flags, tensor_shapes, dtypes):
+        atol = 3e-4 if dtype == 'float16' else 1e-4
+        rtol = 3e-2 if dtype == 'float16' else 1e-2
+        test_median = TestMedian(axis=axis, keepdims=keepdims)
+        if hybridize:
+            test_median.hybridize()
+        a = np.random.uniform(-1.0, 1.0, size=a_shape)
+        np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
+        mx_out = test_median(a)
+        
+        assert mx_out.shape == np_out.shape
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
+
+        mx_out = np.median(a, axis=axis, keepdims=keepdims)
+        np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
+
+        assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
 @with_seed()

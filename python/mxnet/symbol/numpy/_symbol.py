@@ -39,7 +39,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
            'power', 'arctan2',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
-           'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul',
+           'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul', 'median',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'sort', 'tensordot', 'eye', 'linspace',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
@@ -53,6 +53,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
+           'atleast_1d', 'atleast_2d', 'atleast_3d',
            'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
@@ -3605,8 +3606,7 @@ def split(ary, indices_or_sections, axis=0):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False, sections)
-    return ret
+    return _npi.split(ary, indices, axis, False, sections)
 # pylint: enable=redefined-outer-name
 
 
@@ -3651,7 +3651,7 @@ def array_split(ary, indices_or_sections, axis=0):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False, sections)
+    ret = _npi.array_split(ary, indices, axis, False, sections)
     if not isinstance(ret, list):
         return [ret]
     return ret
@@ -3759,11 +3759,11 @@ def hsplit(ary, indices_or_sections):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
-    ret = _npi.hsplit(ary, indices, 1, False, sections)
-    return ret
+    return _npi.hsplit(ary, indices, 1, False, sections)
 # pylint: enable=redefined-outer-name
 
 
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def vsplit(ary, indices_or_sections):
     r"""
@@ -3812,7 +3812,16 @@ def vsplit(ary, indices_or_sections):
     an error will be thrown.
 
     """
-    return split(ary, indices_or_sections, 0)
+    indices = []
+    sections = 0
+    if isinstance(indices_or_sections, int):
+        sections = indices_or_sections
+    elif isinstance(indices_or_sections, (list, set, tuple)):
+        indices = [0] + list(indices_or_sections)
+    else:
+        raise ValueError('indices_or_sections must either int or tuple of ints')
+    return _npi.split(ary, indices, 0, False, sections)
+# pylint: enable=redefined-outer-name
 
 
 # pylint: disable=redefined-outer-name
@@ -3850,8 +3859,7 @@ def dsplit(ary, indices_or_sections):
         indices = [0] + list(indices_or_sections)
     else:
         raise ValueError('indices_or_sections must either int or tuple of ints')
-    ret = _npi.dsplit(ary, indices, 2, False, sections)
-    return ret
+    return _npi.dsplit(ary, indices, 2, False, sections)
 # pylint: enable=redefined-outer-name
 
 
@@ -6164,6 +6172,43 @@ def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='l
 
 
 @set_module('mxnet.symbol.numpy')
+def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
+    r"""
+    Compute the median along the specified axis.
+    Returns the median of the array elements.
+    Parameters
+    ----------
+    a : _Symbol
+        Input array or object that can be converted to an array.
+    axis : {int, sequence of int, None}, optional
+        Axis or axes along which the medians are computed. The default
+        is to compute the median along a flattened version of the array.
+        A sequence of axes is supported since version 1.9.0.
+    out :  _Symbol, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output,
+        but the type (of the output) will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+    Returns
+    -------
+    median :  _Symbol
+        A new array holding the result. If the input contains integers
+        or floats smaller than ``float32``, then the output data-type is
+        ``np.float32``.  Otherwise, the data-type of the output is the
+        same as that of the input. If `out` is specified, that array is
+        returned instead.
+    See Also
+    --------
+    mean, percentile
+    """
+    return quantile(a=a, q=0.5, axis=axis, out=out, overwrite_input=overwrite_input,
+                    interpolation='midpoint', keepdims=keepdims)
+
+
+@set_module('mxnet.symbol.numpy')
 def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
     """
     Compute the q-th quantile of the data along the specified axis.
@@ -6630,6 +6675,76 @@ def isfinite(x, out=None, **kwargs):
     is also supplied when x is a scalar input, or if first and second arguments have different shapes.
     """
     return _unary_func_helper(x, _npi.isfinite, _np.isfinite, out=out, **kwargs)
+
+
+@set_module('mxnet.symbol.numpy')
+def atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : _Symbol
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : _Symbol
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+    """
+    return _npi.atleast_1d(*arys)
+
+
+@set_module('mxnet.symbol.numpy')
+def atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : _Symbol
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : _Symbol
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+    """
+    return _npi.atleast_2d(*arys)
+
+
+@set_module('mxnet.symbol.numpy')
+def atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : _Symbol
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : _Symbol
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+    """
+    return _npi.atleast_3d(*arys)
 
 
 @set_module('mxnet.symbol.numpy')

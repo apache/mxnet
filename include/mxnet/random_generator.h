@@ -96,6 +96,11 @@ class RandGenerator<cpu, DType> {
     for (int i = 0; i < kNumRandomStates; ++i) (states_ + i)->seed(seed + i);
   }
 
+  // export global random states, used by c++ custom operator
+  MSHADOW_XINLINE void* GetStates() {
+    return static_cast<void*>(states_);
+  }
+
  private:
   std::mt19937 *states_;
 };  // class RandGenerator<cpu, DType>
@@ -164,6 +169,9 @@ class RandGenerator<gpu, DType> {
   static void FreeState(RandGenerator<gpu, DType> *inst);
 
   void Seed(mshadow::Stream<gpu> *s, uint32_t seed);
+
+  // export global random states, used by c++ custom operator
+  void* GetStates();
 
  private:
   curandStatePhilox4_32_10_t *states_;
