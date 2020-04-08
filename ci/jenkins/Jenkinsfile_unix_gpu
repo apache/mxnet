@@ -60,6 +60,7 @@ core_logic: {
     custom_steps.test_unix_cpp_package_gpu(),
     custom_steps.test_unix_scala_gpu(),
     custom_steps.test_unix_distributed_kvstore_gpu(),
+    custom_steps.test_unix_byteps_gpu(),
     custom_steps.test_static_python_gpu(),
     custom_steps.test_static_python_gpu_cmake(),
     custom_steps.test_unix_python3_gpu_no_tvm_op(),

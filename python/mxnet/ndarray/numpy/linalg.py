@@ -17,12 +17,91 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 
+import numpy as _np
 from . import _op as _mx_nd_np
 from . import _internal as _npi
 from . import _api_internal
 
 __all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh']
+           'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
+
+
+def lstsq(a, b, rcond='warn'):
+    r"""
+    Return the least-squares solution to a linear matrix equation.
+
+    Solves the equation :math:`a x = b` by computing a vector `x` that
+    minimizes the squared Euclidean 2-norm :math:`\| b - a x \|^2_2`.
+    The equation may be under-, well-, or over-determined (i.e., the
+    number of linearly independent rows of `a` can be less than, equal
+    to, or greater than its number of linearly independent columns).
+    If `a` is square and of full rank, then `x` (but for round-off error)
+    is the "exact" solution of the equation.
+
+    Parameters
+    ----------
+    a : (M, N) ndarray
+        "Coefficient" matrix.
+    b : {(M,), (M, K)} ndarray
+        Ordinate or "dependent variable" values. If `b` is two-dimensional,
+        the least-squares solution is calculated for each of the `K` columns
+        of `b`.
+    rcond : float, optional
+        Cut-off ratio for small singular values of `a`.
+        For the purposes of rank determination, singular values are treated
+        as zero if they are smaller than `rcond` times the largest singular
+        value of `a`
+        The default of ``warn`` or ``-1`` will use the machine precision as
+        `rcond` parameter. The default of ``None`` will use the machine
+        precision times `max(M, N)`.
+
+    Returns
+    -------
+    x : {(N,), (N, K)} ndarray
+        Least-squares solution. If `b` is two-dimensional,
+        the solutions are in the `K` columns of `x`.
+    residuals : {(1,), (K,), (0,)} ndarray
+        Sums of residuals.
+        Squared Euclidean 2-norm for each column in ``b - a*x``.
+        If the rank of `a` is < N or M <= N, this is an empty array.
+        If `b` is 1-dimensional, this is a (1,) shape array.
+        Otherwise the shape is (K,).
+    rank : int
+        Rank of matrix `a`.
+    s : (min(M, N),) ndarray
+        Singular values of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If computation does not converge.
+
+    Notes
+    -----
+    If `b` is a matrix, then all array results are returned as matrices.
+
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 3])
+    >>> y = np.array([-1, 0.2, 0.9, 2.1])
+    >>> A = np.vstack([x, np.ones(len(x))]).T
+    >>> A
+    array([[ 0.,  1.],
+           [ 1.,  1.],
+           [ 2.,  1.],
+           [ 3.,  1.]])
+    >>> m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    >>> m, c
+    (1.0 -0.95) # may vary
+    """
+    new_default = False
+    if rcond is None:
+        rcond = _np.finfo(a.dtype).eps
+        new_default = True
+    if rcond == "warn":
+        rcond = -1
+    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    return (x, residuals, rank, s)
 
 
 def pinv(a, rcond=1e-15, hermitian=False):
@@ -92,9 +171,7 @@ def pinv(a, rcond=1e-15, hermitian=False):
     """
     if hermitian is True:
         raise NotImplementedError("hermitian is not supported yet...")
-    if _mx_nd_np._np.isscalar(rcond):
-        return _npi.pinv_scalar_rcond(a, rcond, hermitian)
-    return _npi.pinv(a, rcond, hermitian)
+    return _api_internal.pinv(a, rcond, hermitian)
 
 
 # pylint: disable=too-many-return-statements
@@ -389,7 +466,7 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _npi.cholesky(a)
+    return _api_internal.cholesky(a, True)
 
 
 def inv(a):
@@ -431,7 +508,7 @@ def inv(a):
            [[-1.2500001 ,  0.75000006],
             [ 0.75000006, -0.25000003]]])
     """
-    return _npi.inv(a)
+    return _api_internal.inv(a)
 
 
 def det(a):
@@ -595,7 +672,7 @@ def solve(a, b):
     >>> np.allclose(np.dot(a, x), b)
     True
     """
-    return _npi.solve(a, b)
+    return _api_internal.solve(a, b)
 
 
 def tensorinv(a, ind=2):
@@ -650,7 +727,7 @@ def tensorinv(a, ind=2):
     >>> np.allclose(np.tensordot(ainv, b, 1), np.linalg.tensorsolve(a, b))
     True
     """
-    return _npi.tensorinv(a, ind)
+    return _api_internal.tensorinv(a, ind)
 
 
 def tensorsolve(a, b, axes=None):
@@ -698,7 +775,7 @@ def tensorsolve(a, b, axes=None):
     >>> np.allclose(np.tensordot(a, x, axes=3), b)
     True
     """
-    return _npi.tensorsolve(a, b, axes)
+    return _api_internal.tensorsolve(a, b, axes)
 
 
 def eigvals(a):
@@ -766,7 +843,7 @@ def eigvals(a):
     >>> LA.eigvals(A)
     array([ 1., -1.]) # random
     """
-    return _npi.eigvals(a)
+    return _api_internal.eigvals(a)
 
 
 def eigvalsh(a, UPLO='L'):
@@ -825,7 +902,7 @@ def eigvalsh(a, UPLO='L'):
     >>> LA.eigvalsh(a, UPLO='L')
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
-    return _npi.eigvalsh(a, UPLO)
+    return _api_internal.eigvalsh(a, UPLO)
 
 
 def eig(a):

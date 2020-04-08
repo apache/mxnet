@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include "../../operator_common.h"
 #include "../../mshadow_op.h"
@@ -48,6 +49,11 @@ struct PinvParam : public dmlc::Parameter<PinvParam> {
     .set_default(false)
     .describe("If True, A is assumed to be Hermitian (symmetric if real-valued).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream hermitian_s;
+    hermitian_s << hermitian;
+    (*dict)["hermitian"] = hermitian_s.str();
+  }
 };
 
 struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
@@ -60,6 +66,14 @@ struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
     DMLC_DECLARE_FIELD(hermitian)
     .set_default(false)
     .describe("If True, A is assumed to be Hermitian (symmetric if real-valued).");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream rcond_s;
+    std::ostringstream hermitian_s;
+    rcond_s << rcond;
+    hermitian_s << hermitian;
+    (*dict)["rcond"] = rcond_s.str();
+    (*dict)["hermitian"] = hermitian_s.str();
   }
 };
 
