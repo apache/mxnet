@@ -331,14 +331,11 @@ def multinomial(n, pvals, size=None):
     >>> np.random.multinomial(100, [1.0 / 3, 2.0 / 3])
     array([32, 68])
     """
-    if isinstance(pvals, NDArray):
-        return _npi.multinomial(pvals, pvals=None, n=n, size=size)
-    else:
-        if isinstance(pvals, np.ndarray):
-            raise ValueError('numpy ndarray is not supported!')
-        if any(isinstance(i, list) for i in pvals):
-            raise ValueError('object too deep for desired array')
-        return _npi.multinomial(n=n, pvals=pvals, size=size)
+    if isinstance(pvals, np.ndarray):
+        raise ValueError('numpy ndarray is not supported!')
+    if any(isinstance(i, list) for i in pvals):
+        raise ValueError('object too deep for desired array')
+    return _api_internal.multinomial(n, pvals, size)
 
 
 def rayleigh(scale=1.0, size=None, ctx=None, out=None):
