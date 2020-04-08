@@ -1105,7 +1105,7 @@ int MXLoadLib(const char *path, int verbose) {
 
     nnvm::PassFunctionReg& pass = dmlc::Registry<nnvm::PassFunctionReg>::Get()->__REGISTER__(name);
     pass.set_body(pass_lambda);
-    pass.set_change_graph(true);    
+    pass.set_change_graph(true);
   }
   API_END();
 }

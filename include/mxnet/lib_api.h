@@ -942,19 +942,19 @@ typedef MXReturnValue (*graphPass_t)(const std::string& in_graph, const std::str
  * \brief An abstract class for graph passes
  */
 class CustomPass {
-  public:
-    CustomPass() : name("ERROR") {}
-    explicit CustomPass(const char* pass_name)
-      : name(pass_name) {}
-    CustomPass& setBody(graphPass_t fn) {
-      pass = fn;
-      return *this;
-    }
+ public:
+  CustomPass() : name("ERROR") {}
+  explicit CustomPass(const char* pass_name)
+    : name(pass_name) {}
+  CustomPass& setBody(graphPass_t fn) {
+    pass = fn;
+    return *this;
+  }
 
-    /*! \brief pass name */
-    const char* name;
-    /*! \brief pass function */
-    graphPass_t pass;
+  /*! \brief pass name */
+  const char* name;
+  /*! \brief pass function */
+  graphPass_t pass;
 };
 
 /*! \brief Custom Subgraph Create function template */
