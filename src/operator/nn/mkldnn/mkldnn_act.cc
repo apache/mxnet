@@ -259,7 +259,8 @@ void MKLDNNActivationBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx
                             {MKLDNN_ARG_DIFF_DST, *diff_dst_memory}};
   if (req[0] != kAddTo) {
     // req[0] is kWriteTo or kWriteInplace
-    auto diff_src_memory = in_grad.GetMKLDNNData(bwd.bwd_pd.diff_src_desc());
+    auto diff_src_memory =
+        const_cast<NDArray &>(in_grad).CreateMKLDNNData(bwd.bwd_pd.diff_src_desc());
     args.insert({MKLDNN_ARG_DIFF_SRC, *diff_src_memory});
     stream->RegisterPrimArgs(bwd.GetBwd(), args);
     stream->Submit();
