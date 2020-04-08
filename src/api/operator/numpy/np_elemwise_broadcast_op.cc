@@ -88,4 +88,63 @@ MXNET_REGISTER_API("_npi.lcm")
   UFuncHelper(args, ret, op, op_scalar, nullptr);
 });
 
+MXNET_REGISTER_API("_npi.bitwise_or")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_bitwise_or");
+  const nnvm::Op* op_scalar = Op::Get("_npi_bitwise_or_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.bitwise_xor")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_bitwise_xor");
+  const nnvm::Op* op_scalar = Op::Get("_npi_bitwise_xor_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.bitwise_and")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_bitwise_and");
+  const nnvm::Op* op_scalar = Op::Get("_npi_bitwise_and_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.copysign")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_copysign");
+  const nnvm::Op* op_scalar = Op::Get("_npi_copysign_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rcopysign_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
+MXNET_REGISTER_API("_npi.arctan2")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_arctan2");
+  const nnvm::Op* op_scalar = Op::Get("_npi_arctan2_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rarctan2_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
+MXNET_REGISTER_API("_npi.hypot")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_hypot");
+  const nnvm::Op* op_scalar = Op::Get("_npi_hypot_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.ldexp")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_ldexp");
+  const nnvm::Op* op_scalar = Op::Get("_npi_ldexp_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_rldexp_scalar");
+  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
 }  // namespace mxnet
