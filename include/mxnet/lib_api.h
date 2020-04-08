@@ -481,14 +481,14 @@ class OpResource {
 
   /*! \brief get pointer to initialized and seeded random number states located on CPU */
   /* Access each state by states[id], but this id should be <= MX_NUM_CPU_RANDOM_STATES */
-  mx_cpu_rand_t* get_cpu_rand_states() {
+  mx_cpu_rand_t* get_cpu_rand_states() const {
     return static_cast<mx_cpu_rand_t*>(rand_cpu_states);
   }
 
   /*! \brief get pointer to initialized and seeded random number states located on GPU */
   /* Access each state by states[id], but this id should be <= MX_NUM_GPU_RANDOM_STATES */
   /* Note that if you are using cpu build, it will return a nullptr */
-  mx_gpu_rand_t* get_gpu_rand_states() {
+  mx_gpu_rand_t* get_gpu_rand_states() const {
     return static_cast<mx_gpu_rand_t*>(rand_gpu_states);
   }
 
@@ -1297,7 +1297,7 @@ extern "C" {
                         fcomp_t** backward_fp, int* backward_count,
                         const char*** create_op_ctx, createOpState_t** create_op_fp,
                         int* create_op_count, parseAttrs_t* parse, inferType_t* type,
-                        inferShape_t* shape, mutateInputs_t* mutate) {
+                        inferSType_t* stype, inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp &op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *parse = op.parse_attrs;
@@ -1515,7 +1515,7 @@ extern "C" {
 
     OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
                    cuda_stream, sparse_malloc, sparse_alloc, rng_cpu_states, rng_gpu_states);
-    return fcomp(attrs, inputs, outputs, res);
+    return fcomp(attrs, &inputs, &outputs, res);
   }
 
   /*! \brief returns status of calling mutateInputs function for operator from library */
