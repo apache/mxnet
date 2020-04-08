@@ -50,7 +50,6 @@ __all__ = [
     'histogramdd',
     'i0',
     'in1d',
-    'interp',
     'intersect1d',
     'isclose',
     'isin',
@@ -138,7 +137,6 @@ histogram_bin_edges = onp.histogram_bin_edges
 histogramdd = onp.histogramdd
 i0 = onp.i0
 in1d = onp.in1d
-interp = onp.interp
 intersect1d = onp.intersect1d
 isclose = onp.isclose
 isin = onp.isin
