@@ -36,7 +36,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'matmul',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
            'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'argsort', 'all', 'any', 'sort',
-           'tensordot', 'eye', 'linspace',
+           'tensordot', 'eye', 'linspace', 'median',
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'around', 'round', 'round_', 'flatnonzero',
@@ -47,6 +47,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
+           'atleast_1d', 'atleast_2d', 'atleast_3d',
            'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
@@ -3792,18 +3793,9 @@ def array_split(ary, indices_or_sections, axis=0):
     >>> np.array_split(x, 3)
     [array([0.,  1.,  2.]), array([3.,  4.]), array([5.,  6.])]
     """
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False, sections)
-    if not isinstance(ret, list):
-        return [ret]
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.array_split(ary, indices_or_sections, axis))
 # pylint: enable=redefined-outer-name
 
 
@@ -3900,20 +3892,9 @@ def hsplit(ary, indices_or_sections):
     >>> np.hsplit(x, [2, 2])
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
-    if len(ary.shape) < 1:
-        raise ValueError('hsplit only works on arrays of 1 or more dimensions')
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.hsplit(ary, indices, 1, False, sections)
-    if not isinstance(ret, list):
-        return [ret]
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.hsplit(ary, indices_or_sections))
 # pylint: enable=redefined-outer-name
 
 
@@ -3991,9 +3972,9 @@ def vsplit(ary, indices_or_sections):
             [6., 7.]]])]
 
     """
-    if len(ary.shape) < 2:
-        raise ValueError("vsplit only works on arrays of 2 or more dimensions")
-    return split(ary, indices_or_sections, 0)
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.vsplit(ary, indices_or_sections))
 
 
 # pylint: disable=redefined-outer-name
@@ -4050,9 +4031,9 @@ def dsplit(ary, indices_or_sections):
             [15.]]]),
     array([], shape=(2, 2, 0), dtype=float64)]
     """
-    if len(ary.shape) < 3:
-        raise ValueError('dsplit only works on arrays of 3 or more dimensions')
-    return split(ary, indices_or_sections, 2)
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.dsplit(ary, indices_or_sections))
 # pylint: enable=redefined-outer-name
 
 
@@ -6924,6 +6905,55 @@ def percentile(a, q, axis=None, out=None, overwrite_input=None, interpolation='l
 
 
 @set_module('mxnet.ndarray.numpy')
+def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
+    r"""
+    Compute the median along the specified axis.
+    Returns the median of the array elements.
+    Parameters
+    ----------
+    a : array_like
+        Input array or object that can be converted to an array.
+    axis : {int, sequence of int, None}, optional
+        Axis or axes along which the medians are computed. The default
+        is to compute the median along a flattened version of the array.
+        A sequence of axes is supported since version 1.9.0.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must
+        have the same shape and buffer length as the expected output,
+        but the type (of the output) will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+    Returns
+    -------
+    median : ndarray
+        A new array holding the result. If the input contains integers
+        or floats smaller than ``float32``, then the output data-type is
+        ``np.float32``.  Otherwise, the data-type of the output is the
+        same as that of the input. If `out` is specified, that array is
+        returned instead.
+    See Also
+    --------
+    mean, percentile
+    Examples
+    --------
+    >>> a = np.array([[10, 7, 4], [3, 2, 1]])
+    >>> a
+    array([[10,  7,  4],
+        [ 3,  2,  1]])
+    >>> np.median(a)
+    3.5
+    >>> np.median(a, axis=0)
+    array([6.5, 4.5, 2.5])
+    >>> np.median(a, axis=1)
+    array([7.,  2.])
+    """
+    return quantile(a=a, q=0.5, axis=axis, out=out, overwrite_input=overwrite_input,
+                    interpolation='midpoint', keepdims=keepdims)
+
+
+@set_module('mxnet.ndarray.numpy')
 def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
     """
     Compute the q-th quantile of the data along the specified axis.
@@ -7559,6 +7589,123 @@ def isfinite(x, out=None, **kwargs):
     array([False,  True, False])
     """
     return _unary_func_helper(x, _npi.isfinite, _np.isfinite, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_1d(1.0)
+    array([1.])
+    >>> x = np.arange(9.0).reshape(3,3)
+    >>> np.atleast_1d(x)
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.atleast_1d(np.array(1), np.array([3, 4]))
+    [array([1.]), array([3., 4.])]
+    """
+    if len(arys) == 1:
+        return _api_internal.atleast_1d(*arys)[0]
+    return list(_api_internal.atleast_1d(*arys))
+
+
+@set_module('mxnet.ndarray.numpy')
+def atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_2d(3.0)
+    array([[3.]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_2d(x)
+    array([[0., 1., 2.]])
+    >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
+    [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
+    """
+    if len(arys) == 1:
+        return _api_internal.atleast_2d(*arys)[0]
+    return list(_api_internal.atleast_2d(*arys))
+
+
+@set_module('mxnet.ndarray.numpy')
+def atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+
+    Examples
+    --------
+    >>> np.atleast_3d(3.0)
+    array([[[3.]]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_3d(x).shape
+    (1, 3, 1)
+    >>> x = np.arange(12.0).reshape(4,3)
+    >>> np.atleast_3d(x).shape
+    (4, 3, 1)
+    >>> for arr in np.atleast_3d(np.array([1, 2]), np.array([[1, 2]]), np.array([[[1, 2]]])):
+    ...     print(arr, arr.shape)
+    ...
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1. 2.]]] (1, 1, 2)
+    """
+    if len(arys) == 1:
+        return _api_internal.atleast_3d(*arys)[0]
+    return list(_api_internal.atleast_3d(*arys))
 
 
 @set_module('mxnet.ndarray.numpy')

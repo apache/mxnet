@@ -28,7 +28,6 @@
 #include <nnvm/c_api.h>
 #include <vector>
 #include <string>
-#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
 
@@ -48,9 +47,11 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
                              int* num_outputs,
                              NDArray** outputs);
 
+bool is_recording();
+
 template<typename T>
 void SetAttrDict(nnvm::NodeAttrs* attrs) {
-  if (Imperative::Get()->is_recording()) {
+  if (is_recording()) {
     ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
   }
 }

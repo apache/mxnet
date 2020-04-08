@@ -343,6 +343,7 @@ build_centos7_cpu() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
@@ -372,7 +373,6 @@ build_centos7_mkldnn() {
     set -ex
     cd /work/build
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
@@ -401,8 +401,9 @@ build_ubuntu_cpu() {
 build_ubuntu_cpu_openblas() {
     set -ex
     cd /work/build
-    cmake \
+    CXXFLAGS="-Wno-error=strict-overflow" cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
         -DUSE_CPP_PACKAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -437,6 +438,7 @@ build_ubuntu_cpu_mkl() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -450,13 +452,14 @@ build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
     cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
         -G Ninja \
         /work/mxnet
     ninja
@@ -639,12 +642,13 @@ build_ubuntu_cpu_mkldnn() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_MKL_IF_AVAILABLE=OFF \
-       -DUSE_TVM_OP=ON \
-       -DUSE_MKLDNN=ON \
-       -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
-       -G Ninja /work/mxnet
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_CPP_PACKAGE=ON \
+        -G Ninja /work/mxnet
     ninja
 }
 
@@ -653,6 +657,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
     cd /work/build
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -767,6 +772,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
     ninja
@@ -922,7 +928,6 @@ build_ubuntu_cpu_large_tensor() {
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
         -DUSE_MKLDNN=OFF                        \
-        -DCMAKE_BUILD_TYPE=Release              \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
@@ -999,6 +1004,7 @@ cd_unittest_ubuntu() {
         # Adding these here as CI doesn't test all CUDA environments
         $python_cmd example/image-classification/test_score.py
         integrationtest_ubuntu_gpu_dist_kvstore
+        integrationtest_ubuntu_gpu_byteps
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
@@ -1341,17 +1347,28 @@ integrationtest_ubuntu_gpu_scala() {
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
     pushd .
-    export PYTHONPATH=./python/
+    cd tests/nightly
+    ./test_distributed_training-gpu.sh
+    popd
+}
+
+integrationtest_ubuntu_gpu_byteps() {
+    set -ex
+    pushd .
+    export PYTHONPATH=$PWD/python/
+    export BYTEPS_WITHOUT_PYTORCH=1
+    export BYTEPS_WITHOUT_TENSORFLOW=1
+    git clone -b v0.2 https://github.com/bytedance/byteps/ --recursive
+    cd byteps && python3 setup.py install --user && cd -
+
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore.py
-    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
-    python3 ../../tools/launch.py --p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
-    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu
+    python3 ../../tools/launch.py -n 1 -s 1 --byteps --env NVIDIA_VISIBLE_DEVICES:0,1 python3 dist_device_sync_kvstore_byteps.py
     popd
 }
+
 
 test_ubuntu_cpu_python3() {
     set -ex
