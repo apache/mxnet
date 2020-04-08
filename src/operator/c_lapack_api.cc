@@ -98,6 +98,15 @@
     return 1; \
   }
 
+  #define MXNET_LAPACK_CWRAPPER11(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int nrhs, \
+                          dtype *a, int lda, dtype *b, int ldb, \
+                          dtype *s, dtype rcond, int *rank, \
+                          dtype *work, int lwork, int *iwork) { \
+    LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
+    return 1; \
+  }
+
   #define MXNET_LAPACK_UNAVAILABLE(func) \
   int mxnet_lapack_##func(...) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
@@ -136,5 +145,8 @@
 
   MXNET_LAPACK_CWRAPPER9(sgesdd, float)
   MXNET_LAPACK_CWRAPPER9(dgesdd, double)
+
+  MXNET_LAPACK_CWRAPPER11(sgelsd, float)
+  MXNET_LAPACK_CWRAPPER11(dgelsd, double)
 
 #endif  // MSHADOW_USE_MKL == 0

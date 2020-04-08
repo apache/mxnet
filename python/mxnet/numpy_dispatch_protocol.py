@@ -158,6 +158,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.solve',
     'linalg.tensorinv',
     'linalg.tensorsolve',
+    'linalg.lstsq',
     'linalg.pinv',
     'linalg.eigvals',
     'linalg.eig',
