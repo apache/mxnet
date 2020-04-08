@@ -110,6 +110,10 @@ def prepare_workloads():
                            out=dnp.array([False, False], dtype=bool), keepdims=False)
     OpArgMngr.add_workload("roll", pool["2x2"], 1, axis=0)
     OpArgMngr.add_workload("rot90", pool["2x2"], 2)
+    OpArgMngr.add_workload("array_split", pool['2X2'], 2, axis=1)
+    OpArgMngr.add_workload("vsplit", pool['2X2'], 2)
+    OpArgMngr.add_workload("hsplit", pool['2X2'], 2)
+    OpArgMngr.add_workload("dsplit", pool['2X2x2'], 2)
 
 
 def benchmark_helper(f, *args, **kwargs):
