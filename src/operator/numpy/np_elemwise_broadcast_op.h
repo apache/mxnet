@@ -51,11 +51,6 @@ inline void PrintErrorMessage(const std::string& op_name, const int dtype1, cons
              << " yet...";
 }
 
-inline bool is_integer(const int dtype) {
-  return dtype == mshadow::kBool || dtype == mshadow::kInt8 ||
-         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
-}
-
 #ifndef _WIN32
 template<typename xpu, typename OP>
 void MixedAllRealBinaryElemwiseCompute(const std::string& op_name,
@@ -293,7 +288,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
           });
         }
       });
-    } else if (is_integer(lhs.type_flag_) && is_integer(rhs.type_flag_)) {
+    } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
       TBlob temp_tblob;
       if (lhs.type_flag_ == out.type_flag_) {
         MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
@@ -344,7 +339,7 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
       BinaryBroadcastCompute<xpu, OP>(
         attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
     }
-  } else if (is_integer(lhs.type_flag_) && is_integer(rhs.type_flag_)) {
+  } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
     TBlob temp_tblob;
     if (lhs.type_flag_ == out.type_flag_) {
       MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
@@ -429,7 +424,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastComputeWithBool<xpu, OP>(attrs, ctx, inputs, req, outputs);
     return;
   }
-  if (is_integer(lhs.type_flag_) && is_integer(rhs.type_flag_)) {
+  if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     TBlob temp_tblob;
     if (lhs.type_flag_ == out.type_flag_) {
