@@ -20,11 +20,13 @@
 /*!
  * Copyright (c) 2020 by Contributors
  * \file relu_lib.cu
- * \brief simple custom relu operator implemented using CUDA function
+ * \brief simple custom relu and noisy relu operator implemented using CUDA function
  */
 
 #include <iostream>
 #include "lib_api.h"
+
+#define NumThreadPerBlock 256 // mxnet recommended cuda thread number per block
 
 __global__ void relu_gpu_forward(float *out, float *in, int64_t N) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -72,9 +74,9 @@ MXReturnValue forwardGPU(std::map<std::string, std::string> attrs,
 
     mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
-    int block = 256;
-    int grid = (N + (block - 1)) / block;
-    relu_gpu_forward<<<grid,block,0,cuda_stream>>>(out_data, in_data, N);
+    int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
+
+    relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(out_data, in_data, N);
 
     return MX_SUCCESS;
 }
@@ -89,9 +91,9 @@ MXReturnValue backwardGPU(std::map<std::string, std::string> attrs,
 
     mx_stream_t cuda_stream = res.get_cuda_stream();
     int64_t N = inputs[0].size();
-    int block = 256;
-    int grid = (N + (block - 1)) / block;
-    relu_gpu_backward<<<grid,block,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
+    int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
+
+    relu_gpu_backward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
 
     return MX_SUCCESS;
 }
@@ -179,6 +181,80 @@ REGISTER_OP(my_state_relu)
 .setInferShape(inferShape)
 .setCreateOpState(createOpStateCPU, "cpu")
 .setCreateOpState(createOpStateGPU, "gpu");
+
+/*
+ * Below is noisy ReLU operator example
+ * noisy ReLU is made from ReLU extended to include Gaussian noise
+ * forward - add Gaussian noise generated from normal distribution to each unit
+ * backward - gradient doesn't need to change since noise is constant
+ */
+
+#define NumRandomPerThread 64 // mxnet recommended random numbers generated per thread
+
+__global__ void noisy_relu_gpu_forward(float *out, float *in, int64_t N, mx_gpu_rand_t* states, int step) {
+    // the launcher logic ensures tid less than NumGPURandomStates
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    // each thread generates unique sequence of random numbers
+    mx_gpu_rand_t thread_state = states[tid];
+    // each thread works on <step> number of calculation
+    int start = tid * step;
+    int end = start + step;
+    for (int i=start; i<end && i<N; ++i) {
+        float noise = curand_normal(&thread_state);
+        out[i] = in[i] + noise > 0 ? in[i] + noise : 0;
+    }
+}
+
+MXReturnValue noisyForwardCPU(std::map<std::string, std::string> attrs,
+                              std::vector<MXTensor> inputs,
+                              std::vector<MXTensor> outputs,
+                              OpResource res) {
+    float* in_data = inputs[0].data<float>();
+    float* out_data = outputs[0].data<float>();
+
+    mx_cpu_rand_t* states = res.get_cpu_rand_states();
+    std::normal_distribution<float> dist_normal;
+
+    for (int i=0; i<inputs[0].size(); ++i) {
+        float noise = dist_normal(*states);
+        out_data[i] = in_data[i] + noise > 0 ? in_data[i] + noise : 0;
+    }
+    return MX_SUCCESS;
+}
+
+MXReturnValue noisyForwardGPU(std::map<std::string, std::string> attrs,
+                              std::vector<MXTensor> inputs,
+                              std::vector<MXTensor> outputs,
+                              OpResource res) {
+    float* in_data = inputs[0].data<float>();
+    float* out_data = outputs[0].data<float>();
+
+    mx_stream_t cuda_stream = res.get_cuda_stream();
+    int64_t N = inputs[0].size();
+
+    // below is mxnet recommended workflow to parallel random number generating
+    int nthread = (N + NumRandomPerThread - 1) / NumRandomPerThread;
+    // we should not launch more threads than mxnet supported random number GPU states
+    int num_thread_need = nthread < MX_NUM_GPU_RANDOM_STATES ? nthread : MX_NUM_GPU_RANDOM_STATES;
+    // each cuda thread processes [step * tid, step * id + step) snippet of input tensor
+    int step = (N + num_thread_need - 1) / num_thread_need;
+    // this can ensure number of parallel threads less than mxnet supported random number states
+    int num_block = (num_thread_need + NumThreadPerBlock - 1) / NumThreadPerBlock;
+
+    noisy_relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(
+                                out_data, in_data, N, res.get_gpu_rand_states(), step);
+
+    return MX_SUCCESS;
+}
+
+REGISTER_OP(my_noisy_relu)
+.setParseAttrs(parseAttrs)
+.setInferType(inferType)
+.setInferShape(inferShape)
+.setForward(noisyForwardCPU, "cpu")
+.setForward(noisyForwardGPU, "gpu")
+.setBackward(backwardCPU, "cpu")
+.setBackward(backwardGPU, "gpu");
 
 MXReturnValue initialize(int version) {
     if (version >= 10400) {
