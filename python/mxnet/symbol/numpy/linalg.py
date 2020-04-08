@@ -17,12 +17,77 @@
 
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
+import numpy as _np
 from . import _symbol
 from . import _op as _mx_sym_np
 from . import _internal as _npi
 
 __all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh']
+           'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
+
+
+def lstsq(a, b, rcond='warn'):
+    r"""
+    Return the least-squares solution to a linear matrix equation.
+
+    Solves the equation :math:`a x = b` by computing a vector `x` that
+    minimizes the squared Euclidean 2-norm :math:`\| b - a x \|^2_2`.
+    The equation may be under-, well-, or over-determined (i.e., the
+    number of linearly independent rows of `a` can be less than, equal
+    to, or greater than its number of linearly independent columns).
+    If `a` is square and of full rank, then `x` (but for round-off error)
+    is the "exact" solution of the equation.
+
+    Parameters
+    ----------
+    a : (M, N) _Symbol
+        "Coefficient" matrix.
+    b : {(M,), (M, K)} _Symbol
+        Ordinate or "dependent variable" values. If `b` is two-dimensional,
+        the least-squares solution is calculated for each of the `K` columns
+        of `b`.
+    rcond : float, optional
+        Cut-off ratio for small singular values of `a`.
+        For the purposes of rank determination, singular values are treated
+        as zero if they are smaller than `rcond` times the largest singular
+        value of `a`
+        The default of ``warn`` or ``-1`` will use the machine precision as
+        `rcond` parameter. The default of ``None`` will use the machine
+        precision times `max(M, N)` as `rcond` parameter.
+
+    Returns
+    -------
+    x : {(N,), (N, K)} _Symbol
+        Least-squares solution. If `b` is two-dimensional,
+        the solutions are in the `K` columns of `x`.
+    residuals : {(1,), (K,), (0,)} _Symbol
+        Sums of residuals.
+        Squared Euclidean 2-norm for each column in ``b - a*x``.
+        If the rank of `a` is < N or M <= N, this is an empty array.
+        If `b` is 1-dimensional, this is a (1,) shape array.
+        Otherwise the shape is (K,).
+    rank : int
+        Rank of matrix `a`.
+    s : (min(M, N),) _Symbol
+        Singular values of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If computation does not converge.
+
+    Notes
+    -----
+    If `b` is a matrix, then all array results are returned as matrices.
+    """
+    new_default = False
+    if rcond is None:
+        rcond = _np.finfo(_np.float64).eps
+        new_default = True
+    if rcond == "warn":
+        rcond = -1
+    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    return (x, residuals, rank, s)
 
 
 def pinv(a, rcond=1e-15, hermitian=False):
