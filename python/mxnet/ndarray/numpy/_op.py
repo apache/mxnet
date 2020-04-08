@@ -5052,7 +5052,9 @@ def copysign(x1, x2, out=None, **kwargs):
     >>> np.copysign(a, np.arange(3)-1)
     array([-1.,  0.,  1.])
     """
-    return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.copysign(x1, x2, out=out)
+    return _api_internal.copysign(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5808,8 +5810,9 @@ def arctan2(x1, x2, out=None, **kwargs):
     >>> np.arctan2(x, y)
     array([ 1.5707964, -1.5707964])
     """
-    return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2,
-                         _npi.arctan2_scalar, _npi.rarctan2_scalar, out=out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.arctan2(x1, x2, out=out)
+    return _api_internal.arctan2(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5857,7 +5860,9 @@ def hypot(x1, x2, out=None, **kwargs):
            [ 5.,  5.,  5.],
            [ 5.,  5.,  5.]])
     """
-    return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.hypot(x1, x2, out=out)
+    return _api_internal.hypot(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5897,7 +5902,9 @@ def bitwise_and(x1, x2, out=None, **kwargs):
     >>> np.bitwise_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([False,  True])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_and, _np.bitwise_and, _npi.bitwise_and_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_and(x1, x2, out=out)
+    return _api_internal.bitwise_and(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5935,7 +5942,9 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     >>> np.bitwise_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, False])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_xor(x1, x2, out=out)
+    return _api_internal.bitwise_xor(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5973,7 +5982,9 @@ def bitwise_or(x1, x2, out=None, **kwargs):
     >>> np.bitwise_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, True])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_or(x1, x2, out=out)
+    return _api_internal.bitwise_or(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6012,7 +6023,9 @@ def ldexp(x1, x2, out=None, **kwargs):
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
     """
-    return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.ldexp(x1, x2, out=out)
+    return _api_internal.ldexp(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
