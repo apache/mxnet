@@ -41,13 +41,13 @@ NNVM_REGISTER_OP(_npi_identity)
 NNVM_REGISTER_OP(_npi_full_like)
 .set_attr<FCompute>("FCompute<gpu>", FullLikeOpCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_atleast_1d)
+NNVM_REGISTER_OP(_npi_atleast_1d)
 .set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_atleast_2d)
+NNVM_REGISTER_OP(_npi_atleast_2d)
 .set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_atleast_3d)
+NNVM_REGISTER_OP(_npi_atleast_3d)
 .set_attr<FCompute>("FCompute<gpu>", AtleastNDCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_arange)
