@@ -37,7 +37,7 @@ except ImportError:
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
-           'power', 'arctan2', 'trace',
+           'power', 'arctan2', 'trace', 'transpose',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul', 'median',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
@@ -653,7 +653,7 @@ class _Symbol(Symbol):
                 axes = axes[0]
             elif axes[0] is None:
                 axes = None
-        return _mx_np_op.transpose(self, axes=axes)
+        return transpose(self, axes=axes)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -2340,6 +2340,27 @@ def trace(a, offset=0, axis1=0, axis2=1, out=None):
         larger dimensions, then an array of sums along diagonals is returned.
     """
     return _npi.trace(a, offset=offset, axis1=axis1, axis2=axis2, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def transpose(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : _Symbol
+        a with its axes permuted.
+    """
+    return _npi.transpose(a, axes=axes)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
