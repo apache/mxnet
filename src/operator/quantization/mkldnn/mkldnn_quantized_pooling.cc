@@ -35,8 +35,8 @@ static void MKLDNNQuantizedPoolingForward(const nnvm::NodeAttrs& attrs, const Op
                                           const std::vector<OpReqType> &req,
                                           const std::vector<NDArray> &out_data) {
   CHECK(in_data[0].dtype() == mshadow::kUint8
-    || in_data[0].dtype() == mshadow::kInt8)
-    << "mkldnn_quantized_pooling op only supports uint8 and int8 as input type";
+        || in_data[0].dtype() == mshadow::kInt8)
+        << "mkldnn_quantized_pooling op only supports uint8 and int8 as input type";
   const PoolingParam& param = nnvm::get<PoolingParam>(attrs.parsed);
   auto fwd = GetPoolingFwd(param, ctx.is_train, in_data[0], out_data[0]);
   fwd.SetNewMem(in_data[0], out_data[0], req[0]);

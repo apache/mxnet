@@ -38,11 +38,13 @@ DMLC_REGISTER_PARAMETER(MKLDNNConvParam);
 
 bool SupportMKLDNNConv(const ConvolutionParam& params, const NDArray &input) {
   if ((params.kernel.ndim() != 1) &&
-      (params.kernel.ndim() != 2))
+      (params.kernel.ndim() != 2) &&
+      (params.kernel.ndim() != 3))
     return false;
   return SupportMKLDNNQuantize(input.dtype()) &&
          ((input.shape().ndim() == 3) ||
-          (input.shape().ndim() == 4));
+          (input.shape().ndim() == 4) ||
+          (input.shape().ndim() == 5));
 }
 
 mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullParam &param,
@@ -76,9 +78,19 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
     strides[1] = param.conv_param.stride[1];
     padding[0] = param.conv_param.pad[0];
     padding[1] = param.conv_param.pad[1];
+  } else if (param.conv_param.kernel.ndim() == 3) {
+    CHECK_GE(param.conv_param.stride.ndim(), 3);
+    CHECK_GE(param.conv_param.pad.ndim(), 3);
+    CHECK_GE(param.conv_param.dilate.ndim(), 3);
+    strides[0] = param.conv_param.stride[0];
+    strides[1] = param.conv_param.stride[1];
+    strides[2] = param.conv_param.stride[2];
+    padding[0] = param.conv_param.pad[0];
+    padding[1] = param.conv_param.pad[1];
+    padding[2] = param.conv_param.pad[2];
   } else {
     LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size "
-               << param.conv_param.kernel.ndim() << ", supporting only 1 or 2.";
+               << param.conv_param.kernel.ndim() << ", supporting only 1 or 2 or 3.";
   }
   mkldnn::primitive_attr attr;
   mkldnn::post_ops ops;
@@ -141,9 +153,13 @@ mkldnn::convolution_forward::primitive_desc GetConvFwdImpl(const MKLDNNConvFullP
     } else if (param.conv_param.dilate.ndim() == 2) {
       dilates[0] = param.conv_param.dilate[0] - 1;
       dilates[1] = param.conv_param.dilate[1] - 1;
+    } else if (param.conv_param.dilate.ndim() == 3) {
+      dilates[0] = param.conv_param.dilate[0] - 1;
+      dilates[1] = param.conv_param.dilate[1] - 1;
+      dilates[2] = param.conv_param.dilate[2] - 1;
     } else {
       LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size " << param.conv_param.dilate.ndim()
-                 << ", supporting only 1 or 2.";
+                 << ", supporting only 1 or 2 or 3.";
     }
     if (bias_md_ptr == nullptr) {
       mkldnn::convolution_forward::desc desc(prop, mkldnn::algorithm::convolution_direct, data_md,
@@ -182,9 +198,19 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
     strides[1] = param.stride[1];
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
+  } else if (param.kernel.ndim() == 3) {
+    CHECK_GE(param.stride.ndim(), 3);
+    CHECK_GE(param.pad.ndim(), 3);
+    CHECK_GE(param.dilate.ndim(), 3);
+    strides[0] = param.stride[0];
+    strides[1] = param.stride[1];
+    strides[2] = param.stride[2];
+    padding[0] = param.pad[0];
+    padding[1] = param.pad[1];
+    padding[2] = param.pad[2];
   } else {
     LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size " << param.kernel.ndim()
-               << ", supporting only 1 or 2.";
+               << ", supporting only 1 or 2 or 3.";
   }
 
   // MKL-DNN introduced padded formats since 0.15 which require more memory
@@ -209,9 +235,13 @@ static mkldnn::convolution_backward_data::primitive_desc GetConvBwdData(
     } else if (param.dilate.ndim() == 2) {
       dilates[0] = param.dilate[0] - 1;
       dilates[1] = param.dilate[1] - 1;
+    } else if (param.dilate.ndim() == 3) {
+      dilates[0] = param.dilate[0] - 1;
+      dilates[1] = param.dilate[1] - 1;
+      dilates[2] = param.dilate[2] - 1;
     } else {
       LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
-                 << param.dilate.ndim() << ", supporting only 1 or 2.";
+                 << param.dilate.ndim() << ", supporting only 1 or 2 or 3.";
     }
     mkldnn::convolution_backward_data::desc desc(mkldnn::algorithm::convolution_direct,
         data_md, weight_md, out_md, strides, dilates, padding, padding,
@@ -250,9 +280,19 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
     strides[1] = param.stride[1];
     padding[0] = param.pad[0];
     padding[1] = param.pad[1];
+  } else if (param.kernel.ndim() == 3) {
+    CHECK_GE(param.stride.ndim(), 3);
+    CHECK_GE(param.pad.ndim(), 3);
+    CHECK_GE(param.dilate.ndim(), 3);
+    strides[0] = param.stride[0];
+    strides[1] = param.stride[1];
+    strides[2] = param.stride[2];
+    padding[0] = param.pad[0];
+    padding[1] = param.pad[1];
+    padding[2] = param.pad[2];
   } else {
     LOG(FATAL) << "Unexpected MKL-DNN Conv kernel size " << param.kernel.ndim()
-               << ", supporting only 1 or 2.";
+               << ", supporting only 1 or 2 or 3.";
   }
 
   // MKL-DNN introduced padded formats since 0.15 which require more memory
@@ -289,9 +329,13 @@ static mkldnn::convolution_backward_weights::primitive_desc GetConvBwdWeights(
     } else if (param.dilate.ndim() == 2) {
       dilates[0] = param.dilate[0] - 1;
       dilates[1] = param.dilate[1] - 1;
+    } else if (param.dilate.ndim() == 3) {
+      dilates[0] = param.dilate[0] - 1;
+      dilates[1] = param.dilate[1] - 1;
+      dilates[2] = param.dilate[2] - 1;
     } else {
       LOG(FATAL) << "Unexpected MKL-DNN Conv dilate size "
-                 << param.dilate.ndim() << ", supporting only 1 or 2.";
+                 << param.dilate.ndim() << ", supporting only 1 or 2 or 3.";
     }
     if (bias == nullptr) {
       mkldnn::convolution_backward_weights::desc desc(mkldnn::algorithm::convolution_direct,
