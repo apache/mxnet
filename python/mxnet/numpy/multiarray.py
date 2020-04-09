@@ -69,10 +69,11 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
-           'equal', 'not_equal',
+           'equal', 'not_equal', 'interp',
            'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
+           'atleast_1d', 'atleast_2d', 'atleast_3d',
            'pad', 'cumsum', 'diag', 'diagonal']
 
 __all__ += fallback.__all__
@@ -9324,6 +9325,83 @@ def resize(a, new_shape):
     return _mx_nd_np.resize(a, new_shape)
 
 
+@set_module('mxnet.numpy')
+def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=too-many-arguments
+    """
+    One-dimensional linear interpolation.
+    Returns the one-dimensional piecewise linear interpolant to a function
+    with given values at discrete data-points.
+
+    Parameters
+    ----------
+    x : ndarray
+        The x-coordinates of the interpolated values.
+    xp : 1-D array of floats
+        The x-coordinates of the data points, must be increasing if argument
+        `period` is not specified. Otherwise, `xp` is internally sorted after
+        normalizing the periodic boundaries with ``xp = xp % period``.
+    fp : 1-D array of floats
+        The y-coordinates of the data points, same length as `xp`.
+    left : optional float corresponding to fp
+        Value to return for `x < xp[0]`, default is `fp[0]`.
+    right : optional float corresponding to fp
+        Value to return for `x > xp[-1]`, default is `fp[-1]`.
+    period : None or float, optional
+        A period for the x-coordinates. This parameter allows the proper
+        interpolation of angular x-coordinates. Parameters `left` and `right`
+        are ignored if `period` is specified.
+        .. versionadded:: 1.10.0
+
+    Returns
+    -------
+    y : float (corresponding to fp) or ndarray
+        The interpolated values, same shape as `x`.
+    Raises
+    ------
+    ValueError
+        If `xp` and `fp` have different length
+        If `xp` or `fp` are not 1-D sequences
+        If `period == 0`
+
+    Notes
+    -----
+    Does not check that the x-coordinate sequence `xp` is increasing.
+    If `xp` is not increasing, the results are nonsense.
+    A simple check for increasing is::
+        np.all(np.diff(xp) > 0)
+
+    Examples
+    --------
+    >>> xp = [1, 2, 3]
+    >>> fp = [3, 2, 0]
+    >>> np.interp(2.5, xp, fp)
+    1.0
+    >>> np.interp([0, 1, 1.5, 2.72, 3.14], xp, fp)
+    array([ 3. ,  3. ,  2.5 ,  0.56,  0. ])
+    >>> UNDEF = -99.0
+    >>> np.interp(3.14, xp, fp, right=UNDEF)
+    -99.0
+    Plot an interpolant to the sine function:
+    >>> x = np.linspace(0, 2*np.pi, 10)
+    >>> y = np.sin(x)
+    >>> xvals = np.linspace(0, 2*np.pi, 50)
+    >>> yinterp = np.interp(xvals, x, y)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.plot(x, y, 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.plot(xvals, yinterp, '-x')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.show()
+    Interpolation with periodic x-coordinates:
+    >>> x = [-180, -170, -185, 185, -10, -5, 0, 365]
+    >>> xp = [190, -190, 350, -350]
+    >>> fp = [5, 10, 3, 4]
+    >>> np.interp(x, xp, fp, period=360)
+    array([7.5, 5., 8.75, 6.25, 3., 3.25, 3.5, 3.75])
+    """
+    return _mx_nd_np.interp(x, xp, fp, left=left, right=right, period=period)
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
@@ -9998,6 +10076,117 @@ def bincount(x, weights=None, minlength=0):
     array([ 0.3,  0.7,  1.1])
     """
     return _mx_nd_np.bincount(x, weights=weights, minlength=minlength)
+
+
+@set_module('mxnet.numpy')
+def atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_1d(1.0)
+    array([1.])
+    >>> x = np.arange(9.0).reshape(3,3)
+    >>> np.atleast_1d(x)
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.atleast_1d(np.array(1), np.array([3, 4]))
+    [array([1.]), array([3., 4.])]
+    """
+    return _mx_nd_np.atleast_1d(*arys)
+
+
+@set_module('mxnet.numpy')
+def atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_2d(3.0)
+    array([[3.]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_2d(x)
+    array([[0., 1., 2.]])
+    >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
+    [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
+    """
+    return _mx_nd_np.atleast_2d(*arys)
+
+
+@set_module('mxnet.numpy')
+def atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+
+    Examples
+    --------
+    >>> np.atleast_3d(3.0)
+    array([[[3.]]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_3d(x).shape
+    (1, 3, 1)
+    >>> x = np.arange(12.0).reshape(4,3)
+    >>> np.atleast_3d(x).shape
+    (4, 3, 1)
+    >>> for arr in np.atleast_3d(np.array([1, 2]), np.array([[1, 2]]), np.array([[[1, 2]]])):
+    ...     print(arr, arr.shape)
+    ...
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1. 2.]]] (1, 1, 2)
+    """
+    return _mx_nd_np.atleast_3d(*arys)
 
 
 @set_module('mxnet.numpy')
