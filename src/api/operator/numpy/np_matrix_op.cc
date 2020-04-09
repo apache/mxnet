@@ -254,6 +254,8 @@ MXNET_REGISTER_API("_npi.reshape_ex")
   } else {
     param.newshape = TShape(args[1].operator ObjectRef());
   }
+  param.reverse = false;
+  param.order = "C";
   attrs.parsed = std::move(param);
   attrs.op = op;
   SetAttrDict<op::NumpyXReshapeParam>(&attrs);
@@ -275,6 +277,7 @@ MXNET_REGISTER_API("_npi.reshape")
   } else {
     param.newshape = TShape(args[1].operator ObjectRef());
   }
+  param.order = "C";
   attrs.parsed = std::move(param);
   attrs.op = op;
   SetAttrDict<op::NumpyReshapeParam>(&attrs);
