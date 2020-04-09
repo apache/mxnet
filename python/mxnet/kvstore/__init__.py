@@ -22,8 +22,4 @@
 from .kvstore import *
 from .base import *
 from .kvstore_server import *
-<<<<<<< HEAD
 from .horovod import *
-from .byteps import *
-=======
->>>>>>> upstream/master
