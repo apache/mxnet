@@ -22,8 +22,8 @@ from . import _op as _mx_nd_np
 from . import _internal as _npi
 from . import _api_internal
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
+__all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
 
 
 def lstsq(a, b, rcond='warn'):
@@ -467,6 +467,65 @@ def cholesky(a):
            [ 4., 10.]])
     """
     return _api_internal.cholesky(a, True)
+
+
+def qr(a, mode='reduced'):
+    r"""
+    Compute the qr factorization of a matrix a.
+    Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        Matrix or stack of matrices to be qr factored.
+    mode: {‘reduced’, ‘complete’, ‘r’, ‘raw’, ‘full’, ‘economic’}, optional
+        Only default mode, 'reduced', is implemented. If K = min(M, N), then
+        * 'reduced’ : returns q, r with dimensions (M, K), (K, N) (default)
+
+    Returns
+    -------
+    q : (..., M, K) ndarray
+        A matrix or stack of matrices with K orthonormal columns, with K = min(M, N).
+    r : (..., K, N) ndarray
+        A matrix or stack of upper triangular matrices.
+
+    Raises
+    ------
+    MXNetError
+        If factoring fails.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.random.uniform(-10, 10, (2, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.22121978, -0.97522414],
+           [-0.97522414,  0.22121954]])
+    >>> r
+    array([[-4.4131265 , -7.1255064 ],
+           [ 0.        , -0.28771925]])
+    >>> a = np.random.uniform(-10, 10, (2, 3))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.28376842, -0.9588929 ],
+           [-0.9588929 ,  0.28376836]])
+    >>> r
+    array([[-7.242763  , -0.5673361 , -2.624416  ],
+           [ 0.        , -7.297918  , -0.15949416]])
+    >>> a = np.random.uniform(-10, 10, (3, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.34515655,  0.10919492],
+           [ 0.14765628, -0.97452265],
+           [-0.92685735, -0.19591334]])
+    >>> r
+    array([[-8.453794,  8.4175  ],
+           [ 0.      ,  5.430561]])
+    """
+    if mode is not None and mode != 'reduced':
+        raise NotImplementedError("Only default mode='reduced' is implemented.")
+    return tuple(_npi.qr(a))
 
 
 def inv(a):
