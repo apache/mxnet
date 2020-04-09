@@ -634,6 +634,36 @@ def _add_workload_linalg_pinv():
             OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), np.array(rcond_np, dtype=dtype), hermitian)
 
 
+def _add_workload_linalg_lstsq():
+    shapes = [
+        ((0, 0), (0,)),
+        ((0, 0), (0, 0)),
+        ((4, 0), (4,)),
+        ((4, 0), (4, 2)),
+        ((0, 2), (0, 4)),
+        ((4, 2), (4, 0)),
+        ((0, 0), (0, 4)),
+        ((0, 2), (0, 0)),
+        ((4, 0), (4, 0)),
+        ((4, 2), (4,)),
+        ((4, 2), (4, 3)),
+        ((4, 6), (4, 3)),
+    ]
+    rconds = [None, "random", "warn"]
+    dtypes = (np.float32, np.float64)
+    for dtype, rcond in itertools.product(dtypes, rconds):
+        for a_shape, b_shape in shapes:
+            if rcond == "random":
+                rcond = _np.random.uniform(100, 200)
+            if rcond == "warn":
+                rcond = -1
+            a_np = _np.random.uniform(-10.0, 10.0, a_shape)
+            b_np = _np.random.uniform(-10.0, 10.0, b_shape)
+            a = np.array(a_np, dtype=dtype)
+            b = np.array(b_np, dtype=dtype)
+            OpArgMngr.add_workload('linalg.lstsq', a, b, rcond)
+
+
 def _add_workload_linalg_eigvals():
     OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((0, 0)), dtype=np.float64))
     OpArgMngr.add_workload('linalg.eigvals', np.array(_np.diag((1, 1)), dtype=np.float64))
@@ -1331,6 +1361,38 @@ def _add_workload_insert():
     OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
     OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=np.int64), np.array([3, 4, 5]))
     OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
+
+
+def _add_workload_interp():
+    xp0 = np.linspace(0, 1, 5)
+    fp0 = np.linspace(0, 1, 5)
+    x0 = np.linspace(0, 1, 50)
+    xp1 = np.array([1, 2, 3, 4])
+    fp1 = np.array([1, 2, np.inf, 4])
+    x1 = np.array([1, 2, 2.5, 3, 4])
+    xp2 = np.arange(0, 10, 0.0001)
+    fp2 = np.sin(xp2)
+    xp3 = np.array([190, -190, 350, -350])
+    fp3 = np.array([5, 10, 3, 4])
+    x3 = np.array([-180, -170, -185, 185, -10, -5, 0, 365])
+
+    OpArgMngr.add_workload('interp', x0, xp0, fp0)
+    OpArgMngr.add_workload('interp', x1, xp1, fp1)
+    OpArgMngr.add_workload('interp', np.pi, xp2, fp2)
+    OpArgMngr.add_workload('interp', x3, xp3, fp3, period=360)
+    for size in range(1, 10):
+        xp = np.arange(size, dtype=np.float64)
+        fp = np.ones(size, dtype=np.float64)
+        incpts = np.array([-1, 0, size - 1, size], dtype=np.float64)
+        decpts = incpts[::-1]
+        OpArgMngr.add_workload('interp', incpts, xp, fp)
+        OpArgMngr.add_workload('interp', decpts, xp, fp)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0, right=2)
 
 
 def _add_workload_hypot():
@@ -2036,15 +2098,6 @@ def _add_workload_linalg_cond():
     OpArgMngr.add_workload('linalg.cond', A, 1)
     OpArgMngr.add_workload('linalg.cond', A, -1)
     OpArgMngr.add_workload('linalg.cond', A, 'fro')
-
-
-def _add_workload_linalg_lstsq():
-    y = np.array([-1, 0.2, 0.9, 2.1])
-    A = np.array([[ 0.,  1.],
-                  [ 1.,  1.],
-                  [ 2.,  1.],
-                  [ 3.,  1.]])
-    OpArgMngr.add_workload('linalg.lstsq', A, y, rcond=None)
 
 
 def _add_workload_linalg_matrix_power():
@@ -2833,6 +2886,7 @@ def _prepare_workloads():
     _add_workload_linalg_det()
     _add_workload_linalg_tensorinv()
     _add_workload_linalg_tensorsolve()
+    _add_workload_linalg_lstsq()
     _add_workload_linalg_pinv()
     _add_workload_linalg_eigvals()
     _add_workload_linalg_eig()
@@ -2840,7 +2894,6 @@ def _prepare_workloads():
     _add_workload_linalg_eigh()
     _add_workload_linalg_slogdet()
     _add_workload_linalg_cond()
-    _add_workload_linalg_lstsq()
     _add_workload_linalg_matrix_power()
     _add_workload_linalg_matrix_rank()
     _add_workload_linalg_multi_dot()
@@ -2860,6 +2913,7 @@ def _prepare_workloads():
     _add_workload_true_divide()
     _add_workload_inner()
     _add_workload_insert()
+    _add_workload_interp()
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_and()
