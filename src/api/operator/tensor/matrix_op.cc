@@ -74,10 +74,10 @@ MXNET_REGISTER_API("_npi.tile")
   const nnvm::Op* op = Op::Get("_npi_tile");
   nnvm::NodeAttrs attrs;
   op::TileParam param;
-  if (arg[1].type_code() == kDLInt) {
-    param.reps = Tuple<int>(1, arg[1].operator int64_t());
+  if (args[1].type_code() == kDLInt) {
+    param.reps = Tuple<int>(1, args[1].operator int64_t());
   } else {
-  param.reps = Tuple<int>(arg[1].operator ObjectRef());
+  param.reps = Tuple<int>(args[1].operator ObjectRef());
   }
   attrs.parsed = std::move(param);
   attrs.op = op;
