@@ -316,15 +316,17 @@ def test_softmax():
 @with_seed()
 def test_pooling():
     def check_pooling_training(stype):
-        for shape in [(3, 3, 10), (3, 3, 20, 20)]:
+        for shape in [(3, 3, 10), (3, 3, 20, 20), (3, 3, 10, 20, 20)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             data = mx.symbol.Variable('data', stype=stype)
             in_location = [mx.nd.array(data_tmp).tostype(stype)]
 
             if np.array(shape).shape[0] == 3:
-                test = mx.symbol.Pooling(data=data, kernel=(3,), stride=(2), pool_type='avg')
+                test = mx.symbol.Pooling(data=data, kernel=(3), stride=(2), pool_type='avg')
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='avg')
+            elif np.array(shape).shape[0] == 5:
+                test = mx.symbol.Pooling(data=data, kernel=(3, 3, 3), stride=(2, 2, 2), pool_type='avg')
             else:
                 return 0
             check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
@@ -358,7 +360,7 @@ def test_activation():
 @with_seed()
 def test_convolution():
     def check_convolution_training(stype):
-        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
+        for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 10, 10, 10)]:
             data_tmp = np.random.normal(-0.1, 1, size=shape)
             data = mx.symbol.Variable('data', stype=stype)
 
@@ -368,6 +370,9 @@ def test_convolution():
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Convolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
+            elif np.array(shape).shape[0] == 5:
+                test = mx.symbol.Convolution(data=data, kernel=(3, 3, 3), stride=(2, 2, 2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3, 3))
             else:
                 return 0
             bias_tmp = np.random.normal(0.1, 0.1, size=(4,))

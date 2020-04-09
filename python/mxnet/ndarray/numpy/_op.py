@@ -45,7 +45,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
-           'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
+           'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
            'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
@@ -5052,7 +5052,9 @@ def copysign(x1, x2, out=None, **kwargs):
     >>> np.copysign(a, np.arange(3)-1)
     array([-1.,  0.,  1.])
     """
-    return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.copysign(x1, x2, out=out)
+    return _api_internal.copysign(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5808,8 +5810,9 @@ def arctan2(x1, x2, out=None, **kwargs):
     >>> np.arctan2(x, y)
     array([ 1.5707964, -1.5707964])
     """
-    return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2,
-                         _npi.arctan2_scalar, _npi.rarctan2_scalar, out=out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.arctan2(x1, x2, out=out)
+    return _api_internal.arctan2(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5857,7 +5860,9 @@ def hypot(x1, x2, out=None, **kwargs):
            [ 5.,  5.,  5.],
            [ 5.,  5.,  5.]])
     """
-    return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.hypot(x1, x2, out=out)
+    return _api_internal.hypot(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5897,7 +5902,9 @@ def bitwise_and(x1, x2, out=None, **kwargs):
     >>> np.bitwise_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([False,  True])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_and, _np.bitwise_and, _npi.bitwise_and_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_and(x1, x2, out=out)
+    return _api_internal.bitwise_and(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5935,7 +5942,9 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     >>> np.bitwise_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, False])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_xor(x1, x2, out=out)
+    return _api_internal.bitwise_xor(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5973,7 +5982,9 @@ def bitwise_or(x1, x2, out=None, **kwargs):
     >>> np.bitwise_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, True])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_or(x1, x2, out=out)
+    return _api_internal.bitwise_or(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6012,7 +6023,9 @@ def ldexp(x1, x2, out=None, **kwargs):
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
     """
-    return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.ldexp(x1, x2, out=out)
+    return _api_internal.ldexp(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7106,6 +7119,86 @@ def may_share_memory(a, b, max_work=None):
     - Actually it is same as `shares_memory` in MXNet DeepNumPy
     """
     return _api_internal.share_memory(a, b).item()
+
+
+@set_module('mxnet.ndarray.numpy')
+def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=too-many-arguments
+    """
+    One-dimensional linear interpolation.
+    Returns the one-dimensional piecewise linear interpolant to a function
+    with given values at discrete data-points.
+
+    Parameters
+    ----------
+    x : ndarray
+        The x-coordinates of the interpolated values.
+    xp : 1-D array of floats
+        The x-coordinates of the data points, must be increasing if argument
+        `period` is not specified. Otherwise, `xp` is internally sorted after
+        normalizing the periodic boundaries with ``xp = xp % period``.
+    fp : 1-D array of floats
+        The y-coordinates of the data points, same length as `xp`.
+    left : optional float corresponding to fp
+        Value to return for `x < xp[0]`, default is `fp[0]`.
+    right : optional float corresponding to fp
+        Value to return for `x > xp[-1]`, default is `fp[-1]`.
+    period : None or float, optional
+        A period for the x-coordinates. This parameter allows the proper
+        interpolation of angular x-coordinates. Parameters `left` and `right`
+        are ignored if `period` is specified.
+        .. versionadded:: 1.10.0
+
+    Returns
+    -------
+    y : float (corresponding to fp) or ndarray
+        The interpolated values, same shape as `x`.
+    Raises
+    ------
+    ValueError
+        If `xp` and `fp` have different length
+        If `xp` or `fp` are not 1-D sequences
+        If `period == 0`
+
+    Notes
+    -----
+    Does not check that the x-coordinate sequence `xp` is increasing.
+    If `xp` is not increasing, the results are nonsense.
+    A simple check for increasing is::
+        np.all(np.diff(xp) > 0)
+
+    Examples
+    --------
+    >>> xp = [1, 2, 3]
+    >>> fp = [3, 2, 0]
+    >>> np.interp(2.5, xp, fp)
+    1.0
+    >>> np.interp([0, 1, 1.5, 2.72, 3.14], xp, fp)
+    array([ 3. ,  3. ,  2.5 ,  0.56,  0. ])
+    >>> UNDEF = -99.0
+    >>> np.interp(3.14, xp, fp, right=UNDEF)
+    -99.0
+    Plot an interpolant to the sine function:
+    >>> x = np.linspace(0, 2*np.pi, 10)
+    >>> y = np.sin(x)
+    >>> xvals = np.linspace(0, 2*np.pi, 50)
+    >>> yinterp = np.interp(xvals, x, y)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.plot(x, y, 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.plot(xvals, yinterp, '-x')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.show()
+    Interpolation with periodic x-coordinates:
+    >>> x = [-180, -170, -185, 185, -10, -5, 0, 365]
+    >>> xp = [190, -190, 350, -350]
+    >>> fp = [5, 10, 3, 4]
+    >>> np.interp(x, xp, fp, period=360)
+    array([7.5, 5., 8.75, 6.25, 3., 3.25, 3.5, 3.75])
+    """
+    if not isinstance(x, numeric_types):
+        x = x.astype(float)
+    return _api_internal.interp(xp.astype(float), fp.astype(float), x, left,
+                                right, period)
 
 
 @set_module('mxnet.ndarray.numpy')
