@@ -70,6 +70,11 @@ void RandGenerator<gpu, float>::FreeState(RandGenerator<gpu> *inst) {
   CUDA_CALL(cudaFree(inst->states_));
 }
 
+template<>
+void* RandGenerator<gpu, float>::GetStates() {
+  return static_cast<void*>(states_);
+}
+
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet

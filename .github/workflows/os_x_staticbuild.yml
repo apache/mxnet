@@ -22,5 +22,4 @@ jobs:
           python3 -m pip install --user -e python
       - name: Test project
         run: |
-          python3 -m nose --with-timer --verbose tests/python/unittest/ --exclude-test=test_extensions.test_subgraph --exclude-test=test_extensions.test_custom_op --exclude-test=test_gluon_data.test_recordimage_dataset_with_data_loader_multiworker
-          
+          python3 -m nose --with-timer --verbose tests/python/unittest/ --exclude-test=test_extensions.test_subgraph --exclude-test=test_extensions.test_custom_op --exclude-test=test_gluon_data.test_recordimage_dataset_with_data_loader_multiworker --exclude-test=test_gluon_data.test_multi_worker --exclude-test=test_gluon_data.test_multi_worker_shape --exclude-test=test_gluon_data.test_multi_worker_forked_data_loader --exclude-test=test_gluon_data.test_multi_worker_dataloader_release_pool
