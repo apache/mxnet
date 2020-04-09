@@ -40,7 +40,8 @@ test_kvstore() {
 
 test_horovod() {
     echo "localhost slots=2" > hosts
-    mpirun -n 2 --hostfile hosts python3 dist_device_sync_kvstore_horovod.py
+    mpirun -np 2 --hostfile hosts --bind-to none --map-by slot -mca pml ob1 \
+        -mca btl ^openib python3 dist_device_sync_kvstore_horovod.py
     if [ $? -ne 0 ]; then
         return $?
     fi
