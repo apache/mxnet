@@ -626,6 +626,41 @@ def _npx_reshape(a, newshape, reverse=False, order='C'):
     pass
 
 
+def _npx_index_add(a, val, ind):
+    """
+    Implmentation of a[ind] += val.
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    ind : int or ndarray
+        Diagonal to set; 0, the default, corresponds to the "main" diagonal,
+        a positive (negative) `k` giving the number of the diagonal above
+        (below) the main.
+    Returns
+    -------
+    out : ndarray
+        The 2-D output array.
+    See Also
+    --------
+    diag : MATLAB work-alike for 1-D and 2-D arrays.
+    diagonal : Return specified diagonals.
+    trace : Sum along diagonals.
+    Examples
+    --------
+    >>> np.diagflat([[1,2], [3,4]])
+    array([[1, 0, 0, 0],
+           [0, 2, 0, 0],
+           [0, 0, 3, 0],
+           [0, 0, 0, 4]])
+    >>> np.diagflat([1,2], 1)
+    array([[0, 1, 0],
+           [0, 0, 2],
+           [0, 0, 0]])
+    """
+    pass
+
+
 def _np_diag(array, k=0):
     """
     Extracts a diagonal or constructs a diagonal array.
