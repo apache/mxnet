@@ -129,15 +129,8 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
     // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
     return false;
   }
-  return dtype == mshadow::kFloat32 && (ndim == 1 || ndim == 2 || ndim == 4);
-}
-
-static inline bool SupportMKLDNNRnn(const NDArray &input) {
-  if (input.dtype() == mshadow::kFloat32 && input.shape().ndim() == 3
-      && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
-    return true;
-  }
-  return false;
+  return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
+                    (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
@@ -302,20 +295,32 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
   if (num_groups == 1) {
     return GetMemDesc(arr, dtype);
   } else {
-    auto ndim = arr.shape().ndim();
-    CHECK((ndim == 3) || (ndim == 4))
-        << "MKL-DNN weight currectly supports 3d and 4d layout";
+    const auto ndim = arr.shape().ndim();
+    CHECK((ndim == 3) || (ndim == 4) || (ndim == 5))
+        << "MKL-DNN weight currently supports 3d or 4d or 5d layout";
     auto tz = mkldnn::memory::dims{0};
-    const int N = 0, H = 2, W = 3, C = 1;
-    if (ndim == 3) {
-      tz = mkldnn::memory::dims{
-          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
-          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H])};
-    } else {
-      tz = mkldnn::memory::dims{
-          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
-          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
-          static_cast<int>(arr.shape()[W])};
+    int N = 0, C = 1, H = 2, W = 3;
+    int D = -1;
+    if (ndim == 5) {
+      D = 2;
+      H = 3;
+      W = 4;
+    }
+    switch (ndim) {
+      case 3:
+        tz = mkldnn::memory::dims{
+                num_groups, arr.shape()[N] / num_groups,
+                arr.shape()[C], arr.shape()[H]};
+        break;
+      case 4:
+        tz = mkldnn::memory::dims{
+                num_groups, arr.shape()[N] / num_groups,
+                arr.shape()[C], arr.shape()[H], arr.shape()[W]};
+        break;
+      case 5:
+        tz = mkldnn::memory::dims{
+                num_groups, arr.shape()[N] / num_groups,
+                arr.shape()[C], arr.shape()[D], arr.shape()[H], arr.shape()[W]};
     }
     return mkldnn::memory::desc{tz, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
   }
