@@ -290,6 +290,32 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_ORGLQ(s, float)
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
 
+  #define MXNET_LAPACK_CWRAP_GEQRF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype *tau, \
+                                          dtype *work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##geqrf(matrix_layout, m, n, a, lda, tau); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_GEQRF(s, float)
+  MXNET_LAPACK_CWRAP_GEQRF(d, double)
+
+  #define MXNET_LAPACK_CWRAP_ORGQR(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##orgqr(int matrix_layout, int m, int n, int k, \
+                                          dtype *a, int lda, dtype *tau, \
+                                          dtype *work, int lwork) { \
+    if (lwork != -1) { \
+      return LAPACKE_##prefix##orgqr(matrix_layout, m, n, k, a, lda, tau); \
+    } \
+    *work = 0; \
+    return 0; \
+  }
+  MXNET_LAPACK_CWRAP_ORGQR(s, float)
+  MXNET_LAPACK_CWRAP_ORGQR(d, double)
+
   // This has to be called internally in COL_MAJOR format even when matrix_layout
   // is row-major as otherwise the eigenvectors would be returned as cols in a
   // row-major matrix layout (see MKL documentation).
@@ -479,6 +505,38 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   }
   MXNET_LAPACK_CWRAP_ORGLQ(s, float)
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
+
+  #define MXNET_LAPACK_CWRAP_GEQRF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "geqrf implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##geqrf_(&m, &n, a, &lda, tau, work, &lwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_GEQRF(s, float)
+  MXNET_LAPACK_CWRAP_GEQRF(d, double)
+
+  #define MXNET_LAPACK_CWRAP_ORGQR(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##orgqr(int matrix_layout, int m, int n, int k, \
+                                          dtype *a, int lda, dtype* tau, \
+                                          dtype* work, int lwork) { \
+    if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
+      CHECK(false) << "MXNET_LAPACK_" << #prefix << "orgqr implemented for col-major layout only"; \
+      return 1; \
+    } else { \
+      int info(0); \
+      prefix##orgqr_(&m, &n, &k, a, &lda, tau, work, &lwork, &info); \
+      return info; \
+    } \
+  }
+  MXNET_LAPACK_CWRAP_ORGQR(s, float)
+  MXNET_LAPACK_CWRAP_ORGQR(d, double)
 
   // Note: Supports row-major format only. Internally, column-major is used, so all
   // inputs/outputs are flipped (in particular, uplo is flipped).
@@ -675,11 +733,19 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
                           dtype *vt, int ldvt, \
                           dtype *work, int lwork, int *iwork);
 
+  #define MXNET_LAPACK_CWRAPPER10(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
+                          int lda, dtype* tau, dtype* work, int lwork);
+
   #define MXNET_LAPACK_CWRAPPER11(func, dtype) \
   int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int nrhs, \
                           dtype *a, int lda, dtype *b, int ldb, \
                           dtype *s, dtype rcond, int *rank, \
                           dtype *work, int lwork, int *iwork);
+
+  #define MXNET_LAPACK_CWRAPPER12(func, dtype) \
+  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, int k, dtype* a, \
+                          int lda, dtype* tau, dtype* work, int lwork);
 
   #define MXNET_LAPACK_UNAVAILABLE(func) \
   int mxnet_lapack_##func(...);
@@ -717,8 +783,14 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAPPER9(sgesdd, float)
   MXNET_LAPACK_CWRAPPER9(dgesdd, double)
 
+  MXNET_LAPACK_CWRAPPER10(sgeqrf, float)
+  MXNET_LAPACK_CWRAPPER10(dgeqrf, double)
+
   MXNET_LAPACK_CWRAPPER11(sgelsd, float)
   MXNET_LAPACK_CWRAPPER11(dgelsd, double)
+
+  MXNET_LAPACK_CWRAPPER12(sorgqr, float)
+  MXNET_LAPACK_CWRAPPER12(dorgqr, double)
 
   #undef MXNET_LAPACK_CWRAPPER1
   #undef MXNET_LAPACK_CWRAPPER2
