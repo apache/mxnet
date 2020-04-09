@@ -58,7 +58,7 @@ def test_pushpull():
 
     expected = (kv.num_workers + 1) * kv.num_workers / 2
     check_diff_to_scalar(tensor, expected)
-    print('worker ' + str(kv.local_rank) + ' passed test_pushpull') 
+    print('worker ' + str(kv.local_rank) + ' passed test_pushpull')
 
 
 def test_broadcast():
