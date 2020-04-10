@@ -382,7 +382,7 @@ struct MXTensor {
   }
 
   /*! \brief helper function to get data size */
-  inline int64_t size() {
+  inline int64_t size() const {
     int64_t size = 1;
     for (unsigned int i = 0; i < shape.size(); i++) {
       size *= shape[i];
@@ -936,7 +936,9 @@ class CustomOp {
 
 /*! \brief Custom Pass Create function template */
 typedef MXReturnValue (*graphPass_t)(const std::string& in_graph, const std::string** out_graph,
-                                     const std::unordered_map<std::string, std::string>& options);
+                                     const std::unordered_map<std::string, std::string>& options,
+                                     const std::unordered_map<std::string, MXTensor>& args,
+                                     const std::unordered_map<std::string, MXTensor>& aux);
 
 /*!
  * \brief An abstract class for graph passes
@@ -1263,7 +1265,16 @@ typedef void (*passRegGet_t)(int pass_idx, graphPass_t* graphPass, const char** 
 typedef int (*passCallGraphPass_t)(graphPass_t graphPass, const char *in_graph,
                                    char** out_graph, const char* const* opt_keys,
                                    const char* const* opt_vals, int num_opts,
-                                   const char* pass_name);
+                                   const char* pass_name, const char* const* arg_names,
+                                   int num_args, void* const* arg_data,
+                                   const int64_t* const* arg_shapes, const int* arg_dims,
+                                   const int* arg_types, const size_t* arg_IDs,
+                                   const char* const* arg_dev_type, const int* arg_dev_id,
+                                   const char* const* aux_names, int num_aux,
+                                   void* const* aux_data, const int64_t* const* aux_shapes,
+                                   const int* aux_dims, const int* aux_types,
+                                   const size_t* aux_IDs, const char* const* aux_dev_type,
+                                   const int* aux_dev_id);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
@@ -1796,7 +1807,6 @@ extern "C" {
       aux[aux_names[i]] = tensor;
     }
 
-
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
@@ -1843,7 +1853,15 @@ extern "C" {
   MX_INT_RET _passCallGraphPass(graphPass_t graphPass, const char *json,
                                 char** graph, const char* const* opt_keys,
                                 const char* const* opt_vals, int num_opts,
-                                const char* pass_name) {
+                                const char* pass_name, const char* const* arg_names, int num_args,
+                                void* const* arg_data, const int64_t* const* arg_shapes,
+                                const int* arg_dims, const int* arg_types,
+                                const size_t* arg_IDs, const char* const* arg_dev_type,
+                                const int* arg_dev_id, const char* const* aux_names, int num_aux,
+                                void* const* aux_data, const int64_t* const* aux_shapes,
+                                const int* aux_dims, const int* aux_types,
+                                const size_t* aux_IDs, const char* const* aux_dev_type,
+                                const int* aux_dev_id) {
     std::string graph_json(json);
     const std::string* out_graph = nullptr;
     // create map of attributes from list
@@ -1851,7 +1869,30 @@ extern "C" {
     for (int i = 0; i < num_opts; i++)
       opts[std::string(opt_keys[i])] = std::string(opt_vals[i]);
 
-    MXReturnValue retval = graphPass(graph_json, &out_graph, opts);
+    // create a map of named tensors for args
+    std::unordered_map<std::string, MXTensor> args;
+    for (int i = 0; i < num_args; i++) {
+      std::vector<int64_t> shapes;
+      for (int j = 0; j < arg_dims[i]; j++)
+        shapes.push_back(arg_shapes[i][j]);
+
+      MXTensor tensor(arg_data[i], shapes, (MXDType)arg_types[i],
+            arg_IDs[i], {arg_dev_type[i], arg_dev_id[i]});
+      args[arg_names[i]] = tensor;
+    }
+    // create a map of named tensors for aux
+    std::unordered_map<std::string, MXTensor> aux;
+    for (int i = 0; i < num_aux; i++) {
+      std::vector<int64_t> shapes;
+      for (int j = 0; j < aux_dims[i]; j++)
+        shapes.push_back(aux_shapes[i][j]);
+
+      MXTensor tensor(aux_data[i], shapes, (MXDType)aux_types[i],
+            aux_IDs[i], {aux_dev_type[i], aux_dev_id[i]});
+      aux[aux_names[i]] = tensor;
+    }
+
+    MXReturnValue retval = graphPass(graph_json, &out_graph, opts, args, aux);
     if (!retval) return retval;
 
     if (out_graph == nullptr) {
