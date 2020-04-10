@@ -520,6 +520,47 @@ void NumpyFlipForward(const nnvm::NodeAttrs& attrs,
   NumpyFlipForwardImpl<xpu>(ctx, inputs, outputs, stride_, trailing_, flip_index);
 }
 
+struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
+  int axis;
+  int start;
+  DMLC_DECLARE_PARAMETER(NumpyRollaxisParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("The axis to roll backwards. "
+    "The positions of the other axes do not change relative to one another.");
+    DMLC_DECLARE_FIELD(start)
+    .set_default(0)
+    .describe("The axis is rolled until it lies before this position. "
+              "The default, 0, results in a “complete” roll.");
+  }
+};
+
+inline mxnet::TShape NumpyRollaxisShapeImpl(int axis,
+                                            int start,
+                                            const int& ndim) {
+  mxnet::TShape axes(ndim, -1);
+  if (axis < 0) {
+    axis += ndim;
+  }
+  if (start < 0) {
+    start += ndim;
+  }
+  if (axis < start) {
+    axes[start - 1] = axis;
+  } else {
+    axes[start] = axis;
+  }
+  int new_axis = 0;
+  for (int i = 0; i < axes.ndim(); i++) {
+    if (axes[i] < 0) {
+      if (new_axis == axis) {
+        new_axis++;
+      }
+      axes[i] = new_axis++;
+    }
+  }
+  return axes;
+}
+
 struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
   mxnet::TShape source;
   mxnet::TShape destination;
@@ -599,6 +640,63 @@ void NumpyMoveaxisCompute(const nnvm::NodeAttrs& attrs,
     << "source and destination not equal.";
   mxnet::TShape axes;
   axes = NumpyMoveaxisShapeImpl(attrs, inputs[0].ndim());
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
+    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  })
+}
+
+template<typename xpu>
+void NumpyRollaxisCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo) << "Rollaxis does not support inplace";
+  mxnet::TShape axes;
+  const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
+  axes = NumpyRollaxisShapeImpl(param.axis, param.start, inputs[0].ndim());
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
+    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  })
+}
+
+template<typename xpu>
+void NumpyRollaxisBackward(const nnvm::NodeAttrs &attrs,
+                            const OpContext &ctx,
+                            const std::vector<TBlob> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
+  int axis_origin = param.axis;
+  int start_origin = param.start;
+  int ndim = inputs[0].ndim();
+
+  int axis;
+  int start;
+
+  if (axis_origin < 0) {
+    axis_origin += ndim;
+  }
+
+  if (start_origin < 0) {
+    start_origin += ndim;
+  }
+
+  if (axis_origin < start_origin) {
+    axis = start_origin - 1;
+    start = axis_origin;
+  } else {
+    axis = start_origin;
+    start = axis_origin + 1;
+  }
+  mxnet::TShape axes;
+  axes = NumpyRollaxisShapeImpl(axis, start, inputs[0].ndim());
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
     TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   })

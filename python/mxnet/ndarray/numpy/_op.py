@@ -48,7 +48,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
+           'where', 'bincount', 'rollaxis', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -8207,6 +8207,38 @@ def cumsum(a, axis=None, dtype=None, out=None):
            [ 4,  9, 15]])
     """
     return _api_internal.cumsum(a, axis, dtype, out)
+
+
+@set_module('mxnet.ndarray.numpy')
+def rollaxis(a, axis, start=0):
+    """
+    Roll the specified axis backwards, until it lies in a given position.
+    a
+        Input array.
+    axis : integer
+        The axis to roll backwards. The positions of the other axes do not
+        change relative to one another.
+    start: int, optional
+        The axis is rolled until it lies before this position.
+        The default, 0, results in a “complete” roll.
+
+    Returns
+    -------
+    res : ndarray
+        A view after applying rollaxis to `a` is returned.
+
+    -----
+    Examples
+    --------
+    >>> a = np.ones((3,4,5,6))
+    >>> np.rollaxis(a, 3, 1).shape
+    (3, 6, 4, 5)
+    >>> np.rollaxis(a, 2).shape
+    (5, 3, 4, 6)
+    >>> np.rollaxis(a, 1, 4).shape
+    (3, 5, 6, 4)
+    """
+    return _npi.rollaxis(a, axis, start)
 
 
 @set_module('mxnet.ndarray.numpy')
