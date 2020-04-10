@@ -469,7 +469,7 @@ def test_np_matmul():
             new_b = _np.broadcast_to(b.reshape((b.size, 1)), newshape_b)
         else:
             new_b = _np.broadcast_to(b, newshape_b)
-        
+
         ad1 = new_a.shape[ndim - 2]
         ad2 = new_a.shape[ndim - 1]
         bd1 = new_b.shape[ndim - 2]
@@ -531,7 +531,7 @@ def test_np_matmul():
             assert b.grad is None
         else:
             assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = eps, atol=eps)
-        
+
         # Test imperative once again
         mx_out = np.matmul(a, b)
         np_out = _np.matmul(np_a, np_b)
@@ -2741,10 +2741,10 @@ def test_np_insert():
             super(TestInsert, self).__init__()
             self._obj = obj
             self._axis = axis
-            
+
         def hybrid_forward(self, F, a, b):
             return F.np.insert(a, self._obj, b, axis=self._axis)
-    
+
     def GetSize(tp):
         res = 1
         for x in tp:
@@ -2814,7 +2814,7 @@ def test_np_insert():
             for stp in [-1, 1, 2, None]:
                 config.append(tuple([A, slice(st, ed, stp), F, 1]))
     dtypes = ['int32', 'float16', 'float32', 'float64', None]
-    
+
     for arr_shape, obj, val_shape, axis in config:
         for atype, btype in itertools.product(dtypes, dtypes):
             if type(obj) == list:
@@ -2835,14 +2835,14 @@ def test_np_insert():
             expected_ret = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
             with mx.autograd.record():
                 y = test_insert(a, b)
-            
+
             assert y.shape == expected_ret.shape
             assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
 
             #test imperative
             mx_out = np.insert(a, obj_mxnp, b, axis=axis)
             np_out = _np.insert(a.asnumpy(), obj_onp, b.asnumpy(), axis=axis)
-                
+
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
@@ -3587,7 +3587,7 @@ def test_np_clip():
 
         def hybrid_forward(self, F, x):
             return x.clip(self._a_min, self._a_max)
-    
+
     # Test scalar case
     for _, a_min, a_max, throw_exception in workloads:
         a = _np.random.uniform() # A scalar
@@ -3675,14 +3675,14 @@ def test_npx_constraint_check():
     class TestConstraintViolatedCheck(HybridBlock):
         def __init__(self):
             super(TestConstraintViolatedCheck, self).__init__()
-        
+
         def hybrid_forward(self, F, boolean_tensor):
             return F.npx.constraint_check(boolean_tensor, msg)
 
     class TestConstraintNotViolatedCheck(HybridBlock):
         def __init__(self):
             super(TestConstraintNotViolatedCheck, self).__init__()
-        
+
         def hybrid_forward(self, F, input, boolean_tensor):
             return input * F.npx.constraint_check(boolean_tensor, msg)
 
@@ -3692,7 +3692,7 @@ def test_npx_constraint_check():
         return executor
 
     shapes = [(1,), (2, 3), 6, (7, 8)]
-    
+
     expect_success_output = np.array(True)
     for shape, hybridize in itertools.product(shapes, [True, False]):
         test_constraint = TestConstraintViolatedCheck()
@@ -3836,7 +3836,7 @@ def test_np_lognormal_grad():
             sigma.attach_grad()
             with mx.autograd.record():
                 mx_out = test_lognormal_grad(mean, sigma)
-            np_out = _np.random.lognormal(mean = mean.asnumpy(), 
+            np_out = _np.random.lognormal(mean = mean.asnumpy(),
                                             sigma = sigma.asnumpy(), size = out_shape)
             assert np_out.shape == mx_out.shape
             mx_out.backward()
@@ -4097,7 +4097,7 @@ def test_np_random_rayleigh():
             test_rayleigh = TestRayleigh(shape)
             if hybridize:
                 test_rayleigh.hybridize()
-            
+
             scale = np.ones(shape)
             scale.attach_grad()
             with mx.autograd.record():
@@ -4756,7 +4756,7 @@ def test_np_linalg_norm():
 
         assert np_ret.shape == mx_ret.shape
         assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
-        
+
         mx_ret.backward()
 
         grad_axis = axis
@@ -6513,7 +6513,7 @@ def test_np_flipud_fliplr():
 
         def hybrid_forward(self, F, x):
             return F.np.flipud(x)
-    
+
     class TestFliplr(HybridBlock):
         def __init__(self):
             super(TestFliplr, self).__init__()
@@ -7290,7 +7290,7 @@ def test_np_pad():
             self._mode = mode
         def hybrid_forward(self,F,A,**kwargs):
             return F.np.pad(A, self._pad_width, mode=self._mode, **kwargs)
-            
+
     shapes = [(1,5), (2,2), (2,2), (3,3), (2,3), (3,4,5)]
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     mode = ['constant', 'reflect', 'symmetric', 'edge', 'minimum', 'maximum']
@@ -7672,7 +7672,7 @@ def test_np_quantile():
             q = q.item()
             np_q = q
             test_quantile = TestQuantileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        else: 
+        else:
             test_quantile = TestQuantile(axis=axis, interpolation=interpolation, keepdims=keepdims)
         if hybridize:
             test_quantile.hybridize()
@@ -7680,7 +7680,7 @@ def test_np_quantile():
         np_out = _np.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
-        
+
         mx_out = np.quantile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         np_out = _np.quantile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
@@ -7698,7 +7698,7 @@ def test_np_percentile():
 
         def hybrid_forward(self, F, a, q):
             return F.np.percentile(a, q, axis=self._axis, interpolation=self._interpolation, keepdims=self._keepdims)
-    
+
     class TestPercentileScalar(HybridBlock):
         def __init__(self, q=None, axis=None, interpolation='linear', keepdims=False):
             super(TestPercentileScalar, self).__init__()
@@ -7735,7 +7735,7 @@ def test_np_percentile():
             q = q.item()
             np_q = q
             test_percentile = TestPercentileScalar(q=q, axis=axis, interpolation=interpolation, keepdims=keepdims)
-        else: 
+        else:
             test_percentile = TestPercentile(axis=axis, interpolation=interpolation, keepdims=keepdims)
         if hybridize:
             test_percentile.hybridize()
@@ -7743,7 +7743,7 @@ def test_np_percentile():
         np_out = _np.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
-        
+
         mx_out = np.percentile(a, q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         np_out = _np.percentile(a.asnumpy(), np_q, axis=axis, interpolation=interpolation, keepdims=keepdims)
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
@@ -7901,7 +7901,7 @@ def test_np_ediff1d():
             mx_out = test_np_ediff1d(*mx_args)
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
-        # test imperative 
+        # test imperative
         mx_out_imperative = np.ediff1d(*mx_args_imperative)
         assert mx_out_imperative.shape == np_out.shape
         assert_almost_equal(mx_out_imperative.asnumpy(), np_out, atol=atol, rtol=rtol)
@@ -8463,6 +8463,21 @@ def test_np_where():
         ret = np.where(cond, x, y)
         same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), y.asnumpy()))
 
+        # check scalar case
+        if dtype in [np.float16, np.float32, np.float64]:
+            # lscalar
+            with mx.autograd.record():
+                ret_lscalar = np.where(cond, 1, x)
+            same(ret.asnumpy(), _np.where(cond.asnumpy(), 1, x.asnumpy()))
+            ret_lscalar.backward()
+            same(x.grad.asnumpy(), 1-collapse_sum_like(_np.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+            # rscalar
+            with mx.autograd.record():
+                ret_rscalar = np.where(cond, x, 1)
+            same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), 1))
+            ret_rscalar.backward()
+            same(x.grad.asnumpy(), collapse_sum_like(_np.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+
 
 @with_seed()
 @use_np
@@ -8586,7 +8601,7 @@ def test_np_diag_indices_from():
     for hybridize, dtype, shape in combinations:
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
-        test_diag_indices_from = TestDiag_indices_from()   
+        test_diag_indices_from = TestDiag_indices_from()
         if hybridize:
             test_diag_indices_from.hybridize()
         x = np.random.uniform(-8, 8, size=shape).astype(dtype)
