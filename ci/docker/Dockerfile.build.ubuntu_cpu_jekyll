@@ -29,7 +29,9 @@ RUN apt-get update && apt-get install -y \
       git \
       zlib1g-dev \
       gnupg2 \
-      curl
+      curl \
+      wget \
+      unzip
 
 # Always last, except here to prevent conflicts with rvm
 ARG USER_ID=0
@@ -43,7 +45,7 @@ RUN curl -sSL https://rvm.io/mpapis.asc | gpg2 --import - && \
 
 RUN source /etc/profile.d/rvm.sh && \
     rvm requirements && \
-    rvm install 2.6 && \
+    rvm install 2.6.3 && \
     rvm use 2.6.3 --default
 
 ENV BUNDLE_HOME=/work/deps/bundle

@@ -45,8 +45,9 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
            'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
-           'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory',
+           'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
+           'atleast_1d', 'atleast_2d', 'atleast_3d',
            'where', 'bincount', 'pad', 'cumsum', 'diag', 'diagonal']
 
 
@@ -3792,18 +3793,9 @@ def array_split(ary, indices_or_sections, axis=0):
     >>> np.array_split(x, 3)
     [array([0.,  1.,  2.]), array([3.,  4.]), array([5.,  6.])]
     """
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.split(ary, indices, axis, False, sections)
-    if not isinstance(ret, list):
-        return [ret]
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.array_split(ary, indices_or_sections, axis))
 # pylint: enable=redefined-outer-name
 
 
@@ -3900,20 +3892,9 @@ def hsplit(ary, indices_or_sections):
     >>> np.hsplit(x, [2, 2])
     [array([0., 1.]), array([], dtype=float32), array([2., 3.])]
     """
-    if len(ary.shape) < 1:
-        raise ValueError('hsplit only works on arrays of 1 or more dimensions')
-    indices = []
-    sections = 0
-    if isinstance(indices_or_sections, integer_types):
-        sections = indices_or_sections
-    elif isinstance(indices_or_sections, (list, set, tuple)):
-        indices = [0] + list(indices_or_sections)
-    else:
-        raise ValueError('indices_or_sections must be either int, or tuple / list / set of ints')
-    ret = _npi.hsplit(ary, indices, 1, False, sections)
-    if not isinstance(ret, list):
-        return [ret]
-    return ret
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.hsplit(ary, indices_or_sections))
 # pylint: enable=redefined-outer-name
 
 
@@ -3991,9 +3972,9 @@ def vsplit(ary, indices_or_sections):
             [6., 7.]]])]
 
     """
-    if len(ary.shape) < 2:
-        raise ValueError("vsplit only works on arrays of 2 or more dimensions")
-    return split(ary, indices_or_sections, 0)
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.vsplit(ary, indices_or_sections))
 
 
 # pylint: disable=redefined-outer-name
@@ -4050,9 +4031,9 @@ def dsplit(ary, indices_or_sections):
             [15.]]]),
     array([], shape=(2, 2, 0), dtype=float64)]
     """
-    if len(ary.shape) < 3:
-        raise ValueError('dsplit only works on arrays of 3 or more dimensions')
-    return split(ary, indices_or_sections, 2)
+    if isinstance(indices_or_sections, set):
+        indices_or_sections = list(indices_or_sections)
+    return list(_api_internal.dsplit(ary, indices_or_sections))
 # pylint: enable=redefined-outer-name
 
 
@@ -5071,7 +5052,9 @@ def copysign(x1, x2, out=None, **kwargs):
     >>> np.copysign(a, np.arange(3)-1)
     array([-1.,  0.,  1.])
     """
-    return _ufunc_helper(x1, x2, _npi.copysign, _np.copysign, _npi.copysign_scalar, _npi.rcopysign_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.copysign(x1, x2, out=out)
+    return _api_internal.copysign(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5827,8 +5810,9 @@ def arctan2(x1, x2, out=None, **kwargs):
     >>> np.arctan2(x, y)
     array([ 1.5707964, -1.5707964])
     """
-    return _ufunc_helper(x1, x2, _npi.arctan2, _np.arctan2,
-                         _npi.arctan2_scalar, _npi.rarctan2_scalar, out=out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.arctan2(x1, x2, out=out)
+    return _api_internal.arctan2(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5876,7 +5860,9 @@ def hypot(x1, x2, out=None, **kwargs):
            [ 5.,  5.,  5.],
            [ 5.,  5.,  5.]])
     """
-    return _ufunc_helper(x1, x2, _npi.hypot, _np.hypot, _npi.hypot_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.hypot(x1, x2, out=out)
+    return _api_internal.hypot(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5916,7 +5902,9 @@ def bitwise_and(x1, x2, out=None, **kwargs):
     >>> np.bitwise_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([False,  True])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_and, _np.bitwise_and, _npi.bitwise_and_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_and(x1, x2, out=out)
+    return _api_internal.bitwise_and(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5954,7 +5942,9 @@ def bitwise_xor(x1, x2, out=None, **kwargs):
     >>> np.bitwise_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, False])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_xor, _np.bitwise_xor, _npi.bitwise_xor_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_xor(x1, x2, out=out)
+    return _api_internal.bitwise_xor(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5992,7 +5982,9 @@ def bitwise_or(x1, x2, out=None, **kwargs):
     >>> np.bitwise_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
     array([ True, True])
     """
-    return _ufunc_helper(x1, x2, _npi.bitwise_or, _np.bitwise_or, _npi.bitwise_or_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.bitwise_or(x1, x2, out=out)
+    return _api_internal.bitwise_or(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6031,7 +6023,9 @@ def ldexp(x1, x2, out=None, **kwargs):
     >>> np.ldexp(5, np.arange(4))
     array([  5.,  10.,  20.,  40.])
     """
-    return _ufunc_helper(x1, x2, _npi.ldexp, _np.ldexp, _npi.ldexp_scalar, _npi.rldexp_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.ldexp(x1, x2, out=out)
+    return _api_internal.ldexp(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7128,6 +7122,86 @@ def may_share_memory(a, b, max_work=None):
 
 
 @set_module('mxnet.ndarray.numpy')
+def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=too-many-arguments
+    """
+    One-dimensional linear interpolation.
+    Returns the one-dimensional piecewise linear interpolant to a function
+    with given values at discrete data-points.
+
+    Parameters
+    ----------
+    x : ndarray
+        The x-coordinates of the interpolated values.
+    xp : 1-D array of floats
+        The x-coordinates of the data points, must be increasing if argument
+        `period` is not specified. Otherwise, `xp` is internally sorted after
+        normalizing the periodic boundaries with ``xp = xp % period``.
+    fp : 1-D array of floats
+        The y-coordinates of the data points, same length as `xp`.
+    left : optional float corresponding to fp
+        Value to return for `x < xp[0]`, default is `fp[0]`.
+    right : optional float corresponding to fp
+        Value to return for `x > xp[-1]`, default is `fp[-1]`.
+    period : None or float, optional
+        A period for the x-coordinates. This parameter allows the proper
+        interpolation of angular x-coordinates. Parameters `left` and `right`
+        are ignored if `period` is specified.
+        .. versionadded:: 1.10.0
+
+    Returns
+    -------
+    y : float (corresponding to fp) or ndarray
+        The interpolated values, same shape as `x`.
+    Raises
+    ------
+    ValueError
+        If `xp` and `fp` have different length
+        If `xp` or `fp` are not 1-D sequences
+        If `period == 0`
+
+    Notes
+    -----
+    Does not check that the x-coordinate sequence `xp` is increasing.
+    If `xp` is not increasing, the results are nonsense.
+    A simple check for increasing is::
+        np.all(np.diff(xp) > 0)
+
+    Examples
+    --------
+    >>> xp = [1, 2, 3]
+    >>> fp = [3, 2, 0]
+    >>> np.interp(2.5, xp, fp)
+    1.0
+    >>> np.interp([0, 1, 1.5, 2.72, 3.14], xp, fp)
+    array([ 3. ,  3. ,  2.5 ,  0.56,  0. ])
+    >>> UNDEF = -99.0
+    >>> np.interp(3.14, xp, fp, right=UNDEF)
+    -99.0
+    Plot an interpolant to the sine function:
+    >>> x = np.linspace(0, 2*np.pi, 10)
+    >>> y = np.sin(x)
+    >>> xvals = np.linspace(0, 2*np.pi, 50)
+    >>> yinterp = np.interp(xvals, x, y)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.plot(x, y, 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.plot(xvals, yinterp, '-x')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.show()
+    Interpolation with periodic x-coordinates:
+    >>> x = [-180, -170, -185, 185, -10, -5, 0, 365]
+    >>> xp = [190, -190, 350, -350]
+    >>> fp = [5, 10, 3, 4]
+    >>> np.interp(x, xp, fp, period=360)
+    array([7.5, 5., 8.75, 6.25, 3., 3.25, 3.5, 3.75])
+    """
+    if not isinstance(x, numeric_types):
+        x = x.astype(float)
+    return _api_internal.interp(xp.astype(float), fp.astype(float), x, left,
+                                right, period)
+
+
+@set_module('mxnet.ndarray.numpy')
 def diff(a, n=1, axis=-1, prepend=None, append=None):  # pylint: disable=redefined-outer-name
     r"""
     Calculate the n-th discrete difference along the given axis.
@@ -7608,6 +7682,123 @@ def isfinite(x, out=None, **kwargs):
     array([False,  True, False])
     """
     return _unary_func_helper(x, _npi.isfinite, _np.isfinite, out=out, **kwargs)
+
+
+@set_module('mxnet.ndarray.numpy')
+def atleast_1d(*arys):
+    """
+    Convert inputs to arrays with at least one dimension.
+
+    Scalar inputs are converted to 1-dimensional arrays, whilst higher-dimensional inputs are preserved.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 1. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_2d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_1d(1.0)
+    array([1.])
+    >>> x = np.arange(9.0).reshape(3,3)
+    >>> np.atleast_1d(x)
+    array([[0., 1., 2.],
+           [3., 4., 5.],
+           [6., 7., 8.]])
+    >>> np.atleast_1d(np.array(1), np.array([3, 4]))
+    [array([1.]), array([3., 4.])]
+    """
+    if len(arys) == 1:
+        return _api_internal.atleast_1d(*arys)[0]
+    return list(_api_internal.atleast_1d(*arys))
+
+
+@set_module('mxnet.ndarray.numpy')
+def atleast_2d(*arys):
+    """
+    Convert inputs to arrays with at least two dimensions.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 2. Copies are made only if necessary.
+
+    See also
+    --------
+    atleast_1d, atleast_3d
+
+    Examples
+    --------
+    >>> np.atleast_2d(3.0)
+    array([[3.]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_2d(x)
+    array([[0., 1., 2.]])
+    >>> np.atleast_2d(np.array(1), np.array([1, 2]), np.array([[1, 2]]))
+    [array([[1.]]), array([[1., 2.]]), array([[1., 2.]])]
+    """
+    if len(arys) == 1:
+        return _api_internal.atleast_2d(*arys)[0]
+    return list(_api_internal.atleast_2d(*arys))
+
+
+@set_module('mxnet.ndarray.numpy')
+def atleast_3d(*arys):
+    """
+    Convert inputs to arrays with at least three dimension.
+
+    Parameters
+    ----------
+    arys1, arys2, ... : ndarray
+        One or more input arrays.
+
+    Returns
+    -------
+    ret : ndarray
+        An array, or list of arrays, each with a.ndim >= 3.
+        For example, a 1-D array of shape (N,) becomes a view of shape (1, N, 1),
+        and a 2-D array of shape (M, N) becomes a view of shape (M, N, 1).
+
+    See also
+    --------
+    atleast_1d, atleast_2d
+
+    Examples
+    --------
+    >>> np.atleast_3d(3.0)
+    array([[[3.]]])
+    >>> x = np.arange(3.0)
+    >>> np.atleast_3d(x).shape
+    (1, 3, 1)
+    >>> x = np.arange(12.0).reshape(4,3)
+    >>> np.atleast_3d(x).shape
+    (4, 3, 1)
+    >>> for arr in np.atleast_3d(np.array([1, 2]), np.array([[1, 2]]), np.array([[[1, 2]]])):
+    ...     print(arr, arr.shape)
+    ...
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1.]
+      [2.]]] (1, 2, 1)
+    [[[1. 2.]]] (1, 1, 2)
+    """
+    if len(arys) == 1:
+        return _api_internal.atleast_3d(*arys)[0]
+    return list(_api_internal.atleast_3d(*arys))
 
 
 @set_module('mxnet.ndarray.numpy')
