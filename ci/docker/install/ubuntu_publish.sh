@@ -20,6 +20,10 @@
 # Build on Ubuntu 14.04 LTS for LINUX CPU/GPU
 set -ex
 
+# replace https with http to force apt-get update to use http
+# nvidia-docker no longer supports ubuntu 14.04
+# refer https://github.com/apache/incubator-mxnet/issues/18005
+sudo sed -i 's/https/http/g' /etc/apt/sources.list.d/*.list
 apt-get update
 apt-get install -y software-properties-common
 add-apt-repository ppa:ubuntu-toolchain-r/test -y

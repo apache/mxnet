@@ -16,6 +16,7 @@
 # under the License.
 
 #' @export mx.metric.logger
+library(methods)
 mx.metric.logger <- setRefClass("mx.metric.logger", fields = list(train = "numeric", eval="numeric"))
 
 #' Log training metric each period
