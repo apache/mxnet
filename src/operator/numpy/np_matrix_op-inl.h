@@ -287,6 +287,106 @@ void NumpyVstackBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
+  int n;
+  int k;
+  int m;
+  DMLC_DECLARE_PARAMETER(NumpyTrilindicesParam) {
+    DMLC_DECLARE_FIELD(n)
+      .describe("The row dimension of the arrays for which"
+                "the returned indices will be valid.");
+    DMLC_DECLARE_FIELD(k)
+      .set_default(0)
+      .describe("Diagonal offset");
+    DMLC_DECLARE_FIELD(m)
+      .describe("The column dimension of the arrays for "
+                "which the returned arrays will be valid."
+                "By default m is taken equal to n.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream n_s, k_s, m_s;
+    n_s << n;
+    k_s << k;
+    m_s << m;
+    (*dict)["n"] = n_s.str();
+    (*dict)["k"] = k_s.str();
+    (*dict)["m"] = m_s.str();
+  }
+};
+
+template<int req>
+struct TrilindicesOpForwardImpl {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data0, DType* out_data1,
+                                  int* data, int length) {
+    KERNEL_ASSIGN(out_data0[i], req, data[i]);
+    KERNEL_ASSIGN(out_data1[i], req, data[i + length]);
+  }
+};
+
+template<typename xpu>
+void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 2U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const NumpyTrilindicesParam& param =
+    nnvm::get<NumpyTrilindicesParam>(attrs.parsed);
+
+  const TBlob& out_data0 = outputs[0];
+  const TBlob& out_data1 = outputs[1];
+
+  CHECK_EQ(out_data0.shape_[0], out_data1.shape_[0]);
+  int length = out_data0.shape_[0];
+
+  std::vector<int> indices_cpu(2 * length, 0);
+  size_t total_temp_size = 2 * length * sizeof(int);
+  Tensor<xpu, 1, char> temp_space =
+    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
+  int* indices = reinterpret_cast<int*>(temp_space.dptr_);
+
+  int n = param.n;
+  int m = param.m;
+  int k = param.k;
+
+  int end = k;
+  int idx = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j <= std::min(end, m - 1); j++) {
+      indices_cpu[idx] = i;
+      indices_cpu[idx + length] = j;
+      idx++;
+    }
+    end++;
+  }
+
+  if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
+  #if MXNET_USE_CUDA
+    cudaMemcpyAsync(indices, indices_cpu.data(),
+                    indices_cpu.size() * sizeof(int),
+                    cudaMemcpyHostToDevice,
+                    Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
+  #else
+    LOG(FATAL) << "Illegal attempt to use GPU in a CPU-only build";
+  #endif
+  } else {
+    std::memcpy(indices, indices_cpu.data(), indices_cpu.size() * sizeof(int));
+  }
+
+  MSHADOW_IDX_TYPE_SWITCH(out_data0.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<TrilindicesOpForwardImpl<req_type>, xpu>::Launch(
+          s, length, out_data0.dptr<DType>(), out_data1.dptr<DType>(),
+           indices, length);
+    });
+  });
+}
+
 struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
   dmlc::optional<mxnet::TShape> shift;
   dmlc::optional<mxnet::TShape> axis;

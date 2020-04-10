@@ -1116,6 +1116,66 @@ NNVM_REGISTER_OP(_backward_np_dstack)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FCompute>("FCompute<cpu>", DStackGradCompute<cpu>);
 
+DMLC_REGISTER_PARAMETER(NumpyTrilindicesParam);
+
+inline bool TrilindicesOpType(const nnvm::NodeAttrs& attrs,
+                                std::vector<int> *in_attrs,
+                                std::vector<int> *out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 2U);
+
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt64);
+  TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kInt64);
+
+  return true;
+}
+
+inline bool TrilindicesOpShape(const nnvm::NodeAttrs& attrs,
+                               mxnet::ShapeVector* in_attrs,
+                               mxnet::ShapeVector* out_attrs) {
+  CHECK_EQ(in_attrs->size(), 0U);
+  CHECK_EQ(out_attrs->size(), 2U);
+
+  const NumpyTrilindicesParam& param =
+    nnvm::get<NumpyTrilindicesParam>(attrs.parsed);
+
+  int n = param.n;
+  int m = param.m;
+  int k = param.k;
+
+  int length = 0;
+  int end = k;
+  for (int i = 0; i < n; i++) {
+    int tmpCount = 0;
+    for (int j = 0; j <= std::min(end, m - 1); j++) {
+      tmpCount++;
+    }
+    length += tmpCount;
+    end++;
+  }
+
+  mxnet::TShape oshape;
+  oshape = mxnet::TShape(1, length);
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  SHAPE_ASSIGN_CHECK(*out_attrs, 1, oshape);
+
+  return shape_is_known(out_attrs->at(0)) && shape_is_known(out_attrs->at(1));
+}
+
+NNVM_REGISTER_OP(_npi_tril_indices)
+.set_attr_parser(ParamParser<NumpyTrilindicesParam>)
+.set_num_inputs(0)
+.set_num_outputs(2)
+.set_attr<mxnet::FInferShape>("FInferShape", TrilindicesOpShape)
+.set_attr<nnvm::FInferType>("FInferType", TrilindicesOpType)
+.set_attr<FCompute>("FCompute<cpu>", TrilindicesOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.add_arguments(NumpyTrilindicesParam::__FIELDS__());
+
 inline bool NumpyRollShape(const nnvm::NodeAttrs& attrs,
                            mxnet::ShapeVector *in_attrs,
                            mxnet::ShapeVector *out_attrs) {
