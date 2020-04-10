@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 import unittest
 
 
@@ -354,7 +354,7 @@ def test_sdml_loss():
     N = 5 # number of samples
     DIM = 10 # Dimensionality
     EPOCHS = 20
-    
+
     # Generate randomized data and 'positive' samples
     data = mx.random.uniform(-1, 1, shape=(N, DIM))
     pos = data + mx.random.uniform(-0.1, 0.1, shape=(N, DIM)) # correlated paired data
@@ -380,7 +380,7 @@ def test_sdml_loss():
     # After training euclidean distance between aligned pairs should be lower than all non-aligned pairs
     avg_loss = loss.sum()/len(loss)
     assert(avg_loss < 0.05)
-    
+
 @with_seed()
 def test_cosine_loss():
     #Generating samples
@@ -488,7 +488,3 @@ def test_bce_loss_with_pos_weight():
     npy_bce_loss = (- label_npy * np.log(prob_npy)*pos_weight_npy - (1 - label_npy) * np.log(1 - prob_npy)).mean(axis=1)
     assert_almost_equal(mx_bce_loss, npy_bce_loss, rtol=1e-4, atol=1e-5)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

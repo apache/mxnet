@@ -35,7 +35,7 @@ backends = ['mxnet', 'gluon']
 pytest_plugins = "onnx.backend.test.report",
 
 
-def test_suite(backend_tests):  # type: () -> unittest.TestSuite
+def build_test_suite(backend_tests):  # type: () -> unittest.TestSuite
     '''
     TestSuite that can be run by TestRunner
     This has been borrowed from onnx/onnx/backend/test/runner/__init__.py,
@@ -89,4 +89,4 @@ for bkend in backends:
         log.info('Executing tests for ' + bkend + ' backend: ' + operation)
         mxnet_backend.MXNetBackend.set_params(bkend, operation)
         BACKEND_TESTS = prepare_tests(mxnet_backend, operation)
-        unittest.TextTestRunner().run(test_suite(BACKEND_TESTS.enable_report()))
+        unittest.TextTestRunner().run(build_test_suite(BACKEND_TESTS.enable_report()))

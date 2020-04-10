@@ -999,7 +999,3 @@ def test_quantized_fc_bias_overflow():
     helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
     helper_quantized_fc_bias_overflow(0, 0, 0, 0)
 
-
-if __name__ == "__main__":
-  import nose
-  nose.runmodule()

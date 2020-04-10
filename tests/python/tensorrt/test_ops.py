@@ -512,6 +512,3 @@ def test_dropout():
             sym = mx.sym.Dropout(data, p=0.7, mode=mode, axes=(0,))
             check_unsupported_single_sym(sym)
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

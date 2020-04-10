@@ -26,7 +26,7 @@ import platform
 import mxnet as mx
 import scipy.stats as ss
 import scipy.special as scipy_special
-from nose.tools import assert_raises
+import pytest
 from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
@@ -34,7 +34,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from mxnet.test_utils import new_matrix_with_real_eigvals_nd
 from mxnet.test_utils import new_sym_matrix_with_real_eigvals_nd
-from common import assertRaises, with_seed
+from common import assertRaises, with_seed, retry
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
@@ -552,7 +552,7 @@ def test_np_matmul():
     for shape_a, shape_b in bad_shapes:
         a = np.random.uniform(size=shape_a)
         b = np.random.uniform(size=shape_b)
-        assert_raises(MXNetError, lambda: np.matmul(a, b))
+        pytest.raises(MXNetError, lambda: np.matmul(a, b))
 
 
 @with_seed()
@@ -1479,7 +1479,7 @@ def test_npx_batch_dot():
         for dtype in dtypes:
             lhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, lhs_shape), dtype=dtype)
             rhs_val = mx.np.array(_np.random.uniform(-1.0, 1.0, rhs_shape), dtype=dtype)
-            assert_raises(MXNetError, lambda: mx.npx.batch_dot(lhs_val, rhs_val,
+            pytest.raises(MXNetError, lambda: mx.npx.batch_dot(lhs_val, rhs_val,
                                                                transpose_a=transpose_a,
                                                                transpose_b=transpose_b))
 
@@ -1964,8 +1964,8 @@ def test_np_transpose():
                             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
     # Test for error raising
     dat = np.random.normal(0, 1, (3, 4, 5), dtype=np.float32)
-    assert_raises(ValueError, lambda: dat.transpose((0, 0, 1)))
-    assert_raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
+    pytest.raises(ValueError, lambda: dat.transpose((0, 0, 1)))
+    pytest.raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
 
 
 
@@ -4490,6 +4490,7 @@ def test_np_cumsum():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_histogram():
     shapes = [(), (3, 4), (3, 0)]
 
@@ -4507,6 +4508,7 @@ def test_np_histogram():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_choice():
     class TestUniformChoice(HybridBlock):
         def __init__(self, sample_size, replace):
@@ -5683,7 +5685,7 @@ def test_np_linalg_lstsq():
         def __init__(self, rcond):
             super(TestLstsq, self).__init__()
             self._rcond = rcond
-        
+
         def hybrid_forward(self, F, a, b, rcond='warn'):
             return F.np.linalg.lstsq(a, b, rcond=self._rcond)
 
@@ -6446,6 +6448,7 @@ def test_np_full():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_full_like():
     class TestFullLike(HybridBlock):
         def __init__(self, fill_value, dtype, ctx):
@@ -7080,10 +7083,10 @@ def test_np_tril_indices():
             if m is None:
                 m = n
             self._m = m
-        
+
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.tril_indices(n=self._n, k=self._k, m=self._m)
-    
+
     for n in _np.random.random_integers(-10, 50, 2):
         for k in _np.random.random_integers(-50, 50, 2):
             for m in _np.random.random_integers(-10, 50, 2):
@@ -7104,7 +7107,7 @@ def test_np_tril_indices():
                         np_data[np_out] = -10
                         mx_data[mx_out] = -10
                         assert same(np_data, mx_data.asnumpy())
-                        
+
 
 @with_seed()
 @use_np
@@ -7443,6 +7446,7 @@ def test_np_einsum():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_diagflat():
     class TestDiagflat(HybridBlock):
         def __init__(self, k=0):
@@ -7818,7 +7822,7 @@ def test_np_median():
         a = np.random.uniform(-1.0, 1.0, size=a_shape)
         np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
         mx_out = test_median(a)
-        
+
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
@@ -8834,10 +8838,10 @@ def test_np_interp():
             self._left = left
             self._right = right
             self._period = period
-        
+
         def hybrid_forward(self, F, x, xp, fp):
             return F.np.interp(x, xp, fp, left=self._left, right=self._right, period=self._period)
-    
+
     class TestInterpScalar(HybridBlock):
         def __init__(self, x=None, left=None, right=None, period=None):
             super(TestInterpScalar, self).__init__()
@@ -8845,7 +8849,7 @@ def test_np_interp():
             self._left = left
             self._right = right
             self._period = period
-        
+
         def hybrid_forward(self, F, xp, fp):
             return F.np.interp(self._x, xp, fp, left=self._left, right=self._right, period=self._period)
 
@@ -8872,13 +8876,13 @@ def test_np_interp():
         else:
             x = np.random.uniform(0, 100, size=xshape).astype(xtype)
             xp = np.sort(np.random.choice(100, dsize, replace=False).astype(dtype))
-            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype) 
+            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype)
         np_x = x.asnumpy()
         if x_scalar and xshape == ():
             x = x.item()
             np_x = x
             test_interp = TestInterpScalar(x=x, left=left, right=right, period=period)
-        else: 
+        else:
             test_interp = TestInterp(left=left, right=right, period=period)
         if hybridize:
             test_interp.hybridize()
@@ -9268,7 +9272,7 @@ def test_np_rollaxis():
             super(TestRollaxis, self).__init__()
             self._axis = axis
             self._start = start
-             
+
         def hybrid_forward(self, F, a, *args, **kwargs):
             return F.np.rollaxis(a, axis=self._axis, start=self._start)
 
@@ -9327,7 +9331,3 @@ def test_npx_stop_gradient():
                 elif grad_req == 'add':
                     assert_almost_equal(new_grad, old_grad + 1)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

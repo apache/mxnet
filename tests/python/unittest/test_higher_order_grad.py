@@ -22,8 +22,6 @@ from functools import reduce
 from operator import mul
 import random
 
-from nose.tools import ok_
-
 from common import with_seed
 import mxnet
 from mxnet import nd, autograd, gluon
@@ -648,18 +646,18 @@ def test_dense_backward_flatten():
         w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
         x_grad_e = nd.dot(o_y, w)
         x_grad_grad_e = nd.dot(o_y, o_w_grad)
-        ok_(w_grad.shape == w.shape)
-        ok_(w_grad_grad.shape == w.shape)
-        ok_(x_grad.shape == x.shape)
-        ok_(x_grad_grad.shape == x.shape)
+        assert w_grad.shape == w.shape
+        assert w_grad_grad.shape == w.shape
+        assert x_grad.shape == x.shape
+        assert x_grad_grad.shape == x.shape
         w_grad_check = same(flatten2d_right(w_grad), flatten2d_right(w_grad_e))
         w_grad_grad_check = same(flatten2d_right(w_grad_grad), flatten2d_right(w_grad_grad_e))
         x_grad_check = same(flatten2d_right(x_grad), flatten2d_right(x_grad_e))
         x_grad_grad_check = same(flatten2d_right(x_grad_grad), flatten2d_right(x_grad_grad_e))
-        ok_(x_grad_check)
-        ok_(w_grad_check)
-        ok_(x_grad_grad_check)
-        ok_(w_grad_grad_check)
+        assert x_grad_check
+        assert w_grad_check
+        assert x_grad_grad_check
+        assert w_grad_grad_check
 
 @with_seed()
 def test_dense_backward_no_flatten():
@@ -701,12 +699,8 @@ def test_dense_backward_no_flatten():
         w_grad_grad_check = same(flatten2d_left(w_grad_grad), flatten2d_left(w_grad_grad_e))
         x_grad_check = same(flatten2d_left(x_grad), flatten2d_left(x_grad_e))
         x_grad_grad_check = same(flatten2d_left(x_grad_grad), flatten2d_left(x_grad_grad_e))
-        ok_(x_grad_check)
-        ok_(w_grad_check)
-        ok_(x_grad_grad_check)
-        ok_(w_grad_grad_check)
+        assert x_grad_check
+        assert w_grad_check
+        assert x_grad_grad_check
+        assert w_grad_grad_check
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

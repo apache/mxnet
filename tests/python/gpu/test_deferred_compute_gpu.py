@@ -24,10 +24,6 @@ mx.test_utils.set_default_context(mx.gpu(0))
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 # We import all tests from ../unittest/test_deferred_compute.py
-# They will be detected by nose, as long as the current file has a different filename
+# They will be detected by test framework, as long as the current file has a different filename
 from test_deferred_compute import *
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

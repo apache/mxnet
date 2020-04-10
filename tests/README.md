@@ -68,7 +68,7 @@ Ninja is a build tool (like make) that prioritizes building speed. If you will b
     ```
 An example for running python tests would be
 ```
-ci/build.py --platform build_ubuntu_cpu_mkldnn /work/runtime_functions.sh unittest_ubuntu_python3_cpu PYTHONPATH=./python/ nosetests-2.7 tests/python/unittest
+ci/build.py --platform build_ubuntu_cpu_mkldnn /work/runtime_functions.sh unittest_ubuntu_python3_cpu PYTHONPATH=./python/ pytest tests/python/unittest
 ```
 
 

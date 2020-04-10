@@ -336,8 +336,10 @@ class Random<gpu, DType> {
    * \brief get a set of random integers
    */
   inline void GetRandInt(const Tensor<gpu, 1, unsigned>& dst) {
-    curandStatus_t status = curandGenerate(gen_, dst.dptr_, dst.size(0));
-    CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "CURAND Gen rand ints failed.";
+    curandStatus_t status;
+    status = curandGenerate(gen_, dst.dptr_, dst.size(0));
+    CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "CURAND Gen rand ints failed."
+                                            << " size = " << dst.size(0);
   }
   /*!
    * \brief generate data from uniform [a,b)

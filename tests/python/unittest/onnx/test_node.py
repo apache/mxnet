@@ -161,7 +161,7 @@ class TestNode(unittest.TestCase):
                     onnx_attrs = _fix_attributes(attrs, fix_attrs)
                     onnxmodel = get_onnx_graph(test_name, names, input_tensors, onnx_name, outputshape, onnx_attrs)
 
-                bkd_rep = backend.prepare(onnxmodel, operation='export')
+                bkd_rep = backend.prepare(onnxmodel, operation='export', backend='mxnet')
                 output = bkd_rep.run(inputs)
 
                 if check_value:
@@ -195,16 +195,17 @@ class TestNode(unittest.TestCase):
         npt.assert_almost_equal(result, forward_op)
 
     def test_imports(self):
-        for test in import_test_cases:
-            test_name, onnx_name, inputs, np_op, attrs = test
-            with self.subTest(test_name):
-                names, input_tensors, inputsym = get_input_tensors(inputs)
-                np_out = [np_op(*inputs, **attrs)]
-                output_shape = np.shape(np_out)
-                onnx_model = get_onnx_graph(test_name, names, input_tensors, onnx_name, output_shape, attrs)
-                bkd_rep = backend.prepare(onnx_model, operation='import')
-                mxnet_out = bkd_rep.run(inputs)
-                npt.assert_almost_equal(np_out, mxnet_out, decimal=4)
+        for bk in ['mxnet', 'gluon']:
+            for test in import_test_cases:
+                test_name, onnx_name, inputs, np_op, attrs = test
+                with self.subTest(test_name):
+                    names, input_tensors, inputsym = get_input_tensors(inputs)
+                    np_out = [np_op(*inputs, **attrs)]
+                    output_shape = np.shape(np_out)
+                    onnx_model = get_onnx_graph(test_name, names, input_tensors, onnx_name, output_shape, attrs)
+                    bkd_rep = backend.prepare(onnx_model, operation='import', backend=bk)
+                    mxnet_out = bkd_rep.run(inputs)
+                    npt.assert_almost_equal(np_out, mxnet_out, decimal=4)
 
     def test_exports(self):
         input_shape = (2,1,3,1)

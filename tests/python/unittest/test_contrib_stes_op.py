@@ -132,6 +132,3 @@ def test_contrib_sign_ste():
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=True, in_data=in_data)
     check_ste(net_type_str="SignSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

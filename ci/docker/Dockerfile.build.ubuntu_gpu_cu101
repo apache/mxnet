@@ -51,12 +51,6 @@ RUN /work/ubuntu_tvm.sh
 COPY install/ubuntu_llvm.sh /work/
 RUN /work/ubuntu_llvm.sh
 
-COPY install/ubuntu_caffe.sh /work/
-RUN /work/ubuntu_caffe.sh
-
-COPY install/ubuntu_onnx.sh /work/
-RUN /work/ubuntu_onnx.sh
-
 COPY install/ubuntu_docs.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_docs.sh

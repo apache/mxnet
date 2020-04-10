@@ -938,7 +938,3 @@ def test_bidirectional_unroll_valid_length():
     _check_bidirectional_unroll_valid_length(1)
     _check_bidirectional_unroll_valid_length(3)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
