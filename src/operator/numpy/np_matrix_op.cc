@@ -34,6 +34,7 @@ namespace op {
 DMLC_REGISTER_PARAMETER(NumpyTransposeParam);
 DMLC_REGISTER_PARAMETER(NumpyRollParam);
 DMLC_REGISTER_PARAMETER(NumpyMoveaxisParam);
+DMLC_REGISTER_PARAMETER(NumpyRollaxisParam);
 DMLC_REGISTER_PARAMETER(NumpyRot90Param);
 DMLC_REGISTER_PARAMETER(NumpyReshapeParam);
 DMLC_REGISTER_PARAMETER(NumpyXReshapeParam);
@@ -1189,6 +1190,69 @@ NNVM_REGISTER_OP(_npi_roll)
 })
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyRollParam::__FIELDS__());
+
+bool NumpyRollaxisShape(const nnvm::NodeAttrs& attrs,
+                        mxnet::ShapeVector *in_attrs,
+                        mxnet::ShapeVector *out_attrs) {
+  const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
+  // check 1 input, 1 output
+  CHECK_EQ(in_attrs->size(), 1U);
+  CHECK_EQ(out_attrs->size(), 1U);
+
+  // check transpose dimentions no more than 6
+  mxnet::TShape& shp = (*in_attrs)[0];
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
+
+  // check axis and start range
+  CHECK_GE(param.axis, -shp.ndim())
+  << "axis must be within the range of "
+  << -shp.ndim() << " and " << shp.ndim() - 1;
+  CHECK_LT(param.axis, shp.ndim())
+  << "axis must be within the range of "
+  << -shp.ndim() << " and " << shp.ndim() - 1;
+  CHECK_GE(param.start, -shp.ndim())
+  << "start must be within the range of "
+  << -shp.ndim() << " and " << shp.ndim();
+  CHECK_LE(param.start, shp.ndim())
+  << "start must be within the range of "
+  << -shp.ndim() << " and " << shp.ndim();
+
+  // generate output shape
+  mxnet::TShape ret(shp.ndim(), -1);
+  mxnet::TShape axes;
+
+  axes = NumpyRollaxisShapeImpl(param.axis, param.start, shp.ndim());
+  for (int i = 0; i < shp.ndim(); ++i) {
+    CHECK(axes[i] < static_cast<int64_t>(shp.ndim()));
+    ret[i] = shp[axes[i]];
+  }
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, ret);
+  return shape_is_known(ret);
+}
+
+NNVM_REGISTER_OP(_npi_rollaxis)
+.describe(R"code(Roll the specified axis backwards, 
+until it lies in a given position.)code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyRollaxisParam>)
+.set_attr<nnvm::FListInputNames>("FListInputNames",
+  [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"data"};
+  })
+.set_attr<mxnet::FInferShape>("FInferShape", NumpyRollaxisShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyRollaxisCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_npi_rollaxis_backward"})
+.add_argument("data", "NDArray-or-Symbol", "Input ndarray")
+.add_arguments(NumpyRollaxisParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_npi_rollaxis_backward)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<NumpyRollaxisParam>)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyRollaxisBackward<cpu>);
 
 template<>
 void NumpyFlipForwardImpl<cpu>(const OpContext& ctx,

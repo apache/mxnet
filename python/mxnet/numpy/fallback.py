@@ -90,7 +90,6 @@ __all__ = [
     'rate',
     'real',
     'result_type',
-    'rollaxis',
     'roots',
     'searchsorted',
     'select',
@@ -182,7 +181,6 @@ pv = onp.pv
 rate = onp.rate
 real = onp.real
 result_type = onp.result_type
-rollaxis = onp.rollaxis
 roots = onp.roots
 searchsorted = onp.searchsorted
 select = onp.select
