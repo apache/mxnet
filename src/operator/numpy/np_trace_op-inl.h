@@ -28,6 +28,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include "../mxnet_op.h"
