@@ -31,6 +31,7 @@
 #include "../nn/moments-inl.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -65,6 +66,21 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
                 "in the result as dimension with size one.");
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s, keepdims_s, initial_s;
+    axis_s << axis;
+    dtype_s << dtype;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
   }
 };
 
