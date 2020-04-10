@@ -5651,6 +5651,10 @@ def test_np_linalg_pinv():
             print(e)
         else:
             assert x.shape == x_expected.shape
+            print("a shape:", a_np.shape)
+            print("a: ", a_np)
+            print("actual: ", x.asnumpy())
+            print("expected: ", x_expected)
             assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
 
     shapes = [
