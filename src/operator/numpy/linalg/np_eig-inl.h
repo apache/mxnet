@@ -26,6 +26,7 @@
 #define MXNET_OPERATOR_NUMPY_LINALG_NP_EIG_INL_H_
 
 #include <vector>
+#include <string>
 #include "./np_eigvals-inl.h"
 
 namespace mxnet {
@@ -215,6 +216,11 @@ struct EighParam : public dmlc::Parameter<EighParam> {
     DMLC_DECLARE_FIELD(UPLO)
     .set_default('L')
     .describe("Specifies whether the calculation is done with the lower or upper triangular part.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream UPLO_s;
+    UPLO_s << UPLO;
+    (*dict)["UPLO"] = UPLO_s.str();
   }
 };
 
