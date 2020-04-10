@@ -124,6 +124,21 @@ def prepare_workloads():
     OpArgMngr.add_workload("vsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("hsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("dsplit", pool['2X2x2'], 2)
+    OpArgMngr.add_workload("arange", 10)
+    OpArgMngr.add_workload("concatenate", (pool['1x2'], pool['1x2'], pool['1x2']), axis=0)
+    OpArgMngr.add_workload("append", pool['2x2'], pool['1x2'], axis=0)
+    OpArgMngr.add_workload("insert", pool['3x2'], 1, pool['1x1'], axis=0)
+    OpArgMngr.add_workload("delete", pool['3x2'], 1, axis=0)
+    OpArgMngr.add_workload("blackman", 12)
+    OpArgMngr.add_workload("eye", 5)
+    OpArgMngr.add_workload("hamming", 12)
+    OpArgMngr.add_workload("hanning", 12)
+    OpArgMngr.add_workload("linspace", 0, 10, 8, endpoint=False)
+    OpArgMngr.add_workload("logspace", 2.0, 3.0, num=4, base=2.0, dtype=onp.float32)
+    OpArgMngr.add_workload("matmul", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
+    OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
+    OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
 
 
 def benchmark_helper(f, *args, **kwargs):

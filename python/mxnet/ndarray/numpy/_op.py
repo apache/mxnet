@@ -550,8 +550,12 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """
     if dtype is None:
         dtype = 'float32'
+    if dtype is not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if stop is None:
         stop = start
         start = 0
@@ -561,7 +565,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         raise ValueError('start and stop cannot be both None')
     if step == 0:
         raise ZeroDivisionError('step cannot be 0')
-    return _npi.arange(start=start, stop=stop, step=step, dtype=dtype, ctx=ctx)
+    return _api_internal.arange(start, stop, step, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -777,11 +781,11 @@ def insert(arr, obj, values, axis=None):
             start = obj.start
             stop = obj.stop
             step = 1 if obj.step is None else obj.step
-            return _npi.insert_slice(arr, val=values, start=start, stop=stop, step=step, axis=axis)
+            return _api_internal.insert_slice(arr, values, start, stop, step, axis)
         elif isinstance(obj, integer_types):
-            return _npi.insert_scalar(arr, val=values, int_ind=obj, axis=axis)
+            return _api_internal.insert_scalar(arr, values, obj, axis)
         elif isinstance(obj, NDArray):
-            return _npi.insert_tensor(arr, obj, val=values, axis=axis)
+            return _api_internal.insert_tensor(arr, obj, values, axis)
 
     if not isinstance(arr, NDArray):
         raise TypeError("'arr' can not support type {}".format(str(type(arr))))
@@ -791,11 +795,11 @@ def insert(arr, obj, values, axis=None):
         start = obj.start
         stop = obj.stop
         step = 1 if obj.step is None else obj.step
-        return _npi.insert_slice(arr, values, start=start, stop=stop, step=step, axis=axis)
+        return _api_internal.insert_slice(arr, values, start, stop, step, axis)
     elif isinstance(obj, integer_types):
-        return _npi.insert_scalar(arr, values, int_ind=obj, axis=axis)
+        return _api_internal.insert_scalar(arr, values, obj, axis)
     elif isinstance(obj, NDArray):
-        return _npi.insert_tensor(arr, values, obj, axis=axis)
+        return _api_internal.insert_tensor(arr, values, obj, axis)
     else:
         raise TypeError("'obj' can not support type {}".format(str(type(obj))))
 
@@ -1249,11 +1253,11 @@ def delete(arr, obj, axis=None):
         start = obj.start
         stop = obj.stop
         step = 1 if obj.step is None else obj.step
-        return _npi.delete(arr, start=start, stop=stop, step=step, axis=axis)
+        return _api_internal.delete(arr, start, stop, step, axis)
     elif isinstance(obj, integer_types):
-        return _npi.delete(arr, int_ind=obj, axis=axis)
+        return _api_internal.delete(arr, obj, axis)
     elif isinstance(obj, NDArray):
-        return _npi.delete(arr, obj, axis=axis)
+        return _api_internal.delete(arr, obj, axis)
     else:
         raise TypeError("'obj' can not support type {}".format(str(type(obj))))
 
@@ -1355,7 +1359,7 @@ def matmul(a, b, out=None):
     ...
     mxnet.base.MXNetError: ... : Multiplication by scalars is not allowed.
     """
-    return _npi.matmul(a, b, out=out)
+    return _api_internal.matmul(a, b, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1772,8 +1776,12 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     _sanity_check_params('eye', ['order'], kwargs)
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
-        ctx = current_context()
-    return _npi.eye(N, M, k, ctx, dtype)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.eye(N, M, k, ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1865,12 +1873,16 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False, dtype=None, axis
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
     if retstep:
         step = (stop - start) / (num - 1)
-        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype), step
+        return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype), step
     else:
-        return _npi.linspace(start=start, stop=stop, num=num, endpoint=endpoint, ctx=ctx, dtype=dtype)
+        return _api_internal.linspace(start, stop, num, endpoint, ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1952,8 +1964,12 @@ def logspace(start, stop, num=50, endpoint=True, base=10.0, dtype=None, axis=0, 
     if axis != 0:
         raise NotImplementedError("the function only support axis 0")
     if ctx is None:
-        ctx = current_context()
-    return _npi.logspace(start=start, stop=stop, num=num, endpoint=endpoint, base=base, ctx=ctx, dtype=dtype)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.logspace(start, stop, num, endpoint, base, ctx, dtype)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4076,7 +4092,7 @@ def concatenate(seq, axis=0, out=None):
     array([[1., 2., 5.],
            [3., 4., 6.]])
     """
-    return _npi.concatenate(*seq, axis=axis, out=out)
+    return _api_internal.concatenate(*seq, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4116,7 +4132,8 @@ def append(arr, values, axis=None):  # pylint: disable=redefined-outer-name
            [4., 5., 6.],
            [7., 8., 9.]])
     """
-    return _npi.concatenate(arr, values, axis=axis, out=None)
+    out = None
+    return _api_internal.concatenate(arr, values, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4794,7 +4811,9 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     >>> np.mean(a, dtype=np.float64)
     array(0.55)
     """
-    return _npi.mean(a, axis=axis, dtype=dtype, keepdims=keepdims, out=out)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.mean(a, axis, dtype, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5302,8 +5321,12 @@ def hanning(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     if ctx is None:
-        ctx = current_context()
-    return _npi.hanning(M, dtype=dtype, ctx=ctx)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.hanning(M, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5382,8 +5405,12 @@ def hamming(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     if ctx is None:
-        ctx = current_context()
-    return _npi.hamming(M, dtype=dtype, ctx=ctx)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.hamming(M, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5460,8 +5487,12 @@ def blackman(M, dtype=_np.float32, ctx=None):
     >>> plt.show()
     """
     if ctx is None:
-        ctx = current_context()
-    return _npi.blackman(M, dtype=dtype, ctx=ctx)
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.blackman(M, dtype, ctx)
 
 
 @set_module('mxnet.ndarray.numpy')

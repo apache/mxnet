@@ -910,6 +910,13 @@ struct NumpyConcatenateParam : public dmlc::Parameter<NumpyConcatenateParam> {
     .describe("The axis along which `values` are appended.  If `axis` is not"
               "given, both `arr` and `values` are flattened before use.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s, axis_s;
+    num_args_s << num_args;
+    axis_s << axis;
+    (*dict)["num_args"] = num_args_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 template<typename xpu>
