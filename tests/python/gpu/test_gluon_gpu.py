@@ -336,14 +336,18 @@ def test_global_norm_clip_multi_device():
     for check_isfinite in [True, False]:
         x1 = mx.nd.ones((3, 3), ctx=mx.gpu(0))
         x2 = mx.nd.ones((4, 4), ctx=mx.cpu(0))
+        x3 = mx.nd.ones((7, 4), ctx=mx.gpu(0))
+        x4 = mx.nd.ones((7, 4), ctx=mx.cpu(0))
         norm = gluon.utils.clip_global_norm(
-            [x1, x2], 1.0, check_isfinite=check_isfinite)
+            [x1, x2, x3, x4], 1.0, check_isfinite=check_isfinite)
         if check_isfinite:
-            assert norm == 5.0
+            assert norm == 9.0
         else:
-            assert norm.asscalar() == 5.0
-        assert_almost_equal(x1, np.ones((3, 3)) / 5)
-        assert_almost_equal(x2, np.ones((4, 4)) / 5)
+            assert norm.asscalar() == 9.0
+        assert_almost_equal(x1, np.ones((3, 3)) / 9)
+        assert_almost_equal(x2, np.ones((4, 4)) / 9)
+        assert_almost_equal(x3, np.ones((7, 4)) / 9)
+        assert_almost_equal(x4, np.ones((7, 4)) / 9)
 
 
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
@@ -614,6 +618,27 @@ def test_symbol_block_symbolic_bn_fp16_cast():
         x = x.astype('float16')
         y1 = net(x)
         assert np.dtype(y1.dtype).name == 'float16'
+
+@with_seed()
+def test_gemms_true_fp16():
+    ctx = mx.gpu(0)
+    input = mx.nd.random.uniform(shape=(1, 512), dtype='float16', ctx=ctx)
+    weights = mx.nd.random.uniform(shape=(128, 512), ctx=ctx)
+
+    net = nn.Dense(128, in_units=512, use_bias=False)
+    net.cast('float16')
+    net.initialize(ctx=ctx)
+    net.weight.set_data(weights)
+    ref_results = net(input)
+
+    os.environ["MXNET_FC_TRUE_FP16"] = "1"
+    results_trueFP16 = net(input)
+    atol = 1e-2
+    rtol = 1e-2
+    assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
+                        atol=atol, rtol=rtol)
+    os.environ["MXNET_FC_TRUE_FP16"] = "0"
+
 
 if __name__ == '__main__':
     import nose

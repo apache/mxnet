@@ -97,7 +97,7 @@ def compile_unix_cpu_openblas() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_openblas', false)
-            utils.pack_lib('cpu', mx_lib_cython)
+            utils.pack_lib('cpu', mx_lib_cython, true)
           }
         }
       }
@@ -125,7 +125,7 @@ def compile_unix_openblas_debug_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_debug', false)
-            utils.pack_lib('cpu_debug', mx_cmake_lib_debug)
+            utils.pack_lib('cpu_debug', mx_cmake_lib_debug, true)
           }
         }
       }
@@ -153,7 +153,6 @@ def compile_unix_int64_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
-            utils.pack_lib('ubuntu_cpu_int64', mx_cmake_lib)
           }
         }
       }
@@ -181,7 +180,7 @@ def compile_unix_mkl_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
-            utils.pack_lib('cpu_mkl', mx_lib)
+            utils.pack_lib('cpu_mkl', mx_lib, true)
           }
         }
       }
@@ -195,7 +194,7 @@ def compile_unix_mkldnn_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn', false)
-            utils.pack_lib('mkldnn_cpu', mx_mkldnn_lib)
+            utils.pack_lib('mkldnn_cpu', mx_mkldnn_lib, true)
           }
         }
       }
@@ -223,7 +222,7 @@ def compile_unix_mkldnn_mkl_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
-            utils.pack_lib('mkldnn_mkl_cpu', mx_mkldnn_lib)
+            utils.pack_lib('mkldnn_mkl_cpu', mx_mkldnn_lib, true)
           }
         }
       }
@@ -375,7 +374,7 @@ def compile_centos7_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_cpu', false)
-            utils.pack_lib('centos7_cpu', mx_lib)
+            utils.pack_lib('centos7_cpu', mx_lib, true)
           }
         }
       }
@@ -403,7 +402,6 @@ def compile_centos7_cpu_mkldnn() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('centos7_cpu', 'build_centos7_mkldnn', false)
-            utils.pack_lib('centos7_mkldnn', mx_mkldnn_lib)
           }
         }
       }
@@ -806,7 +804,7 @@ def test_unix_python3_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
-            utils.unpack_and_init('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -823,7 +821,7 @@ def test_unix_python3_mkl_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
-            utils.unpack_and_init('cpu_mkl', mx_lib)
+            utils.unpack_and_init('cpu_mkl', mx_lib, true)
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -890,7 +888,7 @@ def test_unix_python3_debug_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-debug') {
           try {
-            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug)
+            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug, true)
             python3_ut('ubuntu_cpu')
           } finally {
             utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
@@ -922,7 +920,7 @@ def test_unix_python3_mkldnn_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-cpu') {
           try {
-            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -939,7 +937,7 @@ def test_unix_python3_mkldnn_mkl_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-mkl-cpu') {
           try {
-            utils.unpack_and_init('mkldnn_mkl_cpu', mx_lib)
+            utils.unpack_and_init('mkldnn_mkl_cpu', mx_lib, true)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -1132,7 +1130,7 @@ def test_unix_r_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-r-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
             utils.publish_test_coverage()
           }
@@ -1146,7 +1144,7 @@ def test_unix_r_mkldnn_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-r-mkldnn-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib)
+            utils.unpack_and_init('mkldnn_cpu', mx_mkldnn_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_minimal_R', false)
             utils.publish_test_coverage()
           }
@@ -1188,7 +1186,7 @@ def test_unix_cpp_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-cpp-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug)
+            utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug, true)
             utils.docker_run('ubuntu_cpu', 'unittest_cpp', false)
             utils.publish_test_coverage()
           }
@@ -1230,7 +1228,7 @@ def test_unix_julia07_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-it-julia07-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia07', false)
           }
         }
@@ -1243,7 +1241,7 @@ def test_unix_julia10_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-it-julia10-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia10', false)
           }
         }
@@ -1270,7 +1268,7 @@ def test_unix_distributed_kvstore_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('cpu', mx_lib)
+            utils.unpack_and_init('cpu', mx_lib, true)
             utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_dist_kvstore', false)
             utils.publish_test_coverage()
           }
@@ -1299,7 +1297,7 @@ def test_centos7_python3_cpu() {
         ws('workspace/build-centos7-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
-              utils.unpack_and_init('centos7_cpu', mx_lib)
+              utils.unpack_and_init('centos7_cpu', mx_lib, true)
               utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
               utils.publish_test_coverage()
             } finally {
