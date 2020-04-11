@@ -195,6 +195,10 @@ def submit(args):
                                      "\"" + "import byteps.server" + "\"")
         threads.append(start_ssh(prog, node, port, username, name + '-' + str(i)))
 
-    for t in threads:
-        t.join()
+    try:
+        for t in threads:
+            t.join()
+    except Exception as e:
+        print(e)
+        exit(-1)
     print('Launcher exits')
