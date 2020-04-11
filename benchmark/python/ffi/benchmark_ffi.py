@@ -144,6 +144,18 @@ def prepare_workloads():
     OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
     OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
 
+    unary_ops = ['negative', 'reciprocal', 'abs', 'sign', 'rint', 'ceil', 'floor',
+                 'bitwise_not', 'trunc', 'fix', 'square', 'sqrt', 'cbrt', 'exp',
+                 'log', 'log10', 'log2', 'log1p', 'expm1', 'logical_not', 'isnan',
+                 'isinf', 'isposinf', 'isneginf', 'isfinite', 'sin', 'cos', 'tan',
+                 'arcsin', 'arccos', 'arctan', 'degrees', 'radians', 'sinh', 'cosh',
+                 'tanh', 'arcsinh', 'arccosh', 'arctanh']  # 'rad2deg', 'deg2rad' cannot run without tvm
+    for unary_op in unary_ops:
+        if unary_op == "bitwise_not":
+            OpArgMngr.add_workload(unary_op, dnp.ones((2, 2), dtype=int))
+        else:
+            OpArgMngr.add_workload(unary_op, pool['2x2'])
+
 
 def benchmark_helper(f, *args, **kwargs):
     number = 10000

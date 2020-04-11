@@ -2071,7 +2071,7 @@ def tril(m, k=0):
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
-    """Helper function for unary operators.
+    """Helper function for unary operators with kwargs.
 
     Parameters
     ----------
@@ -2093,6 +2093,33 @@ def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
         return fn_scalar(x, **kwargs)
     elif isinstance(x, NDArray):
         return fn_array(x, out=out, **kwargs)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(x))))
+
+
+def _pure_unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
+    """Helper function for unary operators without support for kwargs.
+
+    Parameters
+    ----------
+    x : ndarray or scalar
+        Input of the unary operator.
+    fn_array : function
+        Function to be called if x is of ``ndarray`` type.
+    fn_scalar : function
+        Function to be called if x is a Python scalar.
+    out : ndarray
+        The buffer ndarray for storing the result of the unary function.
+
+    Returns
+    -------
+    out : mxnet.numpy.ndarray or scalar
+        Result array or scalar.
+    """
+    if isinstance(x, numeric_types):
+        return fn_scalar(x, **kwargs)
+    elif isinstance(x, NDArray):
+        return fn_array(x, out)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -2129,7 +2156,7 @@ def sin(x, out=None, **kwargs):
     >>> np.sin(np.array((0., 30., 45., 60., 90.)) * np.pi / 180.)
     array([0.        , 0.5       , 0.70710677, 0.86602545, 1.        ])
     """
-    return _unary_func_helper(x, _npi.sin, _np.sin, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.sin, _np.sin, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2167,7 +2194,7 @@ def cos(x, out=None, **kwargs):
     >>> out2 is out1
     True
     """
-    return _unary_func_helper(x, _npi.cos, _np.cos, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.cos, _np.cos, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2206,7 +2233,7 @@ def sinh(x, out=None, **kwargs):
     >>> out2 is out1
     True
     """
-    return _unary_func_helper(x, _npi.sinh, _np.sinh, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.sinh, _np.sinh, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2240,7 +2267,7 @@ def cosh(x, out=None, **kwargs):
     >>> np.cosh(0)
     1.0
     """
-    return _unary_func_helper(x, _npi.cosh, _np.cosh, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.cosh, _np.cosh, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2286,7 +2313,7 @@ def tanh(x, out=None, **kwargs):
     >>> out2 is out1
     True
     """
-    return _unary_func_helper(x, _npi.tanh, _np.tanh, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.tanh, _np.tanh, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2320,7 +2347,7 @@ def log10(x, out=None, **kwargs):
     >>> np.log10(np.array([1e-15, -3.]))
     array([-15.,  nan])
     """
-    return _unary_func_helper(x, _npi.log10, _np.log10, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.log10, _np.log10, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2355,7 +2382,7 @@ def sqrt(x, out=None, **kwargs):
     >>> np.sqrt(np.array([4, -1, _np.inf]))
     array([ 2., nan, inf])
     """
-    return _unary_func_helper(x, _npi.sqrt, _np.sqrt, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.sqrt, _np.sqrt, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2384,7 +2411,7 @@ def cbrt(x, out=None, **kwargs):
     >>> np.cbrt([1,8,27])
     array([ 1.,  2.,  3.])
     """
-    return _unary_func_helper(x, _npi.cbrt, _np.cbrt, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.cbrt, _np.cbrt, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2414,7 +2441,7 @@ def abs(x, out=None, **kwargs):
     >>> np.abs(x)
     array([1.2, 1.2])
     """
-    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.abs, _np.abs, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2449,7 +2476,7 @@ def fabs(x, out=None, **kwargs):
     >>> np.fabs(np.array([-1.2, 1.2]))s
     array([ 1.2,  1.2])
     """
-    return _unary_func_helper(x, _npi.abs, _np.abs, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.abs, _np.abs, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2479,7 +2506,7 @@ def absolute(x, out=None, **kwargs):
     >>> np.absolute(x)
     array([ 1.2,  1.2])
     """
-    return _unary_func_helper(x, _npi.absolute, _np.absolute, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.abs, _np.abs, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2529,7 +2556,7 @@ def sign(x, out=None, **kwargs):
     >>> b
     array([-1.,  1.])
     """
-    return _unary_func_helper(x, _npi.sign, _np.sign, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.sign, _np.sign, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2561,7 +2588,7 @@ def exp(x, out=None, **kwargs):
     >>> np.exp(x)
     array([0.36787945, 2.7182817 , 0.13533528, 7.389056  ])
     """
-    return _unary_func_helper(x, _npi.exp, _np.exp, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.exp, _np.exp, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2593,7 +2620,7 @@ def expm1(x, out=None, **kwargs):
     >>> np.expm1(x)
     array([-0.63212056,  1.71828183, -0.86466472,  6.3890561])
     """
-    return _unary_func_helper(x, _npi.expm1, _np.expm1, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.expm1, _np.expm1, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2650,7 +2677,7 @@ def arcsin(x, out=None, **kwargs):
     10th printing, New York: Dover, 1964, pp. 79ff.
     http://www.math.sfu.ca/~cbm/aands/
     """
-    return _unary_func_helper(x, _npi.arcsin, _np.arcsin, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.arcsin, _np.arcsin, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2693,7 +2720,7 @@ def arccos(x, out=None, **kwargs):
     >>> np.arccos([1, -1])
     array([ 0.        ,  3.14159265])
     """
-    return _unary_func_helper(x, _npi.arccos, _np.arccos, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.arccos, _np.arccos, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2738,7 +2765,7 @@ def arctan(x, out=None, **kwargs):
     >>> np.pi/4
     0.7853981633974483
     """
-    return _unary_func_helper(x, _npi.arctan, _np.arctan, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.arctan, _np.arctan, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2790,7 +2817,7 @@ def log(x, out=None, **kwargs):
     >>> np.log(1)
     0.0
     """
-    return _unary_func_helper(x, _npi.log, _np.log, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.log, _np.log, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2837,7 +2864,7 @@ def degrees(x, out=None, **kwargs):
     >>> out
     array([  0.,  30.,  60.,  90., 120., 150., 180., 210., 240., 270., 300., 330.])
     """
-    return _unary_func_helper(x, _npi.degrees, _np.degrees, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.degrees, _np.degrees, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2873,7 +2900,7 @@ def rad2deg(x, out=None, **kwargs):
     >>> np.rad2deg(np.pi/2)
     90.0
     """
-    return _unary_func_helper(x, _npi.rad2deg, _np.rad2deg, out=out)
+    return _pure_unary_func_helper(x, _api_internal.rad2deg, _np.rad2deg, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2911,7 +2938,7 @@ def rint(x, out=None, **kwargs):
     >>> np.rint(a)
     array([-2., -2., -0.,  0.,  1.,  2.,  2.])
     """
-    return _unary_func_helper(x, _npi.rint, _np.rint, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.rint, _np.rint, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2950,7 +2977,7 @@ def log2(x, out=None, **kwargs):
     >>> np.log2(x)
     array([-inf,   0.,   1.,   4.])
     """
-    return _unary_func_helper(x, _npi.log2, _np.log2, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.log2, _np.log2, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -2996,7 +3023,7 @@ def log1p(x, out=None, **kwargs):
     >>> np.log1p(a)
     array([1.3862944, 1.609438 , 1.7917595])
     """
-    return _unary_func_helper(x, _npi.log1p, _np.log1p, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.log1p, _np.log1p, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3036,7 +3063,7 @@ def radians(x, out=None, **kwargs):
            3.1415927, 3.6651914, 4.1887903, 4.712389 , 5.2359877, 5.7595863],
            dtype=float32)
     """
-    return _unary_func_helper(x, _npi.radians, _np.radians, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.radians, _np.radians, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3072,7 +3099,7 @@ def deg2rad(x, out=None, **kwargs):
     >>> np.deg2rad(180)
     3.1415927
     """
-    return _unary_func_helper(x, _npi.deg2rad, _np.deg2rad, out=out)
+    return _pure_unary_func_helper(x, _api_internal.deg2rad, _np.deg2rad, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3118,7 +3145,7 @@ def reciprocal(x, out=None, **kwargs):
     - Only support ndarray and scalar now.
     - `where` argument is not supported.
     """
-    return _unary_func_helper(x, _npi.reciprocal, _np.reciprocal, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.reciprocal, _np.reciprocal, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3159,7 +3186,7 @@ def square(x, out=None, **kwargs):
     - `where` argument is not supported.
     - Complex input is not supported.
     """
-    return _unary_func_helper(x, _npi.square, _np.square, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.square, _np.square, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3185,7 +3212,7 @@ def negative(x, out=None, **kwargs):
     >>> np.negative(1)
     -1
     """
-    return _unary_func_helper(x, _npi.negative, _np.negative, out=out)
+    return _pure_unary_func_helper(x, _api_internal.negative, _np.negative, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3211,7 +3238,7 @@ def fix(x, out=None, **kwargs):
     >>> np.fix(3.14)
     3
     """
-    return _unary_func_helper(x, _npi.fix, _np.fix, out=out)
+    return _pure_unary_func_helper(x, _api_internal.fix, _np.fix, out=out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3245,7 +3272,7 @@ def tan(x, out=None, **kwargs):
     0.5463024898437905
     """
 
-    return _unary_func_helper(x, _npi.tan, _np.tan, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.tan, _np.tan, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3284,7 +3311,7 @@ def ceil(x, out=None, **kwargs):
     >>> a
     array(4.)
     """
-    return _unary_func_helper(x, _npi.ceil, _np.ceil, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.ceil, _np.ceil, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3323,7 +3350,7 @@ def floor(x, out=None, **kwargs):
     >>> a
     array(3.)
     """
-    return _unary_func_helper(x, _npi.floor, _np.floor, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.floor, _np.floor, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3376,7 +3403,7 @@ def bitwise_not(x, out=None, **kwargs):
     >>> np.bitwise_not is np.invert
     True
     """
-    return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.bitwise_not, _np.bitwise_not, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3429,7 +3456,7 @@ def invert(x, out=None, **kwargs):
     >>> np.bitwise_not is np.invert
     True
     """
-    return _unary_func_helper(x, _npi.bitwise_not, _np.bitwise_not, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.bitwise_not, _np.bitwise_not, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3468,7 +3495,7 @@ def trunc(x, out=None, **kwargs):
     >>> np.trunc(a)
     array([-1., -1., -0.,  0.,  1.,  1.,  2.])
     """
-    return _unary_func_helper(x, _npi.trunc, _np.trunc, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.trunc, _np.trunc, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3509,7 +3536,7 @@ def logical_not(x, out=None, **kwargs):
     >>> np.logical_not(x<3)
     array([False, False, False,  True,  True])
     """
-    return _unary_func_helper(x, _npi.logical_not, _np.logical_not, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.logical_not, _np.logical_not, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3555,7 +3582,7 @@ def arcsinh(x, out=None, **kwargs):
     >>> np.arcsinh(1)
     0.0
     """
-    return _unary_func_helper(x, _npi.arcsinh, _np.arcsinh, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.arcsinh, _np.arcsinh, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3601,7 +3628,7 @@ def arccosh(x, out=None, **kwargs):
     >>> np.arccosh(1)
     0.0
     """
-    return _unary_func_helper(x, _npi.arccosh, _np.arccosh, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.arccosh, _np.arccosh, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3647,7 +3674,7 @@ def arctanh(x, out=None, **kwargs):
     >>> np.arctanh(0.0)
     0.0
     """
-    return _unary_func_helper(x, _npi.arctanh, _np.arctanh, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.arctanh, _np.arctanh, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -3716,6 +3743,7 @@ def tile(A, reps):
 
     """
     return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
@@ -7595,7 +7623,7 @@ def isnan(x, out=None, **kwargs):
     >>> np.isnan(np.array([np.log(-1.),1.,np.log(0)]))
     array([ True, False, False])
     """
-    return _unary_func_helper(x, _npi.isnan, _np.isnan, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.isnan, _np.isnan, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7648,7 +7676,7 @@ def isinf(x, out=None, **kwargs):
     >>> y
     array([ True, False,  True])
     """
-    return _unary_func_helper(x, _npi.isinf, _np.isinf, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.isinf, _np.isinf, out=out, **kwargs)
 
 
 @wrap_np_unary_func
@@ -7693,7 +7721,7 @@ def isposinf(x, out=None, **kwargs):
     >>> y
     array([False, False,  True])
     """
-    return _unary_func_helper(x, _npi.isposinf, _np.isposinf, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.isposinf, _np.isposinf, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7739,7 +7767,7 @@ def isneginf(x, out=None, **kwargs):
     >>> y
     array([ True, False, False])
     """
-    return _unary_func_helper(x, _npi.isneginf, _np.isneginf, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.isneginf, _np.isneginf, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -7794,7 +7822,7 @@ def isfinite(x, out=None, **kwargs):
     >>> y
     array([False,  True, False])
     """
-    return _unary_func_helper(x, _npi.isfinite, _np.isfinite, out=out, **kwargs)
+    return _pure_unary_func_helper(x, _api_internal.isfinite, _np.isfinite, out=out, **kwargs)
 
 
 @set_module('mxnet.ndarray.numpy')
