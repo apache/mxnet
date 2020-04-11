@@ -46,10 +46,10 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     mkdir /usr/local/openblas-android && \
     cd /usr/local/OpenBLAS && \
     export TOOLCHAIN=/usr/local/android-ndk-r19/toolchains/llvm/prebuilt/linux-x86_64 && \
-    make NOFORTRAN=1 ARM_SOFTFP_ABI=1 \
+    make NOFORTRAN=1 ARM_SOFTFP_ABI=1 NO_SHARED=1 \
         LDFLAGS="-L/usr/local/android-ndk-r19/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/4.9.x -lm" \
         CC=$TOOLCHAIN/bin/armv7a-linux-androideabi16-clang AR=$TOOLCHAIN/bin/arm-linux-androideabi-ar && \
-    make PREFIX=/usr/local/openblas-android install && \
+    make PREFIX=/usr/local/openblas-android NO_SHARED=1 install && \
     cd /usr/local && \
     rm -rf OpenBLAS
 ENV OpenBLAS_HOME=/usr/local/openblas-android

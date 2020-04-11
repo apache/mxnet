@@ -50,8 +50,8 @@ ENV CMAKE_TOOLCHAIN_FILE=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/share/
 
 RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local/OpenBLAS && \
-    make NOFORTRAN=1 CC=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/bin/arm-linux-gcc && \
-    make PREFIX=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/arm-buildroot-linux-gnueabihf/sysroot install && \
+    make NOFORTRAN=1 NO_SHARED=1 CC=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/bin/arm-linux-gcc && \
+    make PREFIX=/usr/local/armv6-eabihf--glibc--stable-2020.02-2/arm-buildroot-linux-gnueabihf/sysroot NO_SHARED=1 install && \
     cd /usr/local && \
     rm -rf OpenBLAS
 
