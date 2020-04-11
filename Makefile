@@ -151,7 +151,7 @@ ifeq ($(USE_MKLDNN), 1)
 	CFLAGS += -DMXNET_USE_MKLDNN=1
 	CFLAGS += -I$(ROOTDIR)/src/operator/nn/mkldnn/
 	CFLAGS += -I$(MKLDNNROOT)/include
-	LDFLAGS += -L$(MKLDNNROOT)/lib -L$(MKLDNNROOT)/lib64 -lmkldnn -Wl,-rpath,'$${ORIGIN}'
+	LDFLAGS += -L$(MKLDNNROOT)/lib -L$(MKLDNNROOT)/lib64 -ldnnl -Wl,-rpath,'$${ORIGIN}'
 endif
 
 # setup opencv
@@ -597,7 +597,7 @@ lib/libmxnet.so: $(ALLX_DEP)
 	-Wl,${WHOLE_ARCH} $(filter %libnnvm.a, $^) -Wl,${NO_WHOLE_ARCH}
 ifeq ($(USE_MKLDNN), 1)
 ifeq ($(UNAME_S), Darwin)
-	install_name_tool -change '@rpath/libmkldnn.1.dylib' '@loader_path/libmkldnn.1.dylib' $@
+	install_name_tool -change '@rpath/libdnnl.1.dylib' '@loader_path/libdnnl.1.dylib' $@
 endif
 endif
 
@@ -689,8 +689,8 @@ rpkg:
 	cp src/io/image_recordio.h R-package/src
 	cp -rf lib/libmxnet.so R-package/inst/libs
 
-	if [ -e "lib/libmkldnn.so.1" ]; then \
-		cp -rf lib/libmkldnn.so.1 R-package/inst/libs; \
+	if [ -e "lib/libdnnl.so.1" ]; then \
+		cp -rf lib/libdnnl.so.1 R-package/inst/libs; \
 	fi
 
 	if [ -e "lib/libtvm_runtime.so" ]; then \

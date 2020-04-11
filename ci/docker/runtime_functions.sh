@@ -876,9 +876,9 @@ build_ubuntu_gpu_cmake_mkldnn() {
         /work/mxnet
 
     ninja -v
-    # libmkldnn.so.1 is a link file. We need an actual binary file named libmkldnn.so.1.
-    cp 3rdparty/mkldnn/src/libmkldnn.so.1 3rdparty/mkldnn/src/libmkldnn.so.1.tmp
-    mv 3rdparty/mkldnn/src/libmkldnn.so.1.tmp 3rdparty/mkldnn/src/libmkldnn.so.1
+    # libdnnl.so.1 is a link file. We need an actual binary file named libdnnl.so.1.
+    cp 3rdparty/mkldnn/src/libdnnl.so.1 3rdparty/mkldnn/src/libdnnl.so.1.tmp
+    mv 3rdparty/mkldnn/src/libdnnl.so.1.tmp 3rdparty/mkldnn/src/libdnnl.so.1
 }
 
 build_ubuntu_gpu_cmake() {

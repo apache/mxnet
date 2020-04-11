@@ -21,9 +21,9 @@ ifeq ($(USE_MKLDNN), 1)
 	MXNET_LIBDIR = $(ROOTDIR)/lib
 	MXNET_INCLDIR = $(ROOTDIR)/include
 ifeq ($(UNAME_S), Darwin)
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.1.dylib
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libdnnl.1.dylib
 else
-	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libmkldnn.so.1
+	MKLDNN_LIBFILE = $(MKLDNNROOT)/lib/libdnnl.so.1
 endif
 endif
 
@@ -38,10 +38,13 @@ $(MKLDNN_LIBFILE):
 	$(MAKE) -C $(MKLDNN_BUILDDIR) install
 	mkdir -p $(MXNET_LIBDIR)
 	cp $(MKLDNN_LIBFILE) $(MXNET_LIBDIR)
-	cp $(MKLDNN_BUILDDIR)/include/mkldnn_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp $(MKLDNN_BUILDDIR)/include/dnnl_version.h $(MXNET_INCLDIR)/mkldnn/.
+	cp ${MKLDNN_BUILDDIR}/include/dnnl_config.h ${MXNET_INCLDIR}/mkldnn/.
 
 mkldnn_clean:
 	$(RM) -r 3rdparty/mkldnn/build
+	${RM} -r include/mkldnn/dnnl_version.h
+	${RM} -r include/mkldnn/dnnl_config.h
 
 ifeq ($(USE_MKLDNN), 1)
 mkldnn: mkldnn_build

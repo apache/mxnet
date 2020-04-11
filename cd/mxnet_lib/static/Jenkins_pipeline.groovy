@@ -31,7 +31,7 @@ licenses = 'licenses/*'
 
 // libmxnet dependencies
 mx_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0'
-mx_mkldnn_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0, lib/libmkldnn.so.1, 3rdparty/mkldnn/build/install/include/mkldnn_version.h'
+mx_mkldnn_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0, lib/libdnnl.so.1, 3rdparty/mkldnn/build/install/include/dnnl_version.h'
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies

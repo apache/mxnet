@@ -22,13 +22,13 @@ set -ex
 export mxnet_variant=${1:?"Please specify the mxnet variant"}
 
 # Due to this PR: https://github.com/apache/incubator-mxnet/pull/14899
-# The setup.py expects that mkldnn_version.h be present in 
+# The setup.py expects that dnnl_version.h be present in 
 # mxnet-build/3rdparty/mkldnn/build/install/include
 # The artifact repository stores this file in the dependencies
 # and CD unpacks it to a directory called cd_misc
-if [ -f "cd_misc/mkldnn_version.h" ]; then
+if [ -f "cd_misc/dnnl_version.h" ]; then
   mkdir -p 3rdparty/mkldnn/build/install/include
-  cp cd_misc/mkldnn_version.h 3rdparty/mkldnn/build/install/include/.
+  cp cd_misc/dnnl_version.h 3rdparty/mkldnn/build/install/include/.
 fi
 
 # Create wheel workspace

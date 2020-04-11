@@ -35,9 +35,9 @@ $MAKE DEPS_PATH=$DEPS_PATH PSLITE
 
 if [[ $VARIANT == *mkl ]]; then
     if [[ $PLATFORM == 'linux' ]]; then
-        MKLDNN_LIBFILE='libmkldnn.so.1'
+        MKLDNN_LIBFILE='libdnnl.so.1'
     else
-        MKLDNN_LIBFILE='libmkldnn.1.dylib'
+        MKLDNN_LIBFILE='libdnnl.1.dylib'
     fi
     $MAKE DEPS_PATH=$DEPS_PATH mkldnn
     if [ ! -d lib ]; then

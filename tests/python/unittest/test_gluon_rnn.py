@@ -26,6 +26,25 @@ import unittest
 from mxnet.test_utils import almost_equal, assert_almost_equal
 from common import assert_raises_cudnn_not_satisfied, with_seed
 
+
+def check_rnn_states(fused_states, stack_states, num_layers, bidirectional=False, is_lstm=True):
+    directions = 2 if bidirectional else 1
+    assert len(stack_states) / len(fused_states) == num_layers * directions
+
+    fused_states = [state.asnumpy() for state in fused_states]
+    stack_states = [np.expand_dims(state.asnumpy(), axis=0) for state in stack_states]
+    if is_lstm:
+        stack_states_h = stack_states[0::2]
+        stack_states_c = stack_states[1::2]
+        stack_states = [np.concatenate(stack_states_h, axis=0), np.concatenate(stack_states_c, axis=0)]
+    else:
+        stack_states = [np.concatenate(stack_states, axis=0)]
+
+    for f, s in zip(fused_states, stack_states):
+        assert f.shape == s.shape
+        assert_almost_equal(f, s, atol=1e-4, rtol=1e-4)
+
+
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
@@ -49,6 +68,88 @@ def test_lstm():
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+def test_lstmp():
+    hidden_size, projection_size = 512, 256
+    rtol, atol = 1e-4, 1e-4
+    batch_size, seq_len = 5, 3
+    input_size = 128
+    lstm_input = mx.nd.uniform(shape=(seq_len, batch_size, input_size))
+
+    # ==== Unidirectional Layer ====
+    for num_layers in [1, 3]:
+        fused_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
+                                    num_layers=num_layers, layout='TNC', bidirectional=False,
+                                    prefix='lstm0_')
+
+        stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix='lstm0_')
+        with stack_layer.name_scope():
+            for i in range(num_layers):
+                stack_layer.add(gluon.contrib.rnn.LSTMPCell(hidden_size,
+                                                            projection_size=projection_size,
+                                                            prefix='l%d_' % i))
+        fused_layer.initialize()
+        stack_layer.initialize()
+
+        fused_begin_state = fused_layer.begin_state(batch_size)
+        stack_begin_state = stack_layer.begin_state(batch_size=batch_size)
+        fused_layer.infer_shape(lstm_input, fused_begin_state)
+        fused_layer_params = fused_layer.collect_params()
+        stack_layer_params = stack_layer.collect_params()
+
+        for name, value in fused_layer_params.items():
+            w = mx.nd.random.uniform(shape=value.shape)
+            value.set_data(w.copy())
+            stack_layer_params[name].set_data(w.copy())
+
+        fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
+        stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
+                                                        layout='TNC',
+                                                        merge_outputs=True)
+
+        assert_almost_equal(fused_output.asnumpy(), stack_output.asnumpy(), rtol=rtol, atol=atol)
+        check_rnn_states(fused_states, stack_states, num_layers, False)
+
+    # ==== Bidirectional Layer ====
+    for num_layers in [1, 3]:
+        fused_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
+                                    num_layers=num_layers, layout='TNC', bidirectional=True,
+                                    prefix='lstm0_')
+
+        stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix='lstm0_')
+        with stack_layer.name_scope():
+            for i in range(num_layers):
+                stack_layer.add(
+                    gluon.rnn.BidirectionalCell(gluon.contrib.rnn.LSTMPCell(hidden_size,
+                                                                            projection_size=projection_size,
+                                                                            prefix='l%d_' % i),
+                                                gluon.contrib.rnn.LSTMPCell(hidden_size,
+                                                                            projection_size=projection_size,
+                                                                            prefix='r%d_' % i)))
+        fused_layer.initialize()
+        stack_layer.initialize()
+
+        fused_begin_state = fused_layer.begin_state(batch_size)
+        stack_begin_state = stack_layer.begin_state(batch_size=batch_size)
+        fused_layer.infer_shape(lstm_input, fused_begin_state)
+        fused_layer_params = fused_layer.collect_params()
+        stack_layer_params = stack_layer.collect_params()
+
+        for name, value in fused_layer_params.items():
+            w = mx.nd.random.uniform(shape=value.shape)
+            value.set_data(w.copy())
+            stack_layer_params[name].set_data(w.copy())
+
+        fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
+        stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
+                                                        layout='TNC',
+                                                        merge_outputs=True)
+
+        assert_almost_equal(fused_output.asnumpy(), stack_output.asnumpy(), rtol=rtol, atol=atol)
+        check_rnn_states(fused_states, stack_states, num_layers, True)
 
 
 def test_lstm_forget_bias():
