@@ -1366,6 +1366,8 @@ integrationtest_ubuntu_gpu_byteps() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
     python3 ../../tools/launch.py -n 1 -s 1 --byteps --env NVIDIA_VISIBLE_DEVICES:0,1 python3 dist_device_sync_kvstore_byteps.py
+    ls byteps-log/
+    cat byteps-log/*
     popd
 }
 
