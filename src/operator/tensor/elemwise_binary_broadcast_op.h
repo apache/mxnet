@@ -684,8 +684,12 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
         Tensor<cpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<cpu, 1, char>(
                 Shape1(workspace_size * sizeof(index_t)), s);
-        ReduceWithExtraMem<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
-        ReduceWithExtraMem<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+        if (common::is_float(lhs.type_flag_)) {
+          ReduceWithExtraMem<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
+        }
+        if (common::is_float(rhs.type_flag_)) {
+          ReduceWithExtraMem<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+        }
       });
     });
   }

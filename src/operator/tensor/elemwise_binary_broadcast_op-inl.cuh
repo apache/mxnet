@@ -58,8 +58,12 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
             ctx.requested[0].get_space_typed<gpu, 1, char>(
                 Shape1(workspace_size * sizeof(index_t)), s);
         if (out.shape_.Size() != 0) {
-          Reduce<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
-          Reduce<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+          if (common::is_float(lhs.type_flag_)) {
+            Reduce<red::sum, NDim, DType, LOP>(s, lhs, req[0], workspace, out);
+          }
+          if (common::is_float(rhs.type_flag_)) {
+            Reduce<red::sum, NDim, DType, ROP>(s, rhs, req[1], workspace, out);
+          }
         } else {
           using namespace mxnet_op;
           if (lhs.shape_.Size() != 0) {
