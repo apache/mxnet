@@ -1409,6 +1409,18 @@ test_ubuntu_cpu_python3() {
     popd
 }
 
+# QEMU based ARM tests
+unittest_ubuntu_python3_arm() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    python3 -m nose --verbose tests/python/unittest/test_engine.py
+}
+
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers

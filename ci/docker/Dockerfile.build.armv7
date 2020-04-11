@@ -45,8 +45,8 @@ ENV CMAKE_TOOLCHAIN_FILE=/usr/local/arm-linux-gnueabihf-toolchain.cmake
 
 RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local/OpenBLAS && \
-    make NOFORTRAN=1 CC=arm-linux-gnueabihf-gcc && \
-    make PREFIX=/usr/local/arm-linux-gnueabihf install && \
+    make NOFORTRAN=1 NO_SHARED=1 CC=arm-linux-gnueabihf-gcc && \
+    make PREFIX=/usr/local/arm-linux-gnueabihf NO_SHARED=1 install && \
     cd /usr/local && \
     rm -rf OpenBLAS
 

@@ -1,3 +1,4 @@
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,25 +15,27 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to test MXNet on Ubuntu 20.04 ARMv8 CPU
 
-# /etc/inittab
-# busybox init configuration for debian-installer
+FROM arm64v8/ubuntu:20.04
 
-# main rc script
-::sysinit:/sbin/reopen-console /sbin/debian-installer-startup
+WORKDIR /usr/local
 
-# main setup program
-::respawn:/sbin/reopen-console /sbin/debian-installer
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-numpy \
+    python3-scipy \
+    python3-nose \
+    python3-nose-timer \
+    python3-requests \
+ && rm -rf /var/lib/apt/lists/*
 
-# convenience shells
-tty2::askfirst:-/bin/sh
-tty3::askfirst:-/bin/sh
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
 
-# logging
-#tty4::respawn:/usr/bin/tail -f /var/log/syslog
-
-# Stuff to do before rebooting
-::ctrlaltdel:/sbin/shutdown > /dev/null 2>&1
-
-# re-exec init on receipt of SIGHUP/SIGUSR1
-::restart:/sbin/init
+COPY runtime_functions.sh /work/
+WORKDIR /work/mxnet
