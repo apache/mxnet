@@ -1451,31 +1451,6 @@ def test_qemu_armv8_cpu() {
     }]
 }
 
-// This is for running on PRs
-def docs_website() {
-    return ['Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-
-            unstash 'jekyll-artifacts'
-            unstash 'python-artifacts'
-            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs_small', false)
-
-            master_url = utils.get_jenkins_master_url()
-            if ( master_url == 'jenkins.mxnet-ci.amazon-ml.com') {
-                // TODO: Make sure this scripts publish the website from the right folder
-                sh "ci/other/ci_deploy_doc.sh ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-            } else {
-                print "Skipping staging documentation publishing since we are not running in prod. Host: {$master_url}"
-            }
-          }
-        }
-      }
-    }]
-}
-
-
 // This creates the MXNet binary needed for generating different docs sets
 def compile_unix_lite() {
     return ['MXNet lib': {
