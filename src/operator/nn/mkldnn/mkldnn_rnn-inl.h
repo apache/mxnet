@@ -60,8 +60,8 @@ struct MKLDNNRnnLayerParam {
   size_t reserve_size;    // used for the reserved cached memory in Backward
   size_t single_w_size;   // weights size of a single cell
   size_t single_b_size;   // bias size of a single cell from mkl-dnn
-  size_t naive_single_b_size;  // bias size of a single cell from framework
-  size_t single_state_size;    // state size of a single cell, hy, cy
+  size_t native_single_b_size;  // bias size of a single cell from framework
+  size_t single_state_size;     // state size of a single cell, hy, cy
 
   MKLDNNRnnLayerParam(int num_layer, int batch_size, int seq_len,
                       int input_size, int state_size,
