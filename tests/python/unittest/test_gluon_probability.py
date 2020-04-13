@@ -131,6 +131,17 @@ def test_gluon_uniform():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
+    # Test kl
+    for shape in shapes:
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Uniform(low, high)
+        dist2 = mgp.Uniform(low, high)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
@@ -201,6 +212,17 @@ def test_gluon_normal():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
+    # Test kl
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Normal(loc, scale)
+        dist2 = mgp.Normal(loc, scale)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
@@ -268,6 +290,17 @@ def test_gluon_laplace():
         mx_out = net(loc, scale).asnumpy()
         np_out = ss.laplace(loc.asnumpy(),
                         scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test kl
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Laplace(loc, scale)
+        dist2 = mgp.Laplace(loc, scale)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -353,6 +386,17 @@ def test_gluon_cauchy():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
+    # Test kl
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Cauchy(loc, scale)
+        dist2 = mgp.Cauchy(loc, scale)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
@@ -413,7 +457,9 @@ def test_gluon_half_cauchy():
         mx_out = net(scale, samples).asnumpy()
         np_out = ss.halfcauchy(0, scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False) 
+                            rtol=1e-3, use_broadcast=False)
+
+    # TODO: Test kl
 
 
 @with_seed()
@@ -447,6 +493,16 @@ def test_gluon_poisson():
             net.hybridize()
         mx_out = net(rate, samples).asnumpy()
         np_out = ss.poisson(mu=rate.asnumpy()).logpmf(samples.asnumpy())
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test kl
+    for shape in shapes:
+        rate = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Poisson(rate)
+        dist2 = mgp.Poisson(rate)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -510,6 +566,16 @@ def test_gluon_geometric():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
 
+    # Test kl
+    for shape in shapes:
+        prob = np.random.uniform(size=shape)
+        dist1 = mgp.Geometric(prob=prob)
+        dist2 = mgp.Geometric(prob=prob)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
@@ -562,6 +628,8 @@ def test_gluon_negative_binomial():
                     np_out = ss_nbinom.var()
                 assert_almost_equal(mx_out, np_out, atol=1e-4,
                                     rtol=1e-3, use_broadcast=False)
+
+    # TODO: Test kl
 
 
 @with_seed()
@@ -621,6 +689,16 @@ def test_gluon_exponential():
             net.hybridize()
         mx_out = net(scale).asnumpy()
         np_out = ss.expon(scale=scale.asnumpy()).entropy()
+        assert_almost_equal(mx_out, np_out, atol=1e-4,
+                            rtol=1e-3, use_broadcast=False)
+
+    # Test kl
+    for shape in shapes:
+        s = np.random.uniform(size=shape)
+        dist1 = mgp.Exponential(scale=s)
+        dist2 = mgp.Exponential(scale=s)
+        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
+        np_out = _np.zeros(shape)
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1517,6 +1595,7 @@ def test_relaxed_one_hot_categorical():
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = prob.astype('float32')
             param = prob
             if use_logit:
                 param = np.log(param)

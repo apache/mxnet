@@ -18,9 +18,55 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """KL divergence functions."""
-__all__ = ['register_kl', 'kl_divergence']
+__all__ = ['register_kl', 'kl_divergence', 'empirical_kl']
+
+import numpy as _np
 
 from .utils import getF
+from .exponential import *
+from .weibull import *
+from .pareto import *
+from .uniform import *
+from .normal import *
+from .laplace import *
+from .cauchy import *
+from .half_cauchy import *
+from .poisson import *
+from .geometric import *
+from .negative_binomial import *
+from .gamma import *
+from .dirichlet import *
+from .beta import *
+from .chi2 import *
+from .fishersnedecor import *
+from .studentT import *
+from .half_normal import *
+from .independent import *
+from .bernoulli import *
+from .binomial import *
+from .relaxed_bernoulli import *
+from .gumbel import *
+from .categorical import *
+from .one_hot_categorical import *
+from .relaxed_one_hot_categorical import *
+from .multinomial import *
+from .multivariate_normal import *
+
+
+def empirical_kl(p, q, n_samples=1):
+    """Estimate KL(p||q) through monte-carlo estimation,
+    i.e. approximate KL(p||q) with:
+        1/M * \Sum_{i=1}^{M} log(p(x_i) / q(x_i)), x_i ~ p(x)
+    
+    Parameters
+    ----------
+    p : Distribution
+    q : Distribution
+    n_samples : int, optional
+        Number of monte-carlo samples, by default 1
+    """
+    samples = p.sample_n(n_samples)
+    return (p.log_prob(samples) - q.log_prob(samples)).mean(0)
 
 
 def register_kl(typeP, typeQ):
@@ -49,22 +95,23 @@ def register_kl(typeP, typeQ):
 
 
 def kl_divergence(p, q):
-    r"""Return the kl divergence between p and q,
-        this method will automatically dispatch
-        to the corresponding function based on q's type.
+    r"""
+    Return the kl divergence between p and q,
+    this method will automatically dispatch
+    to the corresponding function based on q's type.
 
-        Parameters
-        ----------
-        p : Distribution
-            lhs distribution.
-        q : Distribution
-            rhs distribution.
+    Parameters
+    ----------
+    p : Distribution
+        lhs distribution.
+    q : Distribution
+        rhs distribution.
 
-        Returns
-        -------
-        Tensor
-            KL(self||q)
-        """
+    Returns
+    -------
+    Tensor
+        KL(p||q)
+    """
     func = _dispatch_kl(p.__class__.__name__, q.__class__.__name__)
     return func(p, q)
 
@@ -105,3 +152,68 @@ class _KL_storage():
         var_ratio = (p.scale / q.scale) ** 2
         t1 = ((p.loc - q.loc) / q.scale) ** 2
         return 0.5 * (var_ratio + t1 - 1 - F.np.log(var_ratio))
+
+
+@register_kl(Bernoulli, Bernoulli)
+def _kl_bernoulli_bernoulli(p, q):
+    F = p.F
+    log_fn = F.np.log
+    prob_p = p.prob
+    prob_q = q.prob_p
+    t1 = prob_p * log_fn(prob_p / prob_q)
+    t2 = (1 - p.prob_p) * log_fn((1 - prob_p) / (1 - prob_q))
+    return t1 + t2
+
+
+@register_kl(Categorical, Categorical)
+def _kl_categorical_categorical(p, q):
+    return (p.prob * (p.logit - q.logit)).sum(-1)
+
+
+@register_kl(Uniform, Uniform)
+def _kl_uniform_uniform(p, q):
+    F = p.F
+    result = F.np.log((q.high - q.low) / (p.high - p.low))
+    result[(q.low > p.low) | (q.high < p.high)] = _np.inf
+    return result
+
+
+@register_kl(Cauchy, Cauchy)
+def _kl_cauchy_cauchy(p, q):
+    F = p.F
+    t1 = F.np.log((p.scale + q.scale) ** 2 + (p.loc - q.loc) ** 2)
+    t2 = F.np.log(4 * p.scale * q.scale)
+    return t1 - t2
+
+
+@register_kl(Laplace, Laplace)
+def _kl_laplace_laplace(p, q):
+    F = p.F
+    scale_ratio = p.scale / q.scale
+    loc_abs_diff = F.np.abs(p.loc - q.loc)
+    t1 = -F.np.log(scale_ratio)
+    t2 = loc_abs_diff / q.scale
+    t3 = scale_ratio * F.np.exp(-loc_abs_diff / p.scale)
+    return t1 + t2 + t3 - 1
+
+
+@register_kl(Poisson, Poisson)
+def _kl_poisson_poisson(p, q):
+    F = p.F
+    t1 = p.rate * (F.np.log(p.rate) - F.np.log(q.rate))
+    t2 = (p.rate - q.rate)
+    return t1 - t2
+
+
+@register_kl(Geometric, Geometric)
+def _kl_geometric_geometric(p, q):
+    F = p.F
+    return (-p.entropy() - F.np.log1p(-q.prob) / p.prob - q.logit)
+
+
+@register_kl(Exponential, Exponential)
+def _kl_exponential_exponential(p, q):
+    F = p.F
+    scale_ratio = p.scale / q.scale
+    t1 = -F.np.log(scale_ratio)
+    return t1 + scale_ratio - 1
