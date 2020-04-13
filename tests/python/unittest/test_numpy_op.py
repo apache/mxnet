@@ -2242,6 +2242,7 @@ def test_np_mixedType_unary_funcs():
             return getattr(F.np, self._func)(a)
 
     import math
+
     funcs = {
         'cbrt' : (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
         'ceil' : (None, -10.0, 10.0),
