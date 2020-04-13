@@ -86,7 +86,7 @@ def _getdata_by_idx(data, idx):
     return shuffle_data
 
 
-def _slice_along_batch_axis(data: NDArray, s: slice, batch_axis: int):
+def _slice_along_batch_axis(data, s, batch_axis):
     """Apply slice along the batch axis"""
     ret = data.slice_axis(axis=batch_axis, begin=s.start, end=s.stop)
     return ret
