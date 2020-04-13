@@ -71,6 +71,9 @@ NNVM_REGISTER_OP(_npi_column_stack)
 NNVM_REGISTER_OP(_backward_np_column_stack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_tril_indices)
+.set_attr<FCompute>("FCompute<gpu>", TrilindicesOpForward<gpu>);
+
 NNVM_REGISTER_OP(_npi_roll)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
 
@@ -111,6 +114,12 @@ NNVM_REGISTER_OP(_backward_npi_flip)
 
 NNVM_REGISTER_OP(_np_moveaxis)
 .set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_rollaxis)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_rollaxis_backward)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisBackward<gpu>);
 
 NNVM_REGISTER_OP(_npi_rot90)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);

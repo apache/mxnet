@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "../../../api/operator/op_utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -65,6 +66,17 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
         .describe(
             "DType of the output in case this can't be inferred. "
             "Defaults to float32 if not defined (dtype=None).");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream low_s, high_s, dtype_s, size_s;
+    low_s << low;
+    high_s << high;
+    dtype_s << dtype;
+    size_s << size;
+    (*dict)["low"] = low_s.str();
+    (*dict)["high"] = high_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["size"] = size_s.str();
   }
 };
 

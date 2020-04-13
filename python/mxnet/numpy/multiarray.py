@@ -61,7 +61,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
            'fix', 'ceil', 'floor', 'trunc', 'logical_not', 'arcsinh', 'arccosh', 'arctanh', 'append', 'argsort',
            'sort', 'tensordot', 'eye', 'linspace', 'logspace', 'expand_dims', 'tile', 'arange',
-           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero',
+           'array_split', 'split', 'hsplit', 'vsplit', 'dsplit', 'flatnonzero', 'tril_indices',
            'concatenate', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
@@ -69,12 +69,12 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
-           'equal', 'not_equal',
+           'equal', 'not_equal', 'interp',
            'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'pad', 'cumsum', 'diag', 'diagonal']
+           'pad', 'cumsum', 'rollaxis', 'diag', 'diagonal']
 
 __all__ += fallback.__all__
 
@@ -5535,6 +5535,84 @@ def tril(m, k=0):
     return _mx_nd_np.tril(m, k)
 
 
+@set_module('mxnet.numpy')
+def tril_indices(n, k=0, m=None):
+    """
+    Return the indices for the lower-triangle of an (n, m) array.
+
+    Parameters
+    ----------
+    n : int
+        The row dimension of the arrays for which the returned
+        indices will be valid.
+    k : int, optional
+        Diagonal offset (see `tril` for details).
+    m : int, optional
+        .. versionadded:: 1.9.0
+
+        The column dimension of the arrays for which the returned
+        arrays will be valid.
+        By default `m` is taken equal to `n`.
+
+    Returns
+    -------
+    inds : tuple of arrays
+        The indices for the triangle. The returned tuple contains two arrays,
+        each with the indices along one dimension of the array.
+
+    See also
+    --------
+    triu_indices : similar function, for upper-triangular.
+    mask_indices : generic function accepting an arbitrary mask function.
+    tril, triu
+
+    Examples
+    --------
+    Compute two different sets of indices to access 4x4 arrays, one for the
+    lower triangular part starting at the main diagonal, and one starting two
+    diagonals further right:
+
+    >>> il1 = np.tril_indices(4)
+    >>> il2 = np.tril_indices(4, 2)
+
+    Here is how they can be used with a sample array:
+
+    >>> a = np.arange(16).reshape(4, 4)
+    >>> a
+    array([[ 0,  1,  2,  3],
+           [ 4,  5,  6,  7],
+           [ 8,  9, 10, 11],
+           [12, 13, 14, 15]])
+
+    Both for indexing:
+
+    >>> a[il1]
+    array([ 0,  4,  5,  8,  9, 10, 12, 13, 14, 15])
+
+    And for assigning values:
+
+    >>> a[il1] = -1
+    >>> a
+    array([[-1,  1,  2,  3],
+           [-1, -1,  6,  7],
+           [-1, -1, -1, 11],
+           [-1, -1, -1, -1]])
+
+    These cover almost the whole array (two diagonals right of the main one):
+
+    >>> a[il2] = -10
+    >>> a
+    array([[-10, -10, -10,   3],
+           [-10, -10, -10, -10],
+           [-10, -10, -10, -10],
+           [-10, -10, -10, -10]])
+
+    """
+    if m is None:
+        m = n
+    return tuple(_mx_nd_np.tril_indices(n, k, m))
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
@@ -9325,6 +9403,83 @@ def resize(a, new_shape):
     return _mx_nd_np.resize(a, new_shape)
 
 
+@set_module('mxnet.numpy')
+def interp(x, xp, fp, left=None, right=None, period=None):  # pylint: disable=too-many-arguments
+    """
+    One-dimensional linear interpolation.
+    Returns the one-dimensional piecewise linear interpolant to a function
+    with given values at discrete data-points.
+
+    Parameters
+    ----------
+    x : ndarray
+        The x-coordinates of the interpolated values.
+    xp : 1-D array of floats
+        The x-coordinates of the data points, must be increasing if argument
+        `period` is not specified. Otherwise, `xp` is internally sorted after
+        normalizing the periodic boundaries with ``xp = xp % period``.
+    fp : 1-D array of floats
+        The y-coordinates of the data points, same length as `xp`.
+    left : optional float corresponding to fp
+        Value to return for `x < xp[0]`, default is `fp[0]`.
+    right : optional float corresponding to fp
+        Value to return for `x > xp[-1]`, default is `fp[-1]`.
+    period : None or float, optional
+        A period for the x-coordinates. This parameter allows the proper
+        interpolation of angular x-coordinates. Parameters `left` and `right`
+        are ignored if `period` is specified.
+        .. versionadded:: 1.10.0
+
+    Returns
+    -------
+    y : float (corresponding to fp) or ndarray
+        The interpolated values, same shape as `x`.
+    Raises
+    ------
+    ValueError
+        If `xp` and `fp` have different length
+        If `xp` or `fp` are not 1-D sequences
+        If `period == 0`
+
+    Notes
+    -----
+    Does not check that the x-coordinate sequence `xp` is increasing.
+    If `xp` is not increasing, the results are nonsense.
+    A simple check for increasing is::
+        np.all(np.diff(xp) > 0)
+
+    Examples
+    --------
+    >>> xp = [1, 2, 3]
+    >>> fp = [3, 2, 0]
+    >>> np.interp(2.5, xp, fp)
+    1.0
+    >>> np.interp([0, 1, 1.5, 2.72, 3.14], xp, fp)
+    array([ 3. ,  3. ,  2.5 ,  0.56,  0. ])
+    >>> UNDEF = -99.0
+    >>> np.interp(3.14, xp, fp, right=UNDEF)
+    -99.0
+    Plot an interpolant to the sine function:
+    >>> x = np.linspace(0, 2*np.pi, 10)
+    >>> y = np.sin(x)
+    >>> xvals = np.linspace(0, 2*np.pi, 50)
+    >>> yinterp = np.interp(xvals, x, y)
+    >>> import matplotlib.pyplot as plt
+    >>> plt.plot(x, y, 'o')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.plot(xvals, yinterp, '-x')
+    [<matplotlib.lines.Line2D object at 0x...>]
+    >>> plt.show()
+    Interpolation with periodic x-coordinates:
+    >>> x = [-180, -170, -185, 185, -10, -5, 0, 365]
+    >>> xp = [190, -190, 350, -350]
+    >>> fp = [5, 10, 3, 4]
+    >>> np.interp(x, xp, fp, period=360)
+    array([7.5, 5., 8.75, 6.25, 3., 3.25, 3.5, 3.75])
+    """
+    return _mx_nd_np.interp(x, xp, fp, left=left, right=right, period=period)
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def full_like(a, fill_value, dtype=None, order='C', ctx=None, out=None): # pylint: disable=too-many-arguments
@@ -10262,7 +10417,42 @@ def cumsum(a, axis=None, dtype=None, out=None):
            [ 4,  9, 15]])
     """
     return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
-# pylint: enable=redefined-outer-name
+
+
+# pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def rollaxis(a, axis, start=0):
+    """
+    Roll the specified axis backwards, until it lies in a given position.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axis : integer
+        The axis to roll backwards. The positions of the other axes do not
+        change relative to one another.
+    start: int, optional
+        The axis is rolled until it lies before this position.
+        The default, 0, results in a “complete” roll.
+
+    Returns
+    -------
+    res : ndarray
+        A view after applying rollaxis to `a` is returned.
+
+    -----
+    Examples
+    --------
+    >>> a = np.ones((3,4,5,6))
+    >>> np.rollaxis(a, 3, 1).shape
+    (3, 6, 4, 5)
+    >>> np.rollaxis(a, 2).shape
+    (5, 3, 4, 6)
+    >>> np.rollaxis(a, 1, 4).shape
+    (3, 5, 6, 4)
+    """
+    return _mx_nd_np.rollaxis(a, axis, start)
 
 
 @set_module('mxnet.numpy')

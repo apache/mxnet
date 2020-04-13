@@ -61,6 +61,10 @@ def prepare_workloads():
     OpArgMngr.add_workload("kron", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("cumsum", pool['3x2'], axis=0, out=pool['3x2'])
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("linalg.eig", pool['3x3'])
+    OpArgMngr.add_workload("linalg.eigh", pool['3x3'])
+    OpArgMngr.add_workload("linalg.det", pool['3x3'])
+    OpArgMngr.add_workload("linalg.slogdet", pool['3x3'])
     OpArgMngr.add_workload("linalg.svd", pool['3x3'])
     OpArgMngr.add_workload("linalg.cholesky", pool['1x1'])
     OpArgMngr.add_workload("linalg.eigvals", pool['1x1'])
@@ -93,6 +97,13 @@ def prepare_workloads():
     OpArgMngr.add_workload("full_like", pool['2x2'], 2)
     OpArgMngr.add_workload("zeros_like", pool['2x2'])
     OpArgMngr.add_workload("ones_like", pool['2x2'])
+    OpArgMngr.add_workload("bitwise_and", pool['2x2'].astype(int), pool['2x2'].astype(int))
+    OpArgMngr.add_workload("bitwise_xor", pool['2x2'].astype(int), pool['2x2'].astype(int))
+    OpArgMngr.add_workload("bitwise_or", pool['2x2'].astype(int), pool['2x2'].astype(int))
+    OpArgMngr.add_workload("copysign", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("arctan2", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("hypot", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("ldexp", pool['2x2'].astype(int), pool['2x2'].astype(int))
     OpArgMngr.add_workload("random.uniform", low=0, high=1, size=1)
     OpArgMngr.add_workload("where", pool['2x3'], pool['2x3'], pool['2x1'])
     OpArgMngr.add_workload("fmax", pool['2x2'], pool['2x2'])
@@ -117,6 +128,33 @@ def prepare_workloads():
     OpArgMngr.add_workload("vsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("hsplit", pool['2X2'], 2)
     OpArgMngr.add_workload("dsplit", pool['2X2x2'], 2)
+    OpArgMngr.add_workload("arange", 10)
+    OpArgMngr.add_workload("concatenate", (pool['1x2'], pool['1x2'], pool['1x2']), axis=0)
+    OpArgMngr.add_workload("append", pool['2x2'], pool['1x2'], axis=0)
+    OpArgMngr.add_workload("insert", pool['3x2'], 1, pool['1x1'], axis=0)
+    OpArgMngr.add_workload("delete", pool['3x2'], 1, axis=0)
+    OpArgMngr.add_workload("blackman", 12)
+    OpArgMngr.add_workload("eye", 5)
+    OpArgMngr.add_workload("hamming", 12)
+    OpArgMngr.add_workload("hanning", 12)
+    OpArgMngr.add_workload("linspace", 0, 10, 8, endpoint=False)
+    OpArgMngr.add_workload("logspace", 2.0, 3.0, num=4, base=2.0, dtype=onp.float32)
+    OpArgMngr.add_workload("matmul", pool['2x2'], pool['2x2'])
+    OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
+    OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
+    OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
+
+    unary_ops = ['negative', 'reciprocal', 'abs', 'sign', 'rint', 'ceil', 'floor',
+                 'bitwise_not', 'trunc', 'fix', 'square', 'sqrt', 'cbrt', 'exp',
+                 'log', 'log10', 'log2', 'log1p', 'expm1', 'logical_not', 'isnan',
+                 'isinf', 'isposinf', 'isneginf', 'isfinite', 'sin', 'cos', 'tan',
+                 'arcsin', 'arccos', 'arctan', 'degrees', 'radians', 'sinh', 'cosh',
+                 'tanh', 'arcsinh', 'arccosh', 'arctanh']  # 'rad2deg', 'deg2rad' cannot run without tvm
+    for unary_op in unary_ops:
+        if unary_op == "bitwise_not":
+            OpArgMngr.add_workload(unary_op, dnp.ones((2, 2), dtype=int))
+        else:
+            OpArgMngr.add_workload(unary_op, pool['2x2'])
 
 
 def benchmark_helper(f, *args, **kwargs):

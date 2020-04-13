@@ -497,6 +497,13 @@ def _add_workload_linalg_cholesky():
         OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
 
+def _add_workload_linalg_qr():
+    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
+    OpArgMngr.add_workload('linalg.qr', A)
+    # default mode in numpy is 'reduced'
+    OpArgMngr.add_workload('linalg.qr', A, mode='reduced')
+
+
 def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 0)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -1363,6 +1370,38 @@ def _add_workload_insert():
     OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
 
 
+def _add_workload_interp():
+    xp0 = np.linspace(0, 1, 5)
+    fp0 = np.linspace(0, 1, 5)
+    x0 = np.linspace(0, 1, 50)
+    xp1 = np.array([1, 2, 3, 4])
+    fp1 = np.array([1, 2, np.inf, 4])
+    x1 = np.array([1, 2, 2.5, 3, 4])
+    xp2 = np.arange(0, 10, 0.0001)
+    fp2 = np.sin(xp2)
+    xp3 = np.array([190, -190, 350, -350])
+    fp3 = np.array([5, 10, 3, 4])
+    x3 = np.array([-180, -170, -185, 185, -10, -5, 0, 365])
+
+    OpArgMngr.add_workload('interp', x0, xp0, fp0)
+    OpArgMngr.add_workload('interp', x1, xp1, fp1)
+    OpArgMngr.add_workload('interp', np.pi, xp2, fp2)
+    OpArgMngr.add_workload('interp', x3, xp3, fp3, period=360)
+    for size in range(1, 10):
+        xp = np.arange(size, dtype=np.float64)
+        fp = np.ones(size, dtype=np.float64)
+        incpts = np.array([-1, 0, size - 1, size], dtype=np.float64)
+        decpts = incpts[::-1]
+        OpArgMngr.add_workload('interp', incpts, xp, fp)
+        OpArgMngr.add_workload('interp', decpts, xp, fp)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0, right=2)
+
+
 def _add_workload_hypot():
     OpArgMngr.add_workload('hypot', np.array(1), np.array(1))
     OpArgMngr.add_workload('hypot', np.array(0), np.array(0))
@@ -2087,13 +2126,6 @@ def _add_workload_linalg_multi_dot():
     F = np.ones((6,6))
     OpArgMngr.add_workload('linalg.multi_dot', E)
     OpArgMngr.add_workload('linalg.multi_dot', [F,F])
-
-
-
-def _add_workload_linalg_qr():
-    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
-    OpArgMngr.add_workload('linalg.qr', A)
-    OpArgMngr.add_workload('linalg.qr', A, mode='r')
 
 
 def _add_workload_heaviside():
@@ -2849,6 +2881,7 @@ def _prepare_workloads():
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
+    _add_workload_linalg_qr()
     _add_workload_linalg_inv()
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
@@ -2865,7 +2898,6 @@ def _prepare_workloads():
     _add_workload_linalg_matrix_power()
     _add_workload_linalg_matrix_rank()
     _add_workload_linalg_multi_dot()
-    _add_workload_linalg_qr()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
@@ -2881,6 +2913,7 @@ def _prepare_workloads():
     _add_workload_true_divide()
     _add_workload_inner()
     _add_workload_insert()
+    _add_workload_interp()
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_and()

@@ -7133,6 +7133,36 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
+@with_seed()
+def test_dropout_reproducibility():
+    info = np.iinfo(np.int32)
+    seed1 = np.random.randint(info.min, info.max)
+    seed2 = np.random.randint(info.min, info.max)
+    data = mx.nd.ones((100, 100), ctx=default_context())
+    dropout = mx.gluon.nn.Dropout(0.5)
+    mx.random.seed(seed1)
+    with mx.autograd.record():
+        result1 = dropout(data)
+        result2 = dropout(result1)
+
+    mx.random.seed(seed2)
+    with mx.autograd.record():
+        result3 = dropout(data)
+        result4 = dropout(result3)
+
+    mx.random.seed(seed1)
+    with mx.autograd.record():
+        result5 = dropout(data)
+        result6 = dropout(result5)
+
+    assert_almost_equal(result1.asnumpy(), result5.asnumpy())
+    assert_almost_equal(result2.asnumpy(), result6.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result1.asnumpy(), result2.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result1.asnumpy(), result3.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result2.asnumpy(), result4.asnumpy())
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
 @with_seed()
@@ -8396,6 +8426,19 @@ def test_ravel():
       check_symbolic_forward(b, location={'a': data}, expected=[ravel_npy])
       c = mx.sym.unravel_index(a, shape=shape2)
       check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
+
+
+@with_seed()
+def test_unravel_index():
+    unravel_shape = (2, 10)
+    unravel_size = np.prod(unravel_shape)
+    for shape in [(10,), (2, 10), (3, 4, 5)]:
+        a = np.random.randint(0, unravel_size, size=shape)
+        b = np.stack(np.unravel_index(a, shape=unravel_shape), 0)
+        a_mx = mx.nd.array(a)
+        b_mx = mx.nd.unravel_index(a_mx, shape=unravel_shape)
+        assert_array_equal(b, b_mx.asnumpy())
+
 
 def test_context_num_gpus():
     try:
@@ -9874,6 +9917,25 @@ def test_im2col_col2im():
         dilate      = 2,
         pad         = 1
     )
+
+def test_elemwise_sum_for_gradient_accumulation():
+    for nrepeat in range(1, 10):
+        stored_grad = dict()
+        for grad_req in ['write', 'add']:
+            a = mx.nd.array([1])
+            b = mx.nd.array([2])
+            if grad_req == 'write':
+                a.attach_grad(grad_req='write')
+            elif grad_req == 'add':
+                a.attach_grad(grad_req='add')
+            a.grad[:] = 0
+            with mx.autograd.record():
+                for _ in range(nrepeat):
+                    b = b * a
+                b.backward()
+            stored_grad[grad_req] = a.grad.asscalar()
+        assert stored_grad['write'] == stored_grad['add']
+        assert stored_grad['write'] == 2 * nrepeat
 
 
 if __name__ == '__main__':
