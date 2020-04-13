@@ -220,8 +220,9 @@ class SyncBatchNorm(BatchNorm):
                  center=True, scale=True, use_global_stats=False, beta_initializer='zeros',
                  gamma_initializer='ones', running_mean_initializer='zeros',
                  running_variance_initializer='ones', **kwargs):
+        fuse_relu = False
         super(SyncBatchNorm, self).__init__(1, momentum, epsilon, center, scale, use_global_stats,
-                                            beta_initializer, gamma_initializer,
+                                            fuse_relu, beta_initializer, gamma_initializer,
                                             running_mean_initializer, running_variance_initializer,
                                             in_channels, **kwargs)
         num_devices = self._get_num_devices() if num_devices is None else num_devices

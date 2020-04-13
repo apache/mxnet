@@ -45,7 +45,7 @@ X, y = mnist_train[0]
 
 Each example in this dataset is a $28\times 28$ size grey image, which is presented as NDArray with the shape format of `(height, width, channel)`.  The label is a `numpy` scalar.
 
-Next, we visualize the first six examples.
+Next, we visualize the first ten examples.
 
 ```{.python .input  n=3}
 text_labels = ['t-shirt', 'trouser', 'pullover', 'dress', 'coat',
