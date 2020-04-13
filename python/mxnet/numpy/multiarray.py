@@ -7389,7 +7389,7 @@ def diag_indices_from(arr):
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hanning(M, ctx=None):
+def hanning(M, dtype=None, ctx=None):
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -7465,12 +7465,12 @@ def hanning(M, ctx=None):
     Text(0.5, 0, 'Sample')
     >>> plt.show()
     """
-    return _mx_nd_np.hanning(M, ctx=ctx)
+    return _mx_nd_np.hanning(M, dtype=dtype, ctx=ctx)
 
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def hamming(M, ctx=None):
+def hamming(M, dtype=None, ctx=None):
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -7544,12 +7544,12 @@ def hamming(M, ctx=None):
     Text(0.5, 0, 'Sample')
     >>> plt.show()
     """
-    return _mx_nd_np.hamming(M, ctx=ctx)
+    return _mx_nd_np.hamming(M, dtype=dtype, ctx=ctx)
 
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def blackman(M, ctx=None):
+def blackman(M, dtype=None, ctx=None):
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -7621,7 +7621,7 @@ def blackman(M, ctx=None):
     Text(0.5, 0, 'Sample')
     >>> plt.show()
     """
-    return _mx_nd_np.blackman(M, ctx=ctx)
+    return _mx_nd_np.blackman(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.numpy')

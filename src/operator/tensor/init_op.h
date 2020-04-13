@@ -303,7 +303,7 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
     dtype_s << dtype;
     value_s << value;
     (*dict)["shape"] = shape_s.str();
-    (*dict)["dtype"] = dtype_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
     (*dict)["value"] = value_s.str();
     // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
     // Setting ctx here results in an error.

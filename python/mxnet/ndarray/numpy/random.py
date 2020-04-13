@@ -126,8 +126,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
     """
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = str(current_context())
     else:
@@ -170,8 +168,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized normal distribution.
     """
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = str(current_context())
     else:
@@ -726,8 +722,6 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     electronic components, and arises naturally in processes for which the
     waiting times between Poisson distributed events are relevant.
     """
-    if dtype is None:
-        dtype = 'float32'
     if out is not None:
         size = out.shape
     if size == ():

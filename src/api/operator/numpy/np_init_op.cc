@@ -103,7 +103,7 @@ MXNET_REGISTER_API("_npi.indices")
   }
   // param.dtype
   if (args[1].type_code() == kNull) {
-    param.dtype = mshadow::kInt32;
+    param.dtype = -1;
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
@@ -217,7 +217,7 @@ MXNET_REGISTER_API("_npi.arange")
   param.repeat = 1;
   param.infer_range = false;
   if (args[3].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }
@@ -246,7 +246,7 @@ MXNET_REGISTER_API("_npi.eye")
   }
   param.k = args[2].operator nnvm::dim_t();
   if (args[4].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
@@ -276,7 +276,7 @@ MXNET_REGISTER_API("_npi.linspace")
     param.endpoint = args[3].operator bool();
   }
   if (args[5].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[5].operator std::string());
   }
@@ -311,7 +311,7 @@ MXNET_REGISTER_API("_npi.logspace")
     param.base = args[4].operator double();
   }
   if (args[6].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[6].operator std::string());
   }
@@ -375,7 +375,7 @@ MXNET_REGISTER_API("_npi.full")
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
   }
-  SetAttrDict<op::InitOpParam>(&attrs);
+  SetAttrDict<op::InitOpWithScalarParam>(&attrs);
   NDArray* out = args[4].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
@@ -385,37 +385,6 @@ MXNET_REGISTER_API("_npi.full")
   } else {
     *ret = ndoutputs[0];
   }
-});
-
-MXNET_REGISTER_API("_npi.arange")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_arange");
-  nnvm::NodeAttrs attrs;
-  op::RangeParam param;
-  param.start = args[0].operator double();
-  if (args[1].type_code() != kNull) {
-    param.stop = args[1].operator double();
-  } else {
-    param.stop = dmlc::nullopt;
-  }
-  param.step = args[2].operator double();
-  param.repeat = 1;
-  param.infer_range = false;
-  if (args[3].type_code() == kNull) {
-    param.dtype = mxnet::common::GetDefaultDtype();
-  } else {
-    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
-  }
-  attrs.parsed = std::move(param);
-  attrs.op = op;
-  if (args[4].type_code() != kNull) {
-    attrs.dict["ctx"] = args[4].operator std::string();
-  }
-  int num_outputs = 0;
-  SetAttrDict<op::RangeParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
-  *ret = ndoutputs[0];
 });
 
 MXNET_REGISTER_API("_npi.identity")

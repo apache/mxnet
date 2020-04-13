@@ -370,18 +370,22 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
     if isinstance(fill_value, NDArray):
         if dtype is None:
             ret = broadcast_to(fill_value, shape)
         else:
             ret = broadcast_to(fill_value, shape).astype(dtype)
         return ret
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
         dtype = _np.bool if dtype is None else dtype
-    return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = _np.dtype(dtype).name
+    return _api_internal.full(shape, dtype, fill_value, ctx, out)
 # pylint: enable=too-many-arguments, redefined-outer-name
 
 
@@ -5276,6 +5280,8 @@ def indices(dimensions, dtype=None, ctx=None):
             ctx = str(current_context())
         else:
             ctx = str(ctx)
+        if dtype is not None and not isinstance(dtype, str):
+            dtype = _np.dtype(dtype).name
         return _api_internal.indices(dimensions, dtype, ctx)
     else:
         raise ValueError("The dimensions must be sequence of ints")
@@ -5503,7 +5509,7 @@ def diag_indices_from(arr):
 
 
 @set_module('mxnet.ndarray.numpy')
-def hanning(M, ctx=None):
+def hanning(M, dtype=None, ctx=None):
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -5589,7 +5595,7 @@ def hanning(M, ctx=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def hamming(M, ctx=None):
+def hamming(M, dtype=None, ctx=None):
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -5673,7 +5679,7 @@ def hamming(M, ctx=None):
 
 
 @set_module('mxnet.ndarray.numpy')
-def blackman(M, ctx=None):
+def blackman(M, dtype=None, ctx=None):
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three

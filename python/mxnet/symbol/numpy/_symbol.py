@@ -5039,7 +5039,7 @@ def diag_indices_from(arr):
 
 
 @set_module('mxnet.symbol.numpy')
-def hanning(M, ctx=None):
+def hanning(M, dtype=None, ctx=None):
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -5117,11 +5117,11 @@ def hanning(M, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return _npi.hanning(M, ctx=ctx)
+    return _npi.hanning(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.symbol.numpy')
-def hamming(M, ctx=None):
+def hamming(M, dtype=None, ctx=None):
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -5197,11 +5197,11 @@ def hamming(M, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return _npi.hamming(M, ctx=ctx)
+    return _npi.hamming(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.symbol.numpy')
-def blackman(M, ctx=None):
+def blackman(M, dtype=None, ctx=None):
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -5275,7 +5275,7 @@ def blackman(M, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return _npi.blackman(M, ctx=ctx)
+    return _npi.blackman(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.symbol.numpy')
