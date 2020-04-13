@@ -370,8 +370,6 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     """
     if order != 'C':
         raise NotImplementedError
-    if ctx is None:
-        ctx = current_context()
     if isinstance(fill_value, NDArray):
         if dtype is None:
             ret = broadcast_to(fill_value, shape)

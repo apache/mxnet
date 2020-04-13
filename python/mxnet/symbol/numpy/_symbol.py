@@ -5117,7 +5117,7 @@ def hanning(M, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return _npi.hanning(M, ctx=ctx)
+    return _npi.hanning(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5197,7 +5197,7 @@ def hamming(M, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return _npi.hamming(M, ctx=ctx)
+    return _npi.hamming(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -5275,7 +5275,7 @@ def blackman(M, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    return _npi.blackman(M, ctx=ctx)
+    return _npi.blackman(M, dtype=dtype, ctx=ctx)
 
 
 @set_module('mxnet.symbol.numpy')
