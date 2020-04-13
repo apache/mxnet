@@ -270,6 +270,13 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             return out;
           };
           auto build_tuple = [ndim](int axis, const std::string str, const std::string def) {
+            if (axis < 0 &&
+                axis >= -ndim) {
+              axis += ndim;
+            }
+            if (axis < 0 || axis >= ndim) {
+              LOG(FATAL) << "Axis " << axis << " is out of bounds for array of dimension " << ndim;
+            }
             std::string tuple = "{";
             for (int i = 0; i < axis; i++) {
                 tuple = tuple + def + ",";

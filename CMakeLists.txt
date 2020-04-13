@@ -68,9 +68,10 @@ option(INSTALL_EXAMPLES "Install the example source files." OFF)
 option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
 option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
 option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
-option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF)
+cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
+option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
@@ -151,7 +152,6 @@ endif()
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 # disable stack trace in exception by default.
 add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
-add_definitions(-DDMLC_LOG_FATAL_THROW=1)
 
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
@@ -254,22 +254,6 @@ if(USE_TENSORRT)
 
   list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
-endif()
-
-# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
-if(ENABLE_TESTCOVERAGE)
-  message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
-  find_program( GCOV_PATH gcov )
-  if(NOT GCOV_PATH)
-    message(FATAL_ERROR "gcov not found! Aborting...")
-  endif() # NOT GCOV_PATH
-
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
-  set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
-  link_libraries(gcov)
 endif()
 
 if(USE_MKLDNN)
@@ -478,8 +462,6 @@ endif()
 include(CTest)
 set(GTEST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/googletest/googletest")
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-#set(GTEST_BOTH_LIBRARIES gtest gtest_main)
-set(GTEST_LIBRARIES gtest gtest_main)
 set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
 
@@ -602,7 +584,7 @@ if(USE_CUDA)
   message("-- CUDA: Using the following NVCC architecture flags ${CUDA_ARCH_FLAGS}")
   set(arch_code_list)
   foreach(arch_str ${CUDA_ARCH_FLAGS})
-    if((arch_str MATCHES ".*sm_[0-9]+")) 
+    if((arch_str MATCHES ".*sm_[0-9]+"))
       string( REGEX REPLACE  ".*sm_([0-9]+)" "\\1" arch_code ${arch_str} )
       list(APPEND arch_code_list ${arch_code})
     endif()
@@ -693,6 +675,7 @@ if(UNIX)
   list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
   add_library(mxnet_static STATIC ${SOURCE})
   target_link_libraries(mxnet_static PUBLIC mshadow)
+  target_compile_definitions(mxnet_static PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
   add_library(mxnet SHARED ${DUMMY_SOURCE})
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
@@ -708,83 +691,78 @@ if(UNIX)
       string(APPEND CMAKE_CUDA_FLAGS " -Werror=cross-execution-space-call")
     endif()
   endif()
+  if(ENABLE_TESTCOVERAGE)
+    find_program(GCOV_PATH gcov REQUIRED)
+    target_compile_options(mxnet_static PUBLIC "--coverage")
+    target_link_libraries(mxnet_static PUBLIC gcov)
+  endif()
 elseif(MSVC)
   if(USE_CUDA)
-    if(MSVC)
-      if(USE_SPLIT_ARCH_DLL)
-        add_executable(gen_warp tools/windowsbuild/gen_warp.cpp)
-        add_library(mxnet SHARED tools/windowsbuild/warp_dll.cpp ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp
-                    ${CMAKE_BINARY_DIR}/warp_gen.asm)
-        target_link_libraries(mxnet PRIVATE cudart Shlwapi)
-        list(GET arch_code_list 0 mxnet_first_arch)
-        foreach(arch ${arch_code_list})
-          add_library(mxnet_${arch} SHARED ${SOURCE})
-          target_link_libraries(mxnet_${arch} PUBLIC mshadow)
-          target_compile_options(
-            mxnet_${arch}
-            PRIVATE
-            "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-architecture=compute_${arch}>"
-          )
-          target_compile_options(
-            mxnet_${arch}
-            PRIVATE
-            "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
-          )
-          target_compile_options(
-            mxnet_${arch} 
-            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
-          target_compile_options(
-            mxnet_${arch}
-            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
-        endforeach()
-
-        add_custom_command(
-          OUTPUT ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp ${CMAKE_BINARY_DIR}/warp_gen.asm
-          COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
-      else(USE_SPLIT_ARCH_DLL)
-        string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
-        set(CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
-        add_library(mxnet SHARED ${SOURCE})
-        target_link_libraries(mxnet PUBLIC mshadow)
+    if(USE_SPLIT_ARCH_DLL)
+      add_executable(gen_warp tools/windowsbuild/gen_warp.cpp)
+      add_library(mxnet SHARED tools/windowsbuild/warp_dll.cpp ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp
+                  ${CMAKE_BINARY_DIR}/warp_gen.asm)
+      target_link_libraries(mxnet PRIVATE cudart Shlwapi)
+      list(GET arch_code_list 0 mxnet_first_arch)
+      foreach(arch ${arch_code_list})
+        add_library(mxnet_${arch} SHARED ${SOURCE})
+        target_link_libraries(mxnet_${arch} PUBLIC mshadow)
+        target_compile_definitions(mxnet_${arch} PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
         target_compile_options(
-            mxnet 
-            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+          mxnet_${arch}
+          PRIVATE
+          "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-architecture=compute_${arch}>"
+        )
         target_compile_options(
-            mxnet
-            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+          mxnet_${arch}
+          PRIVATE
+          "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
+        )
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+      endforeach()
 
-      endif(USE_SPLIT_ARCH_DLL)
-    else()
+      add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp ${CMAKE_BINARY_DIR}/warp_gen.asm
+        COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
+    else(USE_SPLIT_ARCH_DLL)
+      string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
+      set(CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
       target_link_libraries(mxnet PUBLIC mshadow)
-    endif()
+      target_compile_options(
+          mxnet
+          PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+      target_compile_options(
+          mxnet
+          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+    endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
+    target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
-
 endif()
 
+# extension libraries (custom operators, custom subgraphs) are built by default
 add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
 add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
 target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
-if (USE_CUDA)
+if(USE_CUDA)
   add_library(customop_gpu_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cu)
   target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 endif()
-if(UNIX)
-  target_compile_options(customop_lib PUBLIC -shared)
-  target_compile_options(subgraph_lib PUBLIC -shared)
-  if (USE_CUDA)
-    target_compile_options(customop_gpu_lib PUBLIC -shared)
-  endif()
-elseif(MSVC)
+if(MSVC)
   target_compile_options(customop_lib PUBLIC /LD)
   target_compile_options(subgraph_lib PUBLIC /LD)
   set_target_properties(customop_lib PROPERTIES PREFIX "lib")
   set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
-  if (USE_CUDA)
+  if(USE_CUDA)
     target_compile_options(customop_gpu_lib PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fPIC>")
     set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
   endif()
