@@ -1562,6 +1562,14 @@ nightly_estimator() {
     nosetests test_sentiment_rnn.py
 }
 
+nightly_test_opperf() {
+    set -ex
+    cd /work/mxnet
+    export PYTHONPATH=/work/mxnet/
+    python benchmark/opperf/opperf.py --ctx cpu --int64-tensor off --output-format md --output-file mxnet_opperf_cpu_int32.md --warmup 1 --runs 1
+    python benchmark/opperf/opperf.py --ctx gpu --int64-tensor off --output-format md --output-file mxnet_opperf_gpu_int32.md --warmup 1 --runs 1
+}
+
 # For testing PRs
 deploy_docs() {
     set -ex

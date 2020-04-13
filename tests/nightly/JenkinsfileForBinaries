@@ -91,6 +91,14 @@ core_logic: {
           utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
         }
       }
+    },
+    'Operator Performance: CPU&GPU': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/opperf-gpu') {
+          utils.unpack_and_init('gpu', mx_lib)
+          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_opperf', true)
+        }
+      }
     }
   }
 }
