@@ -81,12 +81,14 @@ def lstsq(a, b, rcond='warn'):
     If `b` is a matrix, then all array results are returned as matrices.
     """
     new_default = False
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
     if rcond is None:
-        rcond = _np.finfo(_np.float64).eps
+        rcond = 1
         new_default = True
     if rcond == "warn":
         rcond = -1
-    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, finfoEps32=finfo_eps_32, finfoEps64=finfo_eps_64, new_default=new_default)  # pylint: disable=line-too-long
     return (x, residuals, rank, s)
 
 
