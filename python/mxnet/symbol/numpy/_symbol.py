@@ -2200,7 +2200,6 @@ def tril(m, k=0):
 
 
 @set_module('mxnet.symbol.numpy')
-<<<<<<< HEAD
 def triu(m, k=0):
     r"""
     Upper triangle of an array.
@@ -2225,7 +2224,8 @@ def triu(m, k=0):
     tril : same thing, only for the lower triangle
     """
     return _npi.triu(m, k)
-=======
+
+
 def tril_indices(n, k=0, m=None):
     """
     Return the indices for the lower-triangle of an (n, m) array.
@@ -2306,7 +2306,6 @@ def tril_indices(n, k=0, m=None):
     if m is None:
         m = n
     return _npi.tril_indices(n, k, m)
->>>>>>> upstream/master
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
