@@ -32,9 +32,44 @@
 #include <vector>
 #include "../../rnn-inl.h"
 #include "./mkldnn_base-inl.h"
+#include "../../quantization/quantized_rnn-inl.h"
 
 namespace mxnet {
 namespace op {
+
+struct MKLDNNRnnParam : public dmlc::Parameter<MKLDNNRnnParam> {
+  bool quantized;
+
+  DMLC_DECLARE_PARAMETER(MKLDNNRnnParam) {
+    DMLC_DECLARE_FIELD(quantized).set_default(false)
+    .describe("Whether it's a quantized RNN operator");
+  }
+};
+
+inline void MKLDNNMemoryReorder(const mkldnn::memory& src,
+                                const mkldnn::memory& dst) {
+#if DMLC_CXX11_THREAD_LOCAL
+  static thread_local std::unordered_map<OpSignature,
+      mkldnn::reorder, OpHash> reorderPrimitives;
+#else
+  static MX_THREAD_LOCAL std::unordered_map<OpSignature,
+      mkldnn::reorder, OpHash> reorderPrimitives;
+#endif
+  OpSignature key{};
+  key.AddSign(src);
+  key.AddSign(dst);
+
+  auto it = reorderPrimitives.find(key);
+  if (it == reorderPrimitives.end()) {
+    auto reorder = mkldnn::reorder(src, dst);
+    it = AddToCache(&reorderPrimitives, key, reorder);
+  }
+
+  mkldnn_args_map_t net_args;
+  net_args.emplace(MKLDNN_ARG_SRC, src);
+  net_args.emplace(MKLDNN_ARG_DST, dst);
+  MKLDNNStream::Get()->RegisterPrimArgs(it->second, net_args);
+}
 
 struct MKLDNNRnnLayerParam {
   using memory = mkldnn::memory;
@@ -66,12 +101,17 @@ struct MKLDNNRnnLayerParam {
   size_t naive_single_b_size;  // bias size of a single cell from framework
   size_t single_state_size;    // state size of a single cell, hy, cy
 
+  bool quantized;         // whether this layer is quantized
+  bool enable_u8_output;  // true by default, only be false when it is the last fusion layer of the
+                          // quantized rnn operator
+
   MKLDNNRnnLayerParam(int num_layer, int batch_size, int seq_len,
                       int input_size, int state_size, int proj_size,
                       int mode, bool bidirectional = true)
       : mode(mode), bidirectional(bidirectional), state_outputs(true),
         num_layer(num_layer), batch_size(batch_size), input_size(input_size),
-        state_size(state_size), proj_size(proj_size), seq_len(seq_len) { }
+        state_size(state_size), proj_size(proj_size), seq_len(seq_len),
+        quantized(false), enable_u8_output(false) { }
 
   void SetDims();
 };
@@ -79,10 +119,11 @@ struct MKLDNNRnnLayerParam {
 typedef std::vector<MKLDNNRnnLayerParam> LayerParamVector;
 struct MKLDNNRnnFullParam {
   RNNParam default_param;
+  MKLDNNRnnParam mkldnn_param;
   LayerParamVector layer_params;
 };
 
-MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const RNNParam& rnn_param, const int seq_len,
+MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const nnvm::NodeAttrs& attrs, const int seq_len,
                                             const int batch_size, const int input_size);
 
 /*
@@ -105,13 +146,13 @@ class MKLDNNRnnMemMgr {
  public:
   /*!
    * \brief Initializer for RNN memory manager
-   * \param size byte number
-   * \param ctx Context of device enviroment
+   * \param size Bytes number
+   * \param ctx Context of device environment
    */
-  void Init(dim_t size, const Context& ctx);
+  void Init(const dim_t size, const Context& ctx);
 
   // Return the bytes number of the buffer
-  const size_t Size() { return mem_size; }
+  const size_t Size() const { return mem_size; }
 
   void RegisterMem(std::shared_ptr<const mkldnn::memory> mem) {
     mem_holder.push_back(mem);
@@ -119,6 +160,8 @@ class MKLDNNRnnMemMgr {
 
   mkldnn::memory *Alloc(const mkldnn::memory::desc &md);
 };
+
+typedef std::shared_ptr<mkldnn::primitive_attr> shared_mkldnn_attr_t;
 
 /*
  * Rnn Primitive.
@@ -129,15 +172,17 @@ class RnnPrimitive {
    * lstm_forward, lbr_gru_forward, vanilla_rnn_forward
    */
   template<typename rnn_fwd, typename... Args>
-  static RnnPrimitive Create(Args&&... args) {
+  static RnnPrimitive Create(const shared_mkldnn_attr_t attr, Args&&... args) {
     RnnPrimitive rnn_fwd_prim;
     auto fwd_desc = typename rnn_fwd::desc(std::forward<Args>(args)...);
     rnn_fwd_prim.fwd_pd_.reset(
-      new typename rnn_fwd::primitive_desc(fwd_desc, CpuEngine::Get()->get_engine()),
-      [](typename rnn_fwd::primitive_desc* pd) {
+      new typename rnn_fwd::primitive_desc(fwd_desc,
+          attr ? *attr : mkldnn::primitive_attr(), CpuEngine::Get()->get_engine()),
+      [](void* pd) {
         delete reinterpret_cast<typename rnn_fwd::primitive_desc*>(pd);
       });
     auto fwd_pd = reinterpret_cast<typename rnn_fwd::primitive_desc*>(rnn_fwd_prim.fwd_pd_.get());
+    rnn_fwd_prim.attr_ = attr;
     rnn_fwd_prim.weights_layer_desc_ = fwd_pd->weights_layer_desc();
     rnn_fwd_prim.weights_iter_desc_  = fwd_pd->weights_iter_desc();
     rnn_fwd_prim.weights_proj_desc_  = fwd_pd->weights_projection_desc();
@@ -149,6 +194,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive() {
+    this->attr_ = nullptr;
     this->fwd_pd_ = nullptr;
     this->primitive_ = nullptr;
     this->weights_layer_desc_ = mkldnn::memory::desc();
@@ -158,6 +204,7 @@ class RnnPrimitive {
   }
 
   RnnPrimitive(const RnnPrimitive& rnn_fwd_prim) {
+    this->attr_ = rnn_fwd_prim.attr_;
     this->fwd_pd_ = rnn_fwd_prim.fwd_pd_;
     this->primitive_ = rnn_fwd_prim.primitive_;
     this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
@@ -168,6 +215,7 @@ class RnnPrimitive {
 
   RnnPrimitive& operator=(const RnnPrimitive& rnn_fwd_prim) {
     if (this != &rnn_fwd_prim) {
+      this->attr_ = rnn_fwd_prim.attr_;
       this->fwd_pd_ = rnn_fwd_prim.fwd_pd_;
       this->primitive_ = rnn_fwd_prim.primitive_;
       this->weights_layer_desc_ = rnn_fwd_prim.weights_layer_desc_;
@@ -198,30 +246,39 @@ class RnnPrimitive {
     return workspace_desc_;
   }
 
+  const mkldnn::primitive_attr& GetPrimAttr() const {
+    return *attr_;
+  }
+
  private:
   std::shared_ptr<void> fwd_pd_;
   std::shared_ptr<mkldnn::primitive> primitive_;
+  shared_mkldnn_attr_t attr_;
   mkldnn::memory::desc weights_layer_desc_;
   mkldnn::memory::desc weights_iter_desc_;
   mkldnn::memory::desc weights_proj_desc_;
   mkldnn::memory::desc workspace_desc_;
 };
 
-RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam &layer_param, const bool is_train,
-                           const NDArray &data, const NDArray &params);
+RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam &layer_param,
+                           const bool is_train,
+                           const NDArray &data,
+                           const NDArray &params,
+                           const shared_mkldnn_attr_t attr = nullptr);
 
 /*
  * Use this to manage memory and primitive of MKL-DNN RNN forward inference. 
  */
 class MKLDNNRnnForward {
  public:
-  MKLDNNRnnForward(const Context ctx,
+  MKLDNNRnnForward(const Context &ctx,
                    const MKLDNNRnnLayerParam &layer_param,
                    const bool is_train,
                    const NDArray &data,
-                   const NDArray &params)
+                   const NDArray &params,
+                   const shared_mkldnn_attr_t attr = nullptr)
       : ctx_(ctx), initialized_(false), param_(layer_param),
-        fwd_inf_(GetRnnFwdPrim(layer_param, false, data, params)) { }
+        fwd_inf_(GetRnnFwdPrim(layer_param, false, data, params, attr)) { }
 
   void SetNewDataMem(void* x, void* hx, void* cx,
                      void* y, void* hy, void* cy,
@@ -233,10 +290,14 @@ class MKLDNNRnnForward {
 
   const mkldnn::primitive& GetFwd() const { return fwd_inf_.GetPrim(); }
 
+  void ResetFwd(const NDArray &data, const NDArray &params, const shared_mkldnn_attr_t& attr) {
+    fwd_inf_ = GetRnnFwdPrim(this->param_, false, data, params, attr);
+  }
+
   const size_t GetSize() const {
     const size_t size = fwd_inf_.GetLayerDesc().get_size()
-                        + fwd_inf_.GetIterDesc().get_size()
-                        + fwd_inf_.GetProjDesc().get_size();
+        + fwd_inf_.GetIterDesc().get_size()
+        + fwd_inf_.GetProjDesc().get_size();
     return size;
   }
 
@@ -428,10 +489,10 @@ class MKLDNNRnnBackward {
  */
 class MKLDNNRnnOp {
  public:
-  explicit MKLDNNRnnOp(const RNNParam &param, const int seq_len,
+  explicit MKLDNNRnnOp(const nnvm::NodeAttrs &attrs, const int seq_len,
                        const int batch_size, const int input_size)
       : initialized_(false), weights_version_(0),
-        full_param_(MKLDNNRnnFullParamParser(param, seq_len, batch_size, input_size)) { }
+        full_param_(MKLDNNRnnFullParamParser(attrs, seq_len, batch_size, input_size)) { }
 
   void Forward(const OpContext &ctx,
                const std::vector<NDArray> &inputs,
