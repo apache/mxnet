@@ -60,6 +60,7 @@ class _RNNLayer(HybridBlock):
         self._lstm_state_clip_nan = lstm_state_clip_nan
         self._dtype = dtype
         self._use_sequence_length = use_sequence_length
+        self.skip_states = None
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 

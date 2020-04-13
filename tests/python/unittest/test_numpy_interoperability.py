@@ -178,6 +178,14 @@ def _add_workload_diagonal():
     OpArgMngr.add_workload('diagonal', B, 0, 2, 1)
 
 
+def _add_workload_median(array_pool):
+    OpArgMngr.add_workload('median', array_pool['4x1'])
+    OpArgMngr.add_workload('median', array_pool['4x1'], axis=0, keepdims=True)
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
+    OpArgMngr.add_workload('median', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
+
+
 def _add_workload_quantile():
     x1 = np.arange(8) * 0.5
     x2 = np.arange(100.)
@@ -489,6 +497,13 @@ def _add_workload_linalg_cholesky():
         OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
 
+def _add_workload_linalg_qr():
+    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
+    OpArgMngr.add_workload('linalg.qr', A)
+    # default mode in numpy is 'reduced'
+    OpArgMngr.add_workload('linalg.qr', A, mode='reduced')
+
+
 def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 0)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -624,6 +639,36 @@ def _add_workload_linalg_pinv():
             rcond_np = _np.random.uniform(0., 0.1, rcond_shape)
             rcond_np = _np.array(rcond_np, dtype=dtype)
             OpArgMngr.add_workload('linalg.pinv', np.array(a_np, dtype=dtype), np.array(rcond_np, dtype=dtype), hermitian)
+
+
+def _add_workload_linalg_lstsq():
+    shapes = [
+        ((0, 0), (0,)),
+        ((0, 0), (0, 0)),
+        ((4, 0), (4,)),
+        ((4, 0), (4, 2)),
+        ((0, 2), (0, 4)),
+        ((4, 2), (4, 0)),
+        ((0, 0), (0, 4)),
+        ((0, 2), (0, 0)),
+        ((4, 0), (4, 0)),
+        ((4, 2), (4,)),
+        ((4, 2), (4, 3)),
+        ((4, 6), (4, 3)),
+    ]
+    rconds = [None, "random", "warn"]
+    dtypes = (np.float32, np.float64)
+    for dtype, rcond in itertools.product(dtypes, rconds):
+        for a_shape, b_shape in shapes:
+            if rcond == "random":
+                rcond = _np.random.uniform(100, 200)
+            if rcond == "warn":
+                rcond = -1
+            a_np = _np.random.uniform(-10.0, 10.0, a_shape)
+            b_np = _np.random.uniform(-10.0, 10.0, b_shape)
+            a = np.array(a_np, dtype=dtype)
+            b = np.array(b_np, dtype=dtype)
+            OpArgMngr.add_workload('linalg.lstsq', a, b, rcond)
 
 
 def _add_workload_linalg_eigvals():
@@ -1246,6 +1291,13 @@ def _add_workload_outer():
     OpArgMngr.add_workload('outer', np.ones((5)), np.ones((2)))
 
 
+def _add_workload_kron():
+    OpArgMngr.add_workload('kron', np.ones((5)), np.ones((2)))
+    OpArgMngr.add_workload('kron', np.arange(16).reshape((4,4)), np.ones((4,4)))
+    OpArgMngr.add_workload('kron', np.ones((2,4)), np.zeros((2,4)))
+    OpArgMngr.add_workload('kron', np.ones(()), np.ones(()))
+
+
 def _add_workload_meshgrid():
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]))
     OpArgMngr.add_workload('meshgrid', np.array([1, 2, 3]), np.array([4, 5, 6, 7]))
@@ -1333,6 +1385,38 @@ def _add_workload_insert():
     OpArgMngr.add_workload('insert', a, slice(1, -2, -1), np.array([]))
     OpArgMngr.add_workload('insert', np.array([0, 1, 2]), np.array([1, 1, 1], dtype=np.int64), np.array([3, 4, 5]))
     OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
+
+
+def _add_workload_interp():
+    xp0 = np.linspace(0, 1, 5)
+    fp0 = np.linspace(0, 1, 5)
+    x0 = np.linspace(0, 1, 50)
+    xp1 = np.array([1, 2, 3, 4])
+    fp1 = np.array([1, 2, np.inf, 4])
+    x1 = np.array([1, 2, 2.5, 3, 4])
+    xp2 = np.arange(0, 10, 0.0001)
+    fp2 = np.sin(xp2)
+    xp3 = np.array([190, -190, 350, -350])
+    fp3 = np.array([5, 10, 3, 4])
+    x3 = np.array([-180, -170, -185, 185, -10, -5, 0, 365])
+
+    OpArgMngr.add_workload('interp', x0, xp0, fp0)
+    OpArgMngr.add_workload('interp', x1, xp1, fp1)
+    OpArgMngr.add_workload('interp', np.pi, xp2, fp2)
+    OpArgMngr.add_workload('interp', x3, xp3, fp3, period=360)
+    for size in range(1, 10):
+        xp = np.arange(size, dtype=np.float64)
+        fp = np.ones(size, dtype=np.float64)
+        incpts = np.array([-1, 0, size - 1, size], dtype=np.float64)
+        decpts = incpts[::-1]
+        OpArgMngr.add_workload('interp', incpts, xp, fp)
+        OpArgMngr.add_workload('interp', decpts, xp, fp)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0, right=2)
 
 
 def _add_workload_hypot():
@@ -2040,15 +2124,6 @@ def _add_workload_linalg_cond():
     OpArgMngr.add_workload('linalg.cond', A, 'fro')
 
 
-def _add_workload_linalg_lstsq():
-    y = np.array([-1, 0.2, 0.9, 2.1])
-    A = np.array([[ 0.,  1.],
-                  [ 1.,  1.],
-                  [ 2.,  1.],
-                  [ 3.,  1.]])
-    OpArgMngr.add_workload('linalg.lstsq', A, y, rcond=None)
-
-
 def _add_workload_linalg_matrix_power():
     i = np.array([[0, 1], [-1, 0]])
     OpArgMngr.add_workload('linalg.matrix_power', i, 3)
@@ -2068,13 +2143,6 @@ def _add_workload_linalg_multi_dot():
     F = np.ones((6,6))
     OpArgMngr.add_workload('linalg.multi_dot', E)
     OpArgMngr.add_workload('linalg.multi_dot', [F,F])
-
-
-
-def _add_workload_linalg_qr():
-    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
-    OpArgMngr.add_workload('linalg.qr', A)
-    OpArgMngr.add_workload('linalg.qr', A, mode='r')
 
 
 def _add_workload_heaviside():
@@ -2830,11 +2898,13 @@ def _prepare_workloads():
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
+    _add_workload_linalg_qr()
     _add_workload_linalg_inv()
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
     _add_workload_linalg_tensorinv()
     _add_workload_linalg_tensorsolve()
+    _add_workload_linalg_lstsq()
     _add_workload_linalg_pinv()
     _add_workload_linalg_eigvals()
     _add_workload_linalg_eig()
@@ -2842,14 +2912,13 @@ def _prepare_workloads():
     _add_workload_linalg_eigh()
     _add_workload_linalg_slogdet()
     _add_workload_linalg_cond()
-    _add_workload_linalg_lstsq()
     _add_workload_linalg_matrix_power()
     _add_workload_linalg_matrix_rank()
     _add_workload_linalg_multi_dot()
-    _add_workload_linalg_qr()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
+    _add_workload_kron()
     _add_workload_meshgrid()
     _add_workload_einsum()
     _add_workload_abs()
@@ -2861,6 +2930,7 @@ def _prepare_workloads():
     _add_workload_true_divide()
     _add_workload_inner()
     _add_workload_insert()
+    _add_workload_interp()
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_and()
@@ -2924,6 +2994,7 @@ def _prepare_workloads():
     _add_workload_diff()
     _add_workload_ediff1d()
     _add_workload_quantile()
+    _add_workload_median(array_pool)
     _add_workload_percentile()
     _add_workload_resize()
     _add_workload_full_like(array_pool)

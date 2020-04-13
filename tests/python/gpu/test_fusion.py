@@ -191,7 +191,10 @@ def check_other_ops():
     b = mx.sym.Variable('b')
     c = mx.sym.Variable('c')
     shape = rand_shape_2d()
-    shape = (5,) + shape
+    shape = list((5,) + shape)
+    # Make sure there is at least 2 elements for the test with negative indices
+    shape[1] += 1
+    shape[2] += 1
     arr1 = mx.random.uniform(shape=shape)
     arr2 = mx.random.uniform(shape=shape)
     arr3 = mx.random.uniform(shape=shape)
@@ -200,12 +203,23 @@ def check_other_ops():
 
     check_fused_symbol(mx.sym.slice_axis(a, axis=0, begin=1, end=4), a=arr1)
 
+    # Testing handling of negative axis
+    check_fused_symbol(mx.sym.slice_axis(a, axis=-3, begin=1, end=4), a=arr1)
+
     begin = (random.randint(0, shape[0]-1),
              random.randint(0, shape[1]-1),
              random.randint(0, shape[2]-1))
     end = (random.randint(begin[0]+1, shape[0]),
            random.randint(begin[1]+1, shape[1]),
            random.randint(begin[2]+1, shape[2]))
+    check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
+
+    begin = (random.randint(-shape[0], -2),
+             random.randint(-shape[1], -2),
+             random.randint(-shape[2], -2))
+    end = (random.randint(begin[0]+1, -1),
+           random.randint(begin[1]+1, -1),
+           random.randint(begin[2]+1, -1))
     check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
 
     arr1 = mx.random.uniform(shape=(2,3,4,5))

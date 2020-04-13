@@ -94,7 +94,7 @@ void ElementWiseSumCompute_(const nnvm::NodeAttrs& attrs,
       Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], in_0_dptr);
       for (size_t i = 1; i < size; ++i) {
         DType* in_dptr = in_data[i].dptr<DType>();
-        Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, req[0], out_dptr, in_dptr);
+        Kernel<Sum, xpu>::Launch(s, out_size, out_dptr, kWriteTo, out_dptr, in_dptr);
       }
       break;
     }
