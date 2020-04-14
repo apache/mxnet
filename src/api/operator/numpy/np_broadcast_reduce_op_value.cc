@@ -203,5 +203,6 @@ MXNET_REGISTER_API("_npi.prod")
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
-})
+});
+
 }  // namespace mxnet
