@@ -30,6 +30,29 @@
 
 namespace mxnet {
 
+inline int String2MXNetProdType(const std::string& s) {
+  using namespace op;
+  if (s == "float16") {
+    return mshadow::kFloat16;
+  } else if (s == "float32") {
+    return mshadow::kFloat32;
+  } else if (s == "float64") {
+    return mshadow::kFloat64;
+  } else if (s == "int8") {
+    return mshadow::kInt8;
+  } else if (s == "int32") {
+    return mshadow::kInt32;
+  } else if (s == "int64") {
+    return mshadow::kInt64;
+  } else if (s == "bool") {
+    return mshadow::kBool;
+  } else {
+    LOG(FATAL) << "unknown type " << s;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return 0;
+}
+
 MXNET_REGISTER_API("_npi.broadcast_to")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
@@ -150,4 +173,35 @@ MXNET_REGISTER_API("_npi.mean")
   }
 });
 
+MXNET_REGISTER_API("_npi.prod")
+.set_body([](runtime::MXNetArgs, args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_prod");
+  nnvm::NodeAttrs attrs;
+  op::NumpyReduceAxesParam param;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  if (args[2].type_code() == kNull) {
+    param.dtype = dmlc::nullopt;
+  } else {
+    param.dtype = String2MXNetProdType(args[2].operator std::string());
+  }
+  param.keepdims = args[3].operator bool();
+  if (args[4].type_code() == kDLFloat) {
+    param.initial = args[4].operator float();
+  } else {
+    param.initial = dmlc::nullopt;
+  }
+  attrs.op = op;
+  attrs.parsed = std::move(param);
+  SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
+  int num_inputs = 1;
+  int num_outputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+})
 }  // namespace mxnet
