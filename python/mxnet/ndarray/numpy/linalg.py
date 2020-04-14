@@ -22,8 +22,53 @@ from . import _op as _mx_nd_np
 from . import _internal as _npi
 from . import _api_internal
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
+__all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+
+
+def matrix_rank(M, tol=None, hermitian=False):
+    """
+    Return matrix rank of array using SVD method
+
+    Rank of the array is the number of singular values of the array that are
+    greater than `tol`.
+
+    Parameters
+    M : {(M,), (..., M, N)} ndarray
+        Input vector or stack of matrices.
+    tol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    hermitian : bool, optional
+        If True, `M` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    rank : (...) ndarray
+        Rank of M.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    4
+    >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
+    >>> np.matrix_rank(I)
+    3
+    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    1
+    >>> np.matrix_rank(np.zeros((4,)))
+    0
+    """
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    if hermitian is True:
+        raise NotImplementedError("hermitian is not supported yet...")
+    return _api_internal.matrix_rank(M, tol, hermitian, finfo_eps_32, finfo_eps_64)
 
 
 def lstsq(a, b, rcond='warn'):
@@ -94,13 +139,9 @@ def lstsq(a, b, rcond='warn'):
     >>> m, c
     (1.0 -0.95) # may vary
     """
-    new_default = False
-    if rcond is None:
-        rcond = _np.finfo(a.dtype).eps
-        new_default = True
-    if rcond == "warn":
-        rcond = -1
-    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    x, residuals, rank, s = _api_internal.lstsq(a, b, rcond, finfo_eps_32, finfo_eps_64)
     return (x, residuals, rank, s)
 
 
@@ -469,6 +510,65 @@ def cholesky(a):
     return _api_internal.cholesky(a, True)
 
 
+def qr(a, mode='reduced'):
+    r"""
+    Compute the qr factorization of a matrix a.
+    Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        Matrix or stack of matrices to be qr factored.
+    mode: {‘reduced’, ‘complete’, ‘r’, ‘raw’, ‘full’, ‘economic’}, optional
+        Only default mode, 'reduced', is implemented. If K = min(M, N), then
+        * 'reduced’ : returns q, r with dimensions (M, K), (K, N) (default)
+
+    Returns
+    -------
+    q : (..., M, K) ndarray
+        A matrix or stack of matrices with K orthonormal columns, with K = min(M, N).
+    r : (..., K, N) ndarray
+        A matrix or stack of upper triangular matrices.
+
+    Raises
+    ------
+    MXNetError
+        If factoring fails.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.random.uniform(-10, 10, (2, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.22121978, -0.97522414],
+           [-0.97522414,  0.22121954]])
+    >>> r
+    array([[-4.4131265 , -7.1255064 ],
+           [ 0.        , -0.28771925]])
+    >>> a = np.random.uniform(-10, 10, (2, 3))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.28376842, -0.9588929 ],
+           [-0.9588929 ,  0.28376836]])
+    >>> r
+    array([[-7.242763  , -0.5673361 , -2.624416  ],
+           [ 0.        , -7.297918  , -0.15949416]])
+    >>> a = np.random.uniform(-10, 10, (3, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.34515655,  0.10919492],
+           [ 0.14765628, -0.97452265],
+           [-0.92685735, -0.19591334]])
+    >>> r
+    array([[-8.453794,  8.4175  ],
+           [ 0.      ,  5.430561]])
+    """
+    if mode is not None and mode != 'reduced':
+        raise NotImplementedError("Only default mode='reduced' is implemented.")
+    return tuple(_api_internal.qr(a))
+
+
 def inv(a):
     r"""
     Compute the (multiplicative) inverse of a matrix.
@@ -552,7 +652,7 @@ def det(a):
     >>> np.linalg.det(a)
     array([-2., -3., -8.])
     """
-    return _npi.det(a)
+    return _api_internal.det(a)
 
 
 def slogdet(a):
@@ -618,7 +718,7 @@ def slogdet(a):
     >>> np.linalg.slogdet(np.eye(500) * 0.1)
     (1., -1151.2925464970228)
     """
-    return _npi.slogdet(a)
+    return tuple(_api_internal.slogdet(a))
 
 
 def solve(a, b):
@@ -970,7 +1070,7 @@ def eig(a):
            [ 0.13086087, -0.04077047, -0.9325615 ],
            [ 0.4021404 , -0.29585576,  0.26117516]])
     """
-    w, v = _npi.eig(a)
+    w, v = _api_internal.eig(a)
     return (w, v)
 
 
@@ -1038,5 +1138,5 @@ def eigh(a, UPLO='L'):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
-    w, v = _npi.eigh(a, UPLO)
+    w, v = _api_internal.eigh(a, UPLO)
     return (w, v)

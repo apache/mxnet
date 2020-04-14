@@ -165,6 +165,8 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.eig',
     'linalg.eigvalsh',
     'linalg.eigh',
+    'linalg.qr',
+    'linalg.matrix_rank',
     'shape',
     'trace',
     'tril',

@@ -1418,7 +1418,7 @@ nightly_test_imagenet_inference() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     echo $PWD
-    cp /work/mxnet/build/cpp-package/example/imagenet_inference /work/mxnet/cpp-package/example/inference/
+    cp /work/mxnet/build/cpp-package/example/inference/imagenet_inference /work/mxnet/cpp-package/example/inference/
     cd /work/mxnet/cpp-package/example/inference/
     ./unit_test_imagenet_inference.sh
 }

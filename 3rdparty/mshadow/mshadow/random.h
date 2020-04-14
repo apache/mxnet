@@ -55,13 +55,13 @@ class Random<cpu, DType> {
 #if MSHADOW_IN_CXX11
     rnd_engine_.seed(seed);
 #endif
-    this->rseed_ = static_cast<unsigned>(seed);
+    this->rseed_ = static_cast<uint64_t>(seed);
   }
   /*!
    * \brief get random seed used in random generator
    * \return seed in unsigned
    */
-  inline unsigned GetSeed() const {
+  inline uint64_t GetSeed() const {
     return rseed_;
   }
   /*!
@@ -274,7 +274,7 @@ class Random<cpu, DType> {
   /*! \brief use c++11 random engine. */
   std::mt19937 rnd_engine_;
   /*! \brief random number seed used in random engine */
-  unsigned rseed_;
+  uint64_t rseed_;
 
 #else
 
@@ -404,7 +404,15 @@ class Random<gpu, DType> {
     // Now set the seed.
     curandStatus_t status;
     status = curandSetPseudoRandomGeneratorSeed(gen_, static_cast<uint64_t>(seed));
+    this->rseed_ = static_cast<uint64_t>(seed);
     CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "Set CURAND seed failed.";
+  }
+  /*!
+    * \brief get random seed used in random generator
+    * \return seed in unsigned
+    */
+  inline uint64_t GetSeed() const {
+    return rseed_;
   }
   /*!
    * \brief get a set of random integers
@@ -466,6 +474,7 @@ class Random<gpu, DType> {
   uniform(Shape<dim> shape);
 
  private:
+  uint64_t rseed_;
   inline void GenGaussian(float *dptr, size_t size, float mu, float sigma) {
     curandStatus_t status;
     status = curandGenerateNormal(gen_, dptr, size, mu, sigma);

@@ -54,7 +54,7 @@ class SafeDockerClient:
         return cid[:12]
 
     def __init__(self):
-        self._docker_client = docker.from_env()
+        self._docker_client = docker.from_env(timeout=None)
         self._containers = set()
         self._docker_stop_timeout = DOCKER_STOP_TIMEOUT_SECONDS
         self._container_wait_seconds = CONTAINER_WAIT_SECONDS

@@ -497,6 +497,13 @@ def _add_workload_linalg_cholesky():
         OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
 
 
+def _add_workload_linalg_qr():
+    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
+    OpArgMngr.add_workload('linalg.qr', A)
+    # default mode in numpy is 'reduced'
+    OpArgMngr.add_workload('linalg.qr', A, mode='reduced')
+
+
 def _add_workload_linalg_inv():
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 0)), dtype=np.float32))
     OpArgMngr.add_workload('linalg.inv', np.array(_np.ones((0, 1, 1)), dtype=np.float64))
@@ -2106,12 +2113,29 @@ def _add_workload_linalg_matrix_power():
 
 
 def _add_workload_linalg_matrix_rank():
-    a = np.eye(4)
-    b = a; b[-1,-1] = 0
-    c = np.ones((4,))
-    OpArgMngr.add_workload('linalg.matrix_rank', a)
-    OpArgMngr.add_workload('linalg.matrix_rank', b)
-    OpArgMngr.add_workload('linalg.matrix_rank', c)
+    shapes = [
+        ((4, 3), ()),
+        ((4, 3), (1,)),
+        ((4, 3), (2, 3,)),
+        ((2, 1, 1), (1,)),
+        ((2, 3, 3), (2,)),
+        ((2, 3, 1, 1), ()),
+        ((2, 3, 4, 4), (1, 3)),
+        ((2, 3, 4, 5), (2, 3)),
+        ((2, 3, 5, 4), (2, 3)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, tol_shape in shapes:
+            for tol_is_none in [True, False]:
+                a_np = _np.asarray(_np.random.uniform(-10., 10., a_shape))
+                a = np.array(a_np, dtype=dtype)
+                if tol_is_none:
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, None, False)
+                else:
+                    tol_np = _np.random.uniform(10., 20., tol_shape)
+                    tol = np.array(tol_np, dtype=dtype)
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, tol, False)
 
 
 def _add_workload_linalg_multi_dot():
@@ -2119,13 +2143,6 @@ def _add_workload_linalg_multi_dot():
     F = np.ones((6,6))
     OpArgMngr.add_workload('linalg.multi_dot', E)
     OpArgMngr.add_workload('linalg.multi_dot', [F,F])
-
-
-
-def _add_workload_linalg_qr():
-    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
-    OpArgMngr.add_workload('linalg.qr', A)
-    OpArgMngr.add_workload('linalg.qr', A, mode='r')
 
 
 def _add_workload_heaviside():
@@ -2881,6 +2898,7 @@ def _prepare_workloads():
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
+    _add_workload_linalg_qr()
     _add_workload_linalg_inv()
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
@@ -2897,7 +2915,6 @@ def _prepare_workloads():
     _add_workload_linalg_matrix_power()
     _add_workload_linalg_matrix_rank()
     _add_workload_linalg_multi_dot()
-    _add_workload_linalg_qr()
     _add_workload_trace()
     _add_workload_tril()
     _add_workload_outer()
