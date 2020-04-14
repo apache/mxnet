@@ -722,6 +722,23 @@ def _add_workload_tril():
         OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
 
 
+def _add_workload_triu():
+    OpArgMngr.add_workload('triu', np.random.uniform(size=(4, 1)))
+    for dt in ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8']:
+        OpArgMngr.add_workload('triu', np.ones((2, 2), dtype=dt))
+        a = np.array([
+            [[1, 1], [1, 1]],
+            [[1, 1], [1, 0]],
+            [[1, 1], [0, 0]],
+        ], dtype=dt)
+        OpArgMngr.add_workload('triu', a)
+        arr = np.array([[1, 1, np.inf],
+                        [1, 1, 1],
+                        [np.inf, 1, 1]])
+        OpArgMngr.add_workload('triu', arr)
+        OpArgMngr.add_workload('triu', np.zeros((3, 3), dtype=dt))
+
+
 def _add_workload_einsum():
     chars = 'abcdefghij'
     sizes = [2, 3, 4, 5, 4, 3, 2, 6, 5, 4]
