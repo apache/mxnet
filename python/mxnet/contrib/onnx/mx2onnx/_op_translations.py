@@ -1619,7 +1619,7 @@ def convert_slice_axis(node, **kwargs):
     """Map MXNet's slice_axis operator attributes to onnx's Slice operator
     and return the created node.
     """
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, input_shapes, attrs = get_inputs(node, kwargs, with_shapes=True)
 
     axes = int(attrs.get("axis"))
     starts = int(attrs.get("begin"))
@@ -1627,7 +1627,7 @@ def convert_slice_axis(node, **kwargs):
     if not ends or ends == 'None':
         # ONNX doesn't support None for ends. Since ends=None depicts
         # length of dimension, passing dimension in this case.
-        in_shape = kwargs['in_shape'][0]
+        in_shape = input_shapes[0]
         ends = in_shape[axes]
 
     export_nodes = []
@@ -1666,7 +1666,7 @@ def convert_slice_channel(node, **kwargs):
     operator based on squeeze_axis attribute
     and return the created node.
     """
-    name, input_nodes, attrs = get_inputs(node, kwargs)
+    name, input_nodes, input_shapes, attrs = get_inputs(node, kwargs, with_shapes=True)
 
     num_outputs = int(attrs.get("num_outputs"))
     axis = int(attrs.get("axis", 1))
@@ -1682,7 +1682,7 @@ def convert_slice_channel(node, **kwargs):
         )
         return [node]
     elif squeeze_axis == 0 and num_outputs > 1:
-        in_shape = kwargs.get('in_shape')[0]
+        in_shape = input_shapes[0]
         split = in_shape[axis] // num_outputs
         node = onnx.helper.make_node(
             "Split",
