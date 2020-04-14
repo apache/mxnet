@@ -41,14 +41,33 @@ using namespace mshadow;
 
 struct LstsqParam : public dmlc::Parameter<LstsqParam> {
   double rcond;
+  float finfoEps32;
+  double finfoEps64;
   bool new_default;
   DMLC_DECLARE_PARAMETER(LstsqParam) {
     DMLC_DECLARE_FIELD(rcond)
     .set_default(-1)
     .describe("Cut-off ratio for small singular values");
+    DMLC_DECLARE_FIELD(finfoEps32)
+    .set_default(0)
+    .describe("Machine limits for float32 type");
+    DMLC_DECLARE_FIELD(finfoEps64)
+    .set_default(0)
+    .describe("Machine limits for float64 type");
     DMLC_DECLARE_FIELD(new_default)
     .set_default(false)
     .describe("Specifies whether rcond is default which is machine precision");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream rcond_s, finfoEps32_s, finfoEps64_s, new_default_s;
+    rcond_s << rcond;
+    finfoEps32_s << finfoEps32;
+    finfoEps64_s << finfoEps64;
+    new_default_s << new_default;
+    (*dict)["rcond"] = rcond_s.str();
+    (*dict)["finfoEps32"] = finfoEps32_s.str();
+    (*dict)["finfoEps64"] = finfoEps64_s.str();
+    (*dict)["new_default"] = new_default_s.str();
   }
 };
 
@@ -335,10 +354,12 @@ void LstsqOpForwardImpl(const TBlob& a,
                         const OpContext& ctx,
                         const std::vector<OpReqType>& req) {
   // Get param.
-  double rcond = nnvm::get<LstsqParam>(attrs.parsed).rcond;
-  bool new_default = nnvm::get<LstsqParam>(attrs.parsed).new_default;
+  const LstsqParam& param = nnvm::get<LstsqParam>(attrs.parsed);
+  double rcond = param.rcond;
+  bool new_default = param.new_default;
+  double finfoEps = a.type_flag_ == mshadow::kFloat32 ? param.finfoEps32 : param.finfoEps64;
   if (new_default) {
-    rcond *= std::max(a.shape_[0], a.shape_[1]);
+    rcond = finfoEps * std::max(a.shape_[0], a.shape_[1]);
   }
   const mxnet::TShape& a_shape = a.shape_;
   const mxnet::TShape& b_shape = b.shape_;

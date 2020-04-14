@@ -5689,6 +5689,83 @@ def test_np_linalg_lstsq():
 
 @with_seed()
 @use_np
+def test_np_linalg_matrix_rank():
+    class TestMatrixRank(HybridBlock):
+        def __init__(self, hermitian):
+            super(TestMatrixRank, self).__init__()
+            self._hermitian = hermitian
+
+        def hybrid_forward(self, F, M, tol=None):
+            return F.np.linalg.matrix_rank(M, tol, hermitian=self._hermitian)
+
+    def check_matrix_rank(rank, a_np, tol, hermitian):
+        try:
+            rank_expected = _np.linalg.matrix_rank(a_np, tol=tol, hermitian=hermitian)
+        except Exception as e:
+            print("a:", a_np)
+            print("a shape:", a_np.shape)
+            print(e)
+        else:
+            if a_np.ndim < 2:
+                assert rank.shape == _np.asarray(rank_expected).shape
+            else:
+                assert rank.shape == rank_expected.shape
+            assert_almost_equal(rank.asnumpy(), rank_expected, rtol=rtol, atol=atol)
+
+    shapes = [
+        ((), ()),
+        ((1,), (1,)),
+        ((3,), (1,)),
+        ((1, 1), ()),
+        ((1, 1), (1,)),
+        ((3, 3), (1,)),
+        ((3, 4), (1,)),
+        ((4, 3), ()),
+        ((4, 3), (1,)),
+        ((4, 3), (2,)),
+        ((4, 3), (2, 3,)),
+        ((2, 1, 1), ()),
+        ((2, 1, 1), (1,)),
+        ((2, 3, 3), (2,)),
+        ((2, 3, 4), (1,)),
+        ((2, 4, 3), (2,)),
+        ((2, 3, 1, 1), ()),
+        ((2, 3, 1, 1), (1, 1)),
+        ((2, 3, 1, 1), (2, 1)),
+        ((2, 3, 4, 4), (1, 3)),
+        ((2, 3, 4, 5), (2, 1)),
+        ((2, 3, 5, 4), (1, 3)),
+        ((2, 3, 1, 1), (2, 3)),
+        ((2, 3, 4, 4), (2, 3)),
+        ((2, 3, 4, 5), (2, 3)),
+        ((2, 3, 5, 4), (2, 3)),
+    ]
+    dtypes = ['float32', 'float64']
+    for dtype in dtypes:
+        for a_shape, tol_shape in shapes:
+            for tol_is_none, hybridize in itertools.product([True, False], [True, False]):
+                rtol = 1e-3
+                atol = 1e-5
+                test_matrix_rank = TestMatrixRank(hermitian=False)
+                if hybridize:
+                    test_matrix_rank.hybridize()
+
+                a_np = _np.asarray(_np.random.uniform(-10., 10., a_shape))
+                a = np.array(a_np, dtype=dtype)
+                if tol_is_none:
+                    rank = test_matrix_rank(a)
+                    # check matrix_rank validity
+                    check_matrix_rank(rank, a.asnumpy(), tol=None, hermitian=False)
+                else:
+                    tol_np = _np.random.uniform(10., 20., tol_shape)
+                    tol = np.array(tol_np, dtype=dtype)
+                    rank = test_matrix_rank(a, tol)
+                    # check matrix_rank validity
+                    check_matrix_rank(rank, a.asnumpy(), tol.asnumpy(), hermitian=False)
+
+
+@with_seed()
+@use_np
 def test_np_linalg_pinv():
     class TestPinv(HybridBlock):
         def __init__(self, hermitian):
