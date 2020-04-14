@@ -62,6 +62,8 @@ def prepare_workloads():
     OpArgMngr.add_workload("add", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("linalg.svd", pool['3x3'])
     OpArgMngr.add_workload("linalg.cholesky", pool['1x1'])
+    OpArgMngr.add_workload("linalg.qr", pool['3x3'])
+    OpArgMngr.add_workload("linalg.lstsq", pool['2x1'], pool['2'], rcond=None)
     OpArgMngr.add_workload("linalg.eigvals", pool['1x1'])
     OpArgMngr.add_workload("linalg.eigvalsh", pool['1x1'], UPLO='L')
     OpArgMngr.add_workload("linalg.inv", pool['1x1'])
