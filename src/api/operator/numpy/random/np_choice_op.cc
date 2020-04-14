@@ -18,70 +18,63 @@
  */
 
 /*!
- * \file np_laplace_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy/random/np_laplace_op.cc
+ * \file np_choice_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/np_choice_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../../utils.h"
-#include "../../../../operator/numpy/random/np_laplace_op.h"
+#include "../../../../operator/numpy/random/np_choice_op.h"
 
 namespace mxnet {
 
-MXNET_REGISTER_API("_npi.laplace")
+MXNET_REGISTER_API("_npi.choice")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_laplace");
+  const nnvm::Op* op = Op::Get("_npi_choice");
   nnvm::NodeAttrs attrs;
-  op::NumpyLaplaceParam param;
+  op::NumpyChoiceParam param;
 
-  NDArray** inputs = new NDArray*[2]();
+  NDArray* inputs[2];
   int num_inputs = 0;
 
-  if (args[0].type_code() == kNull) {
-    param.loc = dmlc::nullopt;
+  if (args[0].type_code() == kDLInt) {
+    param.a = args[0].operator int();
   } else if (args[0].type_code() == kNDArrayHandle) {
-    param.loc = dmlc::nullopt;
-    inputs[num_inputs] = args[0].operator mxnet::NDArray *();
+    param.a = dmlc::nullopt;
+    inputs[num_inputs] = args[0].operator mxnet::NDArray*();
     num_inputs++;
-  } else {
-    param.loc = args[0].operator double();  // convert arg to T
   }
 
   if (args[1].type_code() == kNull) {
-    param.scale = dmlc::nullopt;
-  } else if (args[1].type_code() == kNDArrayHandle) {
-    param.scale = dmlc::nullopt;
-    inputs[num_inputs] = args[1].operator mxnet::NDArray *();
-    num_inputs++;
-  } else {
-    param.scale = args[1].operator double();  // convert arg to T
-  }
-
-  if (args[2].type_code() == kNull) {
     param.size = dmlc::nullopt;
   } else {
-    if (args[2].type_code() == kDLInt) {
-      param.size = mxnet::Tuple<int>(1, args[2].operator int64_t());
+    if (args[1].type_code() == kDLInt) {
+      param.size = mxnet::Tuple<int64_t>(1, args[1].operator int64_t());
     } else {
-      param.size = mxnet::Tuple<int>(args[2].operator ObjectRef());
+      param.size = mxnet::Tuple<int64_t>(args[1].operator ObjectRef());
     }
   }
 
-  if (args[3].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+  if (args[2].type_code() == kNull) {
+    param.replace = true;
   } else {
-    param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
+    param.replace = args[2].operator bool();
   }
+
+  if (args[3].type_code() == kNull) {
+    param.weighted = false;
+  } else if (args[0].type_code() == kNDArrayHandle) {
+    param.weighted = true;
+    inputs[num_inputs] = args[3].operator mxnet::NDArray*();
+    num_inputs++;
+  }
+
   attrs.parsed = std::move(param);
   attrs.op = op;
-  SetAttrDict<op::NumpyLaplaceParam>(&attrs);
   if (args[4].type_code() != kNull) {
     attrs.dict["ctx"] = args[4].operator std::string();
   }
-
-  inputs = inputs == nullptr ? nullptr : inputs;
-
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
