@@ -120,6 +120,8 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
                        lloader.separate()[i]);
       }
 
+      printf("thread %d %d %d: %d %d %d %f %f %f\n", threadIdx.x, blockIdx.x, idx, lindex, rindex, i, (float)lloader.separate()[i], (float)rinput, (float)temp);
+
       if (req == kAddTo) {
         storer.separate()[i] += temp;
       } else {
@@ -165,6 +167,18 @@ class VectorizedBinaryBroadcastFwd {
   }
 };
 
+inline void PrintTensor(const TBlob& blob, const std::string& name) {
+  const index_t size = blob.shape_.Size();
+  float* temp = new float[size];
+  cudaMemcpy(temp, blob.dptr_, size * sizeof(float), cudaMemcpyDeviceToHost);
+  std::cout << name << std::endl;
+  for (int i = 0; i < size; ++i) {
+    std::cout << i << ": " << temp[i] << std::endl;
+  }
+  std::cout << "End: " << name << std::endl;
+  delete[] temp;
+}
+
 template<int ndim, typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
@@ -175,6 +189,11 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
 
   Shape<ndim> lstride = mxnet_op::calc_stride(lhs.shape_.get<ndim>());
   Shape<ndim> rstride = mxnet_op::calc_stride(rhs.shape_.get<ndim>());
+  std::cout << "lshape: " << lhs.shape_ << std::endl;
+  std::cout << "rshape: " << rhs.shape_ << std::endl;
+  PrintTensor(lhs, "lhs");
+  PrintTensor(rhs, "rhs");
+
   MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     using LType = uint2;
     using Kernel = VectorizedBinaryBroadcastFwd<DType, OP, Req, ndim>;
@@ -187,6 +206,8 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
     param.stride[0] = lstride;
     param.stride[1] = rstride;
     param.oshape = out.shape_.get<ndim>();
+    param.size[0] = lhs.shape_.Size();
+    param.size[1] = rhs.shape_.Size();
 
     for (int i = ndim - 1; i >= 0; --i) {
       /* Find the first non-1 dimension
@@ -204,6 +225,7 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
 
     VectorizedKernelLauncher<DType, LType, Kernel>(N, s, param);
   });
+  PrintTensor(out, "out");
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
