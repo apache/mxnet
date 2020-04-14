@@ -181,8 +181,8 @@ MXNET_REGISTER_API("_npi.prod")
   op::NumpyReduceAxesParam param;
   if (args[1].type_code() == kNull) {
     param.axis = dmlc::nullopt;
-  } else if (args[1].type_code() ==kDLInt) {
-    param.axis = args[1].operator int();
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
   } else {
     param.axis = Tuple<int>(args[1].operator ObjectRef());
   }
