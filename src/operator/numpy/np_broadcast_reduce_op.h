@@ -36,7 +36,7 @@
 namespace mxnet {
 namespace op {
 
-inline std::string MXNetReduceAxesType2String(const int s) {
+inline std::string MXNetReduceAxesType2String(const dmlc::optional<int> s) {
   using namespace op;
   if (s == mshadow::kFloat16) {
     return "float16";
