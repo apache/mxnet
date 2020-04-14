@@ -1685,6 +1685,60 @@ def convert_cast(node, **kwargs):
     return [node]
 
 
+@mx_op.register("slice_like")
+def convert_slice_like(node, **kwargs):
+    """Map MXNet's slice_like operator attributes to onnx's Slice operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    export_nodes = []
+
+    data_node = input_nodes[0]
+    shape_like_node = input_nodes[1]
+    shape_node = create_helper_shape_node(
+        shape_like_node, shape_like_node + "__shape"
+    )
+    export_nodes.extend(shape_node)
+    shape_node = shape_node[-1].name
+
+    if "axes" in attrs:
+        axes = convert_string_to_list(attrs["axes"])
+        axes = np.asarray(axes, dtype=np.int)
+        axes_node = create_helper_tensor_node(axes, name + "__axes", kwargs)
+        export_nodes.extend(axes_node)
+        axes_node = axes_node[-1].name
+
+        shape_node = create_helper_gather_node(
+            shape_node,
+            shape_node + "__gathered",
+            axes,
+            kwargs
+        )
+        export_nodes.extend(shape_node)
+        shape_node = shape_node[-1].name
+
+        starts = np.zeros_like(axes, dtype=np.int)
+        starts_node = create_helper_tensor_node(starts, name + "__starts", kwargs)
+        export_nodes.extend(starts_node)
+        starts_node = starts_node[-1].name
+    else:
+        raise NotImplementedError(
+            "Conversion of slice_like nodes with implicit axes parameter "
+            "to ONNX is currently not supported."
+        )
+
+    node = onnx.helper.make_node(
+        "Slice",
+        [data_node, starts_node, shape_node, axes_node],
+        [name],
+        name=name,
+    )
+    export_nodes.extend([node])
+
+    return export_nodes
+
+
 @mx_op.register("slice_axis")
 def convert_slice_axis(node, **kwargs):
     """Map MXNet's slice_axis operator attributes to onnx's Slice operator

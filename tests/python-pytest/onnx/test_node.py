@@ -297,6 +297,7 @@ export_test_cases = [
     ("test_lesser_scalar", "Less", mx.sym._internal._lesser_scalar, [(2, 1, 3, 1)], {'scalar': 0}),
     ("test_greater_scalar", "Greater", mx.sym._internal._greater_scalar, [(2, 1, 3, 1)], {'scalar': 0}),
     ("test_equal_scalar", "Equal", mx.sym._internal._equal_scalar, [(2, 1, 3, 1)], {'scalar': 0}),
+    ("test_slice_like", "Slice", mx.sym.slice_like, [(2, 10, 20), (7, 5, 3)], {'axes': (1, 2)}),
 ]
 
 if __name__ == '__main__':
