@@ -1969,6 +1969,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-7/enable
+    export USE_SYSTEM_CUDA=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd

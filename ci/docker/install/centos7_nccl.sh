@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,28 +17,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM nvidia/cuda:10.1-cudnn7-devel-centos7
+set -ex
 
-WORKDIR /work/deps
 
-COPY install/centos7_base.sh /work/
-RUN /work/centos7_base.sh
-COPY install/centos7_ccache.sh /work/
-RUN /work/centos7_ccache.sh
-COPY install/centos7_python.sh /work/
-RUN /work/centos7_python.sh
-COPY install/centos7_scala.sh /work/
-RUN /work/centos7_scala.sh
-ENV SHORT_CUDA_VERSION=10.1
-ENV SHORT_NCCL_VERSION=2.4.8
-COPY install/centos7_nccl.sh /work/
-RUN /work/centos7_nccl.sh
+if [ -z ${SHORT_CUDA_VERSION} ]; then
+    echo "Error: SHORT_CUDA_VERSION environment variable undefined"
+    exit 1
+fi
+if [ -z ${SHORT_NCCL_VERSION} ]; then
+    echo "Error: SHORT_NCCL_VERSION environment variable undefined"
+    exit 1
+fi
 
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
+curl -fsSL https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/x86_64/nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm -O
+rpm -i nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm
+yum check-update || true  # exit code 100 in case of available updates
+yum install -y libnccl-${SHORT_NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} libnccl-devel-${SHORT_NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} libnccl-static-${SHORT_NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION}
