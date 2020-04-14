@@ -1864,6 +1864,13 @@ def convert_squeeze(node, **kwargs):
     return [node]
 
 
+@mx_op.register("where")
+def convert_where(node, **kwargs):
+    """Map MXNet's Where operator attributes to onnx's Where operator.
+    """
+    return create_basic_op_node("Where", node, kwargs)
+
+
 @mx_op.register("log")
 def convert_log(node, **kwargs):
     """Map MXNet's log operator attributes to onnx's Log operator
