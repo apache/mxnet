@@ -25,7 +25,6 @@
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
-#include "../../../operator/tensor/broadcast_reduce_op.h"
 #include "../../../operator/numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
