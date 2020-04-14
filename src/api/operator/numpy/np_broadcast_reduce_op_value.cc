@@ -181,23 +181,22 @@ MXNET_REGISTER_API("_npi.prod")
   op::NumpyReduceAxesParam param;
   if (args[1].type_code() == kNull) {
     param.axis = dmlc::nullopt;
+  } else if (args[1].type_code() ==kDLInt) {
+    param.axis = args[1].operator int();
   } else {
     param.axis = Tuple<int>(args[1].operator ObjectRef());
   }
-  std::cout<<"!!!!"
   if (args[2].type_code() == kNull) {
     param.dtype = dmlc::nullopt;
   } else {
     param.dtype = String2MXNetProdType(args[2].operator std::string());
   }
-  std::cout<<"!!!!"
   param.keepdims = args[3].operator bool();
   if (args[4].type_code() == kNull) {
     param.initial = dmlc::nullopt;
   } else {
     param.initial = args[4].operator double();
   }
-  std::cout<<"!!!!"
   attrs.op = op;
   attrs.parsed = std::move(param);
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
