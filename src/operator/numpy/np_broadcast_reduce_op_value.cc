@@ -242,7 +242,7 @@ NNVM_REGISTER_OP(_npi_prod)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_prod"});
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_npi_prod"});
 
 NNVM_REGISTER_OP(_backward_npi_prod)
 .set_num_inputs(3)
