@@ -190,10 +190,10 @@ MXNET_REGISTER_API("_npi.prod")
     param.dtype = String2MXNetProdType(args[2].operator std::string());
   }
   param.keepdims = args[4].operator bool();
-  if (args[5].type_code() == kDLFloat) {
-    param.initial = args[5].operator double();
-  } else {
+  if (args[5].type_code() == kNull) {
     param.initial = dmlc::nullopt;
+  } else {
+    param.initial = args[5].operator double();
   }
   attrs.op = op;
   attrs.parsed = std::move(param);

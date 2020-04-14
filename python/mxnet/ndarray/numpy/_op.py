@@ -8783,7 +8783,7 @@ def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None):
     >>> np.prod([1, 2], initial=5)
     10
     """
-    return _api_internal.prod(a, axis=axis, dtype=dtype, keepdims=keepdims)
+    return _api_internal.prod(a, axis, dtype, out, keepdims, initial, out)
 
 
 @set_module('mxnet.ndarray.numpy')
