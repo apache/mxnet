@@ -1181,6 +1181,12 @@ def scalar_op_helper(node, op_name, **kwargs):
                     new_initializer = numpy_helper.to_array(i) / scalar_value[0]
             elif op_name == 'Pow':
                 new_initializer = numpy_helper.to_array(i) ** scalar_value[0]
+            elif op_name == 'Less':
+                new_initializer = numpy_helper.to_array(i) < scalar_value[0]
+            elif op_name == 'Greater':
+                new_initializer = numpy_helper.to_array(i) > scalar_value[0]
+            elif op_name == 'Equal':
+                new_initializer = numpy_helper.to_array(i) == scalar_value[0]
             flag = False
             break
 
@@ -1215,6 +1221,9 @@ def scalar_op_helper(node, op_name, **kwargs):
 
         new_a_node = input_nodes[0] + str(kwargs["idx"])
         tensor_node = onnx.helper.make_tensor_value_info(new_a_node, data_type, dims)
+
+        if isinstance(new_initializer, np.ndarray):
+            new_initializer = new_initializer.flatten()
 
         initializer.append(
             onnx.helper.make_tensor(
@@ -1287,6 +1296,30 @@ def convert_pow_scalar(node, **kwargs):
     and return multiple created nodes.
     """
     return scalar_op_helper(node, 'Pow', **kwargs)
+
+@mx_op.register("_lesser_scalar")
+def convert_lesser_scalar(node, **kwargs):
+    """Map MXNet's _lesser_scalar operator attributes to onnx's Less operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Less', **kwargs)
+
+@mx_op.register("_greater_scalar")
+def convert_greater_scalar(node, **kwargs):
+    """Map MXNet's _greater_scalar operator attributes to onnx's Greater operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Greater', **kwargs)
+
+@mx_op.register("_equal_scalar")
+def convert_equal_scalar(node, **kwargs):
+    """Map MXNet's _equal_scalar operator attributes to onnx's Equal operator.
+    Creates a new node for the input scalar value, adds it to the initializer
+    and return multiple created nodes.
+    """
+    return scalar_op_helper(node, 'Equal', **kwargs)
 
 # Sorting and Searching
 @mx_op.register("argmax")
