@@ -191,7 +191,7 @@ MXNET_REGISTER_API("_npi.prod")
   }
   param.keepdims = args[4].operator bool();
   if (args[5].type_code() == kDLFloat) {
-    param.initial = args[5].operator float();
+    param.initial = args[5].operator double();
   } else {
     param.initial = dmlc::nullopt;
   }
