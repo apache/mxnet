@@ -2180,6 +2180,8 @@ def tri(N, M=None, k=0, dtype=None, ctx=None):
            [1.,  0.,  0.,  0.,  0.],
            [1.,  1.,  0.,  0.,  0.]])
     """
+    if ctx is None:
+        ctx = str(current_context())
     return _api_internal.tri(N, M, k, dtype, ctx)
 
 

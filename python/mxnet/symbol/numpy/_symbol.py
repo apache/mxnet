@@ -2392,6 +2392,8 @@ def tri(N, M=None, k=0, dtype=None, ctx=None):
         dtype = 'float32'
     if M is None:
         M = N
+    if ctx is None:
+        ctx = current_context()
     return _npi.tri(N, M, k, dtype, ctx)
 
 
