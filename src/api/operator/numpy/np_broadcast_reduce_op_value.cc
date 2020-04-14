@@ -184,17 +184,20 @@ MXNET_REGISTER_API("_npi.prod")
   } else {
     param.axis = Tuple<int>(args[1].operator ObjectRef());
   }
+  std::cout<<"!!!!"
   if (args[2].type_code() == kNull) {
     param.dtype = dmlc::nullopt;
   } else {
     param.dtype = String2MXNetProdType(args[2].operator std::string());
   }
-  param.keepdims = args[4].operator bool();
-  if (args[5].type_code() == kNull) {
+  std::cout<<"!!!!"
+  param.keepdims = args[3].operator bool();
+  if (args[4].type_code() == kNull) {
     param.initial = dmlc::nullopt;
   } else {
-    param.initial = args[5].operator double();
+    param.initial = args[4].operator double();
   }
+  std::cout<<"!!!!"
   attrs.op = op;
   attrs.parsed = std::move(param);
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
@@ -202,7 +205,7 @@ MXNET_REGISTER_API("_npi.prod")
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
   // outputs
-  NDArray* out = args[3].operator mxnet::NDArray*();
+  NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
