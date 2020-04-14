@@ -128,15 +128,17 @@ def get_boolean_attribute_value(attrs, attr_name):
     return 1 if attrs.get(attr_name, 0) in ["True", "1"] else 0
 
 
-def get_inputs(node, kwargs):
+def get_inputs(node, kwargs, with_shapes=False):
     """Helper function to get inputs"""
     name = node["name"]
     proc_nodes = kwargs["proc_nodes"]
     index_lookup = kwargs["index_lookup"]
+    graph_shapes = kwargs["graph_shapes"]
     inputs = node["inputs"]
     attrs = node.get("attrs", {})
 
     input_nodes = []
+    input_shapes = []
     for ip in inputs:
         input_node_id = index_lookup[ip[0]]
         try:
@@ -145,6 +147,11 @@ def get_inputs(node, kwargs):
         except AttributeError:
             # fallback to the name attribute as output if the output attribute does not exist (e.g. for data nodes)
             input_nodes.append(proc_nodes[input_node_id].name)
+
+        input_shapes.append(graph_shapes.get(input_nodes[-1]))
+
+    if with_shapes:
+        return name, input_nodes, input_shapes, attrs
 
     return name, input_nodes, attrs
 

@@ -203,8 +203,9 @@ class MXNetGraph(object):
         onnx_processed_outputs = []
         index_lookup = []
 
-        # Determine output shape
+        # Determine output and internal shapes
         graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label)
+        graph_shapes = MXNetGraph.get_outputs(sym.get_internals(), params, in_shape, output_label)
 
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
@@ -230,6 +231,7 @@ class MXNetGraph(object):
                     in_shape=in_shape[graph_input_idx],
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
+                    graph_shapes=graph_shapes,
                     initializer=initializer,
                     index_lookup=index_lookup)
                 graph_input_idx += 1
@@ -244,6 +246,7 @@ class MXNetGraph(object):
                     in_shape=in_shape,
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
+                    graph_shapes=graph_shapes,
                     initializer=initializer,
                     index_lookup=index_lookup,
                     idx=idx
