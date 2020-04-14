@@ -2084,6 +2084,7 @@ publish_scala_build() {
     pushd .
     scala_prepare
     source /opt/rh/devtoolset-7/enable
+    export USE_SYSTEM_CUDA=1
     ./ci/publish/scala/build.sh
     popd
 }
