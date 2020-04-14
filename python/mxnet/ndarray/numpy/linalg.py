@@ -175,7 +175,7 @@ def pinv(a, rcond=1e-15, hermitian=False):
 
 
 # pylint: disable=too-many-return-statements
-def norm(x, ord=None, axis=None, keepdims=False):
+def norm(x, ord=None, axis=None, keepdims=False, flag=None):
     r"""Matrix or vector norm.
     This function is able to return one of eight different matrix norms,
     or one of an infinite number of vector norms (described below), depending
@@ -289,7 +289,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
     (array(3.7416573), array(11.224973))
     """
     if axis is None and ord is None:
-        return _npi.norm(x, ord=2, axis=None, keepdims=keepdims, flag=-2)
+        return _api_internal.norm(x, 2, None, keepdims, -2)
     if axis is None or isinstance(axis, (int, tuple)):  # pylint: disable=too-many-nested-blocks
         if axis is not None:
             if isinstance(axis, int):
@@ -314,23 +314,23 @@ def norm(x, ord=None, axis=None, keepdims=False):
                     elif ord == -1:
                         return _mx_nd_np.sum(_mx_nd_np.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [2, -2]:
-                    return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=0)
+                    return _api_internal.norm(x, ord, axis, keepdims, 0)
                 if ord is None:
-                    return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+                    return _api_internal.norm(x, 2, axis, keepdims, 1)
         if ord == 'inf':
             return _mx_nd_np.max(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
         elif ord == '-inf':
             return _mx_nd_np.min(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
         elif ord is None:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+            return _api_internal.norm(x, 2, axis, keepdims, 1)
         elif ord == 2:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=-1)
+            return _api_internal.norm(x, 2, axis, keepdims, -1)
         elif ord == 'nuc':
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=2)
+            return _api_internal.norm(x, 2, axis, keepdims, 2)
         elif ord in ['fro', 'f']:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+            return _api_internal.norm(x, 2, axis, keepdims, 1)
         else:
-            return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=-1)
+            return _api_internal.norm(x, ord, axis, keepdims, -1)
     else:
         raise TypeError("'axis' must be None, an integer or a tuple of integers.")
 # pylint: enable=too-many-return-statements
