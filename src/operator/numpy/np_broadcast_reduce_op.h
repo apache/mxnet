@@ -36,29 +36,6 @@
 namespace mxnet {
 namespace op {
 
-inline std::string MXNetReduceAxesType2String(const int s) {
-  using namespace op;
-  if (s == mshadow::kFloat16) {
-    return "float16";
-  } else if (s == mshadow::kFloat32) {
-    return "float32";
-  } else if (s == mshadow::kFloat64) {
-    return "float64";
-  } else if (s == mshadow::kInt8) {
-    return "int8";
-  } else if (s == mshadow::kInt32) {
-    return "int32";
-  } else if (s == mshadow::kInt64) {
-    return "int64";
-  } else if (s == mshadow::kBool) {
-    return "bool";
-  } else {
-    LOG(FATAL) << "unknown type " << s;
-  }
-  LOG(FATAL) << "should not reach here ";
-  return 0;
-}
-
 struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
   dmlc::optional<mxnet::Tuple<int>> axis;
   dmlc::optional<int> dtype;
