@@ -47,9 +47,9 @@ inline int String2MXNetProdType(const std::string& s) {
   } else if (s == "bool") {
     return mshadow::kBool;
   } else {
-    LOG(FATAL) << "unknown type " << s;
+    LOG(FATAL) << "unknown type" << s;
   }
-  LOG(FATAL) << "should not reach here ";
+  LOG(FATAL) << "should not reach here";
   return 0;
 }
 
@@ -174,7 +174,7 @@ MXNET_REGISTER_API("_npi.mean")
 });
 
 MXNET_REGISTER_API("_npi.prod")
-.set_body([](runtime::MXNetArgs, args, runtime::MXNetRetValue* ret) {
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_prod");
   nnvm::NodeAttrs attrs;

@@ -94,7 +94,6 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream axis_s, dtype_s, keepdims_s, initial_s;
     axis_s << axis;
-    //
     dtype_s << dtype;
     keepdims_s << keepdims;
     initial_s << initial;
