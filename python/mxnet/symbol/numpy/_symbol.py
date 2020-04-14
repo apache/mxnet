@@ -7492,7 +7492,7 @@ def prod(a, axis=None, dtype=None, output=None, keepdims=False, initial=None):
     >>> np.prod([1, 2], initial=5)
     10
     """
-    return _npi.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
+    return _npi.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
 
 @set_module('mxnet.symbol.numpy')
 def cumsum(a, axis=None, dtype=None, out=None):
