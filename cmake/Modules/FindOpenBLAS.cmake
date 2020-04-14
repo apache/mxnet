@@ -46,14 +46,15 @@ SET(Open_BLAS_LIB_SEARCH_PATHS
         /usr/local/opt/openblas/lib
         ${PROJECT_SOURCE_DIR}/3rdparty/OpenBLAS/lib
         ${PROJECT_SOURCE_DIR}/thirdparty/OpenBLAS/lib
-	${OpenBLAS_DIR}
-	${OpenBLAS_DIR}/lib
+        ${OpenBLAS_DIR}
+        ${OpenBLAS_DIR}/lib
         ${OpenBLAS_HOME}
         ${OpenBLAS_HOME}/lib
  )
 
 FIND_PATH(OpenBLAS_INCLUDE_DIR NAMES cblas.h PATHS ${Open_BLAS_INCLUDE_SEARCH_PATHS})
-FIND_LIBRARY(OpenBLAS_LIB NAMES openblas PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
+# the Julia's private OpenBLAS is named as `libopenblas64_.so` on x86-64 Linux
+FIND_LIBRARY(OpenBLAS_LIB NAMES openblas64_ openblas PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
 IF(NOT OpenBLAS_LIB)
 	FIND_FILE(OpenBLAS_LIB NAMES libopenblas.dll.a PATHS ${Open_BLAS_LIB_SEARCH_PATHS})
 ENDIF()
@@ -89,3 +90,21 @@ MARK_AS_ADVANCED(
     OpenBLAS
 )
 
+#   Check ILP64 data model for the case of Julia self-shipped `libopenblas64_.so`
+SET(detect_interface64_src "
+    #include <string.h>
+    char* openblas_get_config64_(void)\;
+    int main() {
+        return strstr(openblas_get_config64_(), \"USE64BITINT\") == NULL\;
+    }
+")
+FILE(WRITE "${CMAKE_CURRENT_BINARY_DIR}/detect_interface64.c" ${detect_interface64_src})
+TRY_RUN(
+    OpenBLAS_INTERFACE64 compile_detect_interface64
+    "${CMAKE_CURRENT_BINARY_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/detect_interface64.c"
+    LINK_LIBRARIES ${OpenBLAS_LIB}
+)
+IF(OpenBLAS_INTERFACE64 EQUAL 0)
+    add_definitions(-DOPENBLAS_INTERFACE64=1)  # see julia/deps/cblas.h
+ENDIF(OpenBLAS_INTERFACE64 EQUAL 0)
+FILE(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/detect_interface64.c")
