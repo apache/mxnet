@@ -139,13 +139,9 @@ def lstsq(a, b, rcond='warn'):
     >>> m, c
     (1.0 -0.95) # may vary
     """
-    new_default = False
-    if rcond is None:
-        rcond = _np.finfo(a.dtype).eps
-        new_default = True
-    if rcond == "warn":
-        rcond = -1
-    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    x, residuals, rank, s = _api_internal.lstsq(a, b, rcond, finfo_eps_32, finfo_eps_64)
     return (x, residuals, rank, s)
 
 
@@ -570,7 +566,7 @@ def qr(a, mode='reduced'):
     """
     if mode is not None and mode != 'reduced':
         raise NotImplementedError("Only default mode='reduced' is implemented.")
-    return tuple(_npi.qr(a))
+    return tuple(_api_internal.qr(a))
 
 
 def inv(a):
