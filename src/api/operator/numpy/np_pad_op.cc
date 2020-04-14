@@ -62,7 +62,7 @@ MXNET_REGISTER_API("_npi.pad")
   std::vector<mxnet::Tuple<int>> temp;
   int counter = 0;
   for (counter = 0; counter < ndim; counter++) {
-    temp.push_back(mxnet::Tuple<int>(adt[counter]));
+    temp.emplace_back(mxnet::Tuple<int>(adt[counter]));
   }
   param.pad_width = Tuple<Tuple<int>>(temp.begin(), temp.end());
   param.mode = String2MXNetPadType(args[2].operator std::string());
