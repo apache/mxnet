@@ -292,6 +292,8 @@ export_test_cases = [
     ("test_topk", "TopK", mx.sym.topk, [(2, 10, 2)], {'k': 3, 'axis': 1, 'ret_typ': 'both', 'dtype': np.int64}),
     ("test_slice_axis", "Slice", mx.sym.slice_axis, [(2, 10, 2)], {'begin': 3, 'end': 7, 'axis': 1}),
     ("test_arange", "ValueInfo", mx.sym.arange, [], {'start':2, 'stop': 10, 'step': 2}),
+    ("test_zeros_like", "Expand", mx.sym.zeros_like, [(2, 1, 3, 1)], {}),
+    ("test_ones_like", "Expand", mx.sym.ones_like, [(2, 1, 3, 1)], {}),
 ]
 
 if __name__ == '__main__':

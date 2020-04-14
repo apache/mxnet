@@ -995,6 +995,38 @@ def convert_arange(node, **kwargs):
 
     return create_helper_tensor_node(data, name, kwargs)
 
+@mx_op.register('zeros_like')
+@mx_op.register('ones_like')
+def convert_constant_like(node, **kwargs):
+    """Map MXNet's zeros_like and ones_like operators attributes
+    to onnx's Shape and Broadcast operators and return the created nodes.
+    """
+    # ToDo: Use Constant or ConstantOfShape, when Issue #15101 is resolved?
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    nodes = []
+
+    input_node = input_nodes[0]
+    input_shape = create_helper_shape_node(input_node, input_node + "__shape")
+    nodes.extend(input_shape)
+    input_shape = input_shape[-1].name
+
+    constant_value = np.array({
+        'zeros_like': 0.0,
+        'ones_like': 1.0,
+    }[node['op']], dtype=attrs.get('dtype', 'float32'))
+    constant_node = create_helper_tensor_node(
+        constant_value, name + "__constant", kwargs
+    )
+    nodes.extend(constant_node)
+    constant_node = constant_node[-1].name
+
+    expanded_constant_node = create_helper_expand_node(
+        constant_node, name, input_shape
+    )
+    nodes.extend(expanded_constant_node)
+
+    return nodes
+
 @mx_op.register("transpose")
 def convert_transpose(node, **kwargs):
     """Map MXNet's transpose operator attributes to onnx's Transpose operator
