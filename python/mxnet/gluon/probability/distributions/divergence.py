@@ -22,7 +22,7 @@ __all__ = ['register_kl', 'kl_divergence', 'empirical_kl']
 
 import numpy as _np
 
-from .utils import getF
+from .utils import getF, gammaln
 from .exponential import *
 from .weibull import *
 from .pareto import *
@@ -159,15 +159,19 @@ def _kl_bernoulli_bernoulli(p, q):
     F = p.F
     log_fn = F.np.log
     prob_p = p.prob
-    prob_q = q.prob_p
+    prob_q = q.prob
     t1 = prob_p * log_fn(prob_p / prob_q)
-    t2 = (1 - p.prob_p) * log_fn((1 - prob_p) / (1 - prob_q))
+    t2 = (1 - prob_p) * log_fn((1 - prob_p) / (1 - prob_q))
     return t1 + t2
 
 
 @register_kl(Categorical, Categorical)
 def _kl_categorical_categorical(p, q):
     return (p.prob * (p.logit - q.logit)).sum(-1)
+
+@register_kl(OneHotCategorical, OneHotCategorical)
+def _kl_onehotcategorical_onehotcategorical(p, q):
+    return _kl_categorical_categorical(p._categorical, q._categorical)
 
 
 @register_kl(Uniform, Uniform)
@@ -217,3 +221,28 @@ def _kl_exponential_exponential(p, q):
     scale_ratio = p.scale / q.scale
     t1 = -F.np.log(scale_ratio)
     return t1 + scale_ratio - 1
+
+@register_kl(Pareto, Pareto)
+def _kl_pareto_pareto(p, q):
+    F = p.F
+    scale_ratio = p.scale / q.scale
+    alpha_ratio = q.alpha / p.alpha
+    t1 = q.alpha * F.np.log(scale_ratio)
+    t2 = -F.np.log(alpha_ratio)
+    result = t1 + t2 + alpha_ratio - 1
+    # TODO: Handle out-of-support value
+    # result[p.support.lower_bound < q.support.lower_bound] = inf
+    return result
+
+@register_kl(Gumbel, Gumbel)
+def _kl_gumbel_gumbel(p, q):
+    F = p.F
+    lgamma = gammaln(F)
+    _euler_gamma = _np.euler_gamma
+    ct1 = p.scale / q.scale
+    ct2 = q.loc / q.scale
+    ct3 = p.loc / q.scale
+    t1 = -F.np.log(ct1) - ct2 + ct3
+    t2 = ct1 * _euler_gamma
+    t3 = F.np.exp(ct2 + lgamma(1 + ct1) - ct3)
+    return t1 + t2 + t3 - (1 + _euler_gamma)
