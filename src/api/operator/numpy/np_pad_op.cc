@@ -82,4 +82,4 @@ MXNET_REGISTER_API("_npi.pad")
   *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
 });
 
-}
+}  // namespace mxnet

@@ -8686,7 +8686,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:
             raise ValueError("unsupported reflect_type '{}'".format(values))
-        return _api_internal.pad(x, pad_width, 'symmetric',0, "even")
+        return _api_internal.pad(x, pad_width, 'symmetric', 0, "even")
     elif mode == "edge":
         return _api_internal.pad(x, pad_width, 'edge', 0, "even")
     elif mode == "reflect":
