@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,15 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR "armv7l")
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+set(CMAKE_FIND_ROOT_PATH "/usr/arm-linux-gnueabihf" "/usr/local/arm-linux-gnueabihf")
 
-set -ex
-pushd .
-git clone https://github.com/xianyi/OpenBLAS.git
-cd OpenBLAS
-make TARGET=ARMV7 HOSTCC=gcc NOFORTRAN=1 ARM_SOFTFP_ABI=1 -j$(nproc) libs
-#make PREFIX=${CROSS_ROOT} TARGET=ARMV7 HOSTCC=gcc NOFORTRAN=1 ARM_SOFTFP_ABI=1 install
-cp *.h ${CROSS_ROOT}/include
-cp libopenblas*.a ${CROSS_ROOT}/lib
-popd
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

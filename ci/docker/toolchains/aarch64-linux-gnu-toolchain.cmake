@@ -1,4 +1,3 @@
-# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,25 +14,15 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to run MXNet on Ubuntu 14.04 for GPU
 
-FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu14.04
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR "aarch64")
+set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+set(CMAKE_CUDA_HOST_COMPILER aarch64-linux-gnu-gcc)
+set(CMAKE_FIND_ROOT_PATH "/usr/aarch64-linux-gnu")
 
-WORKDIR /work/deps
-
-COPY install/ubuntu_publish.sh /work/
-RUN /work/ubuntu_publish.sh
-
-COPY install/ubuntu_binutils.sh /work/
-RUN /work/ubuntu_binutils.sh
-
-ARG USER_ID=0
-ARG GROUP_ID=0
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
-
-COPY runtime_functions.sh /work/
-
-WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

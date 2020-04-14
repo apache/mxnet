@@ -16,18 +16,21 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to run MXNet on Ubuntu 14.04 for GPU
+# Dockerfile to test MXNet on Ubuntu 20.04 ARMv7 CPU
 
-# Use CPU with setup_gpu script
-FROM ubuntu:14.04
+FROM arm32v7/ubuntu:20.04
 
-WORKDIR /work/deps
+WORKDIR /usr/local
 
-COPY install/ubuntu_base.sh /work/
-RUN /work/ubuntu_base.sh
-
-COPY install/ubuntu_scala.sh /work/
-RUN /work/ubuntu_scala.sh
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-numpy \
+    python3-scipy \
+    python3-nose \
+    python3-nose-timer \
+    python3-requests \
+ && rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=0
 ARG GROUP_ID=0
@@ -35,6 +38,4 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-
 WORKDIR /work/mxnet
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib

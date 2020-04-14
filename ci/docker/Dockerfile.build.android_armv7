@@ -18,62 +18,41 @@
 #
 # Dockerfile to build MXNet for Android ARMv7
 
-FROM dockcross/base
-MAINTAINER Pedro Larroy "pllarroy@amazon.com"
+FROM ubuntu:20.04
 
-# The cross-compiling emulator
-RUN apt-get update && apt-get install -y \
-  unzip
+ENV ARCH=armv7l \
+    HOSTCC=gcc \
+    HOSTCXX=g++ \
+    TARGET=ARMV7
 
-ENV CROSS_TRIPLE=arm-linux-androideabi
-ENV CROSS_ROOT=/usr/${CROSS_TRIPLE}
-ENV AS=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-as \
-    AR=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-ar \
-    CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-gcc \
-    CPP=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-cpp \
-    CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-g++ \
-    LD=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-ld
+WORKDIR /usr/local
 
-ENV ANDROID_NDK_REVISION 17b
-ENV ANDROID_NDK_API 27
-ENV ANDROID_NDK_ARCH arm
-WORKDIR /work/deps
-COPY install/android_ndk.sh /work/deps
-RUN /work/deps/android_ndk.sh
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    ninja-build \
+    cmake \
+    ccache \
+    git \
+    curl \
+    unzip \
+ && rm -rf /var/lib/apt/lists/*
 
-ENV DEFAULT_DOCKCROSS_IMAGE dockcross/android-arm
+RUN curl -o android-ndk-r19-linux-x86_64.zip -L https://dl.google.com/android/repository/android-ndk-r19-linux-x86_64.zip && \
+    unzip android-ndk-r19-linux-x86_64.zip && \
+    rm android-ndk-r19-linux-x86_64.zip
+ENV CMAKE_TOOLCHAIN_FILE=/usr/local/android-ndk-r19/build/cmake/android.toolchain.cmake
 
-# Build-time metadata as defined at http://label-schema.org
-ARG BUILD_DATE
-ARG IMAGE
-ARG VCS_REF
-ARG VCS_URL
-LABEL org.label-schema.build-date=$BUILD_DATE \
-      org.label-schema.name=$IMAGE \
-      org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.vcs-url=$VCS_URL \
-      org.label-schema.schema-version="1.0"
-
-
-ENV CC=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang
-ENV CXX=${CROSS_ROOT}/bin/${CROSS_TRIPLE}-clang++
-
-WORKDIR /work/deps
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
-WORKDIR /work
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
-
-COPY install/arm_openblas.sh /work/
-COPY install/android_armv7_openblas.sh /work/deps
-RUN /work/deps/android_armv7_openblas.sh
-
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-WORKDIR /work
+RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
+    mkdir /usr/local/openblas-android && \
+    cd /usr/local/OpenBLAS && \
+    export TOOLCHAIN=/usr/local/android-ndk-r19/toolchains/llvm/prebuilt/linux-x86_64 && \
+    make NOFORTRAN=1 ARM_SOFTFP_ABI=1 NO_SHARED=1 \
+        LDFLAGS="-L/usr/local/android-ndk-r19/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/lib/gcc/arm-linux-androideabi/4.9.x -lm" \
+        CC=$TOOLCHAIN/bin/armv7a-linux-androideabi16-clang AR=$TOOLCHAIN/bin/arm-linux-androideabi-ar && \
+    make PREFIX=/usr/local/openblas-android NO_SHARED=1 install && \
+    cd /usr/local && \
+    rm -rf OpenBLAS
+ENV OpenBLAS_HOME=/usr/local/openblas-android
 
 ARG USER_ID=0
 ARG GROUP_ID=0
@@ -81,5 +60,4 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
-
+WORKDIR /work/build

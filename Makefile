@@ -92,6 +92,8 @@ include $(DMLC_CORE)/make/dmlc.mk
 # all tge possible warning tread
 WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+# C++ standard
+CFLAGS+= -DDMLC_USE_CXX11=1 -DDMLC_USE_CXX11=1 -DDMLC_USE_CXX14=1
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 # disable stack trace in exception by default.
@@ -99,7 +101,9 @@ CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
-	CFLAGS += -g -Werror
+  # Excluded from Werror:
+  # 1) variables used in '#pragma omp parallel' are considered unused
+	CFLAGS += -g -Werror -Wno-error=unused-variable -Wno-error=maybe-uninitialized -Wno-error=unused-function
 	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
@@ -131,9 +135,9 @@ endif
 # -L/usr/local/lib
 
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for segfault logger
@@ -537,7 +541,11 @@ ifeq ($(USE_CUDA), 1)
 			CFLAGS += -I$(USE_NCCL_PATH)/include
 			LDFLAGS += -L$(USE_NCCL_PATH)/lib
 		endif
+		ifdef USE_SYSTEM_CUDA
+		LDFLAGS += -lnccl_static
+		else
 		LDFLAGS += -lnccl
+		endif
 		CFLAGS += -DMXNET_USE_NCCL=1
 	else
 		CFLAGS += -DMXNET_USE_NCCL=0
@@ -567,7 +575,7 @@ ALLX_DEP= $(ALL_DEP)
 
 build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
+	$(CXX) -std=c++17 -c $(CFLAGS) -MMD -c $< -o $@
 
 build/src/%_gpu.o: src/%.cu | mkldnn
 	@mkdir -p $(@D)
@@ -578,12 +586,12 @@ build/src/%_gpu.o: src/%.cu | mkldnn
 # Use CXX to generate dependency instead.
 build/plugin/%_gpu.o: plugin/%.cu
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
+	$(CXX) -std=c++17 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
 build/plugin/%.o: plugin/%.cc | mkldnn
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
+	$(CXX) -std=c++17 -c $(CFLAGS) -MMD -c $< -o $@
 
 %_gpu.o: %.cu
 	@mkdir -p $(@D)
@@ -592,7 +600,7 @@ build/plugin/%.o: plugin/%.cc | mkldnn
 
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
+	$(CXX) -std=c++17 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
 # Set install path for libmxnet.so on Mac OS
 ifeq ($(UNAME_S), Darwin)
@@ -653,7 +661,7 @@ bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++17  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 # CPP Package
 ifeq ($(USE_CPP_PACKAGE), 1)
@@ -686,13 +694,13 @@ extension_libs: $(EXT_LIBS)
 
 build/libcustomop_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++14 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
 
 # Cython build
 cython:

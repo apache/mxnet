@@ -1366,6 +1366,7 @@ def test_npx_slice():
 
 @with_seed()
 @use_np
+@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_npx_batch_dot():
     ctx = mx.context.current_context()
     dtypes = ['float32', 'float64']
@@ -1485,6 +1486,7 @@ def test_npx_batch_dot():
 
 @with_seed()
 @use_np
+@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_npi_boolean_assign():
     class TestBooleanAssignScalar(HybridBlock):
         def __init__(self, val, start_axis):

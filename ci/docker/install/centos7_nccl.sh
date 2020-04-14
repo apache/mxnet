@@ -19,10 +19,17 @@
 
 set -ex
 
-apt update || true
-apt install -y \
-    unzip \
-    python3 \
-    python3-pip
 
-pip3 install setuptools
+if [ -z ${SHORT_CUDA_VERSION} ]; then
+    echo "Error: SHORT_CUDA_VERSION environment variable undefined"
+    exit 1
+fi
+if [ -z ${SHORT_NCCL_VERSION} ]; then
+    echo "Error: SHORT_NCCL_VERSION environment variable undefined"
+    exit 1
+fi
+
+curl -fsSL https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/x86_64/nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm -O
+rpm -i nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm
+yum check-update || true  # exit code 100 in case of available updates
+yum install -y libnccl-${SHORT_NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} libnccl-devel-${SHORT_NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} libnccl-static-${SHORT_NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION}
