@@ -1614,16 +1614,34 @@ def convert_slice_axis(node, **kwargs):
         in_shape = kwargs['in_shape'][0]
         ends = in_shape[axes]
 
+    export_nodes = []
+
+    starts = np.atleast_1d(np.asarray(starts, dtype=np.int))
+    ends = np.atleast_1d(np.asarray(ends, dtype=np.int))
+    axes = np.atleast_1d(np.asarray(axes, dtype=np.int))
+
+    starts_node = create_helper_tensor_node(starts, name + '__starts', kwargs)
+    export_nodes.extend(starts_node)
+    starts_node = starts_node[-1].name
+
+    ends_node = create_helper_tensor_node(ends, name + '__ends', kwargs)
+    export_nodes.extend(ends_node)
+    ends_node = ends_node[-1].name
+
+    axes_node = create_helper_tensor_node(axes, name + '__axes', kwargs)
+    export_nodes.extend(axes_node)
+    axes_node = axes_node[-1].name
+
+    input_node = input_nodes[0]
     node = onnx.helper.make_node(
         "Slice",
-        input_nodes,
+        [input_node, starts_node, ends_node, axes_node],
         [name],
-        axes=[axes],
-        starts=[starts],
-        ends=[int(ends)],
         name=name,
     )
-    return [node]
+    export_nodes.extend([node])
+
+    return export_nodes
 
 
 @mx_op.register("SliceChannel")
@@ -2181,14 +2199,22 @@ def convert_topk(node, **kwargs):
     else:
         raise NotImplementedError("ONNX expects both value and indices as output")
 
+    export_nodes = []
+
+    k = np.asarray([k], dtype=np.int)
+    k_node = create_helper_tensor_node(k, name + '__k', kwargs)
+    export_nodes.extend(k_node)
+    k_node = k_node[-1].name
+
+    input_node = input_nodes[0]
     topk_node = onnx.helper.make_node(
         "TopK",
-        input_nodes,
+        [input_node, k_node],
         outputs,
         axis=axis,
-        k=k,
         name=name
     )
+    export_nodes.extend([topk_node])
 
     return [topk_node]
 
