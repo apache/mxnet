@@ -972,6 +972,28 @@ def convert_concat(node, **kwargs):
     )
     return [concat_node]
 
+@mx_op.register("_arange")
+def convert_arange(node, **kwargs):
+    """Map MXNet's _arange operator attributes to onnx's
+    tensors and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    del input_nodes
+
+    start = eval(attrs.get("start", '0'))
+    stop = eval(attrs.get("stop", 'None'))
+    step = eval(attrs.get("step", '1'))
+
+    if eval(attrs.get("repeat", '1')) != 1:
+        raise NotImplementedError(
+            "Conversion of _arange nodes with repeat != 1 "
+            "to ONNX is currently not supported."
+        )
+
+    dtype = attrs.get('dtype')
+    data = np.arange(start, stop, step, dtype)
+
+    return create_helper_tensor_node(data, name, kwargs)
 
 @mx_op.register("transpose")
 def convert_transpose(node, **kwargs):

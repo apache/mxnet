@@ -208,10 +208,10 @@ class TestNode(unittest.TestCase):
 
     def test_exports(self):
         for test in export_test_cases:
-            test_name, onnx_name, mx_op, input_shape, attrs = test
-            input_sym = mx.sym.var('data')
-            outsym = mx_op(input_sym, **attrs)
-            converted_model = onnx_mxnet.export_model(outsym, {}, [input_shape], np.float32,
+            test_name, onnx_name, mx_op, input_shapes, attrs = test
+            input_syms = [mx.sym.var('data' + str(i)) for i in range(len(input_shapes))]
+            outsym = mx_op(*input_syms, **attrs)
+            converted_model = onnx_mxnet.export_model(outsym, {}, input_shapes, np.float32,
                                                       onnx_file_path=outsym.name + ".onnx")
             model = load_model(converted_model)
             checker.check_model(model)
@@ -285,12 +285,13 @@ import_test_cases = [
     ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1})
 ]
 
-# test_case = ("test_case_name", "ONNX_op_name", mxnet_op, input_shape, attribute map)
+# test_case = ("test_case_name", "ONNX_op_name", mxnet_op, input_shapes, attribute map)
 export_test_cases = [
-    ("test_expand", "Expand", mx.sym.broadcast_to, (2,1,3,1), {'shape': (2,1,3,1)}),
-    ("test_tile", "Tile", mx.sym.tile, (2,1,3,1), {'reps': (2,3)}),
-    ("test_topk", "TopK", mx.sym.topk, (2, 10, 2), {'k': 3, 'axis': 1, 'ret_typ': 'both', 'dtype': np.int64}),
-    ("test_slice_axis", "Slice", mx.sym.slice_axis, (2, 10, 2), {'begin': 3, 'end': 7, 'axis': 1}),
+    ("test_expand", "Expand", mx.sym.broadcast_to, [(2,1,3,1)], {'shape': (2,1,3,1)}),
+    ("test_tile", "Tile", mx.sym.tile, [(2,1,3,1)], {'reps': (2,3)}),
+    ("test_topk", "TopK", mx.sym.topk, [(2, 10, 2)], {'k': 3, 'axis': 1, 'ret_typ': 'both', 'dtype': np.int64}),
+    ("test_slice_axis", "Slice", mx.sym.slice_axis, [(2, 10, 2)], {'begin': 3, 'end': 7, 'axis': 1}),
+    ("test_arange", "ValueInfo", mx.sym.arange, [], {'start':2, 'stop': 10, 'step': 2}),
 ]
 
 if __name__ == '__main__':
