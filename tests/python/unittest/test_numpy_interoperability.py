@@ -2113,12 +2113,29 @@ def _add_workload_linalg_matrix_power():
 
 
 def _add_workload_linalg_matrix_rank():
-    a = np.eye(4)
-    b = a; b[-1,-1] = 0
-    c = np.ones((4,))
-    OpArgMngr.add_workload('linalg.matrix_rank', a)
-    OpArgMngr.add_workload('linalg.matrix_rank', b)
-    OpArgMngr.add_workload('linalg.matrix_rank', c)
+    shapes = [
+        ((4, 3), ()),
+        ((4, 3), (1,)),
+        ((4, 3), (2, 3,)),
+        ((2, 1, 1), (1,)),
+        ((2, 3, 3), (2,)),
+        ((2, 3, 1, 1), ()),
+        ((2, 3, 4, 4), (1, 3)),
+        ((2, 3, 4, 5), (2, 3)),
+        ((2, 3, 5, 4), (2, 3)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, tol_shape in shapes:
+            for tol_is_none in [True, False]:
+                a_np = _np.asarray(_np.random.uniform(-10., 10., a_shape))
+                a = np.array(a_np, dtype=dtype)
+                if tol_is_none:
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, None, False)
+                else:
+                    tol_np = _np.random.uniform(10., 20., tol_shape)
+                    tol = np.array(tol_np, dtype=dtype)
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, tol, False)
 
 
 def _add_workload_linalg_multi_dot():
