@@ -24,11 +24,9 @@ import numpy as onp
 __all__ = [
     'cond',
     'matrix_power',
-    'matrix_rank',
     'multi_dot'
 ]
 
 cond = onp.linalg.cond
 matrix_power = onp.linalg.matrix_power
-matrix_rank = onp.linalg.matrix_rank
 multi_dot = onp.linalg.multi_dot
