@@ -10680,6 +10680,7 @@ def atleast_3d(*arys):
 
 @set_module('mxnet.numpy')
 def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-return-statements
     """
     Pad an array.
 
@@ -10846,7 +10847,7 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None):
+def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None): # pylint: disable=too-many-arguments
     """
     Return the product of array elements over a given axis.
 

@@ -8708,7 +8708,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
 
 
 @set_module('mxnet.ndarray.numpy')
-def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None):
+def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None): # pylint: disable=too-many-arguments
     """
     Return the product of array elements over a given axis.
 
