@@ -178,7 +178,7 @@ MXNET_REGISTER_API("_npi.prod")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_prod");
   nnvm::NodeAttrs attrs;
-  op::ReduceAxesParam param;
+  op::NumpyReduceAxesParam param;
   if (args[1].type_code() == kNull) {
     param.axis = dmlc::nullopt;
   } else {
@@ -197,7 +197,7 @@ MXNET_REGISTER_API("_npi.prod")
   }
   attrs.op = op;
   attrs.parsed = std::move(param);
-  SetAttrDict<op::ReduceAxesParam>(&attrs);
+  SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
   // inputs
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
