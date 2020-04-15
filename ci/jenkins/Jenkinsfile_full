@@ -23,13 +23,26 @@
 // timeout in minutes
 max_time = 180
 
+def buildJobs = [
+    'centos-cpu',
+    'centos-gpu',
+    'clang',
+    'edge',
+    'miscellaneous',
+    'unix-cpu',
+    'unix-gpu',
+    'website',
+    'windows-cpu',
+    'windows-gpu'
+]
+
+
 stage("full-build") {
-    def pipelineName = JOB_NAME.substring(0, JOB_NAME.indexOf('/'))
+    // get the base path by removing build and branch portions
+    def jobPath = JOB_NAME.split('/')
+    def pipelineName = jobPath[0..jobPath.size()-3].join('/')
     build job: pipelineName + "/sanity/" + BRANCH_NAME, wait: true
-    ['centos-cpu', 'centos-gpu', 'clang', 'edge',
-        'miscellaneous', 'unix-cpu', 'unix-gpu',
-        'website', 'windows-cpu', 'windows-gpu']
-    .each { subJob ->
+    buildJobs.each { subJob ->
         build job: pipelineName + "/" + subJob + "/" + BRANCH_NAME, wait: false
     }
 }
