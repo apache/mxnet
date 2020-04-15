@@ -216,7 +216,7 @@ def pinv(a, rcond=1e-15, hermitian=False):
 
 
 # pylint: disable=too-many-return-statements
-def norm(x, ord=None, axis=None, keepdims=False, flag=None):
+def norm(x, ord=None, axis=None, keepdims=False):
     r"""Matrix or vector norm.
     This function is able to return one of eight different matrix norms,
     or one of an infinite number of vector norms (described below), depending
