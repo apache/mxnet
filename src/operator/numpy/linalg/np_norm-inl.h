@@ -28,6 +28,8 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
+#include <string>
+#include <sstream>
 #include <cmath>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
