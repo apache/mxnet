@@ -60,8 +60,8 @@ struct MKLDNNRnnLayerParam {
   size_t reserve_size;    // used for the reserved cached memory in Backward
   size_t single_w_size;   // weights size of a single cell
   size_t single_b_size;   // bias size of a single cell from mkl-dnn
-  size_t naive_single_b_size;  // bias size of a single cell from framework
-  size_t single_state_size;    // state size of a single cell, hy, cy
+  size_t native_single_b_size;  // bias size of a single cell from framework
+  size_t single_state_size;     // state size of a single cell, hy, cy
 
   MKLDNNRnnLayerParam(int num_layer, int batch_size, int seq_len,
                       int input_size, int state_size,
@@ -440,6 +440,18 @@ class MKLDNNRnnOp {
             const std::vector<OpReqType> &req,
             const std::vector<NDArray> &outputs);
 };
+
+inline bool SupportMKLDNNRnn(const int input_dtype) {
+  if (input_dtype == mshadow::kFloat32 && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1)) {
+    return true;
+  }
+  return false;
+}
+
+inline bool SupportMKLDNNRnn(const RNNParam &param, const int input_dtype) {
+  if (param.projection_size.has_value()) return false;
+  return SupportMKLDNNRnn(input_dtype);
+}
 
 }  // namespace op
 }  // namespace mxnet
