@@ -22,17 +22,13 @@
 
 set -ex
 
-wget https://mirror.clarkson.edu/gnu/binutils/binutils-2.27.tar.gz
-
-export DEBIAN_FRONTEND=noninteractive
-apt-get update || true
+apt-get update && \
 apt-get install -y \
     wget
 
-mkdir /opt/binutils_install && mkdir /opt/binutils_install && mkdir /opt/binutils && cd /opt/binutils
+cd /usr/local/src
 wget -nv https://mirror.clarkson.edu/gnu/binutils/binutils-2.27.tar.gz
-tar -xvf binutils-2.27.tar.gz && cd binutils-2.27
-./configure --prefix=/opt/binutils_other --exec-prefix=/opt/binutils_install
+tar -xvf binutils-2.27.tar.gz && rm binutils-2.27.tar.gz && cd binutils-2.27
+./configure --prefix=/usr/local
 make -j$(nproc)
 make install
-ls /opt/binutils_install/bin/ | xargs -I{} ln -s /opt/binutils_install/bin/{} /usr/local/bin/{}

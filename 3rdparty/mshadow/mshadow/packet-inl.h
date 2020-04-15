@@ -74,7 +74,11 @@ inline void* AlignedMallocPitch(size_t *out_pitch,
   if (res == NULL) {
     LOG(FATAL) << "AlignedMallocPitch failed";
   }
+#if __GNUC__ >= 6
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
   return res;
+#pragma GCC diagnostic pop
 }
 
 /*!

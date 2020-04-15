@@ -391,8 +391,8 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input, const 
   strides[ndim-1] = 1;
   #pragma unroll
   for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
     if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
@@ -434,8 +434,8 @@ __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
   strides[ndim-1] = 1;
   #pragma unroll
   for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
     if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
@@ -550,7 +550,10 @@ __device__ inline DType sigmoid(const DType val) {
 
 template <typename DType>
 __device__ inline DType softrelu(const DType val) {
-  return logf(1 + expf(val));
+  // Avoid overflow of exp for large inputs.
+  // The threshold 20 is chosen such that softrelu(a) = a
+  // for a > 20 using floating precision.
+  return val > 20 ? val : logf(1 + expf(val));
 }
 
 template <typename DType>

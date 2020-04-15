@@ -17,7 +17,8 @@
 
 use strict;
 use warnings;
-use Test::More tests => 7;
+# use Test::More tests => 7;  https://github.com/apache/incubator-mxnet/issues/17988
+use Test::More tests => 4;
 use AI::MXNet qw(mx);
 
 sub test_default_init
@@ -71,7 +72,7 @@ sub test_rsp_const_init
     $check_rsp_const_init->(mx->initializer->One(), 1);
 }
 
-test_rsp_const_init();
+# test_rsp_const_init();  https://github.com/apache/incubator-mxnet/issues/17988
 test_default_init();
 test_variable_init();
 test_aux_init();

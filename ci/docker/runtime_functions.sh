@@ -98,6 +98,8 @@ build_ccache_wrappers() {
     ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
     ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
     ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
+    ln -sf $CCACHE /tmp/ccache-redirects/clang++-10
+    ln -sf $CCACHE /tmp/ccache-redirects/clang-10
     #Doesn't work: https://github.com/ccache/ccache/issues/373
     # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
     # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
@@ -157,7 +159,7 @@ gather_licenses() {
 build_ubuntu_cpu_release() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
@@ -168,7 +170,7 @@ build_ubuntu_cpu_release() {
 build_ubuntu_cpu_native_release() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
@@ -179,7 +181,7 @@ build_ubuntu_cpu_native_release() {
 build_ubuntu_gpu_release() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_DIST_KVSTORE=ON \
@@ -214,13 +216,22 @@ build_dynamic_libmxnet() {
 
 build_jetson() {
     set -ex
-    pushd .
-
-    cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
-
-    build_wheel /work/mxnet/python /work/mxnet/lib
-    popd
+    cd /work/build
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="5.2" \
+        -DENABLE_CUDA_RTC=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -G Ninja /work/mxnet
+    ninja
+    build_wheel
 }
 
 #
@@ -248,7 +259,7 @@ build_armv6() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-lgfortran \
+        -Dmxnet_LINKER_LIBS=-latomic \
         -G Ninja /work/mxnet
 
     ninja
@@ -275,7 +286,6 @@ build_armv7() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
     ninja
@@ -285,14 +295,15 @@ build_armv7() {
 build_armv8() {
     cd /work/build
     cmake \
-        -DUSE_CUDA=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_OPENCV=OFF\
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_LAPACK=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=Release\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
     build_wheel
@@ -307,15 +318,18 @@ build_android_armv7() {
     set -ex
     cd /work/build
     cmake \
-        -DANDROID=ON\
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DANDROID_ABI="armeabi-v7a" \
+        -DANDROID_STL="c++_shared" \
+        -DANDROID=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -323,15 +337,18 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
-    cmake\
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DANDROID_ABI="arm64-v8a" \
+        -DANDROID_STL="c++_shared" \
         -DANDROID=ON \
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -339,8 +356,10 @@ build_android_armv8() {
 build_centos7_cpu() {
     set -ex
     cd /work/build
+    source /opt/rh/devtoolset-7/enable
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
@@ -352,9 +371,7 @@ build_centos7_cpu() {
 build_centos7_cpu_make() {
     set -ex
     cd /work/mxnet
-    export CC="ccache gcc"
-    export CXX="ccache g++"
-    build_ccache_wrappers
+    source /opt/rh/devtoolset-7/enable
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -369,8 +386,8 @@ build_centos7_cpu_make() {
 build_centos7_mkldnn() {
     set -ex
     cd /work/build
+    source /opt/rh/devtoolset-7/enable
     cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
@@ -381,6 +398,7 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/build
+    source /opt/rh/devtoolset-7/enable
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -399,8 +417,9 @@ build_ubuntu_cpu() {
 build_ubuntu_cpu_openblas() {
     set -ex
     cd /work/build
-    cmake \
+    CXXFLAGS="-Wno-error=strict-overflow" CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_TVM_OP=ON \
         -DUSE_CPP_PACKAGE=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -414,8 +433,8 @@ build_ubuntu_cpu_openblas() {
 
 build_ubuntu_cpu_openblas_make() {
     set -ex
-    export CC="gcc"
-    export CXX="g++"
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     make \
         DEV=1                         \
@@ -433,8 +452,9 @@ build_ubuntu_cpu_openblas_make() {
 build_ubuntu_cpu_mkl() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -447,14 +467,15 @@ build_ubuntu_cpu_mkl() {
 build_ubuntu_cpu_cmake_debug() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_OPENMP=OFF \
         -DUSE_OPENCV=ON \
         -DUSE_SIGNAL_HANDLER=ON \
-        -DCMAKE_BUILD_TYPE=Debug \
         -G Ninja \
         /work/mxnet
     ninja
@@ -463,7 +484,7 @@ build_ubuntu_cpu_cmake_debug() {
 build_ubuntu_cpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -506,9 +527,7 @@ build_ubuntu_cpu_cmake_asan() {
 build_ubuntu_cpu_gcc8_werror() {
     set -ex
     cd /work/build
-    export CXX=g++-8
-    export CC=gcc-8
-    cmake \
+    CXX=g++-8 CC=gcc-8 cmake \
         -DUSE_CUDA=OFF \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_CPP_PACKAGE=ON \
@@ -517,10 +536,44 @@ build_ubuntu_cpu_gcc8_werror() {
     ninja
 }
 
-build_ubuntu_cpu_clang39() {
+build_ubuntu_cpu_clang10_werror() {
     set -ex
     cd /work/build
-    CXX=clang++-3.9 CC=clang-3.9 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DUSE_CUDA=OFF \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -DUSE_CPP_PACKAGE=ON \
+       -DMXNET_USE_CPU=ON \
+       -GNinja /work/mxnet
+    ninja
+}
+
+build_ubuntu_gpu_clang10_werror() {
+    set -ex
+    cd /work/build
+    # Disable cpp package as OpWrapperGenerator.py dlopens libmxnet.so,
+    # requiring presence of cuda driver libraries that are missing on CI host
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/lib/stubs
+    # Workaround https://github.com/thrust/thrust/issues/1072
+    # Can be deleted on Cuda 11
+    export CXXFLAGS="-I/usr/local/thrust"
+
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
+    CXX=clang++-10 CC=clang-10 cmake \
+       -DCMAKE_AR=/usr/local/bin/ar \
+       -DCMAKE_RANLIB=/usr/local/bin/ranlib \
+       -DUSE_CUDA=ON \
+       -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+       -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+       -DUSE_CPP_PACKAGE=OFF \
+       -GNinja /work/mxnet
+    ninja
+}
+
+build_ubuntu_cpu_clang6() {
+    set -ex
+    cd /work/build
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
@@ -531,10 +584,10 @@ build_ubuntu_cpu_clang39() {
     ninja
 }
 
-build_ubuntu_cpu_clang60() {
+build_ubuntu_cpu_clang100() {
     set -ex
     cd /work/build
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
@@ -549,10 +602,12 @@ build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
     export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
+    # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
     CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
+       -DUSE_OPENMP=OFF \
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
@@ -563,10 +618,10 @@ build_ubuntu_cpu_clang_tidy() {
     $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
 }
 
-build_ubuntu_cpu_clang39_mkldnn() {
+build_ubuntu_cpu_clang6_mkldnn() {
     set -ex
     cd /work/build
-    CXX=clang++-3.9 CC=clang-3.9 cmake \
+    CXX=clang++-6.0 CC=clang-6.0 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
@@ -576,10 +631,10 @@ build_ubuntu_cpu_clang39_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_clang60_mkldnn() {
+build_ubuntu_cpu_clang100_mkldnn() {
     set -ex
     cd /work/build
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
@@ -591,6 +646,8 @@ build_ubuntu_cpu_clang60_mkldnn() {
 build_ubuntu_cpu_mkldnn_make() {
     set -ex
 
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
 
     make  \
@@ -605,22 +662,24 @@ build_ubuntu_cpu_mkldnn_make() {
 build_ubuntu_cpu_mkldnn() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-       -DUSE_MKL_IF_AVAILABLE=OFF \
-       -DUSE_TVM_OP=ON \
-       -DUSE_MKLDNN=ON \
-       -DUSE_CUDA=OFF \
-       -DUSE_CPP_PACKAGE=ON \
-       -G Ninja /work/mxnet
+        -DENABLE_TESTCOVERAGE=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
+        -DUSE_MKLDNN=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_CPP_PACKAGE=ON \
+        -G Ninja /work/mxnet
     ninja
 }
 
 build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+        -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
@@ -637,6 +696,9 @@ build_ubuntu_gpu() {
 build_ubuntu_gpu_tensorrt() {
 
     set -ex
+
+    export CC=gcc-7
+    export CXX=g++-7
 
     # Build ONNX
     pushd .
@@ -688,8 +750,11 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -702,8 +767,11 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -717,8 +785,11 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     cd /work/build
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
@@ -726,6 +797,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
         -DUSE_CUDNN=ON \
         -DUSE_MKLDNN=OFF \
         -DUSE_CPP_PACKAGE=ON \
+        -DUSE_DIST_KVSTORE=ON \
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
     ninja
@@ -733,9 +805,10 @@ build_ubuntu_gpu_cuda101_cudnn7() {
 
 build_ubuntu_gpu_cuda101_cudnn7_make() {
     set -ex
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     make \
-        DEV=1                                     \
         USE_BLAS=openblas                         \
         USE_MKLDNN=0                              \
         USE_CUDA=1                                \
@@ -752,9 +825,10 @@ build_ubuntu_gpu_cuda101_cudnn7_make() {
 
 build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     set -ex
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     make \
-        DEV=1                                     \
         USE_BLAS=openblas                         \
         USE_MKLDNN=1                              \
         USE_CUDA=1                                \
@@ -773,8 +847,11 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
 build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     cd /work/build
-    cmake \
-        -DCMAKE_BUILD_TYPE=Release \
+    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_AR=/usr/local/bin/ar \
+        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
+        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=OFF \
         -DUSE_CUDA=ON \
@@ -790,6 +867,8 @@ build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
 build_ubuntu_amalgamation() {
     set -ex
     # Amalgamation can not be run with -j nproc
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
@@ -799,6 +878,8 @@ build_ubuntu_amalgamation() {
 build_ubuntu_amalgamation_min() {
     set -ex
     # Amalgamation can not be run with -j nproc
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     make -C amalgamation/ clean
     make -C amalgamation/     \
@@ -809,7 +890,7 @@ build_ubuntu_amalgamation_min() {
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -830,7 +911,7 @@ build_ubuntu_gpu_cmake() {
 build_ubuntu_gpu_cmake_no_rtc() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -852,7 +933,7 @@ build_ubuntu_gpu_cmake_no_rtc() {
 build_ubuntu_gpu_cmake_no_tvm_op() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -873,12 +954,11 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=OFF                          \
         -DUSE_CUDNN=OFF                         \
         -DUSE_MKLDNN=OFF                        \
-        -DCMAKE_BUILD_TYPE=Release              \
         -DUSE_INT64_TENSOR_SIZE=ON              \
         -G Ninja                                \
         /work/mxnet
@@ -889,7 +969,7 @@ build_ubuntu_cpu_large_tensor() {
 build_ubuntu_gpu_large_tensor() {
     set -ex
     cd /work/build
-    cmake \
+    CC=gcc-7 CXX=g++-7 cmake \
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
@@ -1056,6 +1136,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 
 unittest_centos7_cpu_scala() {
     set -ex
+    source /opt/rh/devtoolset-7/enable
     cd /work/mxnet
     scala_prepare
     cd scala-package
@@ -1095,6 +1176,8 @@ unittest_ubuntu_cpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
@@ -1110,8 +1193,10 @@ unittest_ubuntu_minimal_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
-    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
+    export CC=gcc-7
+    export CXX=g++-7
+    build_ccache_wrappers
     # make -j not supported
     make -f R-package/Makefile rpkg \
         R_LIBS=/tmp/r-site-library
@@ -1139,6 +1224,8 @@ unittest_ubuntu_gpu_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
+    export CC=gcc-7
+    export CXX=g++-7
     build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
@@ -1183,6 +1270,7 @@ unittest_ubuntu_cpu_julia10() {
 
 unittest_centos7_cpu() {
     set -ex
+    source /opt/rh/devtoolset-7/enable
     cd /work/mxnet
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
     python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
@@ -1190,6 +1278,7 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
+    source /opt/rh/devtoolset-7/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
@@ -1297,15 +1386,11 @@ integrationtest_ubuntu_gpu_scala() {
 integrationtest_ubuntu_gpu_dist_kvstore() {
     set -ex
     pushd .
-    export PYTHONPATH=./python/
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    cd tests/nightly/
-    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore.py
-    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
-    python3 ../../tools/launch.py --p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py
-    python3 ../../tools/launch.py -n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu
+    cd /work/mxnet/python
+    pip3 install -e .
+    pip3 install --no-cache-dir horovod
+    cd /work/mxnet/tests/nightly
+    ./test_distributed_training-gpu.sh
     popd
 }
 
@@ -1325,6 +1410,18 @@ test_ubuntu_cpu_python3() {
     python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
 
     popd
+}
+
+# QEMU based ARM tests
+unittest_ubuntu_python3_arm() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    python3 -m nose --verbose tests/python/unittest/test_engine.py
 }
 
 # Functions that run the nightly Tests:
@@ -1373,7 +1470,7 @@ nightly_test_imagenet_inference() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     echo $PWD
-    cp /work/mxnet/build/cpp-package/example/imagenet_inference /work/mxnet/cpp-package/example/inference/
+    cp /work/mxnet/build/cpp-package/example/inference/imagenet_inference /work/mxnet/cpp-package/example/inference/
     cd /work/mxnet/cpp-package/example/inference/
     ./unit_test_imagenet_inference.sh
 }
@@ -1427,6 +1524,8 @@ nightly_test_large_vector() {
 nightly_test_amalgamation() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export CC=gcc-7
+    export CXX=g++-7
     # Amalgamation can not be run with -j nproc
     make -C amalgamation/ clean
     make -C amalgamation/ ${1} ${2}
@@ -1437,6 +1536,8 @@ nightly_test_javascript() {
     set -ex
     export LLVM=/work/deps/emscripten-fastcomp/build/bin
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export CC=gcc-7
+    export CXX=g++-7
     # This part is needed to run emcc correctly
     cd /work/deps/emscripten
     ./emcc
@@ -1556,8 +1657,8 @@ build_docs_setup() {
 
 build_ubuntu_cpu_docs() {
     set -ex
-    export CC="gcc"
-    export CXX="g++"
+    export CC="gcc-7"
+    export CXX="g++-7"
     build_ccache_wrappers
     make \
         DEV=1                         \
@@ -1870,6 +1971,8 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
+    source /opt/rh/devtoolset-7/enable
+    export USE_SYSTEM_CUDA=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -1879,6 +1982,7 @@ build_static_libmxnet() {
 cd_package_pypi() {
     set -ex
     pushd .
+    source /opt/rh/devtoolset-7/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -1933,6 +2037,7 @@ build_static_scala_cpu() {
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=cpu
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/scala/build.sh
     popd
 }
@@ -1941,6 +2046,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -1949,6 +2055,8 @@ build_static_python_cu101() {
     set -ex
     pushd .
     export mxnet_variant=cu101
+    export USE_SYSTEM_CUDA=1
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -1958,6 +2066,7 @@ build_static_python_cpu_cmake() {
     pushd .
     export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -1967,6 +2076,8 @@ build_static_python_cu101_cmake() {
     pushd .
     export mxnet_variant=cu101
     export CMAKE_STATICBUILD=1
+    export USE_SYSTEM_CUDA=1
+    source /opt/rh/devtoolset-7/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -1975,6 +2086,8 @@ publish_scala_build() {
     set -ex
     pushd .
     scala_prepare
+    source /opt/rh/devtoolset-7/enable
+    export USE_SYSTEM_CUDA=1
     ./ci/publish/scala/build.sh
     popd
 }

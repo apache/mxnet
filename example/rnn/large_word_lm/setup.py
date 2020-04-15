@@ -24,5 +24,5 @@ sources = ["log_uniform.pyx", "LogUniformGenerator.cc"]
 setup(ext_modules = cythonize(Extension(extension_name,
                                         sources=sources,
                                         language="c++",
-                                        extra_compile_args=["-std=c++11"],
+                                        extra_compile_args=["-std=c++17"],
                                         include_dirs=[numpy.get_include()])))

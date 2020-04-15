@@ -35,11 +35,10 @@ def get_pipeline(mxnet_variant) {
 }
 
 def get_environment(mxnet_variant) {
-  def environment = "ubuntu_cpu"
   if (mxnet_variant.startsWith('cu')) {
-    environment = "ubuntu_gpu_${mxnet_variant}".replace("mkl", "")
+    return "publish.centos7_gpu_${mxnet_variant}"
   }
-  return environment
+  return "publish.centos7_cpu"
 }
 
 def build(mxnet_variant) {

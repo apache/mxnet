@@ -35,15 +35,19 @@ RUN /work/ubuntu_python.sh
 COPY install/ubuntu_scala.sh /work/
 COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
-COPY install/ubuntu_r.sh /work/
-COPY install/r.gpg /work/
-RUN /work/ubuntu_r.sh
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
+COPY install/ubuntu_gcc8.sh /work/
+RUN /work/ubuntu_gcc8.sh
 COPY install/ubuntu_binutils.sh /work/
 RUN /work/ubuntu_binutils.sh
+COPY install/thrust.sh /work/
+RUN /work/thrust.sh
+COPY install/ubuntu_r.sh /work/
+COPY install/r.gpg /work/
+RUN /work/ubuntu_r.sh
 
 ENV CUDNN_VERSION=7.6.5.32
 COPY install/ubuntu_cudnn.sh /work/
@@ -51,6 +55,7 @@ RUN /work/ubuntu_cudnn.sh
 
 # Special case because the CPP-Package requires the CUDA runtime libs
 # and not only stubs (which are provided by the base image)
+# This prevents usage of this image for actual GPU tests with Docker.
 COPY install/ubuntu_nvidia.sh /work/
 RUN /work/ubuntu_nvidia.sh
 

@@ -1605,6 +1605,14 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
     DMLC_DECLARE_FIELD(a_max)
     .describe("Maximum value");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_min_s, a_max_s;
+    a_min_s << a_min;
+    a_max_s << a_max;
+    (*dict)["a_min"] = a_min_s.str();
+    (*dict)["a_max"] = a_max_s.str();
+  }
 };
 
 
@@ -2728,6 +2736,17 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
               " only if ``input.shape[axis] == num_outputs``.");
     DMLC_DECLARE_FIELD(sections).set_default(0)
     .describe("Number of sections if equally splitted. Default to 0 which means split by indices.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream indices_s, axis_s, squeeze_axis_s, sections_s;
+    indices_s << indices;
+    axis_s << axis;
+    squeeze_axis_s << squeeze_axis;
+    sections_s << sections;
+    (*dict)["indices"] = indices_s.str();
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["squeeze_axis"] = squeeze_axis_s.str();
+    (*dict)["sections"] = sections_s.str();
   }
 };  // struct SplitParam
 

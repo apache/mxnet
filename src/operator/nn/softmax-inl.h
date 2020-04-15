@@ -713,7 +713,7 @@ static inline bool SoftmaxGradOpType(const nnvm::NodeAttrs& attrs,
     }
 
     return (*out_attrs)[0] != -1 && (*in_attrs)[0] != -1 &&
-           (*out_attrs)[1] != -1 && (*in_attrs)[1] != -1;
+           (!softmax_use_length(attrs) || ((*out_attrs)[1] != -1 && (*in_attrs)[1] != -1));
   } else {
     CHECK_EQ(in_attrs->size(), 2U);
     int out_dtype = (*in_attrs)[1];

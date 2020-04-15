@@ -4,7 +4,7 @@ export CXX = g++
 export NVCC =nvcc
 include config.mk
 include ../../make/mshadow.mk
-export CFLAGS = -Wall -O3 -std=c++11 -fopenmp -I../../ $(MSHADOW_CFLAGS)
+export CFLAGS = -Wall -O3 -std=c++17 -fopenmp -I../../ $(MSHADOW_CFLAGS)
 export LDFLAGS= -lm $(MSHADOW_LDFLAGS)
 export NVCCFLAGS = -O3 --use_fast_math -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 

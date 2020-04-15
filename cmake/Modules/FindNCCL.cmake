@@ -45,8 +45,14 @@ find_path(NCCL_INCLUDE_DIRS
   $ENV{NCCL_DIR}/include
   )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX)
+  set(NCCL_LIB_NAME "nccl_static")
+else()
+  set(NCCL_LIB_NAME "nccl")
+endif()
+
 find_library(NCCL_LIBRARIES
-  NAMES nccl
+  NAMES ${NCCL_LIB_NAME}
   HINTS
   ${NCCL_LIB_DIR}
   ${NCCL_ROOT_DIR}
@@ -68,7 +74,7 @@ if (UNIX)
   )
 
   find_library(NCCL_LIBRARIES
-    NAMES nccl
+    NAMES ${NCCL_LIB_NAME}
     PATHS ${search_paths}
     PATH_SUFFIXES lib
   )

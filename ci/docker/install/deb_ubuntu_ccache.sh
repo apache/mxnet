@@ -23,42 +23,21 @@ set -ex
 
 pushd .
 
-apt update || true
+apt update
 apt install -y \
     autoconf \
+    gperf \
     xsltproc
 
 mkdir -p /work/deps
 cd /work/deps
 
-# Unset ARM toolchain cross-compilation configuration on dockcross
-unset ARCH
-unset DEFAULT_DOCKCROSS_IMAGE
-unset CROSS_TRIPLE
-unset CC
-unset AS
-unset AR
-unset FC
-unset CXX
-unset CROSS_ROOT
-unset CROSS_COMPILE
-unset PKG_CONFIG_PATH
-unset CMAKE_TOOLCHAIN_FILE
-unset CPP
-unset LD
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
 git clone --recursive https://github.com/ccache/ccache.git
 cd ccache
-# Checkout a fixed & tested pre-release commit of ccache 4
-# ccache 4 contains fixes for caching nvcc output: https://github.com/ccache/ccache/pull/381
-git checkout 2e7154e67a5dd56852dae29d4c418d4ddc07c230
+git checkout v3.7.9
 
-
-export CFLAGS="-mno-avx"
-export CXXFLAGS="-mno-avx"
 ./autogen.sh
-./configure --disable-man --with-libzstd-from-internet --with-libb2-from-internet
+./configure --disable-man
 make -j$(nproc)
 make install
 

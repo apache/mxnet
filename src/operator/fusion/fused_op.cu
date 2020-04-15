@@ -270,6 +270,13 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             return out;
           };
           auto build_tuple = [ndim](int axis, const std::string str, const std::string def) {
+            if (axis < 0 &&
+                axis >= -ndim) {
+              axis += ndim;
+            }
+            if (axis < 0 || axis >= ndim) {
+              LOG(FATAL) << "Axis " << axis << " is out of bounds for array of dimension " << ndim;
+            }
             std::string tuple = "{";
             for (int i = 0; i < axis; i++) {
                 tuple = tuple + def + ",";
@@ -594,7 +601,7 @@ CUfunction FusedOp::CompileCode(const std::string &code,
 
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
-                          "--std=c++11"};
+                          "--std=c++14"};
     const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
