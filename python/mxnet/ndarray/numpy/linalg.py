@@ -19,7 +19,6 @@
 
 import numpy as _np
 from . import _op as _mx_nd_np
-from . import _internal as _npi
 from . import _api_internal
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
