@@ -576,7 +576,9 @@ class TopKAccuracy(EvalMetric):
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
             if num_dims == 1:
-                self.sum_metric += (pred_label.flat == label.flat).sum()
+                num_correct = (pred_label.flat == label.flat).sum()
+                self.sum_metric += num_correct
+                self.global_sum_metric += num_correct
             elif num_dims == 2:
                 num_classes = pred_label.shape[1]
                 top_k = min(num_classes, self.top_k)
@@ -594,9 +596,19 @@ class _BinaryClassificationMetrics(object):
     True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
     This class provides the machinery to track those statistics across mini-batches of
     (label, prediction) pairs.
+    
+    Parameters
+    ----------
+    beta : float, default 1
+        weight of precision in harmonic mean. 
+    threshold : float, default 0.5
+        threshold for deciding whether the predictions are positive or negative.
+        
     """
 
-    def __init__(self):
+    def __init__(self, threshold=0.5, beta=1):
+        self.threshold = threshold
+        self.beta = beta
         self.true_positives = 0
         self.false_negatives = 0
         self.false_positives = 0
@@ -619,9 +631,19 @@ class _BinaryClassificationMetrics(object):
         """
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
-        pred_label = numpy.argmax(pred, axis=1)
-
-        check_label_shapes(label, pred)
+        if len(pred.shape) == 1: # assume each value refers to confidence(positive)
+            pass
+        elif pred.shape[-1] > 2:
+            raise ValueError("%s currently only supports binary classification."
+                             % self.__class__.__name__)
+        elif pred.shape[-1] == 1: # classify positive when confidence(positive) > threshold
+            pred = pred.flat
+        else:
+            pred = pred.reshape(-1, 2)[:, 1] 
+        pred_label = pred > self.threshold 
+        label = label.flat
+        
+        check_label_shapes(label, pred_label)
         if len(numpy.unique(label)) > 2:
             raise ValueError("%s currently only supports binary classification."
                              % self.__class__.__name__)
@@ -674,14 +696,14 @@ class _BinaryClassificationMetrics(object):
     @property
     def fscore(self):
         if self.precision + self.recall > 0:
-            return 2 * self.precision * self.recall / (self.precision + self.recall)
+            return (1 + self.beta ** 2) * self.precision * self.recall / (self.beta ** 2 * self.precision + self.recall)
         else:
             return 0.
 
     @property
     def global_fscore(self):
         if self.global_precision + self.global_recall > 0:
-            return 2 * self.global_precision * self.global_recall / (self.global_precision + self.global_recall)
+            return (1 + self.beta ** 2) * self.global_precision * self.global_recall / (self.beta ** 2 * self.global_precision + self.global_recall)
         else:
             return 0.
 
@@ -723,6 +745,20 @@ class _BinaryClassificationMetrics(object):
         return self.global_false_negatives + self.global_false_positives + \
                self.global_true_negatives + self.global_true_positives
 
+    @property
+    def accuracy(self):
+        if self.total_examples > 0:
+            return float(self.true_positives + self.true_negatives) / self.total_examples
+        else:
+            return 0.
+
+    @property
+    def global_accuracy(self):
+        if self.global_total_examples > 0:
+            return float(self.global_true_positives + self.global_true_negatives) / self.global_total_examples
+        else:
+            return 0.
+            
     def local_reset_stats(self):
         self.false_positives = 0
         self.false_negatives = 0
@@ -768,6 +804,8 @@ class F1(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    threshold : float, default 0.5
+        threshold for postive confidence value.
     average : str, default 'macro'
         Strategy to be used for aggregating across mini-batches.
             "macro": average the F1 scores for each batch.
@@ -784,9 +822,106 @@ class F1(EvalMetric):
     """
 
     def __init__(self, name='f1',
-                 output_names=None, label_names=None, average="macro"):
+                 output_names=None, label_names=None, threshold=0.5, average="macro"):
         self.average = average
-        self.metrics = _BinaryClassificationMetrics()
+        self.metrics = _BinaryClassificationMetrics(threshold=threshold)
+        EvalMetric.__init__(self, name=name,
+                            output_names=output_names, label_names=label_names,
+                            has_global_stats=True)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            self.metrics.update_binary_stats(label, pred)
+
+        if self.average == "macro":
+            self.sum_metric += self.metrics.fscore
+            self.global_sum_metric += self.metrics.global_fscore
+            self.num_inst += 1
+            self.global_num_inst += 1
+            self.metrics.reset_stats()
+        else:
+            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+            self.global_sum_metric = self.metrics.global_fscore * self.metrics.global_total_examples
+            self.num_inst = self.metrics.total_examples
+            self.global_num_inst = self.metrics.global_total_examples
+
+    def reset(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
+        self.metrics.reset_stats()
+
+    def reset_local(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0
+        self.metrics.local_reset_stats()
+
+@register
+class Fbeta(EvalMetric):
+    """Computes the Fbeta score of a binary classification problem.
+
+    The Fbeta score is equivalent to harmonic mean of the precision and recall,
+    where the best value is 1.0 and the worst value is 0.0. The formula for Fbeta score is::
+
+        Fbeta = (1 + beta ** 2) * (precision * recall) / (beta ** 2 * precision + recall)
+
+    The formula for precision and recall is::
+
+        precision = true_positives / (true_positives + false_positives)
+        recall    = true_positives / (true_positives + false_negatives)
+
+    .. note::
+
+        This Fbeta score only supports binary classification.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    beta : float, default 1
+        weight of precision in harmonic mean. 
+    threshold : float, default 0.5
+        threshold for deciding whether the predictions are positive or negative.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the F1 scores for each batch.
+            "micro": compute a single F1 score across all batches.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
+    >>> labels   = [mx.nd.array([0., 1., 1.])]
+    >>> fbeta = mx.metric.Fbeta(beta=2)
+    >>> fbeta.update(preds = predicts, labels = labels)
+    >>> print fbeta.get()
+    ('fbeta', 0.9090909090909091)
+    """
+
+    def __init__(self, name='fbeta',
+                 output_names=None, label_names=None, beta=1, threshold=0.5, average="macro"):
+        self.average = average
+        self.metrics = _BinaryClassificationMetrics(threshold=threshold, beta=beta)
         EvalMetric.__init__(self, name=name,
                             output_names=output_names, label_names=label_names,
                             has_global_stats=True)
@@ -834,6 +969,76 @@ class F1(EvalMetric):
         self.metrics.local_reset_stats()
 
 
+@register
+class BinaryAccuracy(EvalMetric):
+    """Computes the accuracy of a binary classification problem.
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    threshold : float, default 0.5
+        threshold for deciding whether the predictions are positive or negative.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([0.7, 1, 0.55])]
+    >>> labels   = [mx.nd.array([0., 1., 0.])]
+    >>> bacc = mx.metric.BinaryAccuracy(threshold=0.6)
+    >>> bacc.update(preds = predicts, labels = labels)
+    >>> print bacc.get()
+    ('binary_accuracy', 0.6666666666666666)
+    """
+
+    def __init__(self, name='binary_accuracy',
+                 output_names=None, label_names=None, threshold=0.5):
+        self.metrics = _BinaryClassificationMetrics(threshold=threshold)
+        EvalMetric.__init__(self, name=name,
+                            output_names=output_names, label_names=label_names,
+                            has_global_stats=True)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            self.metrics.update_binary_stats(label, pred)
+
+        self.sum_metric = self.metrics.accuracy * self.metrics.total_examples
+        self.global_sum_metric = self.metrics.global_accuracy * self.metrics.global_total_examples
+        self.num_inst = self.metrics.total_examples
+        self.global_num_inst = self.metrics.global_total_examples
+
+    def reset(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
+        self.metrics.reset_stats()
+
+    def reset_local(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0
+        self.metrics.local_reset_stats()
+        
+        
 @register
 class MCC(EvalMetric):
     """Computes the Matthews Correlation Coefficient of a binary classification problem.
@@ -1092,7 +1297,10 @@ class MAE(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
-
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average MAE results for each batch.
+            "micro": compute a single MAE result across all batches.
     Examples
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
@@ -1104,11 +1312,12 @@ class MAE(EvalMetric):
     """
 
     def __init__(self, name='mae',
-                 output_names=None, label_names=None):
+                 output_names=None, label_names=None, average='macro'):
         super(MAE, self).__init__(
             name, output_names=output_names, label_names=label_names,
             has_global_stats=True)
-
+        self.average = average
+        
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1130,12 +1339,18 @@ class MAE(EvalMetric):
                 label = label.reshape(label.shape[0], 1)
             if len(pred.shape) == 1:
                 pred = pred.reshape(pred.shape[0], 1)
-
-            mae = numpy.abs(label - pred).mean()
+            
+            if self.average == "macro":
+                mae = numpy.abs(label - pred).mean()
+                num_inst = 1
+            else:
+                num_inst = label.shape[0]
+                mae = numpy.abs(label - pred).reshape(num_inst, -1).mean(axis=-1).sum()
+                
             self.sum_metric += mae
             self.global_sum_metric += mae
-            self.num_inst += 1 # numpy.prod(label.shape)
-            self.global_num_inst += 1 # numpy.prod(label.shape)
+            self.num_inst += num_inst
+            self.global_num_inst += num_inst
 
 
 @register
@@ -1157,7 +1372,10 @@ class MSE(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
-
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average MSE results for each batch.
+            "micro": compute a single MSE result across all batches.
     Examples
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
@@ -1168,11 +1386,12 @@ class MSE(EvalMetric):
     ('mse', 0.375)
     """
     def __init__(self, name='mse',
-                 output_names=None, label_names=None):
+                 output_names=None, label_names=None, average="macro"):
         super(MSE, self).__init__(
             name, output_names=output_names, label_names=label_names,
             has_global_stats=True)
-
+        self.average = average
+        
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1195,11 +1414,16 @@ class MSE(EvalMetric):
             if len(pred.shape) == 1:
                 pred = pred.reshape(pred.shape[0], 1)
 
-            mse = ((label - pred)**2.0).mean()
+            if self.average == "macro":
+                mse = ((label - pred)**2.0).mean()
+                num_inst = 1
+            else:
+                num_inst = label.shape[0]
+                mse = ((label - pred)**2.0).reshape(num_inst, -1).mean(axis=-1).sum()
             self.sum_metric += mse
             self.global_sum_metric += mse
-            self.num_inst += 1 # numpy.prod(label.shape)
-            self.global_num_inst += 1 # numpy.prod(label.shape)
+            self.num_inst += num_inst
+            self.global_num_inst += num_inst
 
 
 @register
@@ -1221,7 +1445,10 @@ class RMSE(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
-
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average RMSE results for each batch.
+            "micro": compute a single RSME result across all batches.
     Examples
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
@@ -1232,11 +1459,12 @@ class RMSE(EvalMetric):
     ('rmse', 0.612372457981)
     """
     def __init__(self, name='rmse',
-                 output_names=None, label_names=None):
+                 output_names=None, label_names=None, average="macro"):
         super(RMSE, self).__init__(
             name, output_names=output_names, label_names=label_names,
             has_global_stats=True)
-
+        self.average = average
+        
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1259,13 +1487,175 @@ class RMSE(EvalMetric):
             if len(pred.shape) == 1:
                 pred = pred.reshape(pred.shape[0], 1)
 
-            rmse = numpy.sqrt(((label - pred)**2.0).mean())
+            if self.average == "macro":
+                rmse = numpy.sqrt(((label - pred)**2.0).mean())
+                num_inst = 1
+            else:
+                num_inst = label.shape[0]
+                rmse = numpy.sqrt(((label - pred)**2.0).reshape(num_inst, -1).mean(axis=1)).sum()
             self.sum_metric += rmse
             self.global_sum_metric += rmse
-            self.num_inst += 1
-            self.global_num_inst += 1
+            self.num_inst += num_inst
+            self.global_num_inst += num_inst
 
 
+@register
+class MeanPairwiseDistance(EvalMetric):
+    """Computes Mean Pairwise Distance.
+
+    The mean pairwise distance is given by
+
+    .. math::
+        \\sqrt{\\frac{(\\sum_i^n (y_i - \\hat{y}_i)^p)^\\frac{1}{p}}{n}}
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    p : float, default 2
+        calculating distance using the p-norm
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average MPD results for each batch.
+            "micro": compute a single MPD result across all batches.
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[1., 2.], [3., 4.]])]
+    >>> labels = [mx.nd.array([[1., 0.], [4., 2.]])]
+    >>> mpd = mx.metric.MeanPairwiseDistance()
+    >>> mpd.update(labels = labels, preds = predicts)
+    >>> print mpd.get()
+    ('mpd', 2.1180338859558105)
+    """
+    def __init__(self, name='mpd',
+                 output_names=None, label_names=None, p=2, average="micro"):
+        super(MeanPairwiseDistance, self).__init__(
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+        self.average = average
+        self.p = p
+       
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            label = label.reshape(label.shape[0], -1)
+            pred = pred.reshape(pred.shape[0], -1)
+
+            pd = (((label - pred) ** self.p).sum(axis=-1)) ** (1./self.p)
+            if self.average == "macro":
+                pd = pd.mean()
+                num_inst = 1
+            else:
+                pd = pd.sum()
+                num_inst = label.shape[0]
+
+            self.sum_metric += pd
+            self.global_sum_metric += pd
+            self.num_inst += num_inst
+            self.global_num_inst += num_inst
+            
+
+@register
+class MeanCosineSimilarity(EvalMetric):
+    """Computes Mean Cosine Similarity.
+
+    The mean cosine similarity is given by
+
+    .. math::
+        cos\_sim(label, pred) = \frac{{label}.{pred}}{max(||label||.||pred||, eps)}
+    (calculating on the last dimension of label and pred.)
+    
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+    eps : float, default 1e-8
+        small vale to avoid division by zero.
+    average : str, default 'micro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average RMSE results for each batch.
+            "micro": compute a single RSME result across all batches.
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[1., 0.], [1., 1.]])]
+    >>> labels = [mx.nd.array([[3., 4.], [2., 2.]])]
+    >>> mcs = mx.metric.MeanCosineSimilarity()
+    >>> mcs.update(labels = labels, preds = predicts)
+    >>> print mcs.get()
+    ('cos_sim', 0.8)
+    """
+    def __init__(self, name='cos_sim',
+                 output_names=None, label_names=None, eps=1e-8, average="micro"):
+        super(MeanCosineSimilarity, self).__init__(
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+        self.average = average
+        self.eps = eps
+        
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            if len(label.shape) == 1:
+                label = label.reshape(1, label.shape[0])
+            if len(pred.shape) == 1:
+                pred = pred.reshape(1, pred.shape[0])
+
+            sim = (label * pred).sum(axis=-1)
+            n_p = numpy.linalg.norm(pred, axis=-1)
+            n_l = numpy.linalg.norm(label, axis=-1)
+            sim = sim / numpy.maximum(n_l * n_p, self.eps)
+            if self.average == "macro":
+                sim = sim.mean()
+                num_inst = 1
+            else:
+                sim = sim.sum()
+                num_inst = numpy.prod(label.shape[:-1])
+            self.sum_metric += sim
+            self.global_sum_metric += sim
+            self.num_inst += num_inst
+            self.global_num_inst += num_inst
+
+            
 @register
 @alias('ce')
 class CrossEntropy(EvalMetric):
