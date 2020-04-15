@@ -995,7 +995,7 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
                           const std::vector<NDArray> &inputs,
                           const std::vector<OpReqType> &req,
                           const std::vector<NDArray> &outputs) {
-  TmpMemMgr::Get()->Init(ctx.requested[0]);
+  TmpMemMgr::Get()->Init(ctx.requested[1]);
   // In the `autograd.record()` context, RNNOp is required to run into
   // forward_training mode.
   const bool is_training = (ctx.is_train || ctx.need_grad);
@@ -1132,7 +1132,7 @@ void MKLDNNRnnOp::Backward(const OpContext& ctx,
                            const std::vector<OpReqType>& req,
                            const std::vector<NDArray>& outputs) {
   using tag = mkldnn::memory::format_tag;
-  TmpMemMgr::Get()->Init(ctx.requested[0]);
+  TmpMemMgr::Get()->Init(ctx.requested[1]);
   const RNNParam& default_param = full_param_.default_param;
   const int data_dtype = inputs[rnn_enum::kData].dtype();
   const int w_dtype = inputs[rnn_enum::kParams].dtype();

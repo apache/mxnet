@@ -601,7 +601,7 @@ CUfunction FusedOp::CompileCode(const std::string &code,
 
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
-                          "--std=c++11"};
+                          "--std=c++14"};
     const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 

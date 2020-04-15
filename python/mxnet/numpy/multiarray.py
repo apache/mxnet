@@ -68,7 +68,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
+           'unique', 'lcm', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
            'equal', 'not_equal', 'interp',
            'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
@@ -5614,6 +5614,31 @@ def tril_indices(n, k=0, m=None):
 
 
 # pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def triu(m, k=0):
+    r"""
+    Upper triangle of an array.
+
+    Return a copy of a matrix with the elements below the `k`-th diagonal
+    zeroed.
+
+    Please refer to the documentation for `tril` for further details.
+
+    See Also
+    --------
+    tril : lower triangle of an array
+
+    Examples
+    --------
+    >>> np.triu(np.array([[1,2,3],[4,5,6],[7,8,9],[10,11,12]]), -1)
+    array([[ 1,  2,  3],
+           [ 4,  5,  6],
+           [ 0,  8,  9],
+           [ 0,  0, 12]])
+    """
+    return _mx_nd_np.triu(m, k)
+
+
 @set_module('mxnet.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """Return evenly spaced values within a given interval.

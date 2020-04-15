@@ -220,7 +220,7 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   // If there's no True in mask, return directly
   if (valid_num == 0) return;
 
-  const TShape& vshape = inputs[2].shape_;
+  const TShape& vshape = inputs.at(2).shape_;
 
   if (inputs.size() == 3U) {
     // tensor case

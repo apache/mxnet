@@ -809,7 +809,7 @@ int _SimpleBindImpl(SymbolHandle symbol_handle,
       ret->ret_vec_charp.push_back(ret->ret_vec_str.back().c_str());
     }
     *shared_buffer_len = shared_buffer_map.size();
-    *updated_shared_buffer_handle_list = &(ret->ret_handles[nd_idx]);
+    *updated_shared_buffer_handle_list = &(ret->ret_handles.at(nd_idx));
     *updated_shared_buffer_name_list = &(ret->ret_vec_charp[0]);
   }
 

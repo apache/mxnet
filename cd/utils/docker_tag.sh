@@ -24,7 +24,7 @@ is_release=${RELEASE_BUILD:-false}
 version=${VERSION:-nightly}
 
 # The docker tags will be in the form <version>_<hardware>(_mkl)
-# Eg. nightly_cpu, 1.4.0_cpu_mkl, nightly_gpu_cu80_mkl, etc.
+# Eg. nightly_cpu, 1.4.0_cpu_mkl, nightly_gpu_cu92_mkl, etc.
 
 if [[ ${mxnet_variant} == "cpu" ]]; then
     tag_suffix="cpu"

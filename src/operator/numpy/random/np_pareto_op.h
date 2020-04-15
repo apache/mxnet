@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <unordered_map>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -56,6 +57,14 @@ struct NumpyParetoParam : public dmlc::Parameter<NumpyParetoParam> {
       DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_s, size_s;
+    a_s << a;
+    size_s << size;
+    (*dict)["a"] = a_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 

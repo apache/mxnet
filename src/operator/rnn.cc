@@ -184,6 +184,7 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
     }
 #endif
   } else {
+    request.emplace_back(ResourceRequest::kRandom);
 #if MXNET_USE_MKLDNN == 1
     request.emplace_back(ResourceRequest::kTempSpace);
 #endif
