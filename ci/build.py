@@ -71,7 +71,7 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
 
 
 def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, no_cache: bool,
-                 cache_intermediate: bool) -> str:
+                 cache_intermediate: bool = False) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
