@@ -204,7 +204,12 @@ class LogMessageFatal {
   ~LogMessageFatal() MSHADOW_THROW_EXCEPTION {
     // throwing out of destructor is evil
     // hopefully we can do it here
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wterminate"
+#endif
     throw Error(log_stream_.str());
+#pragma GCC diagnostic pop
   }
 
  private:

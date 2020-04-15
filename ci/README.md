@@ -111,90 +111,37 @@ significantly. You can set this directory explicitly by setting CCACHE_DIR envir
 variable. All ccache instances are currently set to be 10 Gigabytes max in size.
 
 
-## Testing with QEMU
-To run the unit tests under qemu:
-```
-./build.py -p armv7 && ./build.py -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu
-```
+## Testing with ARM / Edge devices with QEMU
 
-To get a shell on the container and debug issues with the emulator itself, we build the container
-and then execute it interactively. We can afterwards use port 2222 on the host to connect with SSH.
-
+We build on [QEMU](https://www.qemu.org/) and Linux [Kernel Support for
+miscellaneous Binary
+Formats](https://www.kernel.org/doc/html/v5.6/admin-guide/binfmt-misc.html) for
+testing MXNet on edge devices. Test can be invoked with the same syntax as for
+non-virtualized platforms:
 
 ```
-ci/build.py -p test.arm_qemu -b && docker run -p2222:2222 -ti mxnetci/build.test.arm_qemu
+./build.py -p armv7
+./build.py -p test.armv7 /work/runtime_functions.sh unittest_ubuntu_python3_armv7
 ```
 
-Then from another terminal:
+For the test step to succeed, you must run Linux kernel 4.8 or later and have qemu installed.
 
+On Debian and Ubuntu systems, run the following command to install the dependencies:
 ```
-ssh -o StrictHostKeyChecking=no -p 2222 qemu@localhost
-```
+sudo apt install binfmt-support qemu-user-static
 
-There are two pre-configured users: `root` and `qemu` both without passwords.
-
-
-### Example of reproducing a test result with QEMU on ARM
-
-
-You might want to enable a debug build first:
-
-```
-$ git diff
-diff --git a/ci/docker/runtime_functions.sh b/ci/docker/runtime_functions.sh
-index 39631f9..666ceea 100755
---- a/ci/docker/runtime_functions.sh
-+++ b/ci/docker/runtime_functions.sh
-@@ -172,6 +172,7 @@ build_armv7() {
-         -DUSE_LAPACK=OFF \
-         -DBUILD_CPP_EXAMPLES=OFF \
-         -Dmxnet_LINKER_LIBS=-lgfortran \
-+        -DCMAKE_BUILD_TYPE=Debug \
-         -G Ninja /work/mxnet
-
-     ninja -v
-
+# Use qemu-binfmt-conf.sh to register all binary types with the kernel
+wget https://raw.githubusercontent.com/qemu/qemu/stable-4.1/scripts/qemu-binfmt-conf.sh
+chmod +x qemu-binfmt-conf.sh
+sudo ./qemu-binfmt-conf.sh --persistent yes --qemu-suffix "-static" --qemu-path "/usr/bin" --systemd ALL
 ```
 
-Then we build the project for armv7, the test container and start QEMU inside docker:
+If you run into segmentation faults at the beginning of the emulated tests, you
+probably have a ancient version of Qemu on your system (or found a bug in
+upstream Qemu). In that situation, you can rely on the
+`multiarch/qemu-user-static` Docker project to register a set of up-to-date Qemu
+binaries from their Docker image with your kernel:
 
 ```
-ci/build.py -p armv7
-ci/build.py -p test.arm_qemu -b && docker run -p2222:2222 -ti mxnetci/build.test.arm_qemu
-```
-
-
-
-At this point we copy artifacts and sources to the VM, in another terminal (host) do the following:
-
-```
-# Copy mxnet sources to the VM
-rsync --delete -e 'ssh -p2222' --exclude='.git/' -zvaP ./ qemu@localhost:mxnet
-
-
-# Ssh into the vm
-ssh -p2222 qemu@localhost
-
-cd mxnet
-
-# Execute a single failing C++ test
-build/tests/mxnet_unit_tests --gtest_filter="ACTIVATION_PERF.ExecuteBidirectional"
-
-# To install MXNet:
-sudo pip3 install --upgrade --force-reinstall build/mxnet-1.3.1-py2.py3-none-any.whl
-
-# Execute a single python test:
-
-nosetests-3.4 -v -s tests/python/unittest/test_ndarray.py
-
-
-# Debug with cgdb
-sudo apt install -y libstdc++6-6-dbg
-cgdb build/tests/mxnet_unit_tests
-
-(gdb) !pwd
-/home/qemu/mxnet
-(gdb) set substitute-path /work /home/qemu
-(gdb) set substitute-path /build/gcc-6-6mK9AW/gcc-6-6.3.0/build/arm-linux-gnueabihf/libstdc++-v3/include/ /usr/include/c++/6/
-(gdb) r --gtest_filter="ACTIVATION_PERF.ExecuteBidirectional"
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 ```

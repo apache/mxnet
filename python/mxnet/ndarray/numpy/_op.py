@@ -43,7 +43,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm',
-           'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
+           'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
@@ -690,9 +690,9 @@ def take(a, indices, axis=None, mode='raise', out=None):
         raise NotImplementedError(
             "function take does not support mode '{}'".format(mode))
     if axis is None:
-        return _npi.take(_npi.reshape(a, -1), indices, 0, mode, out)
+        return _api_internal.take(_npi.reshape(a, -1), indices, 0, mode, out)
     else:
-        return _npi.take(a, indices, axis, mode, out)
+        return _api_internal.take(a, indices, axis, mode, out)
 # pylint: enable=redefined-outer-name
 
 
@@ -2068,6 +2068,31 @@ def tril(m, k=0):
            [10., 11., 12.]])
     """
     return _api_internal.tril(m, k)
+
+
+@set_module('mxnet.ndarray.numpy')
+def triu(m, k=0):
+    r"""
+    Upper triangle of an array.
+
+    Return a copy of a matrix with the elements below the `k`-th diagonal
+    zeroed.
+
+    Please refer to the documentation for `tril` for further details.
+
+    See Also
+    --------
+    tril : lower triangle of an array
+
+    Examples
+    --------
+    >>> np.triu(np.array([[1,2,3],[4,5,6],[7,8,9],[10,11,12]]), -1)
+    array([[ 1,  2,  3],
+           [ 4,  5,  6],
+           [ 0,  8,  9],
+           [ 0,  0, 12]])
+    """
+    return _api_internal.triu(m, k)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
@@ -4551,11 +4576,7 @@ def clip(a, a_min, a_max, out=None):
     """
     if a_min is None and a_max is None:
         raise ValueError('array_clip: must set either max or min')
-    if a_min is None:
-        a_min = float('-inf')
-    if a_max is None:
-        a_max = float('inf')
-    return _npi.clip(a, a_min, a_max, out=out)
+    return _api_internal.clip(a, a_min, a_max, out)
 
 
 @set_module('mxnet.ndarray.numpy')

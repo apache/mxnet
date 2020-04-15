@@ -46,9 +46,7 @@ def build(mxnet_variant) {
   node(NODE_LINUX_CPU) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
       ci_utils.init_git()
-      // Compiling in Ubuntu14.04 due to glibc issues. 
-      // This should be updates once we have clarity on this issue.
-      ci_utils.docker_run('publish.ubuntu1404_cpu', "build_static_libmxnet ${mxnet_variant}", false)
+      ci_utils.docker_run('publish.centos7_cpu', "build_static_libmxnet ${mxnet_variant}", false)
       ci_utils.pack_lib("mxnet_${mxnet_variant}", libmxnet_pipeline.get_stash(mxnet_variant))
     }
   }
