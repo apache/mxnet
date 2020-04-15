@@ -615,6 +615,27 @@ def test_symbol_block_symbolic_bn_fp16_cast():
         y1 = net(x)
         assert np.dtype(y1.dtype).name == 'float16'
 
+@with_seed()
+def test_gemms_true_fp16():
+    ctx = mx.gpu(0)
+    input = mx.nd.random.uniform(shape=(1, 512), dtype='float16', ctx=ctx)
+    weights = mx.nd.random.uniform(shape=(128, 512), ctx=ctx)
+
+    net = nn.Dense(128, in_units=512, use_bias=False)
+    net.cast('float16')
+    net.initialize(ctx=ctx)
+    net.weight.set_data(weights)
+    ref_results = net(input)
+
+    os.environ["MXNET_FC_TRUE_FP16"] = "1"
+    results_trueFP16 = net(input)
+    atol = 1e-2
+    rtol = 1e-2
+    assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
+                        atol=atol, rtol=rtol)
+    os.environ["MXNET_FC_TRUE_FP16"] = "0"
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
