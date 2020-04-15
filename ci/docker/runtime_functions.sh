@@ -144,9 +144,6 @@ build_wheel() {
     popd
 }
 
-# Build commands: Every platform in docker/Dockerfile.build.<platform> should have a corresponding
-# function here with the same suffix:
-
 gather_licenses() {
     mkdir -p licenses
 
@@ -154,41 +151,6 @@ gather_licenses() {
     cp NOTICE licenses/
     cp LICENSE licenses/
     cp DISCLAIMER-WIP licenses/
-}
-
-build_ubuntu_cpu_release() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_MKLDNN=ON \
-        -DUSE_CUDA=OFF \
-        -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_cpu_native_release() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_MKLDNN=OFF \
-        -DUSE_CUDA=OFF \
-        -G Ninja /work/mxnet
-    ninja
-}
-
-build_ubuntu_gpu_release() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_MKLDNN=ON \
-        -DUSE_DIST_KVSTORE=ON \
-        -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -G Ninja /work/mxnet
-    ninja
 }
 
 # Compiles the dynamic mxnet library
@@ -202,16 +164,31 @@ build_dynamic_libmxnet() {
     # relevant licenses will be placed in the licenses directory
     gather_licenses
 
+    source /opt/rh/devtoolset-7/enable
+    cd /work/build
+    export CC=gcc-7
+    export CXX=g++-7
     if [[ ${mxnet_variant} = "cpu" ]]; then
-        build_ubuntu_cpu_release
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=ON \
+            -DUSE_CUDA=OFF \
+            -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} = "native" ]]; then
-        build_ubuntu_cpu_native_release
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=OFF \
+            -DUSE_CUDA=OFF \
+            -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
-        build_ubuntu_gpu_release
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=ON \
+            -DUSE_DIST_KVSTORE=ON \
+            -DUSE_CUDA=ON \
+            -G Ninja /work/mxnet
     else
         echo "Error: Unrecognized mxnet variant '${mxnet_variant}'"
         exit 1
     fi
+    ninja
 }
 
 build_jetson() {
@@ -1017,7 +994,6 @@ cd_unittest_ubuntu() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
-    local python_cmd=${2:?"This function requires a python command as the first argument"}
 
     local nose_cmd="nosetests-3.4"
 
@@ -1033,16 +1009,12 @@ cd_unittest_ubuntu() {
         $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/gpu
 
         # Adding these here as CI doesn't test all CUDA environments
-        $python_cmd example/image-classification/test_score.py
+        python3 example/image-classification/test_score.py
         integrationtest_ubuntu_gpu_dist_kvstore
     fi
 
-    if [[ ${mxnet_variant} = *mkl ]]; then
-        # skipping python 2 testing
-        # https://github.com/apache/incubator-mxnet/issues/14675
-        if [[ ${python_cmd} = "python3" ]]; then
-            $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/mkl
-        fi
+    if [[ ${mxnet_variant} = cpu ]]; then
+        $nose_cmd $NOSE_TIMER_ARGUMENTS --verbose tests/python/mkl
     fi
 }
 

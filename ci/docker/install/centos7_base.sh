@@ -37,6 +37,7 @@ yum -y install protobuf-compiler
 yum -y install protobuf-devel
 yum -y install zeromq-devel
 yum -y install patchelf
+yum -y install pandoc
 
 # gcc7
 yum -y install centos-release-scl
