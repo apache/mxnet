@@ -63,7 +63,7 @@ void MKLDNNRnnLayerParam::SetDims() {
   // unidirectional size of a single cell
   single_w_size = (input_size + state_size) * ngates * state_size;
   single_b_size = nbias * state_size;
-  naive_single_b_size = ngates * state_size * 2;  // naive RNN variants have double bias
+  native_single_b_size = ngates * state_size * 2;  // native RNN variants have double bias
   single_state_size = batch_size * state_size;
 
   // Get workspace size for cached weights memory
@@ -265,7 +265,7 @@ RnnBwdPrimitive GetRnnBwdPrim(const MKLDNNRnnForwardTraining &fwd,
 }
 
 /*
- * Naive weights layout is:
+ * Native weights layout is:
  *         | l0_l2r_wx | l0_l2r_wh | l0_r2l_wx | l0_r2l_wh |
  *         | l1_l2r_wx | l1_l2r_wh | l1_r2l_wx | l1_r2l_wh |
  *         ...
@@ -339,7 +339,6 @@ FUNC(MKLDNN_ARG_DIFF_##NAME, ARGS.at(MKLDNN_ARG_##NAME).get_desc(), HANDLE)
 void MKLDNNRnnForward::SetNewDataMem(void* x, void* hx, void* cx,
                                      void* y, void* hy, void* cy,
                                      const int dtype) {
-  using dims = mkldnn::memory::dims;
   using desc = mkldnn::memory::desc;
   using format_tag = mkldnn::memory::format_tag;
   auto& cpu_engine = CpuEngine::Get()->get_engine();
@@ -462,12 +461,12 @@ inline void EmplaceNetArgs(mkldnn_args_map_t* net_args, const int arg_name,
 }
 
 /*
- * Copy naive memory to mkldnn-format memory. It will initialize the memory
- * when first invoked. Then, the naive weight_layer and weight_iter are
+ * Copy native memory to mkldnn-format memory. It will initialize the memory
+ * when first invoked. Then, the native weight_layer and weight_iter are
  * concatenated to xxx_xx_r memory. Per the different gates order of GRU,
  * it will swap the memory blocks of gates among concatenated memory
  * inplace. From then on, the xxx_xx_r memory is reordered to target
- * memory with preferred format_tag. Finally, naive bias is fused to MKLDNN
+ * memory with preferred format_tag. Finally, native bias is fused to MKLDNN
  * bias memory.
  */
 void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr, void *w_ptr, void *b_ptr,
@@ -551,13 +550,13 @@ void MKLDNNRnnForward::SetWeightsMem(MKLDNNRnnMemMgr* mgr, void *w_ptr, void *b_
 
   // Process bias
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-    DType* naive_b_ptr = static_cast<DType*>(b_ptr);
+    DType* native_b_ptr = static_cast<DType*>(b_ptr);
     DType* fused_bias = static_cast<DType*>(bias_->get_data_handle());
     for (int lyr = 0; lyr < param_.num_layer; ++lyr) {
       for (int d = 0; d < param_.bidirectional + 1; ++d) {
-        FuseBias<DType>(fused_bias, naive_b_ptr, param_.mode, param_.state_size);
+        FuseBias<DType>(fused_bias, native_b_ptr, param_.mode, param_.state_size);
         fused_bias += param_.single_b_size;
-        naive_b_ptr += param_.naive_single_b_size;
+        native_b_ptr += param_.native_single_b_size;
       }
     }
   });
@@ -632,7 +631,6 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
                        const std::vector<NDArray> &inputs,
                        const std::vector<OpReqType> &req,
                        const std::vector<NDArray> &outputs) {
-  using memory = mkldnn::memory;
   using format_tag = mkldnn::memory::format_tag;
 
   // In the `autograd.record()` context, RNNOp is required to run into
@@ -674,10 +672,10 @@ void MKLDNNRnnOp::Init(const OpContext &ctx,
         default_param.bidirectional + 1, default_param.mode)) * dtype_bytes;
   for (auto& fwd_layer : fwd_inf_vec_) {
     size_t single_w_bytes = fwd_layer.GetParam().single_w_size * dtype_bytes;
-    size_t single_b_bytes = fwd_layer.GetParam().naive_single_b_size * dtype_bytes;
+    size_t single_b_bytes = fwd_layer.GetParam().native_single_b_size * dtype_bytes;
     size_t directions = fwd_layer.GetParam().bidirectional ? 2 : 1;
     size_t layer_weights_bytes = single_w_bytes * directions;
-    size_t layer_bias_bytes = single_b_bytes * directions;  // Naive MXNet has double bias
+    size_t layer_bias_bytes = single_b_bytes * directions;  // Native MXNet has double bias
 
     if (!fwd_layer.IsInitialized() || is_training)
       fwd_layer.SetWeightsMem(&(this->mgr_), weights_ptr, bias_ptr, is_training, dtype);
@@ -857,7 +855,7 @@ void MKLDNNRnnBackward::CommitWeightsGrads(void* diff_weights, void* diff_bias,
   const size_t wx_size = param.input_size * param.state_size * ngates;
   const size_t wh_size = param.state_size * param.state_size * ngates;
 
-  /* naive weights layout is:
+  /* native weights layout is:
           1st-layer: | wx_lr  | wh_lr  | wx_rl | wh_rl |
           2st-layer: | wx_lr  | wh_lr  | wx_rl | wh_rl |
   size:              |    wxh_bytes    |
@@ -903,33 +901,33 @@ void MKLDNNRnnBackward::CommitWeightsGrads(void* diff_weights, void* diff_bias,
   });
 
   const size_t bias_size = param.single_b_size;
-  const size_t naive_bias_size = param.naive_single_b_size;
+  const size_t native_bias_size = param.native_single_b_size;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     DType* native_bias = static_cast<DType *>(diff_bias);
     DType* diff_bias_ptr = static_cast<DType *>(this->diff_bias_->get_data_handle());
     OPREQTYPE_SWITCH(req, DType, FAccGrad, {
       if (param.mode != rnn_enum::kGru) {
         for (int shift = 0; shift < num_layer * direction; ++shift) {
-          FAccGrad(native_bias + shift * naive_bias_size,
+          FAccGrad(native_bias + shift * native_bias_size,
               diff_bias_ptr + shift * bias_size, bias_size);
-          FAccGrad(native_bias + shift * naive_bias_size + bias_size,
+          FAccGrad(native_bias + shift * native_bias_size + bias_size,
               diff_bias_ptr + shift * bias_size, bias_size);
         }
       } else {
         const size_t bias_size_per_gate = param.state_size;
         for (int shift = 0; shift < num_layer * direction; ++shift) {
-          DType* native_reset = native_bias + shift * naive_bias_size;
+          DType* native_reset = native_bias + shift * native_bias_size;
           DType* native_update = native_reset + bias_size_per_gate;
           DType* update = diff_bias_ptr + shift * bias_size;
           DType* reset = update + bias_size_per_gate;
 
           FAccGrad(native_update, update, bias_size_per_gate);
           FAccGrad(native_reset, reset, bias_size_per_gate);
-          FAccGrad(native_update + naive_bias_size / 2, update, bias_size_per_gate);
-          FAccGrad(native_reset + naive_bias_size / 2, reset, bias_size_per_gate);
+          FAccGrad(native_update + native_bias_size / 2, update, bias_size_per_gate);
+          FAccGrad(native_reset + native_bias_size / 2, reset, bias_size_per_gate);
 
           DType* native_new_bx = native_update + bias_size_per_gate;
-          DType* native_new_bh = native_new_bx + naive_bias_size / 2;
+          DType* native_new_bh = native_new_bx + native_bias_size / 2;
           DType* new_bx = reset + bias_size_per_gate;
           DType* new_bh = new_bx + bias_size_per_gate;
           FAccGrad(native_new_bx, new_bx, bias_size_per_gate);
@@ -1186,10 +1184,11 @@ void MKLDNNRnnOp::Backward(const OpContext& ctx,
 
   // Commit weights diff
   if (req[rnn_enum::kParams] != kNullOp) {
+    const int directions = default_param.bidirectional ? 2 : 1;
     for (size_t lyr = 0; lyr < bwd_vec_.size(); ++lyr) {
       bwd_vec_.at(lyr).CommitWeightsGrads(dw, db, req[rnn_enum::kParams], w_dtype);
-      dw += full_param_.layer_params.at(lyr).single_w_size * w_bytes;
-      db += full_param_.layer_params.at(lyr).single_b_size * w_bytes;
+      dw += full_param_.layer_params.at(lyr).single_w_size * directions * w_bytes;
+      db += full_param_.layer_params.at(lyr).native_single_b_size * directions * w_bytes;
     }
   }
 }
