@@ -334,8 +334,9 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
     }
 
     // use dst_md as diff_dst_md with any format
-    auto bwd_desc = mkldnn::pooling_backward::desc(alg, diff_src_md, dst_md,
-                                                   strides, kernel, pad_l, pad_r);
+    auto bwd_desc = mkldnn::pooling_backward::desc(
+      alg, diff_src_md, dst_md, {stride_h_, stride_w_},
+      {kernel_h_, kernel_w_}, {pad_t_, pad_l_}, {pad_b_, pad_r_});
     auto pdesc = mkldnn::pooling_backward::primitive_desc(bwd_desc, cpu_engine, fwd_pd);
 
     MKLDNNPoolingBwd bwd(pdesc, with_workspace);
