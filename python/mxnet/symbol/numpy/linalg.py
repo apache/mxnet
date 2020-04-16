@@ -324,18 +324,18 @@ def norm(x, ord=None, axis=None, keepdims=False):
                         if row_axis > col_axis:
                             row_axis -= 1
                     if ord == 'inf':
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).max(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).max(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                     else:
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).min(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).min(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [1, -1]:
                     row_axis, col_axis = axis
                     if not keepdims:
                         if row_axis < col_axis:
                             col_axis -= 1
                     if ord == 1:
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).max(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).max(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                     elif ord == -1:
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [2, -2]:
                     return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=0)
                 if ord is None:

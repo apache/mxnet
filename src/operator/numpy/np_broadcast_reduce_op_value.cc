@@ -51,12 +51,12 @@ inline bool NumpySumType(const nnvm::NodeAttrs& attrs,
 
   if (param.dtype.has_value()) {
     if (in_attrs->at(0) == mshadow::kBool) {
-      CHECK(param.dtype.value() == mshadow::kInt32
-          || param.dtype.value() == mshadow::kInt64
-          || param.dtype.value() == mshadow::kFloat32
-          || param.dtype.value() == mshadow::kFloat64) << "Only support the following output "
-                                                         "dtypes when input dtype is bool: "
-                                                         "int32, int64, float32, float64.";
+      CHECK(param.dtype.value() == mshadow::kInt32 ||
+            param.dtype.value() == mshadow::kInt64 ||
+            param.dtype.value() == mshadow::kFloat32 ||
+            param.dtype.value() == mshadow::kFloat64)
+        << "Only support the following output dtypes when input dtype is bool: "
+           "int32, int64, float32, float64.";
     }
     TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype.value());
   } else if (in_attrs->at(0) == mshadow::kBool) {
@@ -126,7 +126,7 @@ void TVMOpReduce(const OpContext& ctx,
 #endif  // MXNET_USE_TVM_OP
 }
 
-NNVM_REGISTER_OP(_np_sum)
+NNVM_REGISTER_OP(_npi_sum)
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -145,9 +145,9 @@ NNVM_REGISTER_OP(_np_sum)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_np_sum"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_npi_sum"});
 
-NNVM_REGISTER_OP(_backward_np_sum)
+NNVM_REGISTER_OP(_backward_npi_sum)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
@@ -155,8 +155,8 @@ NNVM_REGISTER_OP(_backward_np_sum)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesBackwardUseNone<cpu>);
 
 inline bool NumpyReduceAxesNoDTypeType(const nnvm::NodeAttrs& attrs,
-                         std::vector<int> *in_attrs,
-                         std::vector<int> *out_attrs) {
+                                       std::vector<int> *in_attrs,
+                                       std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
