@@ -552,6 +552,7 @@ __device__ inline DType relu(const DType val) {
 }
 
 const float SQRT_2 = 1.4142135623730950488016887242096;
+// compatible with mshadow_op.h version
 template <typename DType>
 __device__ inline DType gelu(const DType val) {
   return DType(0.5f * static_cast<float>(val) *
@@ -1002,6 +1003,7 @@ __device__ inline DTypeGrad backward_smooth_l1(const DType val, const DType2 sca
   }
 }
 
+// compatible with mshadow_op.h version
 template <typename DType, typename DTypeGrad>
 __device__ inline DTypeGrad backward_gelu(const DType val, const DTypeGrad grad) {
   return grad * DType(0.5f * (1.0f + erf(static_cast<float>(val) / SQRT_2) +
