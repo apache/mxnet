@@ -48,7 +48,7 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'rollaxis', 'pad', 'cumsum', 'diag', 'diagonal']
+           'where', 'bincount', 'rollaxis', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1739,13 +1739,13 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
     if isinstance(bins, numeric_types):
         if range is None:
             raise NotImplementedError("automatic range is not supported yet...")
-        return _npi.histogram(a, bin_cnt=bins, range=range)
+        return tuple(_api_internal.histogram(a, None, bins, range))
     if isinstance(bins, (list, tuple)):
         raise NotImplementedError("array_like bins is not supported yet...")
     if isinstance(bins, str):
         raise NotImplementedError("string bins is not supported yet...")
     if isinstance(bins, NDArray):
-        return _npi.histogram(a, bins=bins)
+        return tuple(_api_internal.histogram(a, bins, None, None))
     raise ValueError("np.histogram fails with", locals())
 
 
@@ -4883,10 +4883,7 @@ def average(a, axis=None, weights=None, returned=False, out=None):
     >>> np.average(data, axis=1, weights=weights)
     array([0.75, 2.75, 4.75])
     """
-    if weights is None:
-        return _npi.average(a, axis=axis, weights=None, returned=returned, weighted=False, out=out)
-    else:
-        return _npi.average(a, axis=axis, weights=weights, returned=returned, out=out)
+    return _api_internal.average(a, weights, axis, returned, weights is not None, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5011,7 +5008,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> np.std(a, dtype=np.float64)
     array(0.45, dtype=float64)
     """
-    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _api_internal.std(a, axis, dtype, ddof, keepdims, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5081,7 +5078,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
     0.2025
     """
-    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _api_internal.var(a, axis, dtype, ddof, keepdims, out)
 
 
 # pylint: disable=redefined-outer-name
@@ -6294,7 +6291,7 @@ def outer(a, b):
         [-2., -1.,  0.,  1.,  2.],
         [-2., -1.,  0.,  1.,  2.]])
     """
-    return tensordot(a.flatten(), b.flatten(), 0)
+    return tensordot(a.reshape_view((-1, )), b.reshape_view((-1, )), 0)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -8464,3 +8461,100 @@ def diagonal(a, offset=0, axis1=0, axis2=1):
             [1, 7]])
     """
     return _api_internal.diagonal(a, offset, axis1, axis2)
+
+
+# pylint:disable=redefined-outer-name, too-many-arguments
+@set_module('mxnet.ndarray.numpy')
+def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+    r"""
+    Sum of array elements over a given axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None or int, optional
+        Axis or axes along which a sum is performed.  The default,
+        axis=None, will sum all of the elements of the input array.  If
+        axis is negative it counts from the last to the first axis.
+    dtype : dtype, optional
+        The type of the returned array and of the accumulator in which the
+        elements are summed. The default type is float32.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `sum` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-classes `sum` method does not implement `keepdims` any
+        exceptions will be raised.
+    initial: Currently only supports None as input, optional
+        Starting value for the sum.
+        Currently not implemented. Please use ``None`` as input or skip this argument.
+    out : ndarray or None, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and dtype as the expected output.
+
+    Returns
+    -------
+    sum_along_axis : ndarray
+        An ndarray with the same shape as `a`, with the specified
+        axis removed. If an output array is specified, a reference to
+        `out` is returned.
+
+    Notes
+    -----
+    - Input type does not support Python native iterables.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    - "initial" param is not supported yet. Please use None as input.
+    - Arithmetic is modular when using integer types, and no error is raised on overflow.
+    - The sum of an empty array is the neutral element 0:
+
+    >>> a = np.empty(1)
+    >>> np.sum(a)
+    array(0.)
+
+    This function differs from the original `numpy.sum
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.sum.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - "out" param: cannot perform auto type cast. out ndarray's dtype must be the same as the expected output.
+    - "initial" param is not supported yet. Please use ``None`` as input or skip it.
+
+    Examples
+    --------
+    >>> a = np.array([0.5, 1.5])
+    >>> np.sum(a)
+    array(2.)
+    >>> a = np.array([0.5, 0.7, 0.2, 1.5])
+    >>> np.sum(a, dtype=np.int32)
+    array(2, dtype=int32)
+    >>> a = np.array([[0, 1], [0, 5]])
+    >>> np.sum(a)
+    array(6.)
+    >>> np.sum(a, axis=0)
+    array([0., 6.])
+    >>> np.sum(a, axis=1)
+    array([1., 5.])
+
+    With output ndarray:
+
+    >>> a = np.array([[0, 1], [0, 5]])
+    >>> b = np.ones((2,), dtype=np.float32)
+    >>> np.sum(a, axis=0, out=b)
+    array([0., 6.])
+    >>> b
+    array([0., 6.])
+
+    If the accumulator is too small, overflow occurs:
+
+    >>> np.ones(128, dtype=np.int8).sum(dtype=np.int8)
+    array(-128, dtype=int8)
+    """
+    if where is not None and where is not True:
+        raise ValueError("only where=None or where=True cases are supported for now")
+    return _api_internal.sum(a, axis, dtype, keepdims, initial, out)
+# pylint:enable=redefined-outer-name, too-many-arguments
