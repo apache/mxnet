@@ -493,18 +493,129 @@ def convert_pad(node, **kwargs):
 
     return [node]
 
+def create_helper_tensor_node(input_vals, output_name, kwargs):
+    """create extra tensor node from numpy values"""
+    data_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[input_vals.dtype]
 
-def create_helper_trans_node(op_name, input_node, node_name):
-    """create extra transpose node for dot operator"""
-    node_name = op_name + "_" + node_name
+    tensor_node = onnx.helper.make_tensor_value_info(
+        name=output_name,
+        elem_type=data_type,
+        shape=input_vals.shape
+    )
+    kwargs["initializer"].append(
+        onnx.helper.make_tensor(
+            name=output_name,
+            data_type=data_type,
+            dims=input_vals.shape,
+            vals=input_vals.flatten(),
+            raw=False,
+        )
+    )
+
+    return [tensor_node]
+
+def create_helper_reshape_node(input_name, output_name, shape, kwargs):
+    """create extra reshape node with static shape"""
+    shape_tensor_node, = create_helper_tensor_node(
+        np.asarray(shape, dtype=np.int64), output_name + "__shape", kwargs
+    )
+    reshape_node = onnx.helper.make_node(
+        "Reshape",
+        inputs=[input_name, shape_tensor_node.name],
+        outputs=[output_name],
+        name=output_name
+    )
+
+    return [shape_tensor_node, reshape_node]
+
+def create_helper_trans_node(input_name, output_name, perm=None):
+    """create extra transpose node"""
+    attrs = {}
+    if perm is not None:
+        attrs['perm'] = perm
     trans_node = onnx.helper.make_node(
         'Transpose',
-        inputs=[input_node],
-        outputs=[node_name],
-        name=node_name
+        inputs=[input_name],
+        outputs=[output_name],
+        name=output_name,
+        **attrs
     )
-    return trans_node
+    return [trans_node]
 
+def create_helper_concat_node(inputs, output_name, axis=0):
+    """create extra concat node"""
+    concat_node = onnx.helper.make_node(
+        "Concat",
+        inputs=inputs,
+        outputs=[output_name],
+        name=output_name,
+        axis=axis,
+    )
+    return [concat_node]
+
+def create_helper_expand_node(input_name, output_name, expand_shape):
+    """create extra expand node"""
+    expand_node = onnx.helper.make_node(
+        "Expand",
+        inputs=[input_name, expand_shape],
+        outputs=[output_name],
+        name=output_name,
+    )
+    return [expand_node]
+
+def create_helper_gather_node(
+        input_name, output_name,
+        indices, kwargs,
+        axis=None
+    ):
+    """create extra gather node with static indices"""
+    attrs = {}
+    if axis is not None:
+        attrs['axis'] = axis
+    gather_tensor_node, = create_helper_tensor_node(
+        np.asarray(indices, np.int64), output_name + "__indices", kwargs
+    )
+    gather_node = onnx.helper.make_node(
+        "Gather",
+        inputs=[input_name, gather_tensor_node.name],
+        outputs=[output_name],
+        name=output_name,
+        **attrs
+    )
+    return [gather_tensor_node, gather_node]
+
+def create_helper_build_values_node(
+        inputs, output_name,
+        dtype, kwargs, axis=0
+    ):
+    """create extra node, with specified values
+
+    (allows mixing node names and static values)
+    """
+    values = []
+    tensor_nodes = []
+    for idx, inp in enumerate(inputs):
+        if not isinstance(inp, (str, bytes)):
+            inp, = create_helper_tensor_node(
+                np.array([inp], dtype=dtype),
+                output_name + "__value" + str(idx),
+                kwargs
+            )
+            tensor_nodes.append(inp)
+            inp = inp.name
+        values.append(inp)
+    concat_node, = create_helper_concat_node(values, output_name, axis=axis)
+    return tensor_nodes + [concat_node,]
+
+def create_helper_shape_node(input_name, output_name):
+    """create extra shape node for specified input node"""
+    shape_node = onnx.helper.make_node(
+        "Shape",
+        inputs=[input_name],
+        outputs=[output_name],
+        name=output_name,
+    )
+    return [shape_node]
 
 @mx_op.register("dot")
 def convert_dot(node, **kwargs):
@@ -524,11 +635,11 @@ def convert_dot(node, **kwargs):
     op_name = "transpose" + str(kwargs["idx"])
 
     if trans_a:
-        trans_a_node = create_helper_trans_node(op_name, input_nodes[0], 'a')
-        input_node_a = op_name+"_a"
+        input_node_a = op_name + "_a"
+        trans_a_node, = create_helper_trans_node(input_nodes[0], input_node_a)
     if trans_b:
-        trans_b_node = create_helper_trans_node(op_name, input_nodes[1], 'b')
-        input_node_b = op_name+"_b"
+        input_node_b = op_name + "_b"
+        trans_b_node, = create_helper_trans_node(input_nodes[1], input_node_b)
 
     matmul_node = onnx.helper.make_node(
         'MatMul',
@@ -1503,16 +1614,34 @@ def convert_slice_axis(node, **kwargs):
         in_shape = kwargs['in_shape'][0]
         ends = in_shape[axes]
 
+    export_nodes = []
+
+    starts = np.atleast_1d(np.asarray(starts, dtype=np.int))
+    ends = np.atleast_1d(np.asarray(ends, dtype=np.int))
+    axes = np.atleast_1d(np.asarray(axes, dtype=np.int))
+
+    starts_node = create_helper_tensor_node(starts, name + '__starts', kwargs)
+    export_nodes.extend(starts_node)
+    starts_node = starts_node[-1].name
+
+    ends_node = create_helper_tensor_node(ends, name + '__ends', kwargs)
+    export_nodes.extend(ends_node)
+    ends_node = ends_node[-1].name
+
+    axes_node = create_helper_tensor_node(axes, name + '__axes', kwargs)
+    export_nodes.extend(axes_node)
+    axes_node = axes_node[-1].name
+
+    input_node = input_nodes[0]
     node = onnx.helper.make_node(
         "Slice",
-        input_nodes,
+        [input_node, starts_node, ends_node, axes_node],
         [name],
-        axes=[axes],
-        starts=[starts],
-        ends=[int(ends)],
         name=name,
     )
-    return [node]
+    export_nodes.extend([node])
+
+    return export_nodes
 
 
 @mx_op.register("SliceChannel")
@@ -2070,14 +2199,22 @@ def convert_topk(node, **kwargs):
     else:
         raise NotImplementedError("ONNX expects both value and indices as output")
 
+    export_nodes = []
+
+    k = np.asarray([k], dtype=np.int)
+    k_node = create_helper_tensor_node(k, name + '__k', kwargs)
+    export_nodes.extend(k_node)
+    k_node = k_node[-1].name
+
+    input_node = input_nodes[0]
     topk_node = onnx.helper.make_node(
         "TopK",
-        input_nodes,
+        [input_node, k_node],
         outputs,
         axis=axis,
-        k=k,
         name=name
     )
+    export_nodes.extend([topk_node])
 
     return [topk_node]
 
