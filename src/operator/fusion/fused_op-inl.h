@@ -232,7 +232,6 @@ const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_bwd
   {"gelu"                              , {{"op::backward_gelu(%, %)", "_1", "_0"}}},
 };
 
-
 const std::map<std::string, std::string> slice_ops = {
   {"slice_axis"   , ""},
   {"slice"   , ""},
@@ -552,7 +551,7 @@ __device__ inline DType relu(const DType val) {
   return val > 0 ? val : 0;
 }
 
-__constant__ const float SQRT_2 = 1.4142135623730950488016887242096;
+const float SQRT_2 = 1.4142135623730950488016887242096;
 template <typename DType>
 __device__ inline DType gelu(const DType val) {
   return DType(0.5f * static_cast<float>(val) *
