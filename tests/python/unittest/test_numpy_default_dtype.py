@@ -199,21 +199,24 @@ def check_default_dtype(op_list):
 
 @with_seed()
 def test_default_float_dtype():
-    check_default_dtype(_NUMPY_DTYPE_DEFAULT_FUNC_LIST)
+    import platform
+    if 'Windows' not in platform.system():
+        check_default_dtype(_NUMPY_DTYPE_DEFAULT_FUNC_LIST)
 
 
 @use_np
 def test_np_indices_default_dtype():
-    
-    @use_np_default_dtype
-    def check_np_indices_default_dtype():
-        assert np.indices((3,)).dtype == 'int64'
+    import platform
+    if 'Windows' not in platform.system():
+        @use_np_default_dtype
+        def check_np_indices_default_dtype():
+            assert np.indices((3,)).dtype == 'int64'
 
-    def check_deepnp_indices_default_dtype():
-        assert np.indices((3,)).dtype == 'int64'
-    
-    check_deepnp_indices_default_dtype()
-    check_np_indices_default_dtype()
+        def check_deepnp_indices_default_dtype():
+            assert np.indices((3,)).dtype == 'int64'
+        
+        check_deepnp_indices_default_dtype()
+        check_np_indices_default_dtype()
 
 
     
