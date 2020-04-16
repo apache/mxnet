@@ -24,9 +24,9 @@ from collections import OrderedDict
 
 import numpy
 
-from .base import numeric_types, string_types
-from . import ndarray
-from . import registry
+from ..base import numeric_types, string_types
+from .. import ndarray
+from .. import registry
 
 
 def check_label_shapes(labels, preds, wrap=False, shape=False):
@@ -256,9 +256,9 @@ def create(metric, *args, **kwargs):
     >>> def custom_metric(label, pred):
     ...     return np.mean(np.abs(label - pred))
     ...
-    >>> metric1 = mx.metric.create('acc')
-    >>> metric2 = mx.metric.create(custom_metric)
-    >>> metric3 = mx.metric.create([metric1, metric2, 'rmse'])
+    >>> metric1 = mx.gluon.metric.create('acc')
+    >>> metric2 = mx.gluon.metric.create(custom_metric)
+    >>> metric3 = mx.gluon.metric.create([metric1, metric2, 'rmse'])
     """
     if callable(metric):
         return CustomMetric(metric, *args, **kwargs)
@@ -293,9 +293,9 @@ class CompositeEvalMetric(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> eval_metrics_1 = mx.metric.Accuracy()
-    >>> eval_metrics_2 = mx.metric.F1()
-    >>> eval_metrics = mx.metric.CompositeEvalMetric()
+    >>> eval_metrics_1 = mx.gluon.metric.Accuracy()
+    >>> eval_metrics_2 = mx.gluon.metric.F1()
+    >>> eval_metrics = mx.gluon.metric.CompositeEvalMetric()
     >>> for child_metric in [eval_metrics_1, eval_metrics_2]:
     >>>     eval_metrics.add(child_metric)
     >>> eval_metrics.update(labels = labels, preds = predicts)
@@ -460,7 +460,7 @@ class Accuracy(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> acc = mx.metric.Accuracy()
+    >>> acc = mx.gluon.metric.Accuracy()
     >>> acc.update(preds = predicts, labels = labels)
     >>> print acc.get()
     ('accuracy', 0.6666666666666666)
@@ -535,7 +535,7 @@ class TopKAccuracy(EvalMetric):
     >>> top_k = 3
     >>> labels = [mx.nd.array([2, 6, 9, 2, 3, 4, 7, 8, 9, 6])]
     >>> predicts = [mx.nd.array(np.random.rand(10, 10))]
-    >>> acc = mx.metric.TopKAccuracy(top_k=top_k)
+    >>> acc = mx.gluon.metric.TopKAccuracy(top_k=top_k)
     >>> acc.update(labels, predicts)
     >>> print acc.get()
     ('top_k_accuracy', 0.3)
@@ -815,7 +815,7 @@ class F1(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0., 1., 1.])]
-    >>> f1 = mx.metric.F1()
+    >>> f1 = mx.gluon.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.8)
@@ -912,7 +912,7 @@ class Fbeta(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0., 1., 1.])]
-    >>> fbeta = mx.metric.Fbeta(beta=2)
+    >>> fbeta = mx.gluon.metric.Fbeta(beta=2)
     >>> fbeta.update(preds = predicts, labels = labels)
     >>> print fbeta.get()
     ('fbeta', 0.9090909090909091)
@@ -990,7 +990,7 @@ class BinaryAccuracy(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([0.7, 1, 0.55])]
     >>> labels   = [mx.nd.array([0., 1., 0.])]
-    >>> bacc = mx.metric.BinaryAccuracy(threshold=0.6)
+    >>> bacc = mx.gluon.metric.BinaryAccuracy(threshold=0.6)
     >>> bacc.update(preds = predicts, labels = labels)
     >>> print bacc.get()
     ('binary_accuracy', 0.6666666666666666)
@@ -1092,9 +1092,9 @@ class MCC(EvalMetric):
         [0.]*(false_positives + true_negatives) +
         [1.]*(false_negatives + true_positives)
     )]
-    >>> f1 = mx.metric.F1()
+    >>> f1 = mx.gluon.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
-    >>> mcc = mx.metric.MCC()
+    >>> mcc = mx.gluon.metric.MCC()
     >>> mcc.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.95233560306652054)
@@ -1203,7 +1203,7 @@ class Perplexity(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> perp = mx.metric.Perplexity(ignore_label=None)
+    >>> perp = mx.gluon.metric.Perplexity(ignore_label=None)
     >>> perp.update(labels, predicts)
     >>> print perp.get()
     ('Perplexity', 1.7710976285155853)
@@ -1305,7 +1305,7 @@ class MAE(EvalMetric):
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
     >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
-    >>> mean_absolute_error = mx.metric.MAE()
+    >>> mean_absolute_error = mx.gluon.metric.MAE()
     >>> mean_absolute_error.update(labels = labels, preds = predicts)
     >>> print mean_absolute_error.get()
     ('mae', 0.5)
@@ -1380,7 +1380,7 @@ class MSE(EvalMetric):
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
     >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
-    >>> mean_squared_error = mx.metric.MSE()
+    >>> mean_squared_error = mx.gluon.metric.MSE()
     >>> mean_squared_error.update(labels = labels, preds = predicts)
     >>> print mean_squared_error.get()
     ('mse', 0.375)
@@ -1453,7 +1453,7 @@ class RMSE(EvalMetric):
     --------
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
     >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
-    >>> root_mean_squared_error = mx.metric.RMSE()
+    >>> root_mean_squared_error = mx.gluon.metric.RMSE()
     >>> root_mean_squared_error.update(labels = labels, preds = predicts)
     >>> print root_mean_squared_error.get()
     ('rmse', 0.612372457981)
@@ -1528,7 +1528,7 @@ class MeanPairwiseDistance(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[1., 2.], [3., 4.]])]
     >>> labels = [mx.nd.array([[1., 0.], [4., 2.]])]
-    >>> mpd = mx.metric.MeanPairwiseDistance()
+    >>> mpd = mx.gluon.metric.MeanPairwiseDistance()
     >>> mpd.update(labels = labels, preds = predicts)
     >>> print mpd.get()
     ('mpd', 2.1180338859558105)
@@ -1605,7 +1605,7 @@ class MeanCosineSimilarity(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[1., 0.], [1., 1.]])]
     >>> labels = [mx.nd.array([[3., 4.], [2., 2.]])]
-    >>> mcs = mx.metric.MeanCosineSimilarity()
+    >>> mcs = mx.gluon.metric.MeanCosineSimilarity()
     >>> mcs.update(labels = labels, preds = predicts)
     >>> print mcs.get()
     ('cos_sim', 0.8)
@@ -1688,7 +1688,7 @@ class CrossEntropy(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> ce = mx.metric.CrossEntropy()
+    >>> ce = mx.gluon.metric.CrossEntropy()
     >>> ce.update(labels, predicts)
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
@@ -1760,7 +1760,7 @@ class NegativeLogLikelihood(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> nll_loss = mx.metric.NegativeLogLikelihood()
+    >>> nll_loss = mx.gluon.metric.NegativeLogLikelihood()
     >>> nll_loss.update(labels, predicts)
     >>> print nll_loss.get()
     ('nll-loss', 0.57159948348999023)
@@ -1829,7 +1829,7 @@ class PearsonCorrelation(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([[1, 0], [0, 1], [0, 1]])]
-    >>> pr = mx.metric.PearsonCorrelation()
+    >>> pr = mx.gluon.metric.PearsonCorrelation()
     >>> pr.update(labels, predicts)
     >>> print pr.get()
     ('pearsonr', 0.42163704544016178)
@@ -1957,9 +1957,9 @@ class PCC(EvalMetric):
         [0]*(false_positives + true_negatives) +
         [1]*(false_negatives + true_positives)
     )]
-    >>> f1 = mx.metric.F1()
+    >>> f1 = mx.gluon.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
-    >>> pcc = mx.metric.PCC()
+    >>> pcc = mx.gluon.metric.PCC()
     >>> pcc.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.95233560306652054)
@@ -2129,7 +2129,7 @@ class CustomMetric(EvalMetric):
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
     >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
     >>> feval = lambda x, y : (x + y).mean()
-    >>> eval_metrics = mx.metric.CustomMetric(feval=feval)
+    >>> eval_metrics = mx.gluon.metric.CustomMetric(feval=feval)
     >>> eval_metrics.update(labels, predicts)
     >>> print eval_metrics.get()
     ('custom(<lambda>)', 6.0)
@@ -2209,7 +2209,7 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     >>> def custom_metric(label, pred):
     ...     return np.mean(np.abs(label-pred))
     ...
-    >>> metric = mx.metric.np(custom_metric)
+    >>> metric = mx.gluon.metric.np(custom_metric)
     """
     def feval(label, pred):
         """Internal eval function."""

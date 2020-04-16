@@ -24,7 +24,7 @@ import logging
 import warnings
 import numpy as np
 
-from .. import metric
+from ..gluon import metric
 from .. import ndarray
 
 from ..context import cpu
@@ -231,7 +231,7 @@ class BaseModule(object):
         --------
         >>> # An example of using score for prediction.
         >>> # Evaluate accuracy on val_dataiter
-        >>> metric = mx.metric.Accuracy()
+        >>> metric = mx.gluon.metric.Accuracy()
         >>> mod.score(val_dataiter, metric)
         >>> mod.score(val_dataiter, ['mse', 'acc'])
         """
