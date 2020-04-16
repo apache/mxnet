@@ -322,7 +322,8 @@ class MKLDNNRnnForward {
 
   mkldnn::memory *weights_layer_r_ = nullptr;
   mkldnn::memory *weights_iter_r_ = nullptr;
-  mkldnn::memory *weights_proj_r_ = nullptr;
+  mkldnn::memory *weights_proj_r_ = nullptr;    // format_tag::ldoi
+  mkldnn::memory *weights_proj_io_ = nullptr;   // format_tag::ldio, used in quantization
 
   /*
    * net_args must contain some keys as below:
