@@ -37,6 +37,7 @@ import warnings
 import json
 import unittest
 import random
+from numpy.testing import assert_allclose
 
 @with_seed()
 def test_parameter():
@@ -3213,6 +3214,46 @@ def test_reqs_switching_training_inference():
     grad2 = x.grad.asnumpy()
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
+
+def test_getitem_hybridized():
+    class picking_np(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super().__init__(prefix=prefix, params=params)
+        def hybrid_forward(self, F, sequence, pick_ids):
+            """
+            new implementation in deep numpy
+            """
+            idx_arange = F.npx.arange_like(pick_ids.reshape((-1, )), axis=0)
+            batch_idx = F.np.floor(idx_arange / 2).astype(np.int32)
+
+            encoded = sequence[batch_idx, pick_ids.reshape((-1,))]
+            encoded = F.npx.reshape_like(encoded, pick_ids, lhs_begin=-2, lhs_end=-1, rhs_begin=0)
+            return encoded
+
+    sequence = mx.nd.array(np.random.normal(0, 1, (8, 32, 768)), dtype=np.float32)
+    # pick_ids: [batch_size, picked_index]
+    pick_ids = mx.nd.random.randint(0, 32, (8,2), dtype=np.int32)
+
+    mx.npx.set_np()
+    picker_np = picking_np()
+    seq_np = sequence.as_np_ndarray()
+    np_output = picker_np(seq_np, pick_ids.as_np_ndarray())
+    seq_np.attach_grad()
+    with mx.autograd.record():
+        z = picker_np(seq_np, pick_ids.as_np_ndarray())
+    z.backward()
+
+    picker_np.initialize()
+    picker_np.hybridize()
+    nd_output_hybridized = picker_np(sequence.as_np_ndarray(), pick_ids.as_np_ndarray())
+    seq_np_hybridized = sequence.as_np_ndarray()
+    seq_np_hybridized.attach_grad()
+    with mx.autograd.record():
+        z_hybridized = picker_np(seq_np_hybridized, pick_ids.as_np_ndarray())
+    z_hybridized.backward()
+
+    assert_allclose(nd_output_hybridized.asnumpy(), np_output.asnumpy(), rtol=1e-5, atol=1e-5)
+    assert_allclose(seq_np.grad.asnumpy(), seq_np_hybridized.grad.asnumpy(), rtol=1e-5, atol=1e-5)
 
 if __name__ == '__main__':
     import nose

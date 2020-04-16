@@ -677,6 +677,28 @@ class ndarray(NDArray):
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
+            if prepend == _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY:
+                has_none = False
+                if type(key) == tuple:
+                    for i in list(key):
+                        if i is None:
+                            has_none = True
+                            break
+                if not has_none:
+                    idcs, new_axes = self._get_index_nd(key)
+                    if type(idcs) == NDArray:  # pylint: disable=unidiomatic-typecheck
+                        idcs = idcs.as_np_ndarray()
+                    else:
+                        idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+                    sliced = _npi.advanced_indexing_multiple(self, idcs)
+                    # Reshape due to `None` entries in `key`.
+                    if new_axes:
+                        final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
+                        for ax in new_axes:  # pylint: disable=invalid-name
+                            final_shape.insert(ax, 1)
+                        return sliced.reshape(tuple(final_shape))
+                    else:
+                        return sliced
             if dc.is_deferred_compute():
                 raise TypeError('Advanced indexing is not supported in HybridBlock.')
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:

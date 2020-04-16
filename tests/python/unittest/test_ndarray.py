@@ -1661,7 +1661,6 @@ def test_ndarray_indexing():
         test_getitem_autograd(np_array, index[0])
         test_setitem_autograd(np_array, index[0])
 
-
 def test_assign_float_value_to_ndarray():
     """Test case from https://github.com/apache/incubator-mxnet/issues/8668"""
     a = np.array([47.844944], dtype=np.float32)

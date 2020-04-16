@@ -116,6 +116,8 @@ class _Symbol(Symbol):
                 end = []
                 step = []
                 new_shape = ()
+                result = self
+                is_symbol_tuple = False
                 if len(key) == 0:
                     return self
                 for index in key:
@@ -136,14 +138,27 @@ class _Symbol(Symbol):
                             end.append(index - 1)
                             step.append(-1)
                         new_shape += (-3,)
+                    elif isinstance(index, Symbol):
+                        if new_shape != ():
+                            new_shape += (-4,)
+                            sliced = _npi.slice(result, begin, end, step)
+                            result = _npi.reshape(sliced, new_shape)
+                        if not is_symbol_tuple:
+                            is_symbol_tuple = True
                     else:
-                        raise IndexError('Only integer, slice, or tuple of these types'
+                        raise IndexError('Only integer, slice, symbol or tuple of these types'
                                          ' are supported! Received key={}'.format(key))
+                if is_symbol_tuple:
+                    key = _npi.stack(*[i for i in key])
+                    sliced = _npi.advanced_indexing_multiple(self, key)
+                    return sliced
                 new_shape += (-4,)
                 sliced = _npi.slice(self, begin, end, step)
                 return _npi.reshape(sliced, new_shape)
+            elif isinstance(key, Symbol):
+                return _npi.advanced_indexing(self, key)
             else:
-                raise IndexError('Only integer, slice, or tuple of these types are supported! '
+                raise IndexError('Only integer, slice, tuple or Symbol of these types are supported! '
                                  'Received key={}'.format(key))
 
     def __setitem__(self, key, value):
