@@ -37,7 +37,7 @@ except ImportError:
     pass
 
 from . import sampler as _sampler
-from ... import nd, context
+from ... import ndarray as nd, context
 from ...util import is_np_shape, is_np_array, set_np
 from ... import numpy as _mx_np  # pylint: disable=reimported
 

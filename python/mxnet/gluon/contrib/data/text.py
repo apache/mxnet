@@ -29,7 +29,7 @@ from . import _constants as C
 from ...data import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
 from ....contrib import text
-from .... import nd, base
+from .... import ndarray as nd, base
 
 class _LanguageModelDataset(dataset._DownloadedDataset): # pylint: disable=abstract-method
     def __init__(self, root, namespace, vocabulary):
