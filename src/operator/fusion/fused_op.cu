@@ -463,7 +463,8 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         // LeakyReLU, look for act_type
         if (op_name == "LeakyReLU") {
             std::string act_type = node.source->attrs.dict.at("act_type");
-            const std::vector<std::vector<std::string>>& op_descs = fusion::LeakyReLU_ops.at(act_type);
+            const std::vector<std::vector<std::string>>& op_descs =
+                fusion::LeakyReLU_ops.at(act_type);
             if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_ops.end()) {
               CHECK_EQ(outputs[i], op_descs.size());
               size_t count = 0;
@@ -479,7 +480,8 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         }
         if (op_name == "_backward_LeakyReLU") {
             std::string act_type = node.source->attrs.dict.at("act_type");
-            const std::vector<std::vector<std::string>>& op_descs = fusion::LeakyReLU_bwd_ops.at(act_type);
+            const std::vector<std::vector<std::string>>& op_descs =
+                fusion::LeakyReLU_bwd_ops.at(act_type);
             if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_bwd_ops.end()) {
               CHECK_EQ(outputs[i], op_descs.size());
               size_t count = 0;
