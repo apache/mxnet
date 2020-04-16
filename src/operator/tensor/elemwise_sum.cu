@@ -89,9 +89,10 @@ class VectorizedElementwiseSumFwd {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t /* other_dim */) {
     VectorizedElementwiseSumKernel<aligned, DType, LType, req>
-      <<<blocks, threads, 0, stream>>>(params, N);
+      <<<blocks, threads, 0, stream>>>(params, lead_dim);
   }
 };
 
@@ -116,7 +117,7 @@ void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
             params.inputs[j] = inputs[i + j].dptr<DType>();
           }
           params.outputs[0] = outputs[0].dptr<DType>();
-          VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+          VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
         } else {
           /* During subsequent launches we need to
              accumulate into the previous outputs
@@ -128,7 +129,7 @@ void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
             params.inputs[j] = inputs[i + j].dptr<DType>();
           }
           params.outputs[0] = outputs[0].dptr<DType>();
-          VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+          VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
         }
       }
     });

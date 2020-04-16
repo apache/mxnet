@@ -75,6 +75,10 @@ class VectorizedAccessor {
     }
   }
 
+  MSHADOW_XINLINE int alignment() const {
+    return alignment_;
+  }
+
   MSHADOW_XINLINE DType* separate() {
     return storage_.scratch_.separate;
   }
@@ -92,7 +96,7 @@ class VectorizedAccessor {
       storage_.scratch_.aligned = aligned_ptr_[id];
     } else {
       if (id > 0 && id < n_elems_ - 1) {
-      storage_.scratch_.aligned = aligned_ptr_[id];
+        storage_.scratch_.aligned = aligned_ptr_[id];
       } else {
 #pragma unroll
         for (int j = 0; j < storage_.nvec; ++j) {
@@ -105,7 +109,6 @@ class VectorizedAccessor {
       }
     }
   }
-
 };
 
 template <typename DType, typename LType, bool aligned = false>
@@ -158,8 +161,9 @@ int CalcAlignment(const DType* ptr) {
 }
 
 template <typename LType, typename DType, typename Params>
-Alignment CheckAlignment(const Params& params) {
+Alignment CheckAlignment(const Params& params, const index_t lead_dim, const index_t other_dim) {
   int align = -1;
+  constexpr int nvec = sizeof(LType) / sizeof(DType);
 
   for (const DType* ptr : params.inputs) {
     int new_align = CalcAlignment<LType>(ptr);
@@ -183,8 +187,17 @@ Alignment CheckAlignment(const Params& params) {
     }
   }
 
-  return align == 0 ? Alignment::SAME_ALIGNED
-                    : Alignment::SAME_UNALIGNED;
+  if ((other_dim != 1) &&
+      (lead_dim % nvec != 0)) {
+    return Alignment::DIFFERENT;
+  }
+
+  if ((align == 0) &&
+      (lead_dim % nvec == 0)) {
+    return Alignment::SAME_ALIGNED;
+  } else {
+    return Alignment::SAME_UNALIGNED;
+  }
 }
 
 constexpr int vectorized_kernel_thread_num = 512;
@@ -192,29 +205,35 @@ constexpr int vectorized_kernel_thread_num = 512;
 }  // namespace
 
 template <typename DType, typename LType, typename Kernel>
-void VectorizedKernelLauncher(const index_t size, mshadow::Stream<gpu>* s, typename Kernel::ParamType params) {
+void VectorizedKernelLauncher(const index_t lead_dim,
+                              const index_t other_dim,
+                              mshadow::Stream<gpu>* s,
+                              typename Kernel::ParamType params) {
   static_assert(sizeof(LType) >= sizeof(DType), "Load type is smaller than operand type");
-  if (size != 0) {
+  if (lead_dim * other_dim != 0) {
     cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-    constexpr int nvec = sizeof(LType) / sizeof(DType);
-    VectorizedLoader<DType, LType> l(params.inputs[0], size);
-    size_t num_elements = l.num_aligned_elements();
+    VectorizedLoader<DType, LType> l(params.inputs[0], lead_dim);
+    size_t num_elements = other_dim * l.num_aligned_elements();
     constexpr int threads = vectorized_kernel_thread_num;
     constexpr int max_blocks = 65535;
     index_t blocks = std::min(static_cast<int>((num_elements + threads - 1) / threads),
                               max_blocks);
-    auto align = CheckAlignment<LType, DType>(params);
-    if (align == Alignment::SAME_ALIGNED && (size % nvec == 0)) {
-      Kernel::template Launch<true, LType>(blocks, threads, stream, params, size);
-    } else {
-      if (align != Alignment::DIFFERENT) {
-        Kernel::template Launch<false, LType>(blocks, threads, stream, params, size);
-      } else {
+    auto align = CheckAlignment<LType, DType>(params, lead_dim, other_dim);
+    switch (align) {
+      case Alignment::SAME_ALIGNED:
+        Kernel::template Launch<true, LType>(blocks, threads, stream, params, lead_dim, other_dim);
+        break;
+      case Alignment::SAME_UNALIGNED:
+        Kernel::template Launch<false, LType>(blocks, threads, stream, params, lead_dim, other_dim);
+        break;
+      case Alignment::DIFFERENT: {
+        const index_t size = lead_dim * other_dim;
         index_t blocks = std::min(static_cast<int>((size + threads - 1) /
                                                    threads),
                                   max_blocks);
         // If the pointers are aligned differently we cannot vectorize
-        Kernel::template Launch<true, DType>(blocks, threads, stream, params, size);
+        Kernel::template Launch<true, DType>(blocks, threads, stream, params, lead_dim, other_dim);
+        break;
       }
     }
   }

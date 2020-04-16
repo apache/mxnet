@@ -191,9 +191,10 @@ class VectorizedBinaryFwd {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t /* other_dim */) {
     VectorizedBinaryKernelFwd<aligned, DType, LType, OP, req>
-      <<<blocks, threads, 0, stream>>>(params, N);
+      <<<blocks, threads, 0, stream>>>(params, lead_dim);
   }
 };
 
@@ -205,9 +206,10 @@ class VectorizedBinaryBwdUseNone {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t /* other_dim */) {
     VectorizedBinaryKernelBwdUseNone<aligned, DType, LType, LOP, ROP, lreq, rreq>
-      <<<blocks, threads, 0, stream>>>(params, N);
+      <<<blocks, threads, 0, stream>>>(params, lead_dim);
   }
 };
 
@@ -219,9 +221,10 @@ class VectorizedBinaryBwdUseIn {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t /* other_dim */) {
     VectorizedBinaryKernelBwdUseIn<aligned, DType, LType, LOP, ROP, lreq, rreq>
-      <<<blocks, threads, 0, stream>>>(params, N);
+      <<<blocks, threads, 0, stream>>>(params, lead_dim);
   }
 };
 
@@ -248,7 +251,7 @@ void ElemwiseBinaryOp::Compute_(const nnvm::NodeAttrs &attrs,
       params.inputs[1] = inputs[1].dptr<DType>();
       params.outputs[0] = outputs[0].dptr<DType>();
 
-      VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+      VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
     });
   });
 }
@@ -275,7 +278,7 @@ void ElemwiseBinaryOp::BackwardUseNone_(const nnvm::NodeAttrs &attrs,
           params.outputs[0] = outputs[0].dptr<DType>();
           params.outputs[1] = outputs[1].dptr<DType>();
 
-          VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+          VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
         });
       });
     }
@@ -305,7 +308,7 @@ void ElemwiseBinaryOp::BackwardUseIn_(const nnvm::NodeAttrs &attrs,
           params.outputs[0] = outputs[0].dptr<DType>();
           params.outputs[1] = outputs[1].dptr<DType>();
 
-          VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+          VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
         });
       });
     });

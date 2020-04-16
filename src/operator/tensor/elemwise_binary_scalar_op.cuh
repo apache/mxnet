@@ -121,9 +121,10 @@ class VectorizedBinaryScalarFwd {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t /* other_dim */) {
     VectorizedBinaryScalarKernelFwd<aligned, DType, LType, OP, req>
-      <<<blocks, threads, 0, stream>>>(params, N);
+      <<<blocks, threads, 0, stream>>>(params, lead_dim);
   }
 };
 
@@ -135,9 +136,10 @@ class VectorizedBinaryScalarBwd {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t /* other_dim */) {
     VectorizedBinaryScalarKernelBwd<aligned, DType, LType, OP, req>
-      <<<blocks, threads, 0, stream>>>(params, N);
+      <<<blocks, threads, 0, stream>>>(params, lead_dim);
   }
 };
 
@@ -165,7 +167,7 @@ void BinaryScalarOp::Compute_(const nnvm::NodeAttrs &attrs,
       params.outputs[0] = outputs[0].dptr<DType>();
       params.scalar = (DType)alpha;
 
-      VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+      VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
     });
   });
 }
@@ -193,7 +195,7 @@ void BinaryScalarOp::Backward_(const nnvm::NodeAttrs &attrs,
       params.outputs[0] = outputs[0].dptr<DType>();
       params.scalar = (DType)alpha;
 
-      VectorizedKernelLauncher<DType, LType, Kernel>(size, s, params);
+      VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
     });
   });
 }

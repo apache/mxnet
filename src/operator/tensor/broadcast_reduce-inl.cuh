@@ -18,10 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2015-2017 by Contributors
+ * Copyright (c) 2015-2020 by Contributors
  * \file broadcast_reduce-inl.cuh
  * \brief CUDA implementations for binary broadcast and reduce
- * \author Antti-Pekka Hynninen
+ * \author Antti-Pekka Hynninen, Przemyslaw Tredak
 */
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_
@@ -31,8 +31,7 @@ using namespace mshadow::cuda;
 template <int ndim, typename DType>
 struct VectorizedBinaryBroadcastParam {
   const DType* inputs[2];
-  DType* outputs[2];  // Only the first one is used in the computation
-                      // the other one is used for alignment checking
+  DType* outputs[1];
   Shape<ndim> stride[2];
   Shape<ndim> oshape;
   index_t size[2];
@@ -44,26 +43,33 @@ using common::cuda::VectorizedStorer;
 template <bool aligned, typename DType, typename LType, typename OP, int ndim, int req>
 __global__ void VectorizedBinaryBroadcastKernel(
     const VectorizedBinaryBroadcastParam<ndim, DType> param,
-    const index_t N) {
+    const index_t lead_dim, const index_t other_dim,
+    const index_t num_aligned_elements) {
   constexpr int nvec = sizeof(LType) / sizeof(DType);
-  const index_t M = N / nvec;
+  const index_t M = num_aligned_elements * other_dim;
 
   VectorizedLoader<DType, LType, aligned> lloader(param.inputs[0], param.size[0]);
   VectorizedLoader<DType, LType, aligned> rloader(param.inputs[1], param.size[1]);
-  VectorizedStorer<DType, LType, aligned> storer(param.outputs[0], N);
 
   for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
        idx < M;
        idx += gridDim.x * blockDim.x) {
+    const index_t row = idx / num_aligned_elements;
+    const index_t lead_dim_idx = idx - row * num_aligned_elements;
+    VectorizedStorer<DType, LType, aligned> storer(param.outputs[0] + row * lead_dim, lead_dim);
+
     index_t lindex, rindex;
-    unravel_dot(idx * nvec, param.oshape,
+    const index_t original_idx = max(lead_dim_idx * nvec -
+                                     lloader.alignment() + row * lead_dim,
+                                     0);
+    unravel_dot(original_idx, param.oshape,
                 param.stride[0], param.stride[1],
                 &lindex, &rindex);
-    lloader.load(lindex / nvec, param.size[0]);
-    rloader.load(rindex / nvec, param.size[1]);
+    lloader.load((lindex + lloader.alignment()) / nvec, param.size[0]);
+    rloader.load((rindex + lloader.alignment()) / nvec, param.size[1]);
 
     if (req == kAddTo) {
-      storer.load(idx, N);
+      storer.load(lead_dim_idx, lead_dim);
     }
 #pragma unroll
     for (int i = 0; i < lloader.nvec(); ++i) {
@@ -76,38 +82,44 @@ __global__ void VectorizedBinaryBroadcastKernel(
         storer.separate()[i] = temp;
       }
     }
-    storer.store(idx, N);
+    storer.store(lead_dim_idx, lead_dim);
   }
 }
 
 template <bool aligned, typename DType, typename LType, typename OP, int ndim, int req, int side>
 __global__ void VectorizedBinaryBroadcastSingleSideKernel(
     const VectorizedBinaryBroadcastParam<ndim, DType> param,
-    const index_t N) {
+    const index_t lead_dim, const index_t other_dim,
+    const index_t num_aligned_elements) {
   constexpr int nvec = sizeof(LType) / sizeof(DType);
-  const index_t M = N / nvec;
+  const index_t M = num_aligned_elements * other_dim;
   constexpr int other_side = 1 - side;
 
   VectorizedLoader<DType, LType, aligned> lloader(param.inputs[side], param.size[side]);
-  VectorizedStorer<DType, LType, aligned> storer(param.outputs[0], N);
 
   for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
        idx < M;
        idx += gridDim.x * blockDim.x) {
-    index_t lindex, rindex;
-    unravel_dot(idx * nvec, param.oshape,
-                param.stride[side], param.stride[other_side],
-                &lindex, &rindex);
-    lloader.load(lindex / nvec, param.size[side]);
+    const index_t row = idx / num_aligned_elements;
+    const index_t lead_dim_idx = idx - row * num_aligned_elements;
+    VectorizedStorer<DType, LType, aligned> storer(param.outputs[0] + row * lead_dim, lead_dim);
+    const index_t original_idx = lead_dim_idx * nvec -
+                                 lloader.alignment() + row * lead_dim;
+    const index_t original_idx_clamped = max(0, original_idx);
+    const index_t lindex = mxnet_op::unravel_dot(original_idx_clamped, param.oshape,
+                                                 param.stride[side]);
+    lloader.load((lindex + lloader.alignment()) / nvec, param.size[side]);
 
     if (req == kAddTo) {
-      storer.load(idx, N);
+      storer.load(lead_dim_idx, lead_dim);
     }
 #pragma unroll
     for (int i = 0; i < lloader.nvec(); ++i) {
-      if (i != 0) {
-        rindex = mxnet_op::unravel_dot(idx * nvec + i, param.oshape, param.stride[other_side]);
-      }
+      const index_t rindex = min(max(mxnet_op::unravel_dot(original_idx + i,
+                                                           param.oshape,
+                                                           param.stride[other_side]),
+                                     0),
+                                 param.size[other_side] - 1);
       DType rinput = param.inputs[other_side][rindex];
       DType temp;
       if (side == 0) {
@@ -120,15 +132,13 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
                        lloader.separate()[i]);
       }
 
-      printf("thread %d %d %d: %d %d %d %f %f %f\n", threadIdx.x, blockIdx.x, idx, lindex, rindex, i, (float)lloader.separate()[i], (float)rinput, (float)temp);
-
       if (req == kAddTo) {
         storer.separate()[i] += temp;
       } else {
         storer.separate()[i] = temp;
       }
     }
-    storer.store(idx, N);
+    storer.store(lead_dim_idx, lead_dim);
   }
 }
 
@@ -140,7 +150,8 @@ class VectorizedBinaryBroadcastFwd {
   template <bool aligned, typename LType>
   static void Launch(const index_t blocks, const index_t threads,
                      cudaStream_t stream,
-                     const ParamType params, const index_t N) {
+                     const ParamType params, const index_t lead_dim,
+                     const index_t other_dim) {
     int common_shape = 1;
     int first_different = -1;
     for (int i = ndim - 1; i >= 0; --i) {
@@ -153,31 +164,25 @@ class VectorizedBinaryBroadcastFwd {
     }
 
     if (common_shape != 1) {
+      VectorizedLoader<DType, LType, aligned> loader(params.inputs[0], lead_dim);
+      const index_t num_elements_per_row = loader.num_aligned_elements();
       VectorizedBinaryBroadcastKernel<aligned, DType, LType, OP, ndim, req>
-        <<<blocks, threads, 0, stream>>>(params, N);
+        <<<blocks, threads, 0, stream>>>(params, lead_dim, other_dim, num_elements_per_row);
     } else {
       if (params.stride[0][first_different] == 0) {
+        VectorizedLoader<DType, LType, aligned> loader(params.inputs[1], lead_dim);
+        const index_t num_elements_per_row = loader.num_aligned_elements();
         VectorizedBinaryBroadcastSingleSideKernel<aligned, DType, LType, OP, ndim, req, 1>
-          <<<blocks, threads, 0, stream>>>(params, N);
+          <<<blocks, threads, 0, stream>>>(params, lead_dim, other_dim, num_elements_per_row);
       } else {
+        VectorizedLoader<DType, LType, aligned> loader(params.inputs[0], lead_dim);
+        const index_t num_elements_per_row = loader.num_aligned_elements();
         VectorizedBinaryBroadcastSingleSideKernel<aligned, DType, LType, OP, ndim, req, 0>
-          <<<blocks, threads, 0, stream>>>(params, N);
+          <<<blocks, threads, 0, stream>>>(params, lead_dim, other_dim, num_elements_per_row);
       }
     }
   }
 };
-
-inline void PrintTensor(const TBlob& blob, const std::string& name) {
-  const index_t size = blob.shape_.Size();
-  float* temp = new float[size];
-  cudaMemcpy(temp, blob.dptr_, size * sizeof(float), cudaMemcpyDeviceToHost);
-  std::cout << name << std::endl;
-  for (int i = 0; i < size; ++i) {
-    std::cout << i << ": " << temp[i] << std::endl;
-  }
-  std::cout << "End: " << name << std::endl;
-  delete[] temp;
-}
 
 template<int ndim, typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
@@ -189,10 +194,6 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
 
   Shape<ndim> lstride = mxnet_op::calc_stride(lhs.shape_.get<ndim>());
   Shape<ndim> rstride = mxnet_op::calc_stride(rhs.shape_.get<ndim>());
-  std::cout << "lshape: " << lhs.shape_ << std::endl;
-  std::cout << "rshape: " << rhs.shape_ << std::endl;
-  PrintTensor(lhs, "lhs");
-  PrintTensor(rhs, "rhs");
 
   MXNET_ASSIGN_REQ_SWITCH(req, Req, {
     using LType = uint2;
@@ -209,23 +210,20 @@ void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
     param.size[0] = lhs.shape_.Size();
     param.size[1] = rhs.shape_.Size();
 
+    index_t lead_dim = 1;
     for (int i = ndim - 1; i >= 0; --i) {
       /* Find the first non-1 dimension
          to check the alignment
       */
       if (param.oshape[i] != 1) {
-        param.outputs[1] = param.outputs[0] + param.oshape[i];
+        lead_dim = param.oshape[i];
         break;
       }
-      if (i == 0) {
-        /* All dimensions are 1 */
-        param.outputs[1] = param.outputs[0];
-      }
     }
+    const index_t other_dim = out.shape_.Size() / lead_dim;
 
-    VectorizedKernelLauncher<DType, LType, Kernel>(N, s, param);
+    VectorizedKernelLauncher<DType, LType, Kernel>(lead_dim, other_dim, s, param);
   });
-  PrintTensor(out, "out");
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
