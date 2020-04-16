@@ -338,13 +338,19 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
   if (it == pooling_bwds.end()) {
     auto input_mem = in_data.GetMKLDNNData();
     const mkldnn::memory::desc data_md = input_mem->get_desc();
-    const mkldnn::memory::desc out_md = GetMemDesc(out_grad, in_data.dtype());
-    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, out_md);
-    const mkldnn::memory::desc diff_md = diff_dst_mem->get_desc();
 
-    const mkldnn::memory::desc diff_in_md = GetMemDesc(in_grad);
-    const mkldnn::engine cpu_engine = CpuEngine::Get()->get_engine();
-    const mkldnn::algorithm alg = GetMKLDNNPoolAlgo(param);
+    auto dst_dims = mkldnn::memory::dims(out_grad.shape().begin(), out_grad.shape().end());
+    auto any = mkldnn::memory::format_tag::any;
+    auto dst_md = mkldnn::memory::desc(dst_dims, get_data_type(data_md), any);
+
+    // fwd hint
+    auto fwd_pd = GetPoolingFwdPdesc(param, true, data_md, dst_md);
+
+    // creat bwd desc
+    auto diff_src_dims = mkldnn::memory::dims(in_grad.shape().begin(), in_grad.shape().end());
+    auto diff_src_md = mkldnn::memory::desc(diff_src_dims, get_data_type(data_md), any);
+    auto cpu_engine = CpuEngine::Get()->get_engine();;
+    auto alg = GetMKLDNNPoolAlgo(param);
 
     const int kernel_ndims = param.kernel.ndim();
     mkldnn::memory::dims kernel(kernel_ndims);
@@ -354,9 +360,11 @@ MKLDNNPoolingBwd &GetPoolingBwd(const PoolingParam &param,
 
     InitPoolingPrimitiveParams(param, data_md, kernel, strides, pad_l, pad_r);
 
-    const mkldnn::pooling_backward::desc desc(
-                alg, diff_in_md, diff_md, strides, kernel, pad_l, pad_r);
-    const auto pdesc = mkldnn::pooling_backward::primitive_desc(desc, cpu_engine, fwd_pd);
+    // use dst_md as diff_dst_md with any format
+    auto bwd_desc = mkldnn::pooling_backward::desc(alg, diff_src_md, dst_md,
+                                                   strides, kernel, pad_l, pad_r);
+    auto pdesc = mkldnn::pooling_backward::primitive_desc(bwd_desc, cpu_engine, fwd_pd);
+
     MKLDNNPoolingBwd bwd(pdesc, with_workspace);
     it = AddToCache(&pooling_bwds, key, bwd);
   }
