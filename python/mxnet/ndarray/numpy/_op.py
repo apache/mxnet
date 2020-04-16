@@ -4341,7 +4341,7 @@ def column_stack(tup):
            [2., 3.],
            [3., 4.]])
     """
-    return _npi.column_stack(*tup)
+    return _api_internal.column_stack(*tup)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4380,7 +4380,7 @@ def hstack(arrays):
            [2., 3.],
            [3., 4.]])
     """
-    return _npi.hstack(*arrays)
+    return _api_internal.hstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
