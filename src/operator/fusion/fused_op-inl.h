@@ -224,6 +224,15 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
                                           {"(% * % / op::hypot(%, %))", "_0", "_2", "_1", "_2"}}}
 };
 
+// LeakyReLU ops: based on "act_type" attribute
+const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_ops = {
+  {"gelu"                              , {{"op::gelu(%)", "_0"}}},
+};
+const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_bwd_ops = {
+  {"gelu"                              , {{"op::backward_gelu(%, %)", "_1", "_0"}}},
+};
+
+
 const std::map<std::string, std::string> slice_ops = {
   {"slice_axis"   , ""},
   {"slice"   , ""},
@@ -541,6 +550,13 @@ __device__ inline typename LoadType<OutType>::Type cast(const DType val) {
 template <typename DType>
 __device__ inline DType relu(const DType val) {
   return val > 0 ? val : 0;
+}
+
+__constant__ const float SQRT_2 = 1.4142135623730950488016887242096;
+template <typename DType>
+__device__ inline DType gelu(const DType val) {
+  return DType(0.5f * static_cast<float>(val) *
+               (1.0f + erf(static_cast<float>(val) / SQRT_2)));
 }
 
 template <typename DType>
@@ -985,6 +1001,12 @@ __device__ inline DTypeGrad backward_smooth_l1(const DType val, const DType2 sca
   } else {
     return bsq * val * grad;
   }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_gelu(const DType val, const DTypeGrad grad) {
+  return grad * DType(0.5f * (1.0f + erf(static_cast<float>(val) / SQRT_2) +
+                static_cast<float>(val) * backward_erf(static_cast<float>(val) / SQRT_2, 1.0f) / SQRT_2));
 }
 
 }  // namespace op

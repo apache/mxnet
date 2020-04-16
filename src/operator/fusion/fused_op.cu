@@ -460,6 +460,40 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           continue;
         }
 
+        // LeakyReLU, look for act_type
+        if (op_name == "LeakyReLU") {
+            std::string act_type = node.source->attrs.dict.at("act_type");
+            const std::vector<std::vector<std::string>>& op_descs = fusion::LeakyReLU_ops.at(act_type);
+            if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_ops.end()) {
+              CHECK_EQ(outputs[i], op_descs.size());
+              size_t count = 0;
+              for (const auto& op_desc : op_descs) {
+                var_name = "temp" + std::to_string(temp_name_counter++);
+                const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+                code += "const auto " + var_name + " = " + fmt + ";\n";
+                variables[{i, count}] = var_name;
+                ++count;
+              }
+              continue;
+            }
+        }
+        if (op_name == "_backward_LeakyReLU") {
+            std::string act_type = node.source->attrs.dict.at("act_type");
+            const std::vector<std::vector<std::string>>& op_descs = fusion::LeakyReLU_bwd_ops.at(act_type);
+            if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_bwd_ops.end()) {
+              CHECK_EQ(outputs[i], op_descs.size());
+              size_t count = 0;
+              for (const auto& op_desc : op_descs) {
+                var_name = "temp" + std::to_string(temp_name_counter++);
+                const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+                code += "const auto " + var_name + " = " + fmt + ";\n";
+                variables[{i, count}] = var_name;
+                ++count;
+              }
+              continue;
+            }
+        }
+
         LOG(FATAL) << "Unrecognized op " + op_name;
       }
     } else {

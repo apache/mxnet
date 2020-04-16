@@ -71,6 +71,20 @@ namespace {
                   op_name) !=
         variable_io_ops.end())
       return true;
+    if (op_name == "LeakyReLU"){
+        std::string act_type = n->attrs.dict.at("act_type");
+        if (LeakyReLU_ops.count(act_type))
+          return true;
+        else
+          return false;
+    }
+    if (op_name == "_backward_LeakyReLU"){
+        std::string act_type = n->attrs.dict.at("act_type");
+        if (LeakyReLU_bwd_ops.count(act_type))
+          return true;
+        else
+          return false;
+    }
     return false;
   }
 
