@@ -8977,6 +8977,34 @@ def test_np_rollaxis():
                         assert same(mx_out.asnumpy(), np_out)
 
 
+@use_np
+def test_npx_stop_gradient():
+    class TestStopGradient(HybridBlock):
+        def hybrid_forward(self, F, a):
+            return F.npx.stop_gradient(a)
+    dtypes = ['float16', 'float32', 'float64']
+    for hybridize in [False, True]:
+        for dtype in dtypes:
+            for grad_req in ['write', 'add']:
+                dat = np.ones((10,), dtype=dtype)
+                dat.attach_grad(grad_req)
+                dat.grad[:] = 2
+                old_grad = dat.grad.asnumpy()
+                net = TestStopGradient()
+                if hybridize:
+                    net.hybridize()
+                with mx.autograd.record():
+                    out = net(dat)
+                    out = out + dat
+                    out.backward()
+                new_grad = dat.grad.asnumpy()
+                assert same(out.asnumpy(), dat.asnumpy() * 2)
+                if grad_req == 'write':
+                    assert_almost_equal(new_grad, _np.ones_like(dat, dtype=dtype))
+                elif grad_req == 'add':
+                    assert_almost_equal(new_grad, old_grad + 1)
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
