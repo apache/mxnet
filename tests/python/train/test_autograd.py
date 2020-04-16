@@ -53,7 +53,7 @@ val_data = mx.io.MNISTIter(
         batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
 def score(net, ctx_list):
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
     val_data.reset()
     for batch in val_data:
         datas = gluon.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
@@ -67,7 +67,7 @@ def score(net, ctx_list):
 def train(net, epoch, ctx_list):
     net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for i in range(epoch):

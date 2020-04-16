@@ -64,7 +64,7 @@ def test_mlp():
         softmax,
         X=train_dataiter,
         eval_data=val_dataiter,
-        eval_metric=mx.metric.np(accuracy),
+        eval_metric=mx.gluon.metric.np(accuracy),
         epoch_end_callback=mx.callback.do_checkpoint(prefix),
         ctx=[mx.cpu(i) for i in range(2)],
         num_epoch=num_epoch,

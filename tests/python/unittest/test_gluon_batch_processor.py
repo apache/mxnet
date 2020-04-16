@@ -52,7 +52,7 @@ def test_batch_processor_fit():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     processor = BatchProcessor()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
@@ -83,7 +83,7 @@ def test_batch_processor_validation():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     val_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     processor = BatchProcessor()

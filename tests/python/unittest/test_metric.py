@@ -25,9 +25,9 @@ from common import with_seed
 from copy import deepcopy
 
 def check_metric(metric, *args, **kwargs):
-    metric = mx.metric.create(metric, *args, **kwargs)
+    metric = mx.gluon.metric.create(metric, *args, **kwargs)
     str_metric = json.dumps(metric.get_config())
-    metric2 = mx.metric.create(str_metric)
+    metric2 = mx.gluon.metric.create(str_metric)
 
     assert metric.get_config() == metric2.get_config()
 
@@ -40,7 +40,7 @@ def test_metrics():
     check_metric('pcc')
     check_metric('nll_loss')
     check_metric('loss')
-    composite = mx.metric.create(['acc', 'f1'])
+    composite = mx.gluon.metric.create(['acc', 'f1'])
     check_metric(composite)
 
 def _check_global_metric(metric, *args, **kwargs):
@@ -76,7 +76,7 @@ def _check_global_metric(metric, *args, **kwargs):
 
     shape = kwargs.pop('shape', (10,10))
     use_same_shape = kwargs.pop('use_same_shape', False)
-    m1 = mx.metric.create(metric, *args, **kwargs)
+    m1 = mx.gluon.metric.create(metric, *args, **kwargs)
     m2 = deepcopy(m1)
     # check that global stats are not reset when calling
     # reset_local()
@@ -121,7 +121,7 @@ def test_global_metric():
     _check_global_metric(['acc', 'f1'], shape=(10,2))
 
 def test_nll_loss():
-    metric = mx.metric.create('nll_loss')
+    metric = mx.gluon.metric.create('nll_loss')
     pred = mx.nd.array([[0.2, 0.3, 0.5], [0.6, 0.1, 0.3]])
     label = mx.nd.array([2, 1])
     metric.update([label], [pred])
@@ -132,7 +132,7 @@ def test_nll_loss():
 def test_acc():
     pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
     label = mx.nd.array([0, 1, 1])
-    metric = mx.metric.create('acc')
+    metric = mx.gluon.metric.create('acc')
     metric.update([label], [pred])
     _, acc = metric.get()
     expected_acc = (np.argmax(pred, axis=1) == label).sum().asscalar() / label.size
@@ -142,7 +142,7 @@ def test_acc_2d_label():
     # label maybe provided in 2d arrays in custom data iterator
     pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6], [0.8, 0.2], [0.3, 0.5], [0.6, 0.4]])
     label = mx.nd.array([[0, 1, 1], [1, 0, 1]])
-    metric = mx.metric.create('acc')
+    metric = mx.gluon.metric.create('acc')
     metric.update([label], [pred])
     _, acc = metric.get()
     expected_acc = (np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / \
@@ -151,8 +151,8 @@ def test_acc_2d_label():
 
 def test_loss_update():
     pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
-    metric1 = mx.metric.create('loss')
-    metric2 = mx.metric.create('loss')
+    metric1 = mx.gluon.metric.create('loss')
+    metric2 = mx.gluon.metric.create('loss')
     metric1.update(None, [pred])
     metric2.update(None, pred)
     _, acc1 = metric1.get()
@@ -160,8 +160,8 @@ def test_loss_update():
     assert acc1 == acc2
 
 def test_f1():
-    microF1 = mx.metric.create("f1", average="micro")
-    macroF1 = mx.metric.F1(average="macro")
+    microF1 = mx.gluon.metric.create("f1", average="micro")
+    macroF1 = mx.gluon.metric.F1(average="macro")
 
     assert np.isnan(macroF1.get()[1])
     assert np.isnan(microF1.get()[1])
@@ -207,8 +207,8 @@ def test_f1():
     np.testing.assert_almost_equal(macroF1.get()[1], (fscore1 + fscore2) / 2.)
 
 def test_mcc():
-    microMCC = mx.metric.create("mcc", average="micro")
-    macroMCC = mx.metric.MCC(average="macro")
+    microMCC = mx.gluon.metric.create("mcc", average="micro")
+    macroMCC = mx.gluon.metric.MCC(average="macro")
 
     assert np.isnan(microMCC.get()[1])
     assert np.isnan(macroMCC.get()[1])
@@ -259,7 +259,7 @@ def test_perplexity():
     label = mx.nd.array([0, 1, 1])
     p = pred.asnumpy()[np.arange(label.size), label.asnumpy().astype('int32')]
     perplexity_expected = np.exp(-np.log(p).sum()/label.size)
-    metric = mx.metric.create('perplexity', -1)
+    metric = mx.gluon.metric.create('perplexity', -1)
     metric.update([label], [pred])
     _, perplexity = metric.get()
     assert perplexity == perplexity_expected
@@ -269,8 +269,8 @@ def test_pearsonr():
     label1 = mx.nd.array([[1, 0], [0, 1], [0, 1]])
     pearsonr_expected_np = np.corrcoef(pred1.asnumpy().ravel(), label1.asnumpy().ravel())[0, 1]
     pearsonr_expected_scipy, _ = pearsonr(pred1.asnumpy().ravel(), label1.asnumpy().ravel())
-    macro_pr = mx.metric.create('pearsonr', average='macro')
-    micro_pr = mx.metric.create('pearsonr', average='micro')
+    macro_pr = mx.gluon.metric.create('pearsonr', average='macro')
+    micro_pr = mx.gluon.metric.create('pearsonr', average='micro')
 
     assert np.isnan(macro_pr.get()[1])
     assert np.isnan(micro_pr.get()[1])
@@ -317,18 +317,18 @@ def test_pcc():
         [ 7, 3 ],
         [ 2, 5 ],
     ])
-    met_pcc = mx.metric.create('pcc')
+    met_pcc = mx.gluon.metric.create('pcc')
     met_pcc.update(labels, preds)
     _, pcc = met_pcc.get()
 
     # pcc should agree with mcc for binary classification
-    met_mcc = mx.metric.create('mcc')
+    met_mcc = mx.gluon.metric.create('mcc')
     met_mcc.update(labels, preds)
     _, mcc = met_mcc.get()
     np.testing.assert_almost_equal(pcc, mcc)
 
     # pcc should agree with Pearson for binary classification
-    met_pear = mx.metric.create('pearsonr')
+    met_pear = mx.gluon.metric.create('pearsonr')
     met_pear.update(labels, [p.argmax(axis=1) for p in preds])
     _, pear = met_pear.get()
     np.testing.assert_almost_equal(pcc, pear)
@@ -391,18 +391,18 @@ def test_single_array_input():
     pred = mx.nd.array([[1,2,3,4]])
     label = pred + 0.1
 
-    mse = mx.metric.create('mse')
+    mse = mx.gluon.metric.create('mse')
     mse.update(label, pred)
     _, mse_res = mse.get()
     np.testing.assert_almost_equal(mse_res, 0.01)
 
-    mae = mx.metric.create('mae')
+    mae = mx.gluon.metric.create('mae')
     mae.update(label, pred)
     mae.get()
     _, mae_res = mae.get()
     np.testing.assert_almost_equal(mae_res, 0.1)
 
-    rmse = mx.metric.create('rmse')
+    rmse = mx.gluon.metric.create('rmse')
     rmse.update(label, pred)
     rmse.get()
     _, rmse_res = rmse.get()
