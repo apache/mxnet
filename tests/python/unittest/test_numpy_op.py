@@ -4983,11 +4983,55 @@ def test_np_linalg_qr():
         def hybrid_forward(self, F, data):
             return F.np.linalg.qr(data)
 
+    def get_expected_grad(a, q, r):
+        if 0 in r.shape:
+            return r
+        def copyltu(M):
+                # shape of M is [batch, m, m]
+                eye = _np.array([_np.eye(M.shape[-1]) for i in range(M.shape[0])])
+                lower = _np.tril(M) - eye * M
+                lower_mask = _np.tril(_np.ones_like(M))
+                ret = lower_mask * M + lower.swapaxes(-1, -2)
+                return ret
+        shape_r = r.shape
+        shape_q = q.shape
+        shape_a = a.shape
+        r = r.reshape(-1, shape_r[-2], shape_r[-1])
+        q = q.reshape(-1, shape_q[-2], shape_q[-1])
+        dq = _np.ones_like(q)
+        dr = _np.ones_like(r)
+        dq_t = dq.swapaxes(-1, -2)
+        dr_t = dr.swapaxes(-1, -2)
+        r_inv = _np.linalg.inv(r)
+        r_inv_t = r_inv.swapaxes(-1, -2)
+        r_t = r.swapaxes(-1, -2)
+        # Get M
+        M = _np.matmul(r, dr_t) - _np.matmul(dq_t, q)
+        da = _np.matmul(dq + _np.matmul(q, copyltu(M)), r_inv_t)
+        return da.reshape(a.shape)
+
+    def well_conditioned_rectang_matrix_2D(shape, max_cond=4):
+        m, n = shape[-2], shape[-1]
+        while 1:
+            M1 = _np.random.uniform(-10, 10, (m, n))
+            Q1, R1 = _np.linalg.qr(M1)
+            s = _np.ones(n)
+            D = _np.diag(s)
+            M2 =_np.random.uniform(-10, 10, (n, n))
+            Q2, R2 = _np.linalg.qr(M2)
+            a = _np.matmul(_np.matmul(Q1, D), _np.swapaxes(Q2, -1, -2))
+            if (_np.linalg.cond(a, 2) < max_cond):
+                return a
+
+    def well_conditioned_rectang_matrix_nD(shape, max_cond=4):
+        p = int(_np.prod(shape[:-2])) if len(shape) > 2 else 1
+        return _np.array([well_conditioned_rectang_matrix_2D(shape, max_cond) for i in range(p)]).reshape(shape)
+
     def check_qr(q, r, a_np):
         # check Q@R = A
         t = _np.matmul(q, r)
-        assert t.shape == data_np.shape
-        assert_almost_equal(t, data_np, rtol=rtol, atol=atol)
+        assert t.shape == a_np.shape
+        assert_almost_equal(t, a_np, rtol=rtol, atol=atol)
         # check QT@Q = I
         qT = _np.swapaxes(q, -2, -1)
         I = _np.matmul(qT, q)
@@ -5029,18 +5073,33 @@ def test_np_linalg_qr():
         (2, 3, 4, 3)
     ]
     dtypes = ['float32', 'float64']
-    for hybridize, shape, dtype in itertools.product([True, False], shapes, dtypes):
+    for hybridize, shape, dtype in itertools.product([False, True], shapes, dtypes):
         rtol = atol = 0.01
         test_qr = TestQR()
         if hybridize:
             test_qr.hybridize()
-        data_np = _np.random.uniform(-10.0, 10.0, shape)
+
+        if 0 in shape:
+            data_np = _np.ones(shape)
+        elif shape[-2] >= shape[-1]:
+            data_np = well_conditioned_rectang_matrix_nD(shape, max_cond=4)
+        else:
+            data_np = _np.random.uniform(-10.0, 10.0, shape)
         data_np = _np.array(data_np, dtype=dtype)
         data = np.array(data_np, dtype=dtype)
 
-        ret = test_qr(data)
+        data.attach_grad()
+        with mx.autograd.record():
+            ret = test_qr(data)
         Q, R = ret[0], ret[1]
         check_qr(Q, R, data_np)
+
+        # Only shapes m >= n have gradient
+        if 0 not in R.shape and shape[-2] >= shape[-1]:
+            assert data.grad.shape == data_np.shape
+            backward_expected = get_expected_grad(data_np, Q.asnumpy(), R.asnumpy())
+            mx.autograd.backward(ret)
+            assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
 
         # check imperative once more; mode='reduced' is default
         # behavior and optional parameter in original numpy
