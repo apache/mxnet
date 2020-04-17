@@ -628,35 +628,82 @@ def _npx_reshape(a, newshape, reverse=False, order='C'):
 
 def _npx_index_add(a, val, ind):
     """
-    Implmentation of a[ind] += val.
+    Add values to input according to given indexes.
+    If exists repeate positions to be updated, the update value will be accumulated.
     Parameters
     ----------
     a : ndarray
-        Input data.
-    ind : int or ndarray
-        Diagonal to set; 0, the default, corresponds to the "main" diagonal,
-        a positive (negative) `k` giving the number of the diagonal above
-        (below) the main.
+        Input data. The array to be updated.
+    val : ndarray
+        Input data. The array to update the input 'a'.
+    ind : tuple
+        Indexes for indicating update positions.
+        For example, tuple ((0, 1), (2, 3), (4, 5)) indicates here are two positions to
+        be updated, which is (0, 2, 4) and (1, 3, 5).
+        Note: 'ind' cannot be '()', for that case, please use operator 'add' instead.
     Returns
     -------
     out : ndarray
-        The 2-D output array.
-    See Also
-    --------
-    diag : MATLAB work-alike for 1-D and 2-D arrays.
-    diagonal : Return specified diagonals.
-    trace : Sum along diagonals.
+        The output array.
     Examples
     --------
-    >>> np.diagflat([[1,2], [3,4]])
-    array([[1, 0, 0, 0],
-           [0, 2, 0, 0],
-           [0, 0, 3, 0],
-           [0, 0, 0, 4]])
-    >>> np.diagflat([1,2], 1)
-    array([[0, 1, 0],
-           [0, 0, 2],
-           [0, 0, 0]])
+    >>> a = np.zeros((2, 3, 4))
+    >>> ind = ((0, 0), (0, 0), (0, 1))
+    >>> val = np.arange(2).reshape(2) + 1
+    >>> b = npx.index_add(a, val, ind)
+    >>> b
+    array([[[1., 2., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> ind = ((0, 0), (0, 0), (0, 0))  # accumulate values in repeated positions
+    >>> b = npx.index_add(a, val, ind)
+    >>> b
+    array([[[3., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+
+    >>> ind = ((0, ), (0, ), (0, 1))  # brocast 'ind'
+    >>> b = npx.index_add(a, val, ind)
+    >>> b
+    array([[[1., 2., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> ind=((0, 0), (0, 1)) 
+    >>> val = np.arange(8).reshape(2, 4) 
+    >>> b = npx.index_add(a,val,ind)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [4., 5., 6., 7.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> val = np.arange(4).reshape(4)  # brocast 'val'
+    >>> b = npx.index_add(a,val,ind)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [0., 1., 2., 3.],
+            [0., 0., 0., 0.]],
+
+        [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
     """
     pass
 
