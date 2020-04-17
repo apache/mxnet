@@ -94,7 +94,7 @@ def config_cython():
                 libraries=libraries,
                 extra_link_args=extra_link_args,
                 language="c++"))
-        
+
         path = "mxnet/_ffi/_cython"
         for fn in os.listdir(path):
             if not fn.endswith(".pyx"):
@@ -105,7 +105,7 @@ def config_cython():
                 include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
-                extra_compile_args=["-std=c++11"],
+                extra_compile_args=["-std=c++17"],
                 extra_link_args=extra_link_args,
                 language="c++"))
 

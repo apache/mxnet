@@ -75,6 +75,10 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
     [](const NodeAttrs& attrs){                                                \
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                \
     })                                                                         \
+  .set_attr<FResourceRequest>("FResourceRequest",                              \
+    [](const NodeAttrs& attrs) {                                               \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};        \
+    })                                                                         \
   .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
   .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
 #else

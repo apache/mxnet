@@ -23,7 +23,7 @@ set -ex
 
 pushd .
 
-apt update || true
+apt update
 apt install -y \
     autoconf \
     gperf \
@@ -32,31 +32,9 @@ apt install -y \
 mkdir -p /work/deps
 cd /work/deps
 
-# Unset ARM toolchain cross-compilation configuration on dockcross
-unset ARCH
-unset DEFAULT_DOCKCROSS_IMAGE
-unset CROSS_TRIPLE
-unset CC
-unset AS
-unset AR
-unset FC
-unset CXX
-unset CROSS_ROOT
-unset CROSS_COMPILE
-unset PKG_CONFIG_PATH
-unset CMAKE_TOOLCHAIN_FILE
-unset CPP
-unset LD
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
 git clone --recursive https://github.com/ccache/ccache.git
 cd ccache
-git checkout v3.7.8
-# Backport cuda related fixes: https://github.com/ccache/ccache/pull/381
-git config user.name "MXNet CI"
-git config user.email "MXNetCI@example.com"
-git cherry-pick --strategy-option=theirs c4fffda031034f930df2cf188878b8f9160027df
-git cherry-pick 0dec5c2df3e3ebc1fbbf33f74c992bef6264f37a
+git checkout v3.7.9
 
 ./autogen.sh
 ./configure --disable-man

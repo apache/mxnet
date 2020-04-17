@@ -38,8 +38,14 @@
 #include <iostream>
 #include <utility>
 #include <stdexcept>
+#include <random>
 
-#define MX_LIBRARY_VERSION 4
+#if defined(__NVCC__)
+  #include <curand_kernel.h>
+#endif
+
+/* Make sure to update the version number everytime you make changes */
+#define MX_LIBRARY_VERSION 6
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -214,6 +220,18 @@ enum MXDType {
   kUNSET = 100,
 };
 
+/*
+ * MXTensor storage type.
+ */
+enum MXStorageType {
+  // dense
+  kDefaultStorage = 0,
+  // row sparse
+  kRowSparseStorage = 1,
+  // csr
+  kCSRStorage = 2,
+};
+
 /*!
  * \brief Context info passing from MXNet OpContext
  * dev_type is string repr of supported context, currently only "cpu" and "gpu"
@@ -229,25 +247,64 @@ enum MXReturnValue {
   MX_SUCCESS = 1,
 };
 
+// For sparse tensors, read/write the data from NDarray via pointers.
+struct MXSparse {
+  // Pointer to data.
+  void *data{nullptr};
+  // length of (non-zero) data.
+  int64_t data_len;
+
+  // To store aux data for sparse.
+  // For CSR, indices stores the col index of non-zero elements.
+  // For row sparse, indices store row index of rows which have non-zero elements.
+  int64_t* indices;
+  int64_t indices_len;
+
+  // For CSR, indptr gives the start and end index of data for each row.
+  // For row sparse, indptr is not used.
+  int64_t* indptr = nullptr;
+  int64_t indptr_len;
+
+  void set(void *data_ptr, const int64_t* dims, int ndims, void *idx,
+          int64_t num_idx, void *idx_ptr = nullptr, int64_t num_idx_ptr = 0) {
+    data = data_ptr;
+    // If CSR, num of non-zero elemets is num_idx,
+    // If row sparse, num of elements is num_idx * width.
+    data_len = num_idx;
+    if (!idx_ptr) {
+      for (int i = 1; i < ndims; ++i)
+         data_len *= dims[i];
+    }
+
+    indices = reinterpret_cast<int64_t*>(idx);
+    indices_len = num_idx;
+
+    if (idx_ptr) {
+      indptr = reinterpret_cast<int64_t*>(idx_ptr);
+      indptr_len = num_idx_ptr;
+    }
+  }
+};
+
 /*!
  * \brief Tensor data structure used by custom operator
  */
 struct MXTensor {
-  MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0) {}
+  MXTensor() : data_ptr(nullptr), dtype(kUNSET), verID(0), stype(kDefaultStorage) {}
   MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), shape(oth.shape),
-    dtype(oth.dtype), verID(oth.verID), ctx(oth.ctx) {
+    dtype(oth.dtype), verID(oth.verID), ctx(oth.ctx), stype(oth.stype) {
     setDLTensor();
   }
   MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
-           size_t vID, MXContext mx_ctx)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx) {
+           size_t vID, MXContext mx_ctx, MXStorageType stype = kDefaultStorage)
+  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx), stype(stype) {
     setDLTensor();
   }
 
   /*! \brief populate internal tensor fields */
   void setTensor(void *dptr, MXDType type, const int64_t* dims, int ndims,
-                 size_t vID, MXContext mx_ctx) {
-    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx;
+                 size_t vID, MXContext mx_ctx, MXStorageType storage_type) {
+    data_ptr = dptr; dtype = type; verID = vID; ctx = mx_ctx; stype = storage_type;
     shape.clear();
     for (int j = 0; j < ndims; j++) {
       shape.push_back(dims[j]);
@@ -340,11 +397,12 @@ struct MXTensor {
            verID == oth.verID &&
            ctx.dev_type == oth.ctx.dev_type &&
            ctx.dev_id == oth.ctx.dev_id &&
-           shape == oth.shape;
+           shape == oth.shape &&
+           stype == oth.stype;
   }
 
-  // data is flatten 1D repr of tensor, elements are in continuous memory
-  // user can access each element using the shape of tensor
+  // For dense, data_ptr points to 1D flattened tensor data
+  // For sparse, data_ptr points to MXSparse
   void *data_ptr;
 
   // shape is in [2,3,4] format to represent high-dim tensor
@@ -362,16 +420,29 @@ struct MXTensor {
   // corresponding DLTensor repr of MXTensor
   // easy way to reuse functions taking DLTensor
   DLTensor dltensor;
+
+  // storage type
+  MXStorageType stype;
 };
 
 /*! \brief resource malloc function to allocate memory inside Forward/Backward functions */
 typedef void* (*xpu_malloc_t)(void*, int);
 
+typedef void (*sparse_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t**);
+
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
+  typedef curandStatePhilox4_32_10_t mx_gpu_rand_t;
 #else
   typedef void* mx_stream_t;
+  typedef void* mx_gpu_rand_t;
 #endif
+typedef std::mt19937 mx_cpu_rand_t;
+
+/*! \brief MXNet initialized random states for each device, used for parallelism */
+/* Each thread should generate random number unique sequence out of different states */
+#define MX_NUM_CPU_RANDOM_STATES 1024
+#define MX_NUM_GPU_RANDOM_STATES 32768
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
@@ -379,9 +450,13 @@ typedef void* (*xpu_malloc_t)(void*, int);
 class OpResource {
  public:
   OpResource(xpu_malloc_t cpu_malloc_fp, void* cpu_alloc_fp,
-             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream)
+             xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream,
+             sparse_malloc_t sparse_malloc_fp, void* sparse_alloc_fp,
+             void* rng_cpu_states, void* rng_gpu_states)
     : cpu_malloc(cpu_malloc_fp), gpu_malloc(gpu_malloc_fp),
-      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream) {}
+      cpu_alloc(cpu_alloc_fp), gpu_alloc(gpu_alloc_fp), cuda_stream(stream),
+      sparse_malloc(sparse_malloc_fp), sparse_alloc(sparse_alloc_fp),
+      rand_cpu_states(rng_cpu_states), rand_gpu_states(rng_gpu_states) {}
 
   /*! \brief allocate cpu memory controlled by MXNet */
   void* alloc_cpu(int size) {
@@ -398,6 +473,25 @@ class OpResource {
     return static_cast<mx_stream_t>(cuda_stream);
   }
 
+  /*! \brief allocate sparse memory controlled by MXNet */
+  void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) {
+    sparse_malloc(sparse_alloc, index, indices_len, indptr_len,
+                   &(sparse->data), &(sparse->indices), &(sparse->indptr));
+  }
+
+  /*! \brief get pointer to initialized and seeded random number states located on CPU */
+  /* Access each state by states[id], but this id should be <= MX_NUM_CPU_RANDOM_STATES */
+  mx_cpu_rand_t* get_cpu_rand_states() {
+    return static_cast<mx_cpu_rand_t*>(rand_cpu_states);
+  }
+
+  /*! \brief get pointer to initialized and seeded random number states located on GPU */
+  /* Access each state by states[id], but this id should be <= MX_NUM_GPU_RANDOM_STATES */
+  /* Note that if you are using cpu build, it will return a nullptr */
+  mx_gpu_rand_t* get_gpu_rand_states() {
+    return static_cast<mx_gpu_rand_t*>(rand_gpu_states);
+  }
+
  private:
   /*! \brief allocation lambda function */
   xpu_malloc_t cpu_malloc, gpu_malloc;
@@ -405,6 +499,12 @@ class OpResource {
   void *cpu_alloc, *gpu_alloc;
   /*! \brief cuda stream passed from MXNet */
   void *cuda_stream;
+  /*! \brief sparse allocation lambda function */
+  sparse_malloc_t sparse_malloc;
+  /*! \brief lambda function to return allocated sparse memory handle */
+  void *sparse_alloc;
+  /*! \brief cpu and gpu rng fully inited and seeded states */
+  void *rand_cpu_states, *rand_gpu_states;
 };
 
 /*!
@@ -647,6 +747,8 @@ typedef MXReturnValue (*parseAttrs_t)(std::map<std::string, std::string>,
                                       int*, int*);
 typedef MXReturnValue (*inferType_t)(std::map<std::string, std::string>,
                                      std::vector<int>&, std::vector<int>&);
+typedef MXReturnValue (*inferSType_t)(std::map<std::string, std::string>,
+                                     std::vector<int>&, std::vector<int>&);
 typedef MXReturnValue (*inferShape_t)(std::map<std::string, std::string>,
                                       std::vector<std::vector<unsigned int> >&,
                                       std::vector<std::vector<unsigned int> >&);
@@ -660,9 +762,9 @@ typedef MXReturnValue (*createOpState_t)(std::map<std::string, std::string>,
  */
 class CustomOp {
  public:
-  explicit CustomOp(const char* op_name) :
-      name(op_name), parse_attrs(nullptr), infer_type(nullptr),
-      infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
+  explicit CustomOp(const char* op_name) : name(op_name),
+    parse_attrs(NULL), infer_type(NULL), infer_storage_type(NULL), infer_shape(NULL),
+    mutate_inputs(NULL), isSGop(false) {}
   CustomOp& setForward(fcomp_t fcomp, const char* ctx) {
     if (forward_ctx_map.count(ctx) > 0)
       raiseDuplicateContextError();
@@ -681,6 +783,10 @@ class CustomOp {
   }
   CustomOp& setInferType(inferType_t func) {
     infer_type = func;
+    return *this;
+  }
+  CustomOp& setInferSType(inferSType_t func) {
+    infer_storage_type = func;
     return *this;
   }
   CustomOp& setInferShape(inferShape_t func) {
@@ -723,6 +829,7 @@ class CustomOp {
   /*! \brief operator functions */
   parseAttrs_t parse_attrs;
   inferType_t infer_type;
+  inferSType_t infer_storage_type;
   inferShape_t infer_shape;
   mutateInputs_t mutate_inputs;
   bool isSGop;
@@ -876,7 +983,7 @@ typedef int (*opRegGet_t)(int idx, const char** name, int *isSGop,
                           const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
                           const char*** create_op_ctx, createOpState_t** create_op_fp,
                           int* create_op_count,
-                          parseAttrs_t* parse, inferType_t* type,
+                          parseAttrs_t* parse, inferType_t* type, inferSType_t* stype,
                           inferShape_t* shape, mutateInputs_t* mutate);
 
 #define MXLIB_OPCALLFREE_STR "_opCallFree"
@@ -898,6 +1005,11 @@ typedef int (*opCallInferType_t)(inferType_t inferType, const char* const* keys,
                                  const char* const* vals, int num,
                                  int* intypes, int num_in, int* outtypes, int num_out);
 
+#define MXLIB_OPCALLINFERSTYPE_STR "_opCallInferSType"
+typedef int (*opCallInferSType_t)(inferSType_t inferSType, const char* const* keys,
+                                 const char* const* vals, int num,
+                                 int* intypes, int num_in, int* outtypes, int num_out);
+
 #define MXLIB_OPCALLFCOMP_STR "_opCallFCompute"
 typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              const char* const* vals, int num,
@@ -910,7 +1022,14 @@ typedef int (*opCallFComp_t)(fcomp_t fcomp, const char* const* keys,
                              size_t* outIDs, const char** outdev_type,
                              int* outdev_id, int num_out,
                              xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream);
+                             xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
+                             sparse_malloc_t sparse_malloc, void* sparse_alloc,
+                             int* instypes, int* outstypes,
+                             void** in_indices, void** out_indices,
+                             void** in_indptr, void** out_indptr,
+                             int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                             int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
+                             void* rng_cpu_states, void* rng_gpu_states);
 
 #define MXLIB_OPCALLMUTATEINPUTS_STR "_opCallMutateInputs"
 typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* keys,
@@ -933,7 +1052,14 @@ typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
                                      size_t* outIDs, const char** outdev_type,
                                      int* outdev_id, int num_out,
                                      xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                                     xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream);
+                                     xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
+                                     sparse_malloc_t sparse_malloc, void* sparse_alloc,
+                                     int* instypes, int* outstypes,
+                                     void** in_indices, void** out_indices,
+                                     void** in_indptr, void** out_indptr,
+                                     int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                                     int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
+                                     void* rng_cpu_states, void* rng_gpu_states);
 
 #define MXLIB_PARTREGSIZE_STR "_partRegSize"
 typedef int (*partRegSize_t)(void);
@@ -1004,12 +1130,13 @@ extern "C" {
             const char*** forward_ctx, fcomp_t** forward_fp, int* forward_count,
             const char*** backward_ctx, fcomp_t** backward_fp, int* backward_count,
             const char*** create_op_ctx, createOpState_t** create_op_fp, int* create_op_count,
-            parseAttrs_t* parse, inferType_t* type,
+            parseAttrs_t* parse, inferType_t* type, inferSType_t* stype,
             inferShape_t* shape, mutateInputs_t* mutate) {
     CustomOp &op = Registry<CustomOp>::get()->get(idx);
     *name = op.name;
     *parse = op.parse_attrs;
     *type = op.infer_type;
+    *stype = op.infer_storage_type;
     *shape = op.infer_shape;
     *mutate = op.mutate_inputs;
     *isSGop = op.isSGop;
@@ -1136,6 +1263,43 @@ extern "C" {
     return retval;
   }
 
+  /*! \brief returns status of calling inferSType function for operator from library */
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+  __declspec(dllexport) int __cdecl
+#else
+  int
+#endif
+  _opCallInferSType(inferSType_t inferSType, const char* const* keys,
+                   const char* const* vals, int num,
+                   int* instypes, int num_in, int* outstypes, int num_out) {
+    // create map of attributes from list
+    std::map<std::string, std::string> attrs;
+    for (int i = 0; i < num; i++) {
+      attrs[std::string(keys[i])] = std::string(vals[i]);
+    }
+
+    // create a vector of types for inputs
+    std::vector<int> in_stypes(num_in);
+    for (int i = 0; i < num_in; i++) {
+      in_stypes[i] = instypes[i];
+    }
+
+    // create a vector of types for outputs
+    std::vector<int> out_stypes(num_out, -1);
+
+    int retval = inferSType(attrs, in_stypes, out_stypes);
+
+    if (!retval)
+      return retval;
+
+    // copy output storage types
+    for (int i = 0; i < num_out; i++) {
+      outstypes[i] = out_stypes[i];
+    }
+
+    return retval;
+  }
+
   /*! \brief returns status of calling Forward/Backward function for operator from library */
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
   __declspec(dllexport) int __cdecl
@@ -1148,7 +1312,13 @@ extern "C" {
                   const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
                   size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                   xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream) {
+                  xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
+                  sparse_malloc_t sparse_malloc, void* sparse_alloc,
+                  int* instypes, int* outstypes, void** in_indices, void** out_indices,
+                  void** in_indptr, void** out_indptr,
+                  int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                  int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
+                  void* rng_cpu_states, void* rng_gpu_states) {
     // create map of attributes from list
     std::map<std::string, std::string> attrs;
     for (int i = 0; i < num; i++) {
@@ -1157,20 +1327,59 @@ extern "C" {
 
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
+    // create a vector for sparse inputs
+    std::vector<MXSparse> in_sparse(num_in);
+
     for (int i = 0; i < num_in; i++) {
-      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], {indev_type[i], indev_id[i]});
+      // Dense representation.
+      if (instypes[i] == 0) {
+        inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                            inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
+      } else {
+        // Sparse representation.
+        MXStorageType type;
+        if (instypes[i] == 1) {
+          type = kRowSparseStorage;
+          in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
+        } else {
+          type = kCSRStorage;
+          in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i],
+                           in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
+        }
+        inputs[i].setTensor(reinterpret_cast<void*>(&in_sparse[i]), (MXDType)intypes[i],
+                            inshapes[i], indims[i], inIDs[i], {indev_type[i], indev_id[i]}, type);
+      }
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
+    std::vector<MXSparse> out_sparse(num_out);
+
     for (int i = 0; i < num_out; i++) {
-      outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]});
+      // Dense representation.
+      if (outstypes[i] == 0) {
+        outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                            outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+      } else {
+        // Sparse representation.
+        MXStorageType type;
+        if (outstypes[i] == 1) {
+          type = kRowSparseStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i],
+                            out_indices[i], out_indices_shapes[i]);
+        } else {
+          type = kCSRStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+                            out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
+        }
+        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (MXDType)outtypes[i],
+                            outshapes[i], outdims[i], outIDs[i], {outdev_type[i],
+                            outdev_id[i]}, type);
+      }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, cuda_stream);
-
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
+                   cuda_stream, sparse_malloc, sparse_alloc, rng_cpu_states, rng_gpu_states);
     return fcomp(attrs, inputs, outputs, res);
   }
 
@@ -1239,22 +1448,70 @@ extern "C" {
                           const int64_t** outshapes, int* outdims, void** outdata, int* outtypes,
                           size_t* outIDs, const char** outdev_type, int* outdev_id, int num_out,
                           xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream) {
+                          xpu_malloc_t gpu_malloc, void* gpu_alloc, void* stream,
+                          sparse_malloc_t sparse_malloc, void* sparse_alloc,
+                          int* instypes, int* outstypes, void** in_indices, void** out_indices,
+                          void** in_indptr, void** out_indptr,
+                          int64_t* in_indices_shapes, int64_t* out_indices_shapes,
+                          int64_t* in_indptr_shapes, int64_t* out_indptr_shapes,
+                          void* rng_cpu_states, void* rng_gpu_states) {
     // create a vector of tensors for inputs
     std::vector<MXTensor> inputs(num_in);
+    // create a vector for sparse inputs
+    std::vector<MXSparse> in_sparse(num_in);
+
     for (int i = 0; i < num_in; i++) {
-      inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                          inIDs[i], {indev_type[i], indev_id[i]});
+      if (instypes[i] == 0) {
+        // Dense representation.
+        inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
+                            inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
+      } else {
+        // Sparse representation.
+        MXStorageType type;
+        if (instypes[i] == 1) {
+          type = kRowSparseStorage;
+          in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i], in_indices_shapes[i]);
+        } else {
+          type = kCSRStorage;
+          in_sparse[i].set(indata[i], inshapes[i], indims[i], in_indices[i],
+                           in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
+        }
+        inputs[i].setTensor(reinterpret_cast<void*>(&in_sparse[i]), (MXDType)intypes[i],
+                            inshapes[i], indims[i], inIDs[i], {indev_type[i],
+                            indev_id[i]}, type);
+      }
     }
 
     // create a vector of tensors for outputs
     std::vector<MXTensor> outputs(num_out);
+    // create a vector for sparse outputs
+    std::vector<MXSparse> out_sparse(num_out);
+
     for (int i = 0; i < num_out; i++) {
-      outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                           outIDs[i], {outdev_type[i], outdev_id[i]});
+      if (outstypes[i] == 0) {
+        // Dense representation.
+        outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
+                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+      } else {
+        // Sparse representation.
+        MXStorageType type;
+        if (outstypes[i] == 1) {
+          type = kRowSparseStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+                            out_indices_shapes[i]);
+        } else {
+          type = kCSRStorage;
+          out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
+                            out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
+        }
+        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (MXDType)outtypes[i],
+                             outshapes[i], outdims[i], outIDs[i], {outdev_type[i],
+                             outdev_id[i]}, type);
+      }
     }
 
-    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc, stream);
+    OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
+                   stream, sparse_malloc, sparse_alloc, rng_cpu_states, rng_gpu_states);
 
     CustomStatefulOp* op_ptr = reinterpret_cast<CustomStatefulOp*>(state_op);
     if (is_forward) {

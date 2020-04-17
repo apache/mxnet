@@ -37,7 +37,11 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
+ifdef USE_SYSTEM_CUDA
+ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -ljpeg -lz -ldl -lgfortran -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
+else
 ADD_LDFLAGS += -L$(DEPS_PATH)/lib $(DEPS_PATH)/lib/libculibos.a -lpng -ltiff -ljpeg -lz -ldl -lgfortran -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
+endif
 
 # the additional compile flags you want to add
 ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
@@ -66,7 +70,11 @@ USE_CUDA = 1
 # add the path to CUDA library to link and compile flag
 # if you have already add them to environment variable, leave it as NONE
 # USE_CUDA_PATH = /usr/local/cuda
+ifdef USE_SYSTEM_CUDA
+USE_CUDA_PATH = /usr/local/cuda-9.1
+else
 USE_CUDA_PATH = $(DEPS_PATH)/usr/local/cuda-9.1
+endif
 
 # whether to use CuDNN library
 USE_CUDNN = 1

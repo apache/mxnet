@@ -43,13 +43,35 @@ void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
                               float alpha, const DType* a, int32_t lda, int32_t strideA,
                               const DType *b, int32_t ldb, int32_t strideB, float beta,
                               DType *c, int32_t ldc, int32_t strideC, int32_t batchCount,
-                              cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT_TENSOR_OP) {
+                              cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT) {
 #if CUDA_VERSION >= 9010
   using namespace mxnet::common::cuda;
   CHECK_EQ(s->blas_handle_ownership_, mshadow::Stream<gpu>::OwnHandle)
       << "Must init CuBLAS handle in stream";
 
   cublasHandle_t blas_handle = mshadow::Stream<gpu>::GetBlasHandle(s);
+  auto err = CUBLAS_STATUS_SUCCESS;
+  using TrueFP16Type = DType;
+  using PseudoFP16Type = typename CublasType<DType>::ScaleType;
+  // Set up alpha and beta values in the possible formats needed (only different when dtype == half)
+  TrueFP16Type trueFP16_alpha = static_cast<TrueFP16Type>(alpha);
+  TrueFP16Type trueFP16_beta = static_cast<TrueFP16Type>(beta);
+  PseudoFP16Type pseudoFP16_alpha = static_cast<PseudoFP16Type>(alpha);
+  PseudoFP16Type pseudoFP16_beta = static_cast<PseudoFP16Type>(beta);
+  const void *alpha_ptr;
+  const void *beta_ptr;
+  cudaDataType_t computeType;
+  bool use_true_fp16 = dmlc::GetEnv("MXNET_FC_TRUE_FP16", false);
+  if (use_true_fp16) {
+    alpha_ptr = &trueFP16_alpha;
+    beta_ptr = &trueFP16_beta;
+    computeType = CublasType<TrueFP16Type>::kCudaFlag;
+  } else {
+    alpha_ptr = &pseudoFP16_alpha;
+    beta_ptr = &pseudoFP16_beta;
+    computeType = CublasType<PseudoFP16Type>::kCudaFlag;
+  }
+
   // cublasGemmStridedBatchedEx is only supported for GPU with architecture
   // capabilities equal or greater than 5.0. Fall back to
   // cublasSgemmStridedBatched, which doesn't support implicit conversion
@@ -59,12 +81,12 @@ void CublasStridedBatchedGemm(mshadow::Stream<gpu>* s, bool transA, bool transB,
     CUBLAS_CALL(cublasGemmStridedBatchedEx(
         blas_handle, CublasTransposeOp(transA), CublasTransposeOp(transB),
         static_cast<int>(m), static_cast<int>(n), static_cast<int>(k),
-        reinterpret_cast<void*>(&alpha),
+        alpha_ptr,
         a, CublasType<DType>::kCudaFlag, static_cast<int>(lda), strideA,
         b, CublasType<DType>::kCudaFlag, static_cast<int>(ldb), strideB,
-        reinterpret_cast<void*>(&beta),
+        beta_ptr,
         c, CublasType<DType>::kCudaFlag, static_cast<int>(ldc), strideC,
-        static_cast<int>(batchCount), CUDA_R_32F, algo));
+        static_cast<int>(batchCount), computeType, algo));
   } else {
     if (std::is_same<DType, float>::value) {
       CUBLAS_CALL(cublasSgemmStridedBatched(
@@ -120,11 +142,11 @@ void gemm_switch_fp32accum(mshadow::Stream<gpu>* s, bool transA, bool transB,
                            float alpha, const DType *a, int32_t lda,
                            int32_t strideA, const DType *b, int32_t ldb,
                            int32_t strideB, float beta, DType *c, int32_t ldc,
-                           int32_t strideC, int32_t batchCount) {
+                           int32_t strideC, int32_t batchCount, bool using_fp16) {
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
-  if (!(lda & 0x7) && !(ldb & 0x7) && !(ldc & 0x7)) {
+  if (using_fp16) {
     CublasStridedBatchedGemm(s, transA, transB, m, n, k, alpha, a, lda, strideA, b, ldb,
-      strideB, beta, c, ldc, strideC, batchCount, CUBLAS_GEMM_ALGO0_TENSOR_OP);
+      strideB, beta, c, ldc, strideC, batchCount, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
   } else {
     CublasStridedBatchedGemm(s, transA, transB, m, n, k, alpha, a, lda, strideA, b, ldb,
       strideB, beta, c, ldc, strideC, batchCount);
@@ -153,6 +175,7 @@ void InterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
     const int32_t batch_stride   = 3 * head_dim;
     const float beta             = req[0] == kAddTo ? 1.f : 0.f;
     const float scale            = 1.0 / sqrt(static_cast<float>(head_dim));
+    const bool using_fp16        = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] == kNullOp)
       return;
@@ -174,7 +197,8 @@ void InterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
                           output,
                           qkv_seq_len,
                           qkv_seq_len * qkv_seq_len,
-                          attn_batches);
+                          attn_batches,
+                          using_fp16);
   })
 }
 
@@ -198,7 +222,8 @@ void BackwardInterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
     const int32_t lead_dim       = attn_batches * 3 * head_dim;
     const int32_t batch_stride   = 3 * head_dim;
     const float scale            = 1.0 / sqrt(static_cast<float>(head_dim));
-    const float beta = req[0] == kAddTo ? 1.f : 0.f;
+    const float beta             = req[0] == kAddTo ? 1.f : 0.f;
+    const bool using_fp16        = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] == kNullOp)
       return;
@@ -225,7 +250,8 @@ void BackwardInterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
                           queries_keys_values_grads,
                           lead_dim,
                           batch_stride,
-                          attn_batches);
+                          attn_batches,
+                          using_fp16);
     gemm_switch_fp32accum(s,
                           false,
                           true,
@@ -243,7 +269,8 @@ void BackwardInterleavedMatMulSelfAttQKGPU(const nnvm::NodeAttrs& attrs,
                           queries_keys_values_grads + head_dim,
                           lead_dim,
                           batch_stride,
-                          attn_batches);
+                          attn_batches,
+                          using_fp16);
   })
 }
 
@@ -268,6 +295,7 @@ void InterleavedMatMulSelfAttValAttGPU(const nnvm::NodeAttrs& attrs,
     const int32_t batch_stride   = 3 * head_dim;
     const float alpha            = 1.f;
     const float beta             = req[0] == kAddTo ? 1.f : 0.f;
+    const bool using_fp16        = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] == kNullOp)
       return;
@@ -289,7 +317,8 @@ void InterleavedMatMulSelfAttValAttGPU(const nnvm::NodeAttrs& attrs,
                           output,
                           head_dim * attn_batches,
                           head_dim,
-                          attn_batches);
+                          attn_batches,
+                          using_fp16);
   })
 }
 
@@ -315,6 +344,8 @@ void BackwardInterleavedMatMulSelfAttValAttGPU(const nnvm::NodeAttrs& attrs,
     const int32_t lead_dim       = attn_batches * 3 * head_dim;
     const int32_t batch_stride   = 3 * head_dim;
     const float alpha            = 1.f;
+    const bool using_fp16        = inputs[0].type_flag_ == mshadow::kFloat16;
+
     if (req[0] != kNullOp) {
       if (req[0] == kWriteTo) {
         cudaMemsetAsync(queries_keys_values_grads, 0, outputs[0].shape_.Size() * sizeof(DType),
@@ -338,7 +369,8 @@ void BackwardInterleavedMatMulSelfAttValAttGPU(const nnvm::NodeAttrs& attrs,
                             queries_keys_values_grads + 2 * head_dim,
                             lead_dim,
                             batch_stride,
-                            attn_batches);
+                            attn_batches,
+                            using_fp16);
     }
     if (req[1] != kNullOp) {
       const float beta = req[1] == kAddTo ? 1.f : 0.f;
@@ -359,7 +391,8 @@ void BackwardInterleavedMatMulSelfAttValAttGPU(const nnvm::NodeAttrs& attrs,
                             attention_maps_grads,
                             qkv_seq_len,
                             qkv_seq_len * qkv_seq_len,
-                            attn_batches);
+                            attn_batches,
+                            using_fp16);
     }
   })
 }
@@ -390,6 +423,7 @@ void InterleavedMatMulEncDecQKGPU(const nnvm::NodeAttrs& attrs,
     const int32_t batch_stride_kv   = head_dim * 2;
     const float beta                = req[0] == kAddTo ? 1.f : 0.f;
     const float scale               = 1.f / sqrt(static_cast<float>(head_dim));
+    const bool using_fp16           = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] == kNullOp)
       return;
@@ -411,7 +445,8 @@ void InterleavedMatMulEncDecQKGPU(const nnvm::NodeAttrs& attrs,
                           output,
                           kv_seq_len,
                           kv_seq_len * q_seq_len,
-                          attn_batches);
+                          attn_batches,
+                          using_fp16);
   })
 }
 
@@ -441,6 +476,7 @@ void BackwardInterleavedMatMulEncDecQKGPU(const nnvm::NodeAttrs& attrs,
     const int32_t batch_stride_q    = head_dim;
     const int32_t batch_stride_kv   = head_dim * 2;
     const float scale               = 1.f / sqrt(static_cast<float>(head_dim));
+    const bool using_fp16        = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] != kNullOp) {
       const float beta = req[0] == kAddTo ? 1.f : 0.f;
@@ -461,7 +497,8 @@ void BackwardInterleavedMatMulEncDecQKGPU(const nnvm::NodeAttrs& attrs,
                             queries_grads,
                             lead_dim_q,
                             batch_stride_q,
-                            attn_batches);
+                            attn_batches,
+                            using_fp16);
     }
     if (req[1] != kNullOp) {
       if (req[1] == kWriteTo) {
@@ -486,7 +523,8 @@ void BackwardInterleavedMatMulEncDecQKGPU(const nnvm::NodeAttrs& attrs,
                             keys_values_grads,
                             lead_dim_kv,
                             batch_stride_kv,
-                            attn_batches);
+                            attn_batches,
+                            using_fp16);
     }
   })
 }
@@ -513,6 +551,7 @@ void InterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
     const int32_t batch_stride_kv   = 2 * head_dim;
     const float alpha               = 1.f;
     const float beta                = req[0] == kAddTo ? 1.f : 0.f;
+    const bool using_fp16           = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] == kNullOp)
       return;
@@ -534,7 +573,8 @@ void InterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
                           output,
                           head_dim * attn_batches,
                           head_dim,
-                          attn_batches);
+                          attn_batches,
+                          using_fp16);
   })
 }
 
@@ -561,6 +601,7 @@ void BackwardInterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
     const int32_t lead_dim_kv       = attn_batches * head_dim * 2;
     const int32_t batch_stride_kv   = 2 * head_dim;
     const float alpha               = 1.f;
+    const bool using_fp16           = inputs[0].type_flag_ == mshadow::kFloat16;
 
     if (req[0] != kNullOp) {
       if (req[0] == kWriteTo) {
@@ -585,7 +626,8 @@ void BackwardInterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
                             keys_values_grads + head_dim,
                             lead_dim_kv,
                             batch_stride_kv,
-                            attn_batches);
+                            attn_batches,
+                            using_fp16);
     }
     if (req[1] != kNullOp) {
       const float beta = req[1] == kAddTo ? 1.f : 0.f;
@@ -606,7 +648,8 @@ void BackwardInterleavedMatMulEncDecValAttGPU(const nnvm::NodeAttrs& attrs,
                             attention_maps_grads,
                             kv_seq_len,
                             kv_seq_len * q_seq_len,
-                            attn_batches);
+                            attn_batches,
+                            using_fp16);
     }
   })
 }

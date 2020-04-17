@@ -137,8 +137,10 @@ set(USE_VTA_TSIM OFF)
 # Whether use Relay debug mode
 set(USE_RELAY_DEBUG OFF)
 
-# Use OPENMP thread pool to be compatible with MXNet
-set(USE_OPENMP ON)
-
 # Disable USE_MKLDNN for TVM
 set(USE_MKLDNN OFF)
+
+# Sanity checks
+if(NOT DEFINED USE_OPENMP)
+  message(FATAL_ERROR "TVM expects USE_OPENMP is set. But USE_OPENMP was neither ON nor OFF.")
+endif()

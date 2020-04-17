@@ -63,6 +63,11 @@ struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be column stacked");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream ss;
+    ss << num_args;
+    (*dict)["num_args"] = ss.str();
+  }
 };
 
 struct NumpyReshapeParam : public dmlc::Parameter<NumpyReshapeParam> {
@@ -287,6 +292,106 @@ void NumpyVstackBackward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
+  int n;
+  int k;
+  int m;
+  DMLC_DECLARE_PARAMETER(NumpyTrilindicesParam) {
+    DMLC_DECLARE_FIELD(n)
+      .describe("The row dimension of the arrays for which"
+                "the returned indices will be valid.");
+    DMLC_DECLARE_FIELD(k)
+      .set_default(0)
+      .describe("Diagonal offset");
+    DMLC_DECLARE_FIELD(m)
+      .describe("The column dimension of the arrays for "
+                "which the returned arrays will be valid."
+                "By default m is taken equal to n.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream n_s, k_s, m_s;
+    n_s << n;
+    k_s << k;
+    m_s << m;
+    (*dict)["n"] = n_s.str();
+    (*dict)["k"] = k_s.str();
+    (*dict)["m"] = m_s.str();
+  }
+};
+
+template<int req>
+struct TrilindicesOpForwardImpl {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, DType* out_data0, DType* out_data1,
+                                  int* data, int length) {
+    KERNEL_ASSIGN(out_data0[i], req, data[i]);
+    KERNEL_ASSIGN(out_data1[i], req, data[i + length]);
+  }
+};
+
+template<typename xpu>
+void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 0U);
+  CHECK_EQ(outputs.size(), 2U);
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const NumpyTrilindicesParam& param =
+    nnvm::get<NumpyTrilindicesParam>(attrs.parsed);
+
+  const TBlob& out_data0 = outputs[0];
+  const TBlob& out_data1 = outputs[1];
+
+  CHECK_EQ(out_data0.shape_[0], out_data1.shape_[0]);
+  int length = out_data0.shape_[0];
+
+  std::vector<int> indices_cpu(2 * length, 0);
+  size_t total_temp_size = 2 * length * sizeof(int);
+  Tensor<xpu, 1, char> temp_space =
+    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
+  int* indices = reinterpret_cast<int*>(temp_space.dptr_);
+
+  int n = param.n;
+  int m = param.m;
+  int k = param.k;
+
+  int end = k;
+  int idx = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j <= std::min(end, m - 1); j++) {
+      indices_cpu[idx] = i;
+      indices_cpu[idx + length] = j;
+      idx++;
+    }
+    end++;
+  }
+
+  if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
+  #if MXNET_USE_CUDA
+    cudaMemcpyAsync(indices, indices_cpu.data(),
+                    indices_cpu.size() * sizeof(int),
+                    cudaMemcpyHostToDevice,
+                    Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
+  #else
+    LOG(FATAL) << "Illegal attempt to use GPU in a CPU-only build";
+  #endif
+  } else {
+    std::memcpy(indices, indices_cpu.data(), indices_cpu.size() * sizeof(int));
+  }
+
+  MSHADOW_IDX_TYPE_SWITCH(out_data0.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+      Kernel<TrilindicesOpForwardImpl<req_type>, xpu>::Launch(
+          s, length, out_data0.dptr<DType>(), out_data1.dptr<DType>(),
+           indices, length);
+    });
+  });
+}
+
 struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
   dmlc::optional<mxnet::TShape> shift;
   dmlc::optional<mxnet::TShape> axis;
@@ -507,6 +612,9 @@ void NumpyFlipForward(const nnvm::NodeAttrs& attrs,
   for (int axis : axistemp) {
     CHECK_LT(axis, ishape.ndim()) << "axis " << axis
       << " is out of bounds for array of dimension " << ishape.ndim() << std::endl;
+    CHECK_GE(axis, -ishape.ndim()) << "axis" << axis
+      << " is out of bounds for array of dimension " << ishape.ndim() << std::endl;
+    axis = (axis < 0) ? axis + ishape.ndim() : axis;
     stride_[flip_index] = ishape[axis];
     trailing_[flip_index] = 1;
     for (int i2 = axis + 1; i2 < ishape.ndim(); ++i2) {
@@ -515,6 +623,47 @@ void NumpyFlipForward(const nnvm::NodeAttrs& attrs,
     flip_index++;
   }
   NumpyFlipForwardImpl<xpu>(ctx, inputs, outputs, stride_, trailing_, flip_index);
+}
+
+struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
+  int axis;
+  int start;
+  DMLC_DECLARE_PARAMETER(NumpyRollaxisParam) {
+    DMLC_DECLARE_FIELD(axis)
+    .describe("The axis to roll backwards. "
+    "The positions of the other axes do not change relative to one another.");
+    DMLC_DECLARE_FIELD(start)
+    .set_default(0)
+    .describe("The axis is rolled until it lies before this position. "
+              "The default, 0, results in a “complete” roll.");
+  }
+};
+
+inline mxnet::TShape NumpyRollaxisShapeImpl(int axis,
+                                            int start,
+                                            const int& ndim) {
+  mxnet::TShape axes(ndim, -1);
+  if (axis < 0) {
+    axis += ndim;
+  }
+  if (start < 0) {
+    start += ndim;
+  }
+  if (axis < start) {
+    axes[start - 1] = axis;
+  } else {
+    axes[start] = axis;
+  }
+  int new_axis = 0;
+  for (int i = 0; i < axes.ndim(); i++) {
+    if (axes[i] < 0) {
+      if (new_axis == axis) {
+        new_axis++;
+      }
+      axes[i] = new_axis++;
+    }
+  }
+  return axes;
 }
 
 struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
@@ -596,6 +745,63 @@ void NumpyMoveaxisCompute(const nnvm::NodeAttrs& attrs,
     << "source and destination not equal.";
   mxnet::TShape axes;
   axes = NumpyMoveaxisShapeImpl(attrs, inputs[0].ndim());
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
+    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  })
+}
+
+template<typename xpu>
+void NumpyRollaxisCompute(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req[0], kWriteTo) << "Rollaxis does not support inplace";
+  mxnet::TShape axes;
+  const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
+  axes = NumpyRollaxisShapeImpl(param.axis, param.start, inputs[0].ndim());
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
+    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
+  })
+}
+
+template<typename xpu>
+void NumpyRollaxisBackward(const nnvm::NodeAttrs &attrs,
+                            const OpContext &ctx,
+                            const std::vector<TBlob> &inputs,
+                            const std::vector<OpReqType> &req,
+                            const std::vector<TBlob> &outputs) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
+  int axis_origin = param.axis;
+  int start_origin = param.start;
+  int ndim = inputs[0].ndim();
+
+  int axis;
+  int start;
+
+  if (axis_origin < 0) {
+    axis_origin += ndim;
+  }
+
+  if (start_origin < 0) {
+    start_origin += ndim;
+  }
+
+  if (axis_origin < start_origin) {
+    axis = start_origin - 1;
+    start = axis_origin;
+  } else {
+    axis = start_origin;
+    start = axis_origin + 1;
+  }
+  mxnet::TShape axes;
+  axes = NumpyRollaxisShapeImpl(axis, start, inputs[0].ndim());
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
     TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
   })
@@ -907,6 +1113,13 @@ struct NumpyConcatenateParam : public dmlc::Parameter<NumpyConcatenateParam> {
     .describe("The axis along which `values` are appended.  If `axis` is not"
               "given, both `arr` and `values` are flattened before use.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s, axis_s;
+    num_args_s << num_args;
+    axis_s << axis;
+    (*dict)["num_args"] = num_args_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 template<typename xpu>
@@ -983,6 +1196,11 @@ struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. ");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
@@ -1006,7 +1224,7 @@ inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
   auto s = std::max(std::min(h, w), a);
   // s is the length of diagonal with k as the offset
 
-  int32_t n_dim = ishape.ndim() - 1;
+  int n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
   oshape[n_dim - 1] = s;
   return oshape;
@@ -1177,8 +1395,8 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
   int offset;
-  int32_t axis1;
-  int32_t axis2;
+  int axis1;
+  int axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
     DMLC_DECLARE_FIELD(offset)
       .set_default(0)
@@ -1195,12 +1413,21 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
       .describe("The second axis of the sub-arrays of interest. "
                 "Ignored when the input is a 1-D array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream offset_s, axis1_s, axis2_s;
+    offset_s << offset;
+    axis1_s << axis1;
+    axis2_s << axis2;
+    (*dict)["offset"] = offset_s.str();
+    (*dict)["axis1"] = axis1_s.str();
+    (*dict)["axis2"] = axis2_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
-                                            const int32_t axis1, const int32_t axis2) {
-  int32_t x1 = CheckAxis(axis1, ishape.ndim());
-  int32_t x2 = CheckAxis(axis2, ishape.ndim());
+                                            const int axis1, const int axis2) {
+  int x1 = CheckAxis(axis1, ishape.ndim());
+  int x2 = CheckAxis(axis2, ishape.ndim());
 
   CHECK_NE(x1, x2) << "axis1 and axis2 cannot refer to the same axis " << x1;
 
@@ -1215,11 +1442,11 @@ inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const i
   if (s < 0) s = 0;
   if (x1 > x2) std::swap(x1, x2);
 
-  int32_t n_dim = ishape.ndim() - 1;
+  int n_dim = ishape.ndim() - 1;
   mxnet::TShape oshape(n_dim, -1);
 
   // remove axis1 and axis2 and append the new axis to the end
-  uint32_t idx = 0;
+  int idx = 0;
   for (int i = 0; i <= n_dim; ++i) {
     if (i != x1 && i != x2) {
       oshape[idx++] = ishape[i];
@@ -1292,22 +1519,22 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
                          const std::vector<OpReqType>& req) {
   using namespace mxnet_op;
   using namespace mshadow;
-  uint32_t x1 = CheckAxis(param.axis1, ishape.ndim());
-  uint32_t x2 = CheckAxis(param.axis2, ishape.ndim());
-  uint32_t idim = ishape.ndim(), odim = oshape.ndim();
-  uint32_t minx = x1, maxx = x2;
+  int x1 = CheckAxis(param.axis1, ishape.ndim());
+  int x2 = CheckAxis(param.axis2, ishape.ndim());
+  int idim = ishape.ndim(), odim = oshape.ndim();
+  int minx = x1, maxx = x2;
   if (minx > maxx) std::swap(minx, maxx);
 
   index_t oleading = 1,
           obody = 1,
           otrailing = 1;
-  for (uint32_t i = 0; i < minx; ++i) {
+  for (int i = 0; i < minx; ++i) {
     oleading *= ishape[i];
   }
-  for (uint32_t i = minx + 1; i < maxx; ++i) {
+  for (int i = minx + 1; i < maxx; ++i) {
     obody *= ishape[i];
   }
-  for (uint32_t i = maxx + 1; i < idim; ++i) {
+  for (int i = maxx + 1; i < idim; ++i) {
     otrailing *= ishape[i];
   }
 

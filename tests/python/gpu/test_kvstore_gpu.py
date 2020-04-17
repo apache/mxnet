@@ -45,6 +45,7 @@ def init_kv_with_str(stype='default', kv_type='local'):
 # Both of them are not reproducible, so this test is back on random seeds.
 @with_seed()
 @unittest.skipIf(mx.context.num_gpus() < 2, "test_rsp_push_pull needs more than 1 GPU")
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14189") 
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, sparse_pull, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
