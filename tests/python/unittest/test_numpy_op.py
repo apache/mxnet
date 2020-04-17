@@ -1325,6 +1325,80 @@ def test_npx_slice(start, end, step, hybridize):
 
 @with_seed()
 @use_np
+def test_npx_index_add():
+    class TestIndexAdd(HybridBlock):
+        def __init__(self, ind):
+            super(TestIndexAdd, self).__init__()
+            self.ind = ind
+
+        def hybrid_forward(self, F, a, val):
+            return F.npx.index_add(a, val, ind=self.ind)
+
+    def index_add_forward(a, ind, val, ind_ndim, ind_num):
+        ind_arr = _np.array([], dtype=int)
+        if ind_ndim == 1:
+            ind_arr = _np.array(ind).transpose()
+        else:
+            t_ind = []
+            for i in range(ind_ndim):
+                if len(ind[i]) == 1:
+                    t_ind.append((ind[i][0],) * ind_num)
+                else:
+                    t_ind.append(ind[i])
+            ind_arr = _np.array(t_ind).transpose()
+        for i in range(ind_arr.shape[0]):
+            t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
+            if val.ndim == 0:
+                a[t_ind] += val
+            elif val.ndim + ind_ndim > a.ndim:
+                t_val = val[tuple([0 if val.shape[0]==1 else i])]
+                if type(t_val) is _np.ndarray and t_val.shape[0] == 1:
+                    a[t_ind] += _np.squeeze(t_val, axis=0)
+                else:
+                    a[t_ind] += t_val
+            else:
+                a[t_ind] += val
+        return a
+
+    configs = [((2, ), (1, ), (1, ), 1, 1)]
+    shape = tuple(_np.random.randint(1, 6, size=(4)))
+    for ind_ndim in range(1, 5):
+        ind_num = _np.random.randint(1, 7)
+        ind = []
+        for ind_dim in range(ind_ndim):
+            if ind_dim == 0:
+                sz = ind_num
+            else:
+                sz = 1 if _np.random.randint(0, 5)==0 else ind_num
+            ind.append(tuple(_np.random.randint(0, shape[ind_dim], size=(sz))))
+        configs.append(tuple([shape, tuple(ind), (), ind_ndim, ind_num]))
+        for val_ndim in range(1, 5 - ind_ndim):
+            val_shape = [1 if _np.random.randint(0, 5)==0 else ind_num]
+            for val_dim in range(ind_ndim, 4):
+                val_shape.append(1 if _np.random.randint(0, 5)==0 else shape[val_dim])
+            configs.append(tuple([shape, tuple(ind), tuple(val_shape), ind_ndim, ind_num]))
+
+    dtypes = ['float32', 'float64']
+    for hybridize, atype, valtype in itertools.product([True, False], dtypes, dtypes):
+        for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
+            test_index_add = TestIndexAdd(ind=ind)
+            
+            a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+            a.attach_grad()
+            val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+            val.attach_grad()
+            expected_ret = index_add_forward(a.asnumpy(), ind, val.asnumpy(), ind_ndim, ind_num)
+
+            with mx.autograd.record():
+                y = test_index_add(a, val)
+            assert y.shape == a.shape
+            assert expected_ret.shape == a.shape
+            assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3, atol=1e-3)
+
+
+@with_seed()
+@use_np
+@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_npx_batch_dot():
     ctx = mx.context.current_context()
     dtypes = ['float32', 'float64']

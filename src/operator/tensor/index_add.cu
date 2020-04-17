@@ -18,18 +18,21 @@
  */
 
 /*!
- * \file index_add-inl.cc
- * \brief CPU implementation of index_add operator
-*/
-#include <vector>
+ * \file index_add.cu
+ * \brief GPU implementation of index_add operator
+ */
+
+#include <cub/cub.cuh>
 #include "./index_add-inl.h"
+#include "../tensor/util/tensor_util-inl.cuh"
+#include "../tensor/util/tensor_util-inl.h"
 
 namespace mxnet {
 namespace op {
 
 template<typename xpu, typename DType, typename VType, int NDim>
 void IndexAddForwardImpl(mshadow::Stream<xpu> *s,
-                         const int ind_num, DType* out,
+                          const int ind_num, DType* out,
                         const VType* val,
                         const mshadow::Shape<NDim>& a_tail_shape,
                         const mshadow::Shape<NDim>& a_pre_stride,
@@ -40,32 +43,19 @@ void IndexAddForwardImpl(mshadow::Stream<xpu> *s,
                         const int req) {
   using namespace mxnet_op;
   using namespace mshadow;
+  int * d_ind_vec;  
+  cudaMalloc((void**)&d_ind_vec, sizeof(int) * ind_ndim * ind_num);  
+  cudaMemcpy(d_ind_vec, ind_vec, sizeof(int) * ind_ndim * ind_num, cudaMemcpyHostToDevice);
   Kernel<IndexAddForwardKernel<DType, VType, NDim>, xpu>::Launch(
-                                             s, ind_num, out, val,
-                                             a_tail_shape, a_pre_stride,
-                                             val_stride, val_shape,
-                                             a_tail_size, ind_num,
-                                             ind_ndim, ind_vec, req);
+                                              s, ind_num, out, val,
+                                              a_tail_shape, a_pre_stride,
+                                              val_stride, val_shape,
+                                              a_tail_size, ind_num,
+                                              ind_ndim, d_ind_vec);
 }
 
-DMLC_REGISTER_PARAMETER(IndexAddParam);
-
 NNVM_REGISTER_OP(_npx_index_add)
-.describe(R"code(This operators implements the "+=" mimic function.
-)code" ADD_FILELINE)
-.set_attr_parser(ParamParser<IndexAddParam>)
-.set_num_inputs(2)
-.set_num_outputs(1)
-.set_attr<nnvm::FListInputNames>("FListInputNames",
-  [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "val"};
-  })
-.set_attr<mxnet::FInferShape>("FInferShape", IndexAddOpShape)
-.set_attr<nnvm::FInferType>("FInferType", IndexAddOpType)
-.set_attr<FCompute>("FCompute<cpu>", IndexAddOpForward<cpu>)
-.add_argument("a", "NDArray-or-Symbol", "Input ndarray")
-.add_argument("val", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(IndexAddParam::__FIELDS__());
+.set_attr<FCompute>("FCompute<gpu>", IndexAddOpForward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
