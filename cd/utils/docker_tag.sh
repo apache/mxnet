@@ -47,7 +47,7 @@ if [[ ${is_release} == "true" ]]; then
         echo "latest_cpu"
     elif [[ ${mxnet_variant} == "native" ]]; then
         echo "latest_cpu_native"
-    elif [[ ${mxnet_variant} == "cu90" ]]; then
+    elif [[ ${mxnet_variant} == "cu92" ]]; then
         echo "latest_gpu"
     fi
 fi

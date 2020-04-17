@@ -21,8 +21,6 @@ This package supports Linux and Windows platforms. You may also want to check:
 - [mxnet-cu102](https://pypi.python.org/pypi/mxnet-cu102/) with CUDA-10.2 support.
 - [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
 - [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100/) with CUDA-10.0 support.
-- [mxnet-cu92](https://pypi.python.org/pypi/mxnet-cu92/) with CUDA-9.2 support.
-- [mxnet-cu90](https://pypi.python.org/pypi/mxnet-cu90/) with CUDA-9.0 support.
 - [mxnet](https://pypi.python.org/pypi/mxnet/).
 - [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without MKLDNN.
 

@@ -164,10 +164,8 @@ build_dynamic_libmxnet() {
     # relevant licenses will be placed in the licenses directory
     gather_licenses
 
-    source /opt/rh/devtoolset-7/enable
     cd /work/build
-    export CC=gcc-7
-    export CXX=g++-7
+    source /opt/rh/devtoolset-7/enable
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
