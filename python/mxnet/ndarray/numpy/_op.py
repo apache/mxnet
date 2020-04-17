@@ -31,7 +31,7 @@ from ..ndarray import NDArray
 
 __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'invert', 'delete',
            'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
-           'power', 'bitwise_not',
+           'power', 'bitwise_not', 'trace', 'transpose',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'insert', 'fabs',
            'absolute', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'matmul',
            'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram',
@@ -2095,6 +2095,53 @@ def triu(m, k=0):
     return _api_internal.triu(m, k)
 
 
+@set_module('mxnet.ndarray.numpy')
+def trace(a, offset=0, axis1=0, axis2=1, out=None):
+    """
+    Return the sum along diagonals of the array.
+    If `a` is 2-D, the sum along its diagonal with the given offset
+    is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
+    If `a` has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-arrays whose traces are returned.
+    The shape of the resulting array is the same as that of `a` with `axis1`
+    and `axis2` removed.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array, from which the diagonals are taken.
+    offset : int, optional
+        Offset of the diagonal from the main diagonal. Can be both positive
+        and negative. Defaults to 0.
+    axis1, axis2 : int, optional
+        Axes to be used as the first and second axis of the 2-D sub-arrays
+        from which the diagonals should be taken. Defaults are the first two
+        axes of `a`.
+    out : ndarray, optional
+        Array into which the output is placed. It must be of the right shape
+        and right type to hold the output.
+
+    Returns
+    -------
+    sum_along_diagonals : ndarray
+        If `a` is 2-D, the sum along the diagonal is returned.  If `a` has
+        larger dimensions, then an array of sums along diagonals is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    >>> np.trace(a)
+    array(3.)
+    >>> a = np.arange(8).reshape((2, 2, 2))
+    >>> np.trace(a)
+    array([6., 8.])
+    >>> a = np.arange(24).reshape((2, 2, 2, 3))
+    >>> np.trace(a).shape
+    (2, 3)
+    """
+    return _api_internal.trace(a, offset, axis1, axis2, out)
+
+
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
     """Helper function for unary operators with kwargs.
 
@@ -3748,7 +3795,7 @@ def tile(A, reps):
     >>> np.tile(b, 2)
     array([[1., 2., 1., 2.],
            [3., 4., 3., 4.]])
-    >>> np.(b, (2, 1))
+    >>> np.tile(b, (2, 1))
     array([[1., 2.],
            [3., 4.],
            [1., 2.],
@@ -3767,7 +3814,55 @@ def tile(A, reps):
     array([2, 2, 2]) # repeating integer `2`
 
     """
-    return _unary_func_helper(A, _npi.tile, _np.tile, reps=reps)
+    if isinstance(A, numeric_types):
+        return _np.tile(A, reps)
+    elif isinstance(A, NDArray):
+        return _api_internal.tile(A, reps)
+    else:
+        raise TypeError('type {} not supported'.format(str(type(A))))
+
+
+@set_module('mxnet.ndarray.numpy')
+def transpose(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+
+    Notes
+    -----
+    This function differs from the original `numpy.transpose
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.transpose.html>`_ in
+    the following way(s):
+
+    - only ndarray is accepted as valid input, python iterables are not supported
+    - the operator always returns an `ndarray` that does not share the memory with the input
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.transpose(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.transpose(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _api_internal.transpose(a, axes)
 
 
 # pylint: disable=redefined-outer-name
