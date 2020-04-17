@@ -54,7 +54,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'unpackbits', 'rollaxis', 'pad', 'cumsum', 'diag', 'diagonal']
+           'where', 'bincount', 'unpackbits', 'rollaxis', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -689,7 +689,7 @@ class _Symbol(Symbol):
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the sum of the array elements over the given axis."""
-        return _mx_np_op.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
+        return _npi.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
 
     def nansum(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`nansum`.
@@ -7382,6 +7382,53 @@ def diagonal(a, offset=0, axis1=0, axis2=1):
     ValueError:  If the dimension of a is less than 2.
     """
     return _npi.diagonal(a, offset=offset, axis1=axis1, axis2=axis2)
+
+
+# pylint:disable=redefined-outer-name, too-many-arguments
+@set_module('mxnet.symbol.numpy')
+def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+    r"""
+    Sum of array elements over a given axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+    axis : None or int, optional
+        Axis or axes along which a sum is performed.  The default,
+        axis=None, will sum all of the elements of the input array.  If
+        axis is negative it counts from the last to the first axis.
+    dtype : dtype, optional
+        The type of the returned array and of the accumulator in which the
+        elements are summed. The default type is float32.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `sum` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-classes `sum` method does not implement `keepdims` any
+        exceptions will be raised.
+    initial: Currently only supports None as input, optional
+        Starting value for the sum.
+        Currently not implemented. Please use ``None`` as input or skip this argument.
+    out : ndarray or None, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and dtype as the expected output.
+
+    Returns
+    -------
+    sum_along_axis : _Symbol
+        An ndarray with the same shape as `a`, with the specified
+        axis removed. If an output array is specified, a reference to
+        `out` is returned.
+    """
+    if where is not None and where is not True:
+        raise ValueError("only where=None or where=True cases are supported for now")
+    return _npi.sum(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
+# pylint:enable=redefined-outer-name, too-many-arguments
 
 
 _set_np_symbol_class(_Symbol)

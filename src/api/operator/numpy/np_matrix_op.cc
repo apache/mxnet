@@ -23,6 +23,7 @@
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <vector>
 #include "../utils.h"
 #include "../../../operator/nn/concat-inl.h"
 #include "../../../operator/tensor/matrix_op-inl.h"
@@ -197,6 +198,46 @@ MXNET_REGISTER_API("_npi.rot90")
   int num_inputs = 1;
   int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.column_stack")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_column_stack");
+  nnvm::NodeAttrs attrs;
+  op::NumpyColumnStackParam param;
+  param.num_args = args.size();
+
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyColumnStackParam>(&attrs);
+  int num_outputs = 0;
+  std::vector<NDArray*> inputs;
+  for (int i = 0; i < param.num_args; ++i) {
+    inputs.push_back(args[i].operator mxnet::NDArray*());
+  }
+  auto ndoutputs = Invoke(op, &attrs, param.num_args, &inputs[0], &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.hstack")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_hstack");
+  nnvm::NodeAttrs attrs;
+  op::ConcatParam param;
+  param.num_args = args.size();
+
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::ConcatParam>(&attrs);
+  int num_outputs = 0;
+  std::vector<NDArray*> inputs;
+  for (int i = 0; i < param.num_args; ++i) {
+    inputs.push_back(args[i].operator mxnet::NDArray*());
+  }
+  auto ndoutputs = Invoke(op, &attrs, param.num_args, &inputs[0], &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 

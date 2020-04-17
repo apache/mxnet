@@ -98,7 +98,7 @@ def unittest_py3(mxnet_variant) {
       def image = get_environment(mxnet_variant)
       def use_nvidia_docker = mxnet_variant.startsWith('cu')
       ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
-      ci_utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant} python3", use_nvidia_docker)
+      ci_utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant}", use_nvidia_docker)
     }
   }
 }

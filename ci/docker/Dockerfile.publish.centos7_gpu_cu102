@@ -29,7 +29,7 @@ RUN /work/centos7_python.sh
 COPY install/centos7_scala.sh /work/
 RUN /work/centos7_scala.sh
 ENV SHORT_CUDA_VERSION=10.2
-ENV SHORT_NCCL_VERSION=2.4.8
+ENV SHORT_NCCL_VERSION=2.6.4
 COPY install/centos7_nccl.sh /work/
 RUN /work/centos7_nccl.sh
 
