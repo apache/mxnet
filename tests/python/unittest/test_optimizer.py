@@ -712,9 +712,10 @@ def test_sparse_ftrl():
             if (dtype == np.float16 and
                     ('multi_precision' not in kwarg or not kwarg['multi_precision'])):
                 continue
+            rtol, atol = (1e-3, 1e-3) if dtype is np.float16 else (1e-4, 1e-4)
             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes,
                               dtype, w_stype='row_sparse', g_stype='row_sparse',
-                              rtol=1e-4, atol=1e-4)
+                              rtol=rtol, atol=atol)
 
 
 @with_seed()
