@@ -9961,7 +9961,7 @@ def test_elementwise_ops_on_misaligned_input():
 @with_seed()
 def test_broadcast_ops_on_misaligned_input():
     dtypes = ['float16', 'float32', 'float64']
-    lead_dims = [2,4,6,10]
+    lead_dims = [2,3,4,6,10]
 
     for dtype in dtypes:
         for lead_dim in lead_dims:
@@ -9990,7 +9990,7 @@ def test_broadcast_ops_on_misaligned_input():
 @with_seed()
 def test_broadcast_ops_on_misaligned_input_oneside():
     dtypes = ['float16', 'float32', 'float64']
-    lead_dims = [2,4,6,10]
+    lead_dims = [2,3,4,6,10]
 
     for dtype in dtypes:
         for lead_dim in lead_dims:
