@@ -20,5 +20,6 @@
 """Contrib datasets."""
 
 from . import text
+from . import vision
 
 from .sampler import *

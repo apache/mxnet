@@ -39,6 +39,17 @@
 namespace mxnet {
 namespace imperative {
 
+namespace {
+  static const char SKIP_ENGINE[] = "__skip_engine__";
+  static const char SKIP_ENGINE_SET[] = "__true__";
+
+  inline bool CheckIfSkipEngine(const nnvm::NodeAttrs& attrs) {
+    const auto& skip_engine_attr = attrs.dict.find(SKIP_ENGINE);
+    if (skip_engine_attr == attrs.dict.end()) return false;
+    return (*skip_engine_attr).second == SKIP_ENGINE_SET;
+  }
+}
+
 struct MemoryPlanInfo {
   int storage_id;
   uint32_t root;
@@ -456,41 +467,47 @@ inline void PushFCompute(const FCompute& fn,
   CHECK(exec_type == ExecType::kSync);
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushSync(
-    [=](RunContext rctx) {
-      std::vector<TBlob> input_blobs, output_blobs;
-      // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
-      std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
-      // mapping from index in input_blobs to index in pre_temp_dst
-      std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+  const auto& run = [=](RunContext rctx) {
+    std::vector<TBlob> input_blobs, output_blobs;
+    // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
+    std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
+    // mapping from index in input_blobs to index in pre_temp_dst
+    std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
 #if MXNET_USE_MKLDNN == 1
-      if (exec_type != ExecType::kCrossDeviceCopy) {
-        // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
-        // its FCcomputeEx, but AsyncPush the copy operation to engine.
-        // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
-        // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
-        // copying A to B may not happen, and will corrupt A's memory.
-        InvalidateOutputs(outputs, req);
-      }
+    if (exec_type != ExecType::kCrossDeviceCopy) {
+      // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
+      // its FCcomputeEx, but AsyncPush the copy operation to engine.
+      // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+      // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
+      // copying A to B may not happen, and will corrupt A's memory.
+      InvalidateOutputs(outputs, req);
+    }
 #endif
-      std::vector<OpReqType> tmp_req = req;
-      // setup blobs
-      SetupDefaultBlobsInOut(inputs, outputs, nullptr, nullptr, &tmp_req,
-                             &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
-                             &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
-      // setup context
-      OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
-      bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
-      // pre-fcompute fallback, cast to default storage type
-      CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
-      fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
-      // post-fcompute fallback, cast to original storage type
-      CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-      if (is_gpu && !rctx.is_bulk) {
-        rctx.get_stream<gpu>()->Wait();
-      }
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
+    std::vector<OpReqType> tmp_req = req;
+    // setup blobs
+    SetupDefaultBlobsInOut(inputs, outputs, nullptr, nullptr, &tmp_req,
+                            &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
+                            &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
+    // setup context
+    OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
+    bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
+    // pre-fcompute fallback, cast to default storage type
+    CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
+    fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
+    // post-fcompute fallback, cast to original storage type
+    CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
+    if (is_gpu && !rctx.is_bulk) {
+      rctx.get_stream<gpu>()->Wait();
+    }
+  };
+  if (CheckIfSkipEngine(attrs)) {
+    // execute without engine
+    run(RunContext{ctx, nullptr, nullptr, false});
+  } else {
+    Engine::Get()->PushSync(
+    run, ctx, read_vars, write_vars, FnProperty::kNormal,
     0, op->name.c_str());
+  }
 }
 
 inline void PushFComputeEx(const FComputeEx& fn,
@@ -537,8 +554,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
         rctx.get_stream<gpu>()->Wait();
       }
     };
-
-  if (exec_type == ExecType::kCrossDeviceCopy) {
+  if (exec_type == ExecType::kCrossDeviceCopy || CheckIfSkipEngine(attrs)) {
     run(RunContext{ctx, nullptr, nullptr, false});
   } else {
     CHECK(exec_type == ExecType::kSync);
@@ -605,7 +621,7 @@ inline void PushOperator(const OpStatePtr& state,
 
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
-    if (exec_type == ExecType::kSubgraphExec) {
+    if (exec_type == ExecType::kSubgraphExec || CheckIfSkipEngine(attrs)) {
       RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
@@ -660,7 +676,7 @@ inline void PushOperator(const OpStatePtr& state,
         }
       };
 
-    if (exec_type == ExecType::kSubgraphExec) {
+    if (exec_type == ExecType::kSubgraphExec || CheckIfSkipEngine(attrs)) {
       RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
@@ -1165,7 +1181,8 @@ void NaiveRunGraph(const bool retain_graph,
                    bool recording,
                    mxnet::ShapeVector *shapes,
                    const CachedOpMonCallback& callback = nullptr,
-                   const bool monitor_all_ = false);
+                   const bool monitor_all_ = false,
+                   const bool skip_engine = false);
 
 }  // namespace imperative
 }  // namespace mxnet

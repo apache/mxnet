@@ -17,9 +17,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
-
 set -ex
 
 function install_julia() {

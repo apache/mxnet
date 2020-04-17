@@ -33,7 +33,7 @@ An mxnet compiled library, or artifact for our purposes, is identified by the fo
 
 **Commit Id**
 
-Manually configured through the --git-sha argument. 
+Manually configured through the --git-sha argument.
 
 If not set, derived by:
 
@@ -59,7 +59,7 @@ As long as the tool is being run from the MXNet code base, the runtime feature d
 
 If it has been compiled with CUDA support, the output of /usr/local/cuda/bin/nvcc --version can be mined for the exact CUDA version (eg. 8.0, 9.0, etc.).
 
-By knowing which features are enabled on the binary, and if necessary, which CUDA version is installed on the machine, the value for the variant argument can be calculated. Eg. if CUDA features are enabled, and nvcc reports cuda version 10, then the variant would be cu100. If neither MKL-DNN nor CUDA features are enabled, the variant would be native. 
+By knowing which features are enabled on the binary, and if necessary, which CUDA version is installed on the machine, the value for the variant argument can be calculated. Eg. if CUDA features are enabled, and nvcc reports cuda version 10, then the variant would be cu100. If neither MKL-DNN nor CUDA features are enabled, the variant would be native.
 
 **Dependency Linking**
 
@@ -68,7 +68,7 @@ The library dependencies can be either statically or dynamically linked. This pr
 ### Uploading an Artifact
 
 The user must specify the path to the libmxnet.so, any license files, and any dependencies. The latter two are optional.
- 
+
 Example:
 
 `./artifact_repository.py --push --static --libmxnet /path/to/libmxnet.so --licenses path/to/license1.txt /path/to/other_licenses/*.txt --dependencies /path/to/dependencies/*.so`
@@ -102,4 +102,3 @@ dist
 ```
 
 The libmxnet.meta file will include the characteristics of the artifact (ie. library type, variant, git commit id, etc.) in a “property” file format.
-
