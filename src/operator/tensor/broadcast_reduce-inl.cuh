@@ -47,6 +47,7 @@ __global__ void VectorizedBinaryBroadcastKernel(
     const index_t num_aligned_elements) {
   constexpr int nvec = sizeof(LType) / sizeof(DType);
   const index_t M = num_aligned_elements * other_dim;
+  const index_t N = lead_dim * other_dim;
 
   VectorizedLoader<DType, LType, aligned> lloader(param.inputs[0], param.size[0]);
   VectorizedLoader<DType, LType, aligned> rloader(param.inputs[1], param.size[1]);
@@ -54,22 +55,41 @@ __global__ void VectorizedBinaryBroadcastKernel(
   for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
        idx < M;
        idx += gridDim.x * blockDim.x) {
-    const index_t row = idx / num_aligned_elements;
-    const index_t lead_dim_idx = idx - row * num_aligned_elements;
-    VectorizedStorer<DType, LType, aligned> storer(param.outputs[0] + row * lead_dim, lead_dim);
+    DType * current_output_pointer;
+    index_t output_size;
+    index_t output_idx;
+    if (aligned) {
+      // Simplified case
+      index_t lindex, rindex;
+      unravel_dot(idx * nvec, param.oshape,
+                  param.stride[0], param.stride[1],
+                  &lindex, &rindex);
+      lloader.load(lindex / nvec, param.size[0]);
+      rloader.load(rindex / nvec, param.size[1]);
+      current_output_pointer = param.outputs[0];
+      output_size = N;
+      output_idx = idx;
+    } else {
+      const index_t row = idx / num_aligned_elements;
+      const index_t lead_dim_idx = idx - row * num_aligned_elements;
 
-    index_t lindex, rindex;
-    const index_t original_idx = max(lead_dim_idx * nvec - lloader.alignment(),
-                                     static_cast<index_t>(0)) +
-                                 row * lead_dim;
-    unravel_dot(original_idx, param.oshape,
-                param.stride[0], param.stride[1],
-                &lindex, &rindex);
-    lloader.load((lindex + lloader.alignment()) / nvec, param.size[0]);
-    rloader.load((rindex + lloader.alignment()) / nvec, param.size[1]);
+      index_t lindex, rindex;
+      const index_t original_idx = max(lead_dim_idx * nvec - lloader.alignment(),
+                                       static_cast<index_t>(0)) +
+                                   row * lead_dim;
+      unravel_dot(original_idx, param.oshape,
+                  param.stride[0], param.stride[1],
+                  &lindex, &rindex);
+      lloader.load((lindex + lloader.alignment()) / nvec, param.size[0]);
+      rloader.load((rindex + lloader.alignment()) / nvec, param.size[1]);
+      current_output_pointer = param.outputs[0] + row * lead_dim;
+      output_size = lead_dim;
+      output_idx = lead_dim_idx;
+    }
+    VectorizedStorer<DType, LType, aligned> storer(current_output_pointer, output_size);
 
     if (req == kAddTo) {
-      storer.load(lead_dim_idx, lead_dim);
+      storer.load(output_idx, output_size);
     }
 #pragma unroll
     for (int i = 0; i < lloader.nvec(); ++i) {
@@ -82,7 +102,7 @@ __global__ void VectorizedBinaryBroadcastKernel(
         storer.separate()[i] = temp;
       }
     }
-    storer.store(lead_dim_idx, lead_dim);
+    storer.store(output_idx, output_size);
   }
 }
 
@@ -93,6 +113,7 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
     const index_t num_aligned_elements) {
   constexpr int nvec = sizeof(LType) / sizeof(DType);
   const index_t M = num_aligned_elements * other_dim;
+  const index_t N = lead_dim * other_dim;
   constexpr int other_side = 1 - side;
 
   VectorizedLoader<DType, LType, aligned> lloader(param.inputs[side], param.size[side]);
@@ -100,20 +121,38 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
   for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
        idx < M;
        idx += gridDim.x * blockDim.x) {
-    const index_t row = idx / num_aligned_elements;
-    const index_t lead_dim_idx = idx - row * num_aligned_elements;
-    VectorizedStorer<DType, LType, aligned> storer(param.outputs[0] + row * lead_dim, lead_dim);
-    const index_t original_idx = lead_dim_idx * nvec -
-                                 lloader.alignment() + row * lead_dim;
-    const index_t original_idx_clamped = max(lead_dim_idx * nvec - lloader.alignment(),
-                                             static_cast<index_t>(0)) +
-                                         row * lead_dim;
-    const index_t lindex = mxnet_op::unravel_dot(original_idx_clamped, param.oshape,
-                                                 param.stride[side]);
-    lloader.load((lindex + lloader.alignment()) / nvec, param.size[side]);
+    index_t original_idx;
+    DType * current_output_pointer;
+    index_t output_size;
+    index_t output_idx;
+    if (aligned) {
+      //Simplified case
+      original_idx = idx * nvec;
+      const index_t lindex = mxnet_op::unravel_dot(original_idx, param.oshape,
+                                                   param.stride[side]);
+      lloader.load(lindex / nvec, param.size[side]);
+      current_output_pointer = param.outputs[0];
+      output_size = N;
+      output_idx = idx;
+    } else {
+      const index_t row = idx / num_aligned_elements;
+      const index_t lead_dim_idx = idx - row * num_aligned_elements;
+      original_idx = lead_dim_idx * nvec -
+                     lloader.alignment() + row * lead_dim;
+      const index_t original_idx_clamped = max(lead_dim_idx * nvec - lloader.alignment(),
+                                               static_cast<index_t>(0)) +
+                                           row * lead_dim;
+      const index_t lindex = mxnet_op::unravel_dot(original_idx_clamped, param.oshape,
+                                                   param.stride[side]);
+      lloader.load((lindex + lloader.alignment()) / nvec, param.size[side]);
+      current_output_pointer = param.outputs[0] + row * lead_dim;
+      output_size = lead_dim;
+      output_idx = lead_dim_idx;
+    }
+    VectorizedStorer<DType, LType, aligned> storer(current_output_pointer, output_size);
 
     if (req == kAddTo) {
-      storer.load(lead_dim_idx, lead_dim);
+      storer.load(output_idx, output_size);
     }
 #pragma unroll
     for (int i = 0; i < lloader.nvec(); ++i) {
@@ -140,7 +179,7 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
         storer.separate()[i] = temp;
       }
     }
-    storer.store(lead_dim_idx, lead_dim);
+    storer.store(output_idx, output_size);
   }
 }
 
