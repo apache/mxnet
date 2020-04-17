@@ -17,9 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Install Thrust 1.9.8 to be shipped with Cuda 11.
-# Fixes https://github.com/thrust/thrust/issues/1072 for Clang 10
-# This file can be deleted when using Cuda 11 on CI
+# build and install are separated so changes to build don't invalidate
+# the whole docker cache for the image
 
 set -ex
 

@@ -5798,7 +5798,7 @@ def test_np_linalg_lstsq():
         def __init__(self, rcond):
             super(TestLstsq, self).__init__()
             self._rcond = rcond
-
+        
         def hybrid_forward(self, F, a, b, rcond='warn'):
             return F.np.linalg.lstsq(a, b, rcond=self._rcond)
 
@@ -7195,10 +7195,10 @@ def test_np_tril_indices():
             if m is None:
                 m = n
             self._m = m
-
+        
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.tril_indices(n=self._n, k=self._k, m=self._m)
-
+    
     for n in _np.random.random_integers(-10, 50, 2):
         for k in _np.random.random_integers(-50, 50, 2):
             for m in _np.random.random_integers(-10, 50, 2):
@@ -7219,7 +7219,7 @@ def test_np_tril_indices():
                         np_data[np_out] = -10
                         mx_data[mx_out] = -10
                         assert same(np_data, mx_data.asnumpy())
-
+                        
 
 @with_seed()
 @use_np
@@ -7421,56 +7421,6 @@ def test_np_dsplit():
         def __init__(self, indices_or_sections):
             super(TestDSplit, self).__init__()
             self._indices_or_sections = indices_or_sections
-
-        def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.dsplit(a, indices_or_sections=self._indices_or_sections)
-
-    shapes = [
-        (2, 4, 6),
-        (3, 0, 6),
-        (2, 3, 0, 4),
-    ]
-    indices_or_sections_num = [
-        (2, 4),
-        (3, 3),
-        (3,),
-        (1,),
-        2,
-    ]
-    for hybridize in [True, False]:
-        for shape in shapes:
-            for indices_or_sections in indices_or_sections_num:
-                # test gluon
-                test_dsplit = TestDSplit(indices_or_sections=indices_or_sections)
-                if hybridize:
-                    test_dsplit.hybridize()
-
-                a = mx.nd.random.uniform(-1.0, 1.0, shape=shape).as_np_ndarray()
-                a.attach_grad()
-                expected_ret = _np.dsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
-                with mx.autograd.record():
-                    y = test_dsplit(a)
-                assert len(y) == len(expected_ret)
-                for mx_out, np_out in zip(y, expected_ret):
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-                mx.autograd.backward(y)
-                assert_almost_equal(a.grad.asnumpy(), _np.ones(a.shape), rtol=1e-3, atol=1e-5)
-
-                # test imperative
-                mx_outs = np.dsplit(a, indices_or_sections=indices_or_sections)
-                np_outs = _np.dsplit(a.asnumpy(), indices_or_sections=indices_or_sections)
-                for mx_out, np_out in zip(mx_outs, np_outs):
-                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
-
-
-@with_seed()
-@use_np
-def test_np_einsum():
-    class TestEinsum(HybridBlock):
-        def __init__(self, subscripts, optimize):
-            super(TestEinsum, self).__init__()
-            self.subscripts = subscripts
-            self.optimize = optimize
 
         def hybrid_forward(self, F, a, *args, **kwargs):
             return F.np.dsplit(a, indices_or_sections=self._indices_or_sections)
@@ -8029,7 +7979,7 @@ def test_np_median():
         a = np.random.uniform(-1.0, 1.0, size=a_shape)
         np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
         mx_out = test_median(a)
-
+        
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
@@ -9046,10 +8996,10 @@ def test_np_interp():
             self._left = left
             self._right = right
             self._period = period
-
+        
         def hybrid_forward(self, F, x, xp, fp):
             return F.np.interp(x, xp, fp, left=self._left, right=self._right, period=self._period)
-
+    
     class TestInterpScalar(HybridBlock):
         def __init__(self, x=None, left=None, right=None, period=None):
             super(TestInterpScalar, self).__init__()
@@ -9057,7 +9007,7 @@ def test_np_interp():
             self._left = left
             self._right = right
             self._period = period
-
+        
         def hybrid_forward(self, F, xp, fp):
             return F.np.interp(self._x, xp, fp, left=self._left, right=self._right, period=self._period)
 
@@ -9084,13 +9034,13 @@ def test_np_interp():
         else:
             x = np.random.uniform(0, 100, size=xshape).astype(xtype)
             xp = np.sort(np.random.choice(100, dsize, replace=False).astype(dtype))
-            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype)
+            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype) 
         np_x = x.asnumpy()
         if x_scalar and xshape == ():
             x = x.item()
             np_x = x
             test_interp = TestInterpScalar(x=x, left=left, right=right, period=period)
-        else:
+        else: 
             test_interp = TestInterp(left=left, right=right, period=period)
         if hybridize:
             test_interp.hybridize()
@@ -9478,7 +9428,7 @@ def test_np_rollaxis():
             super(TestRollaxis, self).__init__()
             self._axis = axis
             self._start = start
-
+             
         def hybrid_forward(self, F, a, *args, **kwargs):
             return F.np.rollaxis(a, axis=self._axis, start=self._start)
 

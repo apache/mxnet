@@ -2702,41 +2702,6 @@ def fabs(x, out=None, **kwargs):
 def absolute(x, out=None, **kwargs):
     r"""
     Calculate the absolute value element-wise.
-
-    This function returns the absolute values (positive magnitude) of the
-    data in `x`. Complex values are not handled, use `absolute` to find the
-    absolute values of complex data.
-
-    Parameters
-    ----------
-    x : ndarray or scalar
-        Input array.
-    out : ndarray or None, optional
-        A location into which the result is stored. If provided, it must have
-        a shape that the inputs broadcast to. If not provided or `None`,
-        a freshly-allocated array is returned.
-
-    Returns
-    -------
-    absolute : ndarray
-        An ndarray containing the absolute value of
-        each element in `x`. This is a scalar if `x` is a scalar.
-
-    Examples
-    --------
-    >>> np.fabs(-1)
-    1.0
-    >>> np.fabs(np.array([-1.2, 1.2]))s
-    array([ 1.2,  1.2])
-    """
-    return _pure_unary_func_helper(x, _api_internal.abs, _np.abs, out=out, **kwargs)
-
-
-@set_module('mxnet.ndarray.numpy')
-@wrap_np_unary_func
-def absolute(x, out=None, **kwargs):
-    r"""
-    Calculate the absolute value element-wise.
     np.abs is a shorthand for this function.
 
     Parameters
@@ -4044,7 +4009,6 @@ def transpose(a, axes=None):
     (2, 1, 3)
     """
     return _api_internal.transpose(a, axes)
-
 
 
 # pylint: disable=redefined-outer-name
@@ -7636,55 +7600,6 @@ def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
 
 
 @set_module('mxnet.ndarray.numpy')
-def median(a, axis=None, out=None, overwrite_input=None, keepdims=False):
-    r"""
-    Compute the median along the specified axis.
-    Returns the median of the array elements.
-    Parameters
-    ----------
-    a : array_like
-        Input array or object that can be converted to an array.
-    axis : {int, sequence of int, None}, optional
-        Axis or axes along which the medians are computed. The default
-        is to compute the median along a flattened version of the array.
-        A sequence of axes is supported since version 1.9.0.
-    out : ndarray, optional
-        Alternative output array in which to place the result. It must
-        have the same shape and buffer length as the expected output,
-        but the type (of the output) will be cast if necessary.
-    keepdims : bool, optional
-        If this is set to True, the axes which are reduced are left
-        in the result as dimensions with size one. With this option,
-        the result will broadcast correctly against the original `arr`.
-    Returns
-    -------
-    median : ndarray
-        A new array holding the result. If the input contains integers
-        or floats smaller than ``float32``, then the output data-type is
-        ``np.float32``.  Otherwise, the data-type of the output is the
-        same as that of the input. If `out` is specified, that array is
-        returned instead.
-    See Also
-    --------
-    mean, percentile
-    Examples
-    --------
-    >>> a = np.array([[10, 7, 4], [3, 2, 1]])
-    >>> a
-    array([[10,  7,  4],
-        [ 3,  2,  1]])
-    >>> np.median(a)
-    3.5
-    >>> np.median(a, axis=0)
-    array([6.5, 4.5, 2.5])
-    >>> np.median(a, axis=1)
-    array([7.,  2.])
-    """
-    return quantile(a=a, q=0.5, axis=axis, out=out, overwrite_input=overwrite_input,
-                    interpolation='midpoint', keepdims=keepdims)
-
-
-@set_module('mxnet.ndarray.numpy')
 def quantile(a, q, axis=None, out=None, overwrite_input=None, interpolation='linear', keepdims=False): # pylint: disable=too-many-arguments
     """
     Compute the q-th quantile of the data along the specified axis.
@@ -8283,14 +8198,6 @@ def isnan(x, out=None, **kwargs):
     - ``out`` param: cannot perform auto broadcasting. ``out`` ndarray's shape must be the same as the expected output.
     - ``out`` param: cannot perform auto type cast. ``out`` ndarray's dtype must be the same as the expected output.
     - ``out`` param does not support scalar input case.
-
-    This function differs from the original `numpy.where
-    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.where.html>`_ in
-    the following way(s):
-
-    - If `condition` is a scalar, this operator returns x or y directly without broadcasting.
-    - If `condition` is ndarray, while both `x` and `y` are scalars,
-        the output dtype will be `float32`.
 
     Examples
     --------

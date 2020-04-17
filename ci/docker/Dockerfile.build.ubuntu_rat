@@ -20,7 +20,7 @@
 
 FROM ubuntu:16.04
 
-WORKDIR /usr/local
+WORKDIR /work/deps
 
 COPY install/ubuntu_rat.sh /work/
 RUN /work/ubuntu_rat.sh
@@ -31,4 +31,6 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
+
 WORKDIR /work/mxnet
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
