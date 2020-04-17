@@ -37,7 +37,7 @@ except ImportError:
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
-           'power', 'arctan2',
+           'power', 'arctan2', 'trace', 'transpose',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul', 'median',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
@@ -49,7 +49,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'interp',
-           'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
+           'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'cross', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
@@ -653,7 +653,7 @@ class _Symbol(Symbol):
                 axes = axes[0]
             elif axes[0] is None:
                 axes = None
-        return _mx_np_op.transpose(self, axes=axes)
+        return transpose(self, axes=axes)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -2306,6 +2306,61 @@ def tril_indices(n, k=0, m=None):
     if m is None:
         m = n
     return _npi.tril_indices(n, k, m)
+
+
+@set_module('mxnet.symbol.numpy')
+def trace(a, offset=0, axis1=0, axis2=1, out=None):
+    """
+    Return the sum along diagonals of the array.
+    If `a` is 2-D, the sum along its diagonal with the given offset
+    is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
+    If `a` has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-arrays whose traces are returned.
+    The shape of the resulting array is the same as that of `a` with `axis1`
+    and `axis2` removed.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array, from which the diagonals are taken.
+    offset : int, optional
+        Offset of the diagonal from the main diagonal. Can be both positive
+        and negative. Defaults to 0.
+    axis1, axis2 : int, optional
+        Axes to be used as the first and second axis of the 2-D sub-arrays
+        from which the diagonals should be taken. Defaults are the first two
+        axes of `a`.
+    out : _Symbol
+        Dummy parameter to keep the consistency with the ndarray counterpart.
+
+    Returns
+    -------
+    sum_along_diagonals : _Symbol
+        If `a` is 2-D, the sum along the diagonal is returned.  If `a` has
+        larger dimensions, then an array of sums along diagonals is returned.
+    """
+    return _npi.trace(a, offset=offset, axis1=axis1, axis2=axis2, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def transpose(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : _Symbol
+        a with its axes permuted.
+    """
+    return _npi.transpose(a, axes=axes)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
@@ -5636,6 +5691,46 @@ def ldexp(x1, x2, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def vdot(a, b):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Parameters
+    ----------
+    a : _Symbol
+        First argument to the dot product.
+    b : _Symbol
+        Second argument to the dot product.
+
+    Returns
+    -------
+    output : _Symbol
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.vdot(a, b)
+    30
+    >>> np.vdot(b, a)
+    30
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return tensordot(a.flatten(), b.flatten(), 1)
+
+
+@set_module('mxnet.symbol.numpy')
 def inner(a, b):
     r"""Inner product of two arrays.
     Ordinary inner product of vectors for 1-D arrays (without complex
@@ -5744,25 +5839,73 @@ def outer(a, b):
 
 
 @set_module('mxnet.symbol.numpy')
+def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None): # pylint: disable=too-many-arguments
+    """
+    Return the cross product of two (arrays of) vectors.
+
+    The cross product of `a` and `b` in :math:`R^3` is a vector perpendicular
+    to both `a` and `b`.  If `a` and `b` are arrays of vectors, the vectors
+    are defined by the last axis of `a` and `b` by default, and these axes
+    can have dimensions 2 or 3.  Where the dimension of either `a` or `b` is
+    2, the third component of the input vector is assumed to be zero and the
+    cross product calculated accordingly.  In cases where both input vectors
+    have dimension 2, the z-component of the cross product is returned.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Components of the first vector(s).
+    b : _Symbol
+        Components of the second vector(s).
+    axisa : int, optional
+        Axis of `a` that defines the vector(s).  By default, the last axis.
+    axisb : int, optional
+        Axis of `b` that defines the vector(s).  By default, the last axis.
+    axisc : int, optional
+        Axis of `c` containing the cross product vector(s).  Ignored if
+        both input vectors have dimension 2, as the return is scalar.
+        By default, the last axis.
+    axis : int, optional
+        If defined, the axis of `a`, `b` and `c` that defines the vector(s)
+        and cross product(s).  Overrides `axisa`, `axisb` and `axisc`.
+
+    Returns
+    -------
+    c : _Symbol
+        Vector cross product(s).
+
+    Raises
+    ------
+    ValueError
+        When the dimension of the vector(s) in `a` and/or `b` does not
+        equal 2 or 3.
+
+    Notes
+    -----
+    Supports full broadcasting of the inputs.
+    """
+    if axis is not None:
+        axisa, axisb, axisc = (axis,) * 3
+
+    return _npi.cross(a, b, axisa, axisb, axisc)
+
+
+@set_module('mxnet.symbol.numpy')
 def kron(a, b):
     r"""
     kron(a, b)
     Kronecker product of two arrays.
     Computes the Kronecker product, a composite array made of blocks of the
     second array scaled by the first.
-
     Parameters
     ----------
     a, b : ndarray
-
     Returns
     -------
     out : ndarray
-
     See Also
     --------
     outer : The outer product
-
     Notes
     -----
     The function assumes that the number of dimensions of `a` and `b`
@@ -5778,7 +5921,6 @@ def kron(a, b):
         [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
         [  ...                              ...   ],
         [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
-
     Examples
     --------
     >>> np.kron([1,10,100], [5,6,7])
@@ -5787,46 +5929,6 @@ def kron(a, b):
     array([  5,  50, 500,   6,  60, 600,   7,  70, 700])
     """
     return _npi.kron(a, b)
-
-
-@set_module('mxnet.symbol.numpy')
-def vdot(a, b):
-    r"""
-    Return the dot product of two vectors.
-    Note that `vdot` handles multidimensional arrays differently than `dot`:
-    it does *not* perform a matrix product, but flattens input arguments
-    to 1-D vectors first. Consequently, it should only be used for vectors.
-
-    Parameters
-    ----------
-    a : _Symbol
-        First argument to the dot product.
-    b : _Symbol
-        Second argument to the dot product.
-
-    Returns
-    -------
-    output : _Symbol
-        Dot product of `a` and `b`.
-
-    See Also
-    --------
-    dot : Return the dot product without using the complex conjugate of the
-        first argument.
-
-    Examples
-    --------
-    Note that higher-dimensional arrays are flattened!
-    >>> a = np.array([[1, 4], [5, 6]])
-    >>> b = np.array([[4, 1], [2, 2]])
-    >>> np.vdot(a, b)
-    30
-    >>> np.vdot(b, a)
-    30
-    >>> 1*4 + 4*1 + 5*2 + 6*2
-    30
-    """
-    return tensordot(a.flatten(), b.flatten(), 1)
 
 
 @set_module('mxnet.symbol.numpy')

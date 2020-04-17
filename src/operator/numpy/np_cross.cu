@@ -18,19 +18,21 @@
  */
 
 /*!
- * \file np_trace_op.cu
- * \brief GPU Implementation of numpy-compatible trace operator
+ *  Copyright (c) 2020 by Contributors
+ * \file np_bicount_op.cu
+ * \brief GPU Implementation of numpy-compatible cross
  */
-#include "./np_trace_op-inl.h"
+
+#include "./np_cross-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_trace)
-.set_attr<FCompute>("FCompute<gpu>", NumpyTraceOpForward<gpu>);
+NNVM_REGISTER_OP(_npi_cross)
+.set_attr<FCompute>("FCompute<gpu>", NumpyCrossForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_npi_trace)
-.set_attr<FCompute>("FCompute<gpu>", NumpyTraceOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_npi_cross)
+.set_attr<FCompute>("FCompute<gpu>", NumpyCrossBackward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

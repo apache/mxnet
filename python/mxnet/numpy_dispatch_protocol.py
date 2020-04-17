@@ -195,6 +195,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'isneginf',
     'isinf',
     'pad',
+    'cross',
 ]
 
 

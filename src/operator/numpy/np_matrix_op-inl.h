@@ -47,6 +47,11 @@ struct NumpyTransposeParam : public dmlc::Parameter<NumpyTransposeParam> {
     .describe("By default, reverse the dimensions, otherwise permute "
               "the axes according to the values given.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axes_s;
+    axes_s << axes;
+    (*dict)["axes"] = axes_s.str();
+  }
 };
 
 struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {

@@ -1925,6 +1925,11 @@ struct TileParam : public dmlc::Parameter<TileParam> {
                 " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
                 " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream reps_s;
+    reps_s << reps;
+    (*dict)["reps"] = reps_s.str();
+  }
 };
 
 inline bool TileOpShape(const nnvm::NodeAttrs& attrs,

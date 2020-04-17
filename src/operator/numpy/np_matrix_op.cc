@@ -105,7 +105,7 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
-NNVM_REGISTER_OP(_np_transpose)
+NNVM_REGISTER_OP(_npi_transpose)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyTransposeParam>)
@@ -126,9 +126,9 @@ NNVM_REGISTER_OP(_np_transpose)
       }
       std::ostringstream os;
       os << axes;
-      return MakeNonlossGradNode("_np_transpose", n, ograds, {}, {{"axes", os.str()}});
+      return MakeNonlossGradNode("_npi_transpose", n, ograds, {}, {{"axes", os.str()}});
     } else {
-      return MakeNonlossGradNode("_np_transpose", n, ograds, {},
+      return MakeNonlossGradNode("_npi_transpose", n, ograds, {},
                                  std::unordered_map<std::string, std::string>());
     }
   })
