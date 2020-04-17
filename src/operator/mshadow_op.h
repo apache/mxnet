@@ -742,21 +742,7 @@ MXNET_BINARY_MATH_OP(rminus, b - a);
 
 MXNET_BINARY_MATH_OP(div_grad, 1.0f / math::id(b));
 
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t div_grad::Map<mshadow::half::half2_t>
-                                               (mshadow::half::half2_t a,
-                                                mshadow::half::half2_t b) {
-  return mshadow::half::half2_t(1) / b;
-}
-
 MXNET_BINARY_MATH_OP(div_rgrad, -math::id(a) / math::sqr(b));
-
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t div_rgrad::Map<mshadow::half::half2_t>
-                                               (mshadow::half::half2_t a,
-                                                mshadow::half::half2_t b) {
-  return -a / (b * b);
-}
 
 MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
@@ -829,13 +815,6 @@ struct rfmod : public mxnet_op::tunable {
   }
 };
 
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
-                                               (mshadow::half::half2_t a,
-                                                mshadow::half::half2_t b) {
-  return a%b;
-}
-
 struct mod_grad : public mxnet_op::tunable  {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -856,19 +835,6 @@ MSHADOW_XINLINE mshadow::half::half_t mod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
   return mshadow::half::half_t(1.0f);
-}
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
-                                                    (mshadow::half::half2_t a,
-                                                     mshadow::half::half2_t b) {
-  mshadow::half::half2_t result = mshadow::half::half2_t();
-#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
-  result.half2_ = ::__float2half2_rn(1.0f);
-#else
-  result.half_t2[0] = mshadow::half::half_t(0.0f);
-  result.half_t2[1] = mshadow::half::half_t(1.0f);
-#endif
-  return result;
 }
 
 struct mod_rgrad : public mxnet_op::tunable {
@@ -891,19 +857,6 @@ MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
   return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
-}
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
-                                                     (mshadow::half::half2_t a,
-                                                      mshadow::half::half2_t b) {
-#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
-  return mshadow::half::half2_t(__hneg2(::h2floor((a/b).half2_)));
-#else
-  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(a.half_t2[0]/b.half_t2[0]))),
-                                mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
-#endif
 }
 
 struct rmod : public mxnet_op::tunable {
@@ -941,13 +894,6 @@ struct rmod : public mxnet_op::tunable {
   }
 };
 
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
-                                                (mshadow::half::half2_t a,
-                                                 mshadow::half::half2_t b) {
-  return b%a;
-}
-
 struct rmod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -968,19 +914,6 @@ MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
   return mshadow::half::half_t(-::floorf(static_cast<float>(b/a)));
-}
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
-                                                     (mshadow::half::half2_t a,
-                                                      mshadow::half::half2_t b) {
-#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
-  return mshadow::half::half2_t(::__hneg2(::h2floor((b/a).half2_)));
-#else
-  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(b.half_t2[0]/a.half_t2[0]))),
-                                mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
-#endif
 }
 
 struct clip : public mxnet_op::tunable {
