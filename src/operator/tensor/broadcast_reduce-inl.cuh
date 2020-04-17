@@ -59,9 +59,9 @@ __global__ void VectorizedBinaryBroadcastKernel(
     VectorizedStorer<DType, LType, aligned> storer(param.outputs[0] + row * lead_dim, lead_dim);
 
     index_t lindex, rindex;
-    const index_t original_idx = max(lead_dim_idx * nvec -
-                                     lloader.alignment() + row * lead_dim,
-                                     0);
+    const index_t original_idx = max(lead_dim_idx * nvec - lloader.alignment(),
+                                     static_cast<index_t>(0)) +
+                                 row * lead_dim;
     unravel_dot(original_idx, param.oshape,
                 param.stride[0], param.stride[1],
                 &lindex, &rindex);
@@ -105,7 +105,9 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
     VectorizedStorer<DType, LType, aligned> storer(param.outputs[0] + row * lead_dim, lead_dim);
     const index_t original_idx = lead_dim_idx * nvec -
                                  lloader.alignment() + row * lead_dim;
-    const index_t original_idx_clamped = max(0, original_idx);
+    const index_t original_idx_clamped = max(lead_dim_idx * nvec - lloader.alignment(),
+                                             static_cast<index_t>(0)) +
+                                         row * lead_dim;
     const index_t lindex = mxnet_op::unravel_dot(original_idx_clamped, param.oshape,
                                                  param.stride[side]);
     lloader.load((lindex + lloader.alignment()) / nvec, param.size[side]);
@@ -118,7 +120,7 @@ __global__ void VectorizedBinaryBroadcastSingleSideKernel(
       const index_t rindex = min(max(mxnet_op::unravel_dot(original_idx + i,
                                                            param.oshape,
                                                            param.stride[other_side]),
-                                     0),
+                                     static_cast<index_t>(0)),
                                  param.size[other_side] - 1);
       DType rinput = param.inputs[other_side][rindex];
       DType temp;
