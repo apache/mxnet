@@ -1125,6 +1125,7 @@ def test_np_multinomial():
 @unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
                                        " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
+@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():
         # adapted from numpy's test_indexing.py

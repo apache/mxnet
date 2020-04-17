@@ -475,6 +475,138 @@ void NumpyLaQrForward(const nnvm::NodeAttrs& attrs,
   QrOpForwardImpl<xpu>(a, q, r, req, workspace, ctx, attrs);
 }
 
+template<int req>
+struct assign_helper {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data) {
+    KERNEL_ASSIGN(out_data[i], req, in_data[i]);
+  }
+};
+
+struct qr_backward {
+  template<typename xpu, typename DType>
+  static void op(const Tensor<xpu, 3, DType>& dA,
+                 const Tensor<xpu, 3, DType>& dQ,
+                 const Tensor<xpu, 3, DType>& dR,
+                 const Tensor<xpu, 3, DType>& A,
+                 const Tensor<xpu, 3, DType>& Q,
+                 const Tensor<xpu, 3, DType>& R,
+                 const Tensor<xpu, 3, DType>& M,
+                 const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
+    // Implements case m >= n; da = [dq + q@copyltu(M))]@r**(-T)
+    // Where M = r@(dr**T) - (dq**T)@q
+    // Reference: https://arxiv.org/abs/1710.08717
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    if (dQ.dptr_ != dA.dptr_) Copy(dA, dQ, s);
+    // M = R@dR_T
+    trmm::op(R, M, DType(1.0), false, false, false, s);
+    // M = R@dR_T - dQ_T@Q
+    gemm::op(dA, Q, M, DType(-1.0), DType(1.0), true, false, s);
+    // M = copyltu(M)
+    mxnet_op::Kernel<CopyTriangularToOppositeSide, xpu>::Launch
+      (s, M.MSize(), M.size(1) * M.stride_, M.stride_, M.dptr_, false);
+    // dA = dQ + Q@M
+    gemm::op(Q, M, dA, DType(1.0), DType(1.0), false, false, s);
+    // dA = dA@R_inv_T
+    trsm::op(R, dA, DType(1.0), true, false, true, s);
+  }
+};
+
+template<typename xpu>
+size_t QrBackwardWorkspaceSize(const TBlob& a,
+                               const TBlob& r,
+                               const TBlob& grad_a) {
+  if (0U == a.Size()) { return 0U; }
+
+  MSHADOW_SGL_DBL_TYPE_SWITCH(grad_a.type_flag_, DType, {
+    size_t work_space_size = 0;
+    // for grad a and M
+    work_space_size += a.Size();
+    work_space_size += r.Size();
+    return work_space_size * sizeof(DType);
+  });
+  LOG(FATAL) << "InternalError: cannot reach here";
+  return 0U;
+}
+
+template<typename xpu>
+void QrBackwardImpl(const TBlob& grad_a,
+                    const TBlob& grad_q,
+                    const TBlob& grad_r,
+                    const TBlob& a,
+                    const TBlob& q,
+                    const TBlob& r,
+                    const std::vector<OpReqType>& req,
+                    const Tensor<xpu, 1, char>& workspace,
+                    const OpContext& ctx,
+                    const nnvm::NodeAttrs& attrs) {
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const mxnet::TShape& a_shape = a.shape_;
+  const mxnet::TShape& r_shape = r.shape_;
+  const int a_ndim = a_shape.ndim();
+  const int n = a.size(a_ndim - 1);
+
+  if (kNullOp == req[0]) { return; }
+
+  if (0U == a_shape.Size()) { return; }
+
+  MSHADOW_SGL_DBL_TYPE_SWITCH(grad_a.type_flag_, DType, {
+    // case m >= n; Q of same shape with A and R is (n, n)
+    DType *m_ptr = reinterpret_cast<DType*>(workspace.dptr_);
+    DType *grad_a_ptr = m_ptr + r_shape.Size();
+    TBlob temp_m(m_ptr, r_shape, xpu::kDevMask);
+    TBlob grad_a_data(grad_a_ptr, a_shape, xpu::kDevMask);
+    // dR_T
+    mxnet_op::Kernel<QrTypeTransposeHelper, xpu>::Launch(
+      s, r_shape.Size(), grad_r.dptr<DType>(), m_ptr, n, n, n * n);
+
+    qr_backward::op(grad_a_data.FlatToKD<xpu, 3, DType>(s),
+                    grad_q.FlatToKD<xpu, 3, DType>(s),
+                    grad_r.FlatToKD<xpu, 3, DType>(s),
+                    a.FlatToKD<xpu, 3, DType>(s),
+                    q.FlatToKD<xpu, 3, DType>(s),
+                    r.FlatToKD<xpu, 3, DType>(s),
+                    temp_m.FlatToKD<xpu, 3, DType>(s),
+                    ctx, attrs);
+
+    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+    mxnet_op::Kernel<assign_helper<req_type>, xpu>::Launch(
+      s, a_shape.Size(), grad_a_data.dptr<DType>(), grad_a.dptr<DType>());
+    });
+  });
+}
+
+// (dQ, dR, A, Q, R) => (dA)
+template<typename xpu>
+void NumpyLaQrBackward(const nnvm::NodeAttrs& attrs,
+                       const OpContext& ctx,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 5U);
+  CHECK_EQ(outputs.size(), 1U);
+  CHECK_EQ(req.size(), 1U);
+
+  const TBlob& grad_q = inputs[0];
+  const TBlob& grad_r = inputs[1];
+  const TBlob& a = inputs[2];
+  const TBlob& q = inputs[3];
+  const TBlob& r = inputs[4];
+  const TBlob& grad_a = outputs[0];
+  const int a_ndim = a.shape_.ndim();
+  const int n = a.size(a_ndim - 1);
+  const int m = a.size(a_ndim - 2);
+
+  CHECK_LE(n, m)
+    << "QrBackward not implemented when ncols > nrows";
+
+  size_t workspace_size = QrBackwardWorkspaceSize<xpu>(a, r, grad_a);
+  Tensor<xpu, 1, char> workspace = ctx.requested[0]
+    .get_space_typed<xpu, 1, char>(Shape1(workspace_size), ctx.get_stream<xpu>());
+  QrBackwardImpl<xpu>(grad_a, grad_q, grad_r, a, q, r, req, workspace, ctx, attrs);
+}
+
 }  // namespace op
 }  // namespace mxnet
 

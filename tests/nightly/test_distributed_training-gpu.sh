@@ -31,7 +31,6 @@ test_kvstore() {
     )
 
     for arg in "${test_args[@]}"; do
-        echo $arg
         python3 ../../tools/launch.py $arg
         if [ $? -ne 0 ]; then
             return $?
@@ -39,6 +38,16 @@ test_kvstore() {
     done
 }
 
+test_horovod() {
+    echo "localhost slots=2" > hosts
+    mpirun -np 2 --hostfile hosts --bind-to none --map-by slot -mca pml ob1 \
+        -mca btl ^openib python3 dist_device_sync_kvstore_horovod.py
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
+}
+
 test_kvstore
+test_horovod
 
 exit $errors

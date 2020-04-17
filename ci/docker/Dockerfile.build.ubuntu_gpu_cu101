@@ -36,15 +36,14 @@ COPY install/ubuntu_scala.sh /work/
 COPY install/sbt.gpg /work/
 RUN /work/ubuntu_scala.sh
 
-COPY install/ubuntu_r.sh /work/
-COPY install/r.gpg /work/
-RUN /work/ubuntu_r.sh
-
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
 
 COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
+
+COPY install/ubuntu_gcc8.sh /work/
+RUN /work/ubuntu_gcc8.sh
 
 COPY install/ubuntu_tvm.sh /work/
 RUN /work/ubuntu_tvm.sh
@@ -70,8 +69,15 @@ ENV CUDNN_VERSION=7.6.5.32
 COPY install/ubuntu_cudnn.sh /work/
 RUN /work/ubuntu_cudnn.sh
 
+COPY install/thrust.sh /work/
+RUN /work/thrust.sh
+
 COPY install/ubuntu_binutils.sh /work/
 RUN /work/ubuntu_binutils.sh
+
+COPY install/ubuntu_r.sh /work/
+COPY install/r.gpg /work/
+RUN /work/ubuntu_r.sh
 
 # Always last
 ARG USER_ID=0

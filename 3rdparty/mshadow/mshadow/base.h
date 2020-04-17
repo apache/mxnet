@@ -119,18 +119,6 @@ typedef unsigned __int64 uint64_t;
 #define MSHADOW_OLD_CUDA 0
 #endif
 
-/*!
- * \brief macro to decide existence of c++11 compiler
- */
-#ifndef MSHADOW_IN_CXX11
-  #if (defined(__GXX_EXPERIMENTAL_CXX0X__) ||\
-      __cplusplus >= 201103L || defined(_MSC_VER))
-    #define MSHADOW_IN_CXX11 1
-  #else
-    #define MSHADOW_IN_CXX11 0
-  #endif
-#endif
-
 /*! \brief whether use SSE */
 #ifndef MSHADOW_USE_SSE
   #define MSHADOW_USE_SSE 1
@@ -207,13 +195,6 @@ extern "C" {
 /*! \brief cpu force inline */
 #define MSHADOW_CINLINE MSHADOW_FORCE_INLINE
 
-#if defined(__GXX_EXPERIMENTAL_CXX0X) ||\
-    defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L
-  #define MSHADOW_CONSTEXPR constexpr
-#else
-  #define MSHADOW_CONSTEXPR const
-#endif
-
 /*!
  * \brief default data type for tensor string
  *  in code release, change it to default_real_t
@@ -231,13 +212,8 @@ extern "C" {
 #define MSHADOW_USE_GLOG DMLC_USE_GLOG
 #endif  // MSHADOW_USE_GLOG
 
-#if DMLC_USE_CXX11
 #define MSHADOW_THROW_EXCEPTION noexcept(false)
 #define MSHADOW_NO_EXCEPTION  noexcept(true)
-#else
-#define MSHADOW_THROW_EXCEPTION
-#define MSHADOW_NO_EXCEPTION
-#endif
 
 #if defined(_MSC_VER)
 #define MSHADOW_ALIGNED(x) __declspec(align(x))
