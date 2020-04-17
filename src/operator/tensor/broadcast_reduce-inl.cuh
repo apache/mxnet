@@ -18,253 +18,57 @@
  */
 
 /*!
- * Copyright (c) 2015-2020 by Contributors
+ * Copyright (c) 2015-2017 by Contributors
  * \file broadcast_reduce-inl.cuh
  * \brief CUDA implementations for binary broadcast and reduce
- * \author Antti-Pekka Hynninen, Przemyslaw Tredak
+ * \author Antti-Pekka Hynninen
 */
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_
 
 using namespace mshadow::cuda;
 
-template <int ndim, typename DType>
-struct VectorizedBinaryBroadcastParam {
-  const DType* inputs[2];
-  DType* outputs[1];
-  Shape<ndim> stride[2];
-  Shape<ndim> oshape;
-  index_t size[2];
-};
-
-using common::cuda::VectorizedLoader;
-using common::cuda::VectorizedStorer;
-
-template <bool aligned, typename DType, typename LType, typename OP, int ndim, int req>
-__global__ void VectorizedBinaryBroadcastKernel(
-    const VectorizedBinaryBroadcastParam<ndim, DType> param,
-    const index_t lead_dim, const index_t other_dim,
-    const index_t num_aligned_elements) {
-  constexpr int nvec = sizeof(LType) / sizeof(DType);
-  const index_t M = num_aligned_elements * other_dim;
-  const index_t N = lead_dim * other_dim;
-
-  VectorizedLoader<DType, LType, aligned> lloader(param.inputs[0], param.size[0]);
-  VectorizedLoader<DType, LType, aligned> rloader(param.inputs[1], param.size[1]);
-
-  for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-       idx < M;
-       idx += gridDim.x * blockDim.x) {
-    DType * current_output_pointer;
-    index_t output_size;
-    index_t output_idx;
-    if (aligned) {
-      // Simplified case
-      index_t lindex, rindex;
-      unravel_dot(idx * nvec, param.oshape,
-                  param.stride[0], param.stride[1],
-                  &lindex, &rindex);
-      lloader.load(lindex / nvec, param.size[0]);
-      rloader.load(rindex / nvec, param.size[1]);
-      current_output_pointer = param.outputs[0];
-      output_size = N;
-      output_idx = idx;
-    } else {
-      const index_t row = idx / num_aligned_elements;
-      const index_t lead_dim_idx = idx - row * num_aligned_elements;
-
-      index_t lindex, rindex;
-      const index_t original_idx = max(lead_dim_idx * nvec - lloader.alignment(),
-                                       static_cast<index_t>(0)) +
-                                   row * lead_dim;
-      unravel_dot(original_idx, param.oshape,
-                  param.stride[0], param.stride[1],
-                  &lindex, &rindex);
-      lloader.load((lindex + lloader.alignment()) / nvec, param.size[0]);
-      rloader.load((rindex + lloader.alignment()) / nvec, param.size[1]);
-      current_output_pointer = param.outputs[0] + row * lead_dim;
-      output_size = lead_dim;
-      output_idx = lead_dim_idx;
+template<int ndim, typename DType, typename OP, int unroll>
+__launch_bounds__(kMaxThreadsPerBlock)
+__global__ void binary_broadcast_kernel(const int N, const bool addto,
+                                        const DType* __restrict lhs,
+                                        const DType* __restrict rhs, DType *out,
+                                        const Shape<ndim> lstride, const Shape<ndim> rstride,
+                                        const Shape<ndim> oshape) {
+  for (int idx = blockIdx.x * blockDim.x * unroll + threadIdx.x; idx < N;
+    idx += blockDim.x * gridDim.x * unroll)
+  {
+    int j[unroll];
+    int k[unroll];
+    DType val[unroll];
+    #pragma unroll
+    for (int i=0;i < unroll;i++) {
+      unravel_dot(idx + i*blockDim.x, oshape, lstride, rstride, &j[i], &k[i]);
+      val[i] = OP::Map(lhs[j[i]], rhs[k[i]]);
     }
-    VectorizedStorer<DType, LType, aligned> storer(current_output_pointer, output_size);
-
-    if (req == kAddTo) {
-      storer.load(output_idx, output_size);
+    #pragma unroll
+    for (int i=0;i < unroll;i++) {
+      if (idx + i*blockDim.x < N) assign(&out[idx + i*blockDim.x], addto, val[i]);
     }
-#pragma unroll
-    for (int i = 0; i < lloader.nvec(); ++i) {
-      DType temp = OP::Map(lloader.separate()[i],
-                           rloader.separate()[i]);
 
-      if (req == kAddTo) {
-        storer.separate()[i] += temp;
-      } else {
-        storer.separate()[i] = temp;
-      }
-    }
-    storer.store(output_idx, output_size);
   }
 }
-
-template <bool aligned, typename DType, typename LType, typename OP, int ndim, int req, int side>
-__global__ void VectorizedBinaryBroadcastSingleSideKernel(
-    const VectorizedBinaryBroadcastParam<ndim, DType> param,
-    const index_t lead_dim, const index_t other_dim,
-    const index_t num_aligned_elements) {
-  constexpr int nvec = sizeof(LType) / sizeof(DType);
-  const index_t M = num_aligned_elements * other_dim;
-  const index_t N = lead_dim * other_dim;
-  constexpr int other_side = 1 - side;
-
-  VectorizedLoader<DType, LType, aligned> lloader(param.inputs[side], param.size[side]);
-
-  for (index_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-       idx < M;
-       idx += gridDim.x * blockDim.x) {
-    index_t original_idx;
-    DType * current_output_pointer;
-    index_t output_size;
-    index_t output_idx;
-    if (aligned) {
-      //Simplified case
-      original_idx = idx * nvec;
-      const index_t lindex = mxnet_op::unravel_dot(original_idx, param.oshape,
-                                                   param.stride[side]);
-      lloader.load(lindex / nvec, param.size[side]);
-      current_output_pointer = param.outputs[0];
-      output_size = N;
-      output_idx = idx;
-    } else {
-      const index_t row = idx / num_aligned_elements;
-      const index_t lead_dim_idx = idx - row * num_aligned_elements;
-      original_idx = lead_dim_idx * nvec -
-                     lloader.alignment() + row * lead_dim;
-      const index_t original_idx_clamped = max(lead_dim_idx * nvec - lloader.alignment(),
-                                               static_cast<index_t>(0)) +
-                                           row * lead_dim;
-      const index_t lindex = mxnet_op::unravel_dot(original_idx_clamped, param.oshape,
-                                                   param.stride[side]);
-      lloader.load((lindex + lloader.alignment()) / nvec, param.size[side]);
-      current_output_pointer = param.outputs[0] + row * lead_dim;
-      output_size = lead_dim;
-      output_idx = lead_dim_idx;
-    }
-    VectorizedStorer<DType, LType, aligned> storer(current_output_pointer, output_size);
-
-    if (req == kAddTo) {
-      storer.load(output_idx, output_size);
-    }
-#pragma unroll
-    for (int i = 0; i < lloader.nvec(); ++i) {
-      const index_t rindex = min(max(mxnet_op::unravel_dot(original_idx + i,
-                                                           param.oshape,
-                                                           param.stride[other_side]),
-                                     static_cast<index_t>(0)),
-                                 param.size[other_side] - 1);
-      DType rinput = param.inputs[other_side][rindex];
-      DType temp;
-      if (side == 0) {
-        // Left side is vectorized
-        temp = OP::Map(lloader.separate()[i],
-                       rinput);
-      } else {
-        // Right side is vectorized
-        temp = OP::Map(rinput,
-                       lloader.separate()[i]);
-      }
-
-      if (req == kAddTo) {
-        storer.separate()[i] += temp;
-      } else {
-        storer.separate()[i] = temp;
-      }
-    }
-    storer.store(output_idx, output_size);
-  }
-}
-
-template <typename DType, typename OP, int req, int ndim>
-class VectorizedBinaryBroadcastFwd {
- public:
-  using ParamType = VectorizedBinaryBroadcastParam<ndim, DType>;
-
-  template <bool aligned, typename LType>
-  static void Launch(const index_t blocks, const index_t threads,
-                     cudaStream_t stream,
-                     const ParamType params, const index_t lead_dim,
-                     const index_t other_dim) {
-    int common_shape = 1;
-    int first_different = -1;
-    for (int i = ndim - 1; i >= 0; --i) {
-      if (params.stride[0][i] == params.stride[1][i]) {
-        common_shape *= params.oshape[i];
-      } else {
-        first_different = i;
-        break;
-      }
-    }
-
-    if (common_shape != 1) {
-      VectorizedLoader<DType, LType, aligned> loader(params.inputs[0], lead_dim);
-      const index_t num_elements_per_row = loader.num_aligned_elements();
-      VectorizedBinaryBroadcastKernel<aligned, DType, LType, OP, ndim, req>
-        <<<blocks, threads, 0, stream>>>(params, lead_dim, other_dim, num_elements_per_row);
-    } else {
-      if (params.stride[0][first_different] == 0) {
-        VectorizedLoader<DType, LType, aligned> loader(params.inputs[1], lead_dim);
-        const index_t num_elements_per_row = loader.num_aligned_elements();
-        VectorizedBinaryBroadcastSingleSideKernel<aligned, DType, LType, OP, ndim, req, 1>
-          <<<blocks, threads, 0, stream>>>(params, lead_dim, other_dim, num_elements_per_row);
-      } else {
-        VectorizedLoader<DType, LType, aligned> loader(params.inputs[0], lead_dim);
-        const index_t num_elements_per_row = loader.num_aligned_elements();
-        VectorizedBinaryBroadcastSingleSideKernel<aligned, DType, LType, OP, ndim, req, 0>
-          <<<blocks, threads, 0, stream>>>(params, lead_dim, other_dim, num_elements_per_row);
-      }
-    }
-  }
-};
 
 template<int ndim, typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<gpu> *s, const OpReqType req,
                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
-  using common::cuda::VectorizedKernelLauncher;
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  const index_t N = out.shape_.Size();
-
-  Shape<ndim> lstride = mxnet_op::calc_stride(lhs.shape_.get<ndim>());
-  Shape<ndim> rstride = mxnet_op::calc_stride(rhs.shape_.get<ndim>());
-
-  MXNET_ASSIGN_REQ_SWITCH(req, Req, {
-    using LType = uint2;
-    using Kernel = VectorizedBinaryBroadcastFwd<DType, OP, Req, ndim>;
-
-    typename Kernel::ParamType param;
-
-    param.inputs[0] = lhs.dptr<DType>();
-    param.inputs[1] = rhs.dptr<DType>();
-    param.outputs[0] = out.dptr<DType>();
-    param.stride[0] = lstride;
-    param.stride[1] = rstride;
-    param.oshape = out.shape_.get<ndim>();
-    param.size[0] = lhs.shape_.Size();
-    param.size[1] = rhs.shape_.Size();
-
-    index_t lead_dim = 1;
-    for (int i = ndim - 1; i >= 0; --i) {
-      /* Find the first non-1 dimension
-         to check the alignment
-      */
-      if (param.oshape[i] != 1) {
-        lead_dim = param.oshape[i];
-        break;
-      }
-    }
-    const index_t other_dim = out.shape_.Size() / lead_dim;
-
-    VectorizedKernelLauncher<DType, LType, Kernel>(lead_dim, other_dim, s, param);
-  });
+  int N = out.shape_.Size();
+  const int warpSize = 32;
+  const int unroll = 2;
+  int nthread = std::min(kMaxThreadsPerBlock, ((N + warpSize - 1)/warpSize)*warpSize );
+  int ngrid = std::min(kBaseGridNum, (N + nthread*unroll - 1) / (nthread*unroll));
+  Shape<ndim> lstride = calc_stride(lhs.shape_.get<ndim>());
+  Shape<ndim> rstride = calc_stride(rhs.shape_.get<ndim>());
+  binary_broadcast_kernel<ndim, DType, OP, unroll><<<ngrid, nthread, 0, stream>>>(
+    N, req == kAddTo, lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>(), lstride, rstride,
+    out.shape_.get<ndim>());
 }
 
 const int nthread_reduce = kMaxThreadsPerBlock;
@@ -288,8 +92,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
     const int Mend   = (int)((uint64_t)M*(uint64_t)(m0 + 1)/(uint64_t)Mnext);
     for (int idx0 = blockIdx.x*bx; idx0 < N; idx0 += bx*gridDim.x) {
       int idx = idx0 + tidx;
-      Shape<ndim> coord = mxnet_op::unravel(idx, small_shape);
-      int idx_big0 = mxnet_op::ravel(coord, big_shape0);
+      Shape<ndim> coord = unravel(idx, small_shape);
+      int idx_big0 = ravel(coord, big_shape0);
 
       AType val, residual;
       Reducer::SetInitValue(val, residual);
@@ -298,7 +102,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           int idx_big[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            idx_big[u] = idx_big0 + mxnet_op::unravel_dot(k + u*by, big_shape, big_stride);
+            idx_big[u] = idx_big0 + unravel_dot(k + u*by, big_shape, big_stride);
           }
           DType tmp[unroll];
           #pragma unroll
@@ -371,10 +175,10 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
     const int Mend   = (int)((uint64_t)M*(uint64_t)(m0 + 1)/(uint64_t)Mnext);
     for (int idx0 = blockIdx.x*bx; idx0 < N; idx0 += bx*gridDim.x) {
       int idx = idx0 + tidx;
-      Shape<ndim> coord = mxnet_op::unravel(idx, small_shape);
-      int idx_big0 = mxnet_op::ravel(coord, big_shape0);
-      int idx_lhs0 = mxnet_op::ravel(coord, lhs_shape0);
-      int idx_rhs0 = mxnet_op::ravel(coord, rhs_shape0);
+      Shape<ndim> coord = unravel(idx, small_shape);
+      int idx_big0 = ravel(coord, big_shape0);
+      int idx_lhs0 = ravel(coord, lhs_shape0);
+      int idx_rhs0 = ravel(coord, rhs_shape0);
 
       DType val, residual;
       Reducer::SetInitValue(val, residual);
@@ -385,9 +189,9 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           int idx_rhs[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            idx_big[u] = idx_big0 + mxnet_op::unravel_dot(k + u*by, big_shape, big_stride);
-            idx_lhs[u] = idx_lhs0 + mxnet_op::unravel_dot(k + u*by, lhs_shape, lhs_stride);
-            idx_rhs[u] = idx_rhs0 + mxnet_op::unravel_dot(k + u*by, rhs_shape, rhs_stride);
+            idx_big[u] = idx_big0 + unravel_dot(k + u*by, big_shape, big_stride);
+            idx_lhs[u] = idx_lhs0 + unravel_dot(k + u*by, lhs_shape, lhs_stride);
+            idx_rhs[u] = idx_rhs0 + unravel_dot(k + u*by, rhs_shape, rhs_stride);
           }
           DType tmp[unroll];
           #pragma unroll
@@ -463,8 +267,8 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
                                 const DType* __restrict big, OType *small, const Shape<ndim> bshape,
                                 const Shape<ndim> sshape) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    Shape<ndim> coord = mxnet_op::unravel(idx, sshape);
-    int j = mxnet_op::ravel(coord, bshape);
+    Shape<ndim> coord = unravel(idx, sshape);
+    int j = ravel(coord, bshape);
     AType val, residual;
     Reducer::SetInitValue(val, residual);
     Reducer::Reduce(val, AType(OP::Map(big[j])), residual);
@@ -485,10 +289,10 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
                                  const Shape<ndim> rhs_shape,
                                  const Shape<ndim> small_shape) {
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
-    Shape<ndim> coord = mxnet_op::unravel(idx, small_shape);
-    int idx_big = mxnet_op::ravel(coord, big_shape);
-    int idx_lhs = mxnet_op::ravel(coord, lhs_shape);
-    int idx_rhs = mxnet_op::ravel(coord, rhs_shape);
+    Shape<ndim> coord = unravel(idx, small_shape);
+    int idx_big = ravel(coord, big_shape);
+    int idx_lhs = ravel(coord, lhs_shape);
+    int idx_rhs = ravel(coord, rhs_shape);
     DType val, residual;
     Reducer::SetInitValue(val, residual);
     Reducer::Reduce(val, OP1::Map(big[idx_big], OP2::Map(lhs[idx_lhs], rhs[idx_rhs])), residual);
@@ -856,16 +660,16 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
-                           const ::mxnet::TShape& big) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, nullptr, nullptr);
   return config.workspace_size;
 }
 
 template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
-                           const ::mxnet::TShape& big, const ::mxnet::TShape& lhs, const ::mxnet::TShape& rhs) {
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const mxnet::TShape& small, const OpReqType req,
+                           const mxnet::TShape& big, const mxnet::TShape& lhs, const mxnet::TShape& rhs) {
   if (req == kNullOp) return 0;
   ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
   return config.workspace_size;

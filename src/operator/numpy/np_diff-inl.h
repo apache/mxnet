@@ -73,7 +73,7 @@ struct diff_forward {
                                   const int stride,
                                   const mshadow::Shape<ndim> oshape,
                                   const mshadow::Shape<ndim> ishape) {
-    using namespace mxnet_op;
+    using namespace broadcast;
 
     // j represent the memory index of the corresponding input entry
     int j = ravel(unravel(i, oshape), ishape);
@@ -145,7 +145,7 @@ struct diff_backward {
                                   const int stride, const int axis,
                                   const mshadow::Shape<ndim> oshape,
                                   const mshadow::Shape<ndim> ishape) {
-    using namespace mxnet_op;
+    using namespace broadcast;
     if (n == 0) {
       igrad[i] = ograd[i];
       return;

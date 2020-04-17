@@ -1461,7 +1461,7 @@ struct pick {
                                   const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
-    using namespace mxnet_op;
+    using namespace broadcast;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
@@ -1483,7 +1483,7 @@ struct pick_grad {
                                   const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
-    using namespace mxnet_op;
+    using namespace broadcast;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
